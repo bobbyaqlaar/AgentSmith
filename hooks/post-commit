@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# AgenticFramework: post-commit
+# 1. Updates the Knowledge Graph via AST mapper
+# 2. Auto-tags semver from Conventional Commit type
+# 3. Appends to .agent-history.log
+# 4. Pushes tags to remote if tracked
+
+if [ "${DISABLE_AI_STACK:-false}" = "true" ]; then exit 0; fi
+if [ "${SEMVER_LOOP_GUARD:-false}" = "true" ]; then exit 0; fi
+export SEMVER_LOOP_GUARD="true"
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+[ -z "$REPO_ROOT" ] && exit 0
+
+# ── 1. Update Knowledge Graph ─────────────────────────────────────────────────
+MAP_SCRIPT="$REPO_ROOT/scripts/map_codebase.py"
+[ ! -f "$MAP_SCRIPT" ] && MAP_SCRIPT="$HOME/.agent-framework/scripts/map_codebase.py"
+if [ -f "$MAP_SCRIPT" ]; then
+  python3 "$MAP_SCRIPT" 2>/dev/null || true
+fi
+
+# ── 2. Semver auto-tagging ────────────────────────────────────────────────────
+LAST_MSG=$(git log -1 --pretty=%B | head -n 1)
+CURRENT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+VERSION_NUM="${CURRENT_TAG#v}"
+
+IFS='.' read -r -a V <<< "$VERSION_NUM"
+MAJOR="${V[0]:-0}"; MINOR="${V[1]:-0}"; PATCH="${V[2]:-0}"
+BUMP="none"
+
+if echo "$LAST_MSG" | grep -qE '!:' || git log -1 --pretty=%B | grep -q "BREAKING CHANGE"; then
+  BUMP="major"; MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
+elif echo "$LAST_MSG" | grep -qE '^feat'; then
+  BUMP="minor"; MINOR=$((MINOR + 1)); PATCH=0
+elif echo "$LAST_MSG" | grep -qE '^(fix|perf|refactor)'; then
+  BUMP="patch"; PATCH=$((PATCH + 1))
+fi
+
+if [ "$BUMP" != "none" ]; then
+  NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+  git tag -a "$NEW_TAG" -m "$LAST_MSG" 2>/dev/null || true
+  echo "✅ Auto-tagged: $NEW_TAG"
+
+  # ── 3. Append to .agent-history.log ────────────────────────────────────────
+  OWNER_ID="${AGENT_OWNER_ID:-unknown}"
+  PROJECT=$(basename "$REPO_ROOT")
+  TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date +"%Y-%m-%dT%H:%M:%SZ")
+  LOG_ENTRY="{\"timestamp\":\"$TS\",\"level\":\"INFO\",\"event\":\"commit_tagged\",\"tag\":\"$NEW_TAG\",\"message\":\"$LAST_MSG\",\"owner_id\":\"$OWNER_ID\",\"project\":\"$PROJECT\",\"hitl_resolved\":true}"
+  echo "$LOG_ENTRY" >> "$REPO_ROOT/.agent-history.log"
+
+  # ── 4. Push to remote if tracked ───────────────────────────────────────────
+  CURRENT_BRANCH=$(git branch --show-current 2>/dev/null)
+  TRACKED_REMOTE=$(git config --get "branch.${CURRENT_BRANCH}.remote" 2>/dev/null || true)
+  if [ -n "$TRACKED_REMOTE" ]; then
+    if git push "$TRACKED_REMOTE" "$CURRENT_BRANCH" --follow-tags --quiet 2>/dev/null; then
+      echo "✅ Pushed $NEW_TAG to $TRACKED_REMOTE"
+    else
+      echo "⚠️  Push to $TRACKED_REMOTE failed (branch protection, network, or diverged history) — $NEW_TAG was tagged locally only."
+    fi
+  fi
+fi
+
+# ── Log rotation: prune INFO/MINOR entries beyond 10,000 lines ────────────────
+LOG_FILE="$REPO_ROOT/.agent-history.log"
+if [ -f "$LOG_FILE" ]; then
+  # Quoted delimiter ('PYEOF') so $LOG_FILE is NOT shell-expanded into the
+  # Python source — it's read via os.environ instead. The unquoted form let
+  # the path expand directly into a string literal with no escaping; low
+  # practical risk since the path comes from `git rev-parse --show-toplevel`,
+  # but fragile (FIXES_AND_CLEANUP.md 4.8).
+  LOG_FILE="$LOG_FILE" python3 - <<'PYEOF' 2>/dev/null || true
+import json, os
+log_file = os.environ["LOG_FILE"]
+try:
+    with open(log_file) as f:
+        lines = [l.strip() for l in f if l.strip()]
+    prunable, protected = [], []
+    for line in lines:
+        try:
+            entry = json.loads(line)
+            level = entry.get("level", "INFO")
+            resolved = entry.get("hitl_resolved", True)
+            if level in ("MAJOR", "CRITICAL") and not resolved:
+                protected.append(line)
+            else:
+                prunable.append(line)
+        except Exception:
+            prunable.append(line)
+    # Keep all protected + latest 10000 prunable
+    trimmed = prunable[-10000:] + protected
+    with open(log_file, "w") as f:
+        f.write("\n".join(trimmed) + "\n")
+except Exception:
+    pass
+PYEOF
+fi
+
+exit 0

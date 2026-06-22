@@ -1,0 +1,129 @@
+# agent-rules.yaml — Single source of truth for all IDE rule generation.
+#
+# The post-checkout hook reads this file and generates:
+#   .cursorrules           (Cursor)
+#   CLAUDE.md              (Claude Code)
+#   .agents/skills/*/      (Antigravity)
+#
+# Never edit .cursorrules, CLAUDE.md, or .agents/skills/ directly —
+# edit this file and let the hook regenerate them.
+#
+# See SPECS.md §4 and §13 for pillar and IDE configuration specification.
+#
+# Status: Phase 5 complete — the post-checkout hook calls
+# scripts/generate-ide-config.py, which reads this file directly.
+
+meta:
+  version: "1.0.0"
+  generated_from: "AgenticFramework"
+
+# ── Global rules (apply to all IDEs / stacks) ────────────────────────────────
+
+pillars:
+  - id: 1
+    name: Requirements and Design
+    rule: >
+      An .agent-rfc/ directory must exist. Do not modify source files unless
+      a markdown spec exists in .agent-rfc/. Before any change, produce a
+      step-by-step implementation blueprint.
+
+  - id: 2
+    name: Build Architecture (Ponytail)
+    rule: >
+      Run a 5-step analysis before creating new files: (1) does this already
+      exist? (2) is there a native library? (3) what is the minimal change?
+      (4) what does this affect? (5) are there downstream graph dependencies?
+      No unapproved third-party dependencies.
+
+  - id: 3
+    name: Tracing and Evaluations
+    rule: >
+      All execution must emit OpenTelemetry spans to $AGENT_PHOENIX_ENDPOINT/v1/traces.
+      Every span must carry: agent.name, agent.role, agent.owner_id, tenant.id,
+      llm.model_name, project.name, environment.
+      Input/output content policy: full in dev, scrubbed in staging, minimal in prod.
+
+  - id: 4
+    name: Testing Guardrails
+    rule: >
+      Every logical change requires a corresponding unit or integration test.
+      Never clear or skip existing tests to force green coverage.
+
+  - id: 5
+    name: Operations and Self-Improvement
+    rule: >
+      On every session start, read .agent-history.log to avoid repeating past mistakes.
+      After two consecutive identical tool failures, log MAJOR, halt, and escalate.
+
+  - id: 6
+    name: Interface Constraints (Caveman Compression)
+    rule: >
+      Output only: code blocks, data structures, terminal commands, variables.
+      No pleasantries, introductory preambles, or meta-summaries.
+
+  - id: 7
+    name: Stack-Specific Rules
+    rule: >
+      TypeScript/React: no `any` type; enforce `use client` on client components.
+      Python/FastAPI: Pydantic V2 for all models; async-safe, no blocking calls.
+      Go: always check `if err != nil`; table-driven tests; -race flag.
+
+  - id: 8
+    name: Observability Wire
+    rule: >
+      .cursorrules and CLAUDE.md include explicit OTLP endpoint instructions.
+      OTEL_EXPORTER_OTLP_ENDPOINT is set in the shell when dashboard starts.
+
+  - id: 9
+    name: Multi-Agent Orchestration
+    rule: >
+      Dev sessions may use LangGraph MemorySaver.
+      Production workers must use Temporal or Celery — MemorySaver is prohibited.
+
+  - id: 10
+    name: Cost-Optimization Routing
+    rule: >
+      Dev sessions use cost_router.py heuristics.
+      Production calls must route through runtime/llm_gateway.py.
+
+# ── Stack addenda ─────────────────────────────────────────────────────────────
+
+stacks:
+  ts-react:
+    detect: "package.json"
+    additional_rules:
+      - "No implicit `any` type"
+      - "Server Components are the default; add `'use client'` explicitly when needed"
+      - "Use Next.js App Router conventions"
+
+  python-fastapi:
+    detect: "requirements.txt|pyproject.toml"
+    additional_rules:
+      - "Use Pydantic V2 for all data models"
+      - "All route handlers must be async"
+      - "No blocking I/O in async context (use asyncio.to_thread for sync operations)"
+
+  go:
+    detect: "go.mod"
+    additional_rules:
+      - "Always check if err != nil immediately after the call"
+      - "Use table-driven tests"
+      - "Run go test with -race flag"
+
+# ── Antigravity skill definitions ─────────────────────────────────────────────
+
+skills:
+  - id: efficiency_stack
+    title: "AgenticFramework Lifecycle Guardrails"
+    trigger: "Before writing any code or making file changes"
+    pillars: [1, 2, 4, 5, 6]
+
+  - id: observability
+    title: "OTel Span Emission"
+    trigger: "Before any LLM call or tool invocation"
+    pillars: [3, 8]
+
+  - id: self_improvement
+    title: "Log Monitoring and HITL Escalation"
+    trigger: "On session start and on repeated failures"
+    pillars: [5, 9]

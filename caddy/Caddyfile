@@ -1,0 +1,18 @@
+# AgenticFramework — Phoenix auth sidecar (SPECS.md §15).
+#
+# Team-shared and production Phoenix deployments MUST require authentication
+# — an unauthenticated shared Phoenix instance is non-compliant even with
+# trace redaction active. This Caddyfile fronts Phoenix with HTTP basic auth.
+#
+# Required env vars (see docker-compose.yml, set in .env):
+#   PHOENIX_BASIC_AUTH_USER  — e.g. "ops"
+#   PHOENIX_BASIC_AUTH_HASH  — bcrypt hash, NOT the plaintext password. Generate with:
+#     docker run --rm caddy:2-alpine caddy hash-password --plaintext '<your-password>'
+
+:80 {
+	basic_auth {
+		{$PHOENIX_BASIC_AUTH_USER} {$PHOENIX_BASIC_AUTH_HASH}
+	}
+
+	reverse_proxy phoenix:6006
+}

@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# AgenticFramework: post-checkout
+# Provisions IDE rules, Antigravity skills, CI workflows, Knowledge Graph.
+# Fires on: git init, git checkout, git clone
+
+if [ "${DISABLE_AI_STACK:-false}" = "true" ]; then exit 0; fi
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+[ -z "$REPO_ROOT" ] && exit 0
+
+FRAMEWORK_DIR="$HOME/.agent-framework"
+SCRIPTS_DIR="$FRAMEWORK_DIR/scripts"
+
+# ── Detect stack ──────────────────────────────────────────────────────────────
+STACK="GENERIC"
+TEST_CMD="echo 'No test command configured'"
+
+if [ -f "$REPO_ROOT/package.json" ]; then
+  STACK="TS_REACT"; TEST_CMD="npm test -- --watchAll=false --ci"
+elif [ -f "$REPO_ROOT/requirements.txt" ] || [ -f "$REPO_ROOT/pyproject.toml" ] || [ -f "$REPO_ROOT/Pipfile" ]; then
+  STACK="PYTHON_FASTAPI"; TEST_CMD="pytest"
+elif [ -f "$REPO_ROOT/go.mod" ]; then
+  STACK="GO"; TEST_CMD="go test -race ./..."
+fi
+
+echo "🔧 AgenticFramework: Detected stack [$STACK]"
+
+# ── Create .agent-rfc/ structure ─────────────────────────────────────────────
+mkdir -p "$REPO_ROOT/.agent-rfc/fixtures"
+
+# ── Seed golden dataset from framework base ───────────────────────────────────
+GOLDEN_FILE="$REPO_ROOT/.agent-rfc/fixtures/golden_evals.json"
+if [ ! -f "$GOLDEN_FILE" ] && [ -f "$FRAMEWORK_DIR/shared/golden_evals_base.json" ]; then
+  cp "$FRAMEWORK_DIR/shared/golden_evals_base.json" "$GOLDEN_FILE"
+  echo "✅ Seeded baseline golden dataset"
+fi
+
+# Seed judge criteria
+CRITERIA_FILE="$REPO_ROOT/.agent-rfc/fixtures/custom_judge_criteria.json"
+if [ ! -f "$CRITERIA_FILE" ] && [ -f "$FRAMEWORK_DIR/shared/custom_judge_criteria_base.json" ]; then
+  cp "$FRAMEWORK_DIR/shared/custom_judge_criteria_base.json" "$CRITERIA_FILE"
+  echo "✅ Seeded baseline judge criteria"
+fi
+
+# ── Resolve project name and owner ────────────────────────────────────────────
+PROJECT_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$REPO_ROOT")
+OWNER_ID="${AGENT_OWNER_ID:-unknown@unknown}"
+OTEL_ENDPOINT="${AGENT_PHOENIX_ENDPOINT:-http://localhost:6006}"
+
+# ── Generate .cursorrules / CLAUDE.md / Antigravity skills ───────────────────
+# Single source of truth: templates/agent-rules.yaml (SPECS.md §4, §13, §22
+# Phase 5). Never edit .cursorrules/CLAUDE.md/.agents/skills/ directly or add
+# new IDE-rule content as inline heredocs here — edit agent-rules.yaml.
+RULES_FILE="$FRAMEWORK_DIR/templates/agent-rules.yaml"
+case "$STACK" in
+  TS_REACT)       RULES_STACK_KEY="ts-react" ;;
+  PYTHON_FASTAPI) RULES_STACK_KEY="python-fastapi" ;;
+  GO)             RULES_STACK_KEY="go" ;;
+  *)              RULES_STACK_KEY="generic" ;;
+esac
+
+GEN_SCRIPT="$REPO_ROOT/scripts/generate-ide-config.py"
+[ ! -f "$GEN_SCRIPT" ] && GEN_SCRIPT="$SCRIPTS_DIR/generate-ide-config.py"
+
+if [ -f "$RULES_FILE" ] && [ -f "$GEN_SCRIPT" ]; then
+  python3 "$GEN_SCRIPT" \
+    --repo-root "$REPO_ROOT" \
+    --rules-file "$RULES_FILE" \
+    --stack "$RULES_STACK_KEY" \
+    --project-name "$PROJECT_NAME" \
+    --owner-id "$OWNER_ID" \
+    --otel-endpoint "$OTEL_ENDPOINT" \
+    --test-cmd "$TEST_CMD" \
+    --framework-version "${FRAMEWORK_VERSION:-1.0.0}" || \
+    echo "⚠️  IDE config generation failed — see error above. .cursorrules/CLAUDE.md/.agents/skills/ not written."
+else
+  echo "⚠️  agent-rules.yaml or generate-ide-config.py not found — IDE config not generated. Re-run install-ai-stack.sh."
+fi
+
+# ── GitHub Actions — copy from workflow-templates (single source, SPECS.md §17) ─
+# Same templates ai-tenant-init uses — no inline heredocs here (they drifted).
+TMPL_DIR="$FRAMEWORK_DIR/workflow-templates"
+GITHUB_WF="$REPO_ROOT/.github/workflows"
+
+TENANT_ID=""
+if [ -f "$REPO_ROOT/.agenticframework/tenant.yaml" ]; then
+  TENANT_ID="$(grep '^  id:' "$REPO_ROOT/.agenticframework/tenant.yaml" | head -1 | sed 's/^  id:[[:space:]]*//')"
+fi
+if [ -z "$TENANT_ID" ]; then
+  TENANT_ID="$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')"
+fi
+if ! [[ "$TENANT_ID" =~ ^[a-z0-9-]+$ ]] || [ -z "$TENANT_ID" ]; then
+  TENANT_ID="project"
+fi
+
+WF_CI=""
+case "$STACK" in
+  TS_REACT)       WF_CI="ci-ts-react.yml" ;;
+  PYTHON_FASTAPI) WF_CI="ci-python-fastapi.yml" ;;
+  GO)             WF_CI="ci-go.yml" ;;
+esac
+
+if [ -f "$GITHUB_WF/cd-deploy.yml" ]; then
+  echo "⚠️  Legacy cd-deploy.yml found — remove it and use cd-staging.yml + cd-production.yml (OPERATIONS.md §C)."
+fi
+
+if [ -d "$TMPL_DIR" ] && [ -n "$WF_CI" ]; then
+  mkdir -p "$GITHUB_WF"
+  for wf in "$WF_CI" "cd-staging.yml" "cd-production.yml" "eval-scorecard.yml"; do
+    src="$TMPL_DIR/$wf"
+    dest="$GITHUB_WF/$wf"
+    if [ ! -f "$src" ]; then
+      echo "⚠️  Workflow template missing, skipping: $src"
+      continue
+    fi
+    if [ -f "$dest" ]; then
+      continue
+    fi
+    sed "s/{{TENANT_ID}}/${TENANT_ID}/g" "$src" > "$dest"
+    echo "✅ Written $dest (from workflow-templates)"
+  done
+elif [ "$STACK" != "GENERIC" ] && [ ! -d "$TMPL_DIR" ]; then
+  echo "⚠️  workflow-templates not installed — run install-ai-stack.sh. CI/CD workflows not written."
+fi
+
+# ── Update Knowledge Graph ────────────────────────────────────────────────────
+MAP_SCRIPT="$REPO_ROOT/scripts/map_codebase.py"
+[ ! -f "$MAP_SCRIPT" ] && MAP_SCRIPT="$SCRIPTS_DIR/map_codebase.py"
+if [ -f "$MAP_SCRIPT" ]; then
+  python3 "$MAP_SCRIPT" 2>/dev/null && echo "✅ Knowledge Graph seeded" || true
+fi
+
+# ── .gitignore for public repos ───────────────────────────────────────────────
+REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
+IS_PUBLIC=0
+
+# Heuristic: github.com URL that doesn't match known private org patterns
+if echo "$REMOTE_URL" | grep -q "github.com"; then
+  IS_PUBLIC=1
+fi
+
+if [ "$IS_PUBLIC" -eq 1 ] && [ -t 1 ]; then
+  echo ""
+  echo "⚠️  This repository appears to be public."
+  echo "   .cursorrules, CLAUDE.md, and .agents/ contain system prompt content."
+  read -r -p "   Add them to .gitignore? (y/n): " GITIGNORE_CHOICE
+  if [[ "${GITIGNORE_CHOICE:-y}" =~ ^[Yy]$ ]]; then
+    GITIGNORE="$REPO_ROOT/.gitignore"
+    {
+      echo ""
+      echo "# AgenticFramework — IDE configs (system prompt content)"
+      echo ".cursorrules"
+      echo "CLAUDE.md"
+      echo ".agents/"
+      echo ".agent-history.log"
+    } >> "$GITIGNORE"
+    echo "✅ Added IDE config files to .gitignore"
+  fi
+elif [ "$IS_PUBLIC" -eq 1 ]; then
+  # Non-interactive (CI): auto-add to .gitignore
+  GITIGNORE="$REPO_ROOT/.gitignore"
+  {
+    echo ""
+    echo "# AgenticFramework — IDE configs (system prompt content)"
+    echo ".cursorrules"
+    echo "CLAUDE.md"
+    echo ".agents/"
+    echo ".agent-history.log"
+  } >> "$GITIGNORE"
+fi
+
+echo ""
+echo "✅ AgenticFramework: Project provisioned for [$STACK] — $(basename "$REPO_ROOT")"
+exit 0
