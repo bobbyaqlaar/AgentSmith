@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Ops Portal (Next.js)
+portal/node_modules/
+portal/.next/
+portal/.env.local
+portal/.env*.local
+portal/*.tsbuildinfo
+portal/next-env.d.ts
+
+# In-App Widget
+templates/in-app-widget/node_modules/
+
+# Runtime local blobs (dev)
+runtime/.hitl_blobs/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local secrets
+.env
+.env.local

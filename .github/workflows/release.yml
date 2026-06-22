@@ -1,0 +1,99 @@
+# AgenticFramework — Release CI (SPECS.md §22 Phase 5, §28).
+#
+# Triggers on a vX.Y.Z tag (set by the framework's own post-commit hook's
+# semver auto-tagging, hooks/post-commit). Builds and attaches the artifacts
+# install-ai-stack.sh falls back to downloading when run outside a local
+# checkout — these filenames are a contract, not arbitrary:
+#   scripts.tar.gz             (scripts/)
+#   hooks.tar.gz                (hooks/)
+#   workflow-templates.tar.gz   (workflow-templates/)
+#   templates.tar.gz            (templates/agent-rules.yaml)
+#
+# Optionally GPG-signs each tarball if ORG_GPG_KEY_ID + ORG_GPG_PRIVATE_KEY
+# secrets are configured — same signing mechanism as
+# enterprise/package-hook-bundle.sh, applied to the framework's own release
+# rather than a tenant org's hook bundle.
+
+name: "Release"
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Build release artifacts"
+        # NOTE: install-ai-stack.sh extracts each of these directly into its
+        # destination dir (e.g. `tar -xz -C "$SCRIPTS_DIR"`), so the tarball
+        # must NOT contain a top-level directory prefix — `-C <dir> .`
+        # archives the directory's CONTENTS, not the directory itself. Using
+        # `tar -czf x.tar.gz scripts` instead would nest everything under an
+        # extra scripts/ level on extraction, double-nesting every path.
+        run: |
+          mkdir -p dist
+          tar --exclude='__pycache__' -czf dist/scripts.tar.gz -C scripts .
+          tar -czf dist/hooks.tar.gz -C hooks .
+          tar -czf dist/workflow-templates.tar.gz -C workflow-templates .
+          tar -czf dist/templates.tar.gz -C templates agent-rules.yaml
+          ls -la dist/
+
+      - name: "Validate artifact structure"
+        # Extracts each tarball into a scratch dir and confirms no top-level
+        # directory prefix — the comment above already explains why that
+        # matters (install-ai-stack.sh's `tar -xz -C "$DIR" ` assumes
+        # contents-only archives); this step makes a regression in the build
+        # step (e.g. someone "fixing" it back to `tar -czf x.tar.gz scripts`)
+        # fail CI instead of silently shipping a release that breaks every
+        # fresh `install-ai-stack.sh` run (FIXES_AND_CLEANUP.md 4.13).
+        run: |
+          set -euo pipefail
+          for f in dist/*.tar.gz; do
+            scratch="$(mktemp -d)"
+            tar -xzf "$f" -C "$scratch"
+            top_entries=$(find "$scratch" -maxdepth 1 -mindepth 1 | wc -l | tr -d ' ')
+            # The double-nesting signature is exactly one top-level entry
+            # and it's a directory — a correctly "contents-only" archive of
+            # a dir with multiple files/subdirs at its root never collapses
+            # to a single top-level dir; templates.tar.gz (one file,
+            # agent-rules.yaml) is the one legitimate single-entry case, and
+            # that entry is a file, not a directory.
+            if [ "$top_entries" -eq 1 ] && [ -d "$(find "$scratch" -maxdepth 1 -mindepth 1)" ]; then
+              echo "❌ $f appears to have a top-level directory prefix (expected flat contents):"
+              find "$scratch" -maxdepth 2
+              exit 1
+            fi
+            echo "✅ $f extracts flat ($top_entries top-level entries)"
+            rm -rf "$scratch"
+          done
+
+      - name: "Import org GPG key (optional)"
+        if: ${{ env.ORG_GPG_PRIVATE_KEY != '' }}
+        env:
+          ORG_GPG_PRIVATE_KEY: ${{ secrets.ORG_GPG_PRIVATE_KEY }}
+        run: echo "$ORG_GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: "Sign release artifacts (optional)"
+        if: ${{ env.ORG_GPG_KEY_ID != '' }}
+        env:
+          ORG_GPG_KEY_ID: ${{ secrets.ORG_GPG_KEY_ID }}
+        run: |
+          for f in dist/*.tar.gz; do
+            gpg --batch --yes --local-user "$ORG_GPG_KEY_ID" --detach-sign --output "$f.sig" "$f"
+          done
+          ls -la dist/
+
+      - name: "Create GitHub Release"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          # Per SPECS.md §28: release notes should call out span-attribute or
+          # hook-interface breaking changes explicitly — generate_release_notes
+          # produces a baseline from merged PRs; amend manually for breaking changes.

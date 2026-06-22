@@ -1,0 +1,122 @@
+# AgenticFramework — Team-Shared Observability Stack
+#
+# Services:
+#   phoenix   — Arize Phoenix dashboard (loopback-only direct access)
+#   db        — PostgreSQL 16 (persistent Phoenix traces + annotations)
+#
+# Usage (solo local dev — unchanged from before, no auth required):
+#   Start:   docker compose up -d
+#   Stop:    docker compose down
+#   Logs:    docker compose logs -f phoenix
+#   Reset:   docker compose down -v   (⚠️  destroys all trace data)
+#
+#   Phoenix's port (PHOENIX_PORT, default 6006) is bound to 127.0.0.1 only —
+#   `http://localhost:6006` keeps working exactly as before. That's
+#   "Local (solo dev): None (local only)" per SPECS.md §15.
+#
+# Team-shared / production server — auth sidecar (SPECS.md §15: an
+# unauthenticated shared Phoenix is non-compliant):
+#
+#   Loopback-only above means Phoenix's raw port is NOT reachable from other
+#   machines AT ALL by default — that's deliberate. To make it reachable,
+#   you must explicitly add the auth overlay (docker-compose.auth.yml),
+#   which fronts Phoenix with HTTP basic auth via Caddy. There is no way to
+#   get external access without it:
+#
+#     docker run --rm caddy:2-alpine caddy hash-password --plaintext '<your-password>'
+#     # ⚠️  CRITICAL: the bcrypt hash contains literal '$' characters
+#     # (e.g. $2a$14$...). Compose interpolates .env file values, so a raw
+#     # '$' there gets treated as a (nonexistent) variable reference and
+#     # silently CORRUPTS the hash to an empty/broken string — auth would
+#     # then reject every password with no error at startup. You MUST
+#     # double every '$' to '$$' when writing it to .env:
+#     #   echo "PHOENIX_BASIC_AUTH_HASH=$(docker run --rm caddy:2-alpine caddy hash-password --plaintext '<your-password>' | sed 's/\$/\$\$/g')" >> .env
+#     cat >> .env << 'EOF'
+#     PHOENIX_BASIC_AUTH_USER=ops
+#     PHOENIX_BASIC_AUTH_HASH=<$$-escaped bcrypt hash from the command above>
+#     EOF
+#
+#     docker compose -f docker-compose.yml -f docker-compose.auth.yml up -d
+#
+#   Developers and CI then connect through Caddy's authenticated port
+#   (PHOENIX_AUTH_PORT, default 6007), not 6006:
+#
+#     export AGENT_PHOENIX_ENDPOINT="http://<server-ip>:${PHOENIX_AUTH_PORT:-6007}"
+#
+#   For TLS termination in front of Caddy's basic auth, see docs/team-observability.md §3.
+#
+# Other environment overrides (copy to .env in this directory):
+#   PHOENIX_PORT=6006
+#   PHOENIX_AUTH_PORT=6007
+#   POSTGRES_USER=phoenix
+#   POSTGRES_PASSWORD=phoenix
+#   POSTGRES_DB=phoenix
+
+version: "3.9"
+
+services:
+
+  # ── Arize Phoenix ────────────────────────────────────────────────────────────
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: agenticframework-phoenix
+    restart: unless-stopped
+    ports:
+      # Loopback-only: on a remote team server this port is unreachable from
+      # other machines — only caddy's authenticated port (below) is exposed
+      # beyond localhost. On a local dev machine, 127.0.0.1 IS localhost, so
+      # this is unchanged from before for solo dev.
+      - "127.0.0.1:${PHOENIX_PORT:-6006}:6006"
+      - "${PHOENIX_GRPC_PORT:-4317}:4317"   # OTLP gRPC ingestion (write-only; agents push traces here)
+    environment:
+      PHOENIX_SQL_DATABASE_URL: "postgresql://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD:-phoenix}@db:5432/${POSTGRES_DB:-phoenix}"
+      PHOENIX_WORKING_DIR: "/phoenix-data"
+    volumes:
+      - phoenix_data:/phoenix-data
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # NOT curl — the arizephoenix/phoenix image doesn't ship it (confirmed:
+      # "exec: curl: executable file not found in $PATH"), which silently made
+      # this healthcheck always report unhealthy regardless of whether Phoenix
+      # was actually up. python3 is guaranteed present (it's how the server
+      # itself runs).
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:6006/healthz', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - agenticframework
+
+  # ── PostgreSQL 16 ─────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: agenticframework-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     "${POSTGRES_USER:-phoenix}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-phoenix}"
+      POSTGRES_DB:       "${POSTGRES_DB:-phoenix}"
+    volumes:
+      - phoenix_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-phoenix} -d ${POSTGRES_DB:-phoenix}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agenticframework
+
+# ── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  phoenix_pg_data:
+    driver: local
+  phoenix_data:
+    driver: local
+
+# ── Network ───────────────────────────────────────────────────────────────────
+networks:
+  agenticframework:
+    driver: bridge

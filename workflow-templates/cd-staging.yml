@@ -1,0 +1,90 @@
+# Tenant-scoped CD — applies to THIS repository only.
+# tenant.id: {{TENANT_ID}}
+# Do not reference org-level shared secrets beyond this tenant's GitHub Environment.
+
+name: "CD: Staging Deploy"
+
+# Runs on every push to develop.
+# Eval fail gate (below 0.75) + smoke test. Staging failure blocks promotion to main.
+
+on:
+  push:
+    branches: ["develop"]
+
+concurrency:
+  group: cd-staging-${{ github.ref }}
+  cancel-in-progress: false   # Never cancel in-flight deploys
+
+jobs:
+  deploy:
+    name: "Deploy to Staging"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+
+    env:
+      ENVIRONMENT: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install framework dependencies
+        run: |
+          pip install \
+            "arize-phoenix>=4.0" \
+            "openinference-instrumentation-openai>=0.1.4" \
+            "opentelemetry-sdk>=1.20" \
+            "opentelemetry-exporter-otlp-proto-http>=1.20" \
+            "networkx>=3.0" \
+            "tiktoken>=0.5" \
+            "httpx>=0.25" \
+            "langchain-core>=0.2" \
+            "langchain-openai>=0.1" \
+            "langchain-anthropic>=0.1"
+
+      # ── REPLACE THIS STEP with your actual staging deployment ──────────────
+      # Examples:
+      #   Railway:   railway up --environment staging
+      #   Fly.io:    flyctl deploy --app <app>-staging
+      #   AWS ECS:   aws ecs update-service --cluster staging ...
+      #   GCP Run:   gcloud run deploy <service>-staging ...
+      - name: "Deploy to staging"
+        run: |
+          echo "🚀 Replace this step with your staging deployment command"
+          echo "   e.g. fly deploy / railway up / aws ecs update-service"
+        env:
+          ANTHROPIC_API_KEY:      ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY:         ${{ secrets.OPENAI_API_KEY }}
+
+      # ── Redaction compliance — staging profile must scrub secrets/PII ──────
+      - name: "Trace redaction compliance check"
+        env:
+          ENVIRONMENT: staging
+        run: python3 scripts/verify_system.py --check-redaction
+
+      # ── Post-deploy smoke: eval fail gate at 0.75 ──────────────────────────
+      - name: "Post-deploy eval smoke test"
+        env:
+          ANTHROPIC_API_KEY:      ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY:         ${{ secrets.OPENAI_API_KEY }}
+          AGENT_JUDGE_MODEL:      ${{ secrets.AGENT_JUDGE_MODEL || 'claude-3-5-sonnet-20241022' }}
+          AGENT_PHOENIX_ENDPOINT: ${{ secrets.AGENT_PHOENIX_ENDPOINT }}
+          AGENT_OWNER_ID:         ${{ secrets.AGENT_OWNER_ID || 'cd@agenticframework' }}
+        run: python3 scripts/run-evals.py --fail-below 0.75
+        # No continue-on-error — failure blocks promotion to main
+
+      - name: "Smoke failure notice"
+        if: failure()
+        run: |
+          echo "❌ Staging smoke test failed below 0.75 — promotion to production is blocked."
+          echo "   Fix the regression on develop before retrying ai-tenant-promote."
