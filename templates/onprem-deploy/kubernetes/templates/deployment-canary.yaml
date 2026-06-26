@@ -1,0 +1,36 @@
+{{- if .Values.canary.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "onprem.fullname" . }}-canary
+  labels:
+    app.kubernetes.io/name: {{ include "onprem.fullname" . }}
+    app.kubernetes.io/component: canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "onprem.fullname" . }}
+      app.kubernetes.io/component: canary
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "onprem.fullname" . }}
+        app.kubernetes.io/component: canary
+    spec:
+      containers:
+        - name: app
+          image: {{ .Values.image.canary }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.image.port }}
+          {{- include "onprem.envFrom" . | nindent 10 }}
+          env:
+            {{- include "onprem.env" . | nindent 12 }}
+          readinessProbe:
+            httpGet: { path: /healthz, port: {{ .Values.image.port }} }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+{{- end }}

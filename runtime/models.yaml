@@ -1,0 +1,37 @@
+# runtime/models.yaml — Framework default model registry (§29).
+#
+# Tenant repos may override any entry by placing their own `models.yaml` at the
+# tenant repo root. Per-role overrides without a full registry copy can also be
+# set in `.agenticframework/tenant.yaml` under `gateway.routing_overrides`.
+#
+# `degrade_to` defines the downgrade ladder target for tier 2 (Downgrade).
+
+models:
+  architect:
+    id: claude-3-5-sonnet-20241022
+    provider: anthropic
+    cost_per_input_token: 0.000003
+    cost_per_output_token: 0.000015
+    degrade_to: developer
+
+  developer:
+    id: gpt-4o
+    provider: openai
+    cost_per_input_token: 0.0000025
+    cost_per_output_token: 0.00001
+    degrade_to: validator
+
+  validator:
+    id: claude-3-haiku-20240307
+    provider: anthropic
+    cost_per_input_token: 0.00000025
+    cost_per_output_token: 0.00000125
+    degrade_to: fast
+
+  fast:
+    id: gemma2
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: null

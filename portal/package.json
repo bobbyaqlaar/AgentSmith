@@ -1,0 +1,34 @@
+{
+  "name": "agentsmith-ops-portal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AgentSmith Ops Portal — cross-tenant operations dashboard (SPECS.md §15, §26)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:migrate": "node --experimental-strip-types scripts/migrate.ts",
+    "test": "node --experimental-strip-types test/authz.test.ts && node --experimental-strip-types test/phoenix.test.ts",
+    "test:db": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/auditLog.test.ts"
+  },
+  "dependencies": {
+    "jose": "^6.2.3",
+    "next": "^14.2.5",
+    "openid-client": "^6.8.4",
+    "pg": "^8.12.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/pg": "^8.11.6",
+    "@types/react": "^18.3.3",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.3"
+  }
+}

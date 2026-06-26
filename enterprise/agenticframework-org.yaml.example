@@ -1,0 +1,36 @@
+# AgentSmith — Org Policy File (SPECS.md §30, enterprise pack).
+#
+# IT authors this file and includes it alongside the signed hook bundle when
+# packaging a release (see scripts/package-hook-bundle.sh). MDM deploys it
+# to ~/.agent-framework/agenticframework-org.yaml on every managed machine.
+# ai-stack-off reads it from there to enforce bypass_policy.
+
+hooks:
+  version: "1.0.0"
+  # disabled    — ai-stack-off always refuses; only IT can disable hooks
+  #               (e.g. temporarily relinking init.templateDir by hand).
+  # break-glass — ai-stack-off allows disabling hooks ONLY with a token that
+  #               matches AI_BREAK_GLASS_TOKEN, issued by IT per incident.
+  #               Every use (granted or denied) is written to the
+  #               enterprise audit log (see portal/lib/auditLog.ts, §30).
+  bypass_policy: disabled
+  break_glass_approvers: ["it-sec@example.com"]
+
+phoenix:
+  endpoint: "https://phoenix.corp.internal"
+  auth: oidc
+
+sso:
+  provider: okta
+  issuer: "https://corp.okta.com"
+  client_id: "REPLACE_ME"
+
+# Best-effort audit log write target (see install-ai-stack.sh's
+# _ai_audit_log_event and portal/app/api/audit/append/route.ts). Optional —
+# if unset, hook_bypass events are still enforced locally, just not logged
+# centrally.
+audit:
+  ops_portal_url: "https://ops.corp.internal"
+  # The write token itself is NOT stored here — set AUDIT_LOG_WRITE_TOKEN in
+  # the environment (e.g. via MDM-managed environment configuration), never
+  # commit it to this file.

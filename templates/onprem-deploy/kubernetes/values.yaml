@@ -1,0 +1,66 @@
+# Default values for agenticframework-onprem-app.
+# Same app contract as ../README.md: one image, one HTTP port, GET
+# /healthz, config from env/Secrets only, JSON-lines to stdout.
+
+# "traefik" or "envoy-gateway" — selects the default gatewayClassName
+# below if gatewayClassName is left empty. Both are real Gateway API
+# implementations; pick whichever the customer's cluster already runs.
+proxyEngine: traefik
+# Override the GatewayClass name directly if the cluster's installation
+# uses a non-default name (e.g. a pre-existing Envoy Gateway install).
+gatewayClassName: ""
+# Set to false if the customer already has a Gateway resource you should
+# attach an HTTPRoute to instead of this chart creating one.
+gateway:
+  create: true
+  name: agenticframework-gateway
+  listenerPort: 80
+
+host: "agent.example.com"
+
+image:
+  prod: "ghcr.io/your-org/your-app:latest"
+  canary: ""
+  shadow: ""
+  port: 8080
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+# Plain (non-secret) env vars merged into every app container (prod/canary/shadow).
+env: {}
+
+# Name of a pre-existing Secret (kubectl create secret generic ... / sealed-secrets /
+# whatever the customer's own secrets tooling produces) whose keys are
+# injected as env vars — this is the on-prem equivalent of the Compose
+# template's .env file, never an external cloud secret manager call.
+envSecretName: ""
+
+canary:
+  enabled: false
+  weightPercent: 10
+
+shadow:
+  enabled: false
+  mirrorPercent: 100
+
+# Consolidated relational + vector state layer, same rationale as the
+# Compose template's db service.
+withDb:
+  enabled: false
+  image: "pgvector/pgvector:pg16"
+  storage: 10Gi
+  credentialsSecretName: ""   # must provide POSTGRES_USER/PASSWORD/DB keys
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
