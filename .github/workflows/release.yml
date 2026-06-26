@@ -1,4 +1,4 @@
-# AgenticFramework — Release CI (SPECS.md §22 Phase 5, §28).
+# AgentSmith — Release CI (SPECS.md §22 Phase 5, §28).
 #
 # Triggers on a vX.Y.Z tag (set by the framework's own post-commit hook's
 # semver auto-tagging, hooks/post-commit). Builds and attaches the artifacts
@@ -42,6 +42,11 @@ jobs:
           tar -czf dist/hooks.tar.gz -C hooks .
           tar -czf dist/workflow-templates.tar.gz -C workflow-templates .
           tar -czf dist/templates.tar.gz -C templates agent-rules.yaml
+          # In-App Widget: no cdn.agenticframework.io exists (FIXES_AND_CLEANUP.md
+          # 5.11) — ship widget.js as a release asset so tenants can self-host it
+          # (e.g. <script src="/static/widget.js">) instead of pointing at a
+          # domain that was never actually provisioned.
+          cp templates/in-app-widget/widget.js dist/widget.js
           ls -la dist/
 
       - name: "Validate artifact structure"

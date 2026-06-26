@@ -129,7 +129,7 @@ def _notify_offline() -> None:
         from notifier import send_notification
         send_notification(
             "📡 Network Offline",
-            "AgenticFramework switched to LOCAL mode (Ollama).",
+            "AgentSmith switched to LOCAL mode (Ollama).",
             urgency="normal",
         )
     except Exception:
@@ -142,7 +142,7 @@ def _notify_recovery() -> None:
         from notifier import send_notification
         send_notification(
             "✅ Network Restored",
-            "AgenticFramework is back online — cloud models available.",
+            "AgentSmith is back online — cloud models available.",
             urgency="low",
         )
     except Exception:

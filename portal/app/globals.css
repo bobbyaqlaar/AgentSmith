@@ -2,7 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light/dark via the `dark` class on <html> (tailwind.config.ts:
+   darkMode: "class"), toggled by components/ui/ThemeToggle.tsx. Default
+   (no class) is light — dark is opt-in, not the other way around, so a
+   user with JS/localStorage unavailable still gets a readable page. */
 body {
+  background-color: #f8f9fb;
+  color: #16181d;
+}
+
+.dark body {
   background-color: #0b0e14;
   color: #e6e6e6;
 }

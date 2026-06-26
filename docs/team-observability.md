@@ -39,8 +39,8 @@ below — there is no way to accidentally expose it unauthenticated.
 
 ```bash
 # Clone the framework
-git clone https://github.com/<org>/AgenticFramework.git
-cd AgenticFramework
+git clone https://github.com/bobbyaqlaar/AgentSmith.git
+cd AgentSmith
 
 # Create a .env file with your credentials
 cat > .env << 'EOF'

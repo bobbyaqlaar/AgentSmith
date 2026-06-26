@@ -1,5 +1,5 @@
 """
-agent_logger.py — AgenticFramework structured log writer.
+agent_logger.py — AgentSmith structured log writer.
 
 Writes JSON-Lines to stdout and appends to .agent-history.log in the repo root.
 Enforces 4-level severity model: INFO / MINOR / MAJOR / CRITICAL.
@@ -25,47 +25,12 @@ from typing import Any, Literal, Optional
 Level = Literal["INFO", "MINOR", "MAJOR", "CRITICAL"]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-
-def _repo_root() -> Path:
-    """Walk up from cwd until .git is found; fall back to cwd."""
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".git").exists():
-            return parent
-    return cwd
-
-
-def _iso_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _tenant_id() -> Optional[str]:
-    """Read tenant.id from .agenticframework/tenant.yaml if present."""
-    try:
-        import yaml  # type: ignore
-    except ImportError:
-        # yaml not available — fall back to simple regex parse
-        try:
-            root = _repo_root()
-            tenant_file = root / ".agenticframework" / "tenant.yaml"
-            if tenant_file.exists():
-                text = tenant_file.read_text()
-                for line in text.splitlines():
-                    if line.strip().startswith("id:"):
-                        return line.split(":", 1)[1].strip()
-        except Exception:
-            pass
-        return None
-    try:
-        root = _repo_root()
-        tenant_file = root / ".agenticframework" / "tenant.yaml"
-        if tenant_file.exists():
-            with tenant_file.open() as fh:
-                data = yaml.safe_load(fh)
-            return (data or {}).get("tenant", {}).get("id")
-    except Exception:
-        pass
-    return None
+# _repo_root/_iso_now/_tenant_id used to be defined here; consolidated into
+# _shared.py since they were byte-for-byte duplicated across most of
+# scripts/*.py (this file was the canonical version _shared.py was lifted
+# from — see that module's docstring for why it's not also shared with
+# runtime/llm_gateway.py's separate copy).
+from _shared import _repo_root, _iso_now, _tenant_id  # noqa: E402
 
 
 def _project_name() -> str:

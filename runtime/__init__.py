@@ -1,5 +1,5 @@
 """
-AgenticFramework — Production Runtime Layer
+AgentSmith — Production Runtime Layer
 
 This package contains production-grade components for running agents at scale.
 It is intentionally separate from the `scripts/` dev-lifecycle package.

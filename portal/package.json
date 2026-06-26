@@ -1,16 +1,17 @@
 {
-  "name": "agenticframework-ops-portal",
+  "name": "agentsmith-ops-portal",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AgenticFramework Ops Portal — cross-tenant operations dashboard (SPECS.md §15, §26)",
+  "description": "AgentSmith Ops Portal — cross-tenant operations dashboard (SPECS.md §15, §26)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "node --experimental-strip-types scripts/migrate.ts",
-    "test": "node --experimental-strip-types test/authz.test.ts"
+    "test": "node --experimental-strip-types test/authz.test.ts && node --experimental-strip-types test/phoenix.test.ts",
+    "test:db": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/auditLog.test.ts"
   },
   "dependencies": {
     "jose": "^6.2.3",

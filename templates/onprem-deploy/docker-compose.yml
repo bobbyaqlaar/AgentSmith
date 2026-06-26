@@ -1,0 +1,101 @@
+# On-premise base stack — proxy-agnostic. The actual ingress/canary/shadow
+# routing is added by docker-compose.traefik.yml or docker-compose.envoy.yml
+# (selected by scripts/up.sh based on PROXY_ENGINE in .env); this file only
+# defines the app versions + optional state layer so it stays identical
+# regardless of which proxy a customer picks.
+#
+# Air-gapped: every image reference here must be either already `docker
+# load`-ed locally (see scripts/load-airgapped.sh) or reachable from a
+# private registry the customer's server can already reach — this file
+# does not pull from any public registry implicitly beyond what .env's
+# APP_IMAGE_* values point at, and pgvector/postgres below (bundle it too
+# via bundle-airgapped.sh if the target host has no internet at all).
+
+services:
+  app-prod:
+    image: ${APP_IMAGE_PROD}
+    container_name: onprem-app-prod
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - onprem
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:${APP_PORT:-8080}/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file   # stdout JSON-lines captured by Docker's default driver — README.md point 4
+
+  # Only started when APP_IMAGE_CANARY is set — profile gated by scripts/up.sh.
+  app-canary:
+    image: ${APP_IMAGE_CANARY}
+    container_name: onprem-app-canary
+    restart: unless-stopped
+    env_file: .env
+    profiles: ["canary"]
+    networks:
+      - onprem
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:${APP_PORT:-8080}/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+
+  # Only started when APP_IMAGE_SHADOW is set. Receives mirrored traffic
+  # only — never gets real client traffic routed to it, so it's safe to run
+  # a version that hasn't passed promotion yet (see README.md's warning
+  # about side effects: the proxy mirrors the HTTP request verbatim, it
+  # does not know whether your app's handling of it is side-effect-safe).
+  app-shadow:
+    image: ${APP_IMAGE_SHADOW}
+    container_name: onprem-app-shadow
+    restart: unless-stopped
+    env_file: .env
+    profiles: ["shadow"]
+    networks:
+      - onprem
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:${APP_PORT:-8080}/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+
+  # Optional consolidated state layer — relational + vector store in one
+  # container, per the expert recommendation, to minimize the customer's
+  # dependency surface. Only started when WITH_DB=true (profile "with-db").
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: onprem-db
+    restart: unless-stopped
+    profiles: ["with-db"]
+    environment:
+      POSTGRES_USER:     "${POSTGRES_USER:-app}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-changeme}"
+      POSTGRES_DB:       "${POSTGRES_DB:-app}"
+    volumes:
+      - onprem_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - onprem
+    logging:
+      driver: json-file
+
+volumes:
+  onprem_db_data:
+    driver: local
+
+networks:
+  onprem:
+    driver: bridge

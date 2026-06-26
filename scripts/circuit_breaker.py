@@ -35,12 +35,7 @@ COST_PER_OUTPUT_TOKEN = float(os.environ.get("AGENT_COST_PER_OUTPUT_TOKEN", "0.0
 
 # ── State file ────────────────────────────────────────────────────────────────
 
-def _repo_root() -> Path:
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".git").exists():
-            return parent
-    return cwd
+from _shared import _repo_root  # noqa: E402
 
 
 def _cache_path() -> Path:

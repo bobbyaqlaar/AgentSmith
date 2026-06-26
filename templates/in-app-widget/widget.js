@@ -1,5 +1,5 @@
 /**
- * AgenticFramework In-App Widget — <agent-status>
+ * AgentSmith In-App Widget — <agent-status>
  *
  * Embeddable, read-only status component for tenant applications
  * (SPECS.md §15, §26). No framework dependency, no build step.
@@ -25,6 +25,7 @@
   "use strict";
 
   const STATUS_COLORS = {
+    running: "#3b82f6",
     success: "#22c55e",
     degraded: "#f59e0b",
     failed: "#ef4444",
@@ -32,6 +33,7 @@
   };
 
   const STATUS_LABELS = {
+    running: "Working",
     success: "Operational",
     degraded: "Degraded",
     failed: "Failed",

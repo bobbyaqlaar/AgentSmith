@@ -43,22 +43,13 @@ NodeType = Literal["CodebaseFile", "Guardrail", "ProductionIncident"]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _repo_root() -> Path:
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".git").exists():
-            return parent
-    return cwd
+from _shared import _repo_root, _iso_now  # noqa: E402
 
 
 def _graph_path() -> Path:
     p = _repo_root() / ".agent-rfc" / "fixtures" / "knowledge_graph.json"
     p.parent.mkdir(parents=True, exist_ok=True)
     return p
-
-
-def _iso_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 # ── Core class ────────────────────────────────────────────────────────────────

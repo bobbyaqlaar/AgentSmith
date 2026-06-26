@@ -15,7 +15,7 @@
 
 meta:
   version: "1.0.0"
-  generated_from: "AgenticFramework"
+  generated_from: "AgentSmith"
 
 # ── Global rules (apply to all IDEs / stacks) ────────────────────────────────
 
@@ -114,7 +114,7 @@ stacks:
 
 skills:
   - id: efficiency_stack
-    title: "AgenticFramework Lifecycle Guardrails"
+    title: "AgentSmith Lifecycle Guardrails"
     trigger: "Before writing any code or making file changes"
     pillars: [1, 2, 4, 5, 6]
 

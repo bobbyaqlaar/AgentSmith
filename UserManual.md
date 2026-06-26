@@ -1,7 +1,7 @@
-# AgenticFramework — User Manual
+# AgentSmith — User Manual
 
 **Version:** 1.0  
-**For:** Developers and teams using AgenticFramework day-to-day  
+**For:** Developers and teams using AgentSmith day-to-day  
 **See also:** [Readme.md](./Readme.md) for overview · [SPECS.md](./SPECS.md) for full specification
 
 ---
@@ -51,7 +51,7 @@ docker --version
 ### Install the Framework
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<org>/AgenticFramework/main/install-ai-stack.sh | bash
+curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
 ```
 
 The installer:
@@ -146,6 +146,14 @@ The `post-checkout` hook fires on `git init` and automatically:
 - Writes the appropriate `.github/workflows/ci-*.yml`
 - Seeds the Knowledge Graph by scanning your codebase
 - Copies the baseline golden dataset from `~/.agent-framework/shared/` to `.agent-rfc/fixtures/golden_evals.json`
+- Writes `.agenticframework/enabled` — this is what tells `pre-commit`,
+  `commit-msg`, and `post-commit` that this repo has opted into
+  AgentSmith. The framework's hooks are installed **globally**
+  (`git config --global init.templateDir`), so they fire on every
+  `git init`/`git clone` on your machine — those three hooks silently
+  no-op in any repo that hasn't been through `post-checkout` at least once
+  (or doesn't have `.agenticframework/tenant.yaml` from `ai-tenant-init`),
+  so cloning an unrelated repo never trips your AgentSmith guardrails.
 
 ### Existing Project
 
@@ -475,7 +483,7 @@ Every developer installs the framework independently and runs their own Phoenix 
 
 ```bash
 # Each developer
-curl -fsSL https://raw.githubusercontent.com/<org>/AgenticFramework/main/install-ai-stack.sh | bash
+curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
 ai-mode-hybrid
 ai-dashboard-start
 ```
@@ -488,8 +496,8 @@ Run a single Phoenix + PostgreSQL instance on a team server. All developers poin
 
 ```bash
 # Clone the framework repo
-git clone https://github.com/<org>/AgenticFramework.git
-cd AgenticFramework
+git clone https://github.com/bobbyaqlaar/AgentSmith.git
+cd AgentSmith
 
 # Start the shared stack
 docker compose up -d
@@ -518,7 +526,7 @@ When you update the framework rules (e.g., new `.cursorrules` content or updated
 
 ```bash
 # On your machine — pull latest framework
-cd AgenticFramework && git pull
+cd AgentSmith && git pull
 
 # Re-run the installer to update hooks and templates
 ./install-ai-stack.sh
@@ -757,7 +765,7 @@ ai-stack-scrub /path/to/project
 ### As Needed: Upgrade the Framework
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<org>/AgenticFramework/main/install-ai-stack.sh | bash
+curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
 source ~/.zshrc
 
 # Re-apply to existing projects

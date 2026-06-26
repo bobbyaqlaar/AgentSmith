@@ -34,6 +34,10 @@ import { SESSION_COOKIE_NAME, verifySessionToken } from "./lib/sessionToken";
 // reasoning as /api/sync/*, gated by AUDIT_LOG_WRITE_TOKEN instead. Reading
 // the audit log (GET /api/audit) still requires basic auth/SSO, unaffected.
 //
+// /api/runs/ingest is runtime/llm_gateway.py's best-effort run-status push
+// (FIXES_AND_CLEANUP.md P2a) — same machine-to-machine reasoning as
+// /api/sync/*, gated by OPS_PORTAL_SYNC_TOKEN inside the route handler.
+//
 // /api/auth/* must always be reachable unauthenticated — it IS the
 // login/callback/logout flow; gating it would make login impossible.
 // Each exclusion is anchored to a path-segment boundary (`(?:/|$)`) so a
@@ -43,7 +47,7 @@ import { SESSION_COOKIE_NAME, verifySessionToken } from "./lib/sessionToken";
 // a latent auth-bypass footgun (see FIXES_AND_CLEANUP.md 2.6).
 export const config = {
   matcher:
-    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/auth(?:/|$)).*)",
+    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/runs/ingest(?:/|$)|api/auth(?:/|$)).*)",
 };
 
 // Strip any client-supplied copy of the trusted RBAC headers before they can
@@ -160,6 +164,6 @@ export async function middleware(request: NextRequest) {
 
   return new NextResponse("Authentication required.", {
     status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="AgenticFramework Ops Portal"' },
+    headers: { "WWW-Authenticate": 'Basic realm="AgentSmith Ops Portal"' },
   });
 }

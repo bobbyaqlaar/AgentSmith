@@ -1,4 +1,4 @@
-# AgenticFramework — Phoenix auth sidecar (SPECS.md §15).
+# AgentSmith — Phoenix auth sidecar (SPECS.md §15).
 #
 # Team-shared and production Phoenix deployments MUST require authentication
 # — an unauthenticated shared Phoenix instance is non-compliant even with

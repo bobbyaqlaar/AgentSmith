@@ -17,7 +17,7 @@ export interface AgentStatusProps {
   token: string;
   portalUrl: string;
   pollIntervalMs?: number;
-  widgetScriptUrl?: string; // defaults to the AgenticFramework CDN build
+  widgetScriptUrl?: string; // defaults to the AgentSmith CDN build
 }
 
 let widgetScriptPromise: Promise<void> | null = null;

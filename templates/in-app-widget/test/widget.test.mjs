@@ -70,6 +70,21 @@ await test("renders status, tenant label, truncated error, and trace link", asyn
   assert.match(html, /href="https:\/\/phoenix\.acme\.example\.com\/projects"/);
 });
 
+await test("renders 'Working' for status=running, not the 'Unknown' fallback", async () => {
+  // Regression: STATUS_LABELS/STATUS_COLORS had no "running" entry even
+  // after runStatus.ts made "running" a reachable status (agent_runs +
+  // workflow_id aggregation) — every in-progress run silently rendered
+  // as gray "Unknown" to end users instead of a meaningful in-progress state.
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({ tenantId: "acme", status: "running", errorSummary: null, traceUrl: null }),
+  });
+  const el = await mountWidget({ "tenant-id": "acme", token: "good", "portal-url": "https://ops.example.com" });
+  const html = el.shadowRoot.innerHTML;
+  assert.match(html, /Working/);
+  assert.doesNotMatch(html, /Unknown/);
+});
+
 await test("invalid token shows an error, not a crash", async () => {
   global.fetch = async () => ({ ok: false, status: 401, json: async () => ({ error: "invalid or revoked token" }) });
   const el = await mountWidget({ token: "bad", "portal-url": "https://ops.example.com" });

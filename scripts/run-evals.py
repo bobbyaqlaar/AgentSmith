@@ -31,12 +31,7 @@ from typing import Any, Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-def _repo_root() -> Path:
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".git").exists():
-            return parent
-    return cwd
+from _shared import _repo_root  # noqa: E402
 
 
 def _golden_path() -> Path:
@@ -84,7 +79,7 @@ def _judge_case(
     If project_response is None, the agent pipeline is invoked first to
     generate a response, then the judge scores it.
     """
-    from cost_router import call as llm_call
+    from eval_judge import judge_case as _shared_judge_case
 
     start = time.monotonic()
 
@@ -99,40 +94,7 @@ def _judge_case(
 
     elapsed_ms = int((time.monotonic() - start) * 1000)
 
-    # Build historical learnings addendum
-    historical = criteria.get("historical_learnings", [])
-    historical_text = "\n".join(f"- {l}" for l in historical) if historical else "(none yet)"
-
-    judge_prompt = f"""{criteria.get('instructions', '')}
-
-{historical_text}
-
-=== CASE TO EVALUATE ===
-INPUT: {case['input']}
-EXPECTED TOOL: {case.get('expected_tool', 'any')}
-REFERENCE OUTPUT: {case.get('reference_output', '(none)')}
-ACTUAL OUTPUT:
-{project_response}
-
-Respond with ONLY a JSON object:
-{{
-  "correctness": 0 or 1,
-  "tool_accuracy": 0 or 1,
-  "quality_notes": "<brief observation>",
-  "score": 0.0..1.0
-}}"""
-
-    try:
-        raw = llm_call(
-            judge_prompt,
-            system="You are a strict technical evaluator. Respond with JSON only.",
-            task_type="review",
-        )
-        import re
-        m = re.search(r'\{.*\}', raw, re.DOTALL)
-        scored = json.loads(m.group(0)) if m else {"correctness": 0, "tool_accuracy": 0, "score": 0.0}
-    except Exception as exc:
-        scored = {"correctness": 0, "tool_accuracy": 0, "score": 0.0, "error": str(exc)}
+    scored = _shared_judge_case(case, criteria, judge_model, project_response)
 
     return {
         "case_id":        case.get("id", "unknown"),
@@ -160,7 +122,7 @@ def run_scorecard(fail_below: float = 0.80) -> int:
     project  = _repo_root().name
     ts       = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    print(f"🎯 AgenticFramework Eval — {project} @ {ts}")
+    print(f"🎯 AgentSmith Eval — {project} @ {ts}")
     print(f"   Judge model:  {judge}")
     print(f"   Criteria:     {criteria.get('name', 'default')}")
     print(f"   Cases loaded: {len(cases)}")
@@ -236,7 +198,7 @@ def run_scorecard(fail_below: float = 0.80) -> int:
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run AgenticFramework eval scorecard")
+    parser = argparse.ArgumentParser(description="Run AgentSmith eval scorecard")
     parser.add_argument(
         "--fail-below",
         type=float,

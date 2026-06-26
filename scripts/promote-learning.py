@@ -29,12 +29,7 @@ from typing import Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-def _repo_root() -> Path:
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".git").exists():
-            return parent
-    return cwd
+from _shared import _repo_root, _iso_now  # noqa: E402
 
 
 def _golden_path() -> Path:
@@ -47,10 +42,6 @@ def _criteria_path() -> Path:
 
 def _log_path() -> Path:
     return _repo_root() / ".agent-history.log"
-
-
-def _iso_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 # ── Core promoter ─────────────────────────────────────────────────────────────

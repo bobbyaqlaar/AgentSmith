@@ -21,6 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: staging
+    permissions:
+      contents: read
+      packages: write   # only used if a Dockerfile is present — see build-push-ghcr
 
     env:
       ENVIRONMENT: staging
@@ -31,6 +34,14 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+
+      # ── Containerize + push to GHCR (optional — skips if no Dockerfile) ────
+      # The pushed image_ref is exported as $IMAGE_REF for DEPLOY_COMMAND to
+      # consume (e.g. `flyctl deploy --image "$IMAGE_REF"`); for on-prem/K8s
+      # customers it's the artifact templates/onprem-deploy/ expects.
+      - name: "Build & push container image"
+        id: image
+        uses: ./.github/actions/build-push-ghcr
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -52,25 +63,30 @@ jobs:
             "langchain-openai>=0.1" \
             "langchain-anthropic>=0.1"
 
-      # ── REPLACE THIS STEP with your actual staging deployment ──────────────
-      # Examples:
-      #   Railway:   railway up --environment staging
-      #   Fly.io:    flyctl deploy --app <app>-staging
-      #   AWS ECS:   aws ecs update-service --cluster staging ...
-      #   GCP Run:   gcloud run deploy <service>-staging ...
+      # ── Deploy to staging. Set the DEPLOY_COMMAND secret on this tenant's
+      # GitHub Environment to wire in your platform — no workflow YAML edit
+      # needed. Unset = no-op placeholder (OPERATIONS.md "Wire your platform").
       - name: "Deploy to staging"
-        run: |
-          echo "🚀 Replace this step with your staging deployment command"
-          echo "   e.g. fly deploy / railway up / aws ecs update-service"
+        uses: ./.github/actions/deploy-placeholder
         env:
-          ANTHROPIC_API_KEY:      ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY:         ${{ secrets.OPENAI_API_KEY }}
+          IMAGE_REF: ${{ steps.image.outputs.image_ref }}
+        with:
+          deploy_command: ${{ secrets.DEPLOY_COMMAND }}
+          environment_label: staging
 
       # ── Redaction compliance — staging profile must scrub secrets/PII ──────
       - name: "Trace redaction compliance check"
         env:
           ENVIRONMENT: staging
         run: python3 scripts/verify_system.py --check-redaction
+
+      # ── Sync history to the Ops Portal (optional — skips silently if the
+      # secrets below aren't configured for this tenant's GitHub Environment) ──
+      - name: "Sync history to Ops Portal"
+        env:
+          OPS_PORTAL_URL:        ${{ secrets.OPS_PORTAL_URL }}
+          OPS_PORTAL_SYNC_TOKEN: ${{ secrets.OPS_PORTAL_SYNC_TOKEN }}
+        run: python3 scripts/sync-portal-history.py
 
       # ── Post-deploy smoke: eval fail gate at 0.75 ──────────────────────────
       - name: "Post-deploy eval smoke test"
@@ -85,6 +101,12 @@ jobs:
 
       - name: "Smoke failure notice"
         if: failure()
-        run: |
-          echo "❌ Staging smoke test failed below 0.75 — promotion to production is blocked."
-          echo "   Fix the regression on develop before retrying ai-tenant-promote."
+        uses: ./.github/actions/rollback-notify
+        with:
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          teams_webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          # No rollback_command on staging by default — there's nothing in
+          # production to roll back yet; this just notifies + fails red.
+          # Promotion to production is already blocked by this failure.
+          environment_label: staging
+          failure_context: "Staging smoke test failed below 0.75 — promotion to production is blocked"

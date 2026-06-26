@@ -1,18 +1,30 @@
-# AgenticFramework — Team-Shared Observability Stack
+# AgentSmith — Standing Dev-Machine Observability + Ops Stack
 #
 # Services:
 #   phoenix   — Arize Phoenix dashboard (loopback-only direct access)
-#   db        — PostgreSQL 16 (persistent Phoenix traces + annotations)
+#   db        — PostgreSQL 16 (persistent Phoenix traces + Ops Portal data,
+#               two separate logical databases — see init-db/ below)
+#   portal    — Ops Portal (Next.js) — cross-tenant cost/issues/audit
+#               dashboard, RBAC, SSO; see portal/README.md
+#
+# This is the machine-wide standing stack — vendored to
+# ~/.agent-framework/observability/ and managed via `ai-dashboard-start` /
+# `ai-dashboard-stop` (install-ai-stack.sh) so every repo on this machine
+# shares one Phoenix + one Ops Portal rather than each spinning up its own.
+# A repo can opt out entirely with `touch .agenticframework/no-shared-infra`
+# (see hooks/post-checkout) — see OPERATIONS.md §2 / Part B.
 #
 # Usage (solo local dev — unchanged from before, no auth required):
 #   Start:   docker compose up -d
 #   Stop:    docker compose down
 #   Logs:    docker compose logs -f phoenix
-#   Reset:   docker compose down -v   (⚠️  destroys all trace data)
+#   Migrate: docker compose run --rm portal npm run db:migrate
+#   Reset:   docker compose down -v   (⚠️  destroys all trace + portal data)
 #
-#   Phoenix's port (PHOENIX_PORT, default 6006) is bound to 127.0.0.1 only —
-#   `http://localhost:6006` keeps working exactly as before. That's
-#   "Local (solo dev): None (local only)" per SPECS.md §15.
+#   Phoenix's port (PHOENIX_PORT, default 6006) and the portal's port
+#   (OPS_PORTAL_PORT, default 3000) are bound to 127.0.0.1 only —
+#   unchanged from before for solo dev ("Local (solo dev): None (local
+#   only)" per SPECS.md §15).
 #
 # Team-shared / production server — auth sidecar (SPECS.md §15: an
 # unauthenticated shared Phoenix is non-compliant):
@@ -43,6 +55,9 @@
 #
 #     export AGENT_PHOENIX_ENDPOINT="http://<server-ip>:${PHOENIX_AUTH_PORT:-6007}"
 #
+#   The Ops Portal has its own auth (basic auth or SSO, enforced by
+#   portal/middleware.ts) — it does not need the Caddy overlay.
+#
 #   For TLS termination in front of Caddy's basic auth, see docs/team-observability.md §3.
 #
 # Other environment overrides (copy to .env in this directory):
@@ -51,6 +66,11 @@
 #   POSTGRES_USER=phoenix
 #   POSTGRES_PASSWORD=phoenix
 #   POSTGRES_DB=phoenix
+#   OPS_PORTAL_PORT=3000
+#   OPS_PORTAL_USER=admin
+#   OPS_PORTAL_PASSWORD=<set a real one>
+#   AUDIT_LOG_HMAC_KEY=<random 32+ byte string>
+#   OPS_PORTAL_SYNC_TOKEN=<random string, used by CD's history-sync step>
 
 version: "3.9"
 
@@ -91,6 +111,15 @@ services:
       - agenticframework
 
   # ── PostgreSQL 16 ─────────────────────────────────────────────────────────────
+  # Two logical databases on one server, kept deliberately separate:
+  #   ${POSTGRES_DB:-phoenix}  — Phoenix's own trace/annotation storage
+  #   agenticframework         — Ops Portal + runtime operational data
+  #                              (tenants, audit log, DLQ, idempotency,
+  #                              llm_gateway_budget) — never mixed into
+  #                              Phoenix's own alembic-migrated schema.
+  # init-db/01-create-agenticframework-db.sh only runs on a fresh, empty
+  # volume (Postgres's own docker-entrypoint-initdb.d convention) — it does
+  # NOT run again on every restart, so it won't clobber an existing DB.
   db:
     image: postgres:16-alpine
     container_name: agenticframework-db
@@ -101,11 +130,54 @@ services:
       POSTGRES_DB:       "${POSTGRES_DB:-phoenix}"
     volumes:
       - phoenix_pg_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-phoenix} -d ${POSTGRES_DB:-phoenix}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - agenticframework
+
+  # ── Ops Portal ────────────────────────────────────────────────────────────────
+  portal:
+    build:
+      context: ./portal
+    container_name: agenticframework-portal
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${OPS_PORTAL_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL:           "postgresql://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD:-phoenix}@db:5432/agenticframework"
+      OPS_PORTAL_USER:        "${OPS_PORTAL_USER:-admin}"
+      OPS_PORTAL_PASSWORD:    "${OPS_PORTAL_PASSWORD:-}"
+      AUDIT_LOG_HMAC_KEY:     "${AUDIT_LOG_HMAC_KEY:-}"
+      OPS_PORTAL_SYNC_TOKEN:  "${OPS_PORTAL_SYNC_TOKEN:-}"
+      OPS_PORTAL_USERS:       "${OPS_PORTAL_USERS:-}"
+      SSO_ENABLED:            "${SSO_ENABLED:-false}"
+      SSO_ISSUER:             "${SSO_ISSUER:-}"
+      SSO_CLIENT_ID:          "${SSO_CLIENT_ID:-}"
+      SSO_CLIENT_SECRET:      "${SSO_CLIENT_SECRET:-}"
+      SSO_REDIRECT_URI:       "${SSO_REDIRECT_URI:-}"
+      SSO_SESSION_SECRET:     "${SSO_SESSION_SECRET:-}"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # Every route is auth-gated (basic auth or SSO via middleware.ts), so
+      # a 401 is the EXPECTED response from a healthy portal — checking for
+      # an open TCP port (not a 200 status) is the right bar here, same
+      # reasoning as Phoenix's healthcheck above using python3 instead of
+      # a tool that isn't in the base image: busybox nc ships in alpine.
+      # Use 127.0.0.1, not "localhost" — Next's standalone server binds
+      # 0.0.0.0 (IPv4) only, and this container's /etc/hosts resolves
+      # "localhost" to ::1 first, so nc would dial a port nothing listens
+      # on and always report unhealthy despite the app working fine.
+      test: ["CMD", "nc", "-z", "127.0.0.1", "3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
     networks:
       - agenticframework
 

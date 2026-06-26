@@ -59,6 +59,9 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
+      - name: Format check (ruff format)
+        run: ruff format --check .
+
       - name: Run tests
         env:
           DATABASE_URL: "postgresql+asyncpg://test:test@localhost:5432/test"

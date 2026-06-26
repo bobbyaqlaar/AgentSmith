@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AgenticFramework: post-commit
+# AgentSmith: post-commit
 # 1. Updates the Knowledge Graph via AST mapper
 # 2. Auto-tags semver from Conventional Commit type
 # 3. Appends to .agent-history.log
@@ -11,6 +11,18 @@ export SEMVER_LOOP_GUARD="true"
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 [ -z "$REPO_ROOT" ] && exit 0
+
+# ── Developer opt-in gate ──────────────────────────────────────────────────────
+# git's global init.templateDir applies these hooks to EVERY `git init`/
+# `git clone` on the machine — including repos that have nothing to do with
+# AgentSmith. post-checkout writes .agenticframework/enabled the first
+# time it provisions a repo (or tenant.yaml already exists, for
+# multi-tenancy repos) — until one of those exists, enforcement hooks no-op
+# rather than auto-tagging/logging in an unrelated repo.
+if [ ! -f "$REPO_ROOT/.agenticframework/enabled" ] && [ ! -f "$REPO_ROOT/.agenticframework/tenant.yaml" ] \
+   && [ ! -f "$HOME/.agent-framework/agenticframework-org.yaml" ]; then
+  exit 0
+fi
 
 # ── 1. Update Knowledge Graph ─────────────────────────────────────────────────
 MAP_SCRIPT="$REPO_ROOT/scripts/map_codebase.py"

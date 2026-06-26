@@ -1,11 +1,11 @@
-# AgenticFramework — Reference Examples
+# AgentSmith — Reference Examples
 
 This directory contains reference tenant application examples.
 
 ## Important
 
 > **Copy and rename these directories into your own repository.**
-> Do NOT deploy from `AgenticFramework/examples/` directly.
+> Do NOT deploy from `AgentSmith/examples/` directly.
 > Examples are reference implementations, not production deployment targets.
 
 Each example demonstrates the full tenant application pattern:

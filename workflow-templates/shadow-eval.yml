@@ -1,0 +1,50 @@
+name: "Shadow eval sampler (optional, opt-in)"
+
+# Nightly async sampler over production traces (SPECS.md §9, P1c). NOT
+# copied automatically by ai-tenant-init — tenants opt in by copying this
+# file into their own .github/workflows/, same posture as the
+# cd-deploy.yml replacement (framework provides the template, tenant owns
+# the CI surface). Requires AGENT_PHOENIX_ENDPOINT to point at a reachable
+# Phoenix and a judge API key — both secrets, never failed loudly if
+# absent (the script exits 0 either way; see scripts/shadow-eval.py).
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # nightly, 03:00 UTC — adjust per tenant traffic patterns
+  workflow_dispatch:
+    inputs:
+      sample_rate:
+        description: "Fraction of production spans to judge"
+        default: "0.05"
+      since_hours:
+        description: "Window of production spans to consider"
+        default: "24"
+
+jobs:
+  shadow-eval:
+    name: "Shadow eval"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install httpx>=0.25
+
+      - name: Run shadow eval sampler
+        env:
+          ANTHROPIC_API_KEY:      ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY:         ${{ secrets.OPENAI_API_KEY }}
+          AGENT_JUDGE_MODEL:      ${{ secrets.AGENT_JUDGE_MODEL || 'claude-3-5-sonnet-20241022' }}
+          AGENT_PHOENIX_ENDPOINT: ${{ secrets.AGENT_PHOENIX_ENDPOINT || '' }}
+        run: |
+          python3 scripts/shadow-eval.py \
+            --sample-rate "${{ github.event.inputs.sample_rate || '0.05' }}" \
+            --since-hours "${{ github.event.inputs.since_hours || '24' }}"
