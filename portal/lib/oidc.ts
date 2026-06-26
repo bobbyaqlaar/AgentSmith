@@ -22,7 +22,7 @@ import {
 // Re-exported for existing callers of this module (app/api/auth/* routes,
 // which run on the Node runtime and can safely import oidc.ts in full) —
 // see lib/sessionToken.ts for why the implementation itself lives there now.
-export { SESSION_COOKIE_NAME, createSessionToken, verifySessionToken };
+export { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS, createSessionToken, verifySessionToken };
 
 // Cookie Secure flag, tied to the SAME explicit opt-in as the OIDC insecure-
 // HTTP allowance — NOT to NODE_ENV. `next start` sets NODE_ENV=production

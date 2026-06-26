@@ -20,6 +20,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "workflows"))
+# oil_price_workflow.py subclasses BaseAgentWorkflow (runtime/workflows/) —
+# added here, not inside oil_price_workflow.py itself, because that file
+# defines the workflow class and gets re-imported by Temporal's sandbox
+# for determinism validation; a sys.path.insert(..., Path(...).resolve()...)
+# at THAT module's top level trips the sandbox's restriction on
+# pathlib.Path.resolve() (confirmed by running it — not a guess).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "runtime"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "runtime" / "workflows"))
 
 from oil_price_workflow import OilPricePredictionWorkflow  # type: ignore
 from activities import (  # type: ignore

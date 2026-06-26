@@ -1,20 +1,20 @@
-# AgenticFramework — Formal Specification
+# AgentSmith — Formal Specification
 
-**Version:** 0.4.0-draft
-**Date:** 2026-06-22
-**Status:** Draft — incorporates tenancy, production runtime, and observability review
+**Version:** 0.5.0-draft
+**Date:** 2026-06-23
+**Status:** Draft — incorporates tenancy, production runtime, observability review, and the security/correctness fix pass tracked in `FIXES_AND_CLEANUP.md`
 
 ---
 
 ## 1. Purpose
 
-AgenticFramework is a two-layer package that provisions the complete lifecycle environment for AI agents.
+AgentSmith is a two-layer package that provisions the complete lifecycle environment for AI agents.
 
 **Layer 1 — Dev Lifecycle (workstation):** IDE guardrails, git hooks, local/hybrid LLM routing, PR evaluations, Knowledge Graph, self-improvement loop. Installed once per developer machine or team server.
 
 **Layer 2 — Production Runtime (cloud):** Durable workflow orchestration, tenant-scoped deployment, LLM gateway with per-tenant budget enforcement, environment-aware trace redaction, ops portal.
 
-> AgenticFramework equips each tenant application to deploy itself. It does not deploy customer applications from a shared platform repository.
+> AgentSmith equips each tenant application to deploy itself. It does not deploy customer applications from a shared platform repository.
 
 Installed once (developer mode) or deployed as org bundle (enterprise mode), it sets up:
 
@@ -30,6 +30,34 @@ Installed once (developer mode) or deployed as org bundle (enterprise mode), it 
 - Tenant scaffold tooling (`ai-tenant-init`, `ai-tenant-promote`)
 - Three observability surfaces: Phoenix traces/evals/HITL, Ops Portal (cross-tenant ops), In-App Widget (end-user status)
 
+### Implementation Status Against This Vision
+
+Everything in the list above is implemented and verified against real
+infrastructure (Postgres, Redis, a real OIDC provider, `kind` Kubernetes,
+real GPG keys) — see `FIXES_AND_CLEANUP.md` for the line-by-line audit
+trail. Specifically real, not aspirational:
+
+- Dev lifecycle layer (hooks, IDE rules, Knowledge Graph, dev-mode LLM routing, eval gate)
+- Production LLM Gateway with atomic per-tenant budget enforcement and a degrade ladder
+- Environment-aware trace redaction with per-span tenant binding and encrypted HITL blobs
+- Idempotency store and dead-letter queue (Postgres-backed; see §25)
+- Ops Portal with role-based access control, signed/tamper-evident audit log, SSO session revocation
+- Enterprise pack: signed hook bundles, HMAC-validated break-glass tokens, developer opt-in + RFC enforcement gates
+
+Three pieces of the production-runtime vision are deliberately **not yet
+implemented** — building them without a live Ops Portal/Phoenix instance to
+validate against would mean shipping untested integration code:
+
+| Gap | What's missing | Tracked as |
+|---|---|---|
+| Automatic CD → Ops Portal history sync | `cd-staging.yml`/`cd-production.yml` don't push `.agent-history.log` to the portal automatically — manual `curl POST /api/sync/history` works today (§26) | `FIXES_AND_CLEANUP.md` P1b |
+| Shadow eval sampler | No production-traffic sampling → async LLM-judge → Phoenix experiment pipeline yet (§9 describes the design) | `FIXES_AND_CLEANUP.md` P1c |
+| Ops Portal v2 (real run status, cost caps, Phoenix depth) | Widget status is inferred from `.agent-history.log` only (never reports "running"); cost cap is always `null`; Phoenix integration is health-check + link only, no GraphQL query surface | `FIXES_AND_CLEANUP.md` P2 |
+| CD deploy/rollback automation | Deploy step is an intentional placeholder (tenant supplies the real command); rollback prints platform commands rather than executing them | `FIXES_AND_CLEANUP.md` P4 |
+
+See the implementation plan under "Deliberately not implemented" in
+`FIXES_AND_CLEANUP.md` for the proposed approach to each, pending sign-off.
+
 ---
 
 ## 2. Guiding Principles
@@ -44,7 +72,7 @@ Installed once (developer mode) or deployed as org bundle (enterprise mode), it 
 | **Tenant Isolation** | Each customer application is an independent repository with isolated promotion tracks, eval suites, config, and runtime partition key (`tenant.id`). |
 | **Environment Safety** | Trace and log content policy varies by `$ENVIRONMENT`; production never stores raw secrets or PII in observability backends by default. |
 | **Durable Execution** | Production agent workflows must survive process crash, deploy, and network failure via external checkpointing and idempotent activities. |
-| **Framework ≠ Application** | AgenticFramework releases on its own semver; tenant apps pin and upgrade independently. |
+| **Framework ≠ Application** | AgentSmith releases on its own semver; tenant apps pin and upgrade independently. |
 
 ---
 
@@ -257,6 +285,40 @@ Domain agent topologies (e.g., ingestion → prediction → decision → order) 
 `cost_router.py` limitations: not wired into IDEs, uses brittle heuristics, no per-model accurate accounting. Acceptable for dev sessions; inadequate for production multi-tenant cost control.
 
 Production degrade path: throttle rate → downgrade model tier → queue with delay → halt cloud inference (local fallback if available) → alert via Ops Portal + Slack/Teams.
+
+---
+
+## 4a. Architecture by Layer
+
+§4's Ten Pillars are this framework's own operational guardrails. This
+section is a different, complementary cut: the **functional and
+non-functional layers** any agentic application needs, each mapped to the
+§-numbered section below that specifies it precisely, plus what's
+genuinely not built and why a particular alternative wasn't chosen where
+that decision has already been made. Read this before re-evaluating a
+design choice that's recorded here as settled.
+
+### Functional layers
+
+| Layer | Current state | Detail |
+|---|---|---|
+| **Reasoning & Planning** | Fixed-topology reference patterns (Architect→Developer→Validator), not a generic planner | §8 (execution modes), §9 (eval framework scores the output of these patterns) |
+| **Tool Orchestration** | Activity *execution* + recovery exists (Temporal); tool *registration*/schema-extraction (e.g. an `@tool` decorator) and LLM-driven tool-call selection do not — `llm_gateway.py.complete()` sends a prompt and receives text, no function-calling fields in the provider request | §25 (Production Runtime), §29 (LLM Gateway) |
+| **Memory Management** | Not implemented: no token-window manager (truncation/summarization/sliding-window), no vector-database integration (Chroma/pgvector/etc.). Present but distinct: Temporal's durable-execution history (workflow progress, not conversation memory) and LangGraph `PostgresSaver` (dev/hybrid only, `MemorySaver` banned in production) | §25 "Idempotency Key Design", §8 |
+| **Perception & Input Parsing** | Narrow JSON-from-text extraction (`re.search` + `json.loads`, no schema validation) in the reference pipelines; no dynamic prompt-template engine (prompts are inline f-strings) | §8 |
+| **Human-in-the-Loop (HITL)** | The most built-out layer — two distinct mechanisms, see §25 "HITL Pause / Resume" for the full approve/reject vs. edit-and-resume split and the recorded reasoning for Temporal signals over Slack+Retool/LangGraph-interrupt alternatives, and for the portal-webhook-bridge design over a direct portal-side Temporal client | §25, §30 (HITL RBAC) |
+
+### Non-functional layers
+
+| Layer | Current state | Detail |
+|---|---|---|
+| **Observability & Traceability** | Full span attribution (tenant/agent/cost/tokens) via OTel→Phoenix. Time-to-First-Token is NOT tracked — `llm_gateway.py` is non-streaming, so there's no first-token timestamp to record | §15, §29 |
+| **Reliability & Accuracy** | `correctness`/`tool_accuracy`/`latency` scored per case (§9) — no metric literally named "hallucination rate" (a hallucination surfaces as low `correctness`, not its own number). Auto-retry is two-tiered: Temporal retries transient failures automatically; `run_with_recoverable_step` deliberately disables that for validation-shaped failures (`RetryPolicy(maximum_attempts=1)`) since they need a *different* payload, not a bare retry. No LLM-driven self-correction loop exists — recovery is always human-driven (DLQ) or Temporal-driven (transient retry), never model-driven | §9, §25 |
+| **Security & Guardrails** | Asymmetric: `trace_redactor.py` redacts/anonymizes data **after** a call for observability storage — there is no symmetric **pre-call** PII scrubber or content moderator between user input and the prompt sent to the model | §27 (Trace Redaction) |
+| **Explainability** | Infrastructure-level: HMAC-signed, tamper-evident, append-only audit log (§30) + full OTel trace history — not per-decision natural-language reasoning narration | §30, §15 |
+| **Scalability & Performance** | Workflow concurrency via Temporal's shared/dedicated worker-pool model (§23, §25); app-version traffic-shaping via on-prem canary routing, customer's choice of Traefik or Envoy (§25 "On-Premise / Air-Gapped Deployment"). TTFT-bounded latency targets are not measurable without adding streaming to the Gateway first (same gap as Observability above) | §23, §25 |
+| **Data Bias & Fairness** | Not implemented — no fairness/bias/robustness metric tracked anywhere in the eval framework (§9); a fairness dimension would be new judge criteria and likely a separate dataset, not an extension of the existing correctness-focused golden set | §9 |
+| **Continuous Improvement** | Two independent loops: the HITL promotion loop (§9 "HITL Promotion Flow" — human-annotated production traces become golden-dataset cases) and the shadow-eval sampler (§9 — passive 5% production-trace sampling, judged the same way, surfaced as a read-only suggested-promotion queue, never auto-promoting) | §9 |
 
 ---
 
@@ -723,7 +785,7 @@ Workers **never terminate** on a budget breach. Temporal activities retry with d
 
 ## 13. Antigravity Integration
 
-Antigravity is an AI coding agent that discovers and executes skills defined as markdown files in `.agents/skills/`. AgenticFramework provisions Antigravity alongside other IDEs during the `post-checkout` hook.
+Antigravity is an AI coding agent that discovers and executes skills defined as markdown files in `.agents/skills/`. AgentSmith provisions Antigravity alongside other IDEs during the `post-checkout` hook.
 
 ### Skill Structure
 
@@ -755,9 +817,9 @@ All three are generated from `templates/agent-rules.yaml` by the `post-checkout`
 
 ### Model
 
-AgenticFramework operates across three distinct levels:
+AgentSmith operates across three distinct levels:
 
-- **Framework repo:** AgenticFramework tooling — single GitHub repository, own release cycle, own semver. Tenant apps pin to a framework version.
+- **Framework repo:** AgentSmith tooling — single GitHub repository, own release cycle, own semver. Tenant apps pin to a framework version.
 - **Tenant repos:** One repository per customer application — independent stack, agents, promotion track, eval suite, and budget.
 - **Monorepo:** Supported within one tenant (sub-package `.agent-rfc/` scoping retained).
 
@@ -777,7 +839,7 @@ tenant:
   name: Acme Corp
   isolation: shared              # shared | dedicated (dedicated = own worker pool)
 framework:
-  version: "1.2.0"               # pinned AgenticFramework version
+  version: "1.2.0"               # pinned AgentSmith version
   mode: enterprise               # developer | enterprise
 environments:
   development:
@@ -858,9 +920,9 @@ Every OTel span must carry all of the following:
 ### Ops Portal
 
 - **Purpose:** Cross-tenant operations view aggregating independent pipelines
-- **Views:** tenant list, deploy status per environment, cost by tenant/agent/model, queue depth, unresolved MAJOR/CRITICAL entries, suggested HITL promotion queue
+- **Views:** tenant list, real run status (`agent_runs`, aggregated across concurrent/sequential calls within one workflow — "running" until every call in the group finishes), cost by tenant/agent/model with cap %, Phoenix trace count + error rate (last 24h, GraphQL), per-tenant DLQ triage with editable payload + Replay/Discard (not just an aggregate pending count), suggested shadow-eval promotion queue, audit log
 - **Auth:** SSO/OIDC (enterprise pack); basic auth minimum (team deployment)
-- **Data sources:** Phoenix API, workflow engine metrics, LLM Gateway spend data, `.agent-history.log` sync
+- **Data sources:** Phoenix REST/GraphQL, `agent_runs`/`dlq_entries`/`llm_gateway_budget` (Postgres), `.agent-history.log` sync
 
 ### In-App Widget
 
@@ -894,15 +956,15 @@ tenant.id = "acme" AND environment = "production"
 
 ```bash
 # Developer install
-curl -fsSL https://raw.githubusercontent.com/<org>/AgenticFramework/main/install-ai-stack.sh | bash
+curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
 
 # Pinned version (recommended for team environments)
-curl -fsSL https://github.com/<org>/AgenticFramework/releases/download/v1.0.0/install-ai-stack.sh | bash
+curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh | bash
 
 # With checksum verification (supply-chain safety)
-curl -fsSL https://github.com/<org>/AgenticFramework/releases/download/v1.0.0/install-ai-stack.sh \
+curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh \
   -o install-ai-stack.sh
-curl -fsSL https://github.com/<org>/AgenticFramework/releases/download/v1.0.0/install-ai-stack.sh.sha256 \
+curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh.sha256 \
   | sha256sum --check
 bash install-ai-stack.sh
 ```
@@ -910,7 +972,7 @@ bash install-ai-stack.sh
 ### Repository Structure
 
 ```
-AgenticFramework/
+AgentSmith/
 ├── install-ai-stack.sh          # Master installer
 ├── scripts/                     # Python agent scripts (dev lifecycle)
 │   ├── local_knowledge_graph.py
@@ -934,8 +996,10 @@ AgenticFramework/
 │   ├── trace_redactor.py
 │   ├── idempotency.py
 │   ├── dead_letter.py
+│   ├── temporal_replay.py       # Concrete Temporal replay_handler — signals a live, parked workflow
+│   ├── replay_webhook_server.py # Reference receiver for the Ops Portal's "Replay with edits" action
 │   ├── workflows/
-│   │   └── base_workflow.py     # Reference HITL-gate pattern (Temporal)
+│   │   └── base_workflow.py     # run_with_hitl_gate (approve/reject) + run_with_recoverable_step (edit/resume)
 │   └── k8s/dedicated-tenant/    # tenant.isolation: dedicated manifests (§23, §30)
 ├── hooks/                       # Git hook templates (Phase 5: extracted from installer)
 │   ├── pre-commit
@@ -960,8 +1024,7 @@ AgenticFramework/
 │   ├── golden_evals_base.json
 │   └── custom_judge_criteria_base.json
 ├── docs/
-│   ├── team-observability.md
-│   └── archive/                 # Superseded planning docs (e.g. specs-update.md)
+│   └── team-observability.md
 ├── .github/
 │   └── workflows/
 │       ├── self-test.yml        # py_compile/shellcheck/portal/widget tests on the framework itself
@@ -999,11 +1062,12 @@ The framework has its own versioned release process (see Section 28). It is not 
 
 ### Per-Tenant Workflow Set
 
-Each tenant repo receives three workflow files:
+Each tenant repo receives four workflow files:
 
 | Workflow | Trigger | Environment | Gate |
 |---|---|---|---|
-| `ci-<stack>.yml` | PR to `develop` or `main` | — | lint, test, evals (warn below 0.7) |
+| `ci-<stack>.yml` | PR to `develop` or `main` | — | lint, test, calls `eval-scorecard.yml` |
+| `eval-scorecard.yml` | `workflow_call` from `ci-<stack>.yml` (not triggered standalone) | — | eval scorecard, warn below 0.7 — shared by all three stacks (`ci-go.yml`/`ci-python-fastapi.yml`/`ci-ts-react.yml`) so a threshold/dependency change lands in one place, not three copy-pasted blocks |
 | `cd-staging.yml` | Push to `develop` | staging | eval fail below 0.75 + smoke |
 | `cd-production.yml` | Push to `main` | production | eval fail below 0.80 + smoke; **no `continue-on-error`** |
 
@@ -1026,6 +1090,19 @@ All workflow files include a tenant-scoped header:
 | `AGENT_PHOENIX_ENDPOINT` | Optional | Required | Required |
 | `AGENT_OWNER_ID` | `ci@...` | `ci@...` | `ci@...` |
 | Deployment credentials | — | Per-platform | Per-platform |
+
+### Container Image Build (optional)
+
+Before the deploy step, both `cd-staging.yml` and `cd-production.yml` run
+`.github/actions/build-push-ghcr`: if a `Dockerfile` exists at the tenant
+repo's root, it builds and pushes `ghcr.io/<org>/<repo>:<sha>` using the
+workflow's own `GITHUB_TOKEN` (no extra registry secret — just
+`permissions: packages: write` on the job) and exports the pushed ref as
+`$IMAGE_REF` for `DEPLOY_COMMAND` to consume. No Dockerfile → the step
+skips cleanly, same "optional infra never fails CD" posture as every
+other optional step in these workflows. This is also the artifact
+`templates/onprem-deploy/` (§D.6/OPERATIONS.md) expects for on-premise
+canary/shadow deployment.
 
 ### Rollback on Failed Production Smoke
 
@@ -1147,7 +1224,7 @@ MAJOR/CRITICAL entries are synced to the Ops Portal unresolved queue in addition
 When the `post-checkout` hook writes IDE config files into a repository, it checks the git remote URL visibility. If a public remote is detected:
 
 ```
-⚠️  AgenticFramework: IDE config files contain system prompt content.
+⚠️  AgentSmith: IDE config files contain system prompt content.
     This repo appears to be public. Add them to .gitignore?
     (y/n): _
 ```
@@ -1336,7 +1413,7 @@ ai-stack-status
 ai-stack-upgrade --to 1.2.0
 
 # Applies: copies new script versions to scripts/, commits as:
-# "chore(framework): upgrade AgenticFramework to v1.2.0"
+# "chore(framework): upgrade AgentSmith to v1.2.0"
 ```
 
 ---
@@ -1372,28 +1449,92 @@ Every workflow activity is assigned an idempotency key derived from a hash of it
 
 ### Dead-Letter Queue
 
-Failed activities that exhaust retries are moved to the DLQ (`runtime/dead_letter.py`). Operations:
+Failed activities — including ones a human can *fix and replay*, not just
+ones that exhaust retries — are moved to the DLQ (`runtime/dead_letter.py`).
+Operations:
 
 ```python
-dlq.enqueue(task_id, payload, error, tenant_id)
-dlq.list(tenant_id=None, limit=100)
-dlq.replay(task_id)  # re-submits to workflow engine
+dlq.enqueue(payload, error, tenant_id, task_id=None,
+            reason=None, workflow_id=None, gate_id=None)
+dlq.list(tenant_id=None, limit=100, status="pending")
+dlq.replay(task_id, override_payload=None)  # re-submits via replay_handler; override_payload
+                                              # is the human-edited fix (e.g. correcting a
+                                              # hallucinated field name before resuming)
 dlq.discard(task_id)  # removes from DLQ + marks resolved
 ```
 
-DLQ entries surface in the Ops Portal unresolved queue.
+`enqueue()` is idempotent on `task_id` (`ON CONFLICT DO NOTHING`) and posts
+to `SLACK_WEBHOOK_URL`/`TEAMS_WEBHOOK_URL` if configured. `reason` is a
+structured category (`validation_error`, `tool_call_error`,
+`hitl_timeout`, `hitl_rejected`, `infra_error`) so the Ops Portal can
+render "needs a human decision" differently from "needs an engineer."
+`workflow_id`/`gate_id` are present only for entries created by
+`run_with_recoverable_step` (below) — they identify the *live, still-
+parked* workflow a replay should resume, as opposed to a terminated
+dead-letter with nothing left to resume.
+
+`replay()`'s constructor-supplied `replay_handler` is workflow-engine-
+specific and pluggable; `runtime/temporal_replay.py`'s
+`make_temporal_replay_handler(client)` is the concrete Temporal
+implementation — it signals the workflow at `entry.workflow_id` with
+`human_fix_payload(gate_id, fix)`.
+
+DLQ entries surface in the Ops Portal's per-tenant triage view
+(`/dlq/<tenantId>`) — editable payload, Replay, Discard — not just an
+aggregate pending count.
 
 ### HITL Pause / Resume
 
-In Temporal: workflow waits on a signal. The Phoenix annotation triggers the signal via:
+Two related patterns in `runtime/workflows/base_workflow.py`, for two
+different kinds of human intervention:
+
+**Approve/reject** (`run_with_hitl_gate`) — workflow waits on a boolean
+signal:
 
 ```python
-# runtime/workflows/base_workflow.py
-await workflow.wait_for_signal("hitl_approved", timeout=timedelta(hours=24))
-# On timeout: DLQ entry created, workflow moves to dead letter state
+await workflow.wait_condition(lambda: self._hitl_approved is not None, timeout=timedelta(hours=24))
+# On timeout: DLQ entry created (reason="hitl_timeout"), workflow terminates ("dead_letter" status)
 ```
 
-In Celery: task chains pause at a HITL checkpoint task; resume via `task.apply_async()` on approval.
+**Edit-and-resume** (`run_with_recoverable_step`) — for failures the
+human fixes rather than approves/rejects (e.g. an agent's tool call
+hallucinates `{"account_status": "active"}` where the schema expects
+`"status"`). On activity failure, the workflow stays **alive** — it does
+not terminate — enqueues a DLQ entry carrying its own `workflow_id`/
+`gate_id`, and waits on the `human_fix_payload` signal up to a caller-
+configurable timeout (bounded by `max_attempts`, default 5, so a human
+submitting fixes that keep failing doesn't park the workflow forever):
+
+```python
+await self.run_with_recoverable_step(
+    "crm_update_activity", payload, tenant_id=tenant_id, gate_id="crm-update-gate",
+    timeout=timedelta(hours=24),
+)
+# On human_fix_payload signal: retries the SAME activity with the corrected payload,
+# resuming in place — not a fresh execution.
+```
+
+**Important:** the gated `execute_activity` call uses
+`retry_policy=RetryPolicy(maximum_attempts=1)` — Temporal's *default*
+policy retries the same failing payload indefinitely (with backoff) until
+`start_to_close_timeout`, which wastes up to that whole timeout before the
+recoverable-step logic even engages, for a payload that won't succeed on
+retry without being different. The method's own attempt loop is the
+intended retry mechanism, not Temporal's.
+
+**The portal has no Temporal client and never gains one** — when a human
+edits a payload in the Ops Portal's DLQ view and clicks Replay, the
+portal HMAC-signs the edit and POSTs it to **that tenant's own**
+`replay_webhook_url`/`replay_webhook_secret` (synced from
+`.agenticframework/tenant.yaml`'s `hitl.replay_webhook_url`/
+`hitl.replay_webhook_secret`, same mechanism as `gateway.budget_cap_usd`)
+— deliberately per-tenant, so a fix is always routed to the team running
+that tenant's worker, never a shared cross-tenant endpoint.
+`runtime/replay_webhook_server.py` is the reference receiver: verifies
+the signature, then calls
+`DeadLetterQueue(replay_handler=make_temporal_replay_handler(client)).replay(task_id, override_payload=...)`.
+
+In Celery: task chains pause at a HITL checkpoint task; resume via `task.apply_async()` on approval. The edit-and-resume pattern's Celery equivalent is tenant-implemented — `run_with_recoverable_step` is Temporal-specific (workflow signals); a Celery worker would re-queue the checkpoint task with the corrected payload instead.
 
 ### Scheduling
 
@@ -1411,6 +1552,43 @@ schedules:
 ### Domain Workflow Ownership
 
 Reference workflows in `runtime/workflows/` demonstrate patterns only. Tenant repos define their own production workflow files. Framework workflows are never deployed directly as tenant production code.
+
+### On-Premise / Air-Gapped Deployment
+
+`templates/onprem-deploy/` — opt-in via `ai-onprem-deploy-scaffold`, never
+auto-written the way the CI/CD workflow templates are (not every tenant
+has an on-prem customer). Stack-agnostic by design, consistent with the
+framework's own position as something that builds "other" applications
+of any architecture: it assumes only that a tenant app ships as **one
+container image**, listens on **one HTTP port** answering `GET /healthz`,
+reads config from **env vars only** (no cloud secret manager call), and
+logs **JSON-Lines to stdout**.
+
+| Target | When | Mechanism |
+|---|---|---|
+| Docker Compose | ~80% of on-prem customers — single server/VM | `docker compose up -d`, canary + shadow routing via Traefik or Envoy (customer's choice) |
+| Kubernetes / Helm | High-compliance enterprise, won't run raw Docker | `helm install`, canary via the **core** Gateway API's `backendRefs[].weight` (portable across Traefik's and Envoy Gateway's controllers); shadow via the core `RequestMirror` filter (always-100%, no percentage field in the standard spec — Compose's native Traefik/Envoy mirroring does support a percent if that's needed) |
+
+Canary/shadow proxy config is rendered from `.env` by
+`scripts/render-{traefik,envoy}-config.py` (a real dict + `yaml.safe_dump`,
+not string templating) — both validated against actual `docker compose
+config` and (for Helm) `helm lint`/`helm template`, not just written and
+assumed correct.
+
+Shadow traffic *mirroring* here is infrastructure-level (tests a new app
+version against live request shape before promotion) — distinct from
+`scripts/shadow-eval.py`'s *application-level* shadow evaluation (§9),
+which judges a sample of already-served production traces after the
+fact, safely, since it never re-executes anything. Don't point a
+mirror-shadow container at a build that isn't side-effect-safe in dry-run
+mode — the proxy replays the HTTP request verbatim with no knowledge of
+what the app does with it.
+
+Air-gapped bundling: `scripts/bundle-airgapped.sh`/`load-airgapped.sh`
+(`docker save`/`docker load`, zero registry calls on the target host).
+See `templates/onprem-deploy/README.md` and
+`templates/onprem-deploy/kubernetes/README.md` for the full walkthrough;
+OPERATIONS.md §D.6 for the operator-facing quickstart.
 
 ---
 
@@ -1450,7 +1628,8 @@ Tenant applications embed the widget via:
 
 ```html
 <!-- From templates/in-app-widget/ -->
-<script src="https://cdn.agenticframework.io/widget.js"></script>
+<!-- Self-hosted: download widget.js from a tagged release and serve it yourself -->
+<script src="/static/widget.js"></script>
 <agent-status tenant-id="acme" token="<read-only-token>"></agent-status>
 ```
 
@@ -1465,11 +1644,16 @@ The Ops Portal aggregates metrics by `tenant.id` attribute. Raw span content (pr
 Every authenticated request resolves to an `Access { role, tenantScope }`
 (`portal/lib/authz.ts`) before any tenant data is read:
 
-| Role | Can view | Can write (`POST /api/tenants`, mint widget tokens) | Can view audit log |
-|---|---|---|---|
-| `viewer` | Tenants in `tenantScope` only | No | No |
-| `operator` | Tenants in `tenantScope` only | Yes | No |
-| `admin` | Tenants in `tenantScope` only (or all, if `tenantScope: "*"`) | Yes | Yes |
+| Role | Can view | Can write (`POST /api/tenants`, mint widget tokens) | Can revoke widget tokens | Can view audit log |
+|---|---|---|---|---|
+| `viewer` | Tenants in `tenantScope` only | No | No | No |
+| `operator` | Tenants in `tenantScope` only | Yes | No | No |
+| `admin` | Tenants in `tenantScope` only (or all, if `tenantScope: "*"`) | Yes | Yes | Yes |
+
+Mint and revoke are deliberately split: minting a widget token is routine
+tenant-onboarding work (same tier as creating the tenant itself), revoking
+one instantly breaks every live embed for that tenant — a more disruptive
+action reserved for `admin`.
 
 `tenantScope` is either `"*"` (all tenants) or an explicit allow-list of
 tenant ids. This is enforced server-side in every route under
@@ -1590,7 +1774,7 @@ python3 scripts/verify_system.py --check-redaction
 
 ## 28. Framework vs Application Release
 
-### AgenticFramework Semver
+### AgentSmith Semver
 
 - `vMAJOR.MINOR.PATCH` — breaking changes (hook API, span contract) increment MAJOR
 - Releases are tagged via the framework's own `post-commit` hook
@@ -1622,7 +1806,7 @@ The framework maintains a compatibility matrix in `CHANGELOG.md`:
 
 `examples/oil-price-agent/` is a reference tenant application. It demonstrates the full stack but is **never deployed directly from the framework repo**. The README in `examples/` states:
 
-> Copy and rename this directory into your own repository. Do not deploy from AgenticFramework/examples. This is a reference implementation, not a production deployment target.
+> Copy and rename this directory into your own repository. Do not deploy from AgentSmith/examples. This is a reference implementation, not a production deployment target.
 
 ---
 
@@ -1745,7 +1929,7 @@ boundary about which period a charge belongs to.
 
 ### Overview
 
-The enterprise pack is an optional layer providing governance controls for organisations running AgenticFramework across multiple teams or meeting compliance requirements. It does not change the core framework behaviour — it adds enforcement, auditability, and isolation controls.
+The enterprise pack is an optional layer providing governance controls for organisations running AgentSmith across multiple teams or meeting compliance requirements. It does not change the core framework behaviour — it adds enforcement, auditability, and isolation controls.
 
 ### Org Hook Bundle
 
@@ -1855,7 +2039,7 @@ When `tenant.isolation: dedicated`:
 
 These are documentation notes for compliance mapping. They are not a guarantee of certification.
 
-| Control area | AgenticFramework mechanism |
+| Control area | AgentSmith mechanism |
 |---|---|
 | Access control | SSO/OIDC for portal + Phoenix; HITL RBAC allowlists |
 | Audit trail | Immutable audit log for promotions, config changes, bypasses |

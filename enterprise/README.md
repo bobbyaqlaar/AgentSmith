@@ -1,6 +1,6 @@
 # Enterprise Pack (SPECS.md §30)
 
-Optional governance layer for orgs running AgenticFramework across multiple
+Optional governance layer for orgs running AgentSmith across multiple
 teams. Does not change core framework behaviour — adds enforcement,
 auditability, and isolation controls.
 

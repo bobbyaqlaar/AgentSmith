@@ -1,28 +1,78 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  AgenticFramework Installer — v1.0.0
-#  https://github.com/<org>/AgenticFramework
+#  AgentSmith Installer — v1.0.0
+#  https://github.com/bobbyaqlaar/AgentSmith  (override AI_STACK_FRAMEWORK_REPO for forks)
 #
 #  Installs once per machine. Safe to re-run (idempotent).
 #  Supports macOS, Linux, and Windows (via WSL/Git Bash).
 #
 #  Usage:
-#    curl -fsSL https://raw.githubusercontent.com/<org>/AgenticFramework/main/install-ai-stack.sh | bash
+#    curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
 #    # or, from a cloned repo:
 #    chmod +x install-ai-stack.sh && ./install-ai-stack.sh
+#
+#  Self-hosted mirror / fork: set AI_STACK_FRAMEWORK_REPO before running, e.g.
+#    AI_STACK_FRAMEWORK_REPO=https://github.com/acme-corp/AgentSmith ./install-ai-stack.sh
+#
+#  Enterprise mode (skips mutating git's GLOBAL init.templateDir — see
+#  OPERATIONS.md Part G for the MDM-distributed hooks path instead):
+#    ./install-ai-stack.sh --mode enterprise
+#    # piped form needs `-s --` to forward args through stdin:
+#    curl -fsSL .../install-ai-stack.sh | bash -s -- --mode enterprise
 # =============================================================================
 
 set -uo pipefail
 
+# ── Mode flag ─────────────────────────────────────────────────────────────────
+# --mode developer (default): sets git's GLOBAL init.templateDir, so every
+#   `git init`/`git clone` on this machine picks up the hook templates
+#   (gated per-repo by the opt-in check inside each hook — see hooks/pre-commit).
+# --mode enterprise: skips the global init.templateDir mutation entirely.
+#   Intended for shared/managed machines where IT distributes hooks via the
+#   signed MDM bundle instead (enterprise/package-hook-bundle.sh +
+#   mdm-deploy-hooks.sh, see OPERATIONS.md Part G) — this installer still
+#   vendors scripts/templates/shell functions, just without taking over
+#   every user's global git config on a machine it doesn't fully own.
+INSTALL_MODE="developer"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --mode)
+      INSTALL_MODE="${2:-developer}"
+      shift 2
+      ;;
+    --mode=*)
+      INSTALL_MODE="${1#--mode=}"
+      shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+if [ "$INSTALL_MODE" != "developer" ] && [ "$INSTALL_MODE" != "enterprise" ]; then
+  echo "❌ --mode must be 'developer' (default) or 'enterprise', got '$INSTALL_MODE'" >&2
+  exit 1
+fi
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 FRAMEWORK_VERSION="1.0.0"
-FRAMEWORK_REPO="https://github.com/<org>/AgenticFramework"
+# Overridable for forks/self-hosted mirrors: AI_STACK_FRAMEWORK_REPO=https://github.com/your-org/AgentSmith ./install-ai-stack.sh
+# The literal "<org>" previously here was not a placeholder convention this
+# script substituted anywhere — it was used verbatim as a URL component in
+# release-download fallback paths (SCRIPTS_URL etc. below), which would
+# fail outright the moment any of those fallback paths actually executed
+# (FIXES_AND_CLEANUP.md 5.10).
+FRAMEWORK_REPO="${AI_STACK_FRAMEWORK_REPO:-https://github.com/bobbyaqlaar/AgentSmith}"
 FRAMEWORK_DIR="$HOME/.agent-framework"
 TEMPLATE_DIR="$HOME/.git_templates"
 SCRIPTS_DIR="$FRAMEWORK_DIR/scripts"
 SHARED_DIR="$FRAMEWORK_DIR/shared"
 WORKFLOW_TEMPLATES_DIR="$FRAMEWORK_DIR/workflow-templates"
+# Standing, machine-wide Phoenix + Postgres + Ops Portal stack — shared
+# across every repo on this machine (FIXES_AND_CLEANUP.md P0.5), not
+# scoped to any one project checkout. Managed via ai-dashboard-start/-stop.
+OBSERVABILITY_DIR="$FRAMEWORK_DIR/observability"
 
 # Detect shell profile file
 if [ -n "${ZSH_VERSION:-}" ] || [ "$(basename "${SHELL:-}")" = "zsh" ]; then
@@ -222,7 +272,7 @@ else
       success "Scripts downloaded from GitHub"
     else
       warn "Could not download scripts from GitHub. Manual copy may be needed."
-      warn "Clone the repo and re-run: git clone ${FRAMEWORK_REPO} && ./AgenticFramework/install-ai-stack.sh"
+      warn "Clone the repo and re-run: git clone ${FRAMEWORK_REPO} && ./AgentSmith/install-ai-stack.sh"
     fi
   fi
 fi
@@ -259,6 +309,63 @@ else
   else
     warn "No agent-rules.yaml found — post-checkout hook will fail to generate IDE config until it's added to ~/.agent-framework/templates/"
   fi
+fi
+
+# On-prem/air-gapped deployment template (Docker Compose + Traefik/Envoy
+# canary+shadow routing, Helm chart for K8s) — opt-in, vendored like
+# agent-rules.yaml above but only ever copied into a tenant repo on
+# explicit request via ai-onprem-deploy-scaffold (FIXES_AND_CLEANUP.md P4
+# on-prem follow-up), never written automatically the way the CI/CD
+# workflow templates are by ai-tenant-init/post-checkout.
+if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/templates/onprem-deploy" ]; then
+  rm -rf "$FRAMEWORK_DIR/templates/onprem-deploy"
+  cp -r "$INSTALLER_DIR/templates/onprem-deploy" "$FRAMEWORK_DIR/templates/onprem-deploy"
+  success "onprem-deploy template copied from local repo"
+elif [ -d "$FRAMEWORK_DIR/templates/onprem-deploy" ]; then
+  success "onprem-deploy template already present in ~/.agent-framework/templates/"
+else
+  info "Downloading onprem-deploy template from GitHub..."
+  ONPREM_TEMPLATE_URL="${FRAMEWORK_REPO}/releases/latest/download/templates.tar.gz"
+  if command_exists curl && curl -fsSL "$ONPREM_TEMPLATE_URL" | tar -xz -C "$FRAMEWORK_DIR/templates" 2>/dev/null; then
+    success "onprem-deploy template downloaded from GitHub"
+  else
+    warn "No onprem-deploy template found — ai-onprem-deploy-scaffold will fail until it's added to ~/.agent-framework/templates/onprem-deploy/"
+  fi
+fi
+
+# Standing observability stack: docker-compose.yml + init-db/ (Phoenix +
+# Postgres) and the Ops Portal source (built into a container image by
+# ai-dashboard-start, not run via npm directly on the host). Vendored the
+# same way scripts/workflow-templates/templates are above — see
+# ai-dashboard-start/ai-dashboard-stop further down for what actually
+# starts/stops it. Docker itself is optional: if it's not installed,
+# ai-dashboard-start falls back to the original plain-process Phoenix
+# launch and this vendoring step is simply skipped (no error).
+if command_exists docker; then
+  mkdir -p "$OBSERVABILITY_DIR"
+  if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/docker-compose.yml" ]; then
+    cp "$INSTALLER_DIR/docker-compose.yml" "$OBSERVABILITY_DIR/docker-compose.yml"
+    cp -r "$INSTALLER_DIR/init-db" "$OBSERVABILITY_DIR/init-db"
+    mkdir -p "$OBSERVABILITY_DIR/portal"
+    # Exclude node_modules/.next/.env*: the container build runs its own
+    # `npm ci` and `npm run build` (portal/Dockerfile) — copying these
+    # would bloat the vendor step with build artifacts the image rebuilds
+    # anyway, and .env* could leak local dev secrets into the vendored copy.
+    (cd "$INSTALLER_DIR/portal" && tar -cf - --exclude=node_modules --exclude=.next --exclude='.env*' .) \
+      | (cd "$OBSERVABILITY_DIR/portal" && tar -xf -)
+    success "Observability stack (Phoenix + Postgres + Ops Portal) vendored to $OBSERVABILITY_DIR"
+  elif [ -f "$OBSERVABILITY_DIR/docker-compose.yml" ]; then
+    success "Observability stack already present in $OBSERVABILITY_DIR"
+  else
+    warn "Not running from a local checkout — observability stack not vendored."
+    warn "ai-dashboard-start will fall back to the plain-process Phoenix launch until"
+    warn "you clone the repo and re-run install-ai-stack.sh, or manually copy"
+    warn "docker-compose.yml + init-db/ + portal/ into $OBSERVABILITY_DIR."
+  fi
+else
+  info "Docker not found — skipping standing observability stack (ai-dashboard-start"
+  info "will use the plain-process Phoenix launch instead). Install Docker to get the"
+  info "full Phoenix + Postgres + Ops Portal stack shared across all repos on this machine."
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -307,7 +414,7 @@ if [ ! -f "$SHARED_DIR/custom_judge_criteria_base.json" ]; then
   else
     cat > "$SHARED_DIR/custom_judge_criteria_base.json" << 'CRITERIA_EOF'
 {
-  "name": "AgenticFramework_Base_Scorecard",
+  "name": "AgentSmith_Base_Scorecard",
   "instructions": "You are a senior principal systems architect auditing autonomous agent code. Grade each submission on a strict binary score (1 = pass, 0 = fail) against three immutable rules:\n\n1. PONYTAIL COMPLIANCE: Uses native platform or standard library capabilities only. Fails if it installs unapproved third-party dependencies or builds over-engineered custom abstractions.\n2. CAVEMAN COMPRESSION: Output is direct code or data. Fails if the agent added pleasantries, summaries, or explanatory meta-commentary around the code.\n3. MARCH OF NINES: No empty catch/except blocks, no loose timeouts, no unhandled None returns on error paths. Must display defensive, explicit error handling.\n\n=== HISTORICAL LEARNINGS ===\nFail any submission that violates the rules below:",
   "historical_learnings": []
 }
@@ -342,7 +449,7 @@ else
   if command_exists curl && curl -fsSL "$HOOKS_URL" | tar -xz -C "$TEMPLATE_DIR/hooks" 2>/dev/null; then
     success "Hooks downloaded from GitHub"
   else
-    error "Could not install git hooks — clone the repo and re-run: git clone ${FRAMEWORK_REPO} && ./AgenticFramework/install-ai-stack.sh"
+    error "Could not install git hooks — clone the repo and re-run: git clone ${FRAMEWORK_REPO} && ./AgentSmith/install-ai-stack.sh"
   fi
 fi
 
@@ -358,11 +465,17 @@ success "All four git hook templates written and made executable"
 # ── Link global git template dir ───────────────────────────────────────────────
 # Capture the pre-install value (if any) so ai-stack-uninstall can restore it
 # exactly, rather than just unsetting (SPECS.md §22 Phase 5).
-if [ ! -f "$FRAMEWORK_DIR/previous_template_dir" ]; then
-  git config --global init.templateDir 2>/dev/null > "$FRAMEWORK_DIR/previous_template_dir" || true
+if [ "$INSTALL_MODE" = "enterprise" ]; then
+  info "Enterprise mode (--mode enterprise): skipping global git init.templateDir."
+  info "Hooks are vendored to $TEMPLATE_DIR but not linked machine-wide — distribute"
+  info "via enterprise/package-hook-bundle.sh + mdm-deploy-hooks.sh instead (OPERATIONS.md Part G)."
+else
+  if [ ! -f "$FRAMEWORK_DIR/previous_template_dir" ]; then
+    git config --global init.templateDir 2>/dev/null > "$FRAMEWORK_DIR/previous_template_dir" || true
+  fi
+  git config --global init.templateDir "$TEMPLATE_DIR"
+  success "Global git template directory set to $TEMPLATE_DIR"
 fi
-git config --global init.templateDir "$TEMPLATE_DIR"
-success "Global git template directory set to $TEMPLATE_DIR"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 7 — SHELL FUNCTIONS
@@ -376,9 +489,9 @@ else
 
 cat >> "$SHELL_RC" << 'SHELL_EOF'
 
-# >>> AgenticFramework managed block — DO NOT EDIT, removed by ai-stack-uninstall >>>
+# >>> AgentSmith managed block — DO NOT EDIT, removed by ai-stack-uninstall >>>
 # ══════════════════════════════════════════════════════════════════════════════
-# AI AGENT FRAMEWORK CONTROLLER — AgenticFramework v1.0.0
+# AI AGENT FRAMEWORK CONTROLLER — AgentSmith v1.0.0
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ── Environment defaults ──────────────────────────────────────────────────────
@@ -400,7 +513,7 @@ function ai-mode-local() {
   if [ $? -eq 0 ]; then
     python3 -c "
 from plyer import notification
-notification.notify(title='AgenticFramework', message='Local offline mode active', timeout=4)
+notification.notify(title='AgentSmith', message='Local offline mode active', timeout=4)
 " 2>/dev/null || true
   fi
 }
@@ -416,7 +529,7 @@ function ai-mode-hybrid() {
   if [ $? -eq 0 ]; then
     python3 -c "
 from plyer import notification
-notification.notify(title='AgenticFramework', message='Hybrid cloud mode active', timeout=4)
+notification.notify(title='AgentSmith', message='Hybrid cloud mode active', timeout=4)
 " 2>/dev/null || true
   fi
 }
@@ -524,7 +637,7 @@ function ai-stack-off() {
 
 # ── Health check ──────────────────────────────────────────────────────────────
 function ai-stack-check() {
-  echo "🩺 AgenticFramework Health Check — Mode: [${AI_STACK_MODE:-not set}]"
+  echo "🩺 AgentSmith Health Check — Mode: [${AI_STACK_MODE:-not set}]"
   local failed=0
 
   # Phoenix connectivity
@@ -586,6 +699,11 @@ if count:
     fi
   fi
 
+  if [ -n "${OPS_PORTAL_URL:-}" ]; then
+    python3 scripts/sync-portal-history.py 2>/dev/null || \
+      python3 "$HOME/.agent-framework/scripts/sync-portal-history.py" 2>/dev/null || true
+  fi
+
   if [ "$failed" -eq 0 ]; then
     echo "   🎉 All checks passed — environment ready"
     return 0
@@ -612,8 +730,36 @@ function ai-stack-status() {
 }
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
+# Per-repo opt-out (FIXES_AND_CLEANUP.md P0.5c): a repo with this marker is
+# treated as fully standalone — ai-dashboard-start falls back to the plain-
+# process Phoenix launch even when the shared stack is available, so this
+# repo's traces/work never touch the machine-wide stack at all.
+function _ai_repo_opts_out_of_shared_infra() {
+  [ -f ".agenticframework/no-shared-infra" ]
+}
+
 function ai-dashboard-start() {
-  echo "📊 Starting Arize Phoenix at ${AGENT_PHOENIX_ENDPOINT}..."
+  local observability_compose="$HOME/.agent-framework/observability/docker-compose.yml"
+
+  if _ai_repo_opts_out_of_shared_infra; then
+    info "This repo has .agenticframework/no-shared-infra — using a standalone Phoenix instance, not the shared stack."
+  fi
+
+  if command_exists docker && [ -f "$observability_compose" ] && ! _ai_repo_opts_out_of_shared_infra; then
+    echo "📊 Starting the standing stack (Phoenix + Postgres + Ops Portal)..."
+    ( cd "$(dirname "$observability_compose")" && docker compose up -d )
+    export OTEL_EXPORTER_OTLP_ENDPOINT="${AGENT_PHOENIX_ENDPOINT}/v1/traces"
+    echo "🚀 Phoenix    → open ${AGENT_PHOENIX_ENDPOINT}"
+    echo "🚀 Ops Portal → open http://localhost:${OPS_PORTAL_PORT:-3000}"
+    echo "   (shared across every repo on this machine — opt out per-repo with:"
+    echo "    touch .agenticframework/no-shared-infra)"
+    return 0
+  fi
+
+  # Fallback: no Docker, stack not vendored yet, or this repo opted out —
+  # the original plain-process launch. No Postgres, no Ops Portal, not
+  # shared with other repos.
+  echo "📊 Starting Arize Phoenix at ${AGENT_PHOENIX_ENDPOINT} (standalone — no Docker stack)..."
   local db_arg=""
   [ -n "${AGENT_PHOENIX_DB_URL:-}" ] && db_arg="--database-url ${AGENT_PHOENIX_DB_URL}"
   python3 -m phoenix.server.main launch \
@@ -625,6 +771,18 @@ function ai-dashboard-start() {
 }
 
 function ai-dashboard-stop() {
+  local observability_compose="$HOME/.agent-framework/observability/docker-compose.yml"
+
+  if command_exists docker && [ -f "$observability_compose" ]; then
+    echo "🔒 Stopping the standing stack (Phoenix + Postgres + Ops Portal)..."
+    # No -v: named volumes (traces, portal data) persist — this is meant to
+    # survive being stopped and restarted, not be reset every time.
+    ( cd "$(dirname "$observability_compose")" && docker compose down )
+    unset OTEL_EXPORTER_OTLP_ENDPOINT
+    echo "✅ Stack offline (data preserved — 'docker compose down -v' there to wipe it)"
+    return 0
+  fi
+
   echo "🔒 Stopping Phoenix..."
   pkill -f "phoenix.server.main" 2>/dev/null || true
   unset OTEL_EXPORTER_OTLP_ENDPOINT
@@ -792,6 +950,15 @@ TENANT_EOF
   echo "🎯 Tenant '$tenant_id' scaffolded (isolation: ${isolation})."
   echo "   Next: configure GitHub Environments 'staging' and 'production'"
   echo "   with required reviewers and per-environment secrets (see SPECS.md §17, §24)."
+  if _ai_repo_opts_out_of_shared_infra; then
+    echo ""
+    echo "   .agenticframework/no-shared-infra is set — this tenant won't be nudged"
+    echo "   toward the machine-wide shared Ops Portal. Point OPS_PORTAL_URL/AGENT_PHOENIX_ENDPOINT"
+    echo "   at a dedicated instance of your own for this tenant's CD secrets."
+  else
+    echo "   Set OPS_PORTAL_URL + OPS_PORTAL_SYNC_TOKEN as GitHub Environment secrets to"
+    echo "   sync this tenant's history to the shared Ops Portal automatically (OPERATIONS.md §2.6)."
+  fi
   if [ "$isolation" = "dedicated" ]; then
     echo ""
     echo "   Dedicated isolation: provision this tenant's own worker pool with:"
@@ -799,6 +966,41 @@ TENANT_EOF
     echo "   (see runtime/k8s/dedicated-tenant/README.md — separate namespace,"
     echo "   separate budget-store Secret, separate Phoenix project per SPECS.md §30)"
   fi
+}
+
+# Opt-in — copies the stack-agnostic on-prem/air-gapped deployment template
+# (Docker Compose + Traefik/Envoy canary+shadow routing, Helm chart for
+# K8s) into THIS repo's deploy/onprem/ — never run automatically by
+# ai-tenant-init, since not every tenant has an on-prem customer. See
+# templates/onprem-deploy/README.md for the app contract this template
+# assumes (single image, GET /healthz, env-var-only config, stdout logs).
+function ai-onprem-deploy-scaffold() {
+  if [ ! -d ".git" ]; then
+    echo "❌ Not a git repository — run inside the tenant repo root"
+    return 1
+  fi
+
+  local src="$HOME/.agent-framework/templates/onprem-deploy"
+  if [ ! -d "$src" ]; then
+    echo "❌ No onprem-deploy template at $src — run install-ai-stack.sh first"
+    return 1
+  fi
+
+  local dest="deploy/onprem"
+  if [ -d "$dest" ]; then
+    echo "⚠️  $dest already exists — leaving untouched. Delete it first to re-scaffold."
+    return 1
+  fi
+
+  mkdir -p "deploy"
+  cp -r "$src" "$dest"
+
+  _ai_audit_log_event "onprem_deploy_scaffolded" "${AGENT_OWNER_ID:-unknown}" "$(basename "$(pwd)")" "{}"
+
+  echo "🏗  Scaffolded on-prem deployment template at $dest/"
+  echo "   Next: cp $dest/.env.example $dest/.env, set APP_IMAGE_PROD, then"
+  echo "   $dest/scripts/up.sh — see $dest/README.md for the canary/shadow/"
+  echo "   air-gapped bundling workflow and $dest/kubernetes/README.md for Helm."
 }
 
 function ai-tenant-promote() {
@@ -910,9 +1112,9 @@ function ai-stack-scrub() {
 }
 
 function ai-stack-uninstall() {
-  echo "🗑  AgenticFramework: Enterprise-safe machine-level uninstall"
+  echo "🗑  AgentSmith: Enterprise-safe machine-level uninstall"
   echo "   This will:"
-  echo "   - Remove the AgenticFramework block from ~/.zshrc (or ~/.bashrc / ~/.profile)"
+  echo "   - Remove the AgentSmith block from ~/.zshrc (or ~/.bashrc / ~/.profile)"
   echo "   - Restore git init.templateDir to its pre-install value (or unset it)"
   echo "   - Optionally remove ~/.agent-framework and ~/.git_templates"
   echo ""
@@ -946,12 +1148,13 @@ function ai-stack-uninstall() {
   local shell_rc="$HOME/.zshrc"
   [ -f "$shell_rc" ] || shell_rc="$HOME/.bashrc"
   [ -f "$shell_rc" ] || shell_rc="$HOME/.profile"
-  if [ -f "$shell_rc" ] && grep -q ">>> AgenticFramework managed block" "$shell_rc" 2>/dev/null; then
+  if [ -f "$shell_rc" ] && grep -qE ">>> (AgentSmith|AgenticFramework) managed block" "$shell_rc" 2>/dev/null; then
+    sed -i.af-uninstall-bak '/>>> AgentSmith managed block/,/<<< AgentSmith managed block <<</d' "$shell_rc"
     sed -i.af-uninstall-bak '/>>> AgenticFramework managed block/,/<<< AgenticFramework managed block <<</d' "$shell_rc"
     rm -f "${shell_rc}.af-uninstall-bak"
-    echo "✅ Removed AgenticFramework block from $shell_rc"
+    echo "✅ Removed AgentSmith block from $shell_rc"
   else
-    echo "⚠️  No AgenticFramework managed block found in $shell_rc — skipping"
+    echo "⚠️  No AgentSmith managed block found in $shell_rc — skipping"
   fi
 
   # ── Optionally remove framework directories ────────────────────────────────
@@ -1007,13 +1210,13 @@ function ai-stack-upgrade() {
   fi
 
   git add scripts .agenticframework/tenant.yaml
-  if ! git commit -m "chore(framework): upgrade AgenticFramework to v${target_version}"; then
+  if ! git commit -m "chore(framework): upgrade AgentSmith to v${target_version}"; then
     echo "❌ git commit failed (blocked by a hook, GPG-sign required and unavailable, etc.) —"
     echo "   scripts/ and tenant.yaml were updated and staged but NOT committed. Fix the issue and re-run:"
-    echo "   git commit -m \"chore(framework): upgrade AgenticFramework to v${target_version}\""
+    echo "   git commit -m \"chore(framework): upgrade AgentSmith to v${target_version}\""
     return 1
   fi
-  echo "✅ Committed: chore(framework): upgrade AgenticFramework to v${target_version}"
+  echo "✅ Committed: chore(framework): upgrade AgentSmith to v${target_version}"
 
   local tenant_id
   tenant_id="$(grep '^  id:' .agenticframework/tenant.yaml | head -1 | sed 's/^  id:[[:space:]]*//')"
@@ -1025,7 +1228,7 @@ function ai-stack-upgrade() {
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
-# <<< AgenticFramework managed block <<<
+# <<< AgentSmith managed block <<<
 SHELL_EOF
 
   success "Shell functions written to $SHELL_RC"
@@ -1056,7 +1259,7 @@ if [ "$IDENTITY_SET" -eq 0 ] && [ -t 1 ]; then
   if [ -n "$OWNER_EMAIL" ] && [ -n "$OWNER_NAME" ]; then
     cat >> "$SHELL_RC" << IDENTITY_EOF
 
-# AgenticFramework — Owner identity
+# AgentSmith — Owner identity
 export AGENT_OWNER_ID="${OWNER_EMAIL}"
 export AGENT_OWNER_NAME="${OWNER_NAME}"
 IDENTITY_EOF
@@ -1118,7 +1321,7 @@ fi
 echo ""
 echo "════════════════════════════════════════════════════════════════════"
 if [ "$VERIFY_PASSED" -eq 1 ]; then
-  echo -e "${GREEN}${BOLD}  🎉 AgenticFramework v${FRAMEWORK_VERSION} installed successfully!${RESET}"
+  echo -e "${GREEN}${BOLD}  🎉 AgentSmith v${FRAMEWORK_VERSION} installed successfully!${RESET}"
 else
   echo -e "${YELLOW}${BOLD}  ⚠️  Installation completed with warnings — review errors above.${RESET}"
 fi

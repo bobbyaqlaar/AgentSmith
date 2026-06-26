@@ -16,12 +16,6 @@ Usage:
     store.set("sha256:abc123", result, ttl_seconds=86400)
 
 See SPECS.md §25 for the full specification.
-
-TODO (Phase 2):
-  - Implement Redis backend
-  - Implement Postgres backend
-  - Add TTL cleanup
-  - Wire into llm_gateway.py
 """
 
 from __future__ import annotations
@@ -48,7 +42,7 @@ class IdempotencyStore:
     def __init__(self) -> None:
         backend = os.environ.get("IDEMPOTENCY_BACKEND", "redis").lower()
         if backend == "redis":
-            self._backend = _RedisBackend()
+            self._backend: Any = _RedisBackend()
         elif backend == "postgres":
             self._backend = _PostgresBackend()
         else:
@@ -64,18 +58,87 @@ class IdempotencyStore:
 
 
 class _RedisBackend:
+    def __init__(self) -> None:
+        import redis  # type: ignore
+        self._client = redis.from_url(os.environ["REDIS_URL"])
+
     def get(self, key: str) -> Optional[Any]:
-        # TODO Phase 2: connect to Redis via REDIS_URL
-        raise NotImplementedError("Redis backend not yet implemented.")
+        raw = self._client.get(f"agenticframework:idempotency:{key}")
+        if raw is None:
+            return None
+        return json.loads(raw)
 
     def set(self, key: str, value: Any, ttl_seconds: int = 86400) -> None:
-        raise NotImplementedError("Redis backend not yet implemented.")
+        self._client.set(
+            f"agenticframework:idempotency:{key}",
+            json.dumps(value, default=str),
+            ex=ttl_seconds,
+        )
 
 
 class _PostgresBackend:
+    def __init__(self) -> None:
+        self._dsn = os.environ["DATABASE_URL"]
+        conn = self._connect()
+        try:
+            with conn, conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS idempotency_keys (
+                        key        TEXT PRIMARY KEY,
+                        value      JSONB NOT NULL,
+                        expires_at TIMESTAMPTZ NOT NULL
+                    )
+                    """
+                )
+        finally:
+            conn.close()
+
+    def _connect(self):
+        import psycopg2  # type: ignore
+        return psycopg2.connect(self._dsn)
+
     def get(self, key: str) -> Optional[Any]:
-        # TODO Phase 2: connect to Postgres via DATABASE_URL
-        raise NotImplementedError("Postgres backend not yet implemented.")
+        conn = self._connect()
+        try:
+            with conn, conn.cursor() as cur:
+                cur.execute(
+                    "SELECT value FROM idempotency_keys WHERE key = %s AND expires_at > now()",
+                    (key,),
+                )
+                row = cur.fetchone()
+                return row[0] if row else None
+        finally:
+            conn.close()
 
     def set(self, key: str, value: Any, ttl_seconds: int = 86400) -> None:
-        raise NotImplementedError("Postgres backend not yet implemented.")
+        conn = self._connect()
+        try:
+            with conn, conn.cursor() as cur:
+                # json.dumps + cast to jsonb rather than passing the dict
+                # directly: psycopg2 has no implicit Python-dict-to-jsonb
+                # adapter registered by default.
+                cur.execute(
+                    """
+                    INSERT INTO idempotency_keys (key, value, expires_at)
+                    VALUES (%s, %s::jsonb, now() + (%s || ' seconds')::interval)
+                    ON CONFLICT (key) DO UPDATE SET
+                        value = EXCLUDED.value,
+                        expires_at = EXCLUDED.expires_at
+                    """,
+                    (key, json.dumps(value, default=str), ttl_seconds),
+                )
+        finally:
+            conn.close()
+
+    def purge_expired(self) -> int:
+        """Deletes rows past their TTL. Not called automatically — intended
+        for a periodic cleanup job (cron, or scripts/verify_system.py
+        --check-idempotency) since this class has no background thread."""
+        conn = self._connect()
+        try:
+            with conn, conn.cursor() as cur:
+                cur.execute("DELETE FROM idempotency_keys WHERE expires_at <= now()")
+                return cur.rowcount
+        finally:
+            conn.close()

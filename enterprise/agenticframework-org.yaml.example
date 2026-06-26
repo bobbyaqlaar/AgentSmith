@@ -1,4 +1,4 @@
-# AgenticFramework — Org Policy File (SPECS.md §30, enterprise pack).
+# AgentSmith — Org Policy File (SPECS.md §30, enterprise pack).
 #
 # IT authors this file and includes it alongside the signed hook bundle when
 # packaging a release (see scripts/package-hook-bundle.sh). MDM deploys it

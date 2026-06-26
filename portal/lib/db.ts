@@ -23,3 +23,17 @@ export async function tableExists(tableName: string): Promise<boolean> {
   );
   return Boolean(rows[0]?.exists);
 }
+
+// dlq_entries is migrated by runtime/dead_letter.py (Python), not this
+// portal's own schema.sql — a worker running an older dead_letter.py
+// before the reason/workflow_id/gate_id columns existed means this table
+// can lag behind what the portal's code expects. Check before querying
+// columns that might not exist yet, same graceful-degrade philosophy as
+// tableExists above (an old worker isn't an error, just a narrower view).
+export async function columnExists(tableName: string, columnName: string): Promise<boolean> {
+  const { rows } = await getPool().query(
+    `SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
+    [tableName, columnName]
+  );
+  return rows.length > 0;
+}

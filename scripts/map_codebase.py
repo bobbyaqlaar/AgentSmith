@@ -23,12 +23,7 @@ from typing import Optional
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _repo_root() -> Path:
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".git").exists():
-            return parent
-    return cwd
+from _shared import _repo_root  # noqa: E402
 
 
 IGNORED_DIRS = {

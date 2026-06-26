@@ -18,7 +18,7 @@ from typing import Literal, Optional
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-APP_NAME      = "AgenticFramework"
+APP_NAME      = "AgentSmith"
 ICON_PATH     = os.environ.get("AGENT_NOTIFY_ICON", "")
 WEBHOOK_URL   = os.environ.get("AGENT_NOTIFY_WEBHOOK", "")   # Slack / Teams / custom
 NOTIFY_SOUND  = os.environ.get("AGENT_NOTIFY_SOUND", "Ping")  # macOS sound name
@@ -169,7 +169,7 @@ def notify_eval_result(score: float, threshold: float, project: Optional[str] = 
 
 if __name__ == "__main__":
     import sys
-    msg = " ".join(sys.argv[1:]) or "AgenticFramework notification test"
+    msg = " ".join(sys.argv[1:]) or "AgentSmith notification test"
     send_notification("Test Notification", msg, urgency="normal")
     import time
     time.sleep(1)   # let the daemon thread fire

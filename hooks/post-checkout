@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AgenticFramework: post-checkout
+# AgentSmith: post-checkout
 # Provisions IDE rules, Antigravity skills, CI workflows, Knowledge Graph.
 # Fires on: git init, git checkout, git clone
 
@@ -23,7 +23,7 @@ elif [ -f "$REPO_ROOT/go.mod" ]; then
   STACK="GO"; TEST_CMD="go test -race ./..."
 fi
 
-echo "🔧 AgenticFramework: Detected stack [$STACK]"
+echo "🔧 AgentSmith: Detected stack [$STACK]"
 
 # ── Create .agent-rfc/ structure ─────────────────────────────────────────────
 mkdir -p "$REPO_ROOT/.agent-rfc/fixtures"
@@ -148,7 +148,7 @@ if [ "$IS_PUBLIC" -eq 1 ] && [ -t 1 ]; then
     GITIGNORE="$REPO_ROOT/.gitignore"
     {
       echo ""
-      echo "# AgenticFramework — IDE configs (system prompt content)"
+      echo "# AgentSmith — IDE configs (system prompt content)"
       echo ".cursorrules"
       echo "CLAUDE.md"
       echo ".agents/"
@@ -161,7 +161,7 @@ elif [ "$IS_PUBLIC" -eq 1 ]; then
   GITIGNORE="$REPO_ROOT/.gitignore"
   {
     echo ""
-    echo "# AgenticFramework — IDE configs (system prompt content)"
+    echo "# AgentSmith — IDE configs (system prompt content)"
     echo ".cursorrules"
     echo "CLAUDE.md"
     echo ".agents/"
@@ -169,6 +169,21 @@ elif [ "$IS_PUBLIC" -eq 1 ]; then
   } >> "$GITIGNORE"
 fi
 
+# ── Write the developer opt-in marker (FIXES_AND_CLEANUP.md P1a) ────────────
+# This hook is the bootstrap step — it must keep running unconditionally
+# (besides DISABLE_AI_STACK) regardless of opt-in state, since it's the
+# thing that establishes opt-in for every other hook in the first place.
+# pre-commit/commit-msg/post-commit gate on .agenticframework/enabled (or
+# tenant.yaml) existing before they enforce anything — that prevents git's
+# global init.templateDir from silently enforcing AgentSmith rules in
+# a totally unrelated repo someone just `git clone`'d, while still letting
+# every AgentSmith-provisioned repo opt in automatically on first
+# checkout, exactly as documented in UserManual.md §3.
+if [ ! -f "$REPO_ROOT/.agenticframework/enabled" ] && [ ! -f "$REPO_ROOT/.agenticframework/tenant.yaml" ]; then
+  mkdir -p "$REPO_ROOT/.agenticframework"
+  touch "$REPO_ROOT/.agenticframework/enabled"
+fi
+
 echo ""
-echo "✅ AgenticFramework: Project provisioned for [$STACK] — $(basename "$REPO_ROOT")"
+echo "✅ AgentSmith: Project provisioned for [$STACK] — $(basename "$REPO_ROOT")"
 exit 0

@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+.pytest_cache/
 
 # Ops Portal (Next.js)
 portal/node_modules/
@@ -28,3 +29,4 @@ runtime/.hitl_blobs/
 # Local secrets
 .env
 .env.local
+docker-compose.override.yml

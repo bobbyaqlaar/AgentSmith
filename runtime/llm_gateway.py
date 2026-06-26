@@ -25,12 +25,16 @@ See SPECS.md §29 for full specification.
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -351,7 +355,14 @@ class LLMGateway:
         try:
             from idempotency import IdempotencyStore  # type: ignore
             return IdempotencyStore()
-        except Exception:
+        except Exception as exc:
+            # Missing REDIS_URL/DATABASE_URL, backend lib not installed, etc.
+            # Degrades gracefully to "no idempotency" (duplicate-call
+            # suppression simply doesn't happen) rather than failing gateway
+            # construction — but logged, not silently invisible, since this
+            # now means a real backend failed to initialize, not "not
+            # implemented yet".
+            logger.warning("idempotency store unavailable, duplicate-call suppression disabled: %s", exc)
             return None
 
     # ── Budget ────────────────────────────────────────────────────────────────
@@ -409,6 +420,52 @@ class LLMGateway:
         tier = "local" if self._is_free_tier(next_cfg) else "downgrade"
         return next_role, tier
 
+    # ── Run status reporting (Ops Portal, FIXES_AND_CLEANUP.md P2a) ─────────
+
+    def _report_run_status(
+        self,
+        run_id: str,
+        status: str,
+        workflow_id: Optional[str] = None,
+        trace_id: Optional[str] = None,
+        error_summary: Optional[str] = None,
+    ) -> None:
+        """Best-effort POST to the Ops Portal's run-status ingest endpoint —
+        gated on OPS_PORTAL_URL being set, fails open (logs, never raises)
+        on any error. Same philosophy as every other runtime/-to-portal
+        call in this codebase (e.g. _ai_audit_log_event in
+        install-ai-stack.sh): never let optional observability infra block
+        or fail the actual LLM call.
+
+        workflow_id is the grouping key portal/lib/runStatus.ts uses to
+        aggregate multiple gateway calls within one workflow run (it was
+        previously dropped here despite being accepted by the ingest route
+        and the agent_runs.workflow_id column — every row landed with
+        workflow_id=NULL regardless of what the caller passed to
+        complete()).
+        """
+        ops_portal_url = os.environ.get("OPS_PORTAL_URL")
+        sync_token = os.environ.get("OPS_PORTAL_SYNC_TOKEN")
+        if not ops_portal_url or not sync_token:
+            return
+        try:
+            import httpx
+            httpx.post(
+                f"{ops_portal_url.rstrip('/')}/api/runs/ingest",
+                json={
+                    "tenantId": self.tenant_id,
+                    "runId": run_id,
+                    "workflowId": workflow_id,
+                    "status": status,
+                    "traceId": trace_id,
+                    "errorSummary": error_summary,
+                },
+                headers={"Authorization": f"Bearer {sync_token}"},
+                timeout=5.0,
+            )
+        except Exception as exc:
+            logger.debug("run-status report failed tenant=%s run_id=%s: %s", self.tenant_id, run_id, exc)
+
     # ── Span attribute recording (§15, §29) ──────────────────────────────────
 
     def _record_span_attributes(
@@ -456,9 +513,15 @@ class LLMGateway:
             try:
                 cached = self._idempotency.get(idempotency_key)
                 if cached is not None:
+                    logger.info("idempotency cache hit tenant=%s key=%s", self.tenant_id, idempotency_key)
                     return CompletionResult(**cached)
-            except NotImplementedError:
-                pass  # idempotency backend not provisioned — treat as cache miss
+                logger.debug("idempotency cache miss tenant=%s key=%s", self.tenant_id, idempotency_key)
+            except Exception as exc:
+                # Now that the backends are real (Postgres/Redis), a failure
+                # here is a live infra error (DB down, bad creds), not the
+                # old "backend not implemented" case — log it instead of
+                # silently treating every failure as a cache miss.
+                logger.error("idempotency lookup failed tenant=%s key=%s: %s", self.tenant_id, idempotency_key, exc)
 
         budget = self.get_budget_status()
         role, degrade_tier = self._resolve_role(model_hint, budget)
@@ -491,11 +554,28 @@ class LLMGateway:
                     "Concurrent in-flight calls already reserved the remaining budget."
                 )
 
+        # run_id is always unique per CALL, never reused across multiple
+        # gateway.complete() calls within one workflow run — a workflow
+        # that makes 2+ calls (the expected shape for multi-agent/
+        # multi-LLM tenant apps, not just the single-call oil-price
+        # example) would otherwise have call #2's "running" report
+        # re-upsert call #1's already-"success" agent_runs row, resetting
+        # finished_at to NULL and making the widget show "running" for a
+        # workflow that's actually done. workflow_id is reported
+        # separately (see _report_run_status) purely as a grouping key —
+        # portal/lib/runStatus.ts aggregates all calls sharing a
+        # workflow_id (including concurrent/parallel ones, e.g. fan-out to
+        # multiple LLMs) into one widget status rather than relying on
+        # row identity to do that grouping.
+        run_id = f"{workflow_id}-{uuid.uuid4().hex[:8]}" if workflow_id else f"{self.tenant_id}-{uuid.uuid4().hex[:12]}"
+        self._report_run_status(run_id, "running", workflow_id=workflow_id)
+
         try:
             text, in_tok, out_tok = await self._invoke(cfg, messages, max_tokens, temperature)
-        except Exception:
+        except Exception as exc:
             if reserved and estimated_cost_usd:
                 self._budget.add_spend(self.tenant_id, -estimated_cost_usd)  # release the reservation
+            self._report_run_status(run_id, "failed", workflow_id=workflow_id, error_summary=str(exc)[:500])
             raise
 
         cost_usd = (
@@ -515,6 +595,7 @@ class LLMGateway:
             self._budget.add_spend(self.tenant_id, cost_usd)
 
         self._record_span_attributes(role, model_id, degrade_tier, workflow_id, cost_usd)
+        self._report_run_status(run_id, "degraded" if degrade_tier else "success", workflow_id=workflow_id)
 
         result = CompletionResult(
             text=text,
@@ -528,8 +609,8 @@ class LLMGateway:
         if idempotency_key and self._idempotency is not None:
             try:
                 self._idempotency.set(idempotency_key, result.__dict__)
-            except NotImplementedError:
-                pass
+            except Exception as exc:
+                logger.error("idempotency write failed tenant=%s key=%s: %s", self.tenant_id, idempotency_key, exc)
 
         return result
 
@@ -540,6 +621,20 @@ class LLMGateway:
         if isinstance(prompt, list):
             return prompt
         raise TypeError(f"prompt must be str or list[dict], got {type(prompt)}")
+
+    @staticmethod
+    def _is_retryable_provider_error(exc: BaseException) -> bool:
+        """Transient-only: connection/timeout issues, 429 (rate limit), and
+        5xx (provider-side fault) — never 4xx other than 429, since a bad
+        request/auth/model-id error will fail identically on retry and
+        retrying it just burns the attempt budget for no benefit."""
+        import httpx
+        if isinstance(exc, httpx.TransportError):
+            return True
+        if isinstance(exc, httpx.HTTPStatusError):
+            status = exc.response.status_code
+            return status == 429 or status >= 500
+        return False
 
     async def _invoke(
         self, cfg: dict, messages: list[dict], max_tokens: int, temperature: float
@@ -552,8 +647,18 @@ class LLMGateway:
         below (which legitimately differs: this is the production path with
         its own model registry, cost_router.py has its own env-var-driven
         route table) stays local to this method.
+
+        Retries transient failures with exponential backoff (this module's
+        own docstring has documented a "Throttle: exponential backoff on
+        request rate" degrade-ladder step from the start — `tenacity` was
+        already a required dependency for exactly this, but nothing in the
+        codebase actually called it until now). Non-transient errors (bad
+        request, auth failure, unknown model) raise immediately — retrying
+        those would just waste the attempt budget on a failure that can't
+        succeed differently the second time.
         """
         import httpx
+        from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
         try:
             from runtime.provider_dispatch import build_request, parse_response
         except ImportError:
@@ -574,8 +679,18 @@ class LLMGateway:
             api_key = os.environ.get("OPENAI_API_KEY", "")
 
         path, headers, body = build_request(provider, model_id, messages, api_key, max_tokens, temperature)
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(base_url.rstrip("/") + path, json=body, headers=headers)
-            resp.raise_for_status()
-            data = resp.json()
+
+        @retry(
+            retry=retry_if_exception(self._is_retryable_provider_error),
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=1, max=10),
+            reraise=True,
+        )
+        async def _post_with_retry() -> dict:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post(base_url.rstrip("/") + path, json=body, headers=headers)
+                resp.raise_for_status()
+                return resp.json()
+
+        data = await _post_with_retry()
         return parse_response(provider, data)

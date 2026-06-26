@@ -3,6 +3,7 @@
 // not by this app — see runtime/llm_gateway.py for the canonical definition.
 
 import { getPool, tableExists } from "./db";
+import { getTenant } from "./tenants";
 
 export interface CostByPeriod {
   period: string;     // "YYYY-MM"
@@ -12,14 +13,17 @@ export interface CostByPeriod {
 export interface TenantCost {
   tenantId: string;
   spentUsd: number;       // current month
-  cap: number | null;     // not stored centrally — caller supplies from env/tenant.yaml
+  cap: number | null;     // tenants.budget_cap_usd — null until synced from tenant.yaml (FIXES_AND_CLEANUP.md P2b)
   history: CostByPeriod[];
 }
 
 export async function getTenantCost(tenantId: string, months = 6): Promise<TenantCost> {
+  const tenant = await getTenant(tenantId);
+  const cap = tenant?.budgetCapUsd ?? null;
+
   const hasTable = await tableExists("llm_gateway_budget");
   if (!hasTable) {
-    return { tenantId, spentUsd: 0, cap: null, history: [] };
+    return { tenantId, spentUsd: 0, cap, history: [] };
   }
 
   const { rows } = await getPool().query(
@@ -40,7 +44,7 @@ export async function getTenantCost(tenantId: string, months = 6): Promise<Tenan
   return {
     tenantId,
     spentUsd: current?.spentUsd ?? 0,
-    cap: null,
+    cap,
     history,
   };
 }

@@ -93,7 +93,7 @@ class PipelineState:
 
 # ── System prompts ────────────────────────────────────────────────────────────
 
-_ARCHITECT_SYSTEM = """You are the Architect agent in an AgenticFramework pipeline.
+_ARCHITECT_SYSTEM = """You are the Architect agent in an AgentSmith pipeline.
 Your role is to produce a precise, step-by-step implementation blueprint for the
 Developer agent. Rules:
 - Reference exact file paths that need to be created or modified.
@@ -102,14 +102,14 @@ Developer agent. Rules:
 - Output raw structured text only — no conversational padding.
 - Flag any ambiguity as a numbered OPEN ITEM at the end."""
 
-_DEVELOPER_SYSTEM = """You are the Developer agent in an AgenticFramework pipeline.
+_DEVELOPER_SYSTEM = """You are the Developer agent in an AgentSmith pipeline.
 Your role is to produce clean, production-ready code from the Architect's blueprint. Rules:
 - Output code only. No explanations outside inline comments.
 - Handle all error paths explicitly — no empty catch blocks, no bare except clauses.
 - Every function must have a typed signature.
 - Follow the 10 pillars in .cursorrules exactly."""
 
-_VALIDATOR_SYSTEM = """You are the Validator agent in an AgenticFramework pipeline.
+_VALIDATOR_SYSTEM = """You are the Validator agent in an AgentSmith pipeline.
 Your role is to review the Developer's code against the Architect's blueprint and the
 original spec. You must respond with a JSON object only:
 {

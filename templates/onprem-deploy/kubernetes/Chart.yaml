@@ -1,0 +1,13 @@
+apiVersion: v2
+name: agenticframework-onprem-app
+description: >
+  Stack-agnostic Helm chart for deploying an AgentSmith tenant app to
+  an enterprise on-premise Kubernetes cluster, with canary weighting and
+  shadow traffic mirroring via the Kubernetes Gateway API (works with
+  either Traefik's or Envoy Gateway's Gateway API implementation — see
+  values.yaml's proxyEngine). For high-compliance customers who won't run
+  raw Docker (see ../README.md) — the Docker Compose template is the
+  lighter-weight 80% case.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

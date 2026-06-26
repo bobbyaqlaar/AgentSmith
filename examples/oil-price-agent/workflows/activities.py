@@ -61,6 +61,7 @@ async def run_prediction_activity(payload: dict) -> dict:
     deviations from the trailing series, or when model confidence is low.
     """
     from llm_gateway import LLMGateway  # type: ignore
+    from idempotency import make_key  # type: ignore
 
     series = payload.get("price_series", [])
     tenant_id = payload["tenant_id"]
@@ -71,12 +72,24 @@ async def run_prediction_activity(payload: dict) -> dict:
     latest = series[-1] if series else 0.0
     is_anomaly = std_dev > 0 and abs(latest - mean) > ANOMALY_STD_DEV_THRESHOLD * std_dev
 
+    # Keyed on the workflow run + activity + its actual input, not just the
+    # workflow run id alone — a Temporal activity retry of THIS SPECIFIC call
+    # must dedupe against itself, but a different activity in the same
+    # workflow run (or the same activity called again with different input)
+    # must not collide with it (FIXES_AND_CLEANUP.md P0).
+    idempotency_key = make_key({
+        "activity": "run_prediction_activity",
+        "workflow_run_id": payload.get("workflow_run_id"),
+        "price_series": series,
+    })
+
     gateway = LLMGateway(tenant_id=tenant_id)
     result = await gateway.complete(
         prompt=f"Given recent oil prices {series}, predict the next price point and a "
                f"confidence score (0-1) as JSON: {{\"prediction\": <float>, \"confidence\": <float>}}.",
         model_hint="validator",  # cheap/fast tier for a bounded forecasting prompt
         workflow_id=payload.get("workflow_run_id"),
+        idempotency_key=idempotency_key,
     )
 
     try:
@@ -99,7 +112,23 @@ async def run_prediction_activity(payload: dict) -> dict:
 
 @activity.defn
 async def decide_action_activity(payload: dict) -> dict:
-    """DecisionAgent: act on an approved (or non-flagged) prediction."""
+    """DecisionAgent: act on an approved (or non-flagged) prediction.
+
+    Validates the shape a real downstream order-placement API would
+    require before calling it — wrapped by
+    oil_price_workflow.py's run_with_recoverable_step, so a payload this
+    rejects parks the workflow alive for a human to correct via the Ops
+    Portal's DLQ view (FIXES_AND_CLEANUP.md's HITL/DLQ redesign) instead
+    of failing the run. This is the exact CRM-example shape: a malformed
+    field is the kind of error a human edit fixes, not a retry.
+    """
+    if "prediction" not in payload or not isinstance(payload.get("confidence"), (int, float)):
+        bad_keys = [k for k in payload if k not in ("tenant_id", "is_anomaly", "needs_hitl", "cost_usd")]
+        raise ValueError(
+            f"decide_action_activity payload missing required prediction/confidence fields "
+            f"(got keys: {bad_keys}) — downstream order API requires {{'prediction': <float>, 'confidence': <float>}}"
+        )
+
     # TODO (tenant implementation): place the order / fire the alert.
     return {
         "status": "success",
@@ -113,9 +142,19 @@ async def dead_letter_activity(payload: dict) -> dict:
     """Routed to when the HITL signal times out (24h) — see base_workflow.py."""
     from dead_letter import DeadLetterQueue  # type: ignore
 
+    # Deterministic task_id (not a fresh uuid per call): if Temporal retries
+    # THIS activity itself (e.g. a transient DB blip inside enqueue(), before
+    # it returns successfully), the retry computes the same task_id, and
+    # DeadLetterQueue.enqueue()'s ON CONFLICT DO NOTHING dedupes it into one
+    # DLQ row instead of one per retry attempt.
+    workflow_run_id = payload.get("workflow_run_id", "unknown")
+    task_id = f"hitl-timeout-{workflow_run_id}"
+
     dlq = DeadLetterQueue()
-    try:
-        dlq.enqueue(payload=payload, error=payload.get("error", "unknown"), tenant_id=payload["tenant_id"])
-    except NotImplementedError:
-        pass  # DLQ store not yet provisioned — surfaced via Ops Portal once it is
+    dlq.enqueue(
+        payload=payload,
+        error=payload.get("error", "unknown"),
+        tenant_id=payload["tenant_id"],
+        task_id=task_id,
+    )
     return {"status": "dead_letter"}

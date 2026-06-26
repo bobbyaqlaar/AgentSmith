@@ -1,4 +1,4 @@
-# AgenticFramework — Self-Test CI (SPECS.md §22 Phase 5).
+# AgentSmith — Self-Test CI (SPECS.md §22 Phase 5).
 #
 # Tests the FRAMEWORK itself (this repo), not a tenant project. Tenant repos
 # get their own ci-<stack>.yml / cd-staging.yml / cd-production.yml from
@@ -25,6 +25,61 @@ jobs:
       - name: "py_compile sweep"
         run: |
           find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
+      - name: "Redaction compliance (staging + production profiles)"
+        run: |
+          ENVIRONMENT=staging python3 scripts/verify_system.py --check-redaction
+          ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
+      - name: "Hook opt-in / enterprise RFC gate"
+        run: python3 scripts/verify_system.py --check-hooks
+      - name: "Set up Helm"
+        uses: azure/setup-helm@v4
+      - name: "On-prem deploy template (Compose + Helm syntax)"
+        run: python3 scripts/verify_system.py --check-onprem-deploy
+
+  python-behaviour:
+    name: "Python runtime behaviour tests (Postgres-backed)"
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: "postgresql://test:test@localhost:5432/test"
+      IDEMPOTENCY_BACKEND: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: pip install -r requirements.txt
+      - name: "Cache Temporal test-server binary"
+        # The Python SDK caches the downloaded dev-server CLI under
+        # $TMPDIR/temporal-sdk-python-<version> (confirmed by running it
+        # locally — not documented, so checked rather than assumed). /tmp
+        # doesn't persist across separate Actions runs on its own; this
+        # cache step is what makes it actually stick between CI runs.
+        uses: actions/cache@v4
+        with:
+          path: /tmp/temporal-sdk-python-*
+          key: temporal-testsrv-${{ runner.os }}
+      - name: "pytest (runtime/test/)"
+        run: pytest runtime/test/ -v
+      - name: "pytest (scripts/test/ — shadow eval sampling)"
+        run: pytest scripts/test/ -v
+      - name: "verify_system.py --check-idempotency"
+        run: python3 scripts/verify_system.py --check-idempotency
+      - name: "verify_system.py --check-dlq"
+        run: python3 scripts/verify_system.py --check-dlq
 
   shell:
     name: "Shell scripts"
@@ -54,6 +109,22 @@ jobs:
     defaults:
       run:
         working-directory: portal
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: "postgresql://test:test@localhost:5432/test"
+      AUDIT_LOG_HMAC_KEY: "ci-test-key-not-a-real-secret"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,7 +134,38 @@ jobs:
           cache-dependency-path: portal/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
+      - run: npm run db:migrate
+      - name: "npm test — cross-tenant isolation (no DB required)"
+        run: npm test
+      - name: "npm run test:db — audit log HMAC sign/verify + tamper detection"
+        run: npm run test:db
       - run: npm run build
+      - name: "Start portal for history-sync check"
+        env:
+          OPS_PORTAL_SYNC_TOKEN: "ci-test-sync-token-not-a-real-secret"
+          OPS_PORTAL_USER: "ci"
+          OPS_PORTAL_PASSWORD: "ci-test-password"
+        run: |
+          npm run start &
+          # No -f: a 401 (wrong token, expected) still means the server is
+          # up and responding — curl without -f only exits non-zero on an
+          # actual connection failure (refused/timeout), which is the
+          # readiness signal we want here.
+          for i in $(seq 1 30); do
+            curl -s -o /dev/null http://localhost:3000/api/sync/history -X POST \
+              -H "Authorization: Bearer wrong-token" -d '{}' && break
+            sleep 1
+          done
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install httpx pyyaml
+      - name: "verify_system.py --check-history-sync (against the live portal above)"
+        working-directory: ${{ github.workspace }}
+        env:
+          OPS_PORTAL_URL: "http://localhost:3000"
+          OPS_PORTAL_SYNC_TOKEN: "ci-test-sync-token-not-a-real-secret"
+        run: python3 scripts/verify_system.py --check-history-sync
 
   widget:
     name: "In-App Widget"

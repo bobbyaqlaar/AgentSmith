@@ -1,4 +1,4 @@
-# AgenticFramework — Phoenix auth sidecar overlay (SPECS.md §15).
+# AgentSmith — Phoenix auth sidecar overlay (SPECS.md §15).
 #
 # Adds HTTP basic auth in front of Phoenix for team-shared / production
 # deployments. Apply on top of the base stack:

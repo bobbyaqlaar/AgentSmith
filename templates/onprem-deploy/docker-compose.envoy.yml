@@ -1,0 +1,23 @@
+# Envoy overlay — adds the ingress/canary/shadow layer when
+# PROXY_ENGINE=envoy. Config rendered to proxy/envoy/envoy.rendered.yaml
+# by scripts/render-envoy-config.py before this comes up.
+
+services:
+  proxy:
+    image: envoyproxy/envoy:v1.31-latest
+    container_name: onprem-proxy-envoy
+    restart: unless-stopped
+    command:
+      - "-c"
+      - "/etc/envoy/envoy.yaml"
+    ports:
+      - "${PROXY_LISTEN_PORT:-80}:${PROXY_LISTEN_PORT:-80}"
+    volumes:
+      - ./proxy/envoy/envoy.rendered.yaml:/etc/envoy/envoy.yaml:ro
+    depends_on:
+      app-prod:
+        condition: service_healthy
+    networks:
+      - onprem
+    logging:
+      driver: json-file   # Envoy's access log is configured to stdout in envoy.yaml's StdoutAccessLog

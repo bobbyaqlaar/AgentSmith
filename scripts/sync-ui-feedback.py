@@ -32,12 +32,8 @@ SYNC_STATE_FILE  = ".agent-rfc/fixtures/sync_state.json"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _repo_root() -> Path:
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".git").exists():
-            return parent
-    return cwd
+from _shared import _repo_root, _iso_now  # noqa: E402
+from _shared import _phoenix_get as _shared_phoenix_get  # noqa: E402
 
 
 def _load_sync_state() -> dict:
@@ -58,22 +54,11 @@ def _save_sync_state(state: dict) -> None:
         json.dump(state, fh, indent=2)
 
 
-def _iso_now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
 # ── Phoenix API client ────────────────────────────────────────────────────────
 
 def _phoenix_get(path: str, params: Optional[dict] = None) -> Any:
     """Make a GET request to Phoenix REST API."""
-    try:
-        import httpx
-        url = f"{PHOENIX_ENDPOINT.rstrip('/')}{path}"
-        resp = httpx.get(url, params=params, timeout=30.0)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as exc:
-        raise RuntimeError(f"Phoenix API error [{path}]: {exc}") from exc
+    return _shared_phoenix_get(PHOENIX_ENDPOINT, path, params)
 
 
 def _fetch_annotations() -> list[dict]:

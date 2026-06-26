@@ -4,7 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { cookies as nextCookies } from "next/headers";
-import { getOidcSettings, handleCallback, createSessionToken, SESSION_COOKIE_NAME, secureCookies } from "@/lib/oidc";
+import { getOidcSettings, handleCallback, createSessionToken, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS, secureCookies } from "@/lib/oidc";
 
 export const dynamic = "force-dynamic"; // depends on query params (code/state) and request cookies — never cache
 
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
       httpOnly: true,
       secure: secureCookies(),
       sameSite: "lax",
-      maxAge: 8 * 60 * 60,
+      maxAge: SESSION_TTL_SECONDS, // must match sessionToken.ts's JWT expiration — a hardcoded duplicate here would silently drift if that constant ever changes
       path: "/",
     });
     res.cookies.delete("oidc_state");
