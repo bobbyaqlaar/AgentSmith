@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# AgentSmith: commit-msg linter
+# Enforces Conventional Commits: <type>(<scope>)?: <summary> (max 72 chars)
+
+if [ "${DISABLE_AI_STACK:-false}" = "true" ]; then exit 0; fi
+
+# ── Developer opt-in gate ──────────────────────────────────────────────────────
+# Same rationale as hooks/pre-commit and hooks/post-commit — git's global
+# init.templateDir applies this hook to every repo on the machine, not just
+# AgentSmith-provisioned ones.
+REPO_ROOT_FOR_OPTIN=$(git rev-parse --show-toplevel 2>/dev/null)
+ORG_POLICY_FILE="$HOME/.agent-framework/agenticframework-org.yaml"
+if [ -n "$REPO_ROOT_FOR_OPTIN" ] \
+   && [ ! -f "$REPO_ROOT_FOR_OPTIN/.agenticframework/enabled" ] \
+   && [ ! -f "$REPO_ROOT_FOR_OPTIN/.agenticframework/tenant.yaml" ] \
+   && [ ! -f "$ORG_POLICY_FILE" ]; then
+  exit 0
+fi
+
+COMMIT_MSG_FILE="$1"
+CLEAN_MSG=$(grep -v '^#' "$COMMIT_MSG_FILE" | head -n 1)
+CONVENTIONAL_RE="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_/-]+\))?!?: .{1,72}$"
+
+echo "📝 AgentSmith: Validating commit message..."
+
+if [[ ! "$CLEAN_MSG" =~ $CONVENTIONAL_RE ]]; then
+  echo "❌ ERROR: Commit message blocked. Must follow Conventional Commits format."
+  echo ""
+  echo "   Expected:  <type>(<optional-scope>): <short summary>"
+  echo "   Examples:  feat(agents): add prediction pipeline"
+  echo "              fix(order): handle null supplier response"
+  echo "              docs: update installation guide"
+  echo ""
+  echo "   Types: feat | fix | docs | style | refactor | perf | test | build | ci | chore | revert"
+  echo "   Your message: \"$CLEAN_MSG\""
+  exit 1
+fi
+
+# ── Enterprise: require an RFC-NNN reference (FIXES_AND_CLEANUP.md P1a) ────
+# Complements hooks/pre-commit's "at least one open RFC exists" guardrail —
+# this is the precise per-commit check, since this hook (unlike pre-commit)
+# actually receives the commit message.
+if [ -f "$ORG_POLICY_FILE" ]; then
+  FULL_MSG=$(grep -v '^#' "$COMMIT_MSG_FILE")
+  if ! echo "$FULL_MSG" | grep -qE "RFC-[0-9]+"; then
+    echo "❌ ERROR: Enterprise policy requires an RFC-NNN reference in the commit message."
+    echo "   Example: feat(auth): add JWT middleware (RFC-001)"
+    exit 1
+  fi
+fi
+
+echo "✅ Commit message format valid."
+exit 0

@@ -1,0 +1,13 @@
+{
+  "name": "@agenticframework/in-app-widget",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Embeddable end-user status component for tenant applications (SPECS.md §15, §26)",
+  "type": "module",
+  "scripts": {
+    "test": "node test/widget.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}

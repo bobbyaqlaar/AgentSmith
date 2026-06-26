@@ -1,0 +1,58 @@
+{{- if .Values.gateway.create }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Values.gateway.name }}
+spec:
+  gatewayClassName: {{ include "onprem.gatewayClassName" . }}
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: {{ .Values.gateway.listenerPort }}
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+{{- end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "onprem.fullname" . }}
+spec:
+  parentRefs:
+    - name: {{ .Values.gateway.name }}
+  hostnames:
+    - {{ .Values.host | quote }}
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: / }
+      backendRefs:
+        # Weighted canary split — backendRefs[].weight is core Gateway API
+        # (works the same under Traefik's and Envoy Gateway's controllers).
+        - name: {{ include "onprem.fullname" . }}-prod
+          port: {{ .Values.image.port }}
+          weight: {{ if .Values.canary.enabled }}{{ sub 100 .Values.canary.weightPercent }}{{ else }}100{{ end }}
+        {{- if .Values.canary.enabled }}
+        - name: {{ include "onprem.fullname" . }}-canary
+          port: {{ .Values.image.port }}
+          weight: {{ .Values.canary.weightPercent }}
+        {{- end }}
+      {{- if .Values.shadow.enabled }}
+      filters:
+        # NOTE: core Gateway API's RequestMirror filter mirrors 100% of
+        # traffic matched by this rule — there is no percentage field in
+        # the core spec (unlike Traefik's/Envoy's native mirroring used in
+        # the Docker Compose template, which do support a percent). If you
+        # need partial-percentage mirroring in Kubernetes specifically,
+        # that requires a vendor extension (e.g. Istio's VirtualService
+        # httpMirrorPercentage, or an Envoy Gateway BackendTrafficPolicy) —
+        # not included here to keep this chart portable across both
+        # supported proxy engines using only the Gateway API standard.
+        # values.shadow.mirrorPercent is therefore informational only at
+        # the Kubernetes layer; it's fully honored in the Compose template.
+        - type: RequestMirror
+          requestMirror:
+            backendRef:
+              name: {{ include "onprem.fullname" . }}-shadow
+              port: {{ .Values.image.port }}
+      {{- end }}

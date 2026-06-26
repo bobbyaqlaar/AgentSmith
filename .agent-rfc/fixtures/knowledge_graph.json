@@ -1,0 +1,1021 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "config",
+        "middleware"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/middleware.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "Role",
+        "Access",
+        "ROLE_HEADER",
+        "TENANT_SCOPE_HEADER",
+        "getBasicAuthUsers",
+        "getSsoUsers",
+        "getAccessForBasicAuthUser",
+        "verifyBasicAuthCredentials",
+        "getAccessForSsoEmail",
+        "encodeTenantScopeHeader",
+        "decodeTenantScopeHeader",
+        "canAccessTenant",
+        "filterTenantIds",
+        "canWrite",
+        "canAdmin",
+        "getAccessFromHeaderValues"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/authz.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "SESSION_COOKIE_NAME",
+        "SESSION_TTL_SECONDS",
+        "OidcIdentity",
+        "createSessionToken",
+        "VerifiedSession",
+        "verifySessionToken"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/sessionToken.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-06-22T12:30:57Z",
+      "id": "portal/next-env.d.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/tailwind.config.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "main",
+        "_load_tenant_worker_module",
+        "_start_temporal_worker",
+        "_start_celery_worker"
+      ],
+      "last_modified": "2026-06-22T23:30:12Z",
+      "id": "runtime/worker.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "make_key",
+        "IdempotencyStore",
+        "_RedisBackend",
+        "_PostgresBackend",
+        "__init__",
+        "get",
+        "set",
+        "_connect",
+        "purge_expired"
+      ],
+      "last_modified": "2026-06-22T23:13:07Z",
+      "id": "runtime/idempotency.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_luhn_valid",
+        "_redact_credit_cards",
+        "_hash8",
+        "_load_extra_patterns",
+        "HITLBlobStore",
+        "_make_blob_ref",
+        "TraceRedactor",
+        "_sub",
+        "__init__",
+        "_key",
+        "put",
+        "_blob_store_for",
+        "on_start",
+        "on_end",
+        "shutdown",
+        "force_flush",
+        "_scrub",
+        "_truncate"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "runtime/trace_redactor.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "runtime/__init__.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "CompletionResult",
+        "BudgetExceededError",
+        "_repo_root",
+        "_load_yaml",
+        "load_model_registry",
+        "_current_period",
+        "BudgetStatus",
+        "_BudgetBackend",
+        "_MemoryBudgetBackend",
+        "_RedisBudgetBackend",
+        "_PostgresBudgetBackend",
+        "_make_budget_backend",
+        "LLMGateway",
+        "remaining_usd",
+        "breached",
+        "get_spend",
+        "add_spend",
+        "try_reserve",
+        "__init__",
+        "_key",
+        "_connect",
+        "_period",
+        "_make_idempotency_store",
+        "get_budget_status",
+        "_degrade_chain",
+        "_is_free_tier",
+        "_resolve_role",
+        "_record_span_attributes",
+        "complete",
+        "_coerce_messages",
+        "_invoke"
+      ],
+      "last_modified": "2026-06-22T23:13:59Z",
+      "id": "runtime/llm_gateway.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "get_environment"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "runtime/environment.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "DLQEntry",
+        "DeadLetterQueue",
+        "__init__",
+        "_connect",
+        "_row_to_entry",
+        "enqueue",
+        "list",
+        "_get",
+        "replay",
+        "discard"
+      ],
+      "last_modified": "2026-06-22T23:14:44Z",
+      "id": "runtime/dead_letter.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "infer_provider",
+        "build_request",
+        "parse_response"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "runtime/provider_dispatch.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_setup_otel",
+        "_NoopSpan",
+        "_NoopTracer",
+        "PipelineState",
+        "_architect_node",
+        "_developer_node",
+        "_validator_node",
+        "run_pipeline",
+        "__enter__",
+        "__exit__",
+        "set_attribute",
+        "set_status",
+        "record_exception",
+        "start_as_current_span"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/local_agent_stack.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_repo_root",
+        "_load_sync_state",
+        "_save_sync_state",
+        "_iso_now",
+        "_phoenix_get",
+        "_fetch_annotations",
+        "_fetch_span",
+        "sync"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/sync-ui-feedback.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_repo_root",
+        "_graph_path",
+        "_iso_now",
+        "AgentKnowledgeGraph",
+        "__init__",
+        "_load",
+        "save",
+        "upsert_file",
+        "upsert_guardrail",
+        "inject_production_learning",
+        "add_import",
+        "link_file_to_guardrail",
+        "remove_file",
+        "fetch_subgraph_context_window",
+        "find_files_by_symbol",
+        "impacted_files",
+        "stats",
+        "as_json"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/local_knowledge_graph.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_repo_root",
+        "_golden_path",
+        "_criteria_path",
+        "_results_path",
+        "_load_golden_cases",
+        "_load_criteria",
+        "_judge_case",
+        "run_scorecard"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/run-evals.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_repo_root",
+        "_golden_path",
+        "_criteria_path",
+        "_log_path",
+        "_iso_now",
+        "promote",
+        "_mark_log_resolved",
+        "_load_json",
+        "_save_json"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/promote-learning.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_repo_root",
+        "_iso_now",
+        "_tenant_id",
+        "_project_name",
+        "AgentLogger",
+        "get_logger",
+        "__init__",
+        "info",
+        "minor",
+        "major",
+        "critical",
+        "llm_call",
+        "_write",
+        "resolve_hitl",
+        "unresolved_issues"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/agent_logger.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_notify_plyer",
+        "_notify_osascript",
+        "_send_webhook",
+        "send_notification",
+        "notify_hitl_required",
+        "notify_circuit_breaker",
+        "notify_eval_result",
+        "_post",
+        "_dispatch"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/notifier.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "is_online",
+        "get_llm_endpoint",
+        "require_online",
+        "start_background_watcher",
+        "stop_background_watcher",
+        "_notify_offline",
+        "_notify_recovery",
+        "_run"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/network_watchdog.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_repo_root",
+        "_cache_path",
+        "_load_state",
+        "_save_state",
+        "CircuitBreakerTripped",
+        "audit_token_velocity_circuit",
+        "_notify_if_requested",
+        "get_status",
+        "reset_monthly",
+        "__init__"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/circuit_breaker.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_count_tokens",
+        "_keyword_tier",
+        "record_failure",
+        "record_success",
+        "_should_escalate",
+        "ModelRoute",
+        "route",
+        "_build_cloud_route",
+        "_local_route",
+        "call",
+        "__init__",
+        "__repr__"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/cost_router.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_load_rules",
+        "_render_cursorrules",
+        "_render_claude_md",
+        "_render_skill",
+        "main"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/generate-ide-config.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_repo_root",
+        "_iter_source_files",
+        "_parse_python",
+        "_parse_typescript",
+        "_parse_go",
+        "_extract_guardrails_from_cursorrules",
+        "_extract_guardrails_from_rfc",
+        "_resolve_local_import",
+        "run_map"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/map_codebase.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "AgentState",
+        "_default_state",
+        "_get_tracer",
+        "_get_model",
+        "_run_llm",
+        "architect_node",
+        "developer_node",
+        "validator_node",
+        "hitl_node",
+        "route_after_validator",
+        "route_after_hitl",
+        "_get_checkpointer",
+        "build_graph",
+        "run_pipeline",
+        "_Noop",
+        "start_as_current_span",
+        "_Span",
+        "__enter__",
+        "__exit__",
+        "set_attribute",
+        "record_exception"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "scripts/multi_agent_system.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_repo_root",
+        "_check",
+        "run_checks",
+        "check_redaction",
+        "check_idempotency",
+        "check_dlq",
+        "check_hooks",
+        "_run",
+        "_git_repo"
+      ],
+      "last_modified": "2026-06-22T23:22:15Z",
+      "id": "scripts/verify_system.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "javascript",
+      "symbols": [],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "templates/in-app-widget/widget.js"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "AgentStatusProps",
+        "AgentStatus"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "templates/in-app-widget/react/AgentStatus.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "main"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "examples/oil-price-agent/worker.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_ensure_runtime_on_path",
+        "fetch_oil_price_activity",
+        "run_prediction_activity",
+        "decide_action_activity",
+        "dead_letter_activity",
+        "_NoopActivity",
+        "defn"
+      ],
+      "last_modified": "2026-06-22T23:36:07Z",
+      "id": "examples/oil-price-agent/workflows/activities.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "OilPriceWorkflowInput",
+        "OilPricePredictionWorkflow",
+        "__init__",
+        "hitl_approved",
+        "run",
+        "_Workflow",
+        "defn",
+        "signal"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "examples/oil-price-agent/workflows/oil_price_workflow.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "examples/oil-price-agent/workflows/__init__.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_make_gateway",
+        "test_concurrent_calls_cannot_exceed_cap",
+        "test_reservation_releases_on_invoke_failure",
+        "test_free_tier_model_bypasses_reservation",
+        "test_reservation_reconciles_to_actual_cost",
+        "fake_invoke",
+        "run_one",
+        "failing_invoke"
+      ],
+      "last_modified": "2026-06-22T23:23:23Z",
+      "id": "runtime/test/test_llm_gateway_budget.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "FakeSpanContext",
+        "FakeSpan",
+        "_redactor",
+        "test_staging_profile_hashes_secrets_preserving_structure",
+        "test_production_profile_truncates_and_flattens",
+        "test_development_profile_does_not_scrub",
+        "test_unrecognized_profile_value_falls_back_to_strictest",
+        "test_per_span_tenant_id_used_for_hitl_blob_not_constructor_default",
+        "test_blob_ref_includes_span_id_for_collision_safety",
+        "test_missing_hitl_key_logs_error_not_silently_swallowed",
+        "test_credit_card_redaction_validates_luhn",
+        "test_get_environment_fail_closed_for_unrecognized_value",
+        "test_get_environment_fail_closed_for_unset",
+        "test_get_environment_explicit_development",
+        "__init__"
+      ],
+      "last_modified": "2026-06-22T23:24:14Z",
+      "id": "runtime/test/test_trace_redactor.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "runtime/workflows/__init__.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "AgentWorkflowInput",
+        "AgentWorkflowResult",
+        "BaseAgentWorkflow",
+        "__init__",
+        "run_with_hitl_gate",
+        "_Workflow",
+        "hitl_approved",
+        "signal"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "runtime/workflows/base_workflow.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "metadata",
+        "RootLayout"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/layout.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "TenantOverviewPage"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/test/authz.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-06-22T23:26:09Z",
+      "id": "portal/test/auditLog.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "CostChart"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/components/CostChart.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/scripts/migrate.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "DLQStatus",
+        "getDLQStatus"
+      ],
+      "last_modified": "2026-06-22T23:15:38Z",
+      "id": "portal/lib/dlq.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "getPool",
+        "tableExists"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/db.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "Tenant",
+        "listTenants",
+        "getTenant",
+        "upsertTenant"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/tenants.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "tenantTraceUrl",
+        "checkPhoenixHealth"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/phoenix.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "CostByPeriod",
+        "TenantCost",
+        "getTenantCost",
+        "getAllTenantsCurrentSpend"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/cost.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "AuditEventType",
+        "AuditEvent",
+        "verifySignature",
+        "AppendAuditEventInput",
+        "appendAuditEvent",
+        "AuditEventWithVerification",
+        "listAuditEvents"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/auditLog.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "RunStatus",
+        "WidgetStatus",
+        "getWidgetStatus"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/runStatus.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "createWidgetToken",
+        "resolveWidgetToken",
+        "revokeWidgetToken",
+        "revokeWidgetTokensForTenant"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/widgetTokens.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "revokeSession",
+        "isSessionRevoked"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/sessionRevocation.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "HistoryEntry",
+        "getUnresolvedIssues",
+        "getUnresolvedCountByTenant",
+        "SyncEntryInput",
+        "syncHistoryEntries"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/issues.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "secureCookies",
+        "OidcSettings",
+        "getOidcSettings",
+        "getOidcClientConfig",
+        "buildAuthorizationUrl",
+        "OidcIdentity",
+        "handleCallback"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/oidc.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "ISOLATION_VALUES",
+        "Isolation",
+        "isValidIsolation"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/lib/isolation.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET",
+        "POST"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/tenants/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/audit/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/dlq/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/sync/history/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/audit/append/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/tenants/[id]/cost/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST",
+        "DELETE"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/tenants/[id]/widget-token/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/tenants/[id]/issues/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/auth/session-status/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/auth/logout/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "GET"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/auth/callback/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "GET"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/auth/login/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "OPTIONS",
+        "GET"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/api/widget/status/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "TenantDetailPage"
+      ],
+      "last_modified": "2026-06-22T23:05:07Z",
+      "id": "portal/app/tenants/[id]/page.tsx"
+    }
+  ],
+  "edges": [
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/middleware.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/middleware.ts",
+      "target": "portal/lib/sessionToken.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/trace_redactor.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/llm_gateway.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/cost_router.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/multi_agent_system.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_llm_gateway_budget.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_trace_redactor.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/dlq.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/tenants.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/cost.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/auditLog.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/runStatus.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/runStatus.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/runStatus.ts",
+      "target": "portal/lib/phoenix.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/widgetTokens.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/sessionRevocation.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/issues.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/oidc.ts",
+      "target": "portal/lib/sessionToken.ts"
+    }
+  ]
+}

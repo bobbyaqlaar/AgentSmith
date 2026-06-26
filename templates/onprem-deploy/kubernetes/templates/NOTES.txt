@@ -1,0 +1,18 @@
+AgentSmith on-prem app deployed.
+
+Proxy engine: {{ .Values.proxyEngine }} (GatewayClass: {{ include "onprem.gatewayClassName" . }})
+Canary:       {{ if .Values.canary.enabled }}enabled, {{ .Values.canary.weightPercent }}% of traffic{{ else }}disabled{{ end }}
+Shadow:       {{ if .Values.shadow.enabled }}enabled (100% mirror — see httproute.yaml's note on K8s percentage limits){{ else }}disabled{{ end }}
+
+Check rollout status:
+  kubectl get pods -l app.kubernetes.io/name={{ include "onprem.fullname" . }}
+  kubectl get httproute {{ include "onprem.fullname" . }} -o yaml
+
+{{- if not .Values.envSecretName }}
+
+⚠️  No envSecretName set — your app container has no env vars beyond
+   values.env's plain entries. Create a Secret with your app's runtime
+   config (API keys, etc.) and set envSecretName, matching the
+   Compose template's .env file convention (see ../README.md point 3:
+   config is always env-var-driven, never a cloud secret manager call).
+{{- end }}

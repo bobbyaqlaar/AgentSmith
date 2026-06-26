@@ -1,0 +1,42 @@
+# AgentSmith — Phoenix auth sidecar overlay (SPECS.md §15).
+#
+# Adds HTTP basic auth in front of Phoenix for team-shared / production
+# deployments. Apply on top of the base stack:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.auth.yml up -d
+#
+# Required .env vars (no default — the stack refuses to start without them,
+# there is no way to accidentally run this overlay unauthenticated):
+#   PHOENIX_BASIC_AUTH_USER=ops
+#   PHOENIX_BASIC_AUTH_HASH=<$$-escaped bcrypt hash, NOT the plaintext password>
+#
+# ⚠️  The bcrypt hash contains literal '$' characters. Compose interpolates
+# .env file values, so an unescaped '$' is treated as a variable reference
+# and silently corrupts the hash (auth then rejects every password, with no
+# startup error). Escape every '$' as '$$' when writing it to .env:
+#   echo "PHOENIX_BASIC_AUTH_HASH=$(docker run --rm caddy:2-alpine caddy hash-password --plaintext '<your-password>' | sed 's/\$/\$\$/g')" >> .env
+#
+# This file is deliberately kept SEPARATE from docker-compose.yml (rather
+# than e.g. a Compose profile) — Compose interpolates every service's
+# `environment:` block at parse time regardless of profiles, so a required
+# var on a profiled-out service still breaks the base `docker compose up -d`
+# solo-dev flow. Splitting into a second file means these required vars are
+# only ever interpolated when this overlay is explicitly included.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: agenticframework-caddy
+    restart: unless-stopped
+    ports:
+      - "${PHOENIX_AUTH_PORT:-6007}:80"
+    environment:
+      PHOENIX_BASIC_AUTH_USER: "${PHOENIX_BASIC_AUTH_USER:?Set PHOENIX_BASIC_AUTH_USER in .env}"
+      PHOENIX_BASIC_AUTH_HASH: "${PHOENIX_BASIC_AUTH_HASH:?Set PHOENIX_BASIC_AUTH_HASH in .env — generate with: docker run --rm caddy:2-alpine caddy hash-password --plaintext \"<password>\"}"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      phoenix:
+        condition: service_healthy
+    networks:
+      - agenticframework

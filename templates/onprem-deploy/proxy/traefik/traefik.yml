@@ -1,0 +1,18 @@
+entryPoints:
+  web:
+    address: ":80"
+
+providers:
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+api:
+  dashboard: false   # enable only behind your own auth if needed; off by default for on-prem security posture
+
+log:
+  level: INFO
+  format: json        # stdout JSON-lines — README.md point 4 / OPERATIONS.md on-prem logging
+
+accessLog:
+  format: json

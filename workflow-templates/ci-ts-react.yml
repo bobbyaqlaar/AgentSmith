@@ -1,0 +1,44 @@
+name: "CI: TypeScript/React Guardrails"
+
+on:
+  pull_request:
+    branches: ["main", "develop"]
+  push:
+    branches: ["main"]
+
+concurrency:
+  group: ci-ts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guardrails:
+    name: "Guardrails — TypeScript/React"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run tsc -- --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test -- --watchAll=false --ci --coverage
+
+  eval-scorecard:
+    name: "Eval scorecard"
+    uses: ./.github/workflows/eval-scorecard.yml
+    secrets: inherit
