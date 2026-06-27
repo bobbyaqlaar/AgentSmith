@@ -227,6 +227,9 @@ for the exact same commands wired into CI.
 # Hooks: opt-in gate + enterprise RFC gate (throwaway repos, no side effects)
 python3 scripts/verify_system.py --check-hooks
 
+# Knowledge Graph: rebuild via map_codebase.py and assert non-empty with known nodes (Pillar 2 / P10a)
+python3 scripts/verify_system.py --check-kg
+
 # Trace redaction: staging (hashed) + production (truncated + HITL blob) profiles
 ENVIRONMENT=staging    python3 scripts/verify_system.py --check-redaction
 ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
@@ -1233,6 +1236,9 @@ Minimal real validation for each subsystem (no mocks):
 # Framework scripts + shell
 find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
 bash -n install-ai-stack.sh && zsh -n install-ai-stack.sh
+
+# Knowledge Graph rebuild + non-empty assertion (Pillar 2 / P10a — wired into self-test.yml)
+python3 scripts/verify_system.py --check-kg
 
 # Ops Portal (includes a cross-tenant isolation regression suite — see SPECS.md §26)
 cd portal && npx tsc --noEmit && npm test && npm run build

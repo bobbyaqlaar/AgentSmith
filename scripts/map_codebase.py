@@ -290,7 +290,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Map codebase into Knowledge Graph")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Suppress the summary line (CI usage)")
     args = parser.parse_args()
 
     stats = run_map(verbose=args.verbose)
-    print(json.dumps({"status": "ok", **stats}, indent=2))
+    if not args.quiet:
+        print(json.dumps({"status": "ok", **stats}, indent=2))

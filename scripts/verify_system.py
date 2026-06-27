@@ -492,6 +492,59 @@ def check_history_sync() -> bool:
     return failures == 0
 
 
+def check_kg() -> bool:
+    """
+    CI validation for the Knowledge Graph (FIXES_AND_CLEANUP.md P10a, Pillar 2).
+    Runs map_codebase.py against the framework's own codebase and asserts the
+    resulting graph is non-empty with at least the known scripts/ file nodes.
+
+        python3 scripts/verify_system.py --check-kg
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import map_codebase  # type: ignore
+
+    print("═══════════════════════════════════════════════════")
+    print("  Knowledge Graph Check (self-test.yml)")
+    print("═══════════════════════════════════════════════════\n")
+
+    stats = map_codebase.run_map()
+    print(f"  ℹ️   map_codebase.py: {stats}")
+
+    kg_path = _repo_root() / ".agent-rfc" / "fixtures" / "knowledge_graph.json"
+    failures = 0
+
+    if not _check("knowledge_graph.json written", kg_path.exists()):
+        failures += 1
+        print()
+        print("═══════════════════════════════════════════════════")
+        print(f"  🛑  {failures} check(s) failed")
+        print("═══════════════════════════════════════════════════")
+        return False
+
+    with kg_path.open() as fh:
+        data = json.load(fh)
+
+    nodes = data.get("nodes", [])
+    node_ids = {n.get("id") for n in nodes}
+    edges = data.get("edges", data.get("links", []))
+
+    if not _check("Knowledge Graph is non-empty", len(nodes) > 0):
+        failures += 1
+
+    known_files = {"scripts/map_codebase.py", "scripts/verify_system.py", "scripts/local_knowledge_graph.py"}
+    missing = known_files - node_ids
+    if not _check(f"known scripts/ file nodes present ({len(known_files)} expected)", not missing, f"missing: {missing}"):
+        failures += 1
+
+    print(f"  ℹ️   {len(nodes)} nodes, {len(edges)} edges")
+
+    print()
+    print("═══════════════════════════════════════════════════")
+    print("  🎉  Knowledge Graph check passed" if failures == 0 else f"  🛑  {failures} check(s) failed")
+    print("═══════════════════════════════════════════════════")
+    return failures == 0
+
+
 def check_onprem_deploy() -> bool:
     """
     Syntax/shape validation for templates/onprem-deploy/ (OPERATIONS.md
@@ -620,5 +673,7 @@ if __name__ == "__main__":
         sys.exit(0 if check_hooks() else 1)
     if "--check-onprem-deploy" in sys.argv:
         sys.exit(0 if check_onprem_deploy() else 1)
+    if "--check-kg" in sys.argv:
+        sys.exit(0 if check_kg() else 1)
     ok = run_checks()
     sys.exit(0 if ok else 1)
