@@ -131,7 +131,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Portal scripts run TypeScript via `node --experimental-strip-types`,
+          # which needs Node >=22.6 (Node 20 rejects the flag with "bad option").
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: portal/package-lock.json
       - run: npm ci

@@ -138,6 +138,9 @@ def main() -> int:
     }
 
     out_path = HERE / "proxy" / "envoy" / "envoy.rendered.yaml"
+    # proxy/envoy/ may be an empty dir that git doesn't track (absent on a
+    # clean checkout / in CI) — create it before writing.
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(yaml.safe_dump(config, sort_keys=False))
     print(f"✅ Wrote {out_path}")
     return 0
