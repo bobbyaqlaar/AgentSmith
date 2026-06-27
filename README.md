@@ -125,19 +125,51 @@ MCP client/tool-schema layer sitting in front of it in your own code.
 
 **3. Memory Management** — short-term (conversation/context) vs. long-term
 (knowledge base/vector store).
-**Not implemented, confirmed absent** — there is no token-window
-truncation/summarization/sliding-window manager anywhere in this repo,
-and no vector-database integration (Chroma/pgvector/Pinecone or otherwise)
-exists. What *is* here, and shouldn't be confused with application
-memory: Temporal's own durable-execution event history (workflow
-*progress* survives a crash — this is `runtime/workflows/base_workflow.py`'s
-whole reason for existing) and LangGraph's `PostgresSaver` checkpointer in
-`scripts/multi_agent_system.py` (dev/hybrid mode only — `MemorySaver`
-in-memory checkpointing is explicitly prohibited in production, SPECS.md
-§25). Neither is a conversation-memory or semantic-retrieval layer. If
-your tenant app needs either, build it as its own component — there's no
-framework convention to follow yet, so document your own design choice
-rather than assuming one is implied here.
+**Partially implemented.** The long-term half exists as a **graph-structured
+codebase knowledge base**: `scripts/map_codebase.py` AST-walks the repo into
+`scripts/local_knowledge_graph.py`'s NetworkX `DiGraph`, persisted as JSON
+node-link at `.agent-rfc/fixtures/knowledge_graph.json` and auto-rebuilt by
+the `post-commit`/`post-checkout` hooks (and now validated in CI via
+`verify_system.py --check-kg`). It is queried, not dumped — `kg.fetch_subgraph_context_window(target, hops=2)`
+returns a ~200-token subgraph of the files, imports, guardrails, and past
+production incidents around an anchor file (SPECS.md §10). This is the
+framework's long-term, *structured* (not vector) memory.
+
+**Why this matters for a brand-new session — refactoring, changing, and
+fixing defects.** An agent (or human) starting cold, with zero prior
+conversation context, can reconstruct what it needs to safely touch the
+code *from the graph alone*:
+- **Before adding code** — query the graph to answer Pillar 2's first
+  question, *"does this already exist?"*, instead of re-deriving the
+  codebase from scratch and duplicating something. New files must be
+  registered in the graph before creation (SPECS.md §4 Pillar 2).
+- **Before changing/refactoring** — `impacted_files(path)` and the
+  `IMPORTS` edges give the blast radius: every file that depends on the
+  one you're about to change, so a rename or signature change isn't a
+  guess. This is the "what does this affect / are there downstream graph
+  dependencies?" steps of the 5-step analysis.
+- **When fixing a defect** — `CAUSED_INCIDENT` edges link source files to
+  `ProductionIncident` nodes distilled from `.agent-history.log`, so a new
+  session can see *which prior bugs touched this file and how they were
+  resolved* — long-term recall that would otherwise have died with the
+  session that fixed them.
+- **Token economy** — pulling a bounded subgraph instead of reading whole
+  files is what keeps a fresh session's context lean enough to actually
+  reason (the §3 "Headroom" guardrail).
+
+**Still genuinely absent** (the other two thirds of this layer): there is
+no short-term **conversation/token-window** manager
+(truncation/summarization/sliding-window) anywhere in this repo, and no
+**semantic / vector** retrieval (Chroma/pgvector/Pinecone or otherwise) —
+the graph is structured lookup, not embedding similarity. Two things that
+are present but are *not* this layer and shouldn't be confused with it:
+Temporal's durable-execution event history (workflow *progress* survives a
+crash — `runtime/workflows/base_workflow.py`) and LangGraph's `PostgresSaver`
+checkpointer in `scripts/multi_agent_system.py` (dev/hybrid mode only —
+`MemorySaver` is prohibited in production, SPECS.md §25). If your tenant app
+needs conversation memory or vector retrieval, build it as its own
+component — see FIXES_AND_CLEANUP.md "Memory Management" for the intended
+shape — rather than assuming one is implied here.
 
 **4. Perception & Input Parsing** — understanding ambiguous user intent
 and routing tasks.
@@ -325,6 +357,8 @@ looking at:
 | Python / FastAPI | `requirements.txt` / `pyproject.toml` | `ci-python-fastapi.yml` |
 | Go | `go.mod` | `ci-go.yml` |
 | Generic | *(fallback)* | *(hooks only, no CI workflow)* |
+
+Every `ci-<stack>.yml` also runs the Ten-Pillars CI gates (FIXES_AND_CLEANUP.md P10): Knowledge Graph validation (Pillar 2), an RFC gate (Pillar 1, enforced only when `.agenticframework/org-policy.yaml` is present), IDE config drift detection (Pillar 6/7), and a non-blocking framework health check (Pillar 3/5). The `ci-ts-react.yml` and `ci-go.yml` workflows set up Python alongside their native toolchain to run these gates.
 
 ---
 
