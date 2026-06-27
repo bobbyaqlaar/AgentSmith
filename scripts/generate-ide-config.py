@@ -23,6 +23,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import difflib
+import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -133,37 +136,80 @@ def _render_skill(skill: dict, rules: dict, ctx: dict[str, str]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _detect_stack(repo_root: Path) -> tuple[str, str]:
+    """Mirror hooks/post-checkout's bash stack detection. Returns (stack, default_test_cmd)."""
+    if (repo_root / "package.json").exists():
+        return "ts-react", "npm test -- --watchAll=false --ci"
+    if (
+        (repo_root / "requirements.txt").exists()
+        or (repo_root / "pyproject.toml").exists()
+        or (repo_root / "Pipfile").exists()
+    ):
+        return "python-fastapi", "pytest"
+    if (repo_root / "go.mod").exists():
+        return "go", "go test -race ./..."
+    return "generic", "echo 'No test command configured'"
+
+
+def _default_project_name(repo_root: Path) -> str:
+    try:
+        url = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=repo_root, capture_output=True, text=True, timeout=5,
+        ).stdout.strip()
+        if url:
+            return url.rsplit("/", 1)[-1].removesuffix(".git")
+    except Exception:
+        pass
+    return repo_root.resolve().name
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--repo-root", required=True)
-    ap.add_argument("--rules-file", required=True)
-    ap.add_argument("--stack", default="generic")
-    ap.add_argument("--project-name", required=True)
-    ap.add_argument("--owner-id", required=True)
-    ap.add_argument("--otel-endpoint", required=True)
-    ap.add_argument("--test-cmd", default="echo 'No test command configured'")
-    ap.add_argument("--framework-version", default="1.0.0")
+    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--rules-file", default=None)
+    ap.add_argument("--stack", default=None)
+    ap.add_argument("--project-name", default=None)
+    ap.add_argument("--owner-id", default=None)
+    ap.add_argument("--otel-endpoint", default=None)
+    ap.add_argument("--test-cmd", default=None)
+    ap.add_argument("--framework-version", default=None)
+    ap.add_argument(
+        "--check-only", action="store_true",
+        help="Don't write files — regenerate in memory and diff against what's "
+             "already committed. Exits 1 if .cursorrules/CLAUDE.md/skill.md have "
+             "drifted from templates/agent-rules.yaml (Pillar 6/7 CI gate).",
+    )
     args = ap.parse_args()
 
     repo_root = Path(args.repo_root)
-    rules_file = Path(args.rules_file)
+    detected_stack, detected_test_cmd = _detect_stack(repo_root)
+
+    rules_file = Path(args.rules_file) if args.rules_file else repo_root / "templates" / "agent-rules.yaml"
     if not rules_file.exists():
+        if args.check_only:
+            print(f"ℹ️  No rules file at {rules_file} — IDE config drift check skipped.")
+            sys.exit(0)
         print(f"❌ Rules file not found: {rules_file}. IDE config was NOT regenerated.", file=sys.stderr)
         sys.exit(1)
 
+    stack = args.stack or detected_stack
     rules = _load_rules(rules_file)
     ctx = {
-        "project_name": args.project_name,
-        "owner_id": args.owner_id,
-        "otel_endpoint": args.otel_endpoint,
-        "test_cmd": args.test_cmd,
-        "framework_version": args.framework_version,
+        "project_name": args.project_name or _default_project_name(repo_root),
+        "owner_id": args.owner_id or os.environ.get("AGENT_OWNER_ID", "unknown@unknown"),
+        "otel_endpoint": args.otel_endpoint or os.environ.get("AGENT_PHOENIX_ENDPOINT", "http://localhost:6006"),
+        "test_cmd": args.test_cmd or detected_test_cmd,
+        "framework_version": args.framework_version or os.environ.get("FRAMEWORK_VERSION", "1.0.0"),
     }
+
+    if args.check_only:
+        sys.exit(0 if _check_drift(repo_root, rules, stack, ctx) else 1)
 
     cursorrules_path = repo_root / ".cursorrules"
     if not cursorrules_path.exists():
-        cursorrules_path.write_text(_render_cursorrules(rules, args.stack, ctx))
-        print(f"✅ Written .cursorrules ({len(rules.get('pillars', []))} pillars + {args.stack} addendum) from agent-rules.yaml")
+        cursorrules_path.write_text(_render_cursorrules(rules, stack, ctx))
+        print(f"✅ Written .cursorrules ({len(rules.get('pillars', []))} pillars + {stack} addendum) from agent-rules.yaml")
 
     claude_md_path = repo_root / "CLAUDE.md"
     if not claude_md_path.exists():
@@ -179,6 +225,38 @@ def main() -> None:
 
     if rules.get("skills"):
         print(f"✅ Written Antigravity skill files ({', '.join(s['id'] for s in rules['skills'])}) from agent-rules.yaml")
+
+
+def _check_drift(repo_root: Path, rules: dict, stack: str, ctx: dict[str, str]) -> bool:
+    """Print a diff for any committed IDE config file that no longer matches
+    what agent-rules.yaml would generate. Returns True if clean (no drift)."""
+    clean = True
+
+    checks = [
+        (repo_root / ".cursorrules", _render_cursorrules(rules, stack, ctx)),
+        (repo_root / "CLAUDE.md", _render_claude_md(ctx)),
+    ]
+    for skill in rules.get("skills", []):
+        skill_path = repo_root / ".agents" / "skills" / skill["id"] / "skill.md"
+        checks.append((skill_path, _render_skill(skill, rules, ctx)))
+
+    for path, expected in checks:
+        if not path.exists():
+            print(f"ℹ️  {path.relative_to(repo_root)} not generated yet — skipping drift check.")
+            continue
+        actual = path.read_text()
+        if actual == expected:
+            print(f"✅ {path.relative_to(repo_root)} matches agent-rules.yaml")
+            continue
+        clean = False
+        print(f"❌ {path.relative_to(repo_root)} has drifted from agent-rules.yaml:")
+        diff = difflib.unified_diff(
+            actual.splitlines(keepends=True), expected.splitlines(keepends=True),
+            fromfile=f"committed/{path.name}", tofile=f"generated/{path.name}",
+        )
+        sys.stdout.writelines(diff)
+
+    return clean
 
 
 if __name__ == "__main__":

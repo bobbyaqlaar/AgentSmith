@@ -26,6 +26,14 @@ jobs:
           go-version: "1.22"
           cache: true
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install pyyaml networkx
+
       - name: Download modules
         run: go mod download
 
@@ -42,6 +50,54 @@ jobs:
 
       - name: Vet
         run: go vet ./...
+
+      - name: "Validate Knowledge Graph (Pillar 2)"
+        run: |
+          python3 scripts/map_codebase.py --quiet
+          python3 - <<'EOF'
+          import json, sys
+          from pathlib import Path
+
+          committed = Path(".agent-rfc/fixtures/knowledge_graph.json")
+          if not committed.exists():
+              print("⚠️  No committed knowledge_graph.json — skipping staleness check.")
+              sys.exit(0)
+
+          with committed.open() as f:
+              data = json.load(f)
+
+          node_count = len(data.get("nodes", []))
+          edge_count = len(data.get("edges", data.get("links", [])))
+          print(f"✅ Knowledge Graph: {node_count} nodes, {edge_count} edges")
+
+          if node_count == 0:
+              print("⚠️  Knowledge Graph is empty — map_codebase.py may have failed.")
+              sys.exit(1)
+          EOF
+        continue-on-error: true # warn, not block, until adoption is stable
+
+      - name: "RFC gate (Pillar 1)"
+        run: |
+          if [ ! -f ".agenticframework/org-policy.yaml" ]; then
+            echo "ℹ️  Developer mode — RFC gate skipped."
+            exit 0
+          fi
+          RFC_COUNT=$(find .agent-rfc -maxdepth 1 -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
+          if [ "${RFC_COUNT:-0}" -eq 0 ]; then
+            echo "❌ Enterprise policy: at least one RFC required under .agent-rfc/ before merging."
+            exit 1
+          fi
+          echo "✅ RFC gate: ${RFC_COUNT} RFC(s) found."
+
+      - name: "IDE config drift check (Pillar 6/7)"
+        run: python3 scripts/generate-ide-config.py --check-only
+        continue-on-error: true # warn only — blocking is a Phase 5 decision
+
+      - name: "Framework health check (Pillar 3/5)"
+        env:
+          AGENT_PHOENIX_ENDPOINT: ${{ secrets.AGENT_PHOENIX_ENDPOINT || '' }}
+          AGENT_OWNER_ID: ${{ secrets.AGENT_OWNER_ID || 'ci@agenticframework' }}
+        run: python3 scripts/verify_system.py || true # non-blocking — inform, not gate
 
       - name: Test (with race detector)
         run: go test -v -race -coverprofile=coverage.out ./...

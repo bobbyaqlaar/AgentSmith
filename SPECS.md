@@ -304,7 +304,7 @@ design choice that's recorded here as settled.
 |---|---|---|
 | **Reasoning & Planning** | Fixed-topology reference patterns (Architect→Developer→Validator), not a generic planner | §8 (execution modes), §9 (eval framework scores the output of these patterns) |
 | **Tool Orchestration** | Activity *execution* + recovery exists (Temporal); tool *registration*/schema-extraction (e.g. an `@tool` decorator) and LLM-driven tool-call selection do not — `llm_gateway.py.complete()` sends a prompt and receives text, no function-calling fields in the provider request | §25 (Production Runtime), §29 (LLM Gateway) |
-| **Memory Management** | Not implemented: no token-window manager (truncation/summarization/sliding-window), no vector-database integration (Chroma/pgvector/etc.). Present but distinct: Temporal's durable-execution history (workflow progress, not conversation memory) and LangGraph `PostgresSaver` (dev/hybrid only, `MemorySaver` banned in production) | §25 "Idempotency Key Design", §8 |
+| **Memory Management** | Partially implemented. **Long-term (structured):** the codebase Knowledge Graph — `map_codebase.py` → `local_knowledge_graph.py`, NetworkX `DiGraph` persisted as JSON node-link, queried via `fetch_subgraph_context_window()`/`impacted_files()` to give a cold session long-term recall over the code (dependencies, guardrails, past incidents — see §10 "Cross-Session Refactoring & Defect-Fixing"). **Absent:** short-term token-window manager (truncation/summarization/sliding-window) and semantic/vector retrieval (Chroma/pgvector/etc.) — the graph is structured lookup, not embedding similarity. Present but distinct: Temporal's durable-execution history (workflow progress, not conversation memory) and LangGraph `PostgresSaver` (dev/hybrid only, `MemorySaver` banned in production) | §10 (Knowledge Graph), §25 "Idempotency Key Design", §8 |
 | **Perception & Input Parsing** | Narrow JSON-from-text extraction (`re.search` + `json.loads`, no schema validation) in the reference pipelines; no dynamic prompt-template engine (prompts are inline f-strings) | §8 |
 | **Human-in-the-Loop (HITL)** | The most built-out layer — two distinct mechanisms, see §25 "HITL Pause / Resume" for the full approve/reject vs. edit-and-resume split and the recorded reasoning for Temporal signals over Slack+Retool/LangGraph-interrupt alternatives, and for the portal-webhook-bridge design over a direct portal-side Temporal client | §25, §30 (HITL RBAC) |
 
@@ -360,7 +360,7 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | File | Purpose |
 |---|---|
 | `local_knowledge_graph.py` | NetworkX DiGraph. Loads/saves `.agent-rfc/fixtures/knowledge_graph.json`. API: `inject_production_learning()`, `fetch_subgraph_context_window()` |
-| `map_codebase.py` | AST-walks `.py`, `.ts`, `.tsx`, `.go` files. Registers `CodebaseFile` nodes. Purges stale nodes. Extracts guardrails from `.cursorrules` and `.agent-rfc/`. |
+| `map_codebase.py` | AST-walks `.py`, `.ts`, `.tsx`, `.go` files. Registers `CodebaseFile` nodes. Purges stale nodes. Extracts guardrails from `.cursorrules` and `.agent-rfc/`. `--quiet` suppresses the summary line for CI usage. |
 | `local_agent_stack.py` | Pure-Python multi-agent loop (offline mode). Architect→Developer→Validator via Ollama HTTP. Full OTel span nesting. |
 | `multi_agent_system.py` | LangGraph stateful graph (hybrid mode). `MemorySaver` checkpointer — **dev use only**. HITL pause loop. Falls back to `local_agent_stack.py` if LangGraph unavailable. |
 | `cost_router.py` | Dev-mode routing: token count + keyword analysis → model selection. Not suitable for production. See §29 for production LLM Gateway. |
@@ -371,7 +371,8 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `sync-ui-feedback.py` | Pulls Phoenix annotations; promotes unsynced negative feedback to golden dataset. |
 | `agent_logger.py` | JSON-Lines to stdout + `.agent-history.log`. Four levels: INFO/MINOR/MAJOR/CRITICAL. Calls `audit_token_velocity_circuit()`. All entries carry `owner_id`, `tenant.id` (if available), `agent.role`. |
 | `circuit_breaker.py` | Dual-tier burst/monthly guard. Dev-mode: raises `CircuitBreakerTripped`. Production: degrade ladder via LLM Gateway (see §11, §29). |
-| `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. |
+| `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-history-sync`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / FIXES_AND_CLEANUP.md P10a). |
+| `generate-ide-config.py` | Renders `.cursorrules` / `CLAUDE.md` / `.agents/skills/*/skill.md` from `templates/agent-rules.yaml` (single source, §13). Called by `post-checkout`. `--check-only` regenerates in memory and diffs against the committed files, exiting 1 on drift (Pillar 6/7 CI gate — FIXES_AND_CLEANUP.md P10c). |
 
 ### 5.5 Production Runtime (runtime/)
 
@@ -713,6 +714,33 @@ kg.fetch_subgraph_context_window("path/to/target_module.py", hops=2)
 # Returns: {anchor, nodes, edges, guardrails, incidents}
 # Token budget: ~200 tokens
 ```
+
+### Role in the Functional Stack — Long-Term Memory
+
+The Knowledge Graph is the **long-term, structured half of Functional Layer 3
+(Memory Management)** (see §4). It is not conversation memory and not a vector
+store — it is a graph-structured knowledge base over the codebase that
+persists across sessions on disk, independent of any one agent run.
+
+### Cross-Session Refactoring & Defect-Fixing
+
+The graph's purpose is to let a session that begins with **no prior context**
+(a fresh agent run, a new developer, a CI job) reconstruct enough of the
+codebase to change it safely — long-term recall that would otherwise have to
+be re-derived by reading the whole tree, or would simply be lost when the
+session that learned it ended.
+
+| Task from a cold session | Graph query | What it prevents |
+|---|---|---|
+| **Add code** | Look up whether the symbol/file already exists (Pillar 2 step 1; new files must be registered before creation) | Duplicating something that already exists |
+| **Change / refactor** | `impacted_files(path)` + `IMPORTS` edges → the dependency blast radius (Pillar 2 steps 4–5) | A rename/signature change silently breaking unseen callers |
+| **Fix a defect** | `CAUSED_INCIDENT` edges → `ProductionIncident` nodes distilled from `.agent-history.log`, including how each was resolved | Re-introducing a bug that a previous session already fixed and explained |
+| **Stay within context budget** | `fetch_subgraph_context_window(anchor, hops=n)` → ~200-token subgraph | Loading full files and exhausting the window (§3 "Headroom") |
+
+Because the graph is rebuilt on every commit/checkout (and now validated in
+CI via `verify_system.py --check-kg`, FIXES_AND_CLEANUP.md P10a), the recall
+a new session reads is current with the committed code rather than a stale
+snapshot.
 
 ---
 
@@ -1066,7 +1094,7 @@ Each tenant repo receives four workflow files:
 
 | Workflow | Trigger | Environment | Gate |
 |---|---|---|---|
-| `ci-<stack>.yml` | PR to `develop` or `main` | — | lint, test, calls `eval-scorecard.yml` |
+| `ci-<stack>.yml` | PR to `develop` or `main` | — | lint, test, calls `eval-scorecard.yml`; plus four Ten-Pillars gates (FIXES_AND_CLEANUP.md P10): Validate Knowledge Graph (Pillar 2, `map_codebase.py --quiet`, warn-only), RFC gate (Pillar 1, enforced only when `.agenticframework/org-policy.yaml` is present), IDE config drift (Pillar 6/7, `generate-ide-config.py --check-only`, warn-only), framework health check (Pillar 3/5, `verify_system.py`, non-blocking) |
 | `eval-scorecard.yml` | `workflow_call` from `ci-<stack>.yml` (not triggered standalone) | — | eval scorecard, warn below 0.7 — shared by all three stacks (`ci-go.yml`/`ci-python-fastapi.yml`/`ci-ts-react.yml`) so a threshold/dependency change lands in one place, not three copy-pasted blocks |
 | `cd-staging.yml` | Push to `develop` | staging | eval fail below 0.75 + smoke |
 | `cd-production.yml` | Push to `main` | production | eval fail below 0.80 + smoke; **no `continue-on-error`** |
@@ -1306,6 +1334,7 @@ In non-interactive environments (CI), the hook defaults to yes.
 - [x] Extract hooks to `hooks/` directory (from heredocs in `install-ai-stack.sh`)
 - [x] `.github/workflows/self-test.yml` and `release.yml` for framework itself
 - [x] `templates/agent-rules.yaml` single-source IDE config generation
+- [x] `generate-ide-config.py --check-only` IDE config drift gate + `verify_system.py --check-kg` Knowledge Graph gate wired into tenant CI and `self-test.yml` (FIXES_AND_CLEANUP.md P10)
 - [x] `ai-stack-uninstall` command implementation
 - [x] `ai-stack-upgrade` command implementation
 

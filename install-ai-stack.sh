@@ -98,18 +98,6 @@ header()  { echo -e "\n${BOLD}${CYAN}$*${RESET}"; echo "────────
 
 command_exists() { command -v "$1" &>/dev/null; }
 
-# Detect OS
-detect_os() {
-  case "$(uname -s)" in
-    Darwin) echo "macos"  ;;
-    Linux)  echo "linux"  ;;
-    CYGWIN*|MINGW*|MSYS*) echo "windows" ;;
-    *) echo "unknown" ;;
-  esac
-}
-
-OS=$(detect_os)
-
 # ── Banner ────────────────────────────────────────────────────────────────────
 
 echo ""
@@ -196,7 +184,7 @@ mkdir -p "$SCRIPTS_DIR"
 mkdir -p "$SHARED_DIR"
 mkdir -p "$WORKFLOW_TEMPLATES_DIR"
 mkdir -p "$TEMPLATE_DIR/hooks"
-success "~/.agent-framework/ structure created"
+success "$HOME/.agent-framework/ structure created"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 3 — PYTHON DEPENDENCIES
