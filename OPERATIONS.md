@@ -36,6 +36,19 @@ it's called out explicitly rather than glossed over.
 
 ## 1. Prerequisites
 
+### Two working directories — always know which one you're in
+
+Every command in this guide runs in one of exactly two places:
+
+| Directory | What it is | Example path |
+|---|---|---|
+| **AgentSmith root** | The framework repo itself — Ops Portal, Docker Compose, shared infra | `~/repos/AgenticFramework/` |
+| **Tenant app root** | Your own agentic app repo, created by `ai-tenant-init` | `~/repos/my-oil-price-app/` |
+
+Commands that affect the shared platform (portal, Postgres, Phoenix) run from the **AgentSmith root**. Commands that affect a specific agent app (hooks, evals, CI, sync scripts) run from the **tenant app root**. Each section below is labelled with which one applies.
+
+### System tools
+
 | Tool | Needed for | Check |
 |---|---|---|
 | Python 3.11+ | Everything | `python3 --version` |
@@ -47,12 +60,193 @@ it's called out explicitly rather than glossed over.
 | `kubectl` | Dedicated tenant worker pools | `kubectl version --client` |
 | Ollama | Local/offline dev mode | `ollama --version` |
 
-Production runtime extras (only needed if you're actually running
-`runtime/llm_gateway.py` against real backends):
+Production runtime extras — run from the **AgentSmith root** (macOS system Python is externally managed; use a venv):
 
 ```bash
+# Run from: AgentSmith root (e.g. ~/repos/AgenticFramework/)
+python3 -m venv .venv
+source .venv/bin/activate
 pip install psycopg2-binary redis temporalio langgraph-checkpoint-postgres cryptography
 ```
+
+To auto-activate when you `cd` into the AgentSmith root, add to `~/.zshrc`:
+
+```bash
+export AGENTSMITH_DIR="$HOME/repos/AgenticFramework"   # adjust to your actual path
+function cd() { builtin cd "$@" && [[ "$PWD" == "$AGENTSMITH_DIR"* && -f .venv/bin/activate ]] && source .venv/bin/activate; }
+```
+
+### `~/.zshrc` — environment variables
+
+These must be set before running `install-ai-stack.sh` or any `ai-*` commands. Add them to `~/.zshrc` (or `~/.bashrc`) so they persist across sessions:
+
+```bash
+# ── Identity — required; every span, log entry, and audit event attributes to this ──
+export AGENT_OWNER_ID="you@example.com"
+export AGENT_OWNER_NAME="Your Name"
+
+# ── LLM providers — add whichever you use (at least one required for hybrid mode) ───
+export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENAI_API_KEY="sk-..."
+export GROQ_API_KEY="gsk_..."           # optional: fast/cheap inference via Groq
+
+# ── Observability ──────────────────────────────────────────────────────────────────
+export AGENT_PHOENIX_ENDPOINT="http://localhost:6006"  # change to team server URL if shared
+export OTEL_EXPORTER_OTLP_ENDPOINT="${AGENT_PHOENIX_ENDPOINT}/v1/traces"  # set by ai-dashboard-start; listed here for manual overrides
+
+# ── Budget and routing ─────────────────────────────────────────────────────────────
+export AGENT_MONTHLY_USD_CAP="50"               # hard cap across all projects (dev mode)
+export AGENT_JUDGE_MODEL="claude-3-5-sonnet-20241022"  # LLM used to grade evals
+
+# ── Production runtime (only needed when running runtime/ against real backends) ───
+export DATABASE_URL="postgresql://user:pass@localhost:5432/agenticframework"
+export REDIS_URL="redis://localhost:6379/0"     # only if IDEMPOTENCY_BACKEND=redis
+export TEMPORAL_ADDRESS="localhost:7233"        # only if WORKER_BACKEND=temporal
+export IDEMPOTENCY_BACKEND="postgres"           # postgres | redis | memory
+export BUDGET_BACKEND="postgres"                # postgres | redis
+
+# ── HITL and trace redaction (production only) ────────────────────────────────────
+export HITL_ENCRYPTION_KEY="<32-byte-hex>"      # generate: openssl rand -hex 32
+export HITL_BLOB_DIR="/var/agentsmith/hitl"     # or set HITL_BLOB_S3_BUCKET for S3
+
+# ── Ops Portal machine-to-machine ──────────────────────────────────────────────────
+export OPS_PORTAL_URL="http://localhost:3000"
+# OPS_PORTAL_SYNC_TOKEN — bearer token sent by local scripts (sync-portal-history.py,
+# verify_system.py, llm_gateway.py) as "Authorization: Bearer <token>" when calling the
+# portal's /api/sync/history and /api/runs/ingest endpoints.
+# Must match the OPS_PORTAL_SYNC_TOKEN value set in AgenticFramework/.env (the portal
+# checks that .env value against every inbound request).
+# Generate: openssl rand -hex 32  — then set the same value in both places.
+export OPS_PORTAL_SYNC_TOKEN="<same value as AgenticFramework/.env OPS_PORTAL_SYNC_TOKEN>"
+
+# ── Enterprise pack (only needed in enterprise mode) ──────────────────────────────
+# BREAK_GLASS_HMAC_KEY — HMAC-SHA256 signing key used to validate break-glass tokens
+# locally (no network call). Break-glass tokens have the form <actor>:<expires>.<sig>;
+# IT issues them by signing the payload with this key. The same key must be present on
+# every machine where hook bypass is permitted.
+# IT generates this key once (openssl rand -hex 32) and distributes it to authorized
+# machines. Individual developers should NOT generate their own value.
+export BREAK_GLASS_HMAC_KEY="<IT-issued value — do not generate locally>"
+```
+
+### `.env` files — there are two, in different places
+
+**Do not confuse these.** They serve different purposes and live in different directories.
+
+#### a. AgentSmith root `.env` — Ops Portal + Docker Compose
+
+> **Where:** `AgenticFramework/.env` (the framework repo root — same folder as `docker-compose.yml`)
+> **How:** `cp portal/.env.example .env` from the AgentSmith root, then edit.
+
+This file is read by `docker compose` and the Ops Portal. It is **not** copied into tenant apps.
+
+```bash
+# Run from: AgentSmith root
+cp portal/.env.example .env
+```
+
+```bash
+# AgenticFramework/.env — fill in after copying from portal/.env.example
+
+# Postgres — shared by Ops Portal, LLM Gateway budget backend, and DLQ
+DATABASE_URL=postgresql://phoenix:phoenix@localhost:5432/agenticframework
+
+# Ops Portal basic auth (required — portal refuses to serve any page without these)
+# OPS_PORTAL_PASSWORD is compared directly against the HTTP Basic Auth header by
+# portal/middleware.ts. Choose a strong random value; this is the only credential
+# protecting the portal UI. Generate: openssl rand -base64 24
+OPS_PORTAL_USER=ops
+OPS_PORTAL_PASSWORD=<strong-password>    # generate: openssl rand -base64 24
+
+# Bearer token for CD pipelines and local scripts → portal ingest
+# This is the server-side value the portal expects on POST /api/sync/history and
+# POST /api/runs/ingest. The same value must be exported as OPS_PORTAL_SYNC_TOKEN
+# in ~/.zshrc (for local scripts) and set as a GitHub Actions secret (for CD).
+# Generate: openssl rand -hex 32
+OPS_PORTAL_SYNC_TOKEN=<random-secret>    # generate: openssl rand -hex 32
+
+# Audit log — two separate secrets serve two different roles (SPECS.md §30):
+# AUDIT_LOG_WRITE_TOKEN — bearer token gating POST /api/audit/append.
+#   Used by install-ai-stack.sh to post hook-bypass events to the portal.
+#   Not needed in ~/.zshrc. Generate: openssl rand -hex 32
+# AUDIT_LOG_HMAC_KEY — HMAC-SHA256 key used to sign every audit event at write
+#   time (portal/lib/auditLog.ts). At read time the portal re-signs and compares;
+#   a mismatch means the row was tampered with. Second layer after the DB triggers
+#   that block UPDATE/DELETE on audit_log. SERVER-SIDE ONLY — never export to
+#   ~/.zshrc or tenant apps. ROTATION WARNING: old events stay signed with the old
+#   key and will fail re-verification after a rotation. Generate: openssl rand -hex 32
+AUDIT_LOG_WRITE_TOKEN=<random-secret>    # generate: openssl rand -hex 32
+AUDIT_LOG_HMAC_KEY=<random-secret>       # generate: openssl rand -hex 32  — rotate with care
+
+# HITL blob encryption (production trace redaction — SPECS.md §27)
+HITL_ENCRYPTION_KEY=<32-byte-hex>        # generate: openssl rand -hex 32
+
+# Notification webhooks (optional — DLQ alerts on new entries)
+# SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+# TEAMS_WEBHOOK_URL=https://outlook.office.com/webhook/...
+
+# SSO/OIDC (enterprise pack — leave commented for basic-auth mode)
+# SSO_ENABLED=true
+# SSO_ISSUER=https://corp.okta.com
+# SSO_CLIENT_ID=
+# SSO_CLIENT_SECRET=
+# SSO_REDIRECT_URI=https://ops.example.com/api/auth/callback
+# SSO_SESSION_SECRET=
+```
+
+#### b. Tenant app `.env` — your agentic app's runtime config
+
+> **You don't have a tenant app directory yet.** This section is a reference template —
+> skip it for now and return here after you run `ai-tenant-init` in §2.1. At that point
+> you'll have a directory to put this file in.
+
+> **Where:** `my-tenant-app/.env` (your own app repo root — **not** the AgentSmith root)
+> **How:** created manually or by `ai-tenant-init` scaffolding; never committed — add `.env` to your tenant app's `.gitignore`.
+
+This file is loaded by the tenant worker at runtime and by `scripts/sync-portal-history.py` when syncing to the Ops Portal.
+
+```bash
+# my-tenant-app/.env — tenant-specific runtime variables
+
+TENANT_ID=my-tenant                      # must match tenant.yaml
+
+# LLM gateway (production) — same API keys you have in ~/.zshrc, but scoped to this app
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+
+# Observability — point at the shared AgentSmith Phoenix/Ops Portal
+AGENT_PHOENIX_ENDPOINT=http://localhost:6006
+OPS_PORTAL_URL=http://localhost:3000
+OPS_PORTAL_SYNC_TOKEN=<same value as AgenticFramework/.env OPS_PORTAL_SYNC_TOKEN>
+
+# Production runtime backends
+DATABASE_URL=postgresql://user:pass@localhost:5432/my-tenant-db
+REDIS_URL=redis://localhost:6379/0
+TEMPORAL_ADDRESS=localhost:7233
+
+# Workflow engine (temporal | celery)
+WORKER_BACKEND=temporal
+IDEMPOTENCY_BACKEND=postgres
+BUDGET_BACKEND=postgres
+
+# HITL encryption — must match the value in AgenticFramework/.env
+HITL_ENCRYPTION_KEY=<same value as AgenticFramework/.env HITL_ENCRYPTION_KEY>
+ENVIRONMENT=production                   # development | staging | production
+```
+
+### GitHub Actions secrets
+
+Set these in **Settings → Secrets and variables → Actions** for each tenant repo:
+
+| Secret | Required for | Notes |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | CI eval judge, hybrid-mode tests | One of these two is required |
+| `OPENAI_API_KEY` | CI eval judge, hybrid-mode tests | One of these two is required |
+| `AGENT_PHOENIX_ENDPOINT` | Trace export from CI | Optional — CI passes without it |
+| `OPS_PORTAL_URL` | CD → portal history sync | Optional — sync skipped if absent |
+| `OPS_PORTAL_SYNC_TOKEN` | CD → portal history sync | Required if `OPS_PORTAL_URL` is set |
+| `DEPLOY_COMMAND` | Production deploy step | Platform-specific (Fly, Railway, ECS, etc.) |
+| `ROLLBACK_COMMAND` | Rollback on smoke failure | Optional — prints guidance if absent |
 
 ---
 
@@ -95,9 +289,11 @@ ai-mode-hybrid    # cloud frontier models, needs ANTHROPIC_API_KEY/OPENAI_API_KE
 ai-stack-check
 ```
 
-Production-runtime extras, only if you'll exercise Part D for real:
+Production-runtime extras, only if you'll exercise Part D for real — run from the **AgentSmith root**:
 
 ```bash
+# Run from: AgentSmith root
+source .venv/bin/activate   # activate the venv created in §1 Prerequisites
 pip install psycopg2-binary redis temporalio langgraph-checkpoint-postgres cryptography
 ```
 

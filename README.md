@@ -27,6 +27,109 @@ AgentSmith is a single-command setup that provisions the complete AI agent lifec
 
 ---
 
+## Prerequisites
+
+### System tools
+
+| Tool | Purpose | Check |
+|---|---|---|
+| Python 3.11+ | All scripts, runtime, evals | `python3 --version` |
+| Git 2.x | Hooks, versioning, CI | `git --version` |
+| Docker 20+ | Phoenix, Ops Portal, Postgres | `docker --version` |
+| Node.js 20+ | Ops Portal, In-App Widget | `node --version` |
+| `gh` CLI | Promotion PRs, CI secrets | `gh --version` |
+| Ollama | Local/offline dev mode only | `ollama --version` |
+
+### API keys — add to `~/.zshrc`
+
+```bash
+# ── Identity (required for every span and log entry) ─────────────────────────
+export AGENT_OWNER_ID="you@example.com"
+export AGENT_OWNER_NAME="Your Name"
+
+# ── LLM providers (hybrid mode — add whichever you use) ──────────────────────
+export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENAI_API_KEY="sk-..."
+export GROQ_API_KEY="gsk_..."          # optional: fast/cheap inference
+
+# ── Observability ─────────────────────────────────────────────────────────────
+export AGENT_PHOENIX_ENDPOINT="http://localhost:6006"   # default; change for team server
+
+# ── Budget / routing ──────────────────────────────────────────────────────────
+export AGENT_MONTHLY_USD_CAP="50"      # hard spend cap per month across all projects
+export AGENT_JUDGE_MODEL="claude-3-5-sonnet-20241022"  # model used to grade evals
+```
+
+### `.env` files — there are two, in different places
+
+**AgentSmith root `.env`** — controls the Ops Portal and shared Docker Compose stack.
+Run from the AgentSmith framework directory (`AgenticFramework/`):
+
+```bash
+# Run from: AgenticFramework/
+cp portal/.env.example .env
+# Then edit .env with the values below
+```
+
+```bash
+# AgenticFramework/.env
+DATABASE_URL=postgresql://phoenix:phoenix@localhost:5432/agenticframework
+
+# Portal basic auth — portal refuses to serve without these. Generate a strong
+# random password: openssl rand -base64 24
+OPS_PORTAL_USER=ops
+OPS_PORTAL_PASSWORD=<strong-password>           # generate: openssl rand -base64 24
+
+# Bearer token gating /api/sync/history and /api/runs/ingest on the portal.
+# Copy this same value into ~/.zshrc (OPS_PORTAL_SYNC_TOKEN) and each tenant
+# app's GitHub Actions secrets so local scripts and CD pipelines can call the portal.
+# Generate: openssl rand -hex 32
+OPS_PORTAL_SYNC_TOKEN=<random-secret>           # generate: openssl rand -hex 32
+
+# Bearer token gating /api/audit/append — used by install-ai-stack.sh to post
+# hook-bypass events. Portal-side only; not needed in ~/.zshrc.
+# Generate: openssl rand -hex 32
+AUDIT_LOG_WRITE_TOKEN=<random-secret>           # generate: openssl rand -hex 32
+
+# HMAC-SHA256 key used to sign every audit event at write time (tamper detection).
+# At read time the portal re-signs and compares — a mismatch means the row was altered.
+# SERVER-SIDE ONLY — never export to ~/.zshrc or tenant apps.
+# ROTATION WARNING: old events stay signed with the old key and fail re-verification
+# after a rotation. Generate once and keep stable: openssl rand -hex 32
+AUDIT_LOG_HMAC_KEY=<random-secret>              # generate: openssl rand -hex 32  — rotate with care
+
+HITL_ENCRYPTION_KEY=<32-byte-hex>               # generate: openssl rand -hex 32
+```
+
+**Tenant app `.env`** — runtime config for each individual agentic app you build.
+Lives in your own app repo root (e.g. `my-oil-price-app/.env`), **not** in the AgentSmith folder:
+
+```bash
+# my-tenant-app/.env
+TENANT_ID=my-tenant
+ANTHROPIC_API_KEY=sk-ant-...
+AGENT_PHOENIX_ENDPOINT=http://localhost:6006
+OPS_PORTAL_URL=http://localhost:3000
+OPS_PORTAL_SYNC_TOKEN=<same value as AgenticFramework/.env>
+DATABASE_URL=postgresql://user:pass@localhost:5432/my-tenant-db
+ENVIRONMENT=production
+HITL_ENCRYPTION_KEY=<same value as AgenticFramework/.env>
+```
+
+### GitHub Actions secrets
+
+Set these in **Settings → Secrets and variables → Actions** for each tenant repo:
+
+| Secret | Required for |
+|---|---|
+| `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` | CI eval judge + hybrid-mode tests |
+| `AGENT_PHOENIX_ENDPOINT` | Trace export from CI (optional — CI still passes without it) |
+| `OPS_PORTAL_URL` | CD → portal history sync |
+| `OPS_PORTAL_SYNC_TOKEN` | CD → portal history sync |
+| `DEPLOY_COMMAND` | Actual deploy step (platform-specific — Fly, Railway, ECS, etc.) |
+
+---
+
 ## Quick Start
 
 ```bash
