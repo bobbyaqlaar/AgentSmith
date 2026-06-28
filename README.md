@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/Logo_AgentSmith.png" alt="Project Logo" width="200">
+</p>
+
 # AgentSmith
 
 **One install. Every agent. Every project.**
