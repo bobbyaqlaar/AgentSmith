@@ -44,19 +44,20 @@ trail. Specifically real, not aspirational:
 - Ops Portal with role-based access control, signed/tamper-evident audit log, SSO session revocation
 - Enterprise pack: signed hook bundles, HMAC-validated break-glass tokens, developer opt-in + RFC enforcement gates
 
-Three pieces of the production-runtime vision are deliberately **not yet
-implemented** — building them without a live Ops Portal/Phoenix instance to
-validate against would mean shipping untested integration code:
+Additionally implemented and verified against live infrastructure (same bar as above):
 
-| Gap | What's missing | Tracked as |
-|---|---|---|
-| Automatic CD → Ops Portal history sync | `cd-staging.yml`/`cd-production.yml` don't push `.agent-history.log` to the portal automatically — manual `curl POST /api/sync/history` works today (§26) | `FIXES_AND_CLEANUP.md` P1b |
-| Shadow eval sampler | No production-traffic sampling → async LLM-judge → Phoenix experiment pipeline yet (§9 describes the design) | `FIXES_AND_CLEANUP.md` P1c |
-| Ops Portal v2 (real run status, cost caps, Phoenix depth) | Widget status is inferred from `.agent-history.log` only (never reports "running"); cost cap is always `null`; Phoenix integration is health-check + link only, no GraphQL query surface | `FIXES_AND_CLEANUP.md` P2 |
-| CD deploy/rollback automation | Deploy step is an intentional placeholder (tenant supplies the real command); rollback prints platform commands rather than executing them | `FIXES_AND_CLEANUP.md` P4 |
+- CD → Ops Portal history sync (`scripts/sync-portal-history.py`, wired into `cd-staging.yml`/`cd-production.yml` — §26)
+- Shadow eval sampler (`scripts/shadow-eval.py` — samples 5% of production spans, judges async, writes Phoenix annotations, surfaces suggested promotions in the Ops Portal — §9). **CI approach:** `shadow-eval.yml` is schedule-only (opt-in nightly cron, never per-PR — a live tenant Phoenix isn't available in that context); CI coverage comes from `scripts/test/test_shadow_eval.py` (sampling determinism, judge-prompt shape) wired into `self-test.yml`'s `python-behaviour` job.
+- Ops Portal v2: real `agent_runs` table with `running`/`success`/`degraded`/`failed` aggregation per workflow, cost cap from `tenant.yaml`, Phoenix 24h trace count + error rate via GraphQL — §26, §29
+- CD deploy/rollback automation: composite actions (`.github/actions/deploy-placeholder/`, `.github/actions/rollback-notify/`) + GHCR image build; rollback posts to Slack/Teams and fails the job whether or not a `ROLLBACK_COMMAND` is set — tenants supply the real command, the notification and job-failure are mandatory — §22
 
-See the implementation plan under "Deliberately not implemented" in
-`FIXES_AND_CLEANUP.md` for the proposed approach to each, pending sign-off.
+**Genuine remaining gaps** (not yet built — trigger conditions documented in
+`FIXES_AND_CLEANUP.md` "Future Phases"): short-term conversation memory,
+vector store retrieval, `@tool` registration/schema-extraction, LLM-driven
+self-correction, pre-call input guardrails, hallucination-rate metric, TTFT
+tracking (requires streaming support), fairness/robustness evaluation. None
+of these are regressions — they were evaluated and deliberately deferred
+pending a concrete tenant call site to design against.
 
 ---
 
@@ -656,6 +657,14 @@ An async sampler evaluates 5% of production traces post-hoc:
 - LLM judge scores sampled spans asynchronously — does not block user-facing workflows
 - Results written to Phoenix experiments, tagged with `eval.type: shadow`
 - Feeds suggested promotion queue in Ops Portal
+
+**CI approach:** `workflow-templates/shadow-eval.yml` is an opt-in schedule
+(nightly cron, never triggered on every PR — a live tenant Phoenix is not
+available in generic CI). CI regression coverage for the sampler's own logic
+(`scripts/shadow-eval.py`) is provided by `scripts/test/test_shadow_eval.py`
+(sampling determinism, correct 5% rate, judge-prompt shape), wired into
+`self-test.yml`'s `python-behaviour` job. Running against a real Phoenix
+instance is a manual/scheduled-workflow concern, not a per-PR gate.
 
 ### HITL Promotion Flow
 

@@ -861,6 +861,12 @@ AgentSmith/
 
 ---
 
-## License
+## License and Trademark
 
-[MIT](./LICENSE)
+This project is released under the [MIT License](./LICENSE).
+
+The name **AgentSmith**, the AgentSmith logo, and associated marks are
+subject to trademark protections. Use of these marks in your own products,
+services, or distributions requires explicit written permission. See
+[TRADEMARK.md](./TRADEMARK.md) for permitted uses, restrictions, and
+attribution guidelines.
