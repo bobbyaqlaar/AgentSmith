@@ -1885,15 +1885,23 @@ Per tenant repo (overrides) with framework defaults:
 # models.yaml
 models:
   architect:
-    id: claude-3-5-sonnet-20241022
+    id: claude-sonnet-4-6
+    provider: anthropic
     cost_per_input_token: 0.000003
     cost_per_output_token: 0.000015
   developer:
     id: gpt-4o
+    provider: openai
     cost_per_input_token: 0.0000025
     cost_per_output_token: 0.00001
+  groq_fast:
+    id: llama-3.3-70b-versatile
+    provider: groq             # OpenAI-compatible; defaults to GROQ_API_KEY
+    cost_per_input_token: 0.00000059
+    cost_per_output_token: 0.00000079
   fast:
     id: gemma2
+    provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
     cost_per_output_token: 0
