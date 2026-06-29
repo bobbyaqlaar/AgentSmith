@@ -22,7 +22,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from runtime.llm_gateway import BudgetExceededError, LLMGateway  # noqa: E402
 
 
-def _make_gateway(cap_usd: float, output_cost_per_token: float, input_cost_per_token: float = 0.01) -> LLMGateway:
+def _make_gateway(
+    cap_usd: float, output_cost_per_token: float, input_cost_per_token: float = 0.01
+) -> LLMGateway:
     gw = LLMGateway(tenant_id="acme", budget_cap_usd=cap_usd)
     gw.models = {
         "developer": {
@@ -82,7 +84,9 @@ async def test_reservation_releases_on_invoke_failure():
     with pytest.raises(RuntimeError):
         await gw.complete(prompt="hi", model_hint="developer", max_tokens=1)
 
-    assert gw._budget.get_spend("acme") == 0.0, "reservation was not released after invoke() raised"
+    assert gw._budget.get_spend("acme") == 0.0, (
+        "reservation was not released after invoke() raised"
+    )
 
 
 @pytest.mark.asyncio
@@ -107,17 +111,23 @@ async def test_reservation_reconciles_to_actual_cost():
     real cost after the call, not left as the (larger) estimate."""
     # cap must accommodate the conservative max_tokens-based reservation
     # (100 * (0.1 + 0.1) = 20) even though the actual cost will be far less.
-    gw = _make_gateway(cap_usd=30.0, output_cost_per_token=0.1, input_cost_per_token=0.1)
+    gw = _make_gateway(
+        cap_usd=30.0, output_cost_per_token=0.1, input_cost_per_token=0.1
+    )
 
     async def fake_invoke(cfg, messages, max_tokens, temperature):
         return "ok", 1, 1  # actual cost: 1*0.1 + 1*0.1 = 0.2
 
     gw._invoke = fake_invoke
 
-    await gw.complete(prompt="hi", model_hint="developer", max_tokens=100)  # estimate: 100*0.2 = 20 (would exceed cap if not reconciled down)
+    await gw.complete(
+        prompt="hi", model_hint="developer", max_tokens=100
+    )  # estimate: 100*0.2 = 20 (would exceed cap if not reconciled down)
 
     spend = gw._budget.get_spend("acme")
-    assert abs(spend - 0.2) < 1e-9, f"expected spend reconciled to actual cost 0.2, got {spend}"
+    assert abs(spend - 0.2) < 1e-9, (
+        f"expected spend reconciled to actual cost 0.2, got {spend}"
+    )
 
 
 @pytest.mark.asyncio
@@ -130,7 +140,9 @@ async def test_invoke_retries_transient_errors_with_backoff():
     import httpx
     from unittest.mock import patch
 
-    gw = _make_gateway(cap_usd=1000.0, output_cost_per_token=0.0, input_cost_per_token=0.0)
+    gw = _make_gateway(
+        cap_usd=1000.0, output_cost_per_token=0.0, input_cost_per_token=0.0
+    )
     cfg = gw.models["developer"]
     call_count = {"n": 0}
 
@@ -141,14 +153,22 @@ async def test_invoke_retries_transient_errors_with_backoff():
             response = httpx.Response(503, request=request, text="Service Unavailable")
             raise httpx.HTTPStatusError("503", request=request, response=response)
         return httpx.Response(
-            200, request=request,
-            json={"choices": [{"message": {"content": "ok"}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1}},
+            200,
+            request=request,
+            json={
+                "choices": [{"message": {"content": "ok"}}],
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1},
+            },
         )
 
     with patch.object(httpx.AsyncClient, "post", fake_post):
-        text, in_tok, out_tok = await gw._invoke(cfg, [{"role": "user", "content": "hi"}], 10, 0.2)
+        text, in_tok, out_tok = await gw._invoke(
+            cfg, [{"role": "user", "content": "hi"}], 10, 0.2
+        )
 
-    assert call_count["n"] == 3, f"expected 2 failed attempts + 1 success, got {call_count['n']} attempts"
+    assert call_count["n"] == 3, (
+        f"expected 2 failed attempts + 1 success, got {call_count['n']} attempts"
+    )
     assert text == "ok"
 
 
@@ -160,7 +180,9 @@ async def test_invoke_does_not_retry_non_transient_errors():
     import httpx
     from unittest.mock import patch
 
-    gw = _make_gateway(cap_usd=1000.0, output_cost_per_token=0.0, input_cost_per_token=0.0)
+    gw = _make_gateway(
+        cap_usd=1000.0, output_cost_per_token=0.0, input_cost_per_token=0.0
+    )
     cfg = gw.models["developer"]
     call_count = {"n": 0}
 
@@ -170,11 +192,16 @@ async def test_invoke_does_not_retry_non_transient_errors():
         response = httpx.Response(401, request=request, text="invalid api key")
         raise httpx.HTTPStatusError("401", request=request, response=response)
 
-    with patch.object(httpx.AsyncClient, "post", fake_post_401), pytest.raises(httpx.HTTPStatusError) as exc_info:
+    with (
+        patch.object(httpx.AsyncClient, "post", fake_post_401),
+        pytest.raises(httpx.HTTPStatusError) as exc_info,
+    ):
         await gw._invoke(cfg, [{"role": "user", "content": "hi"}], 10, 0.2)
 
     assert exc_info.value.response.status_code == 401
-    assert call_count["n"] == 1, f"expected exactly 1 attempt (no retry on 401), got {call_count['n']}"
+    assert call_count["n"] == 1, (
+        f"expected exactly 1 attempt (no retry on 401), got {call_count['n']}"
+    )
 
 
 @pytest.mark.asyncio
@@ -186,8 +213,15 @@ async def test_invoke_groq_provider_uses_groq_base_url_and_key():
     import httpx
     from unittest.mock import patch
 
-    gw = _make_gateway(cap_usd=1000.0, output_cost_per_token=0.0, input_cost_per_token=0.0)
-    cfg = {"id": "llama-3.3-70b-versatile", "provider": "groq", "cost_per_input_token": 0, "cost_per_output_token": 0}
+    gw = _make_gateway(
+        cap_usd=1000.0, output_cost_per_token=0.0, input_cost_per_token=0.0
+    )
+    cfg = {
+        "id": "llama-3.3-70b-versatile",
+        "provider": "groq",
+        "cost_per_input_token": 0,
+        "cost_per_output_token": 0,
+    }
     seen = {}
 
     async def fake_post(self, url, json=None, headers=None):
@@ -195,12 +229,18 @@ async def test_invoke_groq_provider_uses_groq_base_url_and_key():
         seen["headers"] = headers
         request = httpx.Request("POST", url)
         return httpx.Response(
-            200, request=request,
-            json={"choices": [{"message": {"content": "ok"}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1}},
+            200,
+            request=request,
+            json={
+                "choices": [{"message": {"content": "ok"}}],
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1},
+            },
         )
 
-    with patch.dict("os.environ", {"GROQ_API_KEY": "gsk_test_key"}), \
-         patch.object(httpx.AsyncClient, "post", fake_post):
+    with (
+        patch.dict("os.environ", {"GROQ_API_KEY": "gsk_test_key"}),
+        patch.object(httpx.AsyncClient, "post", fake_post),
+    ):
         text, _, _ = await gw._invoke(cfg, [{"role": "user", "content": "hi"}], 10, 0.2)
 
     assert text == "ok"

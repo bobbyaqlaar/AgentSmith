@@ -21,7 +21,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from runtime import trace_redactor as tr  # noqa: E402
 from runtime.environment import get_environment  # noqa: E402
 
-pytestmark = pytest.mark.skipif(not tr._HAS_OTEL, reason="opentelemetry-sdk not installed")
+pytestmark = pytest.mark.skipif(
+    not tr._HAS_OTEL, reason="opentelemetry-sdk not installed"
+)
 
 
 class FakeSpanContext:
@@ -45,7 +47,11 @@ def _redactor(profile: str, tenant_id: str = "unknown", **kw) -> tr.TraceRedacto
 
 def test_staging_profile_hashes_secrets_preserving_structure():
     redactor = _redactor("staging")
-    span = FakeSpan({"input.value": "Authorization: Bearer sk-ant-abcdefghijklmnopqrstuvwxyz0123456789"})
+    span = FakeSpan(
+        {
+            "input.value": "Authorization: Bearer sk-ant-abcdefghijklmnopqrstuvwxyz0123456789"
+        }
+    )
     redactor.on_end(span)
     scrubbed = span._attributes["input.value"]
     assert "sk-ant-" not in scrubbed
@@ -66,7 +72,9 @@ def test_development_profile_does_not_scrub():
     redactor = _redactor("development")
     span = FakeSpan({"input.value": "sk-ant-abcdefghijklmnopqrstuvwxyz0123456789"})
     redactor.on_end(span)
-    assert span._attributes["input.value"] == "sk-ant-abcdefghijklmnopqrstuvwxyz0123456789"
+    assert (
+        span._attributes["input.value"] == "sk-ant-abcdefghijklmnopqrstuvwxyz0123456789"
+    )
 
 
 def test_unrecognized_profile_value_falls_back_to_strictest():
@@ -77,7 +85,9 @@ def test_unrecognized_profile_value_falls_back_to_strictest():
     assert redactor.profile == "production"
 
 
-def test_per_span_tenant_id_used_for_hitl_blob_not_constructor_default(tmp_path, monkeypatch):
+def test_per_span_tenant_id_used_for_hitl_blob_not_constructor_default(
+    tmp_path, monkeypatch
+):
     """FIXES_AND_CLEANUP.md 1.2: the regression this guards against is a
     shared worker pool binding tenant_id once at construction time and
     leaking tenant A's HITL blob under tenant B's key (or vice versa)."""
@@ -88,11 +98,17 @@ def test_per_span_tenant_id_used_for_hitl_blob_not_constructor_default(tmp_path,
     # the span itself carries a DIFFERENT tenant.id attribute, which must win.
     redactor = _redactor("production", tenant_id="default-tenant")
     payload = "x" * 100  # > 50 chars, triggers the HITL blob path
-    span = FakeSpan({"input.value": payload, "tenant.id": "real-tenant"}, trace_id=42, span_id=7)
+    span = FakeSpan(
+        {"input.value": payload, "tenant.id": "real-tenant"}, trace_id=42, span_id=7
+    )
     redactor.on_end(span)
 
-    assert (tmp_path / "real-tenant").is_dir(), "blob was not stored under the span's own tenant.id"
-    assert not (tmp_path / "default-tenant").exists(), "blob was incorrectly stored under the constructor fallback tenant_id"
+    assert (tmp_path / "real-tenant").is_dir(), (
+        "blob was not stored under the span's own tenant.id"
+    )
+    assert not (tmp_path / "default-tenant").exists(), (
+        "blob was incorrectly stored under the constructor fallback tenant_id"
+    )
 
 
 def test_blob_ref_includes_span_id_for_collision_safety(tmp_path, monkeypatch):
@@ -110,14 +126,18 @@ def test_blob_ref_includes_span_id_for_collision_safety(tmp_path, monkeypatch):
 
     ref_a = span_a._attributes["input.value.hitl_blob_ref"]
     ref_b = span_b._attributes["input.value.hitl_blob_ref"]
-    assert ref_a != ref_b, "sibling spans in the same trace collided on the same blob ref"
+    assert ref_a != ref_b, (
+        "sibling spans in the same trace collided on the same blob ref"
+    )
 
     blob_dir = tmp_path / "acme"
     written = {p.stem for p in blob_dir.glob("*.json")}
     assert len(written) == 2, f"expected 2 distinct blob files, got {written}"
 
 
-def test_missing_hitl_key_logs_error_not_silently_swallowed(tmp_path, monkeypatch, caplog):
+def test_missing_hitl_key_logs_error_not_silently_swallowed(
+    tmp_path, monkeypatch, caplog
+):
     """FIXES_AND_CLEANUP.md 2.3: a missing HITL_ENCRYPTION_KEY must be
     visible (logged), not a silently dropped blob with a dangling ref."""
     monkeypatch.setenv("HITL_BLOB_DIR", str(tmp_path))
@@ -128,19 +148,20 @@ def test_missing_hitl_key_logs_error_not_silently_swallowed(tmp_path, monkeypatc
     span = FakeSpan({"input.value": payload})
 
     import logging
+
     with caplog.at_level(logging.ERROR, logger="runtime.trace_redactor"):
         redactor.on_end(span)
 
-    assert any("NOT written" in rec.message or "HITL" in rec.message for rec in caplog.records), (
-        "missing-key failure was not logged at ERROR level"
-    )
+    assert any(
+        "NOT written" in rec.message or "HITL" in rec.message for rec in caplog.records
+    ), "missing-key failure was not logged at ERROR level"
     # truncation still happens — the span is still safe to export
     assert len(span._attributes["input.value"]) <= 50 + len("…[truncated]")
 
 
 def test_credit_card_redaction_validates_luhn():
     redactor = _redactor("staging")
-    valid_card = "4111-1111-1111-1111"   # Luhn-valid test number
+    valid_card = "4111-1111-1111-1111"  # Luhn-valid test number
     invalid_card = "1234-5678-9012-3456"  # Luhn-invalid — looks card-shaped but isn't
     span = FakeSpan({"input.value": f"card {valid_card} and also {invalid_card}"})
     redactor.on_end(span)

@@ -22,7 +22,9 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 
 
 def _load_checker():
-    spec = importlib.util.spec_from_file_location("check_bare_except", SCRIPTS_DIR / "check_bare_except.py")
+    spec = importlib.util.spec_from_file_location(
+        "check_bare_except", SCRIPTS_DIR / "check_bare_except.py"
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -59,11 +61,7 @@ def test_multiline_log_and_continue_is_not_flagged():
 
 def test_bare_pass_is_flagged():
     source = (
-        "def f():\n"
-        "    try:\n"
-        "        risky()\n"
-        "    except Exception:\n"
-        "        pass\n"
+        "def f():\n    try:\n        risky()\n    except Exception:\n        pass\n"
     )
     violations = checker.find_violations(source, "test.py")
     assert len(violations) == 1
@@ -71,13 +69,7 @@ def test_bare_pass_is_flagged():
 
 
 def test_bare_ellipsis_is_flagged():
-    source = (
-        "def f():\n"
-        "    try:\n"
-        "        risky()\n"
-        "    except Exception:\n"
-        "        ...\n"
-    )
+    source = "def f():\n    try:\n        risky()\n    except Exception:\n        ...\n"
     assert len(checker.find_violations(source, "test.py")) == 1
 
 
@@ -87,6 +79,23 @@ def test_fail_open_comment_suppresses_flag():
         "    try:\n"
         "        risky()\n"
         "    except Exception:  # fail-open: must never break the caller\n"
+        "        pass\n"
+    )
+    assert checker.find_violations(source, "test.py") == []
+
+
+def test_fail_open_comment_on_wrapped_header_suppresses_flag():
+    """A formatter (e.g. ruff format) can wrap a long except header across
+    multiple lines, moving a trailing comment onto the `):` line rather
+    than the `except (` line node.lineno points at — the suppression
+    marker must still be found anywhere in that header span."""
+    source = (
+        "def f():\n"
+        "    try:\n"
+        "        risky()\n"
+        "    except (\n"
+        "        OSError\n"
+        "    ):  # fail-open: read-only filesystem — stdout only\n"
         "        pass\n"
     )
     assert checker.find_violations(source, "test.py") == []

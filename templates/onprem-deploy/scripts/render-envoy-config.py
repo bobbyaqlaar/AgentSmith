@@ -9,6 +9,7 @@ Uses Envoy's native `weighted_clusters` (canary split) and
 `request_mirror_policies` (shadow mirroring) route fields — no Lua/WASM
 filter needed, both are core HTTP connection manager route fields.
 """
+
 import os
 import sys
 from pathlib import Path
@@ -39,7 +40,20 @@ def cluster(name: str, address: str, port: int) -> dict:
         "load_assignment": {
             "cluster_name": name,
             "endpoints": [
-                {"lb_endpoints": [{"endpoint": {"address": {"socket_address": {"address": address, "port_value": port}}}}]}
+                {
+                    "lb_endpoints": [
+                        {
+                            "endpoint": {
+                                "address": {
+                                    "socket_address": {
+                                        "address": address,
+                                        "port_value": port,
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
             ],
         },
     }
@@ -54,7 +68,10 @@ def main() -> int:
     canary_weight = int(env.get("CANARY_WEIGHT_PERCENT", "10") or "10")
     shadow_percent = int(env.get("SHADOW_MIRROR_PERCENT", "100") or "100")
 
-    for name, value in (("CANARY_WEIGHT_PERCENT", canary_weight), ("SHADOW_MIRROR_PERCENT", shadow_percent)):
+    for name, value in (
+        ("CANARY_WEIGHT_PERCENT", canary_weight),
+        ("SHADOW_MIRROR_PERCENT", shadow_percent),
+    ):
         if not 0 <= value <= 100:
             print(f"❌ {name} must be 0-100, got {value}", file=sys.stderr)
             return 1
@@ -80,7 +97,10 @@ def main() -> int:
             {
                 "cluster": "app_shadow",
                 "runtime_fraction": {
-                    "default_value": {"numerator": shadow_percent, "denominator": "HUNDRED"}
+                    "default_value": {
+                        "numerator": shadow_percent,
+                        "denominator": "HUNDRED",
+                    }
                 },
             }
         ]
@@ -90,7 +110,12 @@ def main() -> int:
             "listeners": [
                 {
                     "name": "ingress",
-                    "address": {"socket_address": {"address": "0.0.0.0", "port_value": listen_port}},
+                    "address": {
+                        "socket_address": {
+                            "address": "0.0.0.0",
+                            "port_value": listen_port,
+                        }
+                    },
                     "filter_chains": [
                         {
                             "filters": [
@@ -113,7 +138,12 @@ def main() -> int:
                                                 {
                                                     "name": "app",
                                                     "domains": ["*"],
-                                                    "routes": [{"match": {"prefix": "/"}, "route": route_action}],
+                                                    "routes": [
+                                                        {
+                                                            "match": {"prefix": "/"},
+                                                            "route": route_action,
+                                                        }
+                                                    ],
                                                 }
                                             ],
                                         },
@@ -134,7 +164,9 @@ def main() -> int:
             ],
             "clusters": clusters,
         },
-        "admin": {"address": {"socket_address": {"address": "127.0.0.1", "port_value": 9901}}},
+        "admin": {
+            "address": {"socket_address": {"address": "127.0.0.1", "port_value": 9901}}
+        },
     }
 
     out_path = HERE / "proxy" / "envoy" / "envoy.rendered.yaml"

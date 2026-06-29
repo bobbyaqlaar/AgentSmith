@@ -51,7 +51,9 @@ from temporalio.testing import WorkflowEnvironment  # noqa: E402
 from base_workflow import dlq_enqueue_activity  # type: ignore  # noqa: E402
 from _recoverable_step_fixtures import ATTEMPT_COUNT, CRMWorkflow, crm_update_activity  # type: ignore  # noqa: E402
 
-pytestmark = pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set"
+)
 
 
 @pytest.mark.asyncio
@@ -114,7 +116,9 @@ async def test_retries_exactly_once_not_temporals_default_policy():
                 if ATTEMPT_COUNT.get("n", 0) >= 1:
                     break
                 await asyncio.sleep(0.1)
-            await asyncio.sleep(1.0)  # would balloon past 1 within this window under Temporal's default retry policy
+            await asyncio.sleep(
+                1.0
+            )  # would balloon past 1 within this window under Temporal's default retry policy
 
             assert ATTEMPT_COUNT.get("n", 0) == 1, (
                 f"expected exactly 1 attempt before the human fix arrives, got {ATTEMPT_COUNT.get('n')} — "
