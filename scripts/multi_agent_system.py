@@ -25,7 +25,7 @@ import os
 import sys
 import uuid
 from pathlib import Path
-from typing import Annotated, Any, Literal, Optional, TypedDict
+from typing import Any, Literal, Optional, TypedDict
 
 try:
     # Normal case: repo root on sys.path, runtime/ is a package.
@@ -57,6 +57,7 @@ class AgentState(TypedDict):
     owner_id:       str
     project:        str
     issues:         list[str]
+    revision_hint:  str
     hitl_approved:  bool
 
 
@@ -74,6 +75,7 @@ def _default_state(task: str, spec: str, project: str) -> AgentState:
         owner_id=os.environ.get("AGENT_OWNER_ID", "unknown"),
         project=project,
         issues=[],
+        revision_hint="",
         hitl_approved=False,
     )
 
@@ -286,6 +288,7 @@ def validator_node(state: AgentState) -> AgentState:
             "validation":     json.dumps(result, indent=2),
             "verdict":        verdict,
             "issues":         issues,
+            "revision_hint":  hint,
             "revision_count": rev_count,
             "status":         new_status,
         }
@@ -488,7 +491,8 @@ def run_pipeline(
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import argparse, sys
+    import argparse
+    import sys
 
     parser = argparse.ArgumentParser(description="Run LangGraph multi-agent pipeline")
     parser.add_argument("task",       help="Task description")

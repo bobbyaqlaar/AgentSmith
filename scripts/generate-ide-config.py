@@ -28,7 +28,6 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
 
 def _load_rules(rules_file: Path) -> dict:

@@ -20,7 +20,6 @@ failures on the cheaper tier.
 from __future__ import annotations
 
 import os
-import re
 from typing import Optional
 
 # ── Model config ──────────────────────────────────────────────────────────────
@@ -347,7 +346,8 @@ def call(
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import sys, json as _json
+    import sys
+    import json as _json
     prompt = " ".join(sys.argv[1:]) or "Write a hello world function in Python."
     r = route(prompt)
     print(_json.dumps({
