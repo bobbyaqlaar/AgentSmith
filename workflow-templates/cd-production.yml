@@ -41,6 +41,18 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+      # ── GCP auth (optional — skips when neither WIF nor SA key is configured) ─
+      # Must run before build-push-ghcr when pushing to Artifact Registry, and
+      # before the deploy step when using gcloud/kubectl. Sets ADC on the runner
+      # so any subsequent step calling google.auth.default() is authenticated.
+      # See OPERATIONS.md §D.5b for one-time GCP setup instructions.
+      - name: "Authenticate to GCP"
+        uses: ./.github/actions/gcp-auth
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
       # ── Containerize + push to GHCR (optional — skips if no Dockerfile) ────
       - name: "Build & push container image"
         id: image
