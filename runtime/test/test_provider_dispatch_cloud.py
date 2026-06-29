@@ -145,20 +145,39 @@ def test_bedrock():
     assert (text, in_tok, out_tok) == ("hi!", 5, 2)
 
 
-def test_vertex_ai_default_region_is_gcc():
-    """Default region (no `region` in cfg) is GCP's GCC region, not us-central1."""
+def test_vertex_ai_default_region_is_verified_working_region():
+    """Default region (no `region` in cfg) is us-central1 — confirmed live to serve
+    gemini-2.5-flash. A GCC default (me-central1/me-central2) was tried and reverted
+    after a live test against a real Vertex AI project returned 404 "Publisher model
+    ... not found" for both — see VertexAIAdapter's docstring."""
     fake_creds = MagicMock(token="fake-token", expiry=None)
     with patch("google.auth.default", return_value=(fake_creds, "proj")), \
          patch("google.auth.transport.requests.Request", return_value=MagicMock()):
         url, _, _ = build_cloud_request(
-            "vertex_ai", "claude-sonnet-4-6", MESSAGES,
+            "vertex_ai", "gemini-2.5-flash", MESSAGES,
             cfg={"project": "my-proj"}, max_tokens=64, temperature=0.2,
         )
-    assert "me-central2" in url
+    assert "us-central1" in url
+    assert "me-central1" not in url and "me-central2" not in url
 
 
-def test_bedrock_default_region_is_gcc():
-    """Default region (no `region` in cfg) is AWS's GCC region, not us-east-1."""
+def test_vertex_ai_project_supports_env_var_expansion():
+    """`project` supports ${VAR} expansion so a real project id is never committed literally."""
+    fake_creds = MagicMock(token="fake-token", expiry=None)
+    with patch("google.auth.default", return_value=(fake_creds, "proj")), \
+         patch("google.auth.transport.requests.Request", return_value=MagicMock()), \
+         patch.dict("os.environ", {"GCP_PROJECT_ID": "real-project-123"}):
+        url, _, _ = build_cloud_request(
+            "vertex_ai", "gemini-2.5-flash", MESSAGES,
+            cfg={"project": "${GCP_PROJECT_ID}"}, max_tokens=64, temperature=0.2,
+        )
+    assert "real-project-123" in url
+
+
+def test_bedrock_default_region_is_us_east_1():
+    """Default region (no `region` in cfg) is us-east-1, not an unverified GCC region —
+    no AWS credentials were available to repeat the live test done for Vertex AI, so the
+    GCC default was not kept without verification."""
     fake_request = MagicMock(headers={"Authorization": "AWS4-HMAC-SHA256 ..."})
     with patch("boto3.Session") as mock_session, \
          patch("botocore.awsrequest.AWSRequest", return_value=fake_request), \
@@ -168,7 +187,8 @@ def test_bedrock_default_region_is_gcc():
         url, _, _ = build_cloud_request(
             "bedrock", "anthropic.claude-3-5-sonnet", MESSAGES, cfg={}, max_tokens=64, temperature=0.2,
         )
-    assert "me-central-1" in url
+    assert "us-east-1" in url
+    assert "me-central-1" not in url
 
 
 def test_vertex_ai_url_template_override():
