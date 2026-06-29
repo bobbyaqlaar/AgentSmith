@@ -118,10 +118,15 @@ jobs:
         # scaffolded by ai-tenant-init before anyone has written a test
         # yet — that's an expected day-one state, not a CI failure; any
         # other non-zero exit (an actual test failure, a collection error)
-        # still fails the job.
+        # still fails the job. `run:` blocks default to `set -e`, which
+        # would abort on pytest's own non-zero exit before this script
+        # ever reached `code=$?` — `set +e` first is required for that
+        # capture to actually happen.
         run: |
+          set +e
           pytest --cov --cov-report=xml -q
           code=$?
+          set -e
           if [ "$code" -eq 5 ]; then
             echo "ℹ️  No tests collected yet — not failing CI for a fresh project."
             exit 0
