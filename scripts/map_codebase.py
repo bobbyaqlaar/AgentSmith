@@ -76,7 +76,7 @@ def _parse_python(path: Path) -> tuple[list[str], list[str]]:
             for node in ast.walk(tree)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
         ]
-    except SyntaxError:  # noqa: bare-except — one unparsable file must not abort the whole codebase scan; it just contributes no symbols/imports
+    except SyntaxError:  # fail-open: one unparsable file must not abort the whole codebase scan; it just contributes no symbols/imports
         pass
     return list(dict.fromkeys(symbols)), list(dict.fromkeys(imports))
 
@@ -102,7 +102,7 @@ def _parse_typescript(path: Path) -> tuple[list[str], list[str]]:
             imp = m.group(1)
             if imp.startswith("."):
                 imports.append(imp)
-    except Exception:  # noqa: bare-except — one unparsable file must not abort the whole codebase scan; it just contributes no symbols/imports
+    except Exception:  # fail-open: one unparsable file must not abort the whole codebase scan; it just contributes no symbols/imports
         pass
     return list(dict.fromkeys(symbols)), list(dict.fromkeys(imports))
 
@@ -122,7 +122,7 @@ def _parse_go(path: Path) -> tuple[list[str], list[str]]:
             pkg = m.group(1)
             if "/" in pkg:
                 imports.append(pkg.split("/")[-1])
-    except Exception:  # noqa: bare-except — one unparsable file must not abort the whole codebase scan; it just contributes no symbols/imports
+    except Exception:  # fail-open: one unparsable file must not abort the whole codebase scan; it just contributes no symbols/imports
         pass
     return list(dict.fromkeys(symbols)), list(dict.fromkeys(imports))
 
@@ -153,7 +153,7 @@ def _extract_guardrails_from_cursorrules(path: Path) -> list[dict]:
                 "pillar": pillar_num,
                 "source_file": str(path),
             })
-    except Exception:  # noqa: bare-except — one unparsable .cursorrules file must not abort the whole codebase scan; it just contributes no guardrails
+    except Exception:  # fail-open: one unparsable .cursorrules file must not abort the whole codebase scan; it just contributes no guardrails
         pass
     return guardrails
 
@@ -172,7 +172,7 @@ def _extract_guardrails_from_rfc(rfc_dir: Path) -> list[dict]:
                 "pillar": None,
                 "source_file": str(md_file),
             })
-        except Exception:  # noqa: bare-except — one unparsable RFC file must not abort scanning the rest of the directory
+        except Exception:  # fail-open: one unparsable RFC file must not abort scanning the rest of the directory
             pass
     return guardrails
 

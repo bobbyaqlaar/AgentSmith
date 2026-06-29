@@ -81,12 +81,12 @@ def test_bare_ellipsis_is_flagged():
     assert len(checker.find_violations(source, "test.py")) == 1
 
 
-def test_noqa_comment_suppresses_flag():
+def test_fail_open_comment_suppresses_flag():
     source = (
         "def f():\n"
         "    try:\n"
         "        risky()\n"
-        "    except Exception:  # noqa: bare-except — must never break the caller\n"
+        "    except Exception:  # fail-open: must never break the caller\n"
         "        pass\n"
     )
     assert checker.find_violations(source, "test.py") == []
