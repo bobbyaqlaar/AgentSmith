@@ -286,7 +286,7 @@ def call(
         try:
             from circuit_breaker import audit_token_velocity_circuit
             audit_token_velocity_circuit(in_tok, out_tok)
-        except Exception:
+        except Exception:  # noqa: bare-except — circuit breaker is a side-effect check after a successful call; the call's own errors are handled by the outer except below, not this one
             pass
 
         record_success(route_result.model)
