@@ -1145,6 +1145,103 @@ Verified against `act` (local GitHub Actions runner): both actions execute
 correctly with and without a configured command, and a forced failure
 correctly propagates a red job status after rollback/notify run.
 
+### D.5b — GCP deployment specifics (Vertex AI credentials + worker hosting)
+
+§D.5 above covers `DEPLOY_COMMAND` generically, with `gcloud run deploy` as
+one example value — that's enough if your tenant app only talks to direct
+Anthropic/OpenAI APIs. If it routes any `model_hint` to `provider:
+vertex_ai` (e.g. the `vertex_gemini` role added to `runtime/models.yaml` in
+§2 above), CI/CD needs two more things `DEPLOY_COMMAND` alone doesn't give
+you: a way for GitHub Actions to authenticate to GCP, and a decision about
+*what kind* of compute actually runs `worker.py`.
+
+**1. Authenticating GitHub Actions to GCP.** `VertexAIAdapter` resolves
+credentials via `google.auth.default()` (`runtime/provider_dispatch.py`),
+which needs one of:
+
+- **Workload Identity Federation (recommended — no long-lived key to
+  rotate or leak):**
+  ```bash
+  # One-time, run locally with gcloud already authenticated to the target project:
+  gcloud iam workload-identity-pools create "github-actions-pool" \
+    --project="$GCP_PROJECT_ID" --location="global"
+  gcloud iam workload-identity-pools providers create-oidc "github-provider" \
+    --project="$GCP_PROJECT_ID" --location="global" \
+    --workload-identity-pool="github-actions-pool" \
+    --issuer-uri="https://token.actions.githubusercontent.com" \
+    --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository"
+  gcloud iam service-accounts create "github-deployer" --project="$GCP_PROJECT_ID"
+  gcloud iam service-accounts add-iam-policy-binding \
+    "github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
+    --project="$GCP_PROJECT_ID" --role="roles/iam.workloadIdentityUser" \
+    --member="principalSet://iam.googleapis.com/projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/<org>/<repo>"
+  # Grant the deployer SA whatever it needs to deploy + the worker SA Vertex AI access:
+  gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+    --member="serviceAccount:github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/aiplatform.user"
+  ```
+  Then in the workflow (add a step before the deploy step in
+  `cd-staging.yml`/`cd-production.yml`, or fork `deploy-placeholder` if you
+  need it generically — there's no built-in GCP auth step since this
+  framework doesn't assume any one cloud):
+  ```yaml
+  - uses: google-github-actions/auth@v2
+    with:
+      workload_identity_provider: projects/${{ secrets.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+      service_account: github-deployer@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+  ```
+  This also satisfies `google.auth.default()` for any step that runs
+  `gcloud` or the Python worker directly in CI (e.g. a smoke test), since
+  the action writes ADC to the runner's filesystem.
+
+- **Service-account JSON key (simpler, but a long-lived secret to rotate
+  and a bigger blast radius if leaked — prefer Workload Identity above for
+  anything beyond a quick local test):** generate one
+  (`gcloud iam service-accounts keys create key.json --iam-account=...`),
+  store its contents as a `GCP_SA_KEY` secret on the tenant's GitHub
+  Environment, and either use
+  `google-github-actions/auth@v2` with `credentials_json:
+  ${{ secrets.GCP_SA_KEY }}` in CI, or — for the deployed runtime itself —
+  set `GOOGLE_APPLICATION_CREDENTIALS` to a path where that JSON is
+  mounted (Cloud Run/GKE secret volume; never bake the key into the image).
+
+**2. What actually gets deployed.** `gcloud run deploy` deploys a
+request/response HTTP service — but `worker.py` (and any tenant's
+Temporal-backed worker) is a long-running poller with no HTTP listener at
+all. Don't assume Cloud Run "just works" here without one of:
+
+| Option | Fit | Caveat |
+|---|---|---|
+| **Cloud Run, `--no-cpu-throttling --min-instances=1`** | Works for low/moderate-throughput workers; closest to the `DEPLOY_COMMAND` pattern already documented | No autoscaling on queue depth (Cloud Run scales on HTTP concurrency, which this worker has none of) — you're paying for one always-on instance regardless of task-queue load; add a trivial `GET /healthz` HTTP handler alongside the Temporal poller so Cloud Run's own health checks (and `cd-production.yml`'s post-deploy smoke test) have something to hit |
+| **GKE (or any k8s)** | Best fit for a long-running poller — a `Deployment` with no `Service`/ingress needed at all, scales on whatever metric you choose (queue depth via KEDA, etc.) | More infra to operate than this framework's `templates/onprem-deploy/` assumes (§D.6) — bring your own cluster; not scaffolded by `ai-onprem-deploy-scaffold` |
+| **Compute Engine (single VM/MIG)** | Simplest mental model, no container platform needed | Manual scaling, no rolling-deploy story beyond replacing the VM/instance template yourself |
+
+This framework does not pick one of these for you — `DEPLOY_COMMAND` stays
+a single string, same as every other platform in §D.5, so set it to
+whichever of the three you choose, e.g.:
+
+```bash
+# GKE (Deployment must already exist; this just updates the image)
+DEPLOY_COMMAND = "kubectl set image deployment/oil-price-worker worker=$IMAGE_REF"
+# Cloud Run with the worker forced always-on (see caveat above)
+DEPLOY_COMMAND = "gcloud run deploy oil-price-worker --image $IMAGE_REF --no-cpu-throttling --min-instances=1"
+```
+
+Set `GCP_PROJECT_ID` (and, for the `vertex_gemini` role specifically,
+`project: "${GCP_PROJECT_ID}"` already in `runtime/models.yaml`) as a
+GitHub Environment secret or variable so neither the workflow YAML nor
+`models.yaml` ever needs a real project id committed — same reasoning as
+`runtime/provider_dispatch.py`'s `${VAR}` expansion for `project`
+(§29 "Cloud-Native Provider Adapters").
+
+**Live-verification status**: the Vertex AI *call path* itself was
+verified live against a real GCP project this session (`gemini-2.5-flash`
+via `LLMGateway.complete(model_hint="vertex_gemini")` — §29). The
+Workload Identity Federation setup above and the three worker-hosting
+options were not exercised end-to-end through an actual GitHub Actions
+run in this session — verify the exact `gcloud`/`kubectl` invocations
+against your own project before relying on them in production CI/CD.
+
 ### D.6 — On-premise / air-gapped deployment
 
 For tenants whose customers run the agent app on their own hardware
