@@ -26,8 +26,6 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, Optional
 
@@ -267,7 +265,7 @@ class AgentKnowledgeGraph:
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import argparse, sys
+    import argparse
 
     parser = argparse.ArgumentParser(description="AgentKnowledgeGraph CLI")
     parser.add_argument("--stats",   action="store_true", help="Print node/edge counts")

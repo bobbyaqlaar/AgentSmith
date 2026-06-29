@@ -22,8 +22,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Optional
 
 PHOENIX_ENDPOINT = os.environ.get("AGENT_PHOENIX_ENDPOINT", "http://localhost:6006")
@@ -143,11 +141,6 @@ def sync() -> dict:
             or span_attrs.get("llm.input_messages", [{}])[0].get("message.content", "")
             if isinstance(span_attrs.get("llm.input_messages"), list) else ""
         ) or span.get("name", "unknown_input")
-        output_val = (
-            span_attrs.get("output.value")
-            or span_attrs.get("llm.output_messages", [{}])[0].get("message.content", "")
-            if isinstance(span_attrs.get("llm.output_messages"), list) else ""
-        ) or ""
 
         if not input_val:
             stats["errors"] += 1
