@@ -417,6 +417,34 @@ example's still-TODO real forecasting model.
 
 ---
 
+## P10 — Ten Pillars enforcement gaps in CI/CD ✅ done (2026-06-30)
+
+Surfaced by a systematic audit of all ten operational pillars (SPECS.md §4)
+against the tenant CI workflows. All four gaps were **CI absences** — the
+local hook layer enforced them, but CI did not mirror the enforcement,
+meaning a PR that bypassed local hooks would pass CI undetected.
+
+| Sub-item | Gap | Resolution |
+|---|---|---|
+| P10a (Pillar 2 🔴) | `map_codebase.py` never invoked in CI — KG could be stale | Added `Validate Knowledge Graph` step to all three `ci-*.yml` templates (`continue-on-error: true`); added `--check-kg` flag to `verify_system.py` wired into `self-test.yml` |
+| P10b (Pillar 1 🔴) | RFC gate absent from CI — bypassed hooks let RFC-less PRs through in enterprise mode | Added `RFC gate` step to all three `ci-*.yml` templates (no-op in developer mode, enforced when `org-policy.yaml` present) |
+| P10c (Pillar 6/7 🟡) | IDE config drift (`.cursorrules`, `CLAUDE.md`) undetected in CI | Added `IDE config drift check` step calling `generate-ide-config.py --check-only` (`continue-on-error: true`) |
+| P10d (Pillar 3/5 🟢) | `verify_system.py` absent from tenant CI (partial gap — CD already ran `--check-redaction`) | Added non-blocking `Framework health check` step to all three `ci-*.yml` templates |
+
+**Also fixed in this phase:** `set +e` required before `pytest` exit-code
+capture in `ci-python-fastapi.yml` — the `run:` block's implicit `set -e`
+aborted on pytest's non-zero exit before `code=$?` was ever reached,
+silently making the "exit 5 = no tests" tolerance dead code. Fixed in PR #16.
+
+**Acceptance criteria — all met:**
+- [x] Every `ci-*.yml` runs `map_codebase.py` and logs KG node/edge count
+- [x] Enterprise-mode PRs without an RFC file fail CI (not just the local hook)
+- [x] `generate-ide-config.py --check-only` warns on IDE config drift in CI
+- [x] `verify_system.py` non-blocking call in all tenant CI workflows
+- [x] `verify_system.py --check-kg` added and wired into `self-test.yml`
+
+---
+
 ## Resolved design questions (P1c/P4/P5)
 
 These were genuinely open before their respective PRs landed. Recorded so
@@ -439,6 +467,6 @@ they are not re-litigated.
 
 ---
 
-*Active work lives in `FIXES_AND_CLEANUP.md` (P10 and Future Phases).
+*Active work lives in `FIXES_AND_CLEANUP.md` (Future Phases — P10 is complete).
 SPECS.md and Readme.md are the canonical specification record.
 OPERATIONS.md is the canonical operator-facing reference.*
