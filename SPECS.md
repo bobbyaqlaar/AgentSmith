@@ -1986,12 +1986,12 @@ entries with `provider: vertex_ai | azure_openai | bedrock |
 huawei_modelarts` are dispatched instead to a `CloudProviderAdapter`
 (`runtime/provider_dispatch.py`):
 
-| Provider | Auth | URL shape | Required `models.yaml` fields |
-|---|---|---|---|
-| `vertex_ai` (GCP) | OAuth2 service-account token (`google-auth`) | `{region}-aiplatform.googleapis.com/.../publishers/{publisher}/models/{id}:streamRawPredict\|generateContent` | `project`; optional `region`, `publisher` |
-| `azure_openai` | `api-key` header + `api-version` query param | `{resource}.openai.azure.com/openai/deployments/{deployment}/chat/completions` | `resource`; optional `deployment`, `api_version`, `api_key_env` |
-| `bedrock` (AWS) | SigV4-signed request (`boto3`/`botocore`, standard credential chain) | `bedrock-runtime.{region}.amazonaws.com/model/{id}/invoke` | optional `region` |
-| `huawei_modelarts` | AK/SK request signing (`SDK-HMAC-SHA256`, `HUAWEICLOUD_SDK_AK`/`_SK` env vars) | per-deployment custom inference endpoint host | `endpoint` |
+| Provider | Auth | URL shape | Required `models.yaml` fields | Default region | Live-verified? |
+|---|---|---|---|---|---|
+| `vertex_ai` (GCP) | OAuth2 service-account token (`google-auth`) | `{region}-aiplatform.googleapis.com/.../publishers/{publisher}/models/{id}:streamRawPredict\|generateContent` | `project` (supports `${VAR}` expansion); optional `region`, `publisher` (defaults to `google`/Gemini) | `us-central1` | **Yes** — `gemini-2.5-flash` round-tripped end-to-end through `LLMGateway.complete()` against a real GCP project |
+| `azure_openai` | `api-key` header + `api-version` query param | `{resource}.openai.azure.com/openai/deployments/{deployment}/chat/completions` | `resource`; optional `deployment`, `api_version`, `api_key_env` | n/a | No — mocked only |
+| `bedrock` (AWS) | SigV4-signed request (`boto3`/`botocore`, standard credential chain) | `bedrock-runtime.{region}.amazonaws.com/model/{id}/invoke` | optional `region` | `us-east-1` | No — mocked only |
+| `huawei_modelarts` | AK/SK request signing (`SDK-HMAC-SHA256`, `HUAWEICLOUD_SDK_AK`/`_SK` env vars) | per-deployment custom inference endpoint host | `endpoint` | n/a (required field, no default) | No — mocked only, least-documented of the four |
 
 Each adapter implements the same `build_request(model_id, messages, cfg,
 max_tokens, temperature) -> (full_url, headers, body)` /
@@ -1999,13 +1999,31 @@ max_tokens, temperature) -> (full_url, headers, body)` /
 `CloudProviderAdapter` protocol) — unlike the direct-API path, cloud
 adapters return a full URL rather than a path, since project/region/
 deployment/endpoint-id are baked into the URL itself, not split out as a
-separate base_url.
+separate base_url. All four support an optional `url_template` (or, for
+Huawei, `path_template`) override falling back to the defaults above.
+
+**GCC region note (live-verified for GCP, not for AWS):** an earlier
+default pointed Vertex AI and Bedrock at GCC regions (`me-central1`/
+`me-central2` for GCP, `me-central-1` for AWS) on an untested assumption
+that GCC-locality was generally desirable. A live test against a real
+Vertex AI project found `gemini-2.5-flash` returns 404 in both GCP GCC
+regions (works in `us-central1`/`europe-west1`/`europe-west4`/
+`asia-south1`) — both defaults were reverted to the verified-working
+regions above. The GCC regions remain valid `region:` overrides for either
+provider, just no longer the default; verify model availability live
+before relying on one, especially for Bedrock (no AWS credentials were
+available to test its GCC region the way Vertex AI's was).
+
+`runtime/models.yaml` has a live-verified `vertex_gemini` role
+(`gemini-2.5-flash` / `us-central1`) as an opt-in entry — not wired into
+the architect/developer/validator degrade chain, since most tenants won't
+have GCP credentials configured. Route to it via
+`model_hint="vertex_gemini"` or a tenant's `routing_overrides`.
 
 All four adapters are covered by mocked request/response-shape tests
-(`runtime/test/test_provider_dispatch_cloud.py`) — credential acquisition
-(OAuth2 token fetch, boto3 SigV4 signer) is patched out, so none have been
-exercised against a live cloud account. The Huawei ModelArts adapter in
-particular is the least-documented in English-language sources; its
+(`runtime/test/test_provider_dispatch_cloud.py`); `vertex_ai` additionally
+has the live verification described above. The Huawei ModelArts adapter
+in particular is the least-documented in English-language sources; its
 signing implementation follows Huawei's published algorithm structure but
 should be verified against a real deployment before production use.
 
