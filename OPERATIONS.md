@@ -1155,55 +1155,62 @@ vertex_ai` (e.g. the `vertex_gemini` role added to `runtime/models.yaml` in
 you: a way for GitHub Actions to authenticate to GCP, and a decision about
 *what kind* of compute actually runs `worker.py`.
 
-**1. Authenticating GitHub Actions to GCP.** `VertexAIAdapter` resolves
-credentials via `google.auth.default()` (`runtime/provider_dispatch.py`),
-which needs one of:
+**1. Authenticating GitHub Actions to GCP.**
 
-- **Workload Identity Federation (recommended — no long-lived key to
-  rotate or leak):**
-  ```bash
-  # One-time, run locally with gcloud already authenticated to the target project:
-  gcloud iam workload-identity-pools create "github-actions-pool" \
-    --project="$GCP_PROJECT_ID" --location="global"
-  gcloud iam workload-identity-pools providers create-oidc "github-provider" \
-    --project="$GCP_PROJECT_ID" --location="global" \
-    --workload-identity-pool="github-actions-pool" \
-    --issuer-uri="https://token.actions.githubusercontent.com" \
-    --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository"
-  gcloud iam service-accounts create "github-deployer" --project="$GCP_PROJECT_ID"
-  gcloud iam service-accounts add-iam-policy-binding \
-    "github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
-    --project="$GCP_PROJECT_ID" --role="roles/iam.workloadIdentityUser" \
-    --member="principalSet://iam.googleapis.com/projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/<org>/<repo>"
-  # Grant the deployer SA whatever it needs to deploy + the worker SA Vertex AI access:
+The CD workflows (`cd-staging.yml`, `cd-production.yml`) already include a
+`.github/actions/gcp-auth` step — it runs before the image build and deploy
+steps and skips gracefully if neither GCP secret is configured. You only
+need to set the right secrets on each GitHub Environment:
+
+| Secret | What to set | Notes |
+|---|---|---|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/<project-number>/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider` | **Preferred** — see one-time setup below |
+| `GCP_SERVICE_ACCOUNT` | `github-deployer@<project-id>.iam.gserviceaccount.com` | Required alongside WIF |
+| `GCP_SA_KEY` | base64-encoded service-account JSON key | Fallback only — long-lived secret, harder to rotate |
+| `GCP_PROJECT_ID` | `my-gcp-project` | Used in `DEPLOY_COMMAND` / `models.yaml` |
+
+`VertexAIAdapter` resolves credentials via `google.auth.default()`
+(`runtime/provider_dispatch.py`) — after `gcp-auth` runs, ADC is written to
+the runner filesystem so any subsequent step (`gcloud`, `kubectl`, the Python
+gateway) is automatically authenticated.
+
+**One-time GCP setup (Workload Identity Federation — recommended):**
+```bash
+# Run locally with gcloud authenticated to the target project:
+export GCP_PROJECT_ID=my-gcp-project
+export GCP_PROJECT_NUMBER=$(gcloud projects describe $GCP_PROJECT_ID --format='value(projectNumber)')
+export GITHUB_ORG=my-org
+export GITHUB_REPO=oil-price-sample   # or AgentSmith
+
+gcloud iam workload-identity-pools create "github-actions-pool" \
+  --project="$GCP_PROJECT_ID" --location="global"
+gcloud iam workload-identity-pools providers create-oidc "github-provider" \
+  --project="$GCP_PROJECT_ID" --location="global" \
+  --workload-identity-pool="github-actions-pool" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository"
+gcloud iam service-accounts create "github-deployer" --project="$GCP_PROJECT_ID"
+gcloud iam service-accounts add-iam-policy-binding \
+  "github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
+  --project="$GCP_PROJECT_ID" --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/$GITHUB_ORG/$GITHUB_REPO"
+
+# Grant deployer SA the rights it needs:
+for ROLE in roles/run.admin roles/artifactregistry.writer roles/iam.serviceAccountUser roles/aiplatform.user; do
   gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
     --member="serviceAccount:github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
-    --role="roles/aiplatform.user"
-  ```
-  Then in the workflow (add a step before the deploy step in
-  `cd-staging.yml`/`cd-production.yml`, or fork `deploy-placeholder` if you
-  need it generically — there's no built-in GCP auth step since this
-  framework doesn't assume any one cloud):
-  ```yaml
-  - uses: google-github-actions/auth@v2
-    with:
-      workload_identity_provider: projects/${{ secrets.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
-      service_account: github-deployer@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
-  ```
-  This also satisfies `google.auth.default()` for any step that runs
-  `gcloud` or the Python worker directly in CI (e.g. a smoke test), since
-  the action writes ADC to the runner's filesystem.
+    --role="$ROLE"
+done
 
-- **Service-account JSON key (simpler, but a long-lived secret to rotate
-  and a bigger blast radius if leaked — prefer Workload Identity above for
-  anything beyond a quick local test):** generate one
-  (`gcloud iam service-accounts keys create key.json --iam-account=...`),
-  store its contents as a `GCP_SA_KEY` secret on the tenant's GitHub
-  Environment, and either use
-  `google-github-actions/auth@v2` with `credentials_json:
-  ${{ secrets.GCP_SA_KEY }}` in CI, or — for the deployed runtime itself —
-  set `GOOGLE_APPLICATION_CREDENTIALS` to a path where that JSON is
-  mounted (Cloud Run/GKE secret volume; never bake the key into the image).
+# The WIF provider resource name to set as GCP_WORKLOAD_IDENTITY_PROVIDER:
+echo "projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+```
+
+**Service-account JSON key (simpler fallback — prefer WIF above):** generate
+one (`gcloud iam service-accounts keys create key.json --iam-account=...`),
+store its base64-encoded contents as `GCP_SA_KEY` on the GitHub Environment.
+For the deployed runtime's own ADC, mount it as a Cloud Run/GKE secret volume
+and set `GOOGLE_APPLICATION_CREDENTIALS` — never bake the key into the image.
 
 **2. What actually gets deployed.** `gcloud run deploy` deploys a
 request/response HTTP service — but `worker.py` (and any tenant's
@@ -1212,35 +1219,42 @@ all. Don't assume Cloud Run "just works" here without one of:
 
 | Option | Fit | Caveat |
 |---|---|---|
-| **Cloud Run, `--no-cpu-throttling --min-instances=1`** | Works for low/moderate-throughput workers; closest to the `DEPLOY_COMMAND` pattern already documented | No autoscaling on queue depth (Cloud Run scales on HTTP concurrency, which this worker has none of) — you're paying for one always-on instance regardless of task-queue load; add a trivial `GET /healthz` HTTP handler alongside the Temporal poller so Cloud Run's own health checks (and `cd-production.yml`'s post-deploy smoke test) have something to hit |
-| **GKE (or any k8s)** | Best fit for a long-running poller — a `Deployment` with no `Service`/ingress needed at all, scales on whatever metric you choose (queue depth via KEDA, etc.) | More infra to operate than this framework's `templates/onprem-deploy/` assumes (§D.6) — bring your own cluster; not scaffolded by `ai-onprem-deploy-scaffold` |
+| **Cloud Run, `--no-cpu-throttling --min-instances=1`** | Works for low/moderate-throughput workers; closest to the `DEPLOY_COMMAND` pattern already documented | No autoscaling on queue depth; you're paying for one always-on instance regardless of task-queue load. `worker.py` already serves `GET /healthz` on `$PORT` (default 8080) so Cloud Run's health checks have something to hit |
+| **GKE (or any k8s)** | Best fit for a long-running poller — a `Deployment` with no `Service`/ingress needed at all, scales on whatever metric you choose (queue depth via KEDA, etc.) | More infra to operate — bring your own cluster; not scaffolded by `ai-onprem-deploy-scaffold` |
 | **Compute Engine (single VM/MIG)** | Simplest mental model, no container platform needed | Manual scaling, no rolling-deploy story beyond replacing the VM/instance template yourself |
 
-This framework does not pick one of these for you — `DEPLOY_COMMAND` stays
-a single string, same as every other platform in §D.5, so set it to
-whichever of the three you choose, e.g.:
+Set `DEPLOY_COMMAND` on each GitHub Environment to whichever platform you
+choose. The `gcp-auth` step runs first so `gcloud`/`kubectl` is already
+authenticated when `DEPLOY_COMMAND` executes:
 
 ```bash
-# GKE (Deployment must already exist; this just updates the image)
-DEPLOY_COMMAND = "kubectl set image deployment/oil-price-worker worker=$IMAGE_REF"
-# Cloud Run with the worker forced always-on (see caveat above)
-DEPLOY_COMMAND = "gcloud run deploy oil-price-worker --image $IMAGE_REF --no-cpu-throttling --min-instances=1"
+# Cloud Run (worker.py already has /healthz — OPERATIONS.md §D.5b):
+DEPLOY_COMMAND = "gcloud run deploy oil-price-worker-staging \
+  --image $IMAGE_REF \
+  --region us-central1 \
+  --project $GCP_PROJECT_ID \
+  --no-cpu-throttling \
+  --min-instances=1 \
+  --port=8080 \
+  --set-env-vars TENANT_ID=oil-price-demo,TEMPORAL_ADDRESS=<your-temporal-host>:7233,TEMPORAL_TLS=true"
+
+# GKE (Deployment must already exist — this just rolls the new image):
+DEPLOY_COMMAND = "gcloud container clusters get-credentials <cluster> --region us-central1 --project $GCP_PROJECT_ID \
+  && kubectl set image deployment/oil-price-worker worker=$IMAGE_REF"
 ```
 
-Set `GCP_PROJECT_ID` (and, for the `vertex_gemini` role specifically,
-`project: "${GCP_PROJECT_ID}"` already in `runtime/models.yaml`) as a
-GitHub Environment secret or variable so neither the workflow YAML nor
-`models.yaml` ever needs a real project id committed — same reasoning as
-`runtime/provider_dispatch.py`'s `${VAR}` expansion for `project`
-(§29 "Cloud-Native Provider Adapters").
+Set `GCP_PROJECT_ID` as a GitHub Environment variable (not secret — no
+credential, just a project identifier) so `DEPLOY_COMMAND` can reference
+`$GCP_PROJECT_ID` without hardcoding it in the workflow YAML or in
+`runtime/models.yaml` (§29 "Cloud-Native Provider Adapters").
 
 **Live-verification status**: the Vertex AI *call path* itself was
-verified live against a real GCP project this session (`gemini-2.5-flash`
-via `LLMGateway.complete(model_hint="vertex_gemini")` — §29). The
-Workload Identity Federation setup above and the three worker-hosting
-options were not exercised end-to-end through an actual GitHub Actions
-run in this session — verify the exact `gcloud`/`kubectl` invocations
-against your own project before relying on them in production CI/CD.
+verified live against a real GCP project (`gemini-2.5-flash` via
+`LLMGateway.complete(model_hint="vertex_gemini")` — §29). The
+`gcp-auth` composite action and the three worker-hosting options were
+not exercised end-to-end through an actual GitHub Actions run — verify
+the exact `gcloud`/`kubectl` invocations against your own project before
+relying on them in production CI/CD.
 
 ### D.6 — On-premise / air-gapped deployment
 
