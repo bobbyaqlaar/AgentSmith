@@ -77,8 +77,14 @@ class AgentKnowledgeGraph:
                 with self._path.open() as fh:
                     data = json.load(fh)
                 return nx_json.node_link_graph(data, directed=True, multigraph=False)
-            except Exception:
-                pass
+            except Exception as exc:
+                # Falling through to a fresh empty graph silently here would
+                # mean save() later overwrites a corrupted-but-recoverable
+                # file with an empty one, destroying the existing graph with
+                # no signal as to why — at minimum the user should see this.
+                import sys
+                print(f"⚠️  Knowledge Graph at {self._path} is unreadable ({exc}); starting from an empty graph.",
+                      file=sys.stderr)
         return nx.DiGraph()
 
     def save(self) -> None:

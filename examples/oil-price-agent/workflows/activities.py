@@ -27,16 +27,22 @@ except ImportError:
 
 def _ensure_runtime_on_path() -> None:
     import os
-    # Prefer AGENTSMITH_DIR (set in ~/.zshrc) — works regardless of where
-    # this file lives (inside the framework tree OR copied to a tenant repo).
+    # Prefer AGENTSMITH_DIR (set in ~/.zshrc, or baked into a container
+    # image's ENV) — works regardless of where this file lives (inside the
+    # framework tree, copied to a tenant repo, or vendored into a container
+    # at a shallower depth than the framework tree, e.g. /app/workflows/).
     agentsmith_dir = os.environ.get("AGENTSMITH_DIR")
     here = Path(__file__).resolve()
     candidates = []
     if agentsmith_dir:
         candidates.append(Path(agentsmith_dir) / "runtime")
     # Fallback 1: walk up from this file (works when inside framework tree:
-    # examples/oil-price-agent/workflows/ → parents[3] = framework root)
-    candidates.append(here.parents[3] / "runtime")
+    # examples/oil-price-agent/workflows/ → parents[3] = framework root).
+    # Guarded — a container layout (/app/workflows/activities.py) has fewer
+    # than 4 parents and would otherwise raise IndexError before ever
+    # reaching the AGENTSMITH_DIR candidate above.
+    if len(here.parents) > 3:
+        candidates.append(here.parents[3] / "runtime")
     # Fallback 2: vendored install location
     candidates.append(Path.home() / ".agent-framework" / "runtime")
     for candidate in candidates:

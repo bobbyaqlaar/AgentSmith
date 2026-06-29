@@ -16,6 +16,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from runtime.provider_dispatch import (  # noqa: E402
@@ -36,11 +38,8 @@ def test_is_cloud_provider():
 
 
 def test_unknown_cloud_provider_raises():
-    try:
+    with pytest.raises(ValueError):
         get_cloud_adapter("not_a_provider")
-        assert False, "expected ValueError"
-    except ValueError:
-        pass
 
 
 def test_vertex_ai_anthropic_publisher():

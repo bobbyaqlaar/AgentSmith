@@ -158,7 +158,7 @@ def _mark_log_resolved(event_filter: str, resolver: str, ts: str) -> int:
                     entry["hitl_resolved_at"] = ts
                     raw = json.dumps(entry, default=str)
                     updated += 1
-            except Exception:
+            except Exception:  # noqa: bare-except — one malformed JSON-lines entry must not abort resolving the rest; raw line is preserved unchanged below either way
                 pass
             lines.append(raw)
 

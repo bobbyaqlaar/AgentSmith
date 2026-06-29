@@ -175,3 +175,34 @@ async def test_invoke_does_not_retry_non_transient_errors():
 
     assert exc_info.value.response.status_code == 401
     assert call_count["n"] == 1, f"expected exactly 1 attempt (no retry on 401), got {call_count['n']}"
+
+
+@pytest.mark.asyncio
+async def test_invoke_groq_provider_uses_groq_base_url_and_key():
+    """provider: groq resolves to Groq's OpenAI-compatible endpoint and
+    GROQ_API_KEY by default — not the generic OpenAI fallback's
+    api.openai.com/OPENAI_API_KEY, which would silently send Groq-shaped
+    requests to the wrong host with the wrong key."""
+    import httpx
+    from unittest.mock import patch
+
+    gw = _make_gateway(cap_usd=1000.0, output_cost_per_token=0.0, input_cost_per_token=0.0)
+    cfg = {"id": "llama-3.3-70b-versatile", "provider": "groq", "cost_per_input_token": 0, "cost_per_output_token": 0}
+    seen = {}
+
+    async def fake_post(self, url, json=None, headers=None):
+        seen["url"] = url
+        seen["headers"] = headers
+        request = httpx.Request("POST", url)
+        return httpx.Response(
+            200, request=request,
+            json={"choices": [{"message": {"content": "ok"}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1}},
+        )
+
+    with patch.dict("os.environ", {"GROQ_API_KEY": "gsk_test_key"}), \
+         patch.object(httpx.AsyncClient, "post", fake_post):
+        text, _, _ = await gw._invoke(cfg, [{"role": "user", "content": "hi"}], 10, 0.2)
+
+    assert text == "ok"
+    assert seen["url"] == "https://api.groq.com/openai/v1/chat/completions"
+    assert seen["headers"]["Authorization"] == "Bearer gsk_test_key"

@@ -44,9 +44,26 @@ while IFS= read -r file; do
       fi
       ;;
     *.py)
-      if grep -E -n "except\s*(\w+)?:\s*$" "$file" 2>/dev/null | grep -v "#" | grep -q .; then
-        echo "❌ ERROR ($file): Bare except clause with no handler body. Log or re-raise all exceptions."
-        FAILED=1
+      # AST-based (not regex) — a regex matching "except X:$" flags the
+      # HEADER line of every multi-line handler, since the colon always
+      # ends the line regardless of what's in the body underneath. Only
+      # scripts/check_bare_except.py's actual syntax-tree walk can tell a
+      # genuinely empty `pass`/`...` body apart from a normal handler that
+      # re-raises or logs on the next line. Vendored to
+      # ~/.agent-framework/scripts/ for tenant repos; falls back to a
+      # repo-local copy when running inside this framework repo itself.
+      # Missing checker = skip (optional infra never blocks a commit).
+      BARE_EXCEPT_CHECKER=""
+      if [ -f "$HOME/.agent-framework/scripts/check_bare_except.py" ]; then
+        BARE_EXCEPT_CHECKER="$HOME/.agent-framework/scripts/check_bare_except.py"
+      elif [ -f "$REPO_ROOT_FOR_OPTIN/scripts/check_bare_except.py" ]; then
+        BARE_EXCEPT_CHECKER="$REPO_ROOT_FOR_OPTIN/scripts/check_bare_except.py"
+      fi
+      if [ -n "$BARE_EXCEPT_CHECKER" ] && command -v python3 >/dev/null 2>&1; then
+        if ! python3 "$BARE_EXCEPT_CHECKER" "$file"; then
+          echo "❌ ERROR ($file): empty except handler. Log or re-raise all exceptions."
+          FAILED=1
+        fi
       fi
       ;;
     *.go)
