@@ -536,7 +536,7 @@ For internal registries, the installer supports fetching from a private artifact
 | `AGENT_OWNER_ID` | Real user identity | `bobby@example.com` |
 | `AGENT_OWNER_NAME` | Display name | `Bobby Rajagopal` |
 | `AGENT_PHOENIX_ENDPOINT` | Phoenix URL | `http://localhost:6006` |
-| `AGENT_MONTHLY_USD_CAP` | Dev session monthly budget | `150.0` |
+| `AGENT_MONTHLY_USD_CAP` | Dev session monthly budget. Also the production `LLMGateway`'s fallback budget cap (`runtime/llm_gateway.py:LLMGateway.__init__`) when a tenant doesn't pass an explicit `budget_cap_usd` — same env var, same default, both layers | `150.0` |
 | `AI_STACK_SLACK_WEBHOOK` | Optional Slack alert webhook | `https://hooks.slack.com/...` |
 | `AGENT_NOTIFY_WEBHOOK` | Generic notification webhook | `https://...` |
 
@@ -1485,6 +1485,8 @@ Dedicated pool: tenant gets own worker deployment. Configured via `tenant.isolat
 
 Every workflow activity is assigned an idempotency key derived from a hash of its input parameters. Duplicate activity submissions (e.g., on retry after crash) are detected and short-circuited. `runtime/idempotency.py` manages the key store (Redis or Postgres-backed).
 
+Unlike the budget backend (§29, which has an in-memory option for dev/CI), idempotency has **no in-memory fallback** — only `_RedisBackend` and `_PostgresBackend` (`IDEMPOTENCY_BACKEND` env var, default `redis`). If `REDIS_URL`/`DATABASE_URL` isn't set or the backend can't connect, `LLMGateway._make_idempotency_store()` (`runtime/llm_gateway.py:355-367`) catches the failure, logs a warning, and degrades to no idempotency store at all — the gateway still runs, but duplicate-call suppression silently doesn't happen until a real backend is reachable.
+
 ### Dead-Letter Queue
 
 Failed activities — including ones a human can *fix and replay*, not just
@@ -1937,6 +1939,28 @@ current spend, then write only after the LLM call returns — would let N
 concurrent calls for the same tenant all observe "not breached" before any
 of them recorded spend, letting the combined cost of every in-flight call
 exceed the monthly cap.
+
+### Budget Backend Selection
+
+`BUDGET_BACKEND` (env var: `memory` | `postgres` | `redis`, default `memory`)
+chooses the `_BudgetBackend` implementation `_make_budget_backend()`
+instantiates:
+
+| | Dev (`memory`) | Prod (`postgres`) | Prod (`redis`) |
+|---|---|---|---|
+| Process scope | Single process only | Cross-process / cross-worker | Cross-process / cross-worker |
+| Config | None required | `DATABASE_URL` | `REDIS_URL` |
+| Durability | In-memory dict, lost on restart | WAL-backed, durable | In-memory unless persistence is configured |
+| `try_reserve` mechanism | `threading.Lock`-guarded add | Atomic `UPDATE ... WHERE spent_usd + $1 <= cap` | `INCRBYFLOAT` + compensating rollback on overshoot |
+| Queryable alongside other data | No | Yes — joinable with `agent_runs`/`dlq_entries` | No — key-value only |
+| Existing infra needed | None | Already provisioned if the Ops Portal is deployed (shares `DATABASE_URL`) | Separate service unless Redis is already used elsewhere (e.g. idempotency cache, rate limiting) |
+| When to pick | Local dev, unit tests, CI — no external services available or desired | Multi-worker prod fleets, especially when Postgres is already running for the portal and durability/auditability of spend matters | Multi-worker prod fleets needing the lowest-latency reserve path under high concurrency, or consolidating onto Redis already used for other purposes |
+
+The single-process `memory` backend is unsafe for multi-worker prod fleets
+specifically because of the race `try_reserve` exists to close (see
+"Atomic Budget Reservation" above) — that race only manifests across
+*multiple* processes sharing one tenant's budget cap, which is the normal
+prod topology but not the typical dev/CI one.
 
 ### Mandatory Gateway Enforcement
 

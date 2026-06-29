@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import threading
 import time
 import uuid
@@ -397,6 +398,22 @@ class LLMGateway:
     def _is_free_tier(cfg: dict) -> bool:
         return cfg.get("provider") == "ollama" or cfg.get("cost_per_input_token", 1) == 0
 
+    @staticmethod
+    def _is_provider_exhausted(exc: Exception) -> bool:
+        """True when the provider itself is unavailable for this key/tier — no point
+        retrying; degrade to the next tier instead.  Covers billing, quota, and
+        auth errors that will not resolve on their own."""
+        msg = str(exc).lower()
+        return any(k in msg for k in (
+            "credit balance is too low",
+            "insufficient_quota",
+            "rate limit",
+            "billing",
+            "payment required",
+            "429",
+            "overloaded",
+        ))
+
     def _resolve_role(self, model_hint: str, budget: BudgetStatus) -> tuple[str, Optional[str]]:
         """Walk the degrade ladder. Returns (role, degrade_tier); degrade_tier is None at full strength."""
         if not budget.breached:
@@ -570,13 +587,50 @@ class LLMGateway:
         run_id = f"{workflow_id}-{uuid.uuid4().hex[:8]}" if workflow_id else f"{self.tenant_id}-{uuid.uuid4().hex[:12]}"
         self._report_run_status(run_id, "running", workflow_id=workflow_id)
 
-        try:
-            text, in_tok, out_tok = await self._invoke(cfg, messages, max_tokens, temperature)
-        except Exception as exc:
+        # Try the chosen tier; on provider-level exhaustion (billing, quota,
+        # overload) walk the degrade_to chain rather than failing immediately.
+        degrade_chain = self._degrade_chain(role)
+        tried: list[str] = []
+        text = in_tok = out_tok = None
+        last_exc: Exception | None = None
+        for attempt_role in degrade_chain:
+            attempt_cfg = self.models.get(attempt_role)
+            if not attempt_cfg:
+                continue
+            try:
+                text, in_tok, out_tok = await self._invoke(attempt_cfg, messages, max_tokens, temperature)
+                if attempt_role != role:
+                    # Record the tier we actually used
+                    degrade_tier = "local" if self._is_free_tier(attempt_cfg) else "downgrade"
+                    cfg = attempt_cfg
+                    model_id = attempt_cfg["id"]
+                    logger.warning(
+                        "Degraded from %r to %r due to provider error: %s",
+                        role, attempt_role, last_exc,
+                    )
+                last_exc = None
+                break
+            except Exception as exc:
+                tried.append(attempt_role)
+                last_exc = exc
+                if self._is_provider_exhausted(exc):
+                    logger.warning(
+                        "Provider exhausted for role=%r model=%r: %s — trying next tier",
+                        attempt_role, attempt_cfg.get("id"), exc,
+                    )
+                    continue
+                # Non-exhaustion error (bad prompt, network timeout, etc.) — fail fast
+                break
+
+        if last_exc is not None:
             if reserved and estimated_cost_usd:
                 self._budget.add_spend(self.tenant_id, -estimated_cost_usd)  # release the reservation
-            self._report_run_status(run_id, "failed", workflow_id=workflow_id, error_summary=str(exc)[:500])
-            raise
+            self._report_run_status(run_id, "failed", workflow_id=workflow_id, error_summary=str(last_exc)[:500])
+            if tried:
+                raise RuntimeError(
+                    f"All model tiers exhausted (tried: {tried}). Last error: {last_exc}"
+                ) from last_exc
+            raise last_exc
 
         cost_usd = (
             in_tok * cfg.get("cost_per_input_token", 0)
@@ -667,16 +721,27 @@ class LLMGateway:
         provider = cfg.get("provider", "openai")
         model_id = cfg["id"]
 
+        # base_url/api_key_env are config-driven (models.yaml `endpoint` /
+        # `api_key_env` fields) so a tenant can point a provider at a proxy,
+        # a region-pinned host, or a differently-named API key env var
+        # (e.g. per-tenant keys) without editing this code. The literals
+        # below are fallbacks for the common case only — direct Anthropic/
+        # OpenAI calls — not a ceiling on what's supported.
         if provider == "anthropic":
-            api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-            base_url = "https://api.anthropic.com"
+            api_key_env = cfg.get("api_key_env", "ANTHROPIC_API_KEY")
+            api_key = os.environ.get(api_key_env, "")
+            base_url = cfg.get("endpoint") or "https://api.anthropic.com"
         elif provider == "ollama":
             base_url = os.path.expandvars(cfg.get("endpoint", "${OLLAMA_BASE_URL}/v1"))
-            base_url = base_url or os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+            # expandvars leaves unset variables as literal "${VAR}" — not a valid URL.
+            if not base_url.startswith("http"):
+                base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434") + "/v1"
             api_key = "ollama"
         else:
-            base_url = "https://api.openai.com/v1"
-            api_key = os.environ.get("OPENAI_API_KEY", "")
+            api_key_env = cfg.get("api_key_env", "OPENAI_API_KEY")
+            api_key = os.environ.get(api_key_env, "")
+            base_url = cfg.get("endpoint") or "https://api.openai.com/v1"
+        base_url = os.path.expandvars(base_url)
 
         path, headers, body = build_request(provider, model_id, messages, api_key, max_tokens, temperature)
 
@@ -689,7 +754,21 @@ class LLMGateway:
         async def _post_with_retry() -> dict:
             async with httpx.AsyncClient(timeout=120.0) as client:
                 resp = await client.post(base_url.rstrip("/") + path, json=body, headers=headers)
-                resp.raise_for_status()
+                if not resp.is_success:
+                    # Try to surface a human-readable message from the provider
+                    # before falling back to a raw HTTP error.
+                    try:
+                        err_body = resp.json()
+                        err_msg = (
+                            err_body.get("error", {}).get("message")
+                            or err_body.get("message")
+                            or resp.text[:400]
+                        )
+                    except Exception:
+                        err_msg = resp.text[:400]
+                    raise RuntimeError(
+                        f"LLM API error {resp.status_code} (model={model_id!r}): {err_msg}"
+                    )
                 return resp.json()
 
         data = await _post_with_retry()

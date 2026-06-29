@@ -26,8 +26,20 @@ except ImportError:
 
 
 def _ensure_runtime_on_path() -> None:
+    import os
+    # Prefer AGENTSMITH_DIR (set in ~/.zshrc) — works regardless of where
+    # this file lives (inside the framework tree OR copied to a tenant repo).
+    agentsmith_dir = os.environ.get("AGENTSMITH_DIR")
     here = Path(__file__).resolve()
-    for candidate in (here.parents[3] / "runtime", Path.home() / ".agent-framework" / "runtime"):
+    candidates = []
+    if agentsmith_dir:
+        candidates.append(Path(agentsmith_dir) / "runtime")
+    # Fallback 1: walk up from this file (works when inside framework tree:
+    # examples/oil-price-agent/workflows/ → parents[3] = framework root)
+    candidates.append(here.parents[3] / "runtime")
+    # Fallback 2: vendored install location
+    candidates.append(Path.home() / ".agent-framework" / "runtime")
+    for candidate in candidates:
         if not candidate.is_dir():
             continue
         if str(candidate) not in sys.path:
@@ -84,13 +96,17 @@ async def run_prediction_activity(payload: dict) -> dict:
     })
 
     gateway = LLMGateway(tenant_id=tenant_id)
-    result = await gateway.complete(
-        prompt=f"Given recent oil prices {series}, predict the next price point and a "
-               f"confidence score (0-1) as JSON: {{\"prediction\": <float>, \"confidence\": <float>}}.",
-        model_hint="validator",  # cheap/fast tier for a bounded forecasting prompt
-        workflow_id=payload.get("workflow_run_id"),
-        idempotency_key=idempotency_key,
-    )
+    try:
+        result = await gateway.complete(
+            prompt=f"Given recent oil prices {series}, predict the next price point and a "
+                   f"confidence score (0-1) as JSON: {{\"prediction\": <float>, \"confidence\": <float>}}.",
+            model_hint="validator",  # cheap/fast tier for a bounded forecasting prompt
+            workflow_id=payload.get("workflow_run_id"),
+            idempotency_key=idempotency_key,
+        )
+    except Exception as exc:
+        # Surface a short, actionable message — full traceback is in worker logs.
+        raise RuntimeError(f"LLM call failed: {exc}") from None
 
     try:
         parsed = json.loads(result.text)
@@ -150,11 +166,14 @@ async def dead_letter_activity(payload: dict) -> dict:
     workflow_run_id = payload.get("workflow_run_id", "unknown")
     task_id = f"hitl-timeout-{workflow_run_id}"
 
-    dlq = DeadLetterQueue()
-    dlq.enqueue(
-        payload=payload,
-        error=payload.get("error", "unknown"),
-        tenant_id=payload["tenant_id"],
-        task_id=task_id,
-    )
+    try:
+        dlq = DeadLetterQueue()
+        dlq.enqueue(
+            payload=payload,
+            error=payload.get("error", "unknown"),
+            tenant_id=payload["tenant_id"],
+            task_id=task_id,
+        )
+    except Exception as exc:
+        raise RuntimeError(f"Dead-letter enqueue failed: {exc}") from None
     return {"status": "dead_letter"}

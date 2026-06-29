@@ -43,6 +43,10 @@ AgentSmith is a single-command setup that provisions the complete AI agent lifec
 ### API keys — add to `~/.zshrc`
 
 ```bash
+# ── Directories ──────────────────────────────────────────────────────────────
+export REPO_DIR="$HOME/repos"            # root for all your repos; adjust if different
+export AGENTSMITH_DIR="$REPO_DIR/AgenticFramework"
+
 # ── Identity (required for every span and log entry) ─────────────────────────
 export AGENT_OWNER_ID="you@example.com"
 export AGENT_OWNER_NAME="Your Name"
@@ -57,6 +61,9 @@ export AGENT_PHOENIX_ENDPOINT="http://localhost:6006"   # default; change for te
 
 # ── Budget / routing ──────────────────────────────────────────────────────────
 export AGENT_MONTHLY_USD_CAP="50"      # hard spend cap per month across all projects
+                                        # (also the production LLMGateway's default cap
+                                        # if a tenant doesn't pass budget_cap_usd explicitly —
+                                        # falls back to 150.0 if this var is unset)
 export AGENT_JUDGE_MODEL="claude-3-5-sonnet-20241022"  # model used to grade evals
 ```
 
@@ -73,7 +80,7 @@ cp portal/.env.example .env
 
 ```bash
 # AgenticFramework/.env
-DATABASE_URL=postgresql://phoenix:phoenix@localhost:5432/agenticframework
+DATABASE_URL=postgresql://phoenix:phoenix@localhost:5433/agenticframework
 
 # Portal basic auth — portal refuses to serve without these. Generate a strong
 # random password: openssl rand -base64 24
@@ -111,7 +118,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 AGENT_PHOENIX_ENDPOINT=http://localhost:6006
 OPS_PORTAL_URL=http://localhost:3000
 OPS_PORTAL_SYNC_TOKEN=<same value as AgenticFramework/.env>
-DATABASE_URL=postgresql://user:pass@localhost:5432/my-tenant-db
+DATABASE_URL=postgresql://user:pass@localhost:5433/my-tenant-db
 ENVIRONMENT=production
 HITL_ENCRYPTION_KEY=<same value as AgenticFramework/.env>
 ```
@@ -154,7 +161,7 @@ ai-dashboard-start
 
 # 6. Apply to a project
 cd /path/to/your/project
-git init
+git init -b main
 # → hooks fire, .cursorrules written, CI workflows created, Knowledge Graph seeded
 ```
 
@@ -626,7 +633,7 @@ From this point on, every `git init` or `git clone` on this machine automaticall
 
 ```bash
 mkdir oil-price-agent && cd oil-price-agent
-git init
+git init -b main
 git remote add origin https://github.com/org/oil-price-agent.git
 ```
 
@@ -925,7 +932,18 @@ infrastructure (Postgres, Redis, Temporal, Kubernetes, a live OIDC provider):
 | Layer | What it adds |
 |---|---|
 | **Multi-Tenancy** | `ai-tenant-init` / `ai-tenant-promote` scaffold an independent tenant repo with its own CI/CD, eval gates, and `staging → production` promotion flow (exact-match tenant-id guard, not substring) |
-| **Production Runtime** | `runtime/llm_gateway.py` (atomic per-tenant budget reservation + degrade ladder), `runtime/trace_redactor.py` (per-span tenant-bound redaction), `runtime/idempotency.py` + `runtime/dead_letter.py` (Postgres/Redis-backed, not stubs), Temporal workflow patterns in `runtime/workflows/` — including `run_with_recoverable_step`, which parks a failed workflow *alive* (not dead-lettered) so a human can edit the failing payload in the Ops Portal and resume it in place |
+| **Production Runtime** | `runtime/llm_gateway.py` (atomic per-tenant budget reservation + degrade ladder), `runtime/trace_redactor.py` (per-span tenant-bound redaction), `runtime/idempotency.py` + `runtime/dead_letter.py` (Postgres/Redis-backed, not stubs — idempotency has no in-memory fallback, so without `REDIS_URL`/`DATABASE_URL` the gateway degrades to no duplicate-call suppression rather than failing), Temporal workflow patterns in `runtime/workflows/` — including `run_with_recoverable_step`, which parks a failed workflow *alive* (not dead-lettered) so a human can edit the failing payload in the Ops Portal and resume it in place |
+
+`BUDGET_BACKEND` selects which of these the gateway's per-tenant budget store uses (`runtime/llm_gateway.py:_make_budget_backend`):
+
+| | Dev (`memory`, default) | Prod (`postgres`) | Prod (`redis`) |
+|---|---|---|---|
+| Scope | Single process | Cross-process / cross-worker | Cross-process / cross-worker |
+| Setup | None — works out of the box | `DATABASE_URL`, already provisioned for the Ops Portal | `REDIS_URL`, separate service if not already running |
+| Durability | Lost on process restart | WAL-backed, durable | In-memory unless persistence configured |
+| Atomic reserve | Lock-guarded dict add | `UPDATE ... WHERE spent_usd + $1 <= cap` | `INCRBYFLOAT` + compensating rollback on overshoot |
+| Queryability | None | SQL-joinable with `agent_runs`, audits | Key-value only |
+| Best for | Local dev, unit tests, CI | Multi-worker fleets, especially if Postgres is already running for the portal | Multi-worker fleets needing the lowest-latency reserve path, or where Redis is already in use |
 | **Ops Portal** | `portal/` — role-based access control (viewer/operator/admin, per-tenant scoped), cross-tenant cost/issues dashboard with real run status and Phoenix error rate, per-tenant DLQ triage (edit payload, Replay/Discard), history sync, HMAC-signed tamper-evident audit log, SSO/OIDC login with server-side session revocation |
 | **On-Premise Deployment** | `templates/onprem-deploy/` — opt-in Docker Compose or Helm chart for air-gapped/on-prem customers, with canary + shadow traffic routing (Traefik or Envoy, customer's choice) |
 | **In-App Widget** | `templates/in-app-widget/` — embeddable end-user status component, token-scoped, no cross-tenant access; self-hosted (ships as a release asset, no CDN dependency) |

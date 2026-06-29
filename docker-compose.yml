@@ -72,8 +72,6 @@
 #   AUDIT_LOG_HMAC_KEY=<random 32+ byte string>
 #   OPS_PORTAL_SYNC_TOKEN=<random string, used by CD's history-sync step>
 
-version: "3.9"
-
 services:
 
   # ── Arize Phoenix ────────────────────────────────────────────────────────────
@@ -131,6 +129,13 @@ services:
     volumes:
       - phoenix_pg_data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d:ro
+    ports:
+      # Exposed on 5433 (not 5432) so host-side workers and scripts can reach
+      # the Docker Postgres without conflicting with any system Postgres already
+      # running on 5432. Use DATABASE_URL with port 5433 in your tenant .env
+      # and ~/.zshrc. The portal and Phoenix connect via the internal Docker
+      # network (db:5432) and are unaffected by this host-side mapping.
+      - "127.0.0.1:5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-phoenix} -d ${POSTGRES_DB:-phoenix}"]
       interval: 10s
