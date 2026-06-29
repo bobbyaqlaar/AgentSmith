@@ -536,7 +536,7 @@ For internal registries, the installer supports fetching from a private artifact
 | `AGENT_OWNER_ID` | Real user identity | `bobby@example.com` |
 | `AGENT_OWNER_NAME` | Display name | `Bobby Rajagopal` |
 | `AGENT_PHOENIX_ENDPOINT` | Phoenix URL | `http://localhost:6006` |
-| `AGENT_MONTHLY_USD_CAP` | Dev session monthly budget | `150.0` |
+| `AGENT_MONTHLY_USD_CAP` | Dev session monthly budget. Also the production `LLMGateway`'s fallback budget cap (`runtime/llm_gateway.py:LLMGateway.__init__`) when a tenant doesn't pass an explicit `budget_cap_usd` — same env var, same default, both layers | `150.0` |
 | `AI_STACK_SLACK_WEBHOOK` | Optional Slack alert webhook | `https://hooks.slack.com/...` |
 | `AGENT_NOTIFY_WEBHOOK` | Generic notification webhook | `https://...` |
 
@@ -1485,6 +1485,8 @@ Dedicated pool: tenant gets own worker deployment. Configured via `tenant.isolat
 
 Every workflow activity is assigned an idempotency key derived from a hash of its input parameters. Duplicate activity submissions (e.g., on retry after crash) are detected and short-circuited. `runtime/idempotency.py` manages the key store (Redis or Postgres-backed).
 
+Unlike the budget backend (§29, which has an in-memory option for dev/CI), idempotency has **no in-memory fallback** — only `_RedisBackend` and `_PostgresBackend` (`IDEMPOTENCY_BACKEND` env var, default `redis`). If `REDIS_URL`/`DATABASE_URL` isn't set or the backend can't connect, `LLMGateway._make_idempotency_store()` (`runtime/llm_gateway.py:355-367`) catches the failure, logs a warning, and degrades to no idempotency store at all — the gateway still runs, but duplicate-call suppression silently doesn't happen until a real backend is reachable.
+
 ### Dead-Letter Queue
 
 Failed activities — including ones a human can *fix and replay*, not just
@@ -1938,6 +1940,28 @@ concurrent calls for the same tenant all observe "not breached" before any
 of them recorded spend, letting the combined cost of every in-flight call
 exceed the monthly cap.
 
+### Budget Backend Selection
+
+`BUDGET_BACKEND` (env var: `memory` | `postgres` | `redis`, default `memory`)
+chooses the `_BudgetBackend` implementation `_make_budget_backend()`
+instantiates:
+
+| | Dev (`memory`) | Prod (`postgres`) | Prod (`redis`) |
+|---|---|---|---|
+| Process scope | Single process only | Cross-process / cross-worker | Cross-process / cross-worker |
+| Config | None required | `DATABASE_URL` | `REDIS_URL` |
+| Durability | In-memory dict, lost on restart | WAL-backed, durable | In-memory unless persistence is configured |
+| `try_reserve` mechanism | `threading.Lock`-guarded add | Atomic `UPDATE ... WHERE spent_usd + $1 <= cap` | `INCRBYFLOAT` + compensating rollback on overshoot |
+| Queryable alongside other data | No | Yes — joinable with `agent_runs`/`dlq_entries` | No — key-value only |
+| Existing infra needed | None | Already provisioned if the Ops Portal is deployed (shares `DATABASE_URL`) | Separate service unless Redis is already used elsewhere (e.g. idempotency cache, rate limiting) |
+| When to pick | Local dev, unit tests, CI — no external services available or desired | Multi-worker prod fleets, especially when Postgres is already running for the portal and durability/auditability of spend matters | Multi-worker prod fleets needing the lowest-latency reserve path under high concurrency, or consolidating onto Redis already used for other purposes |
+
+The single-process `memory` backend is unsafe for multi-worker prod fleets
+specifically because of the race `try_reserve` exists to close (see
+"Atomic Budget Reservation" above) — that race only manifests across
+*multiple* processes sharing one tenant's budget cap, which is the normal
+prod topology but not the typical dev/CI one.
+
 ### Mandatory Gateway Enforcement
 
 All production workers import `runtime/llm_gateway.py` and **must not** import `cost_router.py` directly. The framework's `pre-commit` hook (enterprise mode — an org policy file present at `~/.agent-framework/agenticframework-org.yaml`) greps staged `runtime/*.py` files for direct `cost_router` imports and blocks the commit if found.
@@ -1951,6 +1975,39 @@ request-building and response-parsing logic via
 vs. OpenAI-compatible chat completions) is shared; each file's own
 routing/budget/degrade-ladder logic, which legitimately differs between the
 dev-mode and production paths, stays local to each file.
+
+### Cloud-Native Provider Adapters
+
+Direct-API providers (`anthropic`, `openai`/`openai_compatible`) share one
+host and static API-key auth, handled by `build_request`/`parse_response`
+above. Cloud-hosted models don't — each cloud vendor has its own auth scheme
+and request/response envelope, not just a different host. `models.yaml`
+entries with `provider: vertex_ai | azure_openai | bedrock |
+huawei_modelarts` are dispatched instead to a `CloudProviderAdapter`
+(`runtime/provider_dispatch.py`):
+
+| Provider | Auth | URL shape | Required `models.yaml` fields |
+|---|---|---|---|
+| `vertex_ai` (GCP) | OAuth2 service-account token (`google-auth`) | `{region}-aiplatform.googleapis.com/.../publishers/{publisher}/models/{id}:streamRawPredict\|generateContent` | `project`; optional `region`, `publisher` |
+| `azure_openai` | `api-key` header + `api-version` query param | `{resource}.openai.azure.com/openai/deployments/{deployment}/chat/completions` | `resource`; optional `deployment`, `api_version`, `api_key_env` |
+| `bedrock` (AWS) | SigV4-signed request (`boto3`/`botocore`, standard credential chain) | `bedrock-runtime.{region}.amazonaws.com/model/{id}/invoke` | optional `region` |
+| `huawei_modelarts` | AK/SK request signing (`SDK-HMAC-SHA256`, `HUAWEICLOUD_SDK_AK`/`_SK` env vars) | per-deployment custom inference endpoint host | `endpoint` |
+
+Each adapter implements the same `build_request(model_id, messages, cfg,
+max_tokens, temperature) -> (full_url, headers, body)` /
+`parse_response(data) -> (text, input_tokens, output_tokens)` shape (a
+`CloudProviderAdapter` protocol) — unlike the direct-API path, cloud
+adapters return a full URL rather than a path, since project/region/
+deployment/endpoint-id are baked into the URL itself, not split out as a
+separate base_url.
+
+All four adapters are covered by mocked request/response-shape tests
+(`runtime/test/test_provider_dispatch_cloud.py`) — credential acquisition
+(OAuth2 token fetch, boto3 SigV4 signer) is patched out, so none have been
+exercised against a live cloud account. The Huawei ModelArts adapter in
+particular is the least-documented in English-language sources; its
+signing implementation follows Huawei's published algorithm structure but
+should be verified against a real deployment before production use.
 
 ### Budget Period Timezone
 

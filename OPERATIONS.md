@@ -42,8 +42,8 @@ Every command in this guide runs in one of exactly two places:
 
 | Directory | What it is | Example path |
 |---|---|---|
-| **AgentSmith root** | The framework repo itself — Ops Portal, Docker Compose, shared infra | `~/repos/AgenticFramework/` |
-| **Tenant app root** | Your own agentic app repo, created by `ai-tenant-init` | `~/repos/my-oil-price-app/` |
+| **AgentSmith root** | The framework repo itself — Ops Portal, Docker Compose, shared infra | `$AGENTSMITH_DIR/` |
+| **Tenant app root** | Your own agentic app repo, created by `ai-tenant-init` | `$REPO_DIR/my-oil-price-app/` |
 
 Commands that affect the shared platform (portal, Postgres, Phoenix) run from the **AgentSmith root**. Commands that affect a specific agent app (hooks, evals, CI, sync scripts) run from the **tenant app root**. Each section below is labelled with which one applies.
 
@@ -53,17 +53,23 @@ Commands that affect the shared platform (portal, Postgres, Phoenix) run from th
 |---|---|---|
 | Python 3.11+ | Everything | `python3 --version` |
 | Git 2.x | Everything | `git --version` |
+
+> **One-time git config** — set your default branch name to `main` globally so every `git init` uses it:
+> ```bash
+> git config --global init.defaultBranch main
+> ```
 | Docker 20+ | Team Phoenix, Ops Portal Postgres, dedicated worker pool testing | `docker --version` |
 | Node.js 20+ | Ops Portal, In-App Widget | `node --version` |
 | `gh` CLI | `ai-tenant-promote` (opens the promotion PR) | `gh --version` |
 | GnuPG | Enterprise hook bundle signing | `gpg --version` |
+| Temporal CLI | `temporal server start-dev` (local dev workflow engine) | `brew install temporal` · `temporal --version` |
 | `kubectl` | Dedicated tenant worker pools | `kubectl version --client` |
 | Ollama | Local/offline dev mode | `ollama --version` |
 
 Production runtime extras — run from the **AgentSmith root** (macOS system Python is externally managed; use a venv):
 
 ```bash
-# Run from: AgentSmith root (e.g. ~/repos/AgenticFramework/)
+# Run from: AgentSmith root (e.g. $AGENTSMITH_DIR/)
 python3 -m venv .venv
 source .venv/bin/activate
 pip install psycopg2-binary redis temporalio langgraph-checkpoint-postgres cryptography
@@ -72,7 +78,6 @@ pip install psycopg2-binary redis temporalio langgraph-checkpoint-postgres crypt
 To auto-activate when you `cd` into the AgentSmith root, add to `~/.zshrc`:
 
 ```bash
-export AGENTSMITH_DIR="$HOME/repos/AgenticFramework"   # adjust to your actual path
 function cd() { builtin cd "$@" && [[ "$PWD" == "$AGENTSMITH_DIR"* && -f .venv/bin/activate ]] && source .venv/bin/activate; }
 ```
 
@@ -81,6 +86,10 @@ function cd() { builtin cd "$@" && [[ "$PWD" == "$AGENTSMITH_DIR"* && -f .venv/b
 These must be set before running `install-ai-stack.sh` or any `ai-*` commands. Add them to `~/.zshrc` (or `~/.bashrc`) so they persist across sessions:
 
 ```bash
+# ── Directories ───────────────────────────────────────────────────────────────────
+export REPO_DIR="$HOME/repos"            # root directory for all your repos; adjust if different
+export AGENTSMITH_DIR="$REPO_DIR/AgenticFramework"  # AgentSmith framework root
+
 # ── Identity — required; every span, log entry, and audit event attributes to this ──
 export AGENT_OWNER_ID="you@example.com"
 export AGENT_OWNER_NAME="Your Name"
@@ -99,7 +108,7 @@ export AGENT_MONTHLY_USD_CAP="50"               # hard cap across all projects (
 export AGENT_JUDGE_MODEL="claude-3-5-sonnet-20241022"  # LLM used to grade evals
 
 # ── Production runtime (only needed when running runtime/ against real backends) ───
-export DATABASE_URL="postgresql://user:pass@localhost:5432/agenticframework"
+export DATABASE_URL="postgresql://user:pass@localhost:5433/agenticframework"
 export REDIS_URL="redis://localhost:6379/0"     # only if IDEMPOTENCY_BACKEND=redis
 export TEMPORAL_ADDRESS="localhost:7233"        # only if WORKER_BACKEND=temporal
 export IDEMPOTENCY_BACKEND="postgres"           # postgres | redis | memory
@@ -147,9 +156,13 @@ cp portal/.env.example .env
 
 ```bash
 # AgenticFramework/.env — fill in after copying from portal/.env.example
+#
+# ⚠️  Docker Compose .env rules: values are raw strings — do NOT surround
+# values with quotes. "abc" sets the value to literally "abc" (with quotes),
+# not abc. Use bare values only: KEY=value, not KEY="value".
 
 # Postgres — shared by Ops Portal, LLM Gateway budget backend, and DLQ
-DATABASE_URL=postgresql://phoenix:phoenix@localhost:5432/agenticframework
+DATABASE_URL=postgresql://phoenix:phoenix@localhost:5433/agenticframework
 
 # Ops Portal basic auth (required — portal refuses to serve any page without these)
 # OPS_PORTAL_PASSWORD is compared directly against the HTTP Basic Auth header by
@@ -220,7 +233,7 @@ OPS_PORTAL_URL=http://localhost:3000
 OPS_PORTAL_SYNC_TOKEN=<same value as AgenticFramework/.env OPS_PORTAL_SYNC_TOKEN>
 
 # Production runtime backends
-DATABASE_URL=postgresql://user:pass@localhost:5432/my-tenant-db
+DATABASE_URL=postgresql://user:pass@localhost:5433/my-tenant-db
 REDIS_URL=redis://localhost:6379/0
 TEMPORAL_ADDRESS=localhost:7233
 
@@ -314,103 +327,150 @@ the shared instance). `ai-dashboard-start` then always uses the standalone
 plain-process Phoenix path for that repo, and `ai-tenant-init` won't nudge
 you toward the shared Ops Portal's env vars in its scaffolding output.
 
+---
+
+> **Starting a new tenant app — nothing to copy manually.**
+>
+> For any repo that is not based on the oil-price-demo example, the full
+> scaffolding is handled automatically — no files need to be copied from
+> the AgenticFramework directory:
+>
+> | What you get | How it arrives |
+> |---|---|
+> | `.agent-rfc/`, `.cursorrules`, `CLAUDE.md`, `.agents/skills/`, Knowledge Graph seed | `post-checkout` hook fires on `git init -b main` |
+> | `.agenticframework/tenant.yaml`, `.github/workflows/ci-*.yml`, `cd-staging.yml`, `cd-production.yml` | `ai-tenant-init <id> --stack <stack>` |
+> | `.env` | You create from the §1b template |
+> | `runtime/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — accessed via `$AGENTSMITH_DIR/runtime` at run time |
+>
+> What you write yourself: `worker.py`, `workflows/`, `workflows/activities.py`
+> — use `examples/oil-price-agent/` as a structural reference only.
+>
+> ```bash
+> mkdir $REPO_DIR/my-app && cd $REPO_DIR/my-app
+> git init -b main                               # hooks fire automatically
+> ai-tenant-init my-app --stack python-fastapi   # scaffolds tenant.yaml + CI/CD
+> # create .env from §1b template, then write your worker.py and workflows/
+> ```
+
+---
+
 ### 2.2 — Run the example app
 
-`examples/oil-price-agent` is a real, working reference tenant — already
-scaffolded (`.agenticframework/tenant.yaml`, a Temporal workflow, three
-domain activities) — not a toy. Two ways to run it, pick based on what
-you're checking:
+The example app lives inside the AgenticFramework repo as a reference, but
+you should run it as a proper standalone tenant — in its own directory,
+outside the framework root, with its own git history and `.env`. This
+mirrors exactly how you'd set up any real tenant app.
 
-**A. Without Temporal** — just exercises the LLM Gateway + budget/cost
-path (fastest, no extra services):
+**Step 1 — Create the tenant project outside the framework root**
 
 ```bash
-ai-dashboard-start    # Phoenix at http://localhost:6006 (+ Postgres + Ops Portal if Docker is available)
+# Run from: anywhere outside AgenticFramework/
+mkdir $REPO_DIR/oil-price-demo && cd $REPO_DIR/oil-price-demo
+git init -b main    # post-checkout hook fires: installs .agent-rfc/, .cursorrules,
+                    # CLAUDE.md, .agents/skills/, CI workflow templates,
+                    # Knowledge Graph seed, .agenticframework/enabled marker
+```
 
-cd examples/oil-price-agent
-export TENANT_ID=oil-price-demo
-export AGENT_PHOENIX_ENDPOINT=http://localhost:6006
-# OPS_PORTAL_URL + OPS_PORTAL_SYNC_TOKEN (from the repo-root .env) are what
-# make the gateway call below auto-register this tenant in the Ops Portal
-# via POST /api/runs/ingest — without them, complete() still runs (traces
-# still land in Phoenix), it just won't show up in the portal walkthrough
-# below until it's registered some other way.
-export OPS_PORTAL_URL=http://localhost:3000
-export OPS_PORTAL_SYNC_TOKEN="<your repo-root .env's OPS_PORTAL_SYNC_TOKEN>"
+**Step 2 — Copy the example app files into the new directory**
+
+```bash
+# Run from: $REPO_DIR/oil-price-demo
+cp -r $AGENTSMITH_DIR/examples/oil-price-agent/. .
+
+# Copy the model registry — defines which LLM each model_hint routes to.
+# Without this, the worker falls back to built-in defaults which may reference
+# deprecated model IDs and cause 400 errors from the Anthropic/OpenAI API.
+cp $AGENTSMITH_DIR/runtime/models.yaml .
+```
+
+**Step 3 — Create the tenant `.env`**
+
+```bash
+# Run from: $REPO_DIR/oil-price-demo
+cat > .env << 'EOF'
+TENANT_ID=oil-price-demo
+ANTHROPIC_API_KEY=sk-ant-...          # or OPENAI_API_KEY
+AGENT_PHOENIX_ENDPOINT=http://localhost:6006
+OPS_PORTAL_URL=http://localhost:3000
+OPS_PORTAL_SYNC_TOKEN=<same value as AgenticFramework/.env OPS_PORTAL_SYNC_TOKEN>
+DATABASE_URL=postgresql://phoenix:phoenix@localhost:5433/agenticframework
+REDIS_URL=redis://localhost:6379/0
+TEMPORAL_ADDRESS=localhost:7233
+WORKER_BACKEND=temporal
+IDEMPOTENCY_BACKEND=postgres
+BUDGET_BACKEND=postgres
+HITL_ENCRYPTION_KEY=<same value as AgenticFramework/.env HITL_ENCRYPTION_KEY>
+ENVIRONMENT=development
+EOF
+echo ".env" >> .gitignore
+```
+
+**Step 4 — Start the shared infra (if not already running)**
+
+```bash
+# Run from: AgenticFramework/
+ai-dashboard-start    # Phoenix at :6006, Postgres, Ops Portal at :3000
+```
+
+**Step 5 — Run the app**
+
+*A. Without Temporal* — exercises LLM Gateway + budget/cost path only (fastest, no extra services):
+
+```bash
+# Run from: $REPO_DIR/oil-price-demo
+source $AGENTSMITH_DIR/.venv/bin/activate
+set -a && source .env && set +a   # load tenant .env into current shell
+
 python3 -c "
-import sys, asyncio; sys.path.insert(0, '../../runtime')
+import sys, asyncio
+sys.path.insert(0, '$AGENTSMITH_DIR/runtime')
 from llm_gateway import LLMGateway
 async def main():
     gw = LLMGateway(tenant_id='oil-price-demo')
-    result = await gw.complete(prompt='Given oil prices [70,71,69,72], predict the next price as JSON.', model_hint='validator')
+    result = await gw.complete(
+        prompt='Given oil prices [70,71,69,72], predict the next price as JSON.',
+        model_hint='validator'
+    )
     print(result.text, result.cost_usd)
 asyncio.run(main())
 "
 ```
 
-This alone already produces a real trace in Phoenix and a real budget
-reservation/spend record — enough to drive the §2.3b Ops Portal walkthrough
-below without standing up Temporal at all.
+This produces a real trace in Phoenix and a real budget record — enough to
+drive the §2.3b Ops Portal walkthrough without standing up Temporal at all.
 
-**B. With Temporal** — the full durable-workflow path, including the HITL
-gate and DLQ:
+*B. With Temporal* — the full durable-workflow path, including the HITL gate and DLQ:
 
 ```bash
+# Run from: $REPO_DIR/oil-price-demo
+
+# Temporal CLI (server) — separate from the Python SDK; install once:
+brew install temporal          # macOS — see https://docs.temporal.io/cli for other platforms
+
+# Temporal Python SDK — install into the venv if not already present:
 pip install temporalio
+
+# Copy the helper scripts from the framework example (if not already there)
+cp $AGENTSMITH_DIR/examples/oil-price-agent/trigger_workflow.py .
+cp $AGENTSMITH_DIR/examples/oil-price-agent/resolve_hitl.py .
+
 temporal server start-dev &   # or: docker run -p 7233:7233 temporalio/auto-setup
 
-cd examples/oil-price-agent
-TENANT_ID=oil-price-demo TEMPORAL_ADDRESS=localhost:7233 python3 worker.py &
+set -a && source .env && set +a
+python3 worker.py &            # starts the Temporal worker (background)
 
-python3 -c "
-import asyncio, sys
-sys.path.insert(0, '.')
-from temporalio.client import Client
-from workflows.oil_price_workflow import OilPricePredictionWorkflow, OilPriceWorkflowInput
-async def main():
-    client = await Client.connect('localhost:7233')
-    result = await client.execute_workflow(
-        OilPricePredictionWorkflow.run,
-        OilPriceWorkflowInput(tenant_id='oil-price-demo', workflow_run_id='demo-run-1', price_series=[70,71,69,72,95]),
-        id='oil-price-demo-run-1', task_queue='agent-tasks-oil-price-demo',
-    )
-    print(result)
-asyncio.run(main())
-"
+python3 trigger_workflow.py    # submits the workflow and waits for result
 ```
 
-The `95` outlier in the price series is deliberate — it's >3 standard
-deviations from the rest, which trips this workflow's HITL gate (see
-`examples/oil-price-agent/agents/README.md`). The workflow will sit waiting
-on the `hitl_approved` signal for up to 24h; resolve it from another
-terminal while the above is still running:
+The `95` outlier in the default price series is deliberate — it's >3 standard
+deviations from the rest, which trips the HITL gate. The workflow pauses and
+waits for an approval signal for up to 24h. Resolve it from a second terminal:
 
 ```bash
-python3 -c "
-import asyncio
-from temporalio.client import Client
-async def main():
-    client = await Client.connect('localhost:7233')
-    handle = client.get_workflow_handle('oil-price-demo-run-1')
-    await handle.signal('hitl_approved', True)
-asyncio.run(main())
-"
-```
-
-**Building your own tenant instead of the example:**
-
-```bash
-mkdir my-project && cd my-project
-git init                        # post-checkout fires: .agent-rfc/, .cursorrules,
-                                 # CLAUDE.md, .agents/skills/, CI workflows,
-                                 # Knowledge Graph seed, .agenticframework/enabled marker
-
-touch .agent-rfc/001-my-feature.md   # write a spec — agents won't touch code without one
-# ... write the RFC, then have your agent implement against it (UserManual.md §6) ...
-
-git add . && git commit -m "feat: my feature"
-# pre-commit guardrails + commit-msg lint + post-commit (KG update, semver
-# tag, .agent-history.log append) all fire automatically
+# Second terminal — Run from: $REPO_DIR/oil-price-demo
+set -a && source .env && set +a
+python3 resolve_hitl.py           # approve (default)
+python3 resolve_hitl.py --reject  # or reject
 ```
 
 ### 2.3 — Test every feature (CLI)
@@ -522,10 +582,10 @@ real recoverable-step failure goes through:
 # 1. Simulate the failure landing in the DLQ, as if a tool call had just
 #    rejected {"account_status": "active"} (schema wants "status"). Uses
 #    the same agenticframework database the Ops Portal reads (the repo
-#    root .env sets POSTGRES_USER/PASSWORD; 55432 is the host-side port
-#    docker-compose.override.yml publishes):
+#    root .env sets POSTGRES_USER/PASSWORD; 5433 is the host-side port
+#    docker-compose.yml publishes for the AgentSmith Postgres):
 set -a; source .env; set +a
-DATABASE_URL="postgresql://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD:-phoenix}@localhost:55432/agenticframework" \
+DATABASE_URL="postgresql://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD:-phoenix}@localhost:5433/agenticframework" \
   python3 -c "
 import sys; sys.path.insert(0, 'runtime')
 from dead_letter import DeadLetterQueue, REASON_VALIDATION_ERROR

@@ -5,10 +5,62 @@
 # set in `.agenticframework/tenant.yaml` under `gateway.routing_overrides`.
 #
 # `degrade_to` defines the downgrade ladder target for tier 2 (Downgrade).
+#
+# Optional per-model overrides (fall back to the provider's default direct
+# API endpoint / standard env var when omitted):
+#   endpoint:     base URL — point at a proxy, region-pinned host, etc.
+#                 (supports ${VAR} expansion; required for provider: ollama)
+#   api_key_env:  name of the env var holding this model's API key — use
+#                 when a tenant has its own key under a different var name
+#
+# Note: endpoint/api_key_env above only cover "same request/response shape,
+# different host or key" cases (direct anthropic/openai/ollama).
+#
+# Cloud-native hosting has its own auth + envelope shape per provider,
+# handled by a CloudProviderAdapter in runtime/provider_dispatch.py
+# (set provider: to one of the values below to use it):
+#
+#   provider: vertex_ai          # GCP Vertex AI — OAuth2 service account
+#     project: my-gcp-project    # required
+#     region: me-central2        # optional, default shown — Dammam, Saudi Arabia (GCP has no UAE
+#                                # region; me-central1, Doha, is the only other GCC option)
+#     publisher: google          # optional, default shown — Gemini, first-party on Vertex, no
+#                                # cross-vendor regional rollout lag. Set to "anthropic" for
+#                                # Claude-on-Vertex instead — supported but deprioritized as the
+#                                # default since its per-region availability depends on Anthropic's
+#                                # own Vertex rollout schedule, not just the Vertex region's GA status.
+#     url_template: "https://{region}-aiplatform.googleapis.com/v1/projects/{project}/..."
+#                                # optional — overrides the URL shape entirely (private VPC
+#                                # endpoint, proxy, regional variant); default is the public API
+#
+#   provider: azure_openai       # Azure OpenAI — api-key + api-version, deployment in URL
+#     resource: my-azure-resource    # required
+#     deployment: gpt-4o-prod        # optional, defaults to `id`
+#     api_version: "2024-06-01"      # optional, default shown
+#     api_key_env: AZURE_OPENAI_API_KEY  # optional, default shown
+#     url_template: "https://{resource}.openai.azure.us/..."  # optional, e.g. Azure Gov cloud
+#
+#   provider: bedrock            # AWS Bedrock — SigV4, standard boto3 credential chain
+#     region: me-central-1       # optional, default shown — UAE/Dubai, AWS's GCC region
+#                                # (me-south-1, Bahrain, is the other Middle East option).
+#                                # NOT verified against AWS's current Bedrock region/model
+#                                # availability table — confirm before relying on it.
+#     url_template: "https://vpce-xxxx.bedrock-runtime.{region}.vpce.amazonaws.com/model/{model_id}/invoke"
+#                                # optional, e.g. a VPC interface endpoint instead of the public host
+#
+#   provider: huawei_modelarts   # Huawei Cloud ModelArts — AK/SK signing (least-verified; see
+#     endpoint: xxxxx.<region>.modelarts-infer.com  # required, custom inference endpoint host.
+#                                # No confirmed Huawei Cloud GCC region code at time of writing —
+#                                # verify against Huawei's current region list before deploying.
+#     path_template: "/v2/infers/{model_id}/chat/completions"  # optional, default shown is /v1/...
+#                                # provider_dispatch.py's HuaweiModelArtsAdapter docstring)
+#
+# All four are mocked-tested only (runtime/test/test_provider_dispatch_cloud.py)
+# — none have been exercised against a live cloud account in this repo.
 
 models:
   architect:
-    id: claude-3-5-sonnet-20241022
+    id: claude-sonnet-4-6
     provider: anthropic
     cost_per_input_token: 0.000003
     cost_per_output_token: 0.000015
@@ -22,14 +74,34 @@ models:
     degrade_to: validator
 
   validator:
-    id: claude-3-haiku-20240307
+    id: claude-haiku-4-5-20251001
     provider: anthropic
     cost_per_input_token: 0.00000025
     cost_per_output_token: 0.00000125
+    degrade_to: local_large
+
+  # ── Local Ollama tier ────────────────────────────────────────────────────────
+  # Bottom of the degrade ladder and the models used in offline mode
+  # (ai-mode-local). Free (zero cost), ordered strongest → fastest. Pull with:
+  #   ollama pull qwen2.5 && ollama pull llama3.2 && ollama pull smollm2
+  local_large:
+    id: qwen2.5
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: local_small
+
+  local_small:
+    id: llama3.2
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
     degrade_to: fast
 
   fast:
-    id: gemma2
+    id: smollm2
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0

@@ -20,14 +20,24 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "workflows"))
+
+# Locate the AgentSmith runtime — prefer AGENTSMITH_DIR env var (set in ~/.zshrc)
+# so this worker can run from any directory, not just from inside the framework tree.
+_agentsmith_dir = os.environ.get("AGENTSMITH_DIR")
+if _agentsmith_dir:
+    _runtime_root = Path(_agentsmith_dir) / "runtime"
+else:
+    # Fallback: assume worker.py is still inside examples/oil-price-agent/ (3 levels deep)
+    _runtime_root = Path(__file__).resolve().parent.parent.parent / "runtime"
+
 # oil_price_workflow.py subclasses BaseAgentWorkflow (runtime/workflows/) —
 # added here, not inside oil_price_workflow.py itself, because that file
 # defines the workflow class and gets re-imported by Temporal's sandbox
 # for determinism validation; a sys.path.insert(..., Path(...).resolve()...)
 # at THAT module's top level trips the sandbox's restriction on
 # pathlib.Path.resolve() (confirmed by running it — not a guess).
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "runtime"))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "runtime" / "workflows"))
+sys.path.insert(0, str(_runtime_root))
+sys.path.insert(0, str(_runtime_root / "workflows"))
 
 from oil_price_workflow import OilPricePredictionWorkflow  # type: ignore
 from activities import (  # type: ignore
