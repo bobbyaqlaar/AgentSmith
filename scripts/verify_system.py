@@ -175,7 +175,7 @@ def run_checks() -> bool:
                         and not entry.get("hitl_resolved", True)
                     ):
                         unresolved.append(entry)
-                except Exception:  # noqa: bare-except — one malformed JSON-lines entry must not abort scanning the rest of the log for unresolved issues
+                except Exception:  # fail-open: one malformed JSON-lines entry must not abort scanning the rest of the log for unresolved issues
                     pass
 
         if unresolved:

@@ -159,7 +159,7 @@ def _default_project_name(repo_root: Path) -> str:
         ).stdout.strip()
         if url:
             return url.rsplit("/", 1)[-1].removesuffix(".git")
-    except Exception:  # noqa: bare-except — no git remote / not a git repo / git not installed all fall back to the dir name below
+    except Exception:  # fail-open: no git remote / not a git repo / git not installed all fall back to the dir name below
         pass
     return repo_root.resolve().name
 
