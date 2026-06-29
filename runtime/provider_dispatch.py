@@ -140,14 +140,21 @@ class VertexAIAdapter:
     Claude and have confirmed it's enabled for your project's region.
 
     Auth: OAuth2 service-account token via `google-auth`. Required
-    models.yaml fields: `project`, `region` (defaults to `me-central2` —
-    Dammam, Saudi Arabia; GCP has no UAE region — its only other GCC
-    region is `me-central1`, Doha, Qatar), `publisher` (defaults to
-    `google`, i.e. Gemini; set to `anthropic` for Claude-on-Vertex).
-    Credentials resolved the standard
-    google-auth way: `GOOGLE_APPLICATION_CREDENTIALS` env var pointing at a
-    service-account JSON key, or any other `google.auth.default()`-supported
-    source (workload identity, gcloud ADC, etc).
+    models.yaml fields: `project`, `region` (defaults to `us-central1`),
+    `publisher` (defaults to `google`, i.e. Gemini; set to `anthropic` for
+    Claude-on-Vertex). Credentials resolved the standard google-auth way:
+    `GOOGLE_APPLICATION_CREDENTIALS` env var pointing at a service-account
+    JSON key, or any other `google.auth.default()`-supported source
+    (workload identity, gcloud ADC, etc).
+
+    Region note (verified live against a real Vertex AI project): GCP's
+    GCC regions — `me-central1` (Doha, Qatar) and `me-central2` (Dammam,
+    Saudi Arabia) — do NOT currently serve `gemini-2.5-flash` (confirmed
+    404 "Publisher model ... was not found" on both). `us-central1`,
+    `europe-west1`, `europe-west4`, and `asia-south1` were confirmed
+    working. If GCC-region hosting is a hard requirement, verify model
+    availability for that region first via a live call before overriding
+    `region` — do not assume any specific GCC region serves a given model.
     """
 
     _cached_token: str | None = None
@@ -181,8 +188,8 @@ class VertexAIAdapter:
     def build_request(
         self, model_id: str, messages: list[dict], cfg: dict, max_tokens: int, temperature: float
     ) -> tuple[str, dict, dict]:
-        project = cfg["project"]
-        region = cfg.get("region", "me-central2")  # Dammam, Saudi Arabia — GCP's GCC region
+        project = os.path.expandvars(cfg["project"])  # supports ${VAR} so a project id never has to be committed literally
+        region = cfg.get("region", "us-central1")  # verified working; GCC regions confirmed NOT to serve gemini-2.5-flash, see class docstring
         publisher = cfg.get("publisher", "google")  # Gemini — first-party on Vertex, no cross-vendor rollout lag
         token = self._get_access_token()
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -263,23 +270,24 @@ class BedrockAdapter:
     own shape, distinct from both the direct Anthropic API and
     Anthropic-on-Vertex).
 
-    Required models.yaml fields: `region` (defaults to `me-central-1` —
-    AWS's UAE/Dubai region, AWS's only GCC region; `me-south-1`, Bahrain,
-    is the other Middle East option). AWS credentials resolved the
-    standard boto3 way (env vars, shared config file, instance/task role)
-    — no per-model credential override, since Bedrock access is normally
-    scoped at the IAM-role level, not per model. Optional `url_template`
-    overrides the URL shape (e.g. a VPC interface endpoint instead of the
-    public `bedrock-runtime` host) — the override still gets correctly
-    SigV4-signed since signing happens against whatever URL is built, not
-    a hard-coded host.
+    Required models.yaml fields: `region` (defaults to `us-east-1`, one of
+    Bedrock's original/best-model-coverage regions). AWS credentials
+    resolved the standard boto3 way (env vars, shared config file,
+    instance/task role) — no per-model credential override, since Bedrock
+    access is normally scoped at the IAM-role level, not per model.
+    Optional `url_template` overrides the URL shape (e.g. a VPC interface
+    endpoint instead of the public `bedrock-runtime` host) — the override
+    still gets correctly SigV4-signed since signing happens against
+    whatever URL is built, not a hard-coded host.
 
-    CAVEAT: Bedrock's set of supported regions (and which foundation
-    models are enabled per region) changes over time and was not verified
-    against AWS's current region/model availability table as of this
-    default — confirm `me-central-1` actually has Bedrock + the model
-    you need enabled before relying on the default; override `region`
-    explicitly if not.
+    GCC region note: AWS's GCC region is `me-central-1` (UAE/Dubai);
+    `me-south-1` (Bahrain) is the other Middle East option. Neither has
+    been verified to have Bedrock (or the specific foundation model you
+    need) enabled — the live test that disproved the equivalent assumption
+    for GCP Vertex AI's GCC regions (see VertexAIAdapter docstring) was not
+    repeatable here for lack of AWS credentials in the test environment.
+    Confirm via a live call before overriding `region` to a GCC value;
+    do not assume it works by default.
     """
 
     _DEFAULT_URL_TEMPLATE = "https://bedrock-runtime.{region}.amazonaws.com/model/{model_id}/invoke"
@@ -291,7 +299,7 @@ class BedrockAdapter:
         from botocore.auth import SigV4Auth
         from botocore.awsrequest import AWSRequest
 
-        region = cfg.get("region", "me-central-1")  # UAE/Dubai — AWS's GCC region
+        region = cfg.get("region", "us-east-1")  # broad model coverage; GCC region unverified, see class docstring
         url = cfg.get("url_template", self._DEFAULT_URL_TEMPLATE).format(region=region, model_id=model_id)
 
         system = "\n".join(m["content"] for m in messages if m["role"] == "system") or None

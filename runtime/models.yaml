@@ -22,8 +22,11 @@
 #
 #   provider: vertex_ai          # GCP Vertex AI — OAuth2 service account
 #     project: my-gcp-project    # required
-#     region: me-central2        # optional, default shown — Dammam, Saudi Arabia (GCP has no UAE
-#                                # region; me-central1, Doha, is the only other GCC option)
+#     region: us-central1        # optional, default shown — verified live (gemini-2.5-flash, 2026-06-29).
+#                                # GCC regions me-central1 (Doha) / me-central2 (Dammam) were tested
+#                                # live and do NOT currently serve gemini-2.5-flash (404 "Publisher
+#                                # model ... not found"); europe-west1/europe-west4/asia-south1 also
+#                                # confirmed working. Verify before overriding to a GCC region.
 #     publisher: google          # optional, default shown — Gemini, first-party on Vertex, no
 #                                # cross-vendor regional rollout lag. Set to "anthropic" for
 #                                # Claude-on-Vertex instead — supported but deprioritized as the
@@ -41,10 +44,13 @@
 #     url_template: "https://{resource}.openai.azure.us/..."  # optional, e.g. Azure Gov cloud
 #
 #   provider: bedrock            # AWS Bedrock — SigV4, standard boto3 credential chain
-#     region: me-central-1       # optional, default shown — UAE/Dubai, AWS's GCC region
-#                                # (me-south-1, Bahrain, is the other Middle East option).
-#                                # NOT verified against AWS's current Bedrock region/model
-#                                # availability table — confirm before relying on it.
+#     region: us-east-1          # optional, default shown — broad model coverage. AWS's GCC
+#                                # region is me-central-1 (UAE/Dubai); me-south-1 (Bahrain) is the
+#                                # other Middle East option — NEITHER has been verified to have
+#                                # Bedrock or the model you need enabled (no AWS creds available to
+#                                # test; the equivalent GCP GCC-region assumption above turned out
+#                                # to be wrong when actually tested — don't assume this one is right
+#                                # either). Confirm via a live call before overriding to a GCC region.
 #     url_template: "https://vpce-xxxx.bedrock-runtime.{region}.vpce.amazonaws.com/model/{model_id}/invoke"
 #                                # optional, e.g. a VPC interface endpoint instead of the public host
 #
@@ -55,8 +61,11 @@
 #     path_template: "/v2/infers/{model_id}/chat/completions"  # optional, default shown is /v1/...
 #                                # provider_dispatch.py's HuaweiModelArtsAdapter docstring)
 #
-# All four are mocked-tested only (runtime/test/test_provider_dispatch_cloud.py)
-# — none have been exercised against a live cloud account in this repo.
+# Mock-tested: all four (runtime/test/test_provider_dispatch_cloud.py).
+# Live-verified against a real cloud account: vertex_ai only (project
+# agentsmith-500916, 2026-06-29) — see the `vertex_gemini` entry below and
+# the region note in its comment. azure_openai/bedrock/huawei_modelarts
+# remain mock-tested only.
 
 models:
   architect:
@@ -99,6 +108,26 @@ models:
     cost_per_input_token: 0
     cost_per_output_token: 0
     degrade_to: fast
+
+  # ── GCP Vertex AI (opt-in, not in the default degrade chain) ───────────────────
+  # Live-verified: gemini-2.5-flash in us-central1 against a real GCP
+  # project (2026-06-29) — request/response round-tripped correctly through
+  # VertexAIAdapter. Requires GOOGLE_APPLICATION_CREDENTIALS (or another
+  # google-auth-supported credential source) and the Vertex AI API enabled
+  # on `project`. cost_per_*_token below are placeholders — confirm against
+  # GCP's current Vertex AI pricing page before relying on them for budget
+  # enforcement. Route to this role explicitly via model_hint="vertex_gemini"
+  # or a tenant's routing_overrides; it isn't wired into
+  # architect/developer/validator's degrade_to chain since most tenants
+  # won't have GCP credentials configured.
+  vertex_gemini:
+    id: gemini-2.5-flash
+    provider: vertex_ai
+    project: "${GCP_PROJECT_ID}"   # set per-tenant; no project id is committed here
+    region: us-central1            # GCC regions (me-central1/me-central2) confirmed NOT to serve this model
+    cost_per_input_token: 0.0000003
+    cost_per_output_token: 0.0000025
+    degrade_to: null
 
   fast:
     id: smollm2
