@@ -48,21 +48,54 @@ from activities import (  # type: ignore
 )
 
 
-async def main() -> None:
-    tenant_id = os.environ.get("TENANT_ID", "")
-    if not tenant_id:
-        print("ERROR: TENANT_ID environment variable is required.", file=sys.stderr)
-        sys.exit(1)
+async def _run_health_server() -> None:
+    """Minimal GET /healthz -> 200 server, run alongside the Temporal poller.
 
-    try:
-        from temporalio.client import Client
-        from temporalio.worker import Worker
-    except ImportError:
-        print("ERROR: temporalio is not installed. Run: pip install temporalio", file=sys.stderr)
-        sys.exit(1)
+    Cloud Run (and most container platforms) expect an HTTP listener to
+    health-check; a pure Temporal worker has no HTTP surface at all. This
+    does NOT report Temporal connectivity — it's a liveness probe for the
+    process itself (so a hung/crashed process gets recycled), not a
+    readiness probe for "is this worker actually polling its task queue."
+    Port via $PORT (Cloud Run's convention), default 8080 for local runs.
+    """
+    from aiohttp import web
+
+    async def healthz(_request: web.Request) -> web.Response:
+        return web.Response(text="ok")
+
+    app = web.Application()
+    app.router.add_get("/healthz", healthz)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", "8080"))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"[worker] Health server listening on :{port}/healthz")
+
+
+async def _run_worker_with_retry(tenant_id: str) -> None:
+    """Connect to Temporal and run the worker, retrying the connect step on
+    failure instead of raising — a transient Temporal outage must not crash
+    the whole process (and take the health server down with it). The health
+    server is a liveness probe for the process, not Temporal connectivity;
+    this keeps that distinction real instead of accidental."""
+    from temporalio.client import Client
+    from temporalio.worker import Worker
 
     address = os.environ.get("TEMPORAL_ADDRESS", "localhost:7233")
-    client = await Client.connect(address)
+    # TEMPORAL_TLS=true for cloud-hosted Temporal behind a TLS-terminating
+    # ingress (e.g. Cloud Run, which only exposes 443 — there is no
+    # plaintext gRPC port reachable from outside the container).
+    use_tls = os.environ.get("TEMPORAL_TLS", "false").lower() == "true"
+    delay = 2.0
+    while True:
+        try:
+            client = await Client.connect(address, tls=use_tls)
+            break
+        except Exception as exc:
+            print(f"[worker] Temporal connect failed ({exc}); retrying in {delay:.0f}s", file=sys.stderr)
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 30.0)
 
     worker = Worker(
         client,
@@ -77,6 +110,22 @@ async def main() -> None:
     )
     print(f"[worker] Listening on task queue agent-tasks-{tenant_id} @ {address}")
     await worker.run()
+
+
+async def main() -> None:
+    tenant_id = os.environ.get("TENANT_ID", "")
+    if not tenant_id:
+        print("ERROR: TENANT_ID environment variable is required.", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        import temporalio  # noqa: F401
+    except ImportError:
+        print("ERROR: temporalio is not installed. Run: pip install temporalio", file=sys.stderr)
+        sys.exit(1)
+
+    await _run_health_server()
+    await _run_worker_with_retry(tenant_id)
 
 
 if __name__ == "__main__":

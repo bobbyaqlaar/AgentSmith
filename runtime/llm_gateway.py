@@ -506,7 +506,7 @@ class LLMGateway:
                 span.set_attribute("llm.gateway.degrade_reason", degrade_tier)
             if workflow_id:
                 span.set_attribute("workflow.id", workflow_id)
-        except Exception:
+        except Exception:  # noqa: bare-except — tracing must never break the actual LLM call
             pass
 
     # ── Completion ────────────────────────────────────────────────────────────
