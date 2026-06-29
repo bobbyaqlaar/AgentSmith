@@ -9,6 +9,7 @@ optional services are active.
 Run by scripts/up.sh before `docker compose up`. Output is gitignored —
 regenerated every run, never edited by hand.
 """
+
 import os
 import sys
 from pathlib import Path
@@ -38,7 +39,10 @@ def main() -> int:
     canary_weight = int(env.get("CANARY_WEIGHT_PERCENT", "10") or "10")
     shadow_percent = int(env.get("SHADOW_MIRROR_PERCENT", "100") or "100")
 
-    for name, value in (("CANARY_WEIGHT_PERCENT", canary_weight), ("SHADOW_MIRROR_PERCENT", shadow_percent)):
+    for name, value in (
+        ("CANARY_WEIGHT_PERCENT", canary_weight),
+        ("SHADOW_MIRROR_PERCENT", shadow_percent),
+    ):
         if not 0 <= value <= 100:
             print(f"❌ {name} must be 0-100, got {value}", file=sys.stderr)
             return 1
@@ -89,7 +93,11 @@ def main() -> int:
     config = {
         "http": {
             "routers": {
-                "app": {"rule": "PathPrefix(`/`)", "entryPoints": ["web"], "service": root_service}
+                "app": {
+                    "rule": "PathPrefix(`/`)",
+                    "entryPoints": ["web"],
+                    "service": root_service,
+                }
             },
             "services": services,
         }

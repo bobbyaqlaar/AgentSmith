@@ -17,7 +17,9 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 
 
 def _load_shadow_eval():
-    spec = importlib.util.spec_from_file_location("shadow_eval", SCRIPTS_DIR / "shadow-eval.py")
+    spec = importlib.util.spec_from_file_location(
+        "shadow_eval", SCRIPTS_DIR / "shadow-eval.py"
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

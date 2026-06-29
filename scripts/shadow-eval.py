@@ -104,7 +104,9 @@ def _fetch_production_spans(since_hours: float, project: str = "default") -> lis
     posture as sync-ui-feedback.py's _fetch_annotations."""
     from datetime import datetime, timedelta, timezone
 
-    start_time = (datetime.now(timezone.utc) - timedelta(hours=since_hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    start_time = (datetime.now(timezone.utc) - timedelta(hours=since_hours)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
     try:
         data = _phoenix_get(
             f"/v1/projects/{project}/spans",
@@ -115,7 +117,11 @@ def _fetch_production_spans(since_hours: float, project: str = "default") -> lis
         print(f"   ⚠️  Could not fetch spans: {exc}")
         return []
 
-    return [s for s in spans if (s.get("attributes") or {}).get("environment") == "production"]
+    return [
+        s
+        for s in spans
+        if (s.get("attributes") or {}).get("environment") == "production"
+    ]
 
 
 def _sample(spans: list[dict], sample_rate: float) -> list[dict]:
@@ -157,7 +163,9 @@ def run_shadow_eval(sample_rate: float = 0.05, since_hours: float = 24.0) -> dic
     judge_model = os.environ.get("AGENT_JUDGE_MODEL", "claude-3-5-sonnet-20241022")
     stats = {"sampled": 0, "judged": 0, "failed": 0, "skipped": 0, "errors": 0}
 
-    print(f"🌗 Shadow eval — sampling {sample_rate:.0%} of production traces (last {since_hours}h) from {PHOENIX_ENDPOINT}")
+    print(
+        f"🌗 Shadow eval — sampling {sample_rate:.0%} of production traces (last {since_hours}h) from {PHOENIX_ENDPOINT}"
+    )
 
     spans = _fetch_production_spans(since_hours)
     if not spans:
@@ -166,7 +174,9 @@ def run_shadow_eval(sample_rate: float = 0.05, since_hours: float = 24.0) -> dic
 
     sampled = _sample(spans, sample_rate)
     stats["sampled"] = len(sampled)
-    print(f"   {len(spans)} production span(s) in window, {len(sampled)} sampled at {sample_rate:.0%}")
+    print(
+        f"   {len(spans)} production span(s) in window, {len(sampled)} sampled at {sample_rate:.0%}"
+    )
 
     state = _load_sync_state()
     already_evaluated = set(state.get("shadow_evaluated_span_ids", []))
@@ -219,9 +229,21 @@ def run_shadow_eval(sample_rate: float = 0.05, since_hours: float = 24.0) -> dic
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Shadow eval sampler over production traces")
-    parser.add_argument("--sample-rate", type=float, default=0.05, help="Fraction of production spans to judge (default: 0.05)")
-    parser.add_argument("--since-hours", type=float, default=24.0, help="Window of production spans to consider (default: 24)")
+    parser = argparse.ArgumentParser(
+        description="Shadow eval sampler over production traces"
+    )
+    parser.add_argument(
+        "--sample-rate",
+        type=float,
+        default=0.05,
+        help="Fraction of production spans to judge (default: 0.05)",
+    )
+    parser.add_argument(
+        "--since-hours",
+        type=float,
+        default=24.0,
+        help="Window of production spans to consider (default: 24)",
+    )
     args = parser.parse_args()
     result = run_shadow_eval(sample_rate=args.sample_rate, since_hours=args.since_hours)
     # Async/post-hoc by design — never blocks or fails the calling job.

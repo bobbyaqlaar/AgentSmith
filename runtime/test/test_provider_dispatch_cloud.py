@@ -21,7 +21,10 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from runtime.provider_dispatch import (  # noqa: E402
-    build_cloud_request, get_cloud_adapter, is_cloud_provider, parse_cloud_response,
+    build_cloud_request,
+    get_cloud_adapter,
+    is_cloud_provider,
+    parse_cloud_response,
 )
 
 MESSAGES = [
@@ -44,12 +47,21 @@ def test_unknown_cloud_provider_raises():
 
 def test_vertex_ai_anthropic_publisher():
     fake_creds = MagicMock(token="fake-token", expiry=None)
-    with patch("google.auth.default", return_value=(fake_creds, "proj")), \
-         patch("google.auth.transport.requests.Request", return_value=MagicMock()):
+    with (
+        patch("google.auth.default", return_value=(fake_creds, "proj")),
+        patch("google.auth.transport.requests.Request", return_value=MagicMock()),
+    ):
         url, headers, body = build_cloud_request(
-            "vertex_ai", "claude-sonnet-4-6", MESSAGES,
-            cfg={"project": "my-proj", "region": "us-central1", "publisher": "anthropic"},
-            max_tokens=64, temperature=0.2,
+            "vertex_ai",
+            "claude-sonnet-4-6",
+            MESSAGES,
+            cfg={
+                "project": "my-proj",
+                "region": "us-central1",
+                "publisher": "anthropic",
+            },
+            max_tokens=64,
+            temperature=0.2,
         )
     assert url == (
         "https://us-central1-aiplatform.googleapis.com/v1/projects/my-proj"
@@ -60,7 +72,11 @@ def test_vertex_ai_anthropic_publisher():
     assert body["messages"] == [{"role": "user", "content": "Say hi"}]
 
     text, in_tok, out_tok = parse_cloud_response(
-        "vertex_ai", {"content": [{"text": "hi!"}], "usage": {"input_tokens": 5, "output_tokens": 2}}
+        "vertex_ai",
+        {
+            "content": [{"text": "hi!"}],
+            "usage": {"input_tokens": 5, "output_tokens": 2},
+        },
     )
     assert (text, in_tok, out_tok) == ("hi!", 5, 2)
 
@@ -68,11 +84,17 @@ def test_vertex_ai_anthropic_publisher():
 def test_vertex_ai_default_publisher_is_gemini():
     """Default publisher (no `publisher` in cfg) is google/Gemini, not anthropic."""
     fake_creds = MagicMock(token="fake-token", expiry=None)
-    with patch("google.auth.default", return_value=(fake_creds, "proj")), \
-         patch("google.auth.transport.requests.Request", return_value=MagicMock()):
+    with (
+        patch("google.auth.default", return_value=(fake_creds, "proj")),
+        patch("google.auth.transport.requests.Request", return_value=MagicMock()),
+    ):
         url, _, body = build_cloud_request(
-            "vertex_ai", "gemini-1.5-pro", MESSAGES,
-            cfg={"project": "my-proj"}, max_tokens=64, temperature=0.2,
+            "vertex_ai",
+            "gemini-1.5-pro",
+            MESSAGES,
+            cfg={"project": "my-proj"},
+            max_tokens=64,
+            temperature=0.2,
         )
     assert "/publishers/google/models/" in url
     assert url.endswith(":generateContent")
@@ -81,12 +103,17 @@ def test_vertex_ai_default_publisher_is_gemini():
 
 def test_vertex_ai_gemini_publisher():
     fake_creds = MagicMock(token="fake-token", expiry=None)
-    with patch("google.auth.default", return_value=(fake_creds, "proj")), \
-         patch("google.auth.transport.requests.Request", return_value=MagicMock()):
+    with (
+        patch("google.auth.default", return_value=(fake_creds, "proj")),
+        patch("google.auth.transport.requests.Request", return_value=MagicMock()),
+    ):
         url, headers, body = build_cloud_request(
-            "vertex_ai", "gemini-1.5-pro", MESSAGES,
+            "vertex_ai",
+            "gemini-1.5-pro",
+            MESSAGES,
             cfg={"project": "my-proj", "publisher": "google"},
-            max_tokens=64, temperature=0.2,
+            max_tokens=64,
+            temperature=0.2,
         )
     assert url.endswith("/publishers/google/models/gemini-1.5-pro:generateContent")
     assert body["generationConfig"]["maxOutputTokens"] == 64
@@ -104,9 +131,12 @@ def test_vertex_ai_gemini_publisher():
 def test_azure_openai():
     with patch.dict("os.environ", {"AZURE_OPENAI_API_KEY": "az-key"}):
         url, headers, body = build_cloud_request(
-            "azure_openai", "gpt-4o", MESSAGES,
+            "azure_openai",
+            "gpt-4o",
+            MESSAGES,
             cfg={"resource": "my-resource", "deployment": "gpt-4o-prod"},
-            max_tokens=64, temperature=0.2,
+            max_tokens=64,
+            temperature=0.2,
         )
     assert url == (
         "https://my-resource.openai.azure.com/openai/deployments/gpt-4o-prod"
@@ -118,28 +148,46 @@ def test_azure_openai():
 
     text, in_tok, out_tok = parse_cloud_response(
         "azure_openai",
-        {"choices": [{"message": {"content": "hi!"}}], "usage": {"prompt_tokens": 5, "completion_tokens": 2}},
+        {
+            "choices": [{"message": {"content": "hi!"}}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 2},
+        },
     )
     assert (text, in_tok, out_tok) == ("hi!", 5, 2)
 
 
 def test_bedrock():
-    fake_request = MagicMock(headers={"Authorization": "AWS4-HMAC-SHA256 ...", "X-Amz-Date": "..."})
-    with patch("boto3.Session") as mock_session, \
-         patch("botocore.awsrequest.AWSRequest", return_value=fake_request), \
-         patch("botocore.auth.SigV4Auth") as mock_sigv4:
+    fake_request = MagicMock(
+        headers={"Authorization": "AWS4-HMAC-SHA256 ...", "X-Amz-Date": "..."}
+    )
+    with (
+        patch("boto3.Session") as mock_session,
+        patch("botocore.awsrequest.AWSRequest", return_value=fake_request),
+        patch("botocore.auth.SigV4Auth") as mock_sigv4,
+    ):
         mock_session.return_value.get_credentials.return_value = MagicMock()
         mock_sigv4.return_value.add_auth = MagicMock()
         url, headers, body = build_cloud_request(
-            "bedrock", "anthropic.claude-3-5-sonnet", MESSAGES,
-            cfg={"region": "us-east-1"}, max_tokens=64, temperature=0.2,
+            "bedrock",
+            "anthropic.claude-3-5-sonnet",
+            MESSAGES,
+            cfg={"region": "us-east-1"},
+            max_tokens=64,
+            temperature=0.2,
         )
-    assert url == "https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-5-sonnet/invoke"
+    assert (
+        url
+        == "https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-5-sonnet/invoke"
+    )
     assert "Authorization" in headers
     assert body["system"] == "You are terse."
 
     text, in_tok, out_tok = parse_cloud_response(
-        "bedrock", {"content": [{"text": "hi!"}], "usage": {"input_tokens": 5, "output_tokens": 2}}
+        "bedrock",
+        {
+            "content": [{"text": "hi!"}],
+            "usage": {"input_tokens": 5, "output_tokens": 2},
+        },
     )
     assert (text, in_tok, out_tok) == ("hi!", 5, 2)
 
@@ -150,11 +198,17 @@ def test_vertex_ai_default_region_is_verified_working_region():
     after a live test against a real Vertex AI project returned 404 "Publisher model
     ... not found" for both — see VertexAIAdapter's docstring."""
     fake_creds = MagicMock(token="fake-token", expiry=None)
-    with patch("google.auth.default", return_value=(fake_creds, "proj")), \
-         patch("google.auth.transport.requests.Request", return_value=MagicMock()):
+    with (
+        patch("google.auth.default", return_value=(fake_creds, "proj")),
+        patch("google.auth.transport.requests.Request", return_value=MagicMock()),
+    ):
         url, _, _ = build_cloud_request(
-            "vertex_ai", "gemini-2.5-flash", MESSAGES,
-            cfg={"project": "my-proj"}, max_tokens=64, temperature=0.2,
+            "vertex_ai",
+            "gemini-2.5-flash",
+            MESSAGES,
+            cfg={"project": "my-proj"},
+            max_tokens=64,
+            temperature=0.2,
         )
     assert "us-central1" in url
     assert "me-central1" not in url and "me-central2" not in url
@@ -163,12 +217,18 @@ def test_vertex_ai_default_region_is_verified_working_region():
 def test_vertex_ai_project_supports_env_var_expansion():
     """`project` supports ${VAR} expansion so a real project id is never committed literally."""
     fake_creds = MagicMock(token="fake-token", expiry=None)
-    with patch("google.auth.default", return_value=(fake_creds, "proj")), \
-         patch("google.auth.transport.requests.Request", return_value=MagicMock()), \
-         patch.dict("os.environ", {"GCP_PROJECT_ID": "real-project-123"}):
+    with (
+        patch("google.auth.default", return_value=(fake_creds, "proj")),
+        patch("google.auth.transport.requests.Request", return_value=MagicMock()),
+        patch.dict("os.environ", {"GCP_PROJECT_ID": "real-project-123"}),
+    ):
         url, _, _ = build_cloud_request(
-            "vertex_ai", "gemini-2.5-flash", MESSAGES,
-            cfg={"project": "${GCP_PROJECT_ID}"}, max_tokens=64, temperature=0.2,
+            "vertex_ai",
+            "gemini-2.5-flash",
+            MESSAGES,
+            cfg={"project": "${GCP_PROJECT_ID}"},
+            max_tokens=64,
+            temperature=0.2,
         )
     assert "real-project-123" in url
 
@@ -178,13 +238,20 @@ def test_bedrock_default_region_is_us_east_1():
     no AWS credentials were available to repeat the live test done for Vertex AI, so the
     GCC default was not kept without verification."""
     fake_request = MagicMock(headers={"Authorization": "AWS4-HMAC-SHA256 ..."})
-    with patch("boto3.Session") as mock_session, \
-         patch("botocore.awsrequest.AWSRequest", return_value=fake_request), \
-         patch("botocore.auth.SigV4Auth") as mock_sigv4:
+    with (
+        patch("boto3.Session") as mock_session,
+        patch("botocore.awsrequest.AWSRequest", return_value=fake_request),
+        patch("botocore.auth.SigV4Auth") as mock_sigv4,
+    ):
         mock_session.return_value.get_credentials.return_value = MagicMock()
         mock_sigv4.return_value.add_auth = MagicMock()
         url, _, _ = build_cloud_request(
-            "bedrock", "anthropic.claude-3-5-sonnet", MESSAGES, cfg={}, max_tokens=64, temperature=0.2,
+            "bedrock",
+            "anthropic.claude-3-5-sonnet",
+            MESSAGES,
+            cfg={},
+            max_tokens=64,
+            temperature=0.2,
         )
     assert "us-east-1" in url
     assert "me-central-1" not in url
@@ -192,33 +259,47 @@ def test_bedrock_default_region_is_us_east_1():
 
 def test_vertex_ai_url_template_override():
     fake_creds = MagicMock(token="fake-token", expiry=None)
-    with patch("google.auth.default", return_value=(fake_creds, "proj")), \
-         patch("google.auth.transport.requests.Request", return_value=MagicMock()):
+    with (
+        patch("google.auth.default", return_value=(fake_creds, "proj")),
+        patch("google.auth.transport.requests.Request", return_value=MagicMock()),
+    ):
         url, _, _ = build_cloud_request(
-            "vertex_ai", "claude-sonnet-4-6", MESSAGES,
+            "vertex_ai",
+            "claude-sonnet-4-6",
+            MESSAGES,
             cfg={
                 "project": "my-proj",
                 "url_template": "https://private-vpc.internal/projects/{project}/models/{model_id}",
             },
-            max_tokens=64, temperature=0.2,
+            max_tokens=64,
+            temperature=0.2,
         )
-    assert url == "https://private-vpc.internal/projects/my-proj/models/claude-sonnet-4-6"
+    assert (
+        url == "https://private-vpc.internal/projects/my-proj/models/claude-sonnet-4-6"
+    )
 
 
 def test_bedrock_url_template_override():
     fake_request = MagicMock(headers={"Authorization": "AWS4-HMAC-SHA256 ..."})
-    with patch("boto3.Session") as mock_session, \
-         patch("botocore.awsrequest.AWSRequest", return_value=fake_request) as mock_aws_request, \
-         patch("botocore.auth.SigV4Auth") as mock_sigv4:
+    with (
+        patch("boto3.Session") as mock_session,
+        patch(
+            "botocore.awsrequest.AWSRequest", return_value=fake_request
+        ) as mock_aws_request,
+        patch("botocore.auth.SigV4Auth") as mock_sigv4,
+    ):
         mock_session.return_value.get_credentials.return_value = MagicMock()
         mock_sigv4.return_value.add_auth = MagicMock()
         url, _, _ = build_cloud_request(
-            "bedrock", "anthropic.claude-3-5-sonnet", MESSAGES,
+            "bedrock",
+            "anthropic.claude-3-5-sonnet",
+            MESSAGES,
             cfg={
                 "region": "us-east-1",
                 "url_template": "https://vpce-xxxx.bedrock-runtime.{region}.vpce.amazonaws.com/model/{model_id}/invoke",
             },
-            max_tokens=64, temperature=0.2,
+            max_tokens=64,
+            temperature=0.2,
         )
     assert url == (
         "https://vpce-xxxx.bedrock-runtime.us-east-1.vpce.amazonaws.com"
@@ -229,33 +310,52 @@ def test_bedrock_url_template_override():
 
 
 def test_huawei_modelarts_path_template_override():
-    with patch.dict("os.environ", {"HUAWEICLOUD_SDK_AK": "ak", "HUAWEICLOUD_SDK_SK": "sk"}):
+    with patch.dict(
+        "os.environ", {"HUAWEICLOUD_SDK_AK": "ak", "HUAWEICLOUD_SDK_SK": "sk"}
+    ):
         url, headers, _ = build_cloud_request(
-            "huawei_modelarts", "my-model", MESSAGES,
+            "huawei_modelarts",
+            "my-model",
+            MESSAGES,
             cfg={
                 "endpoint": "xxxxx.cn-north-4.modelarts-infer.com",
                 "path_template": "/v2/infers/{model_id}/chat/completions",
             },
-            max_tokens=64, temperature=0.2,
+            max_tokens=64,
+            temperature=0.2,
         )
-    assert url == "https://xxxxx.cn-north-4.modelarts-infer.com/v2/infers/my-model/chat/completions"
+    assert (
+        url
+        == "https://xxxxx.cn-north-4.modelarts-infer.com/v2/infers/my-model/chat/completions"
+    )
     assert "SignedHeaders=content-type;host;x-sdk-date" in headers["Authorization"]
 
 
 def test_huawei_modelarts():
-    with patch.dict("os.environ", {"HUAWEICLOUD_SDK_AK": "ak", "HUAWEICLOUD_SDK_SK": "sk"}):
+    with patch.dict(
+        "os.environ", {"HUAWEICLOUD_SDK_AK": "ak", "HUAWEICLOUD_SDK_SK": "sk"}
+    ):
         url, headers, body = build_cloud_request(
-            "huawei_modelarts", "my-model", MESSAGES,
+            "huawei_modelarts",
+            "my-model",
+            MESSAGES,
             cfg={"endpoint": "xxxxx.cn-north-4.modelarts-infer.com"},
-            max_tokens=64, temperature=0.2,
+            max_tokens=64,
+            temperature=0.2,
         )
-    assert url == "https://xxxxx.cn-north-4.modelarts-infer.com/v1/infers/my-model/chat/completions"
+    assert (
+        url
+        == "https://xxxxx.cn-north-4.modelarts-infer.com/v1/infers/my-model/chat/completions"
+    )
     assert headers["Authorization"].startswith("SDK-HMAC-SHA256 Access=ak")
     assert headers["Host"] == "xxxxx.cn-north-4.modelarts-infer.com"
     assert body["messages"] == MESSAGES
 
     text, in_tok, out_tok = parse_cloud_response(
         "huawei_modelarts",
-        {"choices": [{"message": {"content": "hi!"}}], "usage": {"prompt_tokens": 5, "completion_tokens": 2}},
+        {
+            "choices": [{"message": {"content": "hi!"}}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 2},
+        },
     )
     assert (text, in_tok, out_tok) == ("hi!", 5, 2)
