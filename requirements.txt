@@ -55,6 +55,11 @@ redis>=5.0,<6.0
 langgraph-checkpoint-postgres>=2.0,<3.0
 # Encrypted HITL blob storage for production trace redaction (§27)
 cryptography>=42.0,<44.0
+# Cloud-native LLM providers for runtime/provider_dispatch.py's CloudProviderAdapters —
+# google-auth for Vertex AI OAuth2, boto3/botocore for Bedrock SigV4 signing.
+# Huawei ModelArts uses stdlib hmac/hashlib (no official Python SDK dependency).
+google-auth>=2.30,<3.0
+boto3>=1.34,<2.0
 
 # ── Testing ───────────────────────────────────────────────────────────────────
 pytest>=8.0,<9.0

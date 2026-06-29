@@ -714,36 +714,50 @@ class LLMGateway:
         import httpx
         from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
         try:
-            from runtime.provider_dispatch import build_request, parse_response
+            from runtime.provider_dispatch import (
+                build_cloud_request, build_request, is_cloud_provider, parse_cloud_response, parse_response,
+            )
         except ImportError:
-            from provider_dispatch import build_request, parse_response  # type: ignore
+            from provider_dispatch import (  # type: ignore
+                build_cloud_request, build_request, is_cloud_provider, parse_cloud_response, parse_response,
+            )
 
         provider = cfg.get("provider", "openai")
         model_id = cfg["id"]
 
-        # base_url/api_key_env are config-driven (models.yaml `endpoint` /
-        # `api_key_env` fields) so a tenant can point a provider at a proxy,
-        # a region-pinned host, or a differently-named API key env var
-        # (e.g. per-tenant keys) without editing this code. The literals
-        # below are fallbacks for the common case only — direct Anthropic/
-        # OpenAI calls — not a ceiling on what's supported.
-        if provider == "anthropic":
-            api_key_env = cfg.get("api_key_env", "ANTHROPIC_API_KEY")
-            api_key = os.environ.get(api_key_env, "")
-            base_url = cfg.get("endpoint") or "https://api.anthropic.com"
-        elif provider == "ollama":
-            base_url = os.path.expandvars(cfg.get("endpoint", "${OLLAMA_BASE_URL}/v1"))
-            # expandvars leaves unset variables as literal "${VAR}" — not a valid URL.
-            if not base_url.startswith("http"):
-                base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434") + "/v1"
-            api_key = "ollama"
+        if is_cloud_provider(provider):
+            # Cloud-native providers (vertex_ai/azure_openai/bedrock/
+            # huawei_modelarts) need their own auth scheme and URL/envelope
+            # shape, not just a different host — provider_dispatch.py's
+            # CloudProviderAdapter owns that, and returns a full URL rather
+            # than a path since project/region/deployment/endpoint-id are
+            # baked into the URL itself.
+            url, headers, body = build_cloud_request(provider, model_id, messages, cfg, max_tokens, temperature)
         else:
-            api_key_env = cfg.get("api_key_env", "OPENAI_API_KEY")
-            api_key = os.environ.get(api_key_env, "")
-            base_url = cfg.get("endpoint") or "https://api.openai.com/v1"
-        base_url = os.path.expandvars(base_url)
+            # base_url/api_key_env are config-driven (models.yaml `endpoint` /
+            # `api_key_env` fields) so a tenant can point a provider at a proxy,
+            # a region-pinned host, or a differently-named API key env var
+            # (e.g. per-tenant keys) without editing this code. The literals
+            # below are fallbacks for the common case only — direct Anthropic/
+            # OpenAI calls — not a ceiling on what's supported.
+            if provider == "anthropic":
+                api_key_env = cfg.get("api_key_env", "ANTHROPIC_API_KEY")
+                api_key = os.environ.get(api_key_env, "")
+                base_url = cfg.get("endpoint") or "https://api.anthropic.com"
+            elif provider == "ollama":
+                base_url = os.path.expandvars(cfg.get("endpoint", "${OLLAMA_BASE_URL}/v1"))
+                # expandvars leaves unset variables as literal "${VAR}" — not a valid URL.
+                if not base_url.startswith("http"):
+                    base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434") + "/v1"
+                api_key = "ollama"
+            else:
+                api_key_env = cfg.get("api_key_env", "OPENAI_API_KEY")
+                api_key = os.environ.get(api_key_env, "")
+                base_url = cfg.get("endpoint") or "https://api.openai.com/v1"
+            base_url = os.path.expandvars(base_url)
 
-        path, headers, body = build_request(provider, model_id, messages, api_key, max_tokens, temperature)
+            path, headers, body = build_request(provider, model_id, messages, api_key, max_tokens, temperature)
+            url = base_url.rstrip("/") + path
 
         @retry(
             retry=retry_if_exception(self._is_retryable_provider_error),
@@ -753,7 +767,7 @@ class LLMGateway:
         )
         async def _post_with_retry() -> dict:
             async with httpx.AsyncClient(timeout=120.0) as client:
-                resp = await client.post(base_url.rstrip("/") + path, json=body, headers=headers)
+                resp = await client.post(url, json=body, headers=headers)
                 if not resp.is_success:
                     # Try to surface a human-readable message from the provider
                     # before falling back to a raw HTTP error.
@@ -772,4 +786,6 @@ class LLMGateway:
                 return resp.json()
 
         data = await _post_with_retry()
+        if is_cloud_provider(provider):
+            return parse_cloud_response(provider, data)
         return parse_response(provider, data)

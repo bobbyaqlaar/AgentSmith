@@ -1976,6 +1976,39 @@ vs. OpenAI-compatible chat completions) is shared; each file's own
 routing/budget/degrade-ladder logic, which legitimately differs between the
 dev-mode and production paths, stays local to each file.
 
+### Cloud-Native Provider Adapters
+
+Direct-API providers (`anthropic`, `openai`/`openai_compatible`) share one
+host and static API-key auth, handled by `build_request`/`parse_response`
+above. Cloud-hosted models don't — each cloud vendor has its own auth scheme
+and request/response envelope, not just a different host. `models.yaml`
+entries with `provider: vertex_ai | azure_openai | bedrock |
+huawei_modelarts` are dispatched instead to a `CloudProviderAdapter`
+(`runtime/provider_dispatch.py`):
+
+| Provider | Auth | URL shape | Required `models.yaml` fields |
+|---|---|---|---|
+| `vertex_ai` (GCP) | OAuth2 service-account token (`google-auth`) | `{region}-aiplatform.googleapis.com/.../publishers/{publisher}/models/{id}:streamRawPredict\|generateContent` | `project`; optional `region`, `publisher` |
+| `azure_openai` | `api-key` header + `api-version` query param | `{resource}.openai.azure.com/openai/deployments/{deployment}/chat/completions` | `resource`; optional `deployment`, `api_version`, `api_key_env` |
+| `bedrock` (AWS) | SigV4-signed request (`boto3`/`botocore`, standard credential chain) | `bedrock-runtime.{region}.amazonaws.com/model/{id}/invoke` | optional `region` |
+| `huawei_modelarts` | AK/SK request signing (`SDK-HMAC-SHA256`, `HUAWEICLOUD_SDK_AK`/`_SK` env vars) | per-deployment custom inference endpoint host | `endpoint` |
+
+Each adapter implements the same `build_request(model_id, messages, cfg,
+max_tokens, temperature) -> (full_url, headers, body)` /
+`parse_response(data) -> (text, input_tokens, output_tokens)` shape (a
+`CloudProviderAdapter` protocol) — unlike the direct-API path, cloud
+adapters return a full URL rather than a path, since project/region/
+deployment/endpoint-id are baked into the URL itself, not split out as a
+separate base_url.
+
+All four adapters are covered by mocked request/response-shape tests
+(`runtime/test/test_provider_dispatch_cloud.py`) — credential acquisition
+(OAuth2 token fetch, boto3 SigV4 signer) is patched out, so none have been
+exercised against a live cloud account. The Huawei ModelArts adapter in
+particular is the least-documented in English-language sources; its
+signing implementation follows Huawei's published algorithm structure but
+should be verified against a real deployment before production use.
+
 ### Budget Period Timezone
 
 Both the LLM Gateway's Postgres/Redis budget period key and the Ops
