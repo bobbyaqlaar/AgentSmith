@@ -1,0 +1,82 @@
+name: "CD: Ops Portal Deploy"
+
+# Deploys the AgentSmith Ops Portal (portal/Dockerfile) to Cloud Run.
+# Runs on push to main. Staging deploys on every push; production requires
+# a manual approval gate via the GitHub Environment protection rule.
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "portal/**"
+      - ".github/workflows/cd-portal.yml"
+
+concurrency:
+  group: cd-portal-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-staging:
+    name: "Deploy Portal → Staging"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: ./.github/actions/gcp-auth
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Build & push container image
+        id: image
+        uses: ./.github/actions/build-push-ghcr
+
+      - name: Deploy to staging
+        uses: ./.github/actions/deploy-placeholder
+        env:
+          IMAGE_REF: ${{ steps.image.outputs.image_ref }}
+        with:
+          deploy_command: ${{ secrets.DEPLOY_COMMAND }}
+          environment_label: staging
+
+  deploy-production:
+    name: "Deploy Portal → Production"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    needs: deploy-staging
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: ./.github/actions/gcp-auth
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Build & push container image
+        id: image
+        uses: ./.github/actions/build-push-ghcr
+
+      - name: Deploy to production
+        uses: ./.github/actions/deploy-placeholder
+        env:
+          IMAGE_REF: ${{ steps.image.outputs.image_ref }}
+        with:
+          deploy_command: ${{ secrets.DEPLOY_COMMAND }}
+          environment_label: production
