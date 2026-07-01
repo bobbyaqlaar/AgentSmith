@@ -103,8 +103,10 @@ applies only when cloning FROM WITHIN the AgentSmith directory.
   - **Attribute condition:** `assertion.repository in ['bobbyaqlaar/oil-price-demo', 'bobbyaqlaar/AgentSmith']`
     (updated from single-repo `==` to multi-repo `in [...]` when second repo was added)
 - SA: `github-deployer@agentsmith-500916.iam.gserviceaccount.com`
-- Secret Manager: `oil-price-demo-anthropic-key`, `ops-portal-user`, `ops-portal-password`
-  (portal credentials mounted on Cloud Run services via `--set-secrets`)
+  - Also granted `roles/cloudsql.client` (for Cloud SQL Auth Proxy on the Compute SA — see P11c)
+- Secret Manager: `oil-price-demo-anthropic-key`, `ops-portal-user`, `ops-portal-password`,
+  `ops-portal-db-url`, `ops-portal-audit-hmac-key`, `ops-portal-sync-token`
+- `agenticframework` database created on `temporal-pg`; schema migrated (all portal tables + triggers)
 
 **oil-price-demo PR #1 merged to main** ✅ Production CD deployed successfully ✅
 
@@ -121,7 +123,22 @@ applies only when cloning FROM WITHIN the AgentSmith directory.
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | ✅ set | ✅ set |
 | `GCP_SERVICE_ACCOUNT` | ✅ `github-deployer@agentsmith-500916.iam.gserviceaccount.com` | ✅ set |
 | `GCP_PROJECT_ID` | ✅ set | ✅ set |
-| `DEPLOY_COMMAND` (staging) | ✅ `gcloud run deploy agentsmith-portal-staging --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID --platform managed --allow-unauthenticated --set-secrets=OPS_PORTAL_USER=ops-portal-user:latest,OPS_PORTAL_PASSWORD=ops-portal-password:latest` | ✅ production equivalent |
+| `DEPLOY_COMMAND` (staging) | ✅ see full command below | ✅ production equivalent |
+
+**Current DEPLOY_COMMAND (staging):**
+```
+gcloud run deploy agentsmith-portal-staging \
+  --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID \
+  --platform managed --allow-unauthenticated \
+  --add-cloudsql-instances=agentsmith-500916:us-central1:temporal-pg \
+  --set-secrets=OPS_PORTAL_USER=ops-portal-user:latest,OPS_PORTAL_PASSWORD=ops-portal-password:latest,DATABASE_URL=ops-portal-db-url:latest,AUDIT_LOG_HMAC_KEY=ops-portal-audit-hmac-key:latest,OPS_PORTAL_SYNC_TOKEN=ops-portal-sync-token:latest
+```
+
+**DATABASE_URL (stored in Secret Manager `ops-portal-db-url`):**
+```
+postgresql://postgres:***@/agenticframework?host=/cloudsql/agentsmith-500916:us-central1:temporal-pg
+```
+Unix socket via Cloud SQL Auth Proxy — no TCP, no cert management, Google-managed mTLS.
 
 **Live Cloud Run services:**
 - Staging: https://agentsmith-portal-staging-431995395208.us-central1.run.app
@@ -136,6 +153,9 @@ applies only when cloning FROM WITHIN the AgentSmith directory.
 5. `DEPLOY_COMMAND` referenced `$GCP_PROJECT_ID` but it wasn't exported — added `env: GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}` at the job level.
 6. `GCP_SERVICE_ACCOUNT` secret had wrong value — corrected to `github-deployer@agentsmith-500916.iam.gserviceaccount.com`.
 7. Portal startup check requires `OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD` — created Secret Manager secrets and wired via `--set-secrets` in `DEPLOY_COMMAND`.
+8. `DATABASE_URL` not set — created `agenticframework` DB on Cloud SQL, ran schema migration, stored connection string in Secret Manager.
+9. SSL cert verification failure (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`) — **do not use `sslmode=no-verify`** (MITM-vulnerable). Fixed by switching to **Cloud SQL Auth Proxy** via `--add-cloudsql-instances`: Unix socket connection, IAM auth, Google-managed mTLS. Compute SA granted `roles/cloudsql.client`.
+10. New Secret Manager secrets need explicit SA binding before `gcloud run deploy` can reference them — grant `roles/secretmanager.secretAccessor` to the Compute SA for each secret.
 
 ---
 

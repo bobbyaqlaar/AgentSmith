@@ -490,7 +490,7 @@ via GitHub Actions with keyless Workload Identity Federation auth.
 | Service Account | `github-deployer@agentsmith-500916.iam.gserviceaccount.com` |
 | Artifact Registry | `oil-price-demo` (worker images), `agentsmith-portal` (portal images) |
 | Cloud Run | `oil-price-worker-staging`, `agentsmith-portal-staging`, `agentsmith-portal-production` |
-| Secret Manager | `ops-portal-user`, `ops-portal-password` (mounted via `--set-secrets`) |
+| Secret Manager | `ops-portal-user`, `ops-portal-password`, `ops-portal-db-url`, `ops-portal-audit-hmac-key`, `ops-portal-sync-token` (mounted via `--set-secrets`) |
 | Cloud SQL | `temporal-pg` (db-f1-micro — billable, tear down when done) |
 | Cloud Run | `temporal-server` (min-instances=1 — billable) |
 
@@ -504,6 +504,9 @@ via GitHub Actions with keyless Workload Identity Federation auth.
 6. **GHCR image name case** — `basename "${{ github.repository }}"` preserves original casing; GCR/AR require lowercase. Fixed with `| tr '[:upper:]' '[:lower:]'`.
 7. **`$GCP_PROJECT_ID` not available in `eval`** — must export as `env:` at the job level for the deploy shell to expand it.
 8. **Portal auth env vars missing** — portal refuses to serve without `OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD`; stored in Secret Manager, mounted via `--set-secrets` in `DEPLOY_COMMAND`.
+9. **`DATABASE_URL` not set** — `agenticframework` DB did not exist on Cloud SQL; had to create it, run schema migration via `psql`, and store the connection string as Secret Manager secret `ops-portal-db-url`. All remaining secrets (`AUDIT_LOG_HMAC_KEY`, `OPS_PORTAL_SYNC_TOKEN`) similarly created and wired.
+10. **SSL cert failure (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`)** — `node-postgres` with `sslmode=require` fails against Cloud SQL's Google-managed cert (not in Node's CA bundle). `sslmode=no-verify` is MITM-vulnerable and rejected. **Fixed via Cloud SQL Auth Proxy**: `--add-cloudsql-instances=agentsmith-500916:us-central1:temporal-pg` in `gcloud run deploy`; DATABASE_URL uses Unix socket `?host=/cloudsql/PROJECT:REGION:INSTANCE`. Compute SA granted `roles/cloudsql.client`.
+11. **Compute SA needs Secret Manager accessor** — `gcloud run deploy --set-secrets` resolves secrets using the Compute SA, not the deployer SA. Each new secret requires an explicit `gcloud secrets add-iam-policy-binding` for the Compute SA before deploy.
 
 ### New files
 

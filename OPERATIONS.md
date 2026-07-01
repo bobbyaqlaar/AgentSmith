@@ -1422,6 +1422,49 @@ Forgetting this update causes `unauthorized_client: The given credential is
 rejected by the attribute condition` for the new repo even if its WIF principal
 binding is correctly set.
 
+### D.5b-2 — Cloud SQL Auth Proxy for portal database (Cloud Run)
+
+When deploying a Next.js portal (or any app) to Cloud Run that needs to connect to Cloud SQL, **do not** configure TCP + SSL cert verification. Cloud Run natively supports the **Cloud SQL Auth Proxy** via the `--add-cloudsql-instances` flag — it injects a sidecar that creates a Unix socket, handles Google-managed mTLS transparently, and never exposes TCP.
+
+**Why not `sslmode=require` or `sslmode=no-verify`:**
+- `sslmode=require` with `node-postgres` attempts full leaf-cert chain verification; Cloud SQL's cert is Google-managed and not in Node's default CA bundle → `UNABLE_TO_VERIFY_LEAF_SIGNATURE`.
+- `sslmode=no-verify` skips verification entirely — MITM-vulnerable, not acceptable for production.
+
+**Correct approach — Cloud SQL Auth Proxy via Unix socket:**
+
+1. **Grant the Compute SA `roles/cloudsql.client`:**
+   ```bash
+   PROJECT_NUMBER=$(gcloud projects describe agentsmith-500916 --format='value(projectNumber)')
+   COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+   gcloud projects add-iam-policy-binding agentsmith-500916 \
+     --member="serviceAccount:${COMPUTE_SA}" \
+     --role="roles/cloudsql.client"
+   ```
+
+2. **Add `--add-cloudsql-instances` to the DEPLOY_COMMAND:**
+   ```bash
+   gcloud run deploy agentsmith-portal-staging \
+     --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID \
+     --platform managed --allow-unauthenticated \
+     --add-cloudsql-instances=agentsmith-500916:us-central1:temporal-pg \
+     --set-secrets=DATABASE_URL=ops-portal-db-url:latest,...
+   ```
+
+3. **DATABASE_URL must use the Unix socket path** (stored in Secret Manager, never hardcoded):
+   ```
+   postgresql://USER:PASSWORD@/DBNAME?host=/cloudsql/PROJECT:REGION:INSTANCE
+   # e.g.:
+   postgresql://postgres:***@/agenticframework?host=/cloudsql/agentsmith-500916:us-central1:temporal-pg
+   ```
+   No `sslmode` param needed — the proxy socket is always mutually authenticated.
+
+4. **Secret Manager accessor on Compute SA** — `gcloud run deploy --set-secrets` is resolved at deploy time by the Compute SA (not the deployer SA). Each new secret must grant the Compute SA accessor before deploy:
+   ```bash
+   gcloud secrets add-iam-policy-binding SECRET_NAME \
+     --member="serviceAccount:${COMPUTE_SA}" \
+     --role="roles/secretmanager.secretAccessor"
+   ```
+
 ### D.5c — Demo UI (Streamlit) — Cloud Run deployment
 
 The `demo/` directory in your tenant repo contains a Streamlit app (`demo/app.py`) that
