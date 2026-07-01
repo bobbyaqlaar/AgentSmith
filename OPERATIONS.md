@@ -788,6 +788,13 @@ gcloud iam service-accounts add-iam-policy-binding \
 
 # GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT are the same values
 # already set on the first repo — reuse them on the new repo's GitHub Environments.
+
+# ⚠️  Also update the provider's attribute-condition to include the new repo:
+gcloud iam workload-identity-pools providers update-oidc github-provider \
+  --project="$GCP_PROJECT_ID" --location=global \
+  --workload-identity-pool=github-actions-pool \
+  --attribute-condition="assertion.repository in ['$GITHUB_ORG/FIRST_REPO', '$GITHUB_ORG/$GITHUB_REPO']"
+# Without this update the new repo gets: unauthorized_client: rejected by attribute condition
 ```
 
 **Step 2 — Set secrets on both GitHub Environments (`staging` AND `production`):**
@@ -1390,13 +1397,30 @@ credential, just a project identifier) so `DEPLOY_COMMAND` can reference
 `$GCP_PROJECT_ID` without hardcoding it in the workflow YAML or in
 `runtime/models.yaml` (§29 "Cloud-Native Provider Adapters").
 
-**Live-verification status**: the Vertex AI *call path* itself was
-verified live against a real GCP project (`gemini-2.5-flash` via
+**Live-verification status**: the Vertex AI *call path* was verified
+live against a real GCP project (`gemini-2.5-flash` via
 `LLMGateway.complete(model_hint="vertex_gemini")` — §29). The
-`gcp-auth` composite action and the three worker-hosting options were
-not exercised end-to-end through an actual GitHub Actions run — verify
-the exact `gcloud`/`kubectl` invocations against your own project before
-relying on them in production CI/CD.
+`gcp-auth` composite action is now **fully verified end-to-end** through
+real GitHub Actions runs against GCP project `agentsmith-500916` on
+2026-07-01: both `bobbyaqlaar/oil-price-demo` and `bobbyaqlaar/AgentSmith`
+completed successful staging + production deploys to Cloud Run. The
+three worker-hosting options (Cloud Run, GKE, Compute Engine) have been
+exercised for Cloud Run only — verify `kubectl` invocations against your
+own project before relying on them.
+
+**Multi-repo WIF note:** the WIF provider's `--attribute-condition` is a
+single expression that applies to all repos bound to the pool. When adding
+a second repo to the same GCP project, update the condition from a single
+`==` to an `in` list:
+```bash
+gcloud iam workload-identity-pools providers update-oidc github-provider \
+  --project="$GCP_PROJECT_ID" --location=global \
+  --workload-identity-pool=github-actions-pool \
+  --attribute-condition="assertion.repository in ['ORG/REPO1', 'ORG/REPO2']"
+```
+Forgetting this update causes `unauthorized_client: The given credential is
+rejected by the attribute condition` for the new repo even if its WIF principal
+binding is correctly set.
 
 ### D.5c — Demo UI (Streamlit) — Cloud Run deployment
 

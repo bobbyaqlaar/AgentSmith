@@ -467,6 +467,52 @@ they are not re-litigated.
 
 ---
 
-*Active work lives in `FIXES_AND_CLEANUP.md` (Future Phases — P10 is complete).
+## P11 — GCP CI/CD deploy: oil-price-demo + AgentSmith Ops Portal ✅ done (2026-07-01)
+
+### What was built
+
+Full end-to-end deploy of two repos to GCP Cloud Run (`agentsmith-500916`, us-central1)
+via GitHub Actions with keyless Workload Identity Federation auth.
+
+| Item | Status |
+|---|---|
+| oil-price-demo CI green (PR #1 `develop → main`) | ✅ merged |
+| AgentSmith docs PR #18 | ✅ merged |
+| oil-price-demo production CD (worker → Cloud Run) | ✅ deployed |
+| AgentSmith Ops Portal staging + production (Next.js → Cloud Run via AR) | ✅ deployed |
+
+### GCP resources (project: `agentsmith-500916`, us-central1)
+
+| Resource | Name / Detail |
+|---|---|
+| WIF pool | `github-actions-pool` / provider `github-provider` |
+| WIF attribute condition | `assertion.repository in ['bobbyaqlaar/oil-price-demo', 'bobbyaqlaar/AgentSmith']` |
+| Service Account | `github-deployer@agentsmith-500916.iam.gserviceaccount.com` |
+| Artifact Registry | `oil-price-demo` (worker images), `agentsmith-portal` (portal images) |
+| Cloud Run | `oil-price-worker-staging`, `agentsmith-portal-staging`, `agentsmith-portal-production` |
+| Secret Manager | `ops-portal-user`, `ops-portal-password` (mounted via `--set-secrets`) |
+| Cloud SQL | `temporal-pg` (db-f1-micro — billable, tear down when done) |
+| Cloud Run | `temporal-server` (min-instances=1 — billable) |
+
+### Key bugs fixed (do not repeat)
+
+1. **Groq 429 thundering herd** — `(2**attempt)*5 + random.uniform(0, 3)` jitter required; plain `2**n * 5` re-saturates the rate window.
+2. **Global hook file** — pre-commit hook runs `~/.agent-framework/scripts/check_bare_except.py`, not the repo-local copy. Always update both.
+3. **`return 2` for skip-gracefully** — any non-zero exit fails the CI `run:` step. Graceful skip = `return 0`.
+4. **WIF attribute condition is single expression** — adding a second repo requires updating the condition from `== 'repo1'` to `in ['repo1', 'repo2']`.
+5. **GHCR images rejected by Cloud Run** — Cloud Run only accepts Artifact Registry / GCR / Docker Hub. Must re-push to AR before `gcloud run deploy`.
+6. **GHCR image name case** — `basename "${{ github.repository }}"` preserves original casing; GCR/AR require lowercase. Fixed with `| tr '[:upper:]' '[:lower:]'`.
+7. **`$GCP_PROJECT_ID` not available in `eval`** — must export as `env:` at the job level for the deploy shell to expand it.
+8. **Portal auth env vars missing** — portal refuses to serve without `OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD`; stored in Secret Manager, mounted via `--set-secrets` in `DEPLOY_COMMAND`.
+
+### New files
+
+| File | Purpose |
+|---|---|
+| `.github/workflows/cd-portal.yml` | CD for Ops Portal: GHCR build → AR re-push → Cloud Run deploy (staging + production) |
+| `.github/actions/gcp-auth/action.yml` | Composite: WIF keyless auth + optional SA key fallback; graceful skip when secrets absent |
+| `.github/actions/build-push-ghcr/action.yml` | Composite: multi-stage Docker build → GHCR push; skips cleanly if no Dockerfile |
+
+*Active work lives in `FIXES_AND_CLEANUP.md` (P11d demo publication pending).
 SPECS.md and Readme.md are the canonical specification record.
 OPERATIONS.md is the canonical operator-facing reference.*

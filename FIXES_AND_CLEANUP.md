@@ -77,15 +77,15 @@ applies only when cloning FROM WITHIN the AgentSmith directory.
 
 ---
 
-### P11b — GCP secrets on oil-price-demo GitHub Environments ✅ DONE
+### P11b — GCP resources + oil-price-demo GitHub Environments ✅ DONE
 
-Secrets set on both `staging` and `production` environments in
-`bobbyaqlaar/oil-price-demo` → Settings → Environments:
+**oil-price-demo GitHub Environments** (`bobbyaqlaar/oil-price-demo` → Settings → Environments):
 
 | Secret | staging | production |
 |---|---|---|
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | ✅ set | ✅ set |
 | `GCP_SERVICE_ACCOUNT` | ✅ set | ✅ set |
+| `GCP_PROJECT_ID` | ✅ set | ✅ set |
 | `DEPLOY_COMMAND` | ✅ Cloud Run deploy cmd | ✅ set |
 | `GROQ_API_KEY` | ✅ set | ✅ set |
 | `AGENT_MODEL_ARCHITECT` | ✅ `llama-3.3-70b-versatile` | ✅ set |
@@ -96,23 +96,46 @@ Secrets set on both `staging` and `production` environments in
 **GCP resources provisioned (project: `agentsmith-500916`, us-central1):**
 - Cloud SQL Postgres: `temporal-pg` (db-f1-micro, public IP `35.255.14.25`, ssl-mode=ENCRYPTED_ONLY)
 - Cloud Run: `temporal-server` (min-instances=1, BIND_ON_IP=0.0.0.0, SQL_TLS_ENABLED=true)
-- Cloud Run: `oil-price-worker-staging` (deployed, /healthz 404 anomaly — under investigation, not blocking)
+- Cloud Run: `oil-price-worker-staging` (deployed; /healthz 404 anomaly under investigation, not blocking)
 - Artifact Registry: `oil-price-demo` repo
+- Artifact Registry: `agentsmith-portal` repo (portal images)
 - WIF pool: `github-actions-pool` / provider `github-provider`
+  - **Attribute condition:** `assertion.repository in ['bobbyaqlaar/oil-price-demo', 'bobbyaqlaar/AgentSmith']`
+    (updated from single-repo `==` to multi-repo `in [...]` when second repo was added)
 - SA: `github-deployer@agentsmith-500916.iam.gserviceaccount.com`
-- Secret Manager: `oil-price-demo-anthropic-key`
+- Secret Manager: `oil-price-demo-anthropic-key`, `ops-portal-user`, `ops-portal-password`
+  (portal credentials mounted on Cloud Run services via `--set-secrets`)
 
-**Pending:** Verify staging deploy green end-to-end on PR #1, merge to main,
-then tear down billable GCP resources (Cloud SQL `temporal-pg` is ~$7–10/month).
+**oil-price-demo PR #1 merged to main** ✅ Production CD deployed successfully ✅
+
+**Pending:** Tear down billable GCP resources once end-to-end verified (Cloud SQL `temporal-pg` is ~$7–10/month).
 
 ---
 
-### P11c — GCP secrets on AgentSmith framework repo 🟡 IF DEPLOYING FRAMEWORK ITSELF
+### P11c — AgentSmith Ops Portal deployed to GCP ✅ DONE (2026-07-01)
 
-If you want the AgentSmith CI/CD workflows (in the framework repo) to also deploy to GCP:
-Same secrets as P11b above, set on the AgentSmith repo's GitHub Environments.
-The `.github/actions/gcp-auth` composite action is already wired into
-`workflow-templates/cd-staging.yml` and `workflow-templates/cd-production.yml`.
+**AgentSmith GitHub Environments** (`bobbyaqlaar/AgentSmith` → Settings → Environments):
+
+| Secret | staging | production |
+|---|---|---|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | ✅ set | ✅ set |
+| `GCP_SERVICE_ACCOUNT` | ✅ `github-deployer@agentsmith-500916.iam.gserviceaccount.com` | ✅ set |
+| `GCP_PROJECT_ID` | ✅ set | ✅ set |
+| `DEPLOY_COMMAND` (staging) | ✅ `gcloud run deploy agentsmith-portal-staging --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID --platform managed --allow-unauthenticated --set-secrets=OPS_PORTAL_USER=ops-portal-user:latest,OPS_PORTAL_PASSWORD=ops-portal-password:latest` | ✅ production equivalent |
+
+**Live Cloud Run services:**
+- Staging: https://agentsmith-portal-staging-431995395208.us-central1.run.app
+- Production: https://agentsmith-portal-production-431995395208.us-central1.run.app
+- Credentials: `ops` / stored in Secret Manager `ops-portal-password`
+
+**Fixes applied during portal deploy (do not repeat):**
+1. WIF attribute condition was locked to `oil-price-demo` only — updated to `in [...]` list.
+2. `build-push-ghcr` action defaulted to root `Dockerfile` (absent) — added `dockerfile_path: portal/Dockerfile` in `cd-portal.yml`.
+3. GHCR image name preserved repo casing (`AgentSmith`) — added `| tr '[:upper:]' '[:lower:]'` to `build-push-ghcr/action.yml`.
+4. Cloud Run rejects GHCR images — added "Push to Artifact Registry" step in `cd-portal.yml` that retags and pushes before `gcloud run deploy`.
+5. `DEPLOY_COMMAND` referenced `$GCP_PROJECT_ID` but it wasn't exported — added `env: GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}` at the job level.
+6. `GCP_SERVICE_ACCOUNT` secret had wrong value — corrected to `github-deployer@agentsmith-500916.iam.gserviceaccount.com`.
+7. Portal startup check requires `OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD` — created Secret Manager secrets and wired via `--set-secrets` in `DEPLOY_COMMAND`.
 
 ---
 

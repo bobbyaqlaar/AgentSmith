@@ -133,7 +133,13 @@ Set these in **Settings → Secrets and variables → Actions** for each tenant 
 | `AGENT_PHOENIX_ENDPOINT` | Trace export from CI (optional — CI still passes without it) |
 | `OPS_PORTAL_URL` | CD → portal history sync |
 | `OPS_PORTAL_SYNC_TOKEN` | CD → portal history sync |
-| `DEPLOY_COMMAND` | Actual deploy step (platform-specific — Fly, Railway, ECS, etc.) |
+| `DEPLOY_COMMAND` | Actual deploy step (platform-specific — Fly, Railway, ECS, GCP Cloud Run, etc.) |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | GCP Cloud Run deploys — keyless WIF auth (preferred over SA key) |
+| `GCP_SERVICE_ACCOUNT` | GCP Cloud Run deploys — SA email used with WIF |
+| `GCP_PROJECT_ID` | GCP Cloud Run deploys — referenced in `DEPLOY_COMMAND` as `$GCP_PROJECT_ID` |
+
+Set on **GitHub Environments** (`staging` / `production`), not at the repo level, so each environment
+can target a different GCP project or service. See OPERATIONS.md §D.5b for the one-time WIF setup.
 
 ---
 
