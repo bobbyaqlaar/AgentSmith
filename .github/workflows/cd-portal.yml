@@ -28,6 +28,8 @@ jobs:
       contents: read
       id-token: write
       packages: write
+    outputs:
+      ar_image: ${{ steps.ar-push.outputs.ar_image }}
 
     steps:
       - name: Checkout
@@ -47,14 +49,18 @@ jobs:
           context: portal
 
       - name: Push to Artifact Registry
+        id: ar-push
         run: |
           [[ -z "$GCP_PROJECT_ID" ]] && { echo "❌ GCP_PROJECT_ID is not set — check the GitHub Environment secret."; exit 1; }
-          ar_ref="us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/agentsmith-portal/portal:$(git rev-parse --short HEAD)"
+          ar_tag="us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/agentsmith-portal/portal:$(git rev-parse --short HEAD)"
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
           docker pull "${{ steps.image.outputs.image_ref }}"
-          docker tag "${{ steps.image.outputs.image_ref }}" "$ar_ref"
-          docker push "$ar_ref"
-          echo "IMAGE_REF=$ar_ref" >> "$GITHUB_ENV"
+          docker tag "${{ steps.image.outputs.image_ref }}" "$ar_tag"
+          docker push "$ar_tag"
+          # Capture digest so production can pull the exact same image bytes
+          digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$ar_tag")
+          echo "ar_image=${digest}" >> "$GITHUB_OUTPUT"
+          echo "IMAGE_REF=$ar_tag" >> "$GITHUB_ENV"
 
       - name: Deploy to staging
         uses: ./.github/actions/deploy-placeholder
@@ -73,7 +79,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      packages: write
 
     steps:
       - name: Checkout
@@ -85,22 +90,17 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      - name: Build & push container image
-        id: image
-        uses: ./.github/actions/build-push-ghcr
-        with:
-          dockerfile_path: portal/Dockerfile
-          context: portal
-
-      - name: Push to Artifact Registry
+      - name: Promote staging image to production
         run: |
           [[ -z "$GCP_PROJECT_ID" ]] && { echo "❌ GCP_PROJECT_ID is not set — check the GitHub Environment secret."; exit 1; }
-          ar_ref="us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/agentsmith-portal/portal:$(git rev-parse --short HEAD)"
+          ar_digest="${{ needs.deploy-staging.outputs.ar_image }}"
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-          docker pull "${{ steps.image.outputs.image_ref }}"
-          docker tag "${{ steps.image.outputs.image_ref }}" "$ar_ref"
-          docker push "$ar_ref"
-          echo "IMAGE_REF=$ar_ref" >> "$GITHUB_ENV"
+          # Retag the exact staging-built digest as the production tag (no rebuild)
+          prod_tag="us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/agentsmith-portal/portal:$(git rev-parse --short HEAD)-prod"
+          docker pull "$ar_digest"
+          docker tag "$ar_digest" "$prod_tag"
+          docker push "$prod_tag"
+          echo "IMAGE_REF=$prod_tag" >> "$GITHUB_ENV"
 
       - name: Deploy to production
         uses: ./.github/actions/deploy-placeholder
