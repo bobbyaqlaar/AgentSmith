@@ -10,6 +10,7 @@ on:
     paths:
       - "portal/**"
       - ".github/workflows/cd-portal.yml"
+  workflow_dispatch:
 
 concurrency:
   group: cd-portal-${{ github.ref }}
