@@ -75,7 +75,7 @@ runs:
           exit 0
         fi
         name="${{ inputs.image_name }}"
-        if [ -z "$name" ]; then name="$(basename "${{ github.repository }}")"; fi
+        if [ -z "$name" ]; then name="$(basename "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"; fi
         tag="${{ inputs.tag }}"
         if [ -z "$tag" ]; then tag="$(git rev-parse --short HEAD)"; fi
         owner="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
