@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: staging
+    env:
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
     permissions:
       contents: read
       id-token: write
@@ -40,6 +42,9 @@ jobs:
       - name: Build & push container image
         id: image
         uses: ./.github/actions/build-push-ghcr
+        with:
+          dockerfile_path: portal/Dockerfile
+          context: portal
 
       - name: Deploy to staging
         uses: ./.github/actions/deploy-placeholder
@@ -55,6 +60,8 @@ jobs:
     timeout-minutes: 20
     environment: production
     needs: deploy-staging
+    env:
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
     permissions:
       contents: read
       id-token: write
@@ -73,6 +80,9 @@ jobs:
       - name: Build & push container image
         id: image
         uses: ./.github/actions/build-push-ghcr
+        with:
+          dockerfile_path: portal/Dockerfile
+          context: portal
 
       - name: Deploy to production
         uses: ./.github/actions/deploy-placeholder
