@@ -715,6 +715,138 @@ the tenant's GitHub Environment to wire in your platform; unset, it no-ops
 and prints platform-specific guidance (Fly/Railway/ECS/GCP Run). See §D.5
 for the exact commands and the GHCR image-build step that runs before it.
 
+---
+
+**GCP deploy — step-by-step checklist (Cloud Run, any tenant):**
+
+This is the copy-pasteable path to get both the worker and the demo UI running on Cloud Run.
+The variables you need to substitute are listed at the top — set them once and all commands
+below use them automatically.
+
+```
+YOUR_GCP_PROJECT_ID   — your GCP project ID (e.g. my-project-123)
+YOUR_GITHUB_ORG       — GitHub org or username that owns the tenant repo (e.g. acme-corp)
+YOUR_GITHUB_REPO      — tenant repo name (e.g. oil-price-demo)
+YOUR_WORKER_SERVICE   — Cloud Run service name for the worker (e.g. oil-price-worker-staging)
+YOUR_UI_SERVICE       — Cloud Run service name for the demo UI (e.g. oil-price-demo-ui)
+YOUR_TENANT_ID        — value of TENANT_ID env var in the worker (e.g. oil-price-demo)
+YOUR_TEMPORAL_HOST    — host:port of your running Temporal server (e.g. temporal.example.com:7233)
+YOUR_REGION           — Cloud Run region (e.g. us-central1)
+```
+
+**Step 1 — WIF setup (run once per GCP project; add a repo binding per additional repo):**
+
+WIF is set up at the GCP project level, not per repo. If you are deploying a second repo
+to the same GCP project (e.g. `oil-price-demo` to the same project as `AgentSmith`),
+skip the pool/provider/SA creation and only run the **repo binding** command — the pool,
+provider, and service account roles already exist.
+
+*First repo on this GCP project (full setup):*
+```bash
+export GCP_PROJECT_ID=YOUR_GCP_PROJECT_ID
+export GCP_PROJECT_NUMBER=$(gcloud projects describe $GCP_PROJECT_ID --format='value(projectNumber)')
+export GITHUB_ORG=YOUR_GITHUB_ORG
+export GITHUB_REPO=YOUR_GITHUB_REPO
+
+gcloud iam workload-identity-pools create "github-actions-pool" \
+  --project="$GCP_PROJECT_ID" --location="global"
+
+gcloud iam workload-identity-pools providers create-oidc "github-provider" \
+  --project="$GCP_PROJECT_ID" --location="global" \
+  --workload-identity-pool="github-actions-pool" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository"
+
+gcloud iam service-accounts create "github-deployer" --project="$GCP_PROJECT_ID"
+
+gcloud iam service-accounts add-iam-policy-binding \
+  "github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
+  --project="$GCP_PROJECT_ID" --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/$GITHUB_ORG/$GITHUB_REPO"
+
+for ROLE in roles/run.admin roles/artifactregistry.writer roles/iam.serviceAccountUser roles/aiplatform.user; do
+  gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+    --member="serviceAccount:github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="$ROLE"
+done
+
+# Copy this output — it becomes GCP_WORKLOAD_IDENTITY_PROVIDER in Step 2:
+echo "projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
+```
+
+*Additional repo on the same GCP project (repo binding only):*
+```bash
+export GCP_PROJECT_ID=YOUR_GCP_PROJECT_ID
+export GCP_PROJECT_NUMBER=$(gcloud projects describe $GCP_PROJECT_ID --format='value(projectNumber)')
+export GITHUB_ORG=YOUR_GITHUB_ORG
+export GITHUB_REPO=YOUR_GITHUB_REPO   # the new repo to authorize
+
+gcloud iam service-accounts add-iam-policy-binding \
+  "github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
+  --project="$GCP_PROJECT_ID" --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/$GITHUB_ORG/$GITHUB_REPO"
+
+# GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT are the same values
+# already set on the first repo — reuse them on the new repo's GitHub Environments.
+```
+
+**Step 2 — Set secrets on both GitHub Environments (`staging` AND `production`):**
+
+Go to: **https://github.com/YOUR_GITHUB_ORG/YOUR_GITHUB_REPO/settings/environments**
+
+Create `staging` and `production` environments (if they don't exist), then on each add:
+
+| Secret | Value |
+|---|---|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | output of the `echo` command in Step 1 |
+| `GCP_SERVICE_ACCOUNT` | `github-deployer@YOUR_GCP_PROJECT_ID.iam.gserviceaccount.com` |
+| `GCP_PROJECT_ID` | `YOUR_GCP_PROJECT_ID` |
+| `DEPLOY_COMMAND` (staging) | `gcloud run deploy YOUR_WORKER_SERVICE --source . --region YOUR_REGION --project $GCP_PROJECT_ID --no-cpu-throttling --min-instances=1 --port=8080 --set-env-vars TENANT_ID=YOUR_TENANT_ID,TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST` |
+| `DEPLOY_COMMAND` (production) | same, with the production service name substituted |
+| `AGENT_MODEL_ARCHITECT` | `openai/gpt-oss-120b` (avoids Groq rate limits in eval) |
+
+**Step 3 — Trigger the deploy:**
+
+Push any commit to `develop` (or re-run the CD workflow manually in GitHub Actions):
+
+```bash
+# GitHub → YOUR_GITHUB_REPO → Actions → CD: Staging Deploy → Re-run all jobs
+```
+
+The `cd-staging.yml` workflow: authenticates via WIF → builds the worker image → deploys
+`YOUR_WORKER_SERVICE` to Cloud Run.
+
+The `cd-demo-ui.yml` workflow: authenticates via WIF → builds the demo UI from
+`demo/Dockerfile` → deploys `YOUR_UI_SERVICE` to Cloud Run.
+
+**Step 4 — Get the service URLs:**
+
+```bash
+gcloud run services describe YOUR_WORKER_SERVICE \
+  --region YOUR_REGION --project YOUR_GCP_PROJECT_ID --format="value(status.url)"
+
+gcloud run services describe YOUR_UI_SERVICE \
+  --region YOUR_REGION --project YOUR_GCP_PROJECT_ID --format="value(status.url)"
+```
+
+**Step 5 — Smoke test the demo UI:**
+
+Open the `YOUR_UI_SERVICE` Cloud Run URL in a browser. Select the **HITL — price spike**
+preset and click **Start Workflow**. The UI should show the workflow running → pause for
+HITL approval → display the result after you click **Approve**. See §D.5c for the full
+HITL flow and what each button does.
+
+**Step 6 — Promote to production:**
+
+Once staging is verified:
+```bash
+# Open a develop → main PR and merge it
+# cd-production.yml fires automatically, deploying the production worker service
+# Update DEPLOY_COMMAND on the production environment to use the production service name
+```
+
+---
+
 **On-premise / air-gapped (no cloud):**
 
 ```bash
@@ -735,9 +867,19 @@ high-compliance customers, and air-gapped image bundling.
 |---|---|---|
 | **Phoenix** | This tenant's traces, evals, HITL annotation queue | `http://localhost:6006` (or your team server) |
 | **Ops Portal** | Cross-tenant cost/spend + cap, real run status (incl. **Working**/in-progress), Phoenix error rate, per-tenant DLQ triage (edit/Replay/Discard), shadow-eval suggested promotions, signed audit log | `https://ops.example.com` (Part E) |
+| **Demo UI (Streamlit)** | GUI for submitting oil-price workflows, viewing status, approving/rejecting HITL, seeing results — connects to the live Temporal server | Cloud Run: get URL via `gcloud run services describe YOUR_UI_SERVICE --region YOUR_REGION --project YOUR_GCP_PROJECT_ID --format="value(status.url)"` |
 | **`.agent-history.log`** | Local append-only event log this tenant repo produces | `ai-stack-check` surfaces unresolved entries from it |
 | **In-App Widget** | End-user-facing status badge (own tenant only, token-scoped) | embedded in the tenant's own app (Part F) |
 | **GitHub Actions** | CI/CD run history, eval scorecard artifacts per run | the tenant repo's Actions tab |
+
+**Demo UI quick-test after deploy:**
+1. Open the `YOUR_UI_SERVICE` Cloud Run URL
+2. Sidebar → pick **HITL — price spike** preset → click **Start Workflow**
+3. Status refreshes automatically — workflow pauses at HITL gate
+4. Click **Approve** → workflow completes → result (prediction, confidence, anomaly=True) appears in run history
+
+**CLI alternative (no UI):** `scripts/resolve_hitl.py` in the oil-price-demo repo does
+the same HITL signal from the terminal — useful for scripting or when the UI isn't deployed yet.
 
 Day-to-day operational tasks (rotating tokens/keys, checking unresolved
 issues, upgrading the framework version) are in [§10 Day-2 Operations](#10-day-2-operations).
@@ -1229,18 +1371,18 @@ authenticated when `DEPLOY_COMMAND` executes:
 
 ```bash
 # Cloud Run (worker.py already has /healthz — OPERATIONS.md §D.5b):
-DEPLOY_COMMAND = "gcloud run deploy oil-price-worker-staging \
+DEPLOY_COMMAND = "gcloud run deploy YOUR_WORKER_SERVICE \
   --image $IMAGE_REF \
-  --region us-central1 \
+  --region YOUR_REGION \
   --project $GCP_PROJECT_ID \
   --no-cpu-throttling \
   --min-instances=1 \
   --port=8080 \
-  --set-env-vars TENANT_ID=oil-price-demo,TEMPORAL_ADDRESS=<your-temporal-host>:7233,TEMPORAL_TLS=true"
+  --set-env-vars TENANT_ID=YOUR_TENANT_ID,TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST,TEMPORAL_TLS=true"
 
 # GKE (Deployment must already exist — this just rolls the new image):
-DEPLOY_COMMAND = "gcloud container clusters get-credentials <cluster> --region us-central1 --project $GCP_PROJECT_ID \
-  && kubectl set image deployment/oil-price-worker worker=$IMAGE_REF"
+DEPLOY_COMMAND = "gcloud container clusters get-credentials YOUR_CLUSTER --region YOUR_REGION --project $GCP_PROJECT_ID \
+  && kubectl set image deployment/YOUR_WORKER_DEPLOYMENT worker=$IMAGE_REF"
 ```
 
 Set `GCP_PROJECT_ID` as a GitHub Environment variable (not secret — no
@@ -1255,6 +1397,84 @@ verified live against a real GCP project (`gemini-2.5-flash` via
 not exercised end-to-end through an actual GitHub Actions run — verify
 the exact `gcloud`/`kubectl` invocations against your own project before
 relying on them in production CI/CD.
+
+### D.5c — Demo UI (Streamlit) — Cloud Run deployment
+
+The `demo/` directory in your tenant repo contains a Streamlit app (`demo/app.py`) that
+provides a GUI frontend for the pipeline. It connects directly to the **live** Temporal
+server — it is not a simulation. No changes to the existing Temporal worker, Postgres, or
+Ops Portal setup are required; the demo app is a thin UI layer on top.
+
+**Architecture:**
+```
+Browser → Streamlit (Cloud Run: YOUR_UI_SERVICE)
+              │
+              ├── temporalio.client → Temporal server (start workflow, poll, signal)
+              └── (no direct DB — reads Temporal workflow state only)
+```
+
+**Environment variables (set via `--set-env-vars` or Cloud Run console):**
+
+| Variable | Default | Notes |
+|---|---|---|
+| `TEMPORAL_ADDRESS` | `localhost:7233` | Override to point at your live Temporal server |
+| `TEMPORAL_TLS` | `` (empty) | Set to `"1"` if Temporal server uses TLS |
+| `TENANT_ID` | *(required)* | Must match the tenant ID registered in the worker |
+| `PORT` | `8080` | Set automatically by Cloud Run |
+
+**CD workflow:** `.github/workflows/cd-demo-ui.yml` deploys on push to `develop`/`main`
+when any file under `demo/**` changes. It uses the `gcp-auth` composite action (same WIF
+flow as the worker CD) and runs:
+```bash
+gcloud run deploy YOUR_UI_SERVICE \
+  --source . \
+  --dockerfile demo/Dockerfile \
+  --region YOUR_REGION \
+  --project $GCP_PROJECT_ID \
+  --allow-unauthenticated \
+  --port 8080 \
+  --set-env-vars TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST,TENANT_ID=YOUR_TENANT_ID
+```
+
+**Manual deploy** (once GCP secrets are set on the `staging` environment):
+```bash
+# From inside the tenant repo root
+gcloud run deploy YOUR_UI_SERVICE \
+  --source . \
+  --dockerfile demo/Dockerfile \
+  --region YOUR_REGION \
+  --project YOUR_GCP_PROJECT_ID \
+  --allow-unauthenticated \
+  --port 8080 \
+  --set-env-vars TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST,TENANT_ID=YOUR_TENANT_ID
+```
+
+**Get the service URL after deploy:**
+```bash
+gcloud run services describe YOUR_UI_SERVICE \
+  --region YOUR_REGION --project YOUR_GCP_PROJECT_ID \
+  --format="value(status.url)"
+```
+
+**HITL flow via the demo UI:**
+1. Enter a price series (or pick a preset from the sidebar) → click **Start Workflow**
+2. The Streamlit app calls `client.start_workflow("OilPricePredictionWorkflow", ...)`
+3. Status auto-refreshes — when the workflow halts for HITL approval, an
+   **Approve / Reject** panel appears
+4. Clicking Approve/Reject sends `handle.signal("hitl_approved", True/False)` —
+   identical to what `scripts/resolve_hitl.py` does from the CLI
+5. The workflow completes; the result (prediction, confidence, anomaly flag) is
+   displayed in the run history table
+
+**Spike preset:** uses series `[70.0, 70.1, 69.9, 70.0, 70.1, 70.0, 70.2, 69.8, 70.1, 70.0, 110.0]`
+(10 stable values ~70 then spike to 110). This definitively exceeds the 3σ anomaly threshold
+because the stable prefix keeps mean and σ tight — a short series with the outlier included
+inflates σ and can mask the spike.
+
+**Prerequisites:** GCP secrets must be set on the `staging` GitHub Environment (P11b in
+`FIXES_AND_CLEANUP.md`) before the CD workflow can deploy. See §D.5b for the WIF setup.
+
+---
 
 ### D.6 — On-premise / air-gapped deployment
 
