@@ -793,7 +793,7 @@ gcloud iam service-accounts add-iam-policy-binding \
 gcloud iam workload-identity-pools providers update-oidc github-provider \
   --project="$GCP_PROJECT_ID" --location=global \
   --workload-identity-pool=github-actions-pool \
-  --attribute-condition="assertion.repository in ['$GITHUB_ORG/FIRST_REPO', '$GITHUB_ORG/$GITHUB_REPO']"
+  --attribute-condition="assertion.repository in ['$GITHUB_ORG/YOUR_EXISTING_REPO', '$GITHUB_ORG/$GITHUB_REPO']"
 # Without this update the new repo gets: unauthorized_client: rejected by attribute condition
 ```
 

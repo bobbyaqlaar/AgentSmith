@@ -7,7 +7,7 @@ build history lives in `Product_Archive.md`.
 
 ---
 
-## P11 — GCP deployment + oil-price-demo CI green + demo publication 🔴 IN PROGRESS
+## P11 — GCP deployment + oil-price-demo CI green + demo publication 🟡 P11a/b/c DONE · P11d NOT STARTED
 
 **Goal:** Deploy AgentSmith framework and oil-price-demo (tenant: `bobbyaqlaar/oil-price-demo`)
 to GCP via GitHub Actions CI/CD, then publish a demo + article series
@@ -110,7 +110,7 @@ applies only when cloning FROM WITHIN the AgentSmith directory.
 
 **oil-price-demo PR #1 merged to main** ✅ Production CD deployed successfully ✅
 
-**Pending:** Tear down billable GCP resources once end-to-end verified (Cloud SQL `temporal-pg` is ~$7–10/month).
+**Billable resources — explicitly deferred:** Cloud SQL `temporal-pg` (~$7–10/month) and `temporal-server` Cloud Run (min-instances=1) remain live to support the P11d demo publication. Tear down after demo article is published. Owner: Bobby.
 
 ---
 
@@ -126,6 +126,7 @@ applies only when cloning FROM WITHIN the AgentSmith directory.
 | `DEPLOY_COMMAND` (staging) | ✅ see full command below | ✅ production equivalent |
 
 **Current DEPLOY_COMMAND (staging):**
+> ⚠️ `$IMAGE_REF` and `$GCP_PROJECT_ID` are set as env vars by the `cd-portal.yml` workflow steps before this command runs. This command cannot be pasted into a terminal as-is — those variables will be empty outside the GitHub Actions job context.
 ```
 gcloud run deploy agentsmith-portal-staging \
   --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID \

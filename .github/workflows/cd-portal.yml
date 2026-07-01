@@ -48,6 +48,7 @@ jobs:
 
       - name: Push to Artifact Registry
         run: |
+          [[ -z "$GCP_PROJECT_ID" ]] && { echo "❌ GCP_PROJECT_ID is not set — check the GitHub Environment secret."; exit 1; }
           ar_ref="us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/agentsmith-portal/portal:$(git rev-parse --short HEAD)"
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
           docker pull "${{ steps.image.outputs.image_ref }}"
@@ -93,6 +94,7 @@ jobs:
 
       - name: Push to Artifact Registry
         run: |
+          [[ -z "$GCP_PROJECT_ID" ]] && { echo "❌ GCP_PROJECT_ID is not set — check the GitHub Environment secret."; exit 1; }
           ar_ref="us-central1-docker.pkg.dev/${GCP_PROJECT_ID}/agentsmith-portal/portal:$(git rev-parse --short HEAD)"
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
           docker pull "${{ steps.image.outputs.image_ref }}"
