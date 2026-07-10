@@ -987,7 +987,6 @@ See **[OPERATIONS.md](./OPERATIONS.md)** for the full step-by-step: install, run
 - **[docs/iso-42001-control-map.md](./docs/iso-42001-control-map.md)** — ISO/IEC 42001 thematic control map + auditor evidence checklist
 - **[docs/delivery-model.md](./docs/delivery-model.md)** — Enterprise Delivery Model catalog, soft gate, promote evidence pack
 - **[docs/rag-memory.md](./docs/rag-memory.md)** — Conversation memory + vector RAG substrate (v1)
-- **[DemoScript.md](./DemoScript.md)** — Live demo script (framework + GCP + **UAE compliance** beats)
 
 ---
 
@@ -1005,7 +1004,6 @@ AgentSmith/
 ├── examples/oil-price-agent/  # Reference tenant app (fork per customer, never deploy from here)
 ├── fixtures/                  # Golden / fairness / hallucination base fixtures + judge criteria
 ├── docs/                      # uae-regulatory, iso-42001, delivery-model, rag-memory, specs/plans
-├── DemoScript.md              # Live demo script (incl. UAE compliance beats)
 ├── caddy/                     # Phoenix auth sidecar config
 ├── docker-compose.yml         # Team-shared Phoenix + PostgreSQL
 ├── docker-compose.auth.yml    # Optional overlay: HTTP basic auth in front of Phoenix

@@ -1078,7 +1078,6 @@ AgentSmith/
 │   ├── delivery-model.md
 │   ├── rag-memory.md
 │   └── superpowers/             # Design specs + implementation plans
-├── DemoScript.md                # Live demo (incl. UAE compliance beats)
 ├── .github/
 │   └── workflows/
 │       ├── self-test.yml        # py_compile/shellcheck/portal/widget tests on the framework itself
