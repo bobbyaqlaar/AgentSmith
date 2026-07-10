@@ -20,7 +20,7 @@ concrete catalogs, soft gates, and promote-time **artifacts**.
 | 1 | Pre-approved envs, data access, security, deploy pipelines | Platform catalog in org policy + tenant `delivery.platform` |
 | 2 | Rules in the delivery process, not after | Hooks, eval/redaction CD gates, soft Delivery Model check, evidence pack |
 | 3 | Compliance via logs/artifacts | Audit log, Phoenix, eval/fairness scorecards, `delivery_evidence.*` |
-| 4 | Standard RAG functions | Memory / vector Future Phase — not this pack |
+| 4 | Standard RAG functions | v1: [`docs/rag-memory.md`](./rag-memory.md) — conversation memory + vector store |
 
 ---
 
@@ -103,4 +103,4 @@ Hand these to reviewers with ISO/UAE packs — not a slide deck of intended cont
 | 1 Approved platform | Soft `--check-delivery-model` | org-policy + tenant.yaml |
 | 2 In-process rules | Pre-commit, RFC (enterprise), eval CD, redaction CD, input guardrail | CI logs |
 | 3 Evidence not slides | `delivery_evidence.py`, audit API, Phoenix | `delivery_evidence.md/json`, scorecards |
-| 4 RAG | Memory Future Phase | (not yet) |
+| 4 | RAG | Memory v1 (`docs/rag-memory.md`) | `vector_store.query` hits; tenant wires into prompt |

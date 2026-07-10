@@ -277,19 +277,16 @@ code *from the graph alone*:
   files is what keeps a fresh session's context lean enough to actually
   reason (the §3 "Headroom" guardrail).
 
-**Still genuinely absent** (the other two thirds of this layer): there is
-no short-term **conversation/token-window** manager
-(truncation/summarization/sliding-window) anywhere in this repo, and no
-**semantic / vector** retrieval (Chroma/pgvector/Pinecone or otherwise) —
-the graph is structured lookup, not embedding similarity. Two things that
-are present but are *not* this layer and shouldn't be confused with it:
-Temporal's durable-execution event history (workflow *progress* survives a
-crash — `runtime/workflows/base_workflow.py`) and LangGraph's `PostgresSaver`
-checkpointer in `scripts/multi_agent_system.py` (dev/hybrid mode only —
-`MemorySaver` is prohibited in production, SPECS.md §25). If your tenant app
-needs conversation memory or vector retrieval, build it as its own
-component — see FIXES_AND_CLEANUP.md "Memory Management" for the intended
-shape — rather than assuming one is implied here.
+**Also shipped (v1 RAG substrate):** short-term
+`runtime/conversation_memory.py` (token-budget truncate-oldest) and
+long-term `runtime/vector_store.py` + `runtime/embeddings.py` (in-memory
+or pgvector; `EMBEDDER=hash` default, `sentence-transformers` optional).
+Tenant apps wire `store.query()` into prompts — the gateway does not
+auto-RAG yet. See [`docs/rag-memory.md`](./docs/rag-memory.md).
+
+Present but *not* this layer: Temporal durable-execution history and
+LangGraph `PostgresSaver` (dev/hybrid; `MemorySaver` banned in production).
+Knowledge Graph remains the structured (non-vector) long-term memory above.
 
 **4. Perception & Input Parsing** — understanding ambiguous user intent
 and routing tasks.
@@ -980,6 +977,7 @@ See **[OPERATIONS.md](./OPERATIONS.md)** for the full step-by-step: install, run
 - **[docs/uae-regulatory.md](./docs/uae-regulatory.md)** — UAE sovereign / PDPL / HITL / fairness / ISO 42001 mapping (differentiator)
 - **[docs/iso-42001-control-map.md](./docs/iso-42001-control-map.md)** — ISO/IEC 42001 thematic control map + auditor evidence checklist
 - **[docs/delivery-model.md](./docs/delivery-model.md)** — Enterprise Delivery Model catalog, soft gate, promote evidence pack
+- **[docs/rag-memory.md](./docs/rag-memory.md)** — Conversation memory + vector RAG substrate (v1)
 
 ---
 

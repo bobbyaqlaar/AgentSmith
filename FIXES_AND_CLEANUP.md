@@ -1,6 +1,6 @@
 # AgentSmith — Active Work and Future Phases
 
-**Last reviewed:** 2026-07-10 (Delivery Model soft pack shipped)  
+**Last reviewed:** 2026-07-10 (Memory/RAG v1 shipped)  
 **Purpose:** Active planned work and confirmed future gaps with their
 trigger conditions, rationale, and embedded design decisions. Completed
 build history lives in `Product_Archive.md`.
@@ -208,7 +208,7 @@ against that fantasy maps to four requirements:
 | 1 | Teams use pre-approved environments, data access patterns, security controls, and deployment pipelines — no repeated approvals, no unscalable one-offs | **Partial** | Catalog + soft gate shipped: [`docs/delivery-model.md`](./docs/delivery-model.md), [`templates/delivery-model/`](./templates/delivery-model/), `verify_system.py --check-delivery-model`. Hard bind into `ai-tenant-init` still open → [Enterprise Delivery Model](#enterprise-delivery-model--approved-platforms--in-pipeline-governance) |
 | 2 | Rules for data use, risk, auditability, and access live **in** the delivery process, not reviewed afterwards | **Partial** | Hooks, RFC, eval/redaction CD, input guardrail, `delivery_evidence.py` promote pack → same phase |
 | 3 | Compliance demonstrated through logs and artifacts, not slide decks | **Met** | HMAC-signed append-only audit log (SPECS.md §30), Phoenix OTel traces, eval scorecards, encrypted HITL blobs |
-| 4 | Standard functions and frameworks for RAG | **Gap** | No vector/RAG layer in repo; Knowledge Graph is structured recall, not RAG → [Memory Management](#memory-management--short-term-token-window--long-term-vector-store) (vector half) |
+| 4 | Standard functions and frameworks for RAG | **Partial** | v1 shipped: [`docs/rag-memory.md`](./docs/rag-memory.md) — `conversation_memory` + `vector_store` (memory/pgvector) + local ST embedder. Gateway auto-RAG / ingest CLI still open → [Memory Management](#memory-management--short-term-token-window--long-term-vector-store) |
 
 ---
 
@@ -281,32 +281,21 @@ approved, or tenant-init must stamp `delivery.platform` automatically.
 
 ### Memory Management — short-term (token-window) + long-term (vector store)
 
-**Delivery Model link:** this section's vector/RAG half is the home for
-Delivery Model need #4 (standard RAG functions) — see gap register above.
-No separate RAG Future Phase.
+**Delivery Model link:** Delivery Model need #4 (standard RAG functions).
+See [`docs/rag-memory.md`](./docs/rag-memory.md).
 
-**Already implemented (not part of this gap):** the long-term, structured
-half of this layer exists as the codebase Knowledge Graph (`map_codebase.py`
-→ `local_knowledge_graph.py`, SPECS.md §10) — graph-based recall over files,
-dependencies, guardrails, and past incidents that survives across sessions.
+**Status:** **Shipped (v1).**
+- `runtime/conversation_memory.py` — token-budget truncate-oldest
+- `runtime/embeddings.py` — `HashEmbedder` (default) + `SentenceTransformerEmbedder` (`EMBEDDER=sentence-transformers`)
+- `runtime/vector_store.py` — `MemoryVectorStore` + optional `PgVectorStore` (`VECTOR_BACKEND=postgres`)
 
-**Gap:** no short-term token-window truncation/summarization/sliding-window
-manager, and no semantic / vector retrieval (Chroma/pgvector/etc.) anywhere
-in the repo.
+**Already implemented (unchanged):** codebase Knowledge Graph (structured
+recall, not vector RAG).
 
-**Trigger:** the first tenant app that needs either (a) a conversation longer
-than fits in one context window, or (b) semantic retrieval over a corpus too
-large to put in a prompt directly.
+**Remaining:** summarization eviction; auto-RAG in gateway; ingest/chunk CLI;
+live pgvector CI job (extension often absent in bare Postgres).
 
-**Fix sketch, when triggered:**
-- Short-term: `runtime/conversation_memory.py` — message list with a
-  configurable token budget (via `tiktoken`) and a pluggable eviction strategy
-  (truncate-oldest first; summarization via `gw.complete()` is a reasonable v2).
-- Long-term: `runtime/vector_store.py` interface (`add`, `query`) with a
-  Postgres+pgvector backend as the default — consistent with this framework's
-  existing Postgres-backed state (idempotency, DLQ, budget). Chroma/Pinecone
-  become alternate backends behind the same interface only if a concrete tenant
-  need shows up.
+**Trigger for remaining:** tenant needs summarization or gateway-native retrieve.
 
 ---
 

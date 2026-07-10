@@ -45,6 +45,12 @@ pyyaml>=6.0,<7.0
 
 # ── Database (PostgreSQL for team-shared Phoenix) ─────────────────────────────
 psycopg2-binary>=2.9,<3.0
+# Optional: pgvector extension must be installed on the Postgres server for
+# VECTOR_BACKEND=postgres (runtime/vector_store.py). Not a pip package.
+
+# ── RAG / local embeddings (optional — default EMBEDDER=hash needs nothing) ──
+# pip install 'sentence-transformers>=3.0,<4.0' then EMBEDDER=sentence-transformers
+# sentence-transformers>=3.0,<4.0
 
 # ── Production runtime (runtime/, install on workers only — not dev IDE installs) ──
 # Temporal workflow engine (§25)

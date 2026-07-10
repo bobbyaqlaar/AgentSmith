@@ -53,12 +53,10 @@ Additionally implemented and verified against live infrastructure (same bar as a
 - GCP CI/CD end-to-end: `.github/actions/gcp-auth` composite action (Workload Identity Federation, keyless) verified through real GitHub Actions runs deploying both `bobbyaqlaar/oil-price-demo` (worker) and `bobbyaqlaar/AgentSmith` Ops Portal to Cloud Run on GCP project `agentsmith-500916` (2026-07-01). `.github/actions/build-push-ghcr` + Artifact Registry re-push pattern verified. `cd-portal.yml` added for the Ops Portal (Next.js → Cloud Run via AR).
 
 **Genuine remaining gaps** (not yet built — trigger conditions documented in
-`FIXES_AND_CLEANUP.md` "Future Phases"): short-term conversation memory,
-vector store retrieval, `@tool` registration/schema-extraction, LLM-driven
-self-correction, hallucination-rate metric, TTFT tracking (requires
-streaming support). Pre-call input guardrails and fairness/robustness
-evaluation shipped as v1 (`runtime/input_guardrail.py`,
-`run-evals.py --suite fairness`) — see FIXES for remaining extensions.
+`FIXES_AND_CLEANUP.md` "Future Phases"): `@tool` registration/schema-extraction,
+LLM-driven self-correction, hallucination-rate metric, TTFT tracking (requires
+streaming support). Memory/RAG v1, pre-call input guardrails, fairness suite,
+and Delivery Model soft pack are shipped — see FIXES for remaining extensions.
 
 ---
 
@@ -306,7 +304,7 @@ design choice that's recorded here as settled.
 |---|---|---|
 | **Reasoning & Planning** | Fixed-topology reference patterns (Architect→Developer→Validator), not a generic planner | §8 (execution modes), §9 (eval framework scores the output of these patterns) |
 | **Tool Orchestration** | Activity *execution* + recovery exists (Temporal); tool *registration*/schema-extraction (e.g. an `@tool` decorator) and LLM-driven tool-call selection do not — `llm_gateway.py.complete()` sends a prompt and receives text, no function-calling fields in the provider request | §25 (Production Runtime), §29 (LLM Gateway) |
-| **Memory Management** | Partially implemented. **Long-term (structured):** the codebase Knowledge Graph — `map_codebase.py` → `local_knowledge_graph.py`, NetworkX `DiGraph` persisted as JSON node-link, queried via `fetch_subgraph_context_window()`/`impacted_files()` to give a cold session long-term recall over the code (dependencies, guardrails, past incidents — see §10 "Cross-Session Refactoring & Defect-Fixing"). **Absent:** short-term token-window manager (truncation/summarization/sliding-window) and semantic/vector retrieval (Chroma/pgvector/etc.) — the graph is structured lookup, not embedding similarity. Present but distinct: Temporal's durable-execution history (workflow progress, not conversation memory) and LangGraph `PostgresSaver` (dev/hybrid only, `MemorySaver` banned in production) | §10 (Knowledge Graph), §25 "Idempotency Key Design", §8 |
+| **Memory Management** | **Short-term:** `runtime/conversation_memory.py` (token-budget truncate-oldest). **Long-term structured:** Knowledge Graph (§10). **Long-term vector:** `runtime/vector_store.py` + `embeddings.py` (memory/pgvector; HashEmbedder default, sentence-transformers optional). Gateway does not auto-RAG — tenant wires retrieve→prompt. See `docs/rag-memory.md` | §10, `docs/rag-memory.md` |
 | **Perception & Input Parsing** | Narrow JSON-from-text extraction (`re.search` + `json.loads`, no schema validation) in the reference pipelines; no dynamic prompt-template engine (prompts are inline f-strings) | §8 |
 | **Human-in-the-Loop (HITL)** | The most built-out layer — two distinct mechanisms, see §25 "HITL Pause / Resume" for the full approve/reject vs. edit-and-resume split and the recorded reasoning for Temporal signals over Slack+Retool/LangGraph-interrupt alternatives, and for the portal-webhook-bridge design over a direct portal-side Temporal client | §25, §30 (HITL RBAC) |
 
