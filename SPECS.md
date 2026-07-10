@@ -54,10 +54,11 @@ Additionally implemented and verified against live infrastructure (same bar as a
 
 **Genuine remaining gaps** (not yet built — trigger conditions documented in
 `FIXES_AND_CLEANUP.md` "Future Phases"): `@tool` registration/schema-extraction.
-Hallucination-rate metric, TTFT streaming path (`complete_stream` +
-`verify_ttft.py`), LLM-driven self-correction, Memory/RAG v1, pre-call input
-guardrails, fairness suite, and Delivery Model soft pack are shipped — see
-FIXES for remaining extensions.
+Shipped reliability / compliance pack (v1): hallucination-rate hard gate,
+TTFT `complete_stream` + `verify_ttft.py`, LLM `run_with_self_correction`,
+Memory/RAG substrate, pre-call `input_guardrail`, fairness suite, Delivery
+Model soft pack, UAE sovereign Falcon 3 template — see FIXES for remaining
+extensions (e.g. richer fairness stats, portal streaming UI).
 
 ---
 
@@ -121,8 +122,8 @@ FIXES for remaining extensions.
 │                                                                         │
 │  ┌───────────────────┐      ┌───────────────────────────────────────┐  │
 │  │  Local GPU (Ollama│      │  Cloud Frontier (Hybrid Mode)         │  │
-│  │  llama3 / mistral │  OR  │  Claude 3.5 Sonnet / GPT-4o / Groq   │  │
-│  │  gemma2           │      │  + cost_router.py heuristics          │  │
+│  │  falcon3 / llama3 │  OR  │  Claude / GPT-4o / Groq / Vertex     │  │
+│  │  mistral / gemma2 │      │  + cost_router.py heuristics          │  │
 │  └───────────────────┘      └───────────────────────────────────────┘  │
 └──────────────────────────────────┬──────────────────────────────────────┘
                                    │ OTel contract + agent identity + tenant.id
@@ -367,7 +368,7 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `cost_router.py` | Dev-mode routing: token count + keyword analysis → model selection. Not suitable for production. See §29 for production LLM Gateway. |
 | `network_watchdog.py` | Socket ping to `1.1.1.1:53`. Auto-switches active LLM endpoint. Background keepalive thread. |
 | `notifier.py` | Cross-platform desktop notifications via `plyer` + `osascript` (macOS). Background webhook thread (Slack / Teams / custom). |
-| `run-evals.py` | Loads tenant-local golden dataset. Runs judge scorecard. `--fail-below` flag. Skips gracefully when <3 cases. |
+| `run-evals.py` | Loads tenant-local fixtures. Suites: `golden` (default), `fairness`, `hallucination`. `--fail-below` / `HALLUCINATION_FAIL_ABOVE`. Skips gracefully when <3 golden cases. |
 | `promote-learning.py` | Appends to `golden_evals.json`; archives resolution as judge learning (versioned, not FIFO-evicted); marks log entry `hitl_resolved: true` with `hitl_resolved_by` + `hitl_resolved_at`. |
 | `sync-ui-feedback.py` | Pulls Phoenix annotations; promotes unsynced negative feedback to golden dataset. |
 | `agent_logger.py` | JSON-Lines to stdout + `.agent-history.log`. Four levels: INFO/MINOR/MAJOR/CRITICAL. Calls `audit_token_velocity_circuit()`. All entries carry `owner_id`, `tenant.id` (if available), `agent.role`. |
@@ -1019,24 +1020,30 @@ AgentSmith/
 │   ├── cost_router.py
 │   ├── network_watchdog.py
 │   ├── notifier.py
-│   ├── run-evals.py
+│   ├── run-evals.py             # golden | fairness | hallucination suites
+│   ├── verify_ttft.py           # live Ollama TTFT smoke (`TTFT_FAIL_ABOVE_MS`)
+│   ├── verify_sovereign_endpoint.py  # Falcon 3 / HF sovereign smoke
 │   ├── promote-learning.py
 │   ├── sync-ui-feedback.py
 │   ├── agent_logger.py
 │   ├── circuit_breaker.py
-│   ├── verify_system.py
+│   ├── verify_system.py         # incl. --check-delivery-model
 │   └── generate-ide-config.py  # Reads templates/agent-rules.yaml, writes target-repo IDE config
 ├── runtime/                     # Production runtime components
 │   ├── worker.py
-│   ├── llm_gateway.py
+│   ├── llm_gateway.py           # complete() + complete_stream() (ttft_ms)
 │   ├── models.yaml              # Framework default model registry (§29)
+│   ├── input_guardrail.py       # Pre-call PII scrub (PDPL)
+│   ├── self_correction.py       # Opt-in corrected-payload loop helper
+│   ├── conversation_memory.py   # Short-term memory (RAG substrate)
+│   ├── embeddings.py / vector_store.py
 │   ├── trace_redactor.py
 │   ├── idempotency.py
 │   ├── dead_letter.py
 │   ├── temporal_replay.py       # Concrete Temporal replay_handler — signals a live, parked workflow
 │   ├── replay_webhook_server.py # Reference receiver for the Ops Portal's "Replay with edits" action
 │   ├── workflows/
-│   │   └── base_workflow.py     # HITL gates + opt-in self-correction before DLQ
+│   │   └── base_workflow.py     # HITL + self-correction + recoverable DLQ
 │   └── k8s/dedicated-tenant/    # tenant.isolation: dedicated manifests (§23, §30)
 ├── hooks/                       # Git hook templates (Phase 5: extracted from installer)
 │   ├── pre-commit
@@ -1047,21 +1054,31 @@ AgentSmith/
 │   ├── package-hook-bundle.sh   # Signs the org hook bundle (GPG detached sig)
 │   ├── mdm-deploy-hooks.sh      # IT deployment script — verifies sig before install
 │   └── agenticframework-org.yaml.example
-├── templates/                   # IDE config templates
+├── templates/                   # IDE config + deploy + compliance starters
 │   ├── agent-rules.yaml         # Single source of truth — read directly by
 │   │                            #   scripts/generate-ide-config.py at hook-runtime;
 │   │                            #   writes land in the TARGET repo (.cursorrules,
 │   │                            #   CLAUDE.md, .agents/skills/), not in this directory
+│   ├── uae-sovereign/           # Falcon 3 Ollama models.yaml + residency checklist
+│   ├── delivery-model/          # Org policy example for approved platforms
+│   ├── onprem-deploy/
 │   └── in-app-widget/           # Embeddable end-user status widget + Ops Portal API
 ├── portal/                      # Ops Portal (Next.js + TypeScript + Tailwind)
 ├── examples/
 │   ├── oil-price-agent/         # Reference tenant app (fork per customer)
 │   └── README.md                # "Copy and rename — do not deploy from framework repo"
-├── fixtures/                    # Bootstrap golden dataset base
+├── fixtures/                    # Bootstrap eval seeds
 │   ├── golden_evals_base.json
-│   └── custom_judge_criteria_base.json
+│   ├── fairness_evals_base.json
+│   ├── hallucination_evals_base.json
+│   └── *_judge_criteria_base.json
 ├── docs/
-│   └── team-observability.md
+│   ├── uae-regulatory.md
+│   ├── iso-42001-control-map.md
+│   ├── delivery-model.md
+│   ├── rag-memory.md
+│   └── superpowers/             # Design specs + implementation plans
+├── DemoScript.md                # Live demo (incl. UAE compliance beats)
 ├── .github/
 │   └── workflows/
 │       ├── self-test.yml        # py_compile/shellcheck/portal/widget tests on the framework itself
@@ -2187,14 +2204,17 @@ Full control → status → owner → **evidence artifact** pack:
 
 | Theme | Status | Primary AgentSmith evidence |
 |---|---|---|
-| Human oversight | Met | HITL gates, DLQ Replay/Discard, `hitl_promotion` audit events |
-| Transparency & logging | Met | Phoenix OTel traces; HMAC audit log (`GET /api/audit`) |
-| Performance evaluation | Met | `run-evals.py` / CD `--fail-below`; shadow-eval annotations |
+| Human oversight | Met | HITL gates, DLQ Replay/Discard, opt-in `run_with_self_correction`, `hitl_promotion` audit events |
+| Transparency & logging | Met | Phoenix OTel traces (`ttft_ms` on stream); HMAC audit log (`GET /api/audit`) |
+| Performance evaluation | Met | `run-evals.py` golden / fairness / hallucination; CD `--fail-below`; shadow-eval |
 | Change management | Met | Eval gates; enterprise RFC hooks; fixture PRs |
-| Incident & recovery | Met | Recoverable DLQ; MAJOR/CRITICAL protection; budget degrade |
+| Incident & recovery | Met | Recoverable DLQ; self-correction then human; MAJOR/CRITICAL protection; budget degrade |
 | Continual improvement | Met | HITL → golden promotion; shadow suggested queue (no auto-promote) |
-| AI policy & roles | Partial | Org policy YAML; portal RBAC; `AGENT_OWNER_ID` |
-| Third-party & models | Partial | `models.yaml`; UAE sovereign template |
-| Fairness & bias | Partial | `run-evals.py --suite fairness`; pair parity scorecard |
-| Data for AI / privacy | Partial | Golden fixtures; pre-call `input_guardrail` + post-call redaction |
+| AI policy & roles | Partial | Org policy YAML; Delivery Model soft pack; portal RBAC; `AGENT_OWNER_ID` |
+| Third-party & models | Partial | `models.yaml`; UAE sovereign Falcon 3 template + `verify_sovereign_endpoint.py` |
+| Fairness & bias | Partial | `run-evals.py --suite fairness`; pair parity; Decree-Law 34/2023 map in `docs/uae-regulatory.md` |
+| Data for AI / privacy | Partial | Golden fixtures; pre-call `input_guardrail` (Emirates ID) + post-call redaction |
 | Risk assessment | Org-owned | Tenant risk register; map high-risk actions to `needs_hitl` |
+
+**UAE regulatory map (differentiator):** [`docs/uae-regulatory.md`](./docs/uae-regulatory.md) —
+sovereign Falcon 3 / PDPL / HITL / fairness / ISO themes. Not legal advice.

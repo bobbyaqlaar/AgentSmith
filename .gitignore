@@ -6,8 +6,6 @@ __pycache__/
 venv/
 .pytest_cache/
 
-DemoScript.md
-
 # Ops Portal (Next.js)
 portal/node_modules/
 portal/.next/

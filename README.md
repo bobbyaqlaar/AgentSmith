@@ -378,19 +378,14 @@ per golden-dataset case via an LLM judge. Run
 `run-evals.py --suite hallucination`; hard fail when flagged rate exceeds
 **`HALLUCINATION_FAIL_ABOVE`** (default `0.05` in tenant `.env`). See
 `workflow-templates/eval-hallucination.yml` and `fixtures/hallucination_*_base.json`.
-"Auto-retry failed tool calls" is real but
-two-tiered, and the tiers matter: Temporal's own activity retry policy
-handles **transient** failures (network blips, rate limits) automatically;
-`run_with_recoverable_step`'s `RetryPolicy(maximum_attempts=1)` override
-deliberately **disables** that automatic retry for the *gated* activity
-specifically, because a validation/hallucination-shaped failure won't
-succeed on a bare retry — it needs a *different* payload, which only a
-human (today) can supply. **There is no LLM-driven self-correction loop**
-(the model retrying its own tool call after seeing the error) anywhere in
-the repo — every recovery path that exists is human-driven (DLQ
-edit-and-replay) or Temporal-driven (transient-failure retry), never
-model-driven. That's a real, named gap if you wanted the agent itself to
-attempt a fix before escalating to a human.
+"Auto-retry failed tool calls" is **three-tiered**: Temporal's activity
+retry policy handles **transient** failures (network blips, rate limits);
+opt-in **`run_with_self_correction`** asks the gateway for one corrected
+JSON payload and retries the activity before any human sees it; if that
+still fails (or the tenant did not opt in), **`run_with_recoverable_step`**
+parks the workflow alive for DLQ edit-and-resume. The recoverable path
+uses `RetryPolicy(maximum_attempts=1)` so Temporal does not bare-retry a
+validation-shaped failure that needs a *different* payload.
 
 **8. Security & Guardrails** — prompt-injection protection, input
 sanitization, data anonymization.
@@ -430,10 +425,11 @@ routing (Traefik's native `weighted`/`mirroring` service kinds, or Envoy's
 *app-version* traffic-shaping for on-prem deployments — chosen over a
 single fixed proxy because on-prem customers' ops teams already have a
 preference one way or the other, and forcing one would mean a second
-unfamiliar tool to operate. Real limitation worth flagging again from
-layer 6: **TTFT specifically can't be measured** without adding streaming
-to the LLM Gateway first — there's no latency-budget enforcement keyed to
-"first token," only total-call latency.
+unfamiliar tool to operate. **TTFT** is measurable on the opt-in
+`complete_stream()` path (`ttft_ms`); enforce a live budget with
+`TTFT_FAIL_ABOVE_MS` + `scripts/verify_ttft.py` (CI job when
+`TTFT_LIVE=required`). Non-stream `complete()` still reports total-call
+latency only.
 
 **11. Data Bias & Fairness** — continuous evaluation against fairness/
 robustness metrics.
@@ -963,15 +959,20 @@ infrastructure (Postgres, Redis, Temporal, Kubernetes, a live OIDC provider):
 UAE deployments need more than a global SaaS chatbot: **in-border
 inference**, **bias accountability**, **HITL stop-gates**, **PDPL-aligned
 PII handling**, and **governance embedded in the architecture** (including
-alignment toward ISO/IEC 42001 and oversight expectations). AgentSmith maps
-each mandate to concrete runtime controls — local/on-prem + pluggable
-Falcon/UAE endpoints, HITL gates, redaction, audit artifacts — and tracks
-remaining gaps in FIXES.
+alignment toward ISO/IEC 42001). AgentSmith maps each mandate to concrete
+controls — not slideware.
 
-See **[docs/uae-regulatory.md](./docs/uae-regulatory.md)** for the full
-Rule / Action / AgentSmith status map (not legal advice or certification).
-Starter pack: **[templates/uae-sovereign/](./templates/uae-sovereign/)**
-(Falcon/`models.yaml`, env, residency checklist).
+| Mandate (illustrative) | AgentSmith control (shipped) |
+|---|---|
+| Sovereign / in-border models | `templates/uae-sovereign/` — Pattern A **Falcon 3** on Ollama (`falcon3:3b` / `falcon3:1b`, live-verified); Pattern B sovereign OpenAI-compat API; smoke `scripts/verify_sovereign_endpoint.py` |
+| Bias / Federal Decree-Law No. 34/2023 | `run-evals.py --suite fairness` + pair parity; CI via `eval-fairness.yml` |
+| HITL for high-impact actions | `run_with_hitl_gate`, `run_with_recoverable_step`, opt-in `run_with_self_correction` → DLQ |
+| PDPL / PII in the decision path | Pre-call `runtime/input_guardrail.py` (Emirates ID, etc.) + post-call `trace_redactor.py` |
+| Oversight / ISO/IEC 42001 themes | `docs/iso-42001-control-map.md` + HMAC audit log + eval gates (`hallucination`, fairness, TTFT) |
+| Delivery governance | `docs/delivery-model.md` + soft `verify_system.py --check-delivery-model` |
+
+Canonical map: **[docs/uae-regulatory.md](./docs/uae-regulatory.md)** (not legal advice / not certification).
+Starter pack: **[templates/uae-sovereign/](./templates/uae-sovereign/)**.
 
 See **[OPERATIONS.md](./OPERATIONS.md)** for the full step-by-step: install, run, test every feature, run evals, deploy to production through GitHub CI/CD, and monitor operations.
 
@@ -986,6 +987,7 @@ See **[OPERATIONS.md](./OPERATIONS.md)** for the full step-by-step: install, run
 - **[docs/iso-42001-control-map.md](./docs/iso-42001-control-map.md)** — ISO/IEC 42001 thematic control map + auditor evidence checklist
 - **[docs/delivery-model.md](./docs/delivery-model.md)** — Enterprise Delivery Model catalog, soft gate, promote evidence pack
 - **[docs/rag-memory.md](./docs/rag-memory.md)** — Conversation memory + vector RAG substrate (v1)
+- **[DemoScript.md](./DemoScript.md)** — Live demo script (framework + GCP + **UAE compliance** beats)
 
 ---
 
@@ -1001,8 +1003,9 @@ AgentSmith/
 ├── portal/                    # Ops Portal (Next.js)
 ├── enterprise/                # Org hook bundle signing, MDM deploy, bypass policy
 ├── examples/oil-price-agent/  # Reference tenant app (fork per customer, never deploy from here)
-├── fixtures/                  # Baseline golden dataset + judge criteria
-├── docs/                      # Topic docs (e.g. uae-regulatory.md)
+├── fixtures/                  # Golden / fairness / hallucination base fixtures + judge criteria
+├── docs/                      # uae-regulatory, iso-42001, delivery-model, rag-memory, specs/plans
+├── DemoScript.md              # Live demo script (incl. UAE compliance beats)
 ├── caddy/                     # Phoenix auth sidecar config
 ├── docker-compose.yml         # Team-shared Phoenix + PostgreSQL
 ├── docker-compose.auth.yml    # Optional overlay: HTTP basic auth in front of Phoenix

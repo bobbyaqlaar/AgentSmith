@@ -134,10 +134,10 @@ Clarification for implementers: “Hard fail gates” for TTFT means:
 
 ## Success criteria
 
-- [ ] Hallucination rate computed; hard-fail above `HALLUCINATION_FAIL_ABOVE` (default 0.05); `.env` documented for framework + tenant.
-- [ ] Streaming path records `ttft_ms`; unit mock hard-fails if absent; live Ollama job hard-fails when `TTFT_LIVE=required` and over budget.
-- [ ] `run_with_self_correction` exists, tested, leaves recoverable path unchanged.
-- [ ] FIXES sections updated to **Shipped (v1)** / remaining notes.
+- [x] Hallucination rate computed; hard-fail above `HALLUCINATION_FAIL_ABOVE` (default 0.05); `.env` documented for framework + tenant.
+- [x] Streaming path records `ttft_ms`; unit mock hard-fails if absent; live Ollama job hard-fails when `TTFT_LIVE=required` and over budget.
+- [x] `run_with_self_correction` exists, tested, leaves recoverable path unchanged.
+- [x] FIXES sections updated to **Shipped (v1)** / remaining notes.
 
 ## Risks
 
