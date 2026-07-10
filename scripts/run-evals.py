@@ -155,13 +155,17 @@ def _judge_case(
     start = time.monotonic()
 
     if project_response is None:
-        try:
-            from local_agent_stack import run_pipeline
+        fixture_output = case.get("actual_output")
+        if fixture_output:
+            project_response = fixture_output
+        else:
+            try:
+                from local_agent_stack import run_pipeline
 
-            result = run_pipeline(task=case["input"])
-            project_response = result.get("code", "") or result.get("validation", "")
-        except Exception as exc:
-            project_response = f"PIPELINE_ERROR: {exc}"
+                result = run_pipeline(task=case["input"])
+                project_response = result.get("code", "") or result.get("validation", "")
+            except Exception as exc:
+                project_response = f"PIPELINE_ERROR: {exc}"
 
     elapsed_ms = int((time.monotonic() - start) * 1000)
 

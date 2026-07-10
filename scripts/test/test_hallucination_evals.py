@@ -1,13 +1,25 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import os
 import sys
 from pathlib import Path
 
 import pytest
 
+ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
+
+REQUIRED_HALLUCINATION_CASE_KEYS = (
+    "id",
+    "input",
+    "reference_output",
+    "expected_tool",
+    "actual_output",
+    "score_hallucination",
+)
 
 
 def _load_run_evals():
@@ -67,3 +79,24 @@ def test_judge_prompt_includes_hallucination_field():
     )
     assert '"hallucination"' in p
     assert "not supported by the input" in p.lower() or "unsupported" in p.lower()
+
+
+def test_hallucination_base_fixture_has_grounded_cases() -> None:
+    path = ROOT / "fixtures" / "hallucination_evals_base.json"
+    assert path.exists(), "hallucination_evals_base.json must exist"
+    cases = json.loads(path.read_text())
+    assert len(cases) == 4
+    for case in cases:
+        for key in REQUIRED_HALLUCINATION_CASE_KEYS:
+            assert key in case
+
+
+def test_load_dotenv_sets_hallucination_threshold(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    revals = _load_run_evals()
+    monkeypatch.delenv("HALLUCINATION_FAIL_ABOVE", raising=False)
+    (tmp_path / ".env").write_text("HALLUCINATION_FAIL_ABOVE=0.07\n")
+    revals._load_dotenv(tmp_path)
+    assert os.environ.get("HALLUCINATION_FAIL_ABOVE") == "0.07"
+    assert revals._resolve_hallucination_fail_above(None) == 0.07

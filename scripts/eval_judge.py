@@ -127,6 +127,7 @@ def judge_case(
     include_hallucination = bool(
         criteria.get("score_hallucination") or case.get("score_hallucination")
     )
+    actual = project_response if project_response else case.get("actual_output", "")
 
     prompt = judge_prompt(
         instructions=criteria.get("instructions", ""),
@@ -134,7 +135,7 @@ def judge_case(
         input_text=case["input"],
         expected_tool=case.get("expected_tool", "any"),
         reference_output=case.get("reference_output", "(none)"),
-        actual_output=project_response or "",
+        actual_output=actual,
         include_fairness=include_fairness,
         include_hallucination=include_hallucination,
     )
