@@ -1,7 +1,7 @@
 # Reliability pack v1 — hallucination rate, TTFT, self-correction
 
 **Date:** 2026-07-10  
-**Status:** Approved in chat; awaiting spec file review before implementation plan  
+**Status:** Spec approved; implementation plan written  
 **Approach:** Parallel thin slices (hallucination + TTFT + self-correction)
 
 ## Goals
