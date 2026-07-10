@@ -1,11 +1,13 @@
 """
-run-evals.py — Evaluation scorecard (golden + fairness suites).
+run-evals.py — Evaluation scorecard (golden + fairness + hallucination suites).
 
-1. Loads cases from .agent-rfc/fixtures/ (golden_evals.json or fairness_evals.json)
+1. Loads cases from .agent-rfc/fixtures/ (golden_evals.json, fairness_evals.json,
+   or hallucination_evals.json)
 2. Loads matching judge criteria
 3. Runs each case through the configured LLM judge (AGENT_JUDGE_MODEL)
 4. Scores: correctness, tool_accuracy, latency; fairness suite also scores fairness
-   and pair parity across protected-attribute pairs
+   and pair parity across protected-attribute pairs; hallucination suite also scores
+   unsupported-claim rate
 5. Exits non-zero if score < --fail-below threshold
 
 Golden dataset lifecycle:
@@ -18,7 +20,9 @@ Usage:
     python3 scripts/run-evals.py
     python3 scripts/run-evals.py --fail-below 0.85
     python3 scripts/run-evals.py --suite fairness
+    python3 scripts/run-evals.py --suite hallucination --hallucination-fail-above 0.05
     # fairness threshold from .env: FAIRNESS_FAIL_BELOW=0.80 (default)
+    # hallucination threshold from .env: HALLUCINATION_FAIL_ABOVE=0.05 (default)
 """
 
 from __future__ import annotations
@@ -38,16 +42,22 @@ from _shared import _repo_root  # noqa: E402
 
 
 def _evals_path(suite: str = "golden") -> Path:
-    name = "fairness_evals.json" if suite == "fairness" else "golden_evals.json"
+    if suite == "fairness":
+        name = "fairness_evals.json"
+    elif suite == "hallucination":
+        name = "hallucination_evals.json"
+    else:
+        name = "golden_evals.json"
     return _repo_root() / ".agent-rfc" / "fixtures" / name
 
 
 def _criteria_path_for(suite: str = "golden") -> Path:
-    name = (
-        "fairness_judge_criteria.json"
-        if suite == "fairness"
-        else "custom_judge_criteria.json"
-    )
+    if suite == "fairness":
+        name = "fairness_judge_criteria.json"
+    elif suite == "hallucination":
+        name = "hallucination_judge_criteria.json"
+    else:
+        name = "custom_judge_criteria.json"
     return _repo_root() / ".agent-rfc" / "fixtures" / name
 
 
@@ -60,7 +70,12 @@ def _criteria_path() -> Path:
 
 
 def _results_path(suite: str = "golden") -> Path:
-    name = "fairness_eval_results.json" if suite == "fairness" else "eval_results.json"
+    if suite == "fairness":
+        name = "fairness_eval_results.json"
+    elif suite == "hallucination":
+        name = "hallucination_eval_results.json"
+    else:
+        name = "eval_results.json"
     return _repo_root() / ".agent-rfc" / "fixtures" / name
 
 
@@ -76,6 +91,15 @@ def _load_cases(suite: str = "golden") -> list[dict]:
                 Path(__file__).resolve().parent.parent
                 / "fixtures"
                 / "fairness_evals_base.json"
+            )
+            if base.exists():
+                with base.open() as fh:
+                    return json.load(fh)
+        if suite == "hallucination":
+            base = (
+                Path(__file__).resolve().parent.parent
+                / "fixtures"
+                / "hallucination_evals_base.json"
             )
             if base.exists():
                 with base.open() as fh:
@@ -105,6 +129,20 @@ def _load_criteria(suite: str = "golden") -> dict:
                 "name": "Fairness",
                 "score_fairness": True,
                 "instructions": "Judge fairness and bias.",
+            }
+        if suite == "hallucination":
+            base = (
+                Path(__file__).resolve().parent.parent
+                / "fixtures"
+                / "hallucination_judge_criteria_base.json"
+            )
+            if base.exists():
+                with base.open() as fh:
+                    return json.load(fh)
+            return {
+                "name": "Hallucination",
+                "score_hallucination": True,
+                "instructions": "Judge unsupported factual claims.",
             }
         return {
             "name": "Default",
@@ -184,6 +222,8 @@ def _judge_case(
     }
     if "fairness" in scored:
         row["fairness"] = scored.get("fairness", 0)
+    if "hallucination" in scored:
+        row["hallucination"] = scored.get("hallucination", 0.0)
     if case.get("pair_id"):
         row["pair_id"] = case["pair_id"]
         row["protected_attribute"] = case.get("protected_attribute")
@@ -194,13 +234,20 @@ def _judge_case(
 # ── Scorecard ─────────────────────────────────────────────────────────────────
 
 
-def run_scorecard(fail_below: float = 0.80, suite: str = "golden") -> int:
+def run_scorecard(
+    fail_below: float = 0.80,
+    suite: str = "golden",
+    hallucination_fail_above: float | None = None,
+) -> int:
     """
     Run all cases for the suite and print scorecard.
     Returns exit code: 0 = pass, 1 = fail, 2 = skipped.
     """
-    if suite not in {"golden", "fairness"}:
-        print(f"Unknown suite {suite!r}; use golden or fairness", file=sys.stderr)
+    if suite not in {"golden", "fairness", "hallucination"}:
+        print(
+            f"Unknown suite {suite!r}; use golden, fairness, or hallucination",
+            file=sys.stderr,
+        )
         return 1
 
     cases = _load_cases(suite)
@@ -216,11 +263,18 @@ def run_scorecard(fail_below: float = 0.80, suite: str = "golden") -> int:
 
     min_cases = 2 if suite == "fairness" else 3
     if len(cases) < min_cases:
+        base_fixture = (
+            "fairness_evals_base.json"
+            if suite == "fairness"
+            else "hallucination_evals_base.json"
+            if suite == "hallucination"
+            else "golden_evals_base.json"
+        )
         print(
             f"   ⚠️  Only {len(cases)} {suite} case(s) found. "
             f"Need ≥{min_cases} to gate. Skipping eval run.\n"
             f"   Add cases to {_evals_path(suite)} or copy from "
-            f"fixtures/{'fairness_evals_base.json' if suite == 'fairness' else 'golden_evals_base.json'}."
+            f"fixtures/{base_fixture}."
         )
         return 2
 
@@ -233,7 +287,15 @@ def run_scorecard(fail_below: float = 0.80, suite: str = "golden") -> int:
         results.append(r)
         status = "✅" if r["score"] >= fail_below else "❌"
         fair_bit = f" fairness={r['fairness']}" if "fairness" in r else ""
-        print(f"{status} score={r['score']:.2f}{fair_bit} latency={r['latency_ms']}ms")
+        hallucination_bit = (
+            f" hallucination={float(r['hallucination']):.2f}"
+            if isinstance(r.get("hallucination"), (int, float))
+            else ""
+        )
+        print(
+            f"{status} score={r['score']:.2f}{fair_bit}{hallucination_bit} "
+            f"latency={r['latency_ms']}ms"
+        )
 
     avg_score = sum(r["score"] for r in results) / len(results)
     avg_correctness = sum(r["correctness"] for r in results) / len(results)
@@ -245,10 +307,21 @@ def run_scorecard(fail_below: float = 0.80, suite: str = "golden") -> int:
     )
     parity = _pair_parity(results) if suite == "fairness" else {}
     avg_parity = sum(parity.values()) / len(parity) if parity else None
+    has_hallucination = suite == "hallucination" or any(
+        isinstance(r.get("hallucination"), (int, float)) for r in results
+    )
+    hallucination_rate = hallucination_flag_rate(results) if has_hallucination else None
+    hallucination_limit = (
+        _resolve_hallucination_fail_above(hallucination_fail_above)
+        if has_hallucination
+        else None
+    )
     passed = avg_score >= fail_below
     if suite == "fairness" and avg_parity is not None:
         # Pair parity must also clear the threshold for fairness suite
         passed = passed and avg_parity >= fail_below
+    if hallucination_rate is not None and hallucination_limit is not None:
+        passed = passed and hallucination_rate <= hallucination_limit
 
     print("")
     print("─────────────────────────────────────────────")
@@ -259,6 +332,9 @@ def run_scorecard(fail_below: float = 0.80, suite: str = "golden") -> int:
         print(f"  Fairness:        {avg_fairness:.3f}")
     if avg_parity is not None:
         print(f"  Pair parity:     {avg_parity:.3f}  ({len(parity)} pairs)")
+    if hallucination_rate is not None and hallucination_limit is not None:
+        print(f"  Hallucination:   {hallucination_rate:.3f}")
+        print(f"  Hallucination ≤: {hallucination_limit:.2f}")
     print(f"  Avg latency:     {avg_latency_ms:.0f}ms")
     print(f"  Threshold:       {fail_below:.2f}")
     print("─────────────────────────────────────────────")
@@ -274,6 +350,15 @@ def run_scorecard(fail_below: float = 0.80, suite: str = "golden") -> int:
             bad_pairs = [pid for pid, v in parity.items() if v < fail_below]
             if bad_pairs:
                 print(f"\n  Failing pairs ({len(bad_pairs)}): {', '.join(bad_pairs)}")
+        if (
+            hallucination_rate is not None
+            and hallucination_limit is not None
+            and hallucination_rate > hallucination_limit
+        ):
+            print(
+                "\n  Hallucination gate failed: "
+                f"{hallucination_rate:.3f} > {hallucination_limit:.3f}"
+            )
 
     output = {
         "timestamp": ts,
@@ -293,6 +378,8 @@ def run_scorecard(fail_below: float = 0.80, suite: str = "golden") -> int:
         "passed": passed,
         "results": results,
     }
+    if hallucination_rate is not None:
+        output["hallucination_flag_rate"] = hallucination_rate
     results_path = _results_path(suite)
     results_path.parent.mkdir(parents=True, exist_ok=True)
     with results_path.open("w") as fh:
@@ -380,10 +467,32 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--suite",
-        choices=("golden", "fairness"),
+        choices=("golden", "fairness", "hallucination"),
         default="golden",
-        help="Eval suite: golden (default) or fairness (paired bias audits)",
+        help=(
+            "Eval suite: golden (default), fairness (paired bias audits), "
+            "or hallucination (unsupported-claim audits)"
+        ),
+    )
+    parser.add_argument(
+        "--hallucination-fail-above",
+        type=float,
+        default=None,
+        metavar="RATE",
+        help=(
+            "Exit non-zero if hallucination flag rate > RATE. "
+            "Default: HALLUCINATION_FAIL_ABOVE from .env/env, else 0.05."
+        ),
     )
     args = parser.parse_args()
     threshold = _resolve_fail_below(args.suite, args.fail_below)
-    sys.exit(run_scorecard(fail_below=threshold, suite=args.suite))
+    hallucination_threshold = _resolve_hallucination_fail_above(
+        args.hallucination_fail_above
+    )
+    sys.exit(
+        run_scorecard(
+            fail_below=threshold,
+            suite=args.suite,
+            hallucination_fail_above=hallucination_threshold,
+        )
+    )

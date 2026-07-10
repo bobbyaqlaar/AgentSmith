@@ -91,6 +91,76 @@ def test_hallucination_base_fixture_has_grounded_cases() -> None:
             assert key in case
 
 
+def test_hallucination_suite_paths_use_agent_rfc_fixtures() -> None:
+    revals = _load_run_evals()
+    fixtures = ROOT / ".agent-rfc" / "fixtures"
+    assert revals._evals_path("hallucination") == fixtures / "hallucination_evals.json"
+    assert (
+        revals._criteria_path_for("hallucination")
+        == fixtures / "hallucination_judge_criteria.json"
+    )
+    assert (
+        revals._results_path("hallucination")
+        == fixtures / "hallucination_eval_results.json"
+    )
+
+
+def test_load_hallucination_cases_falls_back_to_base_fixture() -> None:
+    revals = _load_run_evals()
+    cases = revals._load_cases("hallucination")
+    assert len(cases) == 4
+    assert all(case["id"].startswith("halluc_") for case in cases)
+    assert all(case.get("score_hallucination") is True for case in cases)
+
+
+def test_run_scorecard_fails_when_hallucination_rate_exceeds_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    revals = _load_run_evals()
+    cases = [
+        {"id": "h1", "input": "a", "actual_output": "a"},
+        {"id": "h2", "input": "b", "actual_output": "b"},
+        {"id": "h3", "input": "c", "actual_output": "c"},
+    ]
+    verdicts = iter([0.0, 0.6, 1.0])
+
+    def fake_judge_case(case: dict, criteria: dict, judge: str) -> dict:
+        return {
+            "case_id": case["id"],
+            "input": case["input"],
+            "expected_tool": "any",
+            "latency_ms": 0,
+            "correctness": 1,
+            "tool_accuracy": 1,
+            "score": 1.0,
+            "quality_notes": "",
+            "error": None,
+            "hallucination": next(verdicts),
+        }
+
+    results_path = tmp_path / "hallucination_eval_results.json"
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(
+        revals,
+        "_load_criteria",
+        lambda suite: {"name": "Hallucination", "score_hallucination": True},
+    )
+    monkeypatch.setattr(revals, "_judge_case", fake_judge_case)
+    monkeypatch.setattr(revals, "_results_path", lambda suite: results_path)
+
+    assert (
+        revals.run_scorecard(
+            fail_below=0.8,
+            suite="hallucination",
+            hallucination_fail_above=0.5,
+        )
+        == 1
+    )
+    output = json.loads(results_path.read_text())
+    assert output["passed"] is False
+    assert output["hallucination_flag_rate"] == pytest.approx(2 / 3)
+
+
 def test_load_dotenv_sets_hallucination_threshold(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
