@@ -17,7 +17,8 @@ Golden dataset lifecycle:
 Usage:
     python3 scripts/run-evals.py
     python3 scripts/run-evals.py --fail-below 0.85
-    python3 scripts/run-evals.py --suite fairness --fail-below 0.80
+    python3 scripts/run-evals.py --suite fairness
+    # fairness threshold from .env: FAIRNESS_FAIL_BELOW=0.80 (default)
 """
 
 from __future__ import annotations
@@ -308,16 +309,55 @@ def run_scorecard(fail_below: float = 0.80, suite: str = "golden") -> int:
     return 0 if passed else 1
 
 
+def _resolve_fail_below(suite: str, cli_value: float | None) -> float:
+    """
+    CLI --fail-below wins when provided.
+    Fairness suite: FAIRNESS_FAIL_BELOW from env / .env (default 0.80).
+    Golden suite: EVAL_FAIL_BELOW or 0.80.
+    """
+    if cli_value is not None:
+        return cli_value
+    if suite == "fairness":
+        raw = os.environ.get("FAIRNESS_FAIL_BELOW", "0.80").strip() or "0.80"
+        return float(raw)
+    raw = os.environ.get("EVAL_FAIL_BELOW", "0.80").strip() or "0.80"
+    return float(raw)
+
+
+def _load_dotenv(root: Path | None = None) -> None:
+    """Best-effort load of repo-root .env into os.environ (no overwrite)."""
+    path = (root or _repo_root()) / ".env"
+    if not path.exists():
+        return
+    try:
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            key = key.strip()
+            val = val.strip().strip("'").strip('"')
+            if key and key not in os.environ:
+                os.environ[key] = val
+    except Exception:
+        pass
+
+
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    _load_dotenv()
     parser = argparse.ArgumentParser(description="Run AgentSmith eval scorecard")
     parser.add_argument(
         "--fail-below",
         type=float,
-        default=0.80,
+        default=None,
         metavar="SCORE",
-        help="Exit non-zero if average score < SCORE (default: 0.80)",
+        help=(
+            "Exit non-zero if average score < SCORE. "
+            "Default: FAIRNESS_FAIL_BELOW from .env/env for --suite fairness "
+            "(else 0.80); EVAL_FAIL_BELOW / 0.80 for golden."
+        ),
     )
     parser.add_argument(
         "--suite",
@@ -326,4 +366,5 @@ if __name__ == "__main__":
         help="Eval suite: golden (default) or fairness (paired bias audits)",
     )
     args = parser.parse_args()
-    sys.exit(run_scorecard(fail_below=args.fail_below, suite=args.suite))
+    threshold = _resolve_fail_below(args.suite, args.fail_below)
+    sys.exit(run_scorecard(fail_below=threshold, suite=args.suite))

@@ -92,13 +92,18 @@ behaviour before launch — and keep evidence.
 
 **How to run:** copy `fixtures/fairness_evals_base.json` →
 `.agent-rfc/fixtures/fairness_evals.json` (or rely on framework base
-fallback), then:
+fallback), set threshold in tenant `.env`, then:
 
 ```bash
-python3 scripts/run-evals.py --suite fairness --fail-below 0.80
+# tenant .env
+FAIRNESS_FAIL_BELOW=0.80
+
+python3 scripts/run-evals.py --suite fairness
 ```
 
-Extend pairs for your domain. CI hard-gate is tenant opt-in.
+CI: `eval-fairness.yml` runs warn-only by default; set repo variable
+`FAIRNESS_EVALS=required` (and optionally `FAIRNESS_FAIL_BELOW`) for a hard
+gate. Extend pairs for your domain.
 
 ---
 

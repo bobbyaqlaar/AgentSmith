@@ -221,7 +221,7 @@ Not legal advice / not certification.
 | # | Mandate | Status | Pointer |
 |---|---|---|---|
 | 1 | Sovereign infrastructure — national data + models in UAE borders (G42-class clouds, TII Falcon, etc.) | **Partial** | Sketch shipped: [`templates/uae-sovereign/`](./templates/uae-sovereign/) (Falcon `models.yaml`, env, residency checklist). ISO/Authority pack still open → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map); narrative in `docs/uae-regulatory.md` §1 |
-| 2 | Bias & fairness — Federal Decree-Law No. 34/2023; routine bias audits | **Partial** | Suite shipped: `run-evals.py --suite fairness` + `fixtures/fairness_evals_base.json`. Domain sets / CI hard-gate still tenant work → [Data Bias & Fairness](#data-bias--fairness--fairnessrobustness-evaluation) |
+| 2 | Bias & fairness — Federal Decree-Law No. 34/2023; routine bias audits | **Partial** | Suite + CI opt-in: `run-evals.py --suite fairness`, `FAIRNESS_FAIL_BELOW` in `.env` (default 0.80), `eval-fairness.yml` (warn / `FAIRNESS_EVALS=required`) → [Data Bias & Fairness](#data-bias--fairness--fairnessrobustness-evaluation) |
 | 3 | HITL stop-gates for high-impact actions + accountability trail | **Met** | `run_with_hitl_gate`, recoverable DLQ, HMAC audit log, HITL blobs |
 | 4 | PDPL — mask/anonymize PII (e.g. Emirates ID) in the decision path | **Partial** | Pre-call scrub shipped: `runtime/input_guardrail.py` in `complete()`. Extend patterns via `register_input_guardrail` → [Security & Guardrails](#security--guardrails--pre-call-input-sanitization) |
 | 5 | Oversight bodies — embed governance (ISO/IEC 42001) from day one | **Partial** | Thematic map + evidence checklist shipped: [`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md). Certification and live sovereign-API verify still org/Future Phase → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map) |
@@ -431,16 +431,21 @@ streaming is an opt-in mode.
 **UAE link:** UAE Regulatory need #2 — Federal Decree-Law No. 34/2023 and
 routine bias audits before launch. See `docs/uae-regulatory.md` §2.
 
-**Status:** **Shipped (v1 suite).** `fixtures/fairness_evals_base.json` paired
-cases; `run-evals.py --suite fairness`; fairness judge criteria; optional
-`fairness` field on golden path when `score_fairness` / `pair_id` present;
-pair-parity aggregate in the scorecard.
+**Status:** **Shipped (v1 suite + CI opt-in).** Paired fixtures;
+`run-evals.py --suite fairness`; threshold from **`FAIRNESS_FAIL_BELOW`**
+in tenant `.env` (default `0.80`, CLI `--fail-below` overrides);
+`workflow-templates/eval-fairness.yml` wired into ci-* (warn-only unless
+`FAIRNESS_EVALS=required` / `fairness_mode: required`).
 
-**Remaining:** domain-specific fairness sets (lending/hiring beyond the seed
-pairs); statistical disparate-impact metrics beyond judge + pair parity;
-CI hard-gate wiring (tenant opt-in).
+**Remaining:** domain-specific fairness sets beyond seed pairs; statistical
+disparate-impact metrics beyond judge + pair parity.
 
-**Trigger (done):** UAE / regulatory bias-audit requirement.
+**How to enable hard gate:** set repo variable `FAIRNESS_EVALS=required` and
+put cases in `.agent-rfc/fixtures/fairness_evals.json`. Set threshold in `.env`:
+
+```bash
+FAIRNESS_FAIL_BELOW=0.80
+```
 
 ---
 

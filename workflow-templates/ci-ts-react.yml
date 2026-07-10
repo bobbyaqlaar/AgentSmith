@@ -98,3 +98,10 @@ jobs:
     name: "Eval scorecard"
     uses: ./.github/workflows/eval-scorecard.yml
     secrets: inherit
+
+  eval-fairness:
+    name: "Fairness eval (opt-in)"
+    uses: ./.github/workflows/eval-fairness.yml
+    secrets: inherit
+    with:
+      fairness_mode: warn

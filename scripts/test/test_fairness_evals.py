@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -85,3 +86,27 @@ def test_pair_parity_score_is_zero_when_fairness_diverges() -> None:
     ]
     parity = revals._pair_parity(results)
     assert parity["p1"] == 0.0
+
+
+def test_resolve_fail_below_fairness_uses_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    revals = _load_run_evals()
+    monkeypatch.setenv("FAIRNESS_FAIL_BELOW", "0.75")
+    assert revals._resolve_fail_below("fairness", None) == 0.75
+    assert revals._resolve_fail_below("fairness", 0.9) == 0.9  # CLI wins
+
+
+def test_resolve_fail_below_fairness_defaults_to_080(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    revals = _load_run_evals()
+    monkeypatch.delenv("FAIRNESS_FAIL_BELOW", raising=False)
+    assert revals._resolve_fail_below("fairness", None) == 0.80
+
+
+def test_load_dotenv_sets_fairness_threshold(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    revals = _load_run_evals()
+    monkeypatch.delenv("FAIRNESS_FAIL_BELOW", raising=False)
+    (tmp_path / ".env").write_text("FAIRNESS_FAIL_BELOW=0.72\n")
+    revals._load_dotenv(tmp_path)
+    assert os.environ.get("FAIRNESS_FAIL_BELOW") == "0.72"
+    assert revals._resolve_fail_below("fairness", None) == 0.72

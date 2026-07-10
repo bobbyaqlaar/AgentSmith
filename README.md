@@ -121,6 +121,7 @@ OPS_PORTAL_SYNC_TOKEN=<same value as AgenticFramework/.env>
 DATABASE_URL=postgresql://user:pass@localhost:5433/my-tenant-db
 ENVIRONMENT=production
 HITL_ENCRYPTION_KEY=<same value as AgenticFramework/.env>
+FAIRNESS_FAIL_BELOW=0.80
 ```
 
 ### GitHub Actions secrets
@@ -915,6 +916,7 @@ All configuration is via environment variables in `~/.zshrc` — no config files
 | `AGENT_OWNER_ID` | — | Your email — ties all traces to you |
 | `AGENT_OWNER_NAME` | — | Your display name |
 | `AGENT_JUDGE_MODEL` | `claude-sonnet-4-6` | LLM used for eval scoring — change without editing code |
+| `FAIRNESS_FAIL_BELOW` | `0.80` | Fairness suite pass threshold (`run-evals.py --suite fairness`); set in tenant `.env` |
 | `AGENT_PHOENIX_ENDPOINT` | `http://localhost:6006` | Phoenix URL (local or team-shared) |
 | `OPENAI_API_KEY` | — | Required for hybrid mode |
 | `ANTHROPIC_API_KEY` | — | Required for hybrid mode |
