@@ -64,7 +64,7 @@ export AGENT_MONTHLY_USD_CAP="50"      # hard spend cap per month across all pro
                                         # (also the production LLMGateway's default cap
                                         # if a tenant doesn't pass budget_cap_usd explicitly —
                                         # falls back to 150.0 if this var is unset)
-export AGENT_JUDGE_MODEL="claude-3-5-sonnet-20241022"  # model used to grade evals
+export AGENT_JUDGE_MODEL="claude-sonnet-4-6"            # model used to grade evals
 ```
 
 ### `.env` files — there are two, in different places
@@ -919,7 +919,7 @@ All configuration is via environment variables in `~/.zshrc` — no config files
 | `AI_STACK_MODE` | `local` | `local` / `hybrid` / `disabled` |
 | `AGENT_OWNER_ID` | — | Your email — ties all traces to you |
 | `AGENT_OWNER_NAME` | — | Your display name |
-| `AGENT_JUDGE_MODEL` | `claude-3-5-sonnet-20241022` | LLM used for eval scoring — change without editing code |
+| `AGENT_JUDGE_MODEL` | `claude-sonnet-4-6` | LLM used for eval scoring — change without editing code |
 | `AGENT_PHOENIX_ENDPOINT` | `http://localhost:6006` | Phoenix URL (local or team-shared) |
 | `OPENAI_API_KEY` | — | Required for hybrid mode |
 | `ANTHROPIC_API_KEY` | — | Required for hybrid mode |
@@ -955,6 +955,19 @@ infrastructure (Postgres, Redis, Temporal, Kubernetes, a live OIDC provider):
 | **In-App Widget** | `templates/in-app-widget/` — embeddable end-user status component, token-scoped, no cross-tenant access; self-hosted (ships as a release asset, no CDN dependency) |
 | **Enterprise Pack** | `enterprise/` — GPG-signed hook bundles + MDM deployment, HMAC-validated break-glass bypass tokens with expiry, developer opt-in + RFC-enforcement git hooks, dedicated per-tenant Kubernetes worker pools |
 
+### UAE / sovereign compliance (differentiator)
+
+UAE deployments need more than a global SaaS chatbot: **in-border
+inference**, **bias accountability**, **HITL stop-gates**, **PDPL-aligned
+PII handling**, and **governance embedded in the architecture** (including
+alignment toward ISO/IEC 42001 and oversight expectations). AgentSmith maps
+each mandate to concrete runtime controls — local/on-prem + pluggable
+Falcon/UAE endpoints, HITL gates, redaction, audit artifacts — and tracks
+remaining gaps in FIXES.
+
+See **[docs/uae-regulatory.md](./docs/uae-regulatory.md)** for the full
+Rule / Action / AgentSmith status map (not legal advice or certification).
+
 See **[OPERATIONS.md](./OPERATIONS.md)** for the full step-by-step: install, run, test every feature, run evals, deploy to production through GitHub CI/CD, and monitor operations.
 
 ---
@@ -964,6 +977,7 @@ See **[OPERATIONS.md](./OPERATIONS.md)** for the full step-by-step: install, run
 - **[SPECS.md](./SPECS.md)** — Full formal specification: all pillars, components, data schemas, decision log
 - **[UserManual.md](./UserManual.md)** — Day-to-day usage for solo/team dev mode: commands, workflows, maintenance
 - **[OPERATIONS.md](./OPERATIONS.md)** — Step-by-step install/config/test/operate, including multi-tenancy, production runtime, Ops Portal, and the enterprise pack
+- **[docs/uae-regulatory.md](./docs/uae-regulatory.md)** — UAE sovereign / PDPL / HITL / fairness / ISO 42001 mapping (differentiator)
 
 ---
 
@@ -980,6 +994,7 @@ AgentSmith/
 ├── enterprise/                # Org hook bundle signing, MDM deploy, bypass policy
 ├── examples/oil-price-agent/  # Reference tenant app (fork per customer, never deploy from here)
 ├── fixtures/                  # Baseline golden dataset + judge criteria
+├── docs/                      # Topic docs (e.g. uae-regulatory.md)
 ├── caddy/                     # Phoenix auth sidecar config
 ├── docker-compose.yml         # Team-shared Phoenix + PostgreSQL
 ├── docker-compose.auth.yml    # Optional overlay: HTTP basic auth in front of Phoenix

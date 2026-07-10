@@ -1,6 +1,6 @@
 # AgentSmith — Active Work and Future Phases
 
-**Last reviewed:** 2026-07-01  
+**Last reviewed:** 2026-07-10 (UAE regulatory map added)  
 **Purpose:** Active planned work and confirmed future gaps with their
 trigger conditions, rationale, and embedded design decisions. Completed
 build history lives in `Product_Archive.md`.
@@ -196,7 +196,101 @@ method, not inserted in front of the existing human DLQ escalation path.
 
 ---
 
+### Delivery Model — gap register (consultant review)
+
+Enterprise agent delivery is not a feature checklist ("RAG + multi-model +
+GDPR + deploy-by-Friday"). It is a **Delivery Model**: how teams ship agents
+on shared, governed rails instead of one-off solutions. AgentSmith stance
+against that fantasy maps to four requirements:
+
+| # | Delivery Model need | Status | Pointer |
+|---|---|---|---|
+| 1 | Teams use pre-approved environments, data access patterns, security controls, and deployment pipelines — no repeated approvals, no unscalable one-offs | **Partial** | `ai-tenant-init` / promote, CI/CD workflow templates, enterprise MDM hook bundles, on-prem/K8s templates — no named approved-platform catalog yet → [Enterprise Delivery Model](#enterprise-delivery-model--approved-platforms--in-pipeline-governance) |
+| 2 | Rules for data use, risk, auditability, and access live **in** the delivery process, not reviewed afterwards | **Partial** | Pre-commit hooks, enterprise RFC gate, eval promote gates, CD redaction compliance — gaps remain (e.g. pre-call PII) → same phase |
+| 3 | Compliance demonstrated through logs and artifacts, not slide decks | **Met** | HMAC-signed append-only audit log (SPECS.md §30), Phoenix OTel traces, eval scorecards, encrypted HITL blobs |
+| 4 | Standard functions and frameworks for RAG | **Gap** | No vector/RAG layer in repo; Knowledge Graph is structured recall, not RAG → [Memory Management](#memory-management--short-term-token-window--long-term-vector-store) (vector half) |
+
+---
+
+### UAE Regulatory — gap register
+
+UAE differentiator map (sovereign infra, bias law, HITL, PDPL, oversight).
+Canonical narrative: [`docs/uae-regulatory.md`](./docs/uae-regulatory.md).
+Not legal advice / not certification.
+
+| # | Mandate | Status | Pointer |
+|---|---|---|---|
+| 1 | Sovereign infrastructure — national data + models in UAE borders (G42-class clouds, TII Falcon, etc.) | **Partial** | Local Ollama + on-prem templates + pluggable gateway endpoint → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map); pattern in `docs/uae-regulatory.md` §1 |
+| 2 | Bias & fairness — Federal Decree-Law No. 34/2023; routine bias audits | **Gap** | → [Data Bias & Fairness](#data-bias--fairness--fairnessrobustness-evaluation) |
+| 3 | HITL stop-gates for high-impact actions + accountability trail | **Met** | `run_with_hitl_gate`, recoverable DLQ, HMAC audit log, HITL blobs |
+| 4 | PDPL — mask/anonymize PII (e.g. Emirates ID) in the decision path | **Partial** | Post-call `trace_redactor.py` shipped; pre-call scrub → [Security & Guardrails](#security--guardrails--pre-call-input-sanitization) |
+| 5 | Oversight bodies — embed governance (ISO/IEC 42001) from day one | **Partial** | Enterprise pack + audit/eval artifacts shipped; clause map + Authority checklist → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map) |
+
+---
+
+### UAE Regulatory Alignment — sovereign profile + ISO 42001 map
+
+**Gap:** runtime already supports in-border / air-gapped deploy and pluggable
+providers, and ships HITL + audit substrate, but there is no packaged **UAE
+sovereign profile** (documented Falcon/UAE-endpoint `models.yaml` example,
+residency checklist) and no **ISO/IEC 42001 / Authority-facing control map**
+that turns existing artifacts into an oversight pack. Fairness (#2) and
+pre-call PII (#4) stay in their existing Future Phases — do not duplicate
+implementation sketches here.
+
+**Trigger:** a UAE tenant (or regional bid) requires documented sovereign
+hosting + Falcon/UAE endpoint wiring, **or** an oversight/ISO 42001 review
+asks for a control-to-artifact map rather than SOC2-oriented notes alone.
+
+**Out of scope:** claiming G42/TII partnership; claiming PDPL/ISO
+certification; implementing the fairness suite or pre-call guardrail (link
+those phases instead).
+
+**Fix sketch, when triggered:**
+- Tenant-facing sovereign profile: example `models.yaml` + env for
+  UAE-hosted Ollama Falcon (or OpenAI-compatible sovereign endpoint), plus
+  residency checklist (workers, Phoenix, Postgres, HITL blobs in-border).
+- ISO/IEC 42001-oriented control map: each relevant control → AgentSmith
+  gate/artifact path (eval report, redaction check, audit events, HITL
+  records) operators can hand to auditors / the UAE Authority for AI and Data.
+- Cross-link `docs/uae-regulatory.md` status board when items move
+  Partial → Met.
+
+---
+
+### Enterprise Delivery Model — approved platforms + in-pipeline governance
+
+**Gap:** pieces exist (tenant scaffold, CI/CD templates, enterprise pack,
+eval/redaction gates) but are not packaged as a reusable **approved
+platform** with data-access patterns and promote-time evidence that a
+multi-team org can adopt without inventing one-offs. Point 3 above is
+already met; this phase covers points 1–2 only. Point 4 (RAG) stays under
+Memory Management — do not duplicate it here.
+
+**Trigger:** a multi-team org needs a reusable approved platform (not a
+one-off tenant), **or** a compliance review asks to "show delivery
+controls and artifacts," not a slide deck of intended controls.
+
+**Out of scope:** implementing RAG/vector retrieval (Memory phase);
+claiming GDPR/SOC2 certification; expanding the fantasy feature list.
+
+**Fix sketch, when triggered:**
+- Catalog of pre-approved environments, data-access patterns, security
+  controls, and deployment pipelines (org policy YAML + `ai-tenant-init`
+  defaults that bind new tenants to those rails).
+- Bake data-use / risk / audit / access checks into promote and CD so
+  evidence is produced as artifacts (eval report, redaction compliance
+  result, audit events) — not a post-hoc review step.
+- Document the mapping: Delivery Model need → concrete gate/artifact path
+  operators can point auditors at.
+
+---
+
 ### Memory Management — short-term (token-window) + long-term (vector store)
+
+**Delivery Model link:** this section's vector/RAG half is the home for
+Delivery Model need #4 (standard RAG functions) — see gap register above.
+No separate RAG Future Phase.
 
 **Already implemented (not part of this gap):** the long-term, structured
 half of this layer exists as the codebase Knowledge Graph (`map_codebase.py`
@@ -295,13 +389,19 @@ and only then falls through to enqueueing a DLQ entry exactly as
 
 ### Security & Guardrails — pre-call input sanitization
 
+**UAE / PDPL link:** Delivery Model and UAE Regulatory need #4 — masking
+personal data (names, Emirates ID, etc.) in the agent decision path, not only
+in post-call traces. See `docs/uae-regulatory.md` §4.
+
 **Gap:** `trace_redactor.py` redacts/anonymizes data **after** a call, for
 observability. There is no symmetric **pre-call** guardrail — nothing scrubs
 PII or moderates content in the prompt sent to the model.
 
 **Trigger:** a tenant app that accepts untrusted end-user input directly into a
 prompt (the current examples take structured internal data — price series,
-payloads — never free-text user input).
+payloads — never free-text user input), **or** a PDPL / UAE deployment that
+must demonstrate PII masking before model invoke (e.g. Emirates ID in
+prompts).
 
 **Fix sketch, when triggered:** a `runtime/input_guardrail.py` hook point in
 `llm_gateway.py.complete()`, called before `_invoke()` — pluggable (framework
@@ -351,14 +451,18 @@ streaming is an opt-in mode.
 
 ### Data Bias & Fairness — fairness/robustness evaluation
 
+**UAE link:** UAE Regulatory need #2 — Federal Decree-Law No. 34/2023 and
+routine bias audits before launch. See `docs/uae-regulatory.md` §2.
+
 **Gap:** no fairness, bias, or robustness metric (demographic parity, disparate
 impact, adversarial-input robustness) is tracked anywhere in the eval
 framework.
 
 **Trigger:** a tenant app whose domain has a real fairness exposure (e.g.
-anything making decisions about people — lending, hiring, eligibility).
-Genuinely not applicable to the current reference examples (oil price
-forecasting has no fairness dimension).
+anything making decisions about people — lending, hiring, eligibility), **or**
+a UAE / regulatory requirement for documented bias audits (Decree-Law
+34/2023). Genuinely not applicable to the current reference examples (oil
+price forecasting has no fairness dimension) until such a tenant appears.
 
 **Fix sketch, when triggered:** a separate evaluation dataset — fairness test
 sets (paired inputs differing only in a protected attribute, checking for
