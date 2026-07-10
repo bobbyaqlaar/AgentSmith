@@ -359,12 +359,12 @@ Fully wired, not partial: every span carries `tenant.id`, `agent.owner_id`,
 `agent.name`, `agent.role`, `llm.model_name`, `llm.gateway.cost_usd`
 (`runtime/llm_gateway.py`'s `_record_span_attributes`), streamed via
 OpenTelemetry/OpenInference to Arize Phoenix. Cost and token counts are
-tracked per call; **Time-to-First-Token is not** — `llm_gateway.py` makes
-a single non-streaming HTTP call per `complete()`, so there is no
-first-token timestamp to record. If a tenant app needs TTFT specifically
-(e.g. a chat UI with a "thinking" indicator), that requires adding
-streaming support to the provider dispatch layer first — TTFT can't be
-measured without it.
+tracked per call. **Time-to-First-Token** is recorded on the opt-in
+streaming path: `LLMGateway.complete_stream()` sets `ttft_ms` on
+`CompletionResult` and span attribute `llm.gateway.ttft_ms`. Non-streaming
+`complete()` stays default (no `ttft_ms`). Live Ollama budget gate:
+`scripts/verify_ttft.py` + `workflow-templates/eval-ttft-live.yml` when
+repo variable `TTFT_LIVE=required`.
 
 **7. Reliability & Accuracy** — capping hallucinations, task-precision
 targets, auto-retrying failed tool calls.
@@ -917,6 +917,8 @@ All configuration is via environment variables in `~/.zshrc` — no config files
 | `AGENT_JUDGE_MODEL` | `claude-sonnet-4-6` | LLM used for eval scoring — change without editing code |
 | `FAIRNESS_FAIL_BELOW` | `0.80` | Fairness suite pass threshold (`run-evals.py --suite fairness`); set in tenant `.env` |
 | `HALLUCINATION_FAIL_ABOVE` | `0.05` | Hallucination suite fail threshold (`run-evals.py --suite hallucination`); set in tenant `.env` |
+| `TTFT_FAIL_ABOVE_MS` | `2000` | Live Ollama TTFT budget (`scripts/verify_ttft.py`); set in tenant `.env` |
+| `TTFT_LIVE` | *(unset)* | Repo variable — set to `required` to enable `eval-ttft-live.yml` hard gate |
 | `AGENT_PHOENIX_ENDPOINT` | `http://localhost:6006` | Phoenix URL (local or team-shared) |
 | `OPENAI_API_KEY` | — | Required for hybrid mode |
 | `ANTHROPIC_API_KEY` | — | Required for hybrid mode |

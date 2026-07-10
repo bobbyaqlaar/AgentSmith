@@ -54,9 +54,10 @@ Additionally implemented and verified against live infrastructure (same bar as a
 
 **Genuine remaining gaps** (not yet built — trigger conditions documented in
 `FIXES_AND_CLEANUP.md` "Future Phases"): `@tool` registration/schema-extraction,
-LLM-driven self-correction, hallucination-rate metric, TTFT tracking (requires
-streaming support). Memory/RAG v1, pre-call input guardrails, fairness suite,
-and Delivery Model soft pack are shipped — see FIXES for remaining extensions.
+LLM-driven self-correction. Hallucination-rate metric, TTFT streaming path
+(`complete_stream` + `verify_ttft.py`), Memory/RAG v1, pre-call input guardrails,
+fairness suite, and Delivery Model soft pack are shipped — see FIXES for
+remaining extensions.
 
 ---
 
@@ -312,11 +313,11 @@ design choice that's recorded here as settled.
 
 | Layer | Current state | Detail |
 |---|---|---|
-| **Observability & Traceability** | Full span attribution (tenant/agent/cost/tokens) via OTel→Phoenix. Time-to-First-Token is NOT tracked — `llm_gateway.py` is non-streaming, so there's no first-token timestamp to record | §15, §29 |
-| **Reliability & Accuracy** | `correctness`/`tool_accuracy`/`latency` scored per case (§9) — no metric literally named "hallucination rate" (a hallucination surfaces as low `correctness`, not its own number). Auto-retry is two-tiered: Temporal retries transient failures automatically; `run_with_recoverable_step` deliberately disables that for validation-shaped failures (`RetryPolicy(maximum_attempts=1)`) since they need a *different* payload, not a bare retry. No LLM-driven self-correction loop exists — recovery is always human-driven (DLQ) or Temporal-driven (transient retry), never model-driven | §9, §25 |
+| **Observability & Traceability** | Full span attribution (tenant/agent/cost/tokens) via OTel→Phoenix. TTFT via opt-in `LLMGateway.complete_stream()` (`ttft_ms` on result + `llm.gateway.ttft_ms` span); non-stream `complete()` unchanged | §15, §29 |
+| **Reliability & Accuracy** | `correctness`/`tool_accuracy`/`latency`/`hallucination` scored per case (§9). Hallucination rate hard-fail via `HALLUCINATION_FAIL_ABOVE`. Auto-retry is two-tiered: Temporal retries transient failures automatically; `run_with_recoverable_step` deliberately disables that for validation-shaped failures (`RetryPolicy(maximum_attempts=1)`) since they need a *different* payload, not a bare retry. No LLM-driven self-correction loop exists — recovery is always human-driven (DLQ) or Temporal-driven (transient retry), never model-driven | §9, §25 |
 | **Security & Guardrails** | Pre-call: `runtime/input_guardrail.py` scrubs PII in prompts before `_invoke()` (`INPUT_GUARDRAIL`); post-call: `trace_redactor.py` for observability. Content-moderation models remain tenant-pluggable, not shipped | §27, `input_guardrail.py` |
 | **Explainability** | Infrastructure-level: HMAC-signed, tamper-evident, append-only audit log (§30) + full OTel trace history — not per-decision natural-language reasoning narration | §30, §15 |
-| **Scalability & Performance** | Workflow concurrency via Temporal's shared/dedicated worker-pool model (§23, §25); app-version traffic-shaping via on-prem canary routing, customer's choice of Traefik or Envoy (§25 "On-Premise / Air-Gapped Deployment"). TTFT-bounded latency targets are not measurable without adding streaming to the Gateway first (same gap as Observability above) | §23, §25 |
+| **Scalability & Performance** | Workflow concurrency via Temporal's shared/dedicated worker-pool model (§23, §25); app-version traffic-shaping via on-prem canary routing, customer's choice of Traefik or Envoy (§25 "On-Premise / Air-Gapped Deployment"). TTFT budget gate: `complete_stream()` + `scripts/verify_ttft.py` + optional `eval-ttft-live.yml` when `TTFT_LIVE=required` | §23, §25 |
 | **Data Bias & Fairness** | v1 suite: `run-evals.py --suite fairness` with paired fixtures + fairness judge field / pair parity; not a full statistical disparate-impact package | §9 |
 | **Continuous Improvement** | Two independent loops: the HITL promotion loop (§9 "HITL Promotion Flow" — human-annotated production traces become golden-dataset cases) and the shadow-eval sampler (§9 — passive 5% production-trace sampling, judged the same way, surfaced as a read-only suggested-promotion queue, never auto-promoting) | §9 |
 

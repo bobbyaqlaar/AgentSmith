@@ -412,19 +412,22 @@ flagged cases.
 
 ### Scalability & Performance — Time-to-First-Token
 
-**Gap:** `llm_gateway.py` makes one non-streaming HTTP call per `complete()` —
-there is no first-token timestamp anywhere, so TTFT cannot be measured.
+**Status:** **Shipped (v1).** Opt-in streaming via `LLMGateway.complete_stream()`
+records `ttft_ms` on `CompletionResult` and OTel span `llm.gateway.ttft_ms`.
+Non-streaming `complete()` unchanged.
 
-**Trigger:** a tenant app with a user-facing streaming response UI (e.g. a chat
-interface showing tokens as they arrive) — TTFT only matters as a UX metric
-once there's a UI that benefits from streaming.
+**Unit CI:** `runtime/test/test_ttft_stream.py` (mock stream; hard-fail if
+`ttft_ms` absent).
 
-**Fix sketch, when triggered:** add a streaming code path to
-`runtime/provider_dispatch.py` (provider SDKs already support streaming —
-this is wiring, not new capability), record the first-chunk timestamp in
-`_invoke()`, add `ttft_ms` alongside existing `cost_usd`/token counts in
-`_record_span_attributes`. Non-streaming `complete()` stays the default —
-streaming is an opt-in mode.
+**Live gate:** `scripts/verify_ttft.py` streams `falcon3:1b` against
+`OLLAMA_BASE_URL`; fails when `ttft_ms > TTFT_FAIL_ABOVE_MS` (default
+`2000`). Enable in CI with repo variable **`TTFT_LIVE=required`**
+(`workflow-templates/eval-ttft-live.yml`).
+
+**Config:** `TTFT_FAIL_ABOVE_MS` in AgentSmith / tenant `.env`.
+
+**Remaining:** portal chat UI streaming; TTFT on non-stream path (not
+measurable without fake first-token).
 
 ---
 
