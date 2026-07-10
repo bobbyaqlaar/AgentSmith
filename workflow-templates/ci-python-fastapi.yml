@@ -155,3 +155,8 @@ jobs:
     name: "Hallucination eval (hard-fail)"
     uses: ./.github/workflows/eval-hallucination.yml
     secrets: inherit
+
+  eval-ttft-live:
+    name: "TTFT live (opt-in)"
+    uses: ./.github/workflows/eval-ttft-live.yml
+    secrets: inherit
