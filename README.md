@@ -393,16 +393,15 @@ attempt a fix before escalating to a human.
 
 **8. Security & Guardrails** — prompt-injection protection, input
 sanitization, data anonymization.
-**Asymmetric, and worth knowing which side you're on:** `runtime/trace_redactor.py`
-redacts/anonymizes data **after** a call, for observability (what gets
-written to Phoenix/logs) — staging hashes, production truncates +
-encrypts into a HITL blob. There is **no symmetric guardrail before a
-call** — no PII scrubber or content moderator (e.g. a Llama Guard-style
-filter) sits between user input and the prompt actually sent to the
-model. A tenant app handling untrusted user input that could contain
-injected instructions or PII that must never reach the model at all needs
-its own pre-call guardrail; redaction here only protects what's
-*recorded*, not what's *sent*.
+**Pre-call + post-call:** `runtime/input_guardrail.py` scrubs PII (Emirates
+ID, email, phone, cards) **before** the provider call inside
+`llm_gateway.complete()` (`INPUT_GUARDRAIL=off|default|custom`; unset → off
+in development, default in staging/production; `register_input_guardrail`
+for tenant policies). `runtime/trace_redactor.py` still redacts **after** a
+call for observability (staging hashes, production truncates + encrypted
+HITL blob). Content moderation / prompt-injection classifiers are still
+tenant-supplied if needed — the framework owns the scrub hook, not a
+specific moderation model.
 
 **9. Explainability** — meeting stakeholder transparency/auditing
 expectations.
@@ -437,14 +436,13 @@ to the LLM Gateway first — there's no latency-budget enforcement keyed to
 
 **11. Data Bias & Fairness** — continuous evaluation against fairness/
 robustness metrics.
-**Not implemented.** No fairness or bias metric is tracked anywhere in
-`run-evals.py`/`eval_judge.py`/`shadow-eval.py` — the judge scores
-correctness/tool-accuracy/latency, not demographic parity, robustness
-under adversarial input, or any standard fairness metric (equalized odds,
-disparate impact, etc.). If this matters for your tenant app, it's a new
-judge-criteria dimension and likely a separate evaluation dataset
-(fairness test sets don't usually overlap with task-correctness golden
-sets) — there's no existing scaffold to extend, this is greenfield.
+**Shipped (v1 suite).** `python3 scripts/run-evals.py --suite fairness`
+runs paired cases from `fixtures/fairness_evals_base.json` (or tenant
+`.agent-rfc/fixtures/fairness_evals.json`) with a fairness judge criteria
+file; scorecard includes `fairness` and pair-parity. Golden path can also
+request a `fairness` field when criteria sets `score_fairness` or the case
+has a `pair_id`. Not a full disparate-impact statistics package — extend
+pairs for your domain and opt into CI gating as needed.
 
 **12. Continuous Improvement** — learning from production to update the
 golden dataset/evals, avoiding drift.

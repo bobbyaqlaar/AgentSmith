@@ -80,23 +80,25 @@ Decree-Law No. 34/2023**.
 **The Action:** Run routine bias audits on training/eval data and agent
 behaviour before launch — and keep evidence.
 
-### AgentSmith today — **Gap (eval harness ready to extend)**
+### AgentSmith today — **Partial (suite shipped)**
 
 
 | Capability                         | Status                                                                |
 | ---------------------------------- | --------------------------------------------------------------------- |
 | Golden evals + LLM judge scorecard | **Shipped** — correctness / tool accuracy / latency gates             |
-| Fairness / bias suite              | **Not shipped** — no demographic-parity or paired-attribute evals yet |
+| Fairness / bias suite              | **Shipped (v1)** — `run-evals.py --suite fairness` + paired fixtures  |
 | Audit artifacts for other controls | **Shipped** — HMAC audit log, Phoenix traces, promote gates           |
 
 
-**Roadmap:** `FIXES_AND_CLEANUP.md` → Data Bias & Fairness (triggered by
-people-impacting agents **or** UAE/regulatory fairness requirements). Planned
-shape: `.agent-rfc/fixtures/fairness_evals.json` + `run-evals.py --suite fairness`.
+**How to run:** copy `fixtures/fairness_evals_base.json` →
+`.agent-rfc/fixtures/fairness_evals.json` (or rely on framework base
+fallback), then:
 
-Until that suite lands, tenants in regulated domains must supply their own
-bias-audit evidence outside the framework scorecard — AgentSmith will not
-pretend a correctness score is a fairness audit.
+```bash
+python3 scripts/run-evals.py --suite fairness --fail-below 0.80
+```
+
+Extend pairs for your domain. CI hard-gate is tenant opt-in.
 
 ---
 
@@ -143,23 +145,21 @@ consent and strong protections.
 numbers, contact data, etc.) during the agent’s decision-making path — not only
 in logs after the fact.
 
-### AgentSmith today — **Partial**
+### AgentSmith today — **Partial (pre-call + post-call)**
 
 
 | Capability                                | Status                                                                                       |
 | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
 | Post-call trace redaction / anonymization | **Shipped** — `runtime/trace_redactor.py`, CD redaction compliance checks                    |
 | Encrypted HITL blob storage               | **Shipped** — full payload for review without leaving cleartext in traces                    |
-| Pre-call PII scrub before model invoke    | **Gap** — nothing yet strips Emirates ID / names from the prompt in `llm_gateway.complete()` |
+| Pre-call PII scrub before model invoke    | **Shipped** — `runtime/input_guardrail.py` in `llm_gateway.complete()` (Emirates ID, email, phone, cards; pluggable) |
 
 
-**Roadmap:** `FIXES_AND_CLEANUP.md` → Security & Guardrails — pre-call input
-sanitization (pluggable `input_guardrail` before `_invoke()`). UAE PDPL and
-Emirates ID patterns are explicit trigger drivers for that work.
+**How to run:** staging/production default `INPUT_GUARDRAIL=default` (or unset).
+Development defaults to `off`. Force on: `export INPUT_GUARDRAIL=default`.
+Custom: `register_input_guardrail(fn)` + `INPUT_GUARDRAIL=custom`.
 
-**Until then:** tenants must scrub or tokenize PII **before** calling the
-gateway when processing personal data, and keep national/personal datasets on
-in-border stores (see §1).
+Keep national/personal datasets on in-border stores (see §1).
 
 ---
 
@@ -202,9 +202,9 @@ for technical standards alignment (still not a certificate).
 | #   | Mandate                     | Status  | Primary pointer                                                          |
 | --- | --------------------------- | ------- | ------------------------------------------------------------------------ |
 | 1   | Sovereign infrastructure    | Partial | [`templates/uae-sovereign/`](../templates/uae-sovereign/); this doc §1    |
-| 2   | Bias & fairness             | Gap     | FIXES → Data Bias & Fairness                                             |
+| 2   | Bias & fairness             | Partial | `run-evals.py --suite fairness`; FIXES Data Bias & Fairness              |
 | 3   | HITL stop-gates             | Met     | README HITL; `run_with_hitl_gate`; Ops Portal                            |
-| 4   | PDPL / PII in decision path | Partial | `trace_redactor.py`; FIXES → pre-call sanitization                       |
+| 4   | PDPL / PII in decision path | Partial | `input_guardrail.py` + `trace_redactor.py`                               |
 | 5   | Oversight / ISO 42001       | Partial | [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md); enterprise pack |
 
 

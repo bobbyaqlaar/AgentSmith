@@ -413,6 +413,24 @@ else
   success "Baseline judge criteria already present"
 fi
 
+# Fairness eval suite base (paired bias audits — UAE / ISO theme)
+if [ ! -f "$SHARED_DIR/fairness_evals_base.json" ]; then
+  if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/fixtures/fairness_evals_base.json" ]; then
+    cp "$INSTALLER_DIR/fixtures/fairness_evals_base.json" "$SHARED_DIR/"
+    success "Baseline fairness evals written to ~/.agent-framework/shared/"
+  else
+    info "fairness_evals_base.json not found in installer — skip (optional suite)"
+  fi
+else
+  success "Baseline fairness evals already present"
+fi
+if [ ! -f "$SHARED_DIR/fairness_judge_criteria_base.json" ]; then
+  if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/fixtures/fairness_judge_criteria_base.json" ]; then
+    cp "$INSTALLER_DIR/fixtures/fairness_judge_criteria_base.json" "$SHARED_DIR/"
+    success "Baseline fairness judge criteria written to ~/.agent-framework/shared/"
+  fi
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 6 — GIT HOOK: pre-commit
 # ═══════════════════════════════════════════════════════════════════════════════

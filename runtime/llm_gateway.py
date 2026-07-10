@@ -591,6 +591,38 @@ class LLMGateway:
         model_id = cfg["id"]
         messages = self._coerce_messages(prompt)
 
+        # Pre-call PII scrub (PDPL / FIXES Security & Guardrails) — masks
+        # personal data in the prompt before provider invoke. Symmetric to
+        # post-call trace_redactor.py. Mode: INPUT_GUARDRAIL or env default.
+        try:
+            from runtime.input_guardrail import resolve_mode, scrub_messages
+        except ImportError:  # pragma: no cover
+            from input_guardrail import resolve_mode, scrub_messages  # type: ignore
+
+        guardrail_mode = resolve_mode()
+        messages, guardrail_counts = scrub_messages(messages, mode=guardrail_mode)
+        if guardrail_counts:
+            logger.info(
+                "input_guardrail applied tenant=%s mode=%s counts=%s",
+                self.tenant_id,
+                guardrail_mode,
+                guardrail_counts,
+            )
+        try:
+            from opentelemetry import trace as _otel_trace
+
+            span = _otel_trace.get_current_span()
+            if span and span.is_recording():
+                span.set_attribute("llm.gateway.input_guardrail.mode", guardrail_mode)
+                span.set_attribute(
+                    "llm.gateway.input_guardrail.redactions",
+                    sum(guardrail_counts.values()),
+                )
+                for kind, n in guardrail_counts.items():
+                    span.set_attribute(f"llm.gateway.input_guardrail.{kind}", n)
+        except Exception:  # fail-open: tracing must never break the LLM call
+            pass
+
         # Reserve an upper-bound cost estimate atomically before the call,
         # not after — closes the check-then-act race where concurrent calls
         # could all observe "not breached" before any of them recorded

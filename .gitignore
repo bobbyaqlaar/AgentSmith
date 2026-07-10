@@ -25,6 +25,7 @@ runtime/.hitl_blobs/
 # circuit_breaker.py's local dev-session state cache
 .agent-rfc/fixtures/token_velocity_cache.json
 .agent-rfc/fixtures/eval_results.json
+.agent-rfc/fixtures/fairness_eval_results.json
 
 # IDE / OS
 .DS_Store

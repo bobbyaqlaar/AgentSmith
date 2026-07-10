@@ -1,6 +1,6 @@
 # AgentSmith — Active Work and Future Phases
 
-**Last reviewed:** 2026-07-10 (ISO 42001 control map added)  
+**Last reviewed:** 2026-07-10 (pre-call PII + fairness suite shipped)  
 **Purpose:** Active planned work and confirmed future gaps with their
 trigger conditions, rationale, and embedded design decisions. Completed
 build history lives in `Product_Archive.md`.
@@ -221,28 +221,28 @@ Not legal advice / not certification.
 | # | Mandate | Status | Pointer |
 |---|---|---|---|
 | 1 | Sovereign infrastructure — national data + models in UAE borders (G42-class clouds, TII Falcon, etc.) | **Partial** | Sketch shipped: [`templates/uae-sovereign/`](./templates/uae-sovereign/) (Falcon `models.yaml`, env, residency checklist). ISO/Authority pack still open → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map); narrative in `docs/uae-regulatory.md` §1 |
-| 2 | Bias & fairness — Federal Decree-Law No. 34/2023; routine bias audits | **Gap** | → [Data Bias & Fairness](#data-bias--fairness--fairnessrobustness-evaluation) |
+| 2 | Bias & fairness — Federal Decree-Law No. 34/2023; routine bias audits | **Partial** | Suite shipped: `run-evals.py --suite fairness` + `fixtures/fairness_evals_base.json`. Domain sets / CI hard-gate still tenant work → [Data Bias & Fairness](#data-bias--fairness--fairnessrobustness-evaluation) |
 | 3 | HITL stop-gates for high-impact actions + accountability trail | **Met** | `run_with_hitl_gate`, recoverable DLQ, HMAC audit log, HITL blobs |
-| 4 | PDPL — mask/anonymize PII (e.g. Emirates ID) in the decision path | **Partial** | Post-call `trace_redactor.py` shipped; pre-call scrub → [Security & Guardrails](#security--guardrails--pre-call-input-sanitization) |
+| 4 | PDPL — mask/anonymize PII (e.g. Emirates ID) in the decision path | **Partial** | Pre-call scrub shipped: `runtime/input_guardrail.py` in `complete()`. Extend patterns via `register_input_guardrail` → [Security & Guardrails](#security--guardrails--pre-call-input-sanitization) |
 | 5 | Oversight bodies — embed governance (ISO/IEC 42001) from day one | **Partial** | Thematic map + evidence checklist shipped: [`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md). Certification and live sovereign-API verify still org/Future Phase → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map) |
 
 ---
 
-### UAE Regulatory Alignment — sovereign profile + ISO 42001 map
-
 **Gap:** sovereign profile sketch and ISO/IEC 42001 **thematic control map +
 evidence checklist** are shipped
 ([`templates/uae-sovereign/`](./templates/uae-sovereign/),
-[`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md)). Still
-open: live verification against a named UAE sovereign API (beyond Ollama
-pattern), and any org-level certification work (never framework-owned).
-Fairness (#2) and pre-call PII (#4) stay in their existing Future Phases.
+[`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md)).
+Fairness suite and pre-call PII scrub also shipped (v1) — see those Future
+Phase sections. Still open: live verification against a named UAE sovereign
+API (beyond Ollama pattern), and any org-level certification work (never
+framework-owned).
 
 **Already shipped (do not re-litigate):**
 - Pattern A/B sovereign profile + residency checklist
 - Thematic ISO/IEC 42001 map with Met/Partial/Gap/Org-owned + framework vs
   tenant ownership + auditor evidence checklist
 - SPECS.md §30 ISO/IEC 42001-oriented summary table linking the full doc
+- `runtime/input_guardrail.py` + `run-evals.py --suite fairness`
 
 **Trigger:** live verification against a specific sovereign provider
 endpoint is required for a bid, **or** an auditor demands a licensed
@@ -250,15 +250,14 @@ clause-ID matrix beyond the thematic pack (out of scope for inventing
 clause text — engage a certification body).
 
 **Out of scope:** claiming G42/TII partnership; claiming PDPL/ISO
-certification; implementing the fairness suite or pre-call guardrail (link
-those phases instead); reproducing ISO standard text.
+certification; reproducing ISO standard text.
 
 **Fix sketch, when triggered:**
 - Optional: live-verify one sovereign OpenAI-compatible endpoint and record
   the working `models.yaml` id/base URL in the template (same bar as
   `vertex_gemini` live notes in `runtime/models.yaml`).
-- Keep `docs/iso-42001-control-map.md` status board in sync when fairness /
-  pre-call PII move Partial/Gap → Met.
+- Keep `docs/iso-42001-control-map.md` status board in sync when remaining
+  Partial items move.
 
 ---
 
@@ -397,21 +396,16 @@ and only then falls through to enqueueing a DLQ entry exactly as
 personal data (names, Emirates ID, etc.) in the agent decision path, not only
 in post-call traces. See `docs/uae-regulatory.md` §4.
 
-**Gap:** `trace_redactor.py` redacts/anonymizes data **after** a call, for
-observability. There is no symmetric **pre-call** guardrail — nothing scrubs
-PII or moderates content in the prompt sent to the model.
+**Status:** **Shipped (hybrid).** `runtime/input_guardrail.py` scrubs prompts
+before `_invoke()` in `llm_gateway.complete()`. Default regex covers Emirates
+ID, email, phone, Luhn cards; `register_input_guardrail()` for custom;
+`INPUT_GUARDRAIL=off|default|custom` (unset → off in development, default in
+staging/production).
 
-**Trigger:** a tenant app that accepts untrusted end-user input directly into a
-prompt (the current examples take structured internal data — price series,
-payloads — never free-text user input), **or** a PDPL / UAE deployment that
-must demonstrate PII masking before model invoke (e.g. Emirates ID in
-prompts).
+**Remaining:** tenant-specific PII vocabularies beyond the default patterns;
+content moderation (toxicity) is still out of scope.
 
-**Fix sketch, when triggered:** a `runtime/input_guardrail.py` hook point in
-`llm_gateway.py.complete()`, called before `_invoke()` — pluggable (framework
-provides the call site, not a specific moderation model), matching the
-framework's existing pattern of providing the mechanism and letting the tenant
-supply the policy (same shape as `replay_handler`, `TENANT_WORKER_MODULE`).
+**Trigger (done):** PDPL / UAE deployments needing decision-path masking.
 
 ---
 
@@ -458,21 +452,16 @@ streaming is an opt-in mode.
 **UAE link:** UAE Regulatory need #2 — Federal Decree-Law No. 34/2023 and
 routine bias audits before launch. See `docs/uae-regulatory.md` §2.
 
-**Gap:** no fairness, bias, or robustness metric (demographic parity, disparate
-impact, adversarial-input robustness) is tracked anywhere in the eval
-framework.
+**Status:** **Shipped (v1 suite).** `fixtures/fairness_evals_base.json` paired
+cases; `run-evals.py --suite fairness`; fairness judge criteria; optional
+`fairness` field on golden path when `score_fairness` / `pair_id` present;
+pair-parity aggregate in the scorecard.
 
-**Trigger:** a tenant app whose domain has a real fairness exposure (e.g.
-anything making decisions about people — lending, hiring, eligibility), **or**
-a UAE / regulatory requirement for documented bias audits (Decree-Law
-34/2023). Genuinely not applicable to the current reference examples (oil
-price forecasting has no fairness dimension) until such a tenant appears.
+**Remaining:** domain-specific fairness sets (lending/hiring beyond the seed
+pairs); statistical disparate-impact metrics beyond judge + pair parity;
+CI hard-gate wiring (tenant opt-in).
 
-**Fix sketch, when triggered:** a separate evaluation dataset — fairness test
-sets (paired inputs differing only in a protected attribute, checking for
-outcome parity) don't usually overlap with task-correctness golden sets. Scope
-as its own `.agent-rfc/fixtures/fairness_evals.json` with its own judge
-criteria, evaluated by `scripts/run-evals.py --suite fairness` (new flag).
+**Trigger (done):** UAE / regulatory bias-audit requirement.
 
 ---
 
