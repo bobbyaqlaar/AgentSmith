@@ -309,6 +309,21 @@ def run_scorecard(fail_below: float = 0.80, suite: str = "golden") -> int:
     return 0 if passed else 1
 
 
+def hallucination_flag_rate(rows: list[dict], flag_at: float = 0.5) -> float:
+    scored = [r for r in rows if isinstance(r.get("hallucination"), (int, float))]
+    if not scored:
+        return 0.0
+    flagged = sum(1 for r in scored if float(r["hallucination"]) >= flag_at)
+    return flagged / len(scored)
+
+
+def _resolve_hallucination_fail_above(cli_value: float | None) -> float:
+    if cli_value is not None:
+        return cli_value
+    raw = os.environ.get("HALLUCINATION_FAIL_ABOVE", "0.05").strip() or "0.05"
+    return float(raw)
+
+
 def _resolve_fail_below(suite: str, cli_value: float | None) -> float:
     """
     CLI --fail-below wins when provided.
