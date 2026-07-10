@@ -119,3 +119,8 @@ jobs:
     secrets: inherit
     with:
       fairness_mode: warn
+
+  eval-hallucination:
+    name: "Hallucination eval (hard-fail)"
+    uses: ./.github/workflows/eval-hallucination.yml
+    secrets: inherit
