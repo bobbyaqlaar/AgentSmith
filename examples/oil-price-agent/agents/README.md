@@ -34,6 +34,12 @@ and demonstrates both of the framework's HITL patterns:
   alive for a human to correct via the Ops Portal's DLQ view, rather than
   failing the run.
 
+Opt-in self-correction: tenant workflows that call
+`run_with_self_correction` must also register
+`self_correct_payload_activity` on their Temporal worker alongside their
+domain activities. This oil-price example keeps the existing
+human-editable `run_with_recoverable_step` path registered locally.
+
 Worker bootstrap: `../worker.py`. Cron schedule: `../.agenticframework/schedules.yaml`.
 
 ## Status

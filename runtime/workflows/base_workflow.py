@@ -82,6 +82,29 @@ if _HAS_TEMPORAL:
         return {"task_id": entry.task_id}
 
 
+    @activity.defn
+    async def self_correct_payload_activity(input: dict) -> Any:
+        """Activity boundary for LLM-driven payload correction.
+
+        Kept outside workflow code because gateway calls are network I/O and
+        therefore non-deterministic from Temporal's point of view.
+        """
+        try:
+            from runtime.llm_gateway import LLMGateway
+            from runtime.self_correction import propose_corrected_payload
+        except ImportError:
+            from llm_gateway import LLMGateway  # type: ignore
+            from self_correction import propose_corrected_payload  # type: ignore
+
+        gateway = LLMGateway(tenant_id=input["tenant_id"])
+        return await propose_corrected_payload(
+            gateway,
+            input["payload"],
+            input["error"],
+            model_hint=input.get("model_hint", "developer"),
+        )
+
+
 @dataclass
 class AgentWorkflowInput:
     tenant_id: str
@@ -184,6 +207,74 @@ class BaseAgentWorkflow:
             resume_activity_name,
             resume_input,
             start_to_close_timeout=timedelta(minutes=10),
+        )
+
+    async def run_with_self_correction(
+        self,
+        activity_name: str,
+        payload: Any,
+        tenant_id: str,
+        gate_id: str,
+        reason: str = "validation_error",
+        timeout: timedelta = HITL_SIGNAL_TIMEOUT,
+        max_attempts: int = RECOVERABLE_STEP_MAX_ATTEMPTS,
+        max_self_correction_attempts: int = 1,
+        model_hint: str = "developer",
+    ) -> Any:
+        """
+        Run `activity_name` with `payload`. On failure, ask the gateway for a
+        corrected JSON payload and retry before falling through to the
+        existing human recoverable-step path.
+        """
+        if not _HAS_TEMPORAL:
+            raise RuntimeError(
+                "temporalio is not installed. Run: pip install temporalio. "
+                "See SPECS.md §25 for the production runtime spec."
+            )
+
+        current_payload = payload
+        last_error = ""
+
+        try:
+            return await workflow.execute_activity(
+                activity_name,
+                current_payload,
+                start_to_close_timeout=timedelta(minutes=10),
+                retry_policy=RetryPolicy(maximum_attempts=1),
+            )
+        except Exception as exc:
+            last_error = str(exc)[:500]
+
+        for _ in range(max_self_correction_attempts):
+            current_payload = await workflow.execute_activity(
+                self_correct_payload_activity,
+                {
+                    "payload": current_payload,
+                    "error": last_error,
+                    "tenant_id": tenant_id,
+                    "model_hint": model_hint,
+                },
+                start_to_close_timeout=timedelta(minutes=10),
+                retry_policy=RetryPolicy(maximum_attempts=1),
+            )
+            try:
+                return await workflow.execute_activity(
+                    activity_name,
+                    current_payload,
+                    start_to_close_timeout=timedelta(minutes=10),
+                    retry_policy=RetryPolicy(maximum_attempts=1),
+                )
+            except Exception as exc:
+                last_error = str(exc)[:500]
+
+        return await self.run_with_recoverable_step(
+            activity_name=activity_name,
+            payload=current_payload,
+            tenant_id=tenant_id,
+            gate_id=gate_id,
+            reason=reason,
+            timeout=timeout,
+            max_attempts=max_attempts,
         )
 
     async def run_with_recoverable_step(
