@@ -71,3 +71,53 @@ async def test_complete_stream_sets_ttft_ms() -> None:
     assert "Hi" in result.text
     assert result.ttft_ms is not None
     assert result.ttft_ms >= 0
+
+
+def _stream_gateway(*, free_tier: bool) -> LLMGateway:
+    gw = LLMGateway.__new__(LLMGateway)
+    gw.tenant_id = "t"
+    gw.models = {
+        "developer": {
+            "id": "test-model",
+            "provider": "ollama",
+            "endpoint": "http://127.0.0.1:11434/v1",
+            "cost_per_input_token": 0.01,
+            "cost_per_output_token": 0.02,
+        }
+    }
+    gw.budget_cap_usd = 10.0
+    gw._idempotency = None
+    gw.get_budget_status = MagicMock(
+        return_value={"ok": True, "remaining_usd": 10, "spent_usd": 0, "cap_usd": 10}
+    )
+    gw._resolve_role = MagicMock(return_value=("developer", None))
+    gw._coerce_messages = MagicMock(return_value=[{"role": "user", "content": "hi"}])
+    gw._record_span_attributes = MagicMock()
+    gw._report_run_status = MagicMock()
+    gw._degrade_chain = MagicMock(return_value=["developer"])
+    gw._is_free_tier = MagicMock(return_value=free_tier)
+    return gw
+
+
+@pytest.mark.asyncio
+async def test_complete_stream_keeps_budget_reservation_on_success() -> None:
+    gw = _stream_gateway(free_tier=False)
+    mock_budget = MagicMock()
+    mock_budget.try_reserve = MagicMock(return_value=True)
+    gw._budget = mock_budget
+
+    fake = _FakeStreamResp(SSE)
+    mock_client = MagicMock()
+    mock_client.stream = MagicMock(return_value=fake)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await gw.complete_stream("hi", model_hint="developer", max_tokens=100)
+
+    expected_cost = 100 * (0.01 + 0.02)
+    mock_budget.try_reserve.assert_called_once()
+    mock_budget.add_spend.assert_not_called()
+    assert result.cost_usd == expected_cost
+    gw._record_span_attributes.assert_called_once()
+    assert gw._record_span_attributes.call_args[0][4] == expected_cost

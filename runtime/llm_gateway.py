@@ -682,9 +682,8 @@ class LLMGateway:
             raise
 
         text = "".join(chunks)
-        cost_usd = 0.0
-        if reserved and estimated_cost_usd:
-            self._budget.add_spend(self.tenant_id, -estimated_cost_usd)
+        # Stream v1 has no usage tokens; keep the try_reserve() amount as cost.
+        cost_usd = estimated_cost_usd if (reserved and estimated_cost_usd) else 0.0
 
         self._record_span_attributes(
             role, model_id, degrade_tier, workflow_id, cost_usd, ttft_ms
