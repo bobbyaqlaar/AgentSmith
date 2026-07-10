@@ -979,6 +979,7 @@ See **[OPERATIONS.md](./OPERATIONS.md)** for the full step-by-step: install, run
 - **[OPERATIONS.md](./OPERATIONS.md)** — Step-by-step install/config/test/operate, including multi-tenancy, production runtime, Ops Portal, and the enterprise pack
 - **[docs/uae-regulatory.md](./docs/uae-regulatory.md)** — UAE sovereign / PDPL / HITL / fairness / ISO 42001 mapping (differentiator)
 - **[docs/iso-42001-control-map.md](./docs/iso-42001-control-map.md)** — ISO/IEC 42001 thematic control map + auditor evidence checklist
+- **[docs/delivery-model.md](./docs/delivery-model.md)** — Enterprise Delivery Model catalog, soft gate, promote evidence pack
 
 ---
 
@@ -990,7 +991,7 @@ AgentSmith/
 ├── scripts/                   # Python agent stack (dev lifecycle) + generate-ide-config.py
 ├── runtime/                   # Production runtime — llm_gateway, trace_redactor, worker, workflows/, k8s/
 ├── hooks/                     # Git hook templates
-├── templates/                 # IDE config + in-app-widget + onprem-deploy + uae-sovereign
+├── templates/                 # IDE config + in-app-widget + onprem-deploy + uae-sovereign + delivery-model
 ├── portal/                    # Ops Portal (Next.js)
 ├── enterprise/                # Org hook bundle signing, MDM deploy, bypass policy
 ├── examples/oil-price-agent/  # Reference tenant app (fork per customer, never deploy from here)

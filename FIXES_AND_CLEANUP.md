@@ -1,6 +1,6 @@
 # AgentSmith — Active Work and Future Phases
 
-**Last reviewed:** 2026-07-10 (pre-call PII + fairness suite shipped)  
+**Last reviewed:** 2026-07-10 (Delivery Model soft pack shipped)  
 **Purpose:** Active planned work and confirmed future gaps with their
 trigger conditions, rationale, and embedded design decisions. Completed
 build history lives in `Product_Archive.md`.
@@ -205,8 +205,8 @@ against that fantasy maps to four requirements:
 
 | # | Delivery Model need | Status | Pointer |
 |---|---|---|---|
-| 1 | Teams use pre-approved environments, data access patterns, security controls, and deployment pipelines — no repeated approvals, no unscalable one-offs | **Partial** | `ai-tenant-init` / promote, CI/CD workflow templates, enterprise MDM hook bundles, on-prem/K8s templates — no named approved-platform catalog yet → [Enterprise Delivery Model](#enterprise-delivery-model--approved-platforms--in-pipeline-governance) |
-| 2 | Rules for data use, risk, auditability, and access live **in** the delivery process, not reviewed afterwards | **Partial** | Pre-commit hooks, enterprise RFC gate, eval promote gates, CD redaction compliance — gaps remain (e.g. pre-call PII) → same phase |
+| 1 | Teams use pre-approved environments, data access patterns, security controls, and deployment pipelines — no repeated approvals, no unscalable one-offs | **Partial** | Catalog + soft gate shipped: [`docs/delivery-model.md`](./docs/delivery-model.md), [`templates/delivery-model/`](./templates/delivery-model/), `verify_system.py --check-delivery-model`. Hard bind into `ai-tenant-init` still open → [Enterprise Delivery Model](#enterprise-delivery-model--approved-platforms--in-pipeline-governance) |
+| 2 | Rules for data use, risk, auditability, and access live **in** the delivery process, not reviewed afterwards | **Partial** | Hooks, RFC, eval/redaction CD, input guardrail, `delivery_evidence.py` promote pack → same phase |
 | 3 | Compliance demonstrated through logs and artifacts, not slide decks | **Met** | HMAC-signed append-only audit log (SPECS.md §30), Phoenix OTel traces, eval scorecards, encrypted HITL blobs |
 | 4 | Standard functions and frameworks for RAG | **Gap** | No vector/RAG layer in repo; Knowledge Graph is structured recall, not RAG → [Memory Management](#memory-management--short-term-token-window--long-term-vector-store) (vector half) |
 
@@ -263,29 +263,19 @@ certification; reproducing ISO standard text.
 
 ### Enterprise Delivery Model — approved platforms + in-pipeline governance
 
-**Gap:** pieces exist (tenant scaffold, CI/CD templates, enterprise pack,
-eval/redaction gates) but are not packaged as a reusable **approved
-platform** with data-access patterns and promote-time evidence that a
-multi-team org can adopt without inventing one-offs. Point 3 above is
-already met; this phase covers points 1–2 only. Point 4 (RAG) stays under
-Memory Management — do not duplicate it here.
+**Status:** **Shipped (v1 soft pack).**
+- [`docs/delivery-model.md`](./docs/delivery-model.md) — catalog + need→gate→artifact
+- [`templates/delivery-model/org-policy.example.yaml`](./templates/delivery-model/org-policy.example.yaml)
+- `scripts/delivery_model.py` + `verify_system.py --check-delivery-model` (warn-only)
+- `scripts/delivery_evidence.py` → `delivery_evidence.json` + `.md`
 
-**Trigger:** a multi-team org needs a reusable approved platform (not a
-one-off tenant), **or** a compliance review asks to "show delivery
-controls and artifacts," not a slide deck of intended controls.
+**Remaining:** hard-fail enterprise mode; auto-inject `delivery.*` defaults from
+`ai-tenant-init`; CD step that uploads evidence pack as release artifact.
 
-**Out of scope:** implementing RAG/vector retrieval (Memory phase);
-claiming GDPR/SOC2 certification; expanding the fantasy feature list.
+**Out of scope:** RAG/vector (Memory phase); claiming GDPR/SOC2 certification.
 
-**Fix sketch, when triggered:**
-- Catalog of pre-approved environments, data-access patterns, security
-  controls, and deployment pipelines (org policy YAML + `ai-tenant-init`
-  defaults that bind new tenants to those rails).
-- Bake data-use / risk / audit / access checks into promote and CD so
-  evidence is produced as artifacts (eval report, redaction compliance
-  result, audit events) — not a post-hoc review step.
-- Document the mapping: Delivery Model need → concrete gate/artifact path
-  operators can point auditors at.
+**Trigger for remaining work:** org wants promote blocked when platform not
+approved, or tenant-init must stamp `delivery.platform` automatically.
 
 ---
 

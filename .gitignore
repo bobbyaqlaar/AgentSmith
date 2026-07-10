@@ -26,6 +26,8 @@ runtime/.hitl_blobs/
 .agent-rfc/fixtures/token_velocity_cache.json
 .agent-rfc/fixtures/eval_results.json
 .agent-rfc/fixtures/fairness_eval_results.json
+.agent-rfc/fixtures/delivery_evidence.json
+.agent-rfc/fixtures/delivery_evidence.md
 
 # IDE / OS
 .DS_Store

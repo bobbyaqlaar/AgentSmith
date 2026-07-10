@@ -1,0 +1,52 @@
+# templates/delivery-model/org-policy.example.yaml
+#
+# Copy into a tenant or org repo as `.agenticframework/org-policy.yaml`
+# (or merge the `delivery_model:` block into an existing enterprise org policy).
+# Soft-checked by: python3 scripts/verify_system.py --check-delivery-model
+# Evidence pack:     python3 scripts/delivery_evidence.py
+#
+# See docs/delivery-model.md
+
+hooks:
+  version: "1.0.0"
+  bypass_policy: disabled
+  break_glass_approvers: ["it-sec@example.com"]
+
+delivery_model:
+  # Pre-approved runtime/deploy footprints — tenants set delivery.platform
+  # in .agenticframework/tenant.yaml to one of these ids.
+  approved_platforms:
+    - dev-local          # AI_STACK_MODE=local, laptop/dev server
+    - hybrid-cloud       # gateway to approved cloud providers + shared Phoenix
+    - on-prem            # templates/onprem-deploy Compose or Helm
+    - uae-sovereign      # templates/uae-sovereign + in-border residency
+    - dedicated-k8s      # tenant.isolation: dedicated worker pool
+
+  # How agents may touch enterprise data — tenants set delivery.data_access_pattern
+  data_access_patterns:
+    - postgres-tenant-partition   # tenant.id partition key (default)
+    - dedicated-db                # separate DATABASE_URL per tenant
+    - no-national-data-export     # national data must not leave approved region
+
+  # Security controls expected on every approved platform
+  security_controls:
+    - precommit-hooks
+    - trace-redaction
+    - input-guardrail-default-in-prod
+    - hitl-for-high-impact
+    - hmac-audit-log
+
+  # Deploy pipelines allowed without one-off approval
+  deployment_pipelines:
+    - github-actions-staging-production
+    - onprem-compose
+    - onprem-helm
+
+  # Artifacts that must exist (or be marked N/A) at promote time
+  required_promote_evidence:
+    - eval_scorecard
+    - redaction_check
+    - delivery_evidence_pack
+    # optional but recommended:
+    # - fairness_scorecard
+    # - audit_log_sample

@@ -37,6 +37,14 @@ jobs:
         uses: azure/setup-helm@v4
       - name: "On-prem deploy template (Compose + Helm syntax)"
         run: python3 scripts/verify_system.py --check-onprem-deploy
+      - name: "Delivery Model soft gate (warn-only)"
+        run: python3 scripts/verify_system.py --check-delivery-model
+      - name: "Delivery evidence pack script"
+        run: python3 scripts/delivery_evidence.py
+      - name: "Unit tests — delivery model + fairness + input guardrail"
+        run: |
+          pip install pytest pyyaml
+          PYTHONPATH=scripts:. pytest scripts/test/test_delivery_model.py scripts/test/test_fairness_evals.py runtime/test/test_input_guardrail.py -q
 
   python-behaviour:
     name: "Python runtime behaviour tests (Postgres-backed)"

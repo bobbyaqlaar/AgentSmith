@@ -857,6 +857,52 @@ def check_onprem_deploy() -> bool:
     return failures == 0
 
 
+def check_delivery_model() -> bool:
+    """
+    Soft gate for Enterprise Delivery Model (FIXES_AND_CLEANUP.md).
+
+    If `.agenticframework/org-policy.yaml` defines `delivery_model`, warn when
+    tenant `delivery.platform` / `data_access_pattern` are missing or not in
+    the approved catalog. Never fails CI (warn-only).
+
+        python3 scripts/verify_system.py --check-delivery-model
+    """
+    scripts_dir = Path(__file__).resolve().parent
+    sys.path.insert(0, str(scripts_dir))
+    from delivery_model import check_tenant_against_policy  # type: ignore
+    from _shared import _repo_root  # type: ignore
+
+    print("═══════════════════════════════════════════════════")
+    print("  Delivery Model Soft Gate")
+    print("═══════════════════════════════════════════════════\n")
+
+    result = check_tenant_against_policy(_repo_root())
+    status = result["status"]
+    if status == "skip":
+        _check(
+            "No delivery_model in org-policy — soft gate skipped",
+            True,
+            warn_only=True,
+        )
+    elif status == "ok":
+        _check("Tenant delivery.* matches approved catalog", True)
+    else:
+        for warning in result.get("warnings") or []:
+            _check(warning, False, warn_only=True)
+        _check(
+            "Delivery Model soft gate complete (warnings above; CI not failed)",
+            True,
+            warn_only=True,
+        )
+
+    print()
+    print("═══════════════════════════════════════════════════")
+    print("  Soft gate finished (ok_for_ci=True)")
+    print("  Evidence pack: python3 scripts/delivery_evidence.py")
+    print("═══════════════════════════════════════════════════")
+    return True  # soft gate — never hard-fail
+
+
 if __name__ == "__main__":
     if "--check-redaction" in sys.argv:
         sys.exit(0 if check_redaction() else 1)
@@ -872,5 +918,7 @@ if __name__ == "__main__":
         sys.exit(0 if check_onprem_deploy() else 1)
     if "--check-kg" in sys.argv:
         sys.exit(0 if check_kg() else 1)
+    if "--check-delivery-model" in sys.argv:
+        sys.exit(0 if check_delivery_model() else 1)
     ok = run_checks()
     sys.exit(0 if ok else 1)
