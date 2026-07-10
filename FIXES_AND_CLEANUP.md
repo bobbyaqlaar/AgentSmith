@@ -189,9 +189,9 @@ now," not a calendar date) and **rationale**, so a future session can
 decide whether the trigger has actually fired instead of re-litigating
 whether the gap matters.
 
-Two design decisions are settled for items below and recorded so they are
-not re-opened: MCP integration stays tenant-owned (BYO), not shipped by the
-framework; the LLM self-correction loop, if built, is a separate opt-in
+One design decision is settled for items below and recorded so it is not
+re-opened: MCP integration stays tenant-owned (BYO), not shipped by the
+framework. The LLM self-correction loop is now shipped as a separate opt-in
 method, not inserted in front of the existing human DLQ escalation path.
 
 ---
@@ -344,28 +344,22 @@ there are 2+ real call sites with the same shape, not before.
 
 ### Human-in-the-Loop — LLM-driven self-correction
 
-**Gap:** every recovery path today is human-driven (DLQ edit-and-replay) or
-Temporal-driven (transient-failure retry) — no path where the model sees its
-own tool-call error and retries with a corrected call before any human is
-involved.
+**Status:** **Shipped (v1).** `runtime/self_correction.py` provides
+`propose_corrected_payload()` and `run_self_correction_loop()`; Temporal
+workflows can opt in via `BaseAgentWorkflow.run_with_self_correction()`.
 
-**Design decision (settled):** if built, this is a **separate, opt-in method**
-(e.g. `run_with_self_correction`), not inserted in front of
-`run_with_recoverable_step`'s existing human-escalation path. Rationale: keeps
-the already-shipped, already-tested human-escalation behavior completely
-unchanged for every existing call site; a tenant who wants model-driven retry
-for a specific failure class opts into the new method deliberately.
+**Behavior:** on activity failure, `self_correct_payload_activity` builds an
+`LLMGateway(tenant_id=...)`, asks for only corrected JSON, parses the payload,
+and retries the activity up to `max_self_correction_attempts` (default 1).
+If the corrected payload still fails, the method falls through to
+`run_with_recoverable_step` with the last payload, preserving the existing
+human DLQ escalation path.
 
-**Trigger:** a tenant reports DLQ volume dominated by an error class a model
-could plausibly self-correct on the first retry — evidence from real DLQ
-`reason` distribution, not a guess.
+**Unchanged:** existing `run_with_recoverable_step` callers are not modified;
+tenants opt into model-driven retry per step.
 
-**Fix sketch, when triggered:** `run_with_self_correction(activity_name,
-payload, tenant_id, max_self_correction_attempts, ...)` — on activity failure,
-calls `gw.complete()` with the original payload + error message, asks the
-model for a corrected payload, retries up to `max_self_correction_attempts`,
-and only then falls through to enqueueing a DLQ entry exactly as
-`run_with_recoverable_step` does today — reusing that path, not duplicating it.
+**Remaining:** tenant-specific policies for which error classes should opt in;
+multi-turn planner/tool-choice correction remains out of scope.
 
 ---
 

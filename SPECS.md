@@ -53,11 +53,11 @@ Additionally implemented and verified against live infrastructure (same bar as a
 - GCP CI/CD end-to-end: `.github/actions/gcp-auth` composite action (Workload Identity Federation, keyless) verified through real GitHub Actions runs deploying both `bobbyaqlaar/oil-price-demo` (worker) and `bobbyaqlaar/AgentSmith` Ops Portal to Cloud Run on GCP project `agentsmith-500916` (2026-07-01). `.github/actions/build-push-ghcr` + Artifact Registry re-push pattern verified. `cd-portal.yml` added for the Ops Portal (Next.js → Cloud Run via AR).
 
 **Genuine remaining gaps** (not yet built — trigger conditions documented in
-`FIXES_AND_CLEANUP.md` "Future Phases"): `@tool` registration/schema-extraction,
-LLM-driven self-correction. Hallucination-rate metric, TTFT streaming path
-(`complete_stream` + `verify_ttft.py`), Memory/RAG v1, pre-call input guardrails,
-fairness suite, and Delivery Model soft pack are shipped — see FIXES for
-remaining extensions.
+`FIXES_AND_CLEANUP.md` "Future Phases"): `@tool` registration/schema-extraction.
+Hallucination-rate metric, TTFT streaming path (`complete_stream` +
+`verify_ttft.py`), LLM-driven self-correction, Memory/RAG v1, pre-call input
+guardrails, fairness suite, and Delivery Model soft pack are shipped — see
+FIXES for remaining extensions.
 
 ---
 
@@ -307,14 +307,14 @@ design choice that's recorded here as settled.
 | **Tool Orchestration** | Activity *execution* + recovery exists (Temporal); tool *registration*/schema-extraction (e.g. an `@tool` decorator) and LLM-driven tool-call selection do not — `llm_gateway.py.complete()` sends a prompt and receives text, no function-calling fields in the provider request | §25 (Production Runtime), §29 (LLM Gateway) |
 | **Memory Management** | **Short-term:** `runtime/conversation_memory.py` (token-budget truncate-oldest). **Long-term structured:** Knowledge Graph (§10). **Long-term vector:** `runtime/vector_store.py` + `embeddings.py` (memory/pgvector; HashEmbedder default, sentence-transformers optional). Gateway does not auto-RAG — tenant wires retrieve→prompt. See `docs/rag-memory.md` | §10, `docs/rag-memory.md` |
 | **Perception & Input Parsing** | Narrow JSON-from-text extraction (`re.search` + `json.loads`, no schema validation) in the reference pipelines; no dynamic prompt-template engine (prompts are inline f-strings) | §8 |
-| **Human-in-the-Loop (HITL)** | The most built-out layer — two distinct mechanisms, see §25 "HITL Pause / Resume" for the full approve/reject vs. edit-and-resume split and the recorded reasoning for Temporal signals over Slack+Retool/LangGraph-interrupt alternatives, and for the portal-webhook-bridge design over a direct portal-side Temporal client | §25, §30 (HITL RBAC) |
+| **Human-in-the-Loop (HITL)** | The most built-out layer — approve/reject, edit-and-resume, and opt-in LLM self-correction before DLQ. See §25 "HITL Pause / Resume" for the full split and the recorded reasoning for Temporal signals over Slack+Retool/LangGraph-interrupt alternatives, and for the portal-webhook-bridge design over a direct portal-side Temporal client | §25, §30 (HITL RBAC) |
 
 ### Non-functional layers
 
 | Layer | Current state | Detail |
 |---|---|---|
 | **Observability & Traceability** | Full span attribution (tenant/agent/cost/tokens) via OTel→Phoenix. TTFT via opt-in `LLMGateway.complete_stream()` (`ttft_ms` on result + `llm.gateway.ttft_ms` span); non-stream `complete()` unchanged | §15, §29 |
-| **Reliability & Accuracy** | `correctness`/`tool_accuracy`/`latency`/`hallucination` scored per case (§9). Hallucination rate hard-fail via `HALLUCINATION_FAIL_ABOVE`. Auto-retry is two-tiered: Temporal retries transient failures automatically; `run_with_recoverable_step` deliberately disables that for validation-shaped failures (`RetryPolicy(maximum_attempts=1)`) since they need a *different* payload, not a bare retry. No LLM-driven self-correction loop exists — recovery is always human-driven (DLQ) or Temporal-driven (transient retry), never model-driven | §9, §25 |
+| **Reliability & Accuracy** | `correctness`/`tool_accuracy`/`latency`/`hallucination` scored per case (§9). Hallucination rate hard-fail via `HALLUCINATION_FAIL_ABOVE`. Auto-retry is three-tiered: Temporal retries transient failures automatically; `run_with_self_correction` can ask the gateway for one corrected JSON payload before DLQ; `run_with_recoverable_step` deliberately disables bare retries for validation-shaped failures (`RetryPolicy(maximum_attempts=1)`) since they need a *different* payload | §9, §25 |
 | **Security & Guardrails** | Pre-call: `runtime/input_guardrail.py` scrubs PII in prompts before `_invoke()` (`INPUT_GUARDRAIL`); post-call: `trace_redactor.py` for observability. Content-moderation models remain tenant-pluggable, not shipped | §27, `input_guardrail.py` |
 | **Explainability** | Infrastructure-level: HMAC-signed, tamper-evident, append-only audit log (§30) + full OTel trace history — not per-decision natural-language reasoning narration | §30, §15 |
 | **Scalability & Performance** | Workflow concurrency via Temporal's shared/dedicated worker-pool model (§23, §25); app-version traffic-shaping via on-prem canary routing, customer's choice of Traefik or Envoy (§25 "On-Premise / Air-Gapped Deployment"). TTFT budget gate: `complete_stream()` + `scripts/verify_ttft.py` + optional `eval-ttft-live.yml` when `TTFT_LIVE=required` | §23, §25 |
@@ -1036,7 +1036,7 @@ AgentSmith/
 │   ├── temporal_replay.py       # Concrete Temporal replay_handler — signals a live, parked workflow
 │   ├── replay_webhook_server.py # Reference receiver for the Ops Portal's "Replay with edits" action
 │   ├── workflows/
-│   │   └── base_workflow.py     # run_with_hitl_gate (approve/reject) + run_with_recoverable_step (edit/resume)
+│   │   └── base_workflow.py     # HITL gates + opt-in self-correction before DLQ
 │   └── k8s/dedicated-tenant/    # tenant.isolation: dedicated manifests (§23, §30)
 ├── hooks/                       # Git hook templates (Phase 5: extracted from installer)
 │   ├── pre-commit
@@ -1561,6 +1561,16 @@ policy retries the same failing payload indefinitely (with backoff) until
 recoverable-step logic even engages, for a payload that won't succeed on
 retry without being different. The method's own attempt loop is the
 intended retry mechanism, not Temporal's.
+
+**Opt-in self-correction** (`run_with_self_correction`) — a tenant can ask
+the model to repair a failing payload once before escalating to the human
+edit-and-resume path. On activity failure, the workflow calls
+`self_correct_payload_activity`, which builds `LLMGateway(tenant_id=...)`
+and delegates to `runtime/self_correction.py` to request only corrected JSON
+and parse it. If the corrected payload still fails after
+`max_self_correction_attempts` (default 1), the method calls
+`run_with_recoverable_step` with the last payload. Existing
+`run_with_recoverable_step` behavior and callers are unchanged.
 
 **The portal has no Temporal client and never gains one** — when a human
 edits a payload in the Ops Portal's DLQ view and clicks Replay, the

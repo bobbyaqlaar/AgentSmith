@@ -319,6 +319,10 @@ for two distinct situations — **don't conflate them**:
   **alive**, parked on a per-`gate_id` signal; a human edits the failing
   payload in the Ops Portal's `/dlq/<tenantId>` view and the same
   execution resumes with the correction — not a fresh run.
+- **Opt-in self-correction** (`BaseAgentWorkflow.run_with_self_correction`)
+  — before the human DLQ path, a tenant can ask the LLM gateway for one
+  corrected JSON payload and retry the same activity. If it still fails,
+  the existing edit-and-resume DLQ path takes over unchanged.
 
 **Why Temporal signals, not a third-party HITL platform:** an external
 review proposed three off-the-shelf approaches for this — (a) Slack +
@@ -937,7 +941,7 @@ infrastructure (Postgres, Redis, Temporal, Kubernetes, a live OIDC provider):
 | Layer | What it adds |
 |---|---|
 | **Multi-Tenancy** | `ai-tenant-init` / `ai-tenant-promote` scaffold an independent tenant repo with its own CI/CD, eval gates, and `staging → production` promotion flow (exact-match tenant-id guard, not substring) |
-| **Production Runtime** | `runtime/llm_gateway.py` (atomic per-tenant budget reservation + degrade ladder), `runtime/trace_redactor.py` (per-span tenant-bound redaction), `runtime/idempotency.py` + `runtime/dead_letter.py` (Postgres/Redis-backed, not stubs — idempotency has no in-memory fallback, so without `REDIS_URL`/`DATABASE_URL` the gateway degrades to no duplicate-call suppression rather than failing), Temporal workflow patterns in `runtime/workflows/` — including `run_with_recoverable_step`, which parks a failed workflow *alive* (not dead-lettered) so a human can edit the failing payload in the Ops Portal and resume it in place. Cloud-native model hosting (GCP Vertex AI, Azure OpenAI, AWS Bedrock, Huawei ModelArts) is supported via `CloudProviderAdapter`s in `runtime/provider_dispatch.py` — GCP Vertex AI is live-verified end-to-end (`vertex_gemini` role in `models.yaml`); Azure OpenAI, Bedrock, and Huawei ModelArts remain mock-tested only (SPECS.md §29 "Cloud-Native Provider Adapters") |
+| **Production Runtime** | `runtime/llm_gateway.py` (atomic per-tenant budget reservation + degrade ladder), `runtime/trace_redactor.py` (per-span tenant-bound redaction), `runtime/idempotency.py` + `runtime/dead_letter.py` (Postgres/Redis-backed, not stubs — idempotency has no in-memory fallback, so without `REDIS_URL`/`DATABASE_URL` the gateway degrades to no duplicate-call suppression rather than failing), Temporal workflow patterns in `runtime/workflows/` — including `run_with_self_correction`, which can retry once with LLM-corrected JSON before DLQ, and `run_with_recoverable_step`, which parks a failed workflow *alive* so a human can edit the failing payload in the Ops Portal and resume it in place. Cloud-native model hosting (GCP Vertex AI, Azure OpenAI, AWS Bedrock, Huawei ModelArts) is supported via `CloudProviderAdapter`s in `runtime/provider_dispatch.py` — GCP Vertex AI is live-verified end-to-end (`vertex_gemini` role in `models.yaml`); Azure OpenAI, Bedrock, and Huawei ModelArts remain mock-tested only (SPECS.md §29 "Cloud-Native Provider Adapters") |
 
 `BUDGET_BACKEND` selects which of these the gateway's per-tenant budget store uses (`runtime/llm_gateway.py:_make_budget_backend`):
 
