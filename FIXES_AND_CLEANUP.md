@@ -390,21 +390,23 @@ content moderation (toxicity) is still out of scope.
 
 ### Reliability & Accuracy — hallucination-rate metric
 
-**Gap:** `run-evals.py`/`eval_judge.py` score `correctness`, `tool_accuracy`,
-`latency` — no metric is literally named "hallucination rate." A hallucination
-shows up as a low `correctness` score, not as its own tracked number.
+**Status:** **Shipped (v1).** Judge dimension `hallucination` (0.0–1.0,
+distinct from `correctness`); flagged when score ≥ 0.5; rate =
+`flagged_count / scored_count`. Hard fail when rate exceeds threshold.
 
-**Trigger:** a tenant or stakeholder needs hallucination tracked as its own
-reportable number (e.g. a compliance requirement stating "< 5% hallucination
-incidents" specifically, not "correctness ≥ some threshold") — the two are
-not the same number.
+**Run:** `scripts/run-evals.py --suite hallucination`
 
-**Fix sketch, when triggered:** add a `hallucination` field to the judge's
-scored output in `.agent-rfc/fixtures/custom_judge_criteria.json` — a new
-judge-prompt dimension asking specifically "did the response state something
-not supported by the input/retrieved context," distinct from "was the response
-correct." Additive to the existing scorecard, not a replacement for
-`correctness`.
+**Threshold:** **`HALLUCINATION_FAIL_ABOVE`** in tenant `.env` (default
+`0.05`; CLI `--hallucination-fail-above` overrides)
+
+**CI:** `workflow-templates/eval-hallucination.yml` (hard-fail gate)
+
+**Fixtures:** `fixtures/hallucination_evals_base.json`,
+`fixtures/hallucination_judge_criteria_base.json` (copy into
+`.agent-rfc/fixtures/` per tenant)
+
+**Remaining:** expand golden cases beyond seed pairs; human review UI for
+flagged cases.
 
 ---
 

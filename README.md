@@ -369,13 +369,12 @@ measured without it.
 **7. Reliability & Accuracy** — capping hallucinations, task-precision
 targets, auto-retrying failed tool calls.
 `scripts/run-evals.py`/`scripts/eval_judge.py` score `correctness`,
-`tool_accuracy`, and `latency` per golden-dataset case via an LLM judge —
-**there is no metric literally named "hallucination rate"**; a
-hallucination shows up as a low `correctness` score, not as its own
-tracked number. If you need a hallucination rate specifically (as opposed
-to a correctness proxy for it), that's a new judge-criteria dimension to
-add in `.agent-rfc/fixtures/custom_judge_criteria.json`, not something to
-infer from existing scores. "Auto-retry failed tool calls" is real but
+`tool_accuracy`, `latency`, and a dedicated **`hallucination`** dimension
+per golden-dataset case via an LLM judge. Run
+`run-evals.py --suite hallucination`; hard fail when flagged rate exceeds
+**`HALLUCINATION_FAIL_ABOVE`** (default `0.05` in tenant `.env`). See
+`workflow-templates/eval-hallucination.yml` and `fixtures/hallucination_*_base.json`.
+"Auto-retry failed tool calls" is real but
 two-tiered, and the tiers matter: Temporal's own activity retry policy
 handles **transient** failures (network blips, rate limits) automatically;
 `run_with_recoverable_step`'s `RetryPolicy(maximum_attempts=1)` override
@@ -917,6 +916,7 @@ All configuration is via environment variables in `~/.zshrc` — no config files
 | `AGENT_OWNER_NAME` | — | Your display name |
 | `AGENT_JUDGE_MODEL` | `claude-sonnet-4-6` | LLM used for eval scoring — change without editing code |
 | `FAIRNESS_FAIL_BELOW` | `0.80` | Fairness suite pass threshold (`run-evals.py --suite fairness`); set in tenant `.env` |
+| `HALLUCINATION_FAIL_ABOVE` | `0.05` | Hallucination suite fail threshold (`run-evals.py --suite hallucination`); set in tenant `.env` |
 | `AGENT_PHOENIX_ENDPOINT` | `http://localhost:6006` | Phoenix URL (local or team-shared) |
 | `OPENAI_API_KEY` | — | Required for hybrid mode |
 | `ANTHROPIC_API_KEY` | — | Required for hybrid mode |
