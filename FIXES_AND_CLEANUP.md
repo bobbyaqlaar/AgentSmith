@@ -1,6 +1,6 @@
 # AgentSmith — Active Work and Future Phases
 
-**Last reviewed:** 2026-07-10 (UAE regulatory map added)  
+**Last reviewed:** 2026-07-10 (ISO 42001 control map added)  
 **Purpose:** Active planned work and confirmed future gaps with their
 trigger conditions, rationale, and embedded design decisions. Completed
 build history lives in `Product_Archive.md`.
@@ -224,41 +224,41 @@ Not legal advice / not certification.
 | 2 | Bias & fairness — Federal Decree-Law No. 34/2023; routine bias audits | **Gap** | → [Data Bias & Fairness](#data-bias--fairness--fairnessrobustness-evaluation) |
 | 3 | HITL stop-gates for high-impact actions + accountability trail | **Met** | `run_with_hitl_gate`, recoverable DLQ, HMAC audit log, HITL blobs |
 | 4 | PDPL — mask/anonymize PII (e.g. Emirates ID) in the decision path | **Partial** | Post-call `trace_redactor.py` shipped; pre-call scrub → [Security & Guardrails](#security--guardrails--pre-call-input-sanitization) |
-| 5 | Oversight bodies — embed governance (ISO/IEC 42001) from day one | **Partial** | Enterprise pack + audit/eval artifacts shipped; clause map + Authority checklist → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map) |
+| 5 | Oversight bodies — embed governance (ISO/IEC 42001) from day one | **Partial** | Thematic map + evidence checklist shipped: [`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md). Certification and live sovereign-API verify still org/Future Phase → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map) |
 
 ---
 
 ### UAE Regulatory Alignment — sovereign profile + ISO 42001 map
 
-**Gap:** a tenant-facing **sovereign profile sketch** now exists
-([`templates/uae-sovereign/`](./templates/uae-sovereign/) — Falcon/Ollama
-`models.yaml`, `env.example`, residency checklist). Still missing: an
-**ISO/IEC 42001 / Authority-facing control map** that turns existing
-artifacts into an oversight pack, and any live-verified wiring against a
-named UAE sovereign API. Fairness (#2) and pre-call PII (#4) stay in their
-existing Future Phases — do not duplicate implementation sketches here.
+**Gap:** sovereign profile sketch and ISO/IEC 42001 **thematic control map +
+evidence checklist** are shipped
+([`templates/uae-sovereign/`](./templates/uae-sovereign/),
+[`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md)). Still
+open: live verification against a named UAE sovereign API (beyond Ollama
+pattern), and any org-level certification work (never framework-owned).
+Fairness (#2) and pre-call PII (#4) stay in their existing Future Phases.
 
-**Already sketched (do not re-litigate):** Pattern A (in-border Ollama +
-Falcon) and Pattern B (OpenAI-compatible sovereign endpoint) documented in
-the template README; copy into tenant repos and replace placeholders.
+**Already shipped (do not re-litigate):**
+- Pattern A/B sovereign profile + residency checklist
+- Thematic ISO/IEC 42001 map with Met/Partial/Gap/Org-owned + framework vs
+  tenant ownership + auditor evidence checklist
+- SPECS.md §30 ISO/IEC 42001-oriented summary table linking the full doc
 
-**Trigger:** a UAE tenant (or regional bid) requires a control-to-artifact
-map for ISO 42001 / UAE Authority for AI and Data, **or** live verification
-against a specific sovereign provider endpoint beyond the Ollama pattern.
+**Trigger:** live verification against a specific sovereign provider
+endpoint is required for a bid, **or** an auditor demands a licensed
+clause-ID matrix beyond the thematic pack (out of scope for inventing
+clause text — engage a certification body).
 
 **Out of scope:** claiming G42/TII partnership; claiming PDPL/ISO
 certification; implementing the fairness suite or pre-call guardrail (link
-those phases instead).
+those phases instead); reproducing ISO standard text.
 
 **Fix sketch, when triggered:**
-- ISO/IEC 42001-oriented control map: each relevant control → AgentSmith
-  gate/artifact path (eval report, redaction check, audit events, HITL
-  records) operators can hand to auditors / the UAE Authority for AI and Data.
 - Optional: live-verify one sovereign OpenAI-compatible endpoint and record
   the working `models.yaml` id/base URL in the template (same bar as
   `vertex_gemini` live notes in `runtime/models.yaml`).
-- Cross-link `docs/uae-regulatory.md` status board when items move
-  Partial → Met.
+- Keep `docs/iso-42001-control-map.md` status board in sync when fairness /
+  pre-call PII move Partial/Gap → Met.
 
 ---
 

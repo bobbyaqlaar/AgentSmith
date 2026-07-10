@@ -2169,3 +2169,23 @@ These are documentation notes for compliance mapping. They are not a guarantee o
 | Encryption at rest | Encrypted HITL blobs (AES-256-GCM); Postgres encryption at rest |
 | Change management | Branch protection + eval gate on every merge; fixture PRs required |
 | Monitoring | Ops Portal; unresolved MAJOR/CRITICAL surfaced; shadow evals |
+
+### Compliance Notes (ISO/IEC 42001-Oriented)
+
+Thematic AIMS-style mapping (not a licensed clause dump, not a certification).
+Full control → status → owner → **evidence artifact** pack:
+[`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md).
+
+| Theme | Status | Primary AgentSmith evidence |
+|---|---|---|
+| Human oversight | Met | HITL gates, DLQ Replay/Discard, `hitl_promotion` audit events |
+| Transparency & logging | Met | Phoenix OTel traces; HMAC audit log (`GET /api/audit`) |
+| Performance evaluation | Met | `run-evals.py` / CD `--fail-below`; shadow-eval annotations |
+| Change management | Met | Eval gates; enterprise RFC hooks; fixture PRs |
+| Incident & recovery | Met | Recoverable DLQ; MAJOR/CRITICAL protection; budget degrade |
+| Continual improvement | Met | HITL → golden promotion; shadow suggested queue (no auto-promote) |
+| AI policy & roles | Partial | Org policy YAML; portal RBAC; `AGENT_OWNER_ID` |
+| Third-party & models | Partial | `models.yaml`; UAE sovereign template |
+| Data for AI / privacy | Partial | Golden fixtures; post-call redaction — pre-call PII still a gap |
+| Fairness & bias | Gap | See FIXES → Data Bias & Fairness |
+| Risk assessment | Org-owned | Tenant risk register; map high-risk actions to `needs_hitl` |

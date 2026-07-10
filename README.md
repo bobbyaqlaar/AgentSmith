@@ -980,6 +980,7 @@ See **[OPERATIONS.md](./OPERATIONS.md)** for the full step-by-step: install, run
 - **[UserManual.md](./UserManual.md)** — Day-to-day usage for solo/team dev mode: commands, workflows, maintenance
 - **[OPERATIONS.md](./OPERATIONS.md)** — Step-by-step install/config/test/operate, including multi-tenancy, production runtime, Ops Portal, and the enterprise pack
 - **[docs/uae-regulatory.md](./docs/uae-regulatory.md)** — UAE sovereign / PDPL / HITL / fairness / ISO 42001 mapping (differentiator)
+- **[docs/iso-42001-control-map.md](./docs/iso-42001-control-map.md)** — ISO/IEC 42001 thematic control map + auditor evidence checklist
 
 ---
 

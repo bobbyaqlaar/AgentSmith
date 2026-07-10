@@ -182,14 +182,15 @@ controls, logs, and promote gates — rather than bolting them on after launch.
 | Enterprise pack                       | GPG-signed hooks, MDM deploy, break-glass with audited bypass |
 | Immutable audit log + RBAC Ops Portal | Evidence substrate for oversight reviews                      |
 | Eval / redaction / promote gates      | Controls in the delivery path (Delivery Model needs 2–3)      |
-| ISO/IEC 42001 control map             | **Not shipped** — no clause-by-clause mapping yet             |
-| Authority-facing artifact checklist   | **Not shipped** — see UAE Future Phase in FIXES               |
+| ISO/IEC 42001 control map             | **Shipped (thematic)** — [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md) |
+| Authority-facing artifact checklist   | **Shipped** — evidence checklist in the same doc              |
 
 
 AgentSmith’s bet: **compliance is demonstrated through logs and artifacts**
 (audit events, eval scorecards, redaction check output, HITL records) — the
-same Delivery Model stance as the enterprise consultant review. What remains
-is packaging that substrate as an UAE/ISO 42001-facing control map.
+same Delivery Model stance as the enterprise consultant review. Use the
+ISO/IEC 42001 control map + evidence checklist when an oversight body asks
+for technical standards alignment (still not a certificate).
 
 ---
 
@@ -204,7 +205,7 @@ is packaging that substrate as an UAE/ISO 42001-facing control map.
 | 2   | Bias & fairness             | Gap     | FIXES → Data Bias & Fairness                                             |
 | 3   | HITL stop-gates             | Met     | README HITL; `run_with_hitl_gate`; Ops Portal                            |
 | 4   | PDPL / PII in decision path | Partial | `trace_redactor.py`; FIXES → pre-call sanitization                       |
-| 5   | Oversight / ISO 42001       | Partial | Enterprise pack; FIXES → UAE Regulatory Alignment                        |
+| 5   | Oversight / ISO 42001       | Partial | [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md); enterprise pack |
 
 
 ---
@@ -215,6 +216,7 @@ is packaging that substrate as an UAE/ISO 42001-facing control map.
 
 - [`FIXES_AND_CLEANUP.md`](../FIXES_AND_CLEANUP.md) — UAE gap register + Future Phase
 - [`templates/uae-sovereign/`](../templates/uae-sovereign/) — Falcon models.yaml, env, residency checklist
+- [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md) — ISO/IEC 42001 thematic map + evidence checklist
 - [`README.md`](../README.md) — Ten Pillars, HITL, enterprise layer
 - [`OPERATIONS.md`](../OPERATIONS.md) — Install, modes, on-prem, portal
 - [`SPECS.md`](../SPECS.md) — §27 redaction, §29 gateway, §30 enterprise/compliance
