@@ -25,6 +25,7 @@ See SPECS.md §29 for full specification.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
@@ -47,6 +48,7 @@ class CompletionResult:
     output_tokens: int
     cost_usd: float
     degrade_tier: Optional[str] = None  # None = nominal; "downgrade" | "local" | etc.
+    ttft_ms: Optional[float] = None
 
 
 class BudgetExceededError(RuntimeError):
@@ -517,6 +519,7 @@ class LLMGateway:
         degrade_tier: Optional[str],
         workflow_id: Optional[str],
         cost_usd: float,
+        ttft_ms: Optional[float] = None,
     ) -> None:
         try:
             from opentelemetry import trace
@@ -528,6 +531,8 @@ class LLMGateway:
             span.set_attribute("llm.model_name", model_id)
             span.set_attribute("llm.gateway.tier", role)
             span.set_attribute("llm.gateway.cost_usd", cost_usd)
+            if ttft_ms is not None:
+                span.set_attribute("llm.gateway.ttft_ms", ttft_ms)
             if degrade_tier:
                 span.set_attribute("llm.gateway.degrade_reason", degrade_tier)
             if workflow_id:
@@ -536,6 +541,167 @@ class LLMGateway:
             pass
 
     # ── Completion ────────────────────────────────────────────────────────────
+
+    async def complete_stream(
+        self,
+        prompt: Any,
+        model_hint: str = "developer",
+        workflow_id: Optional[str] = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.2,
+        **kwargs: Any,
+    ) -> CompletionResult:
+        """Route an OpenAI-compatible streaming completion and measure TTFT."""
+        del kwargs
+
+        budget = self.get_budget_status()
+        role, degrade_tier = self._resolve_role(model_hint, budget)
+
+        cfg = self.models.get(role)
+        if not cfg:
+            raise ValueError(
+                f"No model registered for role {role!r}. Check models.yaml."
+            )
+
+        provider = cfg.get("provider", "openai")
+        try:
+            from runtime.provider_dispatch import build_request, is_cloud_provider
+        except ImportError:
+            from provider_dispatch import build_request, is_cloud_provider  # type: ignore
+
+        if is_cloud_provider(provider) or provider == "anthropic":
+            raise NotImplementedError(
+                f"complete_stream currently supports OpenAI-compatible providers only; got {provider!r}."
+            )
+        if provider not in {"openai", "ollama", "groq"}:
+            raise NotImplementedError(
+                f"complete_stream currently supports provider values 'openai', 'ollama', and 'groq'; got {provider!r}."
+            )
+
+        model_id = cfg["id"]
+        messages = self._coerce_messages(prompt)
+
+        try:
+            from runtime.input_guardrail import resolve_mode, scrub_messages
+        except ImportError:  # pragma: no cover
+            from input_guardrail import resolve_mode, scrub_messages  # type: ignore
+
+        guardrail_mode = resolve_mode()
+        messages, guardrail_counts = scrub_messages(messages, mode=guardrail_mode)
+        if guardrail_counts:
+            logger.info(
+                "input_guardrail applied tenant=%s mode=%s counts=%s",
+                self.tenant_id,
+                guardrail_mode,
+                guardrail_counts,
+            )
+
+        estimated_cost_usd = max_tokens * (
+            cfg.get("cost_per_input_token", 0) + cfg.get("cost_per_output_token", 0)
+        )
+        reserved = True
+        if estimated_cost_usd and not self._is_free_tier(cfg):
+            reserved = self._budget.try_reserve(
+                self.tenant_id, estimated_cost_usd, self.budget_cap_usd
+            )
+            if not reserved:
+                raise BudgetExceededError(
+                    f"tenant={self.tenant_id} budget reservation of ${estimated_cost_usd:.4f} for "
+                    f"model_hint={model_hint!r} would exceed cap (${budget.spent_usd:.2f}/${budget.cap_usd:.2f}). "
+                    "Concurrent in-flight calls already reserved the remaining budget."
+                )
+
+        run_id = (
+            f"{workflow_id}-{uuid.uuid4().hex[:8]}"
+            if workflow_id
+            else f"{self.tenant_id}-{uuid.uuid4().hex[:12]}"
+        )
+        self._report_run_status(run_id, "running", workflow_id=workflow_id)
+
+        if provider == "ollama":
+            base_url = os.path.expandvars(
+                cfg.get("endpoint", "${OLLAMA_BASE_URL}/v1")
+            )
+            if not base_url.startswith("http"):
+                base_url = (
+                    os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+                    + "/v1"
+                )
+            api_key = "ollama"
+        elif provider == "groq":
+            api_key = os.environ.get(cfg.get("api_key_env", "GROQ_API_KEY"), "")
+            base_url = cfg.get("endpoint") or "https://api.groq.com/openai/v1"
+        else:
+            api_key = os.environ.get(cfg.get("api_key_env", "OPENAI_API_KEY"), "")
+            base_url = cfg.get("endpoint") or "https://api.openai.com/v1"
+        base_url = os.path.expandvars(base_url)
+
+        path, headers, body = build_request(
+            provider, model_id, messages, api_key, max_tokens, temperature
+        )
+        body = {**body, "stream": True}
+        url = base_url.rstrip("/") + path
+
+        import httpx
+
+        start = time.perf_counter()
+        ttft_ms: Optional[float] = None
+        chunks: list[str] = []
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                async with client.stream(
+                    "POST", url, json=body, headers=headers
+                ) as resp:
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        if not line.startswith("data:"):
+                            continue
+                        payload = line.removeprefix("data:").strip()
+                        if not payload or payload == "[DONE]":
+                            continue
+                        data = json.loads(payload)
+                        content = (
+                            data.get("choices", [{}])[0]
+                            .get("delta", {})
+                            .get("content")
+                        )
+                        if not content:
+                            continue
+                        if ttft_ms is None:
+                            ttft_ms = (time.perf_counter() - start) * 1000
+                        chunks.append(content)
+        except Exception as exc:
+            if reserved and estimated_cost_usd:
+                self._budget.add_spend(self.tenant_id, -estimated_cost_usd)
+            self._report_run_status(
+                run_id,
+                "failed",
+                workflow_id=workflow_id,
+                error_summary=str(exc)[:500],
+            )
+            raise
+
+        text = "".join(chunks)
+        cost_usd = 0.0
+        if reserved and estimated_cost_usd:
+            self._budget.add_spend(self.tenant_id, -estimated_cost_usd)
+
+        self._record_span_attributes(
+            role, model_id, degrade_tier, workflow_id, cost_usd, ttft_ms
+        )
+        self._report_run_status(
+            run_id, "degraded" if degrade_tier else "success", workflow_id=workflow_id
+        )
+
+        return CompletionResult(
+            text=text,
+            model_used=model_id,
+            input_tokens=0,
+            output_tokens=0,
+            cost_usd=cost_usd,
+            degrade_tier=degrade_tier,
+            ttft_ms=ttft_ms,
+        )
 
     async def complete(
         self,
