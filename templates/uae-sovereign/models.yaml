@@ -1,54 +1,56 @@
 # templates/uae-sovereign/models.yaml — EXAMPLE tenant registry
 #
 # Copy to the tenant repo root as `models.yaml` so llm_gateway loads it over
-# runtime/models.yaml defaults. Replace placeholders; verify Falcon tags and
-# sovereign API model ids against your provider before production.
+# runtime/models.yaml defaults.
 #
-# Pattern A (default below): UAE-hosted Ollama + Falcon.
-# Pattern B: uncomment sovereign_api and point roles at it.
+# Pattern A (active below): UAE-hosted Ollama + Falcon 3.
+#   Live-verified 2026-07-10 (local Ollama OpenAI-compat /v1):
+#     falcon3:3b → OK chat completion
+#     falcon3:1b → OK chat completion
+# Pattern B: sovereign OpenAI-compatible API (in-border).
+# Pattern C (optional): HF Hub weight ids — router does not host them;
+#   see README / prior live notes. Public HF ≠ UAE residency.
 #
-# Residency: OLLAMA_BASE_URL / UAE_SOVEREIGN_API_BASE must resolve to
-# in-border hosts. See README.md checklist.
+# Smoke: OLLAMA_BASE_URL=http://127.0.0.1:11434 \\
+#          python3 scripts/verify_sovereign_endpoint.py --ollama
+# Residency checklist: README.md
 
 models:
-  # ── Primary roles — Falcon on in-border Ollama ─────────────────────────────
+  # ── Pattern A — Falcon 3 on in-border Ollama ───────────────────────────────
   architect:
-    id: falcon2
-    provider: ollama
-    endpoint: "${OLLAMA_BASE_URL}/v1"
-    cost_per_input_token: 0
-    cost_per_output_token: 0
-    degrade_to: developer
-
-  developer:
-    id: falcon2
-    provider: ollama
-    endpoint: "${OLLAMA_BASE_URL}/v1"
-    cost_per_input_token: 0
-    cost_per_output_token: 0
-    degrade_to: validator
-
-  validator:
-    id: falcon2
+    id: falcon3:3b
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
     cost_per_output_token: 0
     degrade_to: local_small
 
-  # Smaller / faster Falcon for degrade and low-stakes calls
+  developer:
+    id: falcon3:3b
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: local_small
+
+  validator:
+    id: falcon3:3b
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: local_small
+
   local_small:
-    id: falcon:7b
+    id: falcon3:1b
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
     cost_per_output_token: 0
     degrade_to: null
 
-  # Judge for evals — keep in-border; do not point at public Claude/GPT for
-  # national-data eval corpora unless counsel approves.
   judge:
-    id: falcon2
+    id: falcon3:1b
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
@@ -60,10 +62,27 @@ models:
   # when your UAE provider exposes an OpenAI-compatible base URL.
   #
   # sovereign_api:
-  #   id: "${UAE_SOVEREIGN_MODEL_ID}"   # provider's model id string
-  #   provider: openai                  # OpenAI-compatible request shape
+  #   id: "${UAE_SOVEREIGN_MODEL_ID}"
+  #   provider: openai
   #   endpoint: "${UAE_SOVEREIGN_API_BASE}"
   #   api_key_env: UAE_SOVEREIGN_API_KEY
-  #   cost_per_input_token: 0.000001    # replace with provider pricing
+  #   cost_per_input_token: 0.000001
   #   cost_per_output_token: 0.000002
-  #   degrade_to: architect             # fall back to in-border Falcon/Ollama
+  #   degrade_to: architect
+
+  # ── Pattern C (optional) — HF Hub Falcon ids (not on Inference Providers) ──
+  # Live 2026-07-10: router model_not_supported; H1 Tiny OK via local
+  # transformers only. Prefer Pattern A (falcon3:*) for gateway.
+  #
+  # hf_falcon_e:
+  #   id: tiiuae/Falcon-E-3B-Base-prequantized
+  #   provider: openai
+  #   endpoint: "${HF_BASE_URL}"
+  #   api_key_env: HF_TOKEN
+  #   degrade_to: local_small
+  # hf_falcon_h1:
+  #   id: tiiuae/Falcon-H1-Tiny-R-0.6B-pre-GRPO
+  #   provider: openai
+  #   endpoint: "${HF_BASE_URL}"
+  #   api_key_env: HF_TOKEN
+  #   degrade_to: null

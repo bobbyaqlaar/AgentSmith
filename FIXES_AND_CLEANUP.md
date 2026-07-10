@@ -249,6 +249,12 @@ endpoint is required for a bid, **or** an auditor demands a licensed
 clause-ID matrix beyond the thematic pack (out of scope for inventing
 clause text — engage a certification body).
 
+**In progress → nearly done (Pattern A):** Ollama Falcon 3 live-verified
+2026-07-10 — `falcon3:3b` + `falcon3:1b` via local Ollama `/v1` chat.
+Template default: [`templates/uae-sovereign/models.yaml`](./templates/uae-sovereign/models.yaml).
+Smoke: `scripts/verify_sovereign_endpoint.py`. HF Pattern C remains optional
+research path (router unsupported). Public HF ≠ UAE residency.
+
 **Out of scope:** claiming G42/TII partnership; claiming PDPL/ISO
 certification; reproducing ISO standard text.
 

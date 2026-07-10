@@ -49,20 +49,22 @@ data-residency expectations.
 ### How to run (pattern, not partnership)
 
 **Starter pack:** [`templates/uae-sovereign/`](../templates/uae-sovereign/) —
-example tenant `models.yaml` (Falcon via Ollama), `env.example`, and a
-**data residency checklist**. Copy into the tenant repo; replace placeholders.
+example tenant `models.yaml` (HF Falcon live-verify + Ollama/sovereign paths),
+`env.example`, and a **data residency checklist**. Copy into the tenant repo;
+replace placeholders.
 
 1. **In-border compute** — deploy workers, Phoenix, Postgres, and the Ops
    Portal on UAE-region or on-prem infrastructure (`templates/onprem-deploy/`,
    or your sovereign cloud’s Kubernetes).
-2. **Falcon (or other TII weights) via Ollama** — pull the model into a
-   UAE-hosted Ollama instance (`ollama pull falcon2` or import GGUF); set
-   `AI_STACK_MODE=local` and `OLLAMA_BASE_URL` to that host; use the sovereign
-   `models.yaml` at the tenant root.
-3. **Sovereign cloud OpenAI-compatible API** — set `UAE_SOVEREIGN_API_BASE` /
-   key and enable the `sovereign_api` role in the template `models.yaml`.
-4. **Do not** send national data through hybrid mode to non-UAE frontier APIs
-   unless counsel has approved that path.
+2. **Falcon 3 via in-border Ollama (Pattern A)** — `ollama pull falcon3:3b`
+   and `falcon3:1b`; `AI_STACK_MODE=local` + `OLLAMA_BASE_URL`. Live-verified
+   2026-07-10. Smoke: `scripts/verify_sovereign_endpoint.py`.
+3. **Sovereign cloud OpenAI-compatible API (Pattern B)** — set
+   `UAE_SOVEREIGN_API_BASE` / key and enable `sovereign_api`.
+4. **Optional HF Hub ids (Pattern C)** — research only; router does not host
+   the TII Falcon-E / H1 ids. Prefer `falcon3:*` for gateway.
+5. **Do not** send national data through hybrid mode to non-UAE frontier APIs
+   (including public Hugging Face) unless counsel has approved that path.
 
 See OPERATIONS.md (local vs hybrid mode, on-prem deploy) and SPECS.md §29
 (LLM Gateway / provider adapters).

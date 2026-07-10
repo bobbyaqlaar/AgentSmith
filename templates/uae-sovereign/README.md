@@ -17,8 +17,8 @@ On-prem runtime packaging: [`templates/onprem-deploy/`](../onprem-deploy/).
 
 | File | Purpose |
 |---|---|
-| `models.yaml` | Example tenant model registry — Falcon via UAE-hosted Ollama, plus optional sovereign OpenAI-compatible API role |
-| `env.example` | Env vars for local mode, in-border Ollama/API URL, storage, redaction |
+| `models.yaml` | Example tenant model registry — Falcon 3 via Ollama (`falcon3:3b` / `falcon3:1b`), plus optional Pattern B/C |
+| `env.example` | Env vars for in-border Ollama, optional HF/API, storage, redaction |
 | `README.md` | This file — residency checklist + wire-up steps |
 
 Copy into a tenant repo root (or `.agenticframework/`) as needed:
@@ -31,28 +31,27 @@ cp templates/uae-sovereign/env.example /path/to/tenant/.env.uae.example
 
 ---
 
-## Wire-up (two supported patterns)
+## Wire-up (three patterns)
 
-### Pattern A — Falcon on UAE-hosted Ollama (default in `models.yaml`)
+### Pattern A — Falcon 3 on UAE-hosted Ollama (active in `models.yaml`)
 
 1. Run Ollama on **in-border** compute (on-prem VM, UAE-region K8s node, or
    sovereign cloud GPU).
-2. Pull / import Falcon (verify current tags before production):
+2. Pull Falcon 3:
 
    ```bash
-   # Official Ollama library (TII Falcon family — confirm tag on ollama.com)
-   ollama pull falcon2          # Falcon 2 ~11B — common general-purpose choice
-   # ollama pull falcon:7b      # smaller
-   # ollama pull falcon:40b     # needs ~32GB+ RAM
-
-   # Newer TII weights not in the library yet → GGUF + Modelfile import
-   # (see https://docs.ollama.com/import) then set models.yaml id to that name.
+   ollama pull falcon3:3b   # primary roles
+   ollama pull falcon3:1b   # local_small / judge
    ```
 
 3. Set `AI_STACK_MODE=local` and point `OLLAMA_BASE_URL` at the **in-border**
    Ollama base (no `/v1` suffix — `models.yaml` appends `/v1`).
-4. Place this folder’s `models.yaml` at the tenant repo root so
-   `runtime/llm_gateway.py` loads it over framework defaults.
+4. Place this folder’s `models.yaml` at the tenant repo root.
+5. Smoke (live-verified 2026-07-10 on local Ollama):
+
+   ```bash
+   OLLAMA_BASE_URL=http://127.0.0.1:11434 python3 scripts/verify_sovereign_endpoint.py
+   ```
 
 ### Pattern B — Sovereign OpenAI-compatible API
 
@@ -65,7 +64,18 @@ chat completions URL:
    footprint — moving only the model API in-border is not enough if traces
    and databases leave the country.
 
-Hybrid mode to **non-UAE** frontier APIs (Anthropic/OpenAI/Groq public) is
+### Pattern C — Hugging Face Falcon ids (optional / research)
+
+HF Hub ids (`tiiuae/Falcon-E-3B-Base-prequantized`,
+`tiiuae/Falcon-H1-Tiny-R-0.6B-pre-GRPO`) are **not** on Inference Providers
+(router `model_not_supported`, 2026-07-10). Prefer Pattern A `falcon3:*` for
+gateway. Public HF ≠ UAE residency.
+
+```bash
+HF_TOKEN=... python3 scripts/verify_sovereign_endpoint.py --hf
+```
+
+Hybrid mode to **non-UAE** frontier APIs (Anthropic/OpenAI/Groq/public HF) is
 **out of profile** for national data unless counsel explicitly approves.
 
 ---
@@ -78,7 +88,8 @@ ops runbooks / audit packs — not slide decks.
 ### Compute & inference
 
 - [ ] Worker / Temporal / agent processes run in UAE region or on-prem in UAE
-- [ ] LLM endpoint is in-border Ollama **or** UAE sovereign API (Pattern A/B)
+- [ ] LLM endpoint is in-border Ollama **or** UAE sovereign API (Pattern A/B) —
+      not public Hugging Face (Pattern C is verify-only)
 - [ ] `AI_STACK_MODE=local` (or hybrid only to in-border endpoints)
 - [ ] No degrade ladder hop to public non-UAE frontier APIs for national data
       (edit `degrade_to` in tenant `models.yaml` accordingly)

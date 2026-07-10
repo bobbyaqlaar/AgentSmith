@@ -78,7 +78,7 @@ pip install psycopg2-binary redis temporalio langgraph-checkpoint-postgres crypt
 To auto-activate when you `cd` into the AgentSmith root, add to `~/.zshrc`:
 
 ```bash
-function cd() { builtin cd "$@" && [[ "$PWD" == "$AGENTSMITH_DIR"* && -f .venv/bin/activate ]] && source .venv/bin/activate; }
+function cd() { builtin cd "$@" && [[ -f .venv/bin/activate ]] && source .venv/bin/activate; }
 ```
 
 ### `~/.zshrc` — environment variables
@@ -105,7 +105,7 @@ export OTEL_EXPORTER_OTLP_ENDPOINT="${AGENT_PHOENIX_ENDPOINT}/v1/traces"  # set 
 
 # ── Budget and routing ─────────────────────────────────────────────────────────────
 export AGENT_MONTHLY_USD_CAP="50"               # hard cap across all projects (dev mode)
-export AGENT_JUDGE_MODEL="claude-3-5-sonnet-20241022"  # LLM used to grade evals
+export AGENT_JUDGE_MODEL="claude-sonnet-4-6"            # LLM used to grade evals
 
 # ── Production runtime (only needed when running runtime/ against real backends) ───
 export DATABASE_URL="postgresql://user:pass@localhost:5433/agenticframework"
@@ -461,6 +461,11 @@ python3 worker.py &            # starts the Temporal worker (background)
 
 python3 trigger_workflow.py    # submits the workflow and waits for result
 ```
+
+> **If `trigger_workflow.py` fails with "Workflow execution is already running":**
+> a previous run failed mid-flight. Terminate it via the Temporal UI at
+> `http://localhost:8233` (Workflows → select the run → Terminate), then re-run.
+> See §11 Troubleshooting for the CLI alternative.
 
 The `95` outlier in the default price series is deliberate — it's >3 standard
 deviations from the rest, which trips the HITL gate. The workflow pauses and
@@ -1045,10 +1050,23 @@ export BUDGET_BACKEND=postgres   # or redis, or memory (dev/CI only)
 export DATABASE_URL="postgresql://..."
 ```
 
-When the tenant's monthly spend breaches the cap, the gateway automatically
-walks the `degrade_to` chain in `models.yaml` (e.g. `architect` →
-`developer` → `validator` → `fast`/Ollama) rather than failing outright. If
-the requested tier is already the free/local tier, a breach never blocks it.
+Ollama endpoint — `OLLAMA_BASE_URL` is optional; the gateway defaults to
+`http://localhost:11434` if the variable is unset or unresolved. Set it
+only when Ollama is running on a non-default host or port:
+
+```bash
+export OLLAMA_BASE_URL="http://localhost:11434"   # default — omit if using the standard port
+```
+
+The gateway automatically walks the `degrade_to` chain in `models.yaml`
+(e.g. `architect` → `developer` → `validator` → `fast`/Ollama) in two
+situations: (1) the tenant's monthly spend breaches the cap, or (2) the
+provider itself returns a billing, quota, or rate-limit error (HTTP 400
+"credit balance too low", 429, overload). In both cases the chain is walked
+until a tier succeeds or all tiers are exhausted — at which point
+`complete()` raises `RuntimeError("All model tiers exhausted …")` with the
+last error included. If the requested tier is already the free/local tier, a
+budget breach never blocks it.
 
 Budget spend is reserved atomically **before** the provider call (an upper
 bound from `max_tokens`), then reconciled to the actual cost afterward —
@@ -1981,6 +1999,14 @@ was revoked, or you're pointing `portal-url` at the wrong portal instance.
 **`mdm-deploy-hooks.sh` refuses with "BAD signature"** — the bundle was
 modified after signing, or you're verifying against the wrong public key.
 Re-package from a clean checkout; never patch a signed tarball.
+
+**`trigger_workflow.py` fails with "Workflow execution is already running"** — a
+previous run failed mid-flight and its execution record was not cleaned up.
+Terminate it first via the Temporal UI at `http://localhost:8233` (Workflows →
+select the run → Terminate), then re-run `trigger_workflow.py`. If the Temporal
+UI is unreachable, use: `temporal workflow terminate --workflow-id <id> --address 127.0.0.1:7233`
+(use `127.0.0.1`, not `localhost` — macOS may resolve `localhost` to `::1`
+while the dev server only binds IPv4).
 
 **LangGraph raises "MemorySaver is prohibited"** — you set
 `ENVIRONMENT=production`/`staging` without `DATABASE_URL`, **or you simply
