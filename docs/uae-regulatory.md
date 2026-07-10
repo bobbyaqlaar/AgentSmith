@@ -36,7 +36,8 @@ data-residency expectations.
 
 | Capability                   | How it helps                                                                                                                                     |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Local / air-gapped inference | `AI_STACK_MODE=local` routes calls to Ollama (`OS_LLM_BASE_URL`, default `http://localhost:11434/v1`) — prompts stay on the machine              |
+| Local / air-gapped inference | `AI_STACK_MODE=local` routes calls to Ollama (`OLLAMA_BASE_URL`, default `http://localhost:11434`) — prompts stay on the machine                 |
+| UAE sovereign starter pack   | [`templates/uae-sovereign/`](../templates/uae-sovereign/) — Falcon `models.yaml`, env example, residency checklist                               |
 | On-prem / air-gapped deploy  | `templates/onprem-deploy/` (Compose or Helm) for in-border clusters                                                                              |
 | Pluggable providers          | `runtime/llm_gateway.py` + `runtime/provider_dispatch.py` — point the gateway at **any** OpenAI-compatible or cloud-adapter endpoint you control |
 | Dedicated tenant isolation   | `tenant.isolation: dedicated` + K8s worker pools for stronger runtime separation                                                                 |
@@ -47,19 +48,21 @@ data-residency expectations.
 
 ### How to run (pattern, not partnership)
 
+**Starter pack:** [`templates/uae-sovereign/`](../templates/uae-sovereign/) —
+example tenant `models.yaml` (Falcon via Ollama), `env.example`, and a
+**data residency checklist**. Copy into the tenant repo; replace placeholders.
+
 1. **In-border compute** — deploy workers, Phoenix, Postgres, and the Ops
-  Portal on UAE-region or on-prem infrastructure (`templates/onprem-deploy/`,
+   Portal on UAE-region or on-prem infrastructure (`templates/onprem-deploy/`,
    or your sovereign cloud’s Kubernetes).
 2. **Falcon (or other TII weights) via Ollama** — pull the model into a
-  UAE-hosted Ollama instance; set `AI_STACK_MODE=local` and
-   `OS_LLM_BASE_URL` to that endpoint; select the model via your
-   `models.yaml` / env model roles.
-3. **Sovereign cloud OpenAI-compatible API** — if your UAE provider exposes an
-  OpenAI-compatible base URL, point `OS_LLM_BASE_URL` (or the relevant
-   `CloudProviderAdapter` config) at that endpoint; keep `DATABASE_URL`,
-   traces, and HITL blobs on in-border storage.
+   UAE-hosted Ollama instance (`ollama pull falcon2` or import GGUF); set
+   `AI_STACK_MODE=local` and `OLLAMA_BASE_URL` to that host; use the sovereign
+   `models.yaml` at the tenant root.
+3. **Sovereign cloud OpenAI-compatible API** — set `UAE_SOVEREIGN_API_BASE` /
+   key and enable the `sovereign_api` role in the template `models.yaml`.
 4. **Do not** send national data through hybrid mode to non-UAE frontier APIs
-  unless counsel has approved that path.
+   unless counsel has approved that path.
 
 See OPERATIONS.md (local vs hybrid mode, on-prem deploy) and SPECS.md §29
 (LLM Gateway / provider adapters).
@@ -195,13 +198,13 @@ is packaging that substrate as an UAE/ISO 42001-facing control map.
 ## Quick status board
 
 
-| #   | Mandate                     | Status  | Primary pointer                                                |
-| --- | --------------------------- | ------- | -------------------------------------------------------------- |
-| 1   | Sovereign infrastructure    | Partial | This doc §1; on-prem templates; local/gateway endpoint pattern |
-| 2   | Bias & fairness             | Gap     | FIXES → Data Bias & Fairness                                   |
-| 3   | HITL stop-gates             | Met     | README HITL; `run_with_hitl_gate`; Ops Portal                  |
-| 4   | PDPL / PII in decision path | Partial | `trace_redactor.py`; FIXES → pre-call sanitization             |
-| 5   | Oversight / ISO 42001       | Partial | Enterprise pack; FIXES → UAE Regulatory Alignment              |
+| #   | Mandate                     | Status  | Primary pointer                                                          |
+| --- | --------------------------- | ------- | ------------------------------------------------------------------------ |
+| 1   | Sovereign infrastructure    | Partial | [`templates/uae-sovereign/`](../templates/uae-sovereign/); this doc §1    |
+| 2   | Bias & fairness             | Gap     | FIXES → Data Bias & Fairness                                             |
+| 3   | HITL stop-gates             | Met     | README HITL; `run_with_hitl_gate`; Ops Portal                            |
+| 4   | PDPL / PII in decision path | Partial | `trace_redactor.py`; FIXES → pre-call sanitization                       |
+| 5   | Oversight / ISO 42001       | Partial | Enterprise pack; FIXES → UAE Regulatory Alignment                        |
 
 
 ---
@@ -210,9 +213,10 @@ is packaging that substrate as an UAE/ISO 42001-facing control map.
 
 ## Related docs
 
-- `[FIXES_AND_CLEANUP.md](../FIXES_AND_CLEANUP.md)` — UAE gap register + Future Phase
-- `[README.md](../README.md)` — Ten Pillars, HITL, enterprise layer
-- `[OPERATIONS.md](../OPERATIONS.md)` — Install, modes, on-prem, portal
-- `[SPECS.md](../SPECS.md)` — §27 redaction, §29 gateway, §30 enterprise/compliance
-- `[enterprise/README.md](../enterprise/README.md)` — Hook bundles, bypass policy
+- [`FIXES_AND_CLEANUP.md`](../FIXES_AND_CLEANUP.md) — UAE gap register + Future Phase
+- [`templates/uae-sovereign/`](../templates/uae-sovereign/) — Falcon models.yaml, env, residency checklist
+- [`README.md`](../README.md) — Ten Pillars, HITL, enterprise layer
+- [`OPERATIONS.md`](../OPERATIONS.md) — Install, modes, on-prem, portal
+- [`SPECS.md`](../SPECS.md) — §27 redaction, §29 gateway, §30 enterprise/compliance
+- [`enterprise/README.md`](../enterprise/README.md) — Hook bundles, bypass policy
 

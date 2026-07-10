@@ -220,7 +220,7 @@ Not legal advice / not certification.
 
 | # | Mandate | Status | Pointer |
 |---|---|---|---|
-| 1 | Sovereign infrastructure — national data + models in UAE borders (G42-class clouds, TII Falcon, etc.) | **Partial** | Local Ollama + on-prem templates + pluggable gateway endpoint → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map); pattern in `docs/uae-regulatory.md` §1 |
+| 1 | Sovereign infrastructure — national data + models in UAE borders (G42-class clouds, TII Falcon, etc.) | **Partial** | Sketch shipped: [`templates/uae-sovereign/`](./templates/uae-sovereign/) (Falcon `models.yaml`, env, residency checklist). ISO/Authority pack still open → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map); narrative in `docs/uae-regulatory.md` §1 |
 | 2 | Bias & fairness — Federal Decree-Law No. 34/2023; routine bias audits | **Gap** | → [Data Bias & Fairness](#data-bias--fairness--fairnessrobustness-evaluation) |
 | 3 | HITL stop-gates for high-impact actions + accountability trail | **Met** | `run_with_hitl_gate`, recoverable DLQ, HMAC audit log, HITL blobs |
 | 4 | PDPL — mask/anonymize PII (e.g. Emirates ID) in the decision path | **Partial** | Post-call `trace_redactor.py` shipped; pre-call scrub → [Security & Guardrails](#security--guardrails--pre-call-input-sanitization) |
@@ -230,29 +230,33 @@ Not legal advice / not certification.
 
 ### UAE Regulatory Alignment — sovereign profile + ISO 42001 map
 
-**Gap:** runtime already supports in-border / air-gapped deploy and pluggable
-providers, and ships HITL + audit substrate, but there is no packaged **UAE
-sovereign profile** (documented Falcon/UAE-endpoint `models.yaml` example,
-residency checklist) and no **ISO/IEC 42001 / Authority-facing control map**
-that turns existing artifacts into an oversight pack. Fairness (#2) and
-pre-call PII (#4) stay in their existing Future Phases — do not duplicate
-implementation sketches here.
+**Gap:** a tenant-facing **sovereign profile sketch** now exists
+([`templates/uae-sovereign/`](./templates/uae-sovereign/) — Falcon/Ollama
+`models.yaml`, `env.example`, residency checklist). Still missing: an
+**ISO/IEC 42001 / Authority-facing control map** that turns existing
+artifacts into an oversight pack, and any live-verified wiring against a
+named UAE sovereign API. Fairness (#2) and pre-call PII (#4) stay in their
+existing Future Phases — do not duplicate implementation sketches here.
 
-**Trigger:** a UAE tenant (or regional bid) requires documented sovereign
-hosting + Falcon/UAE endpoint wiring, **or** an oversight/ISO 42001 review
-asks for a control-to-artifact map rather than SOC2-oriented notes alone.
+**Already sketched (do not re-litigate):** Pattern A (in-border Ollama +
+Falcon) and Pattern B (OpenAI-compatible sovereign endpoint) documented in
+the template README; copy into tenant repos and replace placeholders.
+
+**Trigger:** a UAE tenant (or regional bid) requires a control-to-artifact
+map for ISO 42001 / UAE Authority for AI and Data, **or** live verification
+against a specific sovereign provider endpoint beyond the Ollama pattern.
 
 **Out of scope:** claiming G42/TII partnership; claiming PDPL/ISO
 certification; implementing the fairness suite or pre-call guardrail (link
 those phases instead).
 
 **Fix sketch, when triggered:**
-- Tenant-facing sovereign profile: example `models.yaml` + env for
-  UAE-hosted Ollama Falcon (or OpenAI-compatible sovereign endpoint), plus
-  residency checklist (workers, Phoenix, Postgres, HITL blobs in-border).
 - ISO/IEC 42001-oriented control map: each relevant control → AgentSmith
   gate/artifact path (eval report, redaction check, audit events, HITL
   records) operators can hand to auditors / the UAE Authority for AI and Data.
+- Optional: live-verify one sovereign OpenAI-compatible endpoint and record
+  the working `models.yaml` id/base URL in the template (same bar as
+  `vertex_gemini` live notes in `runtime/models.yaml`).
 - Cross-link `docs/uae-regulatory.md` status board when items move
   Partial → Met.
 

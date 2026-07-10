@@ -967,6 +967,8 @@ remaining gaps in FIXES.
 
 See **[docs/uae-regulatory.md](./docs/uae-regulatory.md)** for the full
 Rule / Action / AgentSmith status map (not legal advice or certification).
+Starter pack: **[templates/uae-sovereign/](./templates/uae-sovereign/)**
+(Falcon/`models.yaml`, env, residency checklist).
 
 See **[OPERATIONS.md](./OPERATIONS.md)** for the full step-by-step: install, run, test every feature, run evals, deploy to production through GitHub CI/CD, and monitor operations.
 
@@ -989,7 +991,7 @@ AgentSmith/
 ├── scripts/                   # Python agent stack (dev lifecycle) + generate-ide-config.py
 ├── runtime/                   # Production runtime — llm_gateway, trace_redactor, worker, workflows/, k8s/
 ├── hooks/                     # Git hook templates
-├── templates/                 # IDE config source of truth (agent-rules.yaml) + in-app-widget/
+├── templates/                 # IDE config + in-app-widget + onprem-deploy + uae-sovereign
 ├── portal/                    # Ops Portal (Next.js)
 ├── enterprise/                # Org hook bundle signing, MDM deploy, bypass policy
 ├── examples/oil-price-agent/  # Reference tenant app (fork per customer, never deploy from here)

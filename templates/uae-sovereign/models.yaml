@@ -1,0 +1,69 @@
+# templates/uae-sovereign/models.yaml — EXAMPLE tenant registry
+#
+# Copy to the tenant repo root as `models.yaml` so llm_gateway loads it over
+# runtime/models.yaml defaults. Replace placeholders; verify Falcon tags and
+# sovereign API model ids against your provider before production.
+#
+# Pattern A (default below): UAE-hosted Ollama + Falcon.
+# Pattern B: uncomment sovereign_api and point roles at it.
+#
+# Residency: OLLAMA_BASE_URL / UAE_SOVEREIGN_API_BASE must resolve to
+# in-border hosts. See README.md checklist.
+
+models:
+  # ── Primary roles — Falcon on in-border Ollama ─────────────────────────────
+  architect:
+    id: falcon2
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: developer
+
+  developer:
+    id: falcon2
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: validator
+
+  validator:
+    id: falcon2
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: local_small
+
+  # Smaller / faster Falcon for degrade and low-stakes calls
+  local_small:
+    id: falcon:7b
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: null
+
+  # Judge for evals — keep in-border; do not point at public Claude/GPT for
+  # national-data eval corpora unless counsel approves.
+  judge:
+    id: falcon2
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: null
+
+  # ── Pattern B (optional) — sovereign OpenAI-compatible API ─────────────────
+  # Uncomment and set gateway.routing_overrides or model_hint="sovereign_api"
+  # when your UAE provider exposes an OpenAI-compatible base URL.
+  #
+  # sovereign_api:
+  #   id: "${UAE_SOVEREIGN_MODEL_ID}"   # provider's model id string
+  #   provider: openai                  # OpenAI-compatible request shape
+  #   endpoint: "${UAE_SOVEREIGN_API_BASE}"
+  #   api_key_env: UAE_SOVEREIGN_API_KEY
+  #   cost_per_input_token: 0.000001    # replace with provider pricing
+  #   cost_per_output_token: 0.000002
+  #   degrade_to: architect             # fall back to in-border Falcon/Ollama
