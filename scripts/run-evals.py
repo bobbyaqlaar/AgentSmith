@@ -38,7 +38,7 @@ from typing import Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-from _shared import _repo_root  # noqa: E402
+from _shared import _repo_root, judge_model as _judge_model  # noqa: E402
 
 
 def _evals_path(suite: str = "golden") -> Path:
@@ -252,7 +252,7 @@ def run_scorecard(
 
     cases = _load_cases(suite)
     criteria = _load_criteria(suite)
-    judge = os.environ.get("AGENT_JUDGE_MODEL", "claude-sonnet-4-6")
+    judge = _judge_model()
     project = _repo_root().name
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 

@@ -35,7 +35,7 @@ import { SESSION_COOKIE_NAME, verifySessionToken } from "./lib/sessionToken";
 // the audit log (GET /api/audit) still requires basic auth/SSO, unaffected.
 //
 // /api/runs/ingest is runtime/llm_gateway.py's best-effort run-status push
-// (FIXES_AND_CLEANUP.md P2a) — same machine-to-machine reasoning as
+// (Product_Archive.md P2a) — same machine-to-machine reasoning as
 // /api/sync/*, gated by OPS_PORTAL_SYNC_TOKEN inside the route handler.
 //
 // /api/auth/* must always be reachable unauthenticated — it IS the
@@ -44,7 +44,7 @@ import { SESSION_COOKIE_NAME, verifySessionToken } from "./lib/sessionToken";
 // future route that merely starts with one of these literal strings — e.g.
 // /api/audit/appendix, /api/widgetry, /api/syncing — is NOT accidentally
 // swept into the unauthenticated set. Plain string-prefix matching here was
-// a latent auth-bypass footgun (see FIXES_AND_CLEANUP.md 2.6).
+// a latent auth-bypass footgun (see Product_Archive.md 2.6).
 export const config = {
   matcher:
     "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/runs/ingest(?:/|$)|api/auth(?:/|$)).*)",
@@ -86,10 +86,10 @@ async function checkSsoSession(request: NextRequest): Promise<{ email?: string }
   // Delegates to lib/sessionToken.ts instead of re-verifying the JWT inline
   // with a hardcoded cookie name — previously this duplicated oidc.ts's
   // verification logic with its own copy of the secret-reading and
-  // jwtVerify call (FIXES_AND_CLEANUP.md 4.2).
+  // jwtVerify call (Product_Archive.md 4.2).
   const session = await verifySessionToken(token);
   if (!session) return null;
-  // Server-side revocation check (FIXES_AND_CLEANUP.md 4.14) — see
+  // Server-side revocation check (Product_Archive.md 4.14) — see
   // lib/sessionRevocation.ts for why this is a fetch to a Node-runtime route
   // rather than a direct DB call from this Edge-runtime middleware.
   if (await isRevoked(request, session.jti)) return null;

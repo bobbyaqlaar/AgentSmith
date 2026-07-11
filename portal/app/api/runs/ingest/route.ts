@@ -1,5 +1,5 @@
 // POST /api/runs/ingest — best-effort run-status updates from
-// runtime/llm_gateway.py (FIXES_AND_CLEANUP.md P2a). Same auth shape as
+// runtime/llm_gateway.py (Product_Archive.md P2a). Same auth shape as
 // /api/sync/history: a single shared bearer token
 // (OPS_PORTAL_SYNC_TOKEN — reused, not a second token, since both are
 // "a production worker pushing operational data to the shared portal").

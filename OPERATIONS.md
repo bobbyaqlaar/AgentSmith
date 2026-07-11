@@ -1,12 +1,16 @@
+<p align="center">
+  <img src="assets/Logo_AgentSmith.png" alt="AgentSmith Logo" width="200">
+</p>
+
 # AgentSmith — Operations Guide
 
-**Covers:** install → configure → test → operate, for everything beyond solo
-dev mode: multi-tenancy, the production runtime, the Ops Portal, the In-App
-Widget, and the enterprise pack.
-
-**See also:** [README.md](./README.md) for the high-level overview ·
-[UserManual.md](./UserManual.md) for day-to-day solo/team dev-mode usage ·
-[SPECS.md](./SPECS.md) for the full formal specification.
+> **Scope:** this document owns every step-by-step procedure across the
+> AgentSmith lifecycle — install/start → create governed repos → configure
+> features → test → deploy via GitHub CI/CD → monitor → production
+> evals/tracing → HITL/DLQ → continuous improvement → maintain → shut down.
+> The framework introduction is [README.md](./README.md); the formal
+> specification is [SPECS.md](./SPECS.md); day-to-day dev-mode usage and the
+> command reference are [UserManual.md](./UserManual.md).
 
 Every command and code path in this document has been run against real
 infrastructure while building it — real Postgres, real Redis, a real local
@@ -14,27 +18,32 @@ OIDC provider, a real `kind` Kubernetes cluster, real GPG keys — not just
 read from source. Where something is a known limitation (not yet wired),
 it's called out explicitly rather than glossed over.
 
+The lifecycle sections use one worked example throughout —
+`examples/oil-price-agent` — so you can follow along with a concrete app
+and swap in your own tenant repo once you've seen the shape end to end.
+
 ---
 
 ## Contents
 
-1. [Prerequisites](#1-prerequisites)
-2. [Step-by-Step: Setup → Run → Test → Eval → Deploy → Operate](#2-step-by-step-setup--run--test--eval--deploy--operate) — uses `examples/oil-price-agent` throughout; includes a [manual UI walkthrough](#23b--manual-test-walkthrough-the-uis) (Phoenix, Ops Portal incl. DLQ replay, In-App Widget)
-3. [Part A — Solo Dev Install (recap)](#part-a--solo-dev-install-recap)
-4. [Part B — Team-Shared Phoenix with Auth](#part-b--team-shared-phoenix-with-auth)
-5. [Part C — Multi-Tenancy](#part-c--multi-tenancy)
-6. [Part D — Production Runtime](#part-d--production-runtime)
-7. [Part E — Ops Portal](#part-e--ops-portal)
-8. [Part F — In-App Widget](#part-f--in-app-widget)
-9. [Part G — Enterprise Pack](#part-g--enterprise-pack)
-10. [Testing Checklist](#9-testing-checklist)
-11. [Day-2 Operations](#10-day-2-operations)
-12. [Troubleshooting](#11-troubleshooting)
-13. [Spec Cross-Reference](#12-spec-cross-reference)
+- [§0 — Install & Start](#0--install--start)
+- [§1 — Create an AgentSmith-Governed Repo](#1--create-an-agentsmith-governed-repo)
+- [§2 — Configure Features](#2--configure-features)
+- [§3 — Test](#3--test)
+- [§4 — Deploy via GitHub CI/CD](#4--deploy-via-github-cicd)
+- [§5 — Monitor in Production](#5--monitor-in-production)
+- [§6 — Evals & Tracing in Production](#6--evals--tracing-in-production)
+- [§7 — HITL & DLQ Operations](#7--hitl--dlq-operations)
+- [§8 — Continuous Improvement](#8--continuous-improvement)
+- [§9 — Maintain (Day-2 Operations)](#9--maintain-day-2-operations)
+- [§10 — Shutdown & Teardown](#10--shutdown--teardown)
+- [Appendix A — Enterprise Pack](#appendix-a--enterprise-pack)
+- [Appendix B — Troubleshooting](#appendix-b--troubleshooting)
+- [Appendix C — Spec Cross-Reference](#appendix-c--spec-cross-reference)
 
 ---
 
-## 1. Prerequisites
+## 0 — Install & Start
 
 ### Two working directories — always know which one you're in
 
@@ -53,11 +62,6 @@ Commands that affect the shared platform (portal, Postgres, Phoenix) run from th
 |---|---|---|
 | Python 3.11+ | Everything | `python3 --version` |
 | Git 2.x | Everything | `git --version` |
-
-> **One-time git config** — set your default branch name to `main` globally so every `git init` uses it:
-> ```bash
-> git config --global init.defaultBranch main
-> ```
 | Docker 20+ | Team Phoenix, Ops Portal Postgres, dedicated worker pool testing | `docker --version` |
 | Node.js 20+ | Ops Portal, In-App Widget | `node --version` |
 | `gh` CLI | `ai-tenant-promote` (opens the promotion PR) | `gh --version` |
@@ -65,6 +69,11 @@ Commands that affect the shared platform (portal, Postgres, Phoenix) run from th
 | Temporal CLI | `temporal server start-dev` (local dev workflow engine) | `brew install temporal` · `temporal --version` |
 | `kubectl` | Dedicated tenant worker pools | `kubectl version --client` |
 | Ollama | Local/offline dev mode | `ollama --version` |
+
+> **One-time git config** — set your default branch name to `main` globally so every `git init` uses it:
+> ```bash
+> git config --global init.defaultBranch main
+> ```
 
 Production runtime extras — run from the **AgentSmith root** (macOS system Python is externally managed; use a venv):
 
@@ -210,7 +219,7 @@ HITL_ENCRYPTION_KEY=<32-byte-hex>        # generate: openssl rand -hex 32
 #### b. Tenant app `.env` — your agentic app's runtime config
 
 > **You don't have a tenant app directory yet.** This section is a reference template —
-> skip it for now and return here after you run `ai-tenant-init` in §2.1. At that point
+> skip it for now and return here after you run `ai-tenant-init` in §1. At that point
 > you'll have a directory to put this file in.
 
 > **Where:** `my-tenant-app/.env` (your own app repo root — **not** the AgentSmith root)
@@ -263,30 +272,26 @@ Set these in **Settings → Secrets and variables → Actions** for each tenant 
 
 ---
 
-## 2. Step-by-Step: Setup → Run → Test → Eval → Deploy → Operate
-
-This section is the linear, copy-pasteable path from a clean machine to a
-tenant running in production with CI/CD and monitoring in place. **Every
-step uses the same worked example — `examples/oil-price-agent`** — so you
-can follow along with one concrete app instead of a generic placeholder;
-swap in your own tenant repo once you've seen the shape end to end. Each
-step links into the detailed Part (A–G) for background — read this section
-to execute, read the Parts when something needs explaining.
-
-Testing is covered twice, deliberately: [§2.3](#23--test-every-feature-cli)
-is CLI-only (the same commands CI runs, no browser needed) — start there if
-you're scripting/automating. [§2.3b](#23b--manual-test-walkthrough-the-uis)
-is a click-through of every UI surface (Phoenix, Ops Portal, the In-App
-Widget) using the example app's data, including the HITL/DLQ "edit a
-failing payload and replay it" flow — start there if you want to actually
-see what an operator sees.
-
-### 2.1 — Setup
+### Pinned / checksum-verified install (team environments)
 
 ```bash
-# Install (Part A) — vendors scripts/hooks/templates to ~/.agent-framework,
+# Pinned version (recommended for team environments)
+curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh | bash
+
+# With checksum verification (supply-chain safety)
+curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh \
+  -o install-ai-stack.sh
+curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh.sha256 \
+  | shasum -a 256 --check
+bash install-ai-stack.sh
+```
+
+### Machine install, mode, and standing infra
+
+```bash
+# Install (§0) — vendors scripts/hooks/templates to ~/.agent-framework,
 # sets git's global init.templateDir (developer mode; use --mode enterprise
-# to skip that — see Part G).
+# to skip that — see Appendix A).
 curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
 source ~/.zshrc
 
@@ -302,11 +307,11 @@ ai-mode-hybrid    # cloud frontier models, needs ANTHROPIC_API_KEY/OPENAI_API_KE
 ai-stack-check
 ```
 
-Production-runtime extras, only if you'll exercise Part D for real — run from the **AgentSmith root**:
+Production-runtime extras, only if you'll exercise §2's production runtime for real — run from the **AgentSmith root**:
 
 ```bash
 # Run from: AgentSmith root
-source .venv/bin/activate   # activate the venv created in §1 Prerequisites
+source .venv/bin/activate   # activate the venv created in §0 Prerequisites
 pip install psycopg2-binary redis temporalio langgraph-checkpoint-postgres cryptography
 ```
 
@@ -327,7 +332,61 @@ the shared instance). `ai-dashboard-start` then always uses the standalone
 plain-process Phoenix path for that repo, and `ai-tenant-init` won't nudge
 you toward the shared Ops Portal's env vars in its scaffolding output.
 
+### Team-shared Phoenix with auth
+
+An unauthenticated shared Phoenix instance is non-compliant (SPECS.md §15) —
+the base `docker-compose.yml` binds Phoenix's own port to `127.0.0.1` only,
+so by default it's **not reachable from other machines at all**.
+
+#### B.1 — Solo dev (unchanged)
+
+```bash
+docker compose up -d
+curl http://localhost:6006/healthz   # works — you're on localhost
+```
+
+#### B.2 — Team server: add the auth overlay
+
+```bash
+# Generate a bcrypt hash for the basic-auth password. The hash contains
+# literal '$' characters that Compose's .env interpolation will otherwise
+# corrupt — this one-liner escapes them correctly:
+echo "PHOENIX_BASIC_AUTH_HASH=$(docker run --rm caddy:2-alpine caddy hash-password --plaintext '<your-password>' | sed 's/\$/\$\$/g')" >> .env
+echo "PHOENIX_BASIC_AUTH_USER=ops" >> .env
+
+# Base stack + auth overlay together (NOT just `docker compose up -d` —
+# that alone leaves Phoenix loopback-only with no remote access at all)
+docker compose -f docker-compose.yml -f docker-compose.auth.yml up -d
+```
+
+Verify:
+
+```bash
+curl http://localhost:6007/healthz                                    # 401, no creds
+curl -u ops:<your-password> http://localhost:6007/healthz             # 200
+```
+
+Developers and CI then point at port **6007** (the auth sidecar), not 6006:
+
+```bash
+export AGENT_PHOENIX_ENDPOINT="http://ops:<password>@<server-ip>:6007"
+```
+
+See [docker-compose.yml](./docker-compose.yml) and
+[docker-compose.auth.yml](./docker-compose.auth.yml) header comments for the
+full rationale (why this is a separate file, not a Compose profile).
+
 ---
+
+---
+
+## 1 — Create an AgentSmith-Governed Repo
+
+A **tenant** is a customer application with its own independent repository,
+agents, eval suite, and deployment track (SPECS.md §23). New repos opt in
+automatically on `git init`; pre-existing/cloned repos opt in explicitly
+(`mkdir -p .agenticframework && touch .agenticframework/enabled`, then any
+checkout) — see README "Opt-in model".
 
 > **Starting a new tenant app — nothing to copy manually.**
 >
@@ -338,8 +397,8 @@ you toward the shared Ops Portal's env vars in its scaffolding output.
 > | What you get | How it arrives |
 > |---|---|
 > | `.agent-rfc/`, `.cursorrules`, `CLAUDE.md`, `.agents/skills/`, Knowledge Graph seed | `post-checkout` hook fires on `git init -b main` |
-> | `.agenticframework/tenant.yaml`, `.github/workflows/ci-*.yml`, `cd-staging.yml`, `cd-production.yml` | `ai-tenant-init <id> --stack <stack>` |
-> | `.env` | You create from the §1b template |
+> | `.agenticframework/tenant.yaml`, `.github/workflows/` (ci-*, cd-*, eval-* reusable workflows), `.github/actions/` (composite actions the CD workflows call) | `ai-tenant-init <id> --stack <stack>` |
+> | `.env` | You create from the §0 tenant-app `.env` template |
 > | `runtime/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — accessed via `$AGENTSMITH_DIR/runtime` at run time |
 >
 > What you write yourself: `worker.py`, `workflows/`, `workflows/activities.py`
@@ -349,12 +408,35 @@ you toward the shared Ops Portal's env vars in its scaffolding output.
 > mkdir $REPO_DIR/my-app && cd $REPO_DIR/my-app
 > git init -b main                               # hooks fire automatically
 > ai-tenant-init my-app --stack python-fastapi   # scaffolds tenant.yaml + CI/CD
-> # create .env from §1b template, then write your worker.py and workflows/
+> # create .env from the §0 tenant-app template, then write your worker.py and workflows/
 > ```
 
----
+### Scaffold a new tenant repo (`ai-tenant-init`)
 
-### 2.2 — Run the example app
+```bash
+cd /path/to/your-tenant-repo   # must be a git repo
+ai-tenant-init acme --stack python-fastapi
+```
+
+Stack options: `python-fastapi` (default), `go`, `ts-react`. Add
+`--isolation dedicated` if this tenant needs its own worker pool (§4 "Dedicated isolation tier").
+
+This writes:
+- `.agenticframework/tenant.yaml` — tenant id, isolation tier, framework version pin, per-environment Phoenix namespaces and eval thresholds
+- `.github/workflows/ci-<stack>.yml`, `cd-staging.yml`, `cd-production.yml`, plus the reusable eval workflows the CI file calls (`eval-scorecard.yml`, `eval-fairness.yml`, `eval-hallucination.yml`, `eval-ttft-live.yml`)
+- `.github/actions/{gcp-auth,build-push-ghcr,deploy-placeholder,rollback-notify}` — composite actions the CD workflows reference as `uses: ./.github/actions/<name>` (resolved inside this repo)
+
+Re-running is idempotent — existing files are never overwritten.
+
+### Configure GitHub Environments
+
+In the tenant repo: **Settings → Environments**, create `staging` and
+`production`, each with:
+- Required reviewers (production)
+- Environment secrets: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+  `AGENT_PHOENIX_ENDPOINT`, `AGENT_OWNER_ID`
+
+### Run the reference example app end to end
 
 The example app lives inside the AgenticFramework repo as a reference, but
 you should run it as a proper standalone tenant — in its own directory,
@@ -437,7 +519,7 @@ asyncio.run(main())
 ```
 
 This produces a real trace in Phoenix and a real budget record — enough to
-drive the §2.3b Ops Portal walkthrough without standing up Temporal at all.
+drive the §3 UI-walkthrough's Ops Portal steps without standing up Temporal at all.
 
 *B. With Temporal* — the full durable-workflow path, including the HITL gate and DLQ:
 
@@ -465,7 +547,7 @@ python3 trigger_workflow.py    # submits the workflow and waits for result
 > **If `trigger_workflow.py` fails with "Workflow execution is already running":**
 > a previous run failed mid-flight. Terminate it via the Temporal UI at
 > `http://localhost:8233` (Workflows → select the run → Terminate), then re-run.
-> See §11 Troubleshooting for the CLI alternative.
+> See Appendix B — Troubleshooting for the CLI alternative.
 
 The `95` outlier in the default price series is deliberate — it's >3 standard
 deviations from the rest, which trips the HITL gate. The workflow pauses and
@@ -478,11 +560,186 @@ python3 resolve_hitl.py           # approve (default)
 python3 resolve_hitl.py --reject  # or reject
 ```
 
-### 2.3 — Test every feature (CLI)
+---
+
+## 2 — Configure Features
+
+`scripts/multi_agent_system.py` / `local_agent_stack.py` are the **dev/IDE**
+path. Production agent execution uses `runtime/` instead — never deployed
+directly from this repo (tenant repos build their own worker image, §25).
+
+### LLM Gateway — models, budget, degrade ladder
+
+```python
+from runtime.llm_gateway import LLMGateway
+
+gateway = LLMGateway(tenant_id="acme", budget_cap_usd=150.0)
+result = await gateway.complete(prompt="...", model_hint="developer")
+```
+
+Model registry: `runtime/models.yaml` (framework defaults) →
+tenant-repo-root `models.yaml` (override) → `.agenticframework/tenant.yaml`
+`gateway.routing_overrides` (per-role shorthand).
+
+Budget backend — set before instantiating:
+
+```bash
+export BUDGET_BACKEND=postgres   # or redis, or memory (dev/CI only)
+export DATABASE_URL="postgresql://..."
+```
+
+Ollama endpoint — `OLLAMA_BASE_URL` is optional; the gateway defaults to
+`http://localhost:11434` if the variable is unset or unresolved. Set it
+only when Ollama is running on a non-default host or port:
+
+```bash
+export OLLAMA_BASE_URL="http://localhost:11434"   # default — omit if using the standard port
+```
+
+The gateway automatically walks the `degrade_to` chain in `models.yaml`
+(e.g. `architect` → `developer` → `validator` → `fast`/Ollama) in two
+situations: (1) the tenant's monthly spend breaches the cap, or (2) the
+provider itself returns a billing, quota, or rate-limit error (HTTP 400
+"credit balance too low", 429, overload). In both cases the chain is walked
+until a tier succeeds or all tiers are exhausted — at which point
+`complete()` raises `RuntimeError("All model tiers exhausted …")` with the
+last error included. If the requested tier is already the free/local tier, a
+budget breach never blocks it.
+
+Budget spend is reserved atomically **before** the provider call (an upper
+bound from `max_tokens`), then reconciled to the actual cost afterward —
+not read-checked-then-written-after, which would let concurrent in-flight
+calls for the same tenant all slip past the cap before any of them recorded
+spend. If a reservation would exceed the cap, `complete()` raises
+`BudgetExceededError` immediately rather than making the provider call.
+
+### Trace redaction (`ENVIRONMENT` profiles)
+
+```bash
+export ENVIRONMENT=development   # explicit opt-in for local/IDE work — see note below
+```
+
+```python
+from runtime.trace_redactor import TraceRedactor
+provider.add_span_processor(TraceRedactor())
+```
+
+`$ENVIRONMENT` is resolved by the shared, **fail-closed**
+`runtime/environment.py:get_environment()` — an unset or unrecognized value
+(typo, blank, etc.) resolves to `"production"`, never to `"development"`.
+This is a deliberate change from "missing var = least-restrictive
+default": a worker that loses its `ENVIRONMENT` var should fail toward
+*more* redaction and *more* durable checkpointing, not less. **Set
+`ENVIRONMENT=development` explicitly for local/IDE work** — don't rely on
+it being the default for an unset variable.
+
+| `ENVIRONMENT` (resolved) | Behaviour |
+|---|---|
+| `development` (must be set explicitly) | No scrubbing |
+| `staging` | Secrets/PII replaced with `[REDACTED:<hash8>]`; structure preserved |
+| `production` (also the fallback for unset/unrecognized) | Scrubbed + truncated to 50 chars; full original payload stored in an AES-256-GCM-encrypted blob (`HITL_ENCRYPTION_KEY` / `HITL_ENCRYPTION_KEY_<TENANT>`), keyed per-span by `{trace_id}.{span_id}.{attr_key}` |
+
+The tenant id used for HITL blob encryption is read from each span's own
+`tenant.id` attribute, not bound once when the processor is constructed —
+required for correctness on a shared (non-dedicated) worker pool processing
+spans for more than one tenant in the same process.
+
+CI check (also wired into `cd-staging.yml` / `cd-production.yml`):
+
+```bash
+ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
+```
+
+### Postgres checkpointer (staging/production LangGraph)
+
+```bash
+export ENVIRONMENT=production
+export DATABASE_URL="postgresql://..."
+```
+
+`scripts/multi_agent_system.py` uses the same `get_environment()` resolver
+as "Trace redaction" above and will use a real `PostgresSaver` instead of `MemorySaver`
+whenever the resolved environment is `staging`/`production` — **including
+an unset or unrecognized `ENVIRONMENT`**, which now resolves to
+`production` rather than `development`. It **raises** rather than silently
+falling back if `DATABASE_URL` is missing in that case — `MemorySaver`
+loses all HITL pause state on crash and is dev-only by design (SPECS.md §25,
+§28). Local/IDE runs must set `ENVIRONMENT=development` explicitly to get
+`MemorySaver` without a `DATABASE_URL`.
+
+### Reliability & compliance pack (runtime side)
+
+The eval-side suites are §3 "Reliability & compliance suites". These are the runtime components that
+shipped with the same pack — each opt-in, none changes existing callers:
+
+**Pre-call input guardrail (PDPL — `runtime/input_guardrail.py`).**
+Scrubs PII from prompts *before* the provider call inside
+`llm_gateway.complete()` — decision-path masking, distinct from
+`trace_redactor.py`'s post-call observability scrubbing (§2 "Trace redaction"). Default
+patterns: Emirates ID, email, phone, Luhn-valid card numbers.
+
+```bash
+export INPUT_GUARDRAIL=default   # off | default | custom
+# Unset → off in development, default in staging/production
+# (environment resolved by the same fail-closed get_environment() as the two sections above).
+```
+
+Tenant-specific vocabularies: `register_input_guardrail(fn)` +
+`INPUT_GUARDRAIL=custom`. Content moderation (toxicity etc.) stays
+tenant-supplied — the framework owns the scrub hook, not a moderation model.
+
+**LLM self-correction before human DLQ (`runtime/self_correction.py`).**
+`BaseAgentWorkflow.run_with_self_correction()` asks the gateway for one
+corrected JSON payload on activity failure and retries the same activity
+(`max_self_correction_attempts`, default 1) before falling through to
+`run_with_recoverable_step`'s human edit-and-resume path (§7) — existing
+`run_with_recoverable_step` callers are unchanged; tenants opt in per step.
+
+**Memory / RAG substrate (see [docs/rag-memory.md](./docs/rag-memory.md)).**
+Short-term `runtime/conversation_memory.py` (token-budget truncate-oldest);
+long-term `runtime/vector_store.py` + `runtime/embeddings.py`. The gateway
+does **not** auto-RAG — the tenant wires `store.query()` results into its
+own prompts.
+
+```bash
+export EMBEDDER=hash                   # hash (default, no deps) | sentence-transformers
+export VECTOR_BACKEND=memory           # memory (default) | postgres (needs pgvector + DATABASE_URL)
+```
+
+**TTFT on the streaming path.** `LLMGateway.complete_stream()` records
+`ttft_ms` on `CompletionResult` and span attribute `llm.gateway.ttft_ms`;
+non-streaming `complete()` is unchanged (total-call latency only). Live
+budget gate: §3's `verify_ttft.py` / `TTFT_LIVE=required`.
+
+**UAE sovereign profile (`templates/uae-sovereign/`).** Pattern A: Falcon 3
+on Ollama (`falcon3:3b` / `falcon3:1b`, live-verified 2026-07-10); Pattern B:
+a sovereign OpenAI-compatible API. Smoke test either:
+
+```bash
+OLLAMA_BASE_URL=http://127.0.0.1:11434 python3 scripts/verify_sovereign_endpoint.py
+```
+
+Residency checklist and `models.yaml` starter in the template; regulatory
+narrative in [docs/uae-regulatory.md](./docs/uae-regulatory.md).
+
+**Delivery Model soft gate ([docs/delivery-model.md](./docs/delivery-model.md)).**
+
+```bash
+python3 scripts/verify_system.py --check-delivery-model   # warn-only gate
+python3 scripts/delivery_evidence.py                      # writes delivery_evidence.json + .md
+```
+
+---
+
+---
+
+## 3 — Test
+
+### CLI test pass (every feature, no browser)
 
 Run these from the framework repo root (not your tenant project) to
-validate the framework itself; see [§9 Testing Checklist](#9-testing-checklist)
-for the exact same commands wired into CI.
+validate the framework itself; see the [full testing checklist](#full-testing-checklist-same-bar-as-self-testyml)
+below for the exact same commands wired into CI.
 
 ```bash
 # Hooks: opt-in gate + enterprise RFC gate (throwaway repos, no side effects)
@@ -490,6 +747,13 @@ python3 scripts/verify_system.py --check-hooks
 
 # Knowledge Graph: rebuild via map_codebase.py and assert non-empty with known nodes (Pillar 2 / P10a)
 python3 scripts/verify_system.py --check-kg
+
+# Reliability pack suites (fairness / hallucination — framework seed fixtures; see below)
+python3 scripts/run-evals.py --suite fairness
+python3 scripts/run-evals.py --suite hallucination
+
+# Delivery Model soft gate (warn-only; §2 "Reliability & compliance pack")
+python3 scripts/verify_system.py --check-delivery-model
 
 # Trace redaction: staging (hashed) + production (truncated + HITL blob) profiles
 ENVIRONMENT=staging    python3 scripts/verify_system.py --check-redaction
@@ -522,23 +786,23 @@ docker rm -f pg-test
 
 A passing run here is the same bar CI enforces — see `.github/workflows/self-test.yml`'s `python`, `python-behaviour`, `portal`, and `widget` jobs.
 
-### 2.3b — Manual test walkthrough: the UIs
+### Manual test walkthrough: the UIs
 
 Three surfaces, walked through in the order an operator would actually
 hit them after a problem report comes in: trace-level detail (Phoenix) →
 cross-tenant ops view (Ops Portal) → what the end user sees (In-App
-Widget). Assumes §2.2's Option A or B already produced at least one real
+Widget). Assumes §1's example-app run (Option A or B) already produced at least one real
 trace/spend record for `oil-price-demo`, and `ai-dashboard-start` is
 running (Phoenix + Postgres + Ops Portal).
 
 **1. Phoenix — `http://localhost:6006`**
 
 - Open the **Traces** tab for the `default` project. You should see the
-  span from §2.2's `gw.complete()` call (or the full workflow's three
+  span from §1's `gw.complete()` call (or the full workflow's three
   spans if you ran Option B), each carrying `tenant.id=oil-price-demo`,
   `llm.model_name`, `llm.gateway.cost_usd`.
 - Click into a span → confirm `input.value`/`output.value` are visible in
-  `development`/`staging` profiles (or redacted, per §D.2, if you set
+  `development`/`staging` profiles (or redacted, per §2 "Trace redaction", if you set
   `ENVIRONMENT=production` for the call).
 - **Annotations tab** (only relevant if you ran Option B and a HITL gate
   fired): this is the *other* HITL mechanism — the golden-dataset
@@ -553,7 +817,7 @@ running (Phoenix + Postgres + Ops Portal).
   on first trace/spend) with non-zero spend.
 - **Tenant detail** (`/tenants/oil-price-demo`) — click the tenant. Confirm:
   - **Spend this month** / **Budget cap** metric cards (cap shows `—` until
-    `tenant.yaml`'s `gateway.budget_cap_usd` is synced — see §2.5).
+    `tenant.yaml`'s `gateway.budget_cap_usd` is synced — see §4).
   - **Run status** — reflects the *last* `gw.complete()` call's outcome
     for this tenant: **Operational** after a successful call, **Degraded**/
     **Failed** otherwise. **Important:** a workflow parked on a HITL/
@@ -615,10 +879,10 @@ print('Created DLQ entry:', entry.task_id)
   `workflow_id`, since it wasn't created by a real parked workflow — Replay
   would correctly report `resumable: false` since there's no tenant
   `replay_webhook_url` configured yet either). To see a *real* resumable
-  entry and an actual live-workflow resume, run §2.2 Option B with the
+  entry and an actual live-workflow resume, run §1's example-app Option B with the
   `95` outlier, let it park on the HITL gate, then check `/dlq/oil-price-demo`
   while it's waiting — that entry, if you wire up `runtime/replay_webhook_server.py`
-  per §D.4, *is* resumable.
+  per §7, *is* resumable.
 
 **3. In-App Widget**
 
@@ -666,7 +930,7 @@ LLMGateway(tenant_id='oil-price-demo')._report_run_status('manual-demo-run', 'su
 # Reload again — back to Operational.
 ```
 
-### 2.4 — Run evals
+### Local eval runs
 
 ```bash
 # Sync HITL annotations from Phoenix, then score against the golden dataset
@@ -674,26 +938,137 @@ ai-test-evals
 
 # Same, explicitly, with a fail threshold (what CI actually runs)
 python3 scripts/run-evals.py --fail-below 0.80
-
-# Promote a production fix into the golden dataset (HITL-approved only)
-ai-stack-promote <case-id> "<input query>" "<correct output>"
-
-# Shadow-eval a sample of production traces (async, post-hoc — never blocks
-# the live request; see SPECS.md §9). Needs real production-environment
-# spans in Phoenix to have anything to sample.
-python3 scripts/shadow-eval.py --sample-rate 0.05
 ```
 
-Eval thresholds by environment (enforced in the CD workflows, not just
-locally): development is warn-only, staging fails below 0.75, production
-fails below 0.80 (SPECS.md §8/§24).
+### Reliability & compliance suites (fairness, hallucination, TTFT)
 
-### 2.5 — Deploy
+Shipped with the reliability pack v1 (CHANGELOG.md 1.0.0). Same
+`run-evals.py` entry point as the golden suite — different fixtures,
+different thresholds, separate CI workflows:
+
+```bash
+# Fairness — paired protected-attribute cases + pair parity.
+# Threshold: FAIRNESS_FAIL_BELOW in the tenant .env (default 0.80); CLI --fail-below overrides.
+python3 scripts/run-evals.py --suite fairness
+
+# Hallucination — dedicated judge dimension (0.0–1.0, flagged at ≥ 0.5).
+# Hard fail when flagged rate exceeds HALLUCINATION_FAIL_ABOVE (default 0.05);
+# CLI --hallucination-fail-above overrides.
+python3 scripts/run-evals.py --suite hallucination
+
+# TTFT — live Ollama smoke: streams a tiny prompt (default model falcon3:1b)
+# against OLLAMA_BASE_URL and fails when ttft_ms > TTFT_FAIL_ABOVE_MS (default 2000).
+# Exit codes: 0 within budget · 1 over budget · 2 Ollama unreachable/no first token.
+python3 scripts/verify_ttft.py
+```
+
+**Fixtures:** tenant-local `.agent-rfc/fixtures/fairness_evals.json` /
+`hallucination_evals.json` (+ matching `*_judge_criteria.json`). Seed
+copies live in the framework's `fixtures/*_base.json` — copy them into the
+tenant repo's `.agent-rfc/fixtures/` and extend with domain-specific cases.
+When no tenant file exists, `run-evals.py` falls back to the framework base
+seeds (framework checkout only — a vendored tenant copy without fixtures
+skips gracefully).
+
+**CI wiring:** every `ci-<stack>.yml` calls these as reusable workflows —
+`eval-fairness.yml` (warn-only unless repo variable `FAIRNESS_EVALS=required`),
+`eval-hallucination.yml` (hard-fail gate), `eval-ttft-live.yml` (no-ops
+unless repo variable `TTFT_LIVE=required`, since generic CI runners have no
+Ollama). All three are copied into tenant repos by `post-checkout` /
+`ai-tenant-init` alongside `eval-scorecard.yml` — a missing callee makes
+GitHub reject the whole CI workflow as invalid.
+
+**Tenant `.env` knobs (reliability pack):**
+
+```bash
+FAIRNESS_FAIL_BELOW=0.80          # fairness + pair-parity pass threshold
+HALLUCINATION_FAIL_ABOVE=0.05     # max tolerated flagged-case rate
+TTFT_FAIL_ABOVE_MS=2000           # live TTFT budget (verify_ttft.py)
+```
+
+### Full testing checklist (same bar as `self-test.yml`)
+
+Minimal real validation for each subsystem (no mocks):
+
+```bash
+# Framework scripts + shell
+find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
+bash -n install-ai-stack.sh && zsh -n install-ai-stack.sh
+
+# Knowledge Graph rebuild + non-empty assertion (Pillar 2 / P10a — wired into self-test.yml)
+python3 scripts/verify_system.py --check-kg
+
+# Ops Portal (includes a cross-tenant isolation regression suite — see SPECS.md §26)
+cd portal && npx tsc --noEmit && npm test && npm run build
+
+# In-App Widget (includes an XSS-attribute-injection regression test)
+cd templates/in-app-widget && npm install && npm test
+
+# Redaction (needs ENVIRONMENT set; staging/production exercise real scrubbing)
+ENVIRONMENT=staging python3 scripts/verify_system.py --check-redaction
+ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
+
+# Reliability pack (§2, §3) — eval suites, input guardrail unit tests, TTFT
+python3 scripts/run-evals.py --suite fairness
+python3 scripts/run-evals.py --suite hallucination
+pytest runtime/test/test_input_guardrail.py runtime/test/test_ttft_stream.py \
+       runtime/test/test_self_correction.py runtime/test/test_memory_and_vector.py -q
+python3 scripts/verify_ttft.py            # needs a local Ollama with falcon3:1b pulled
+
+# Hook bundle signing (needs a real GPG key; see Appendix A)
+gpg --verify agenticframework-hooks-<version>.tar.gz.sig agenticframework-hooks-<version>.tar.gz
+
+# On-prem deployment template (§4) — compose/proxy/Helm syntax, no live cluster needed
+python3 scripts/verify_system.py --check-onprem-deploy
+
+# Dedicated worker pool manifests — kubectl (even --dry-run=client) needs a
+# reachable cluster for API discovery; a free local one takes ~30s:
+brew install kind && kind create cluster --name af-test
+runtime/k8s/dedicated-tenant/render.sh acme nginx:alpine --apply
+kubectl get pods -n tenant-acme   # CreateContainerConfigError until you create the Secret — expected
+kind delete cluster --name af-test
+```
+
+For LLM Gateway / Postgres checkpointer / Ops Portal database code, spin up
+a throwaway Postgres rather than trusting the code path untested:
+
+```bash
+docker run -d --name pg-test -e POSTGRES_PASSWORD=test -e POSTGRES_USER=test -e POSTGRES_DB=test -p 55432:5432 postgres:16-alpine
+export DATABASE_URL="postgresql://test:test@localhost:55432/test"
+# ... run your test, then:
+docker rm -f pg-test
+```
+
+For `run_with_recoverable_step` (§7) specifically — the workflow-side
+mechanics (parking alive, retry-policy override, signal resume) can't be
+exercised by a throwaway Postgres alone; it needs a real Temporal test
+server:
+
+```bash
+pip install temporalio
+python3 -c "
+import asyncio
+from temporalio.testing import WorkflowEnvironment
+asyncio.run(WorkflowEnvironment.start_local())  # downloads/starts the test server once
+"
+# Then run a worker + workflow against env.client inside that context —
+# see the pattern in Product_Archive.md's HITL/DLQ redesign section for
+# a worked example (CRM-style hallucinated-field-name failure -> parked
+# workflow -> human_fix_payload signal -> resumed with the correction).
+```
+
+---
+
+---
+
+## 4 — Deploy via GitHub CI/CD
+
+### Deploy pipeline and GCP checklist
 
 **Through GitHub CI/CD (cloud):**
 
 ```bash
-# Scaffold a tenant repo with CI/CD wired in (Part C) — or, for the example,
+# Scaffold a tenant repo with CI/CD wired in (§1) — or, for the example,
 # this is already done: examples/oil-price-agent/.agenticframework/tenant.yaml
 cd my-project
 ai-tenant-init my-tenant --stack python-fastapi   # or ts-react | go
@@ -712,13 +1087,13 @@ Then the pipeline runs itself on the branch flow already wired by `ai-tenant-ini
 | Push a feature branch / open a PR | `ci-<stack>.yml` | lint, format check, test, eval scorecard (warn-only) |
 | Merge to `develop` | `cd-staging.yml` | optional GHCR image build → eval fail-gate at 0.75 + post-deploy smoke test |
 | `ai-tenant-promote my-tenant --from staging --to production` | Opens a `develop → main` PR | re-verifies the staging eval gate before opening it; **exact tenant-id match required** — refuses if `.agenticframework/tenant.yaml`'s id doesn't match exactly |
-| PR reviewed + merged to `main` | `cd-production.yml` | optional GHCR image build → eval fail-gate at 0.80 + smoke test; **blocks + runs `rollback-notify` on smoke failure** (no automatic rollback execution — see §D.5 "Wire your platform") |
+| PR reviewed + merged to `main` | `cd-production.yml` | optional GHCR image build → eval fail-gate at 0.80 + smoke test; **blocks + runs `rollback-notify` on smoke failure** (no automatic rollback execution — see "Wire your platform" below) |
 
 `cd-staging.yml`/`cd-production.yml`'s deploy step is
 `.github/actions/deploy-placeholder` — set the `DEPLOY_COMMAND` secret on
 the tenant's GitHub Environment to wire in your platform; unset, it no-ops
-and prints platform-specific guidance (Fly/Railway/ECS/GCP Run). See §D.5
-for the exact commands and the GHCR image-build step that runs before it.
+and prints platform-specific guidance (Fly/Railway/ECS/GCP Run). See "Wire
+your platform" below for the exact commands and the GHCR image-build step that runs before it.
 
 ---
 
@@ -845,7 +1220,7 @@ gcloud run services describe YOUR_UI_SERVICE \
 
 Open the `YOUR_UI_SERVICE` Cloud Run URL in a browser. Select the **HITL — price spike**
 preset and click **Start Workflow**. The UI should show the workflow running → pause for
-HITL approval → display the result after you click **Approve**. See §D.5c for the full
+HITL approval → display the result after you click **Approve**. See "Worked example: a tenant demo UI" below for the full
 HITL flow and what each button does.
 
 **Step 6 — Promote to production:**
@@ -870,128 +1245,10 @@ cp deploy/onprem/.env.example deploy/onprem/.env
 deploy/onprem/scripts/up.sh
 ```
 
-See §D.6 for canary/shadow traffic routing, Kubernetes/Helm for
+See "On-premise / air-gapped deployment" below for canary/shadow traffic routing, Kubernetes/Helm for
 high-compliance customers, and air-gapped image bundling.
 
-### 2.6 — Operate
-
-| Surface | What it shows | Where |
-|---|---|---|
-| **Phoenix** | This tenant's traces, evals, HITL annotation queue | `http://localhost:6006` (or your team server) |
-| **Ops Portal** | Cross-tenant cost/spend + cap, real run status (incl. **Working**/in-progress), Phoenix error rate, per-tenant DLQ triage (edit/Replay/Discard), shadow-eval suggested promotions, signed audit log | `https://ops.example.com` (Part E) |
-| **Demo UI (Streamlit)** | GUI for submitting oil-price workflows, viewing status, approving/rejecting HITL, seeing results — connects to the live Temporal server | Cloud Run: get URL via `gcloud run services describe YOUR_UI_SERVICE --region YOUR_REGION --project YOUR_GCP_PROJECT_ID --format="value(status.url)"` |
-| **`.agent-history.log`** | Local append-only event log this tenant repo produces | `ai-stack-check` surfaces unresolved entries from it |
-| **In-App Widget** | End-user-facing status badge (own tenant only, token-scoped) | embedded in the tenant's own app (Part F) |
-| **GitHub Actions** | CI/CD run history, eval scorecard artifacts per run | the tenant repo's Actions tab |
-
-**Demo UI quick-test after deploy:**
-1. Open the `YOUR_UI_SERVICE` Cloud Run URL
-2. Sidebar → pick **HITL — price spike** preset → click **Start Workflow**
-3. Status refreshes automatically — workflow pauses at HITL gate
-4. Click **Approve** → workflow completes → result (prediction, confidence, anomaly=True) appears in run history
-
-**CLI alternative (no UI):** `scripts/resolve_hitl.py` in the oil-price-demo repo does
-the same HITL signal from the terminal — useful for scripting or when the UI isn't deployed yet.
-
-Day-to-day operational tasks (rotating tokens/keys, checking unresolved
-issues, upgrading the framework version) are in [§10 Day-2 Operations](#10-day-2-operations).
-
----
-
-## Part A — Solo Dev Install (recap)
-
-Full detail is in [UserManual.md §1–2](./UserManual.md). The short version:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
-source ~/.zshrc
-export AGENT_OWNER_ID="you@example.com"
-export AGENT_OWNER_NAME="Your Name"
-ai-mode-local      # or ai-mode-hybrid
-ai-dashboard-start
-ai-stack-check
-```
-
-Everything below assumes this is done.
-
----
-
-## Part B — Team-Shared Phoenix with Auth
-
-An unauthenticated shared Phoenix instance is non-compliant (SPECS.md §15) —
-the base `docker-compose.yml` binds Phoenix's own port to `127.0.0.1` only,
-so by default it's **not reachable from other machines at all**.
-
-### B.1 — Solo dev (unchanged)
-
-```bash
-docker compose up -d
-curl http://localhost:6006/healthz   # works — you're on localhost
-```
-
-### B.2 — Team server: add the auth overlay
-
-```bash
-# Generate a bcrypt hash for the basic-auth password. The hash contains
-# literal '$' characters that Compose's .env interpolation will otherwise
-# corrupt — this one-liner escapes them correctly:
-echo "PHOENIX_BASIC_AUTH_HASH=$(docker run --rm caddy:2-alpine caddy hash-password --plaintext '<your-password>' | sed 's/\$/\$\$/g')" >> .env
-echo "PHOENIX_BASIC_AUTH_USER=ops" >> .env
-
-# Base stack + auth overlay together (NOT just `docker compose up -d` —
-# that alone leaves Phoenix loopback-only with no remote access at all)
-docker compose -f docker-compose.yml -f docker-compose.auth.yml up -d
-```
-
-Verify:
-
-```bash
-curl http://localhost:6007/healthz                                    # 401, no creds
-curl -u ops:<your-password> http://localhost:6007/healthz             # 200
-```
-
-Developers and CI then point at port **6007** (the auth sidecar), not 6006:
-
-```bash
-export AGENT_PHOENIX_ENDPOINT="http://ops:<password>@<server-ip>:6007"
-```
-
-See [docker-compose.yml](./docker-compose.yml) and
-[docker-compose.auth.yml](./docker-compose.auth.yml) header comments for the
-full rationale (why this is a separate file, not a Compose profile).
-
----
-
-## Part C — Multi-Tenancy
-
-A tenant is a customer application with its own independent repository,
-agents, eval suite, and deployment track (SPECS.md §23).
-
-### C.1 — Scaffold a new tenant repo
-
-```bash
-cd /path/to/your-tenant-repo   # must be a git repo
-ai-tenant-init acme --stack python-fastapi
-```
-
-Stack options: `python-fastapi` (default), `go`, `ts-react`. Add
-`--isolation dedicated` if this tenant needs its own worker pool (Part D.4).
-
-This writes:
-- `.agenticframework/tenant.yaml` — tenant id, isolation tier, framework version pin, per-environment Phoenix namespaces and eval thresholds
-- `.github/workflows/ci-<stack>.yml`, `cd-staging.yml`, `cd-production.yml`
-
-Re-running is idempotent — existing files are never overwritten.
-
-### C.2 — Configure GitHub Environments
-
-In the tenant repo: **Settings → Environments**, create `staging` and
-`production`, each with:
-- Required reviewers (production)
-- Environment secrets: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
-  `AGENT_PHOENIX_ENDPOINT`, `AGENT_OWNER_ID`
-
-### C.3 — Promote staging → production
+### Promote staging → production (`ai-tenant-promote`)
 
 ```bash
 ai-tenant-promote acme --from staging --to production
@@ -1001,7 +1258,281 @@ This verifies the staging eval gate (`run-evals.py --fail-below 0.75`) and,
 only if it passes, opens a `develop → main` PR via `gh pr create` — it never
 pushes directly to `main`.
 
-### C.4 — Dedicated isolation tier
+### Wire your platform (CD deploy + rollback)
+
+Before the deploy step, both CD workflows run
+`.github/actions/build-push-ghcr`: if a `Dockerfile` exists at the repo
+root, it builds and pushes `ghcr.io/<org>/<repo>:<sha>` using the
+workflow's own `GITHUB_TOKEN` (no extra registry secret) and exports the
+image ref as `$IMAGE_REF` for the deploy step below to consume — e.g.
+`DEPLOY_COMMAND = "gcloud run deploy myapp-staging --image $IMAGE_REF"`.
+No Dockerfile present → this step skips cleanly (exit 0, no CD failure),
+same "optional infra never fails CD" posture as the Ops Portal history
+sync. This is also the artifact `templates/onprem-deploy/` (below)
+expects — point its `APP_IMAGE_PROD`/`_CANARY`/`_SHADOW` at the pushed
+`$IMAGE_REF` tags instead of building separately for on-prem.
+
+`cd-staging.yml`/`cd-production.yml`'s deploy step is
+`.github/actions/deploy-placeholder` — a documented composite action, not
+literal text to find-and-delete. It runs `secrets.DEPLOY_COMMAND` if set on
+the tenant's GitHub Environment; unset, it no-ops and prints the platform
+commands below. No workflow YAML edit needed to wire in a real deploy:
+
+```bash
+# Set on the tenant's GitHub Environment (Settings → Environments → staging/production):
+DEPLOY_COMMAND   = "flyctl deploy --app myapp-staging"        # Fly.io
+DEPLOY_COMMAND   = "railway up --environment staging"          # Railway
+DEPLOY_COMMAND   = "aws ecs update-service --cluster staging --service myapp --force-new-deployment"  # AWS ECS
+DEPLOY_COMMAND   = "gcloud run deploy myapp-staging --image $IMAGE"  # GCP Run
+```
+
+On a post-deploy smoke-test failure, `cd-production.yml` invokes
+`.github/actions/rollback-notify`: posts to Slack/Teams
+(`SLACK_WEBHOOK_URL`/`TEAMS_WEBHOOK_URL` secrets, optional), runs
+`secrets.ROLLBACK_COMMAND` if set, then fails the job (red status
+preserved either way — notification/rollback never silently swallows the
+failure):
+
+```bash
+ROLLBACK_COMMAND = "fly releases list && fly deploy --image <prev-image>"  # Fly.io
+ROLLBACK_COMMAND = "railway rollback"                                      # Railway
+ROLLBACK_COMMAND = "aws ecs update-service --task-definition <prev-arn>"   # AWS ECS
+```
+
+Actual rollback *execution* stays tenant-supplied (this framework has no
+opinion on which platform CLI to run) — same posture as the deploy step.
+Verified against `act` (local GitHub Actions runner): both actions execute
+correctly with and without a configured command, and a forced failure
+correctly propagates a red job status after rollback/notify run.
+
+### GCP deployment specifics (Vertex AI credentials + worker hosting)
+
+"Wire your platform" above covers `DEPLOY_COMMAND` generically, with `gcloud run deploy` as
+one example value — that's enough if your tenant app only talks to direct
+Anthropic/OpenAI APIs. If it routes any `model_hint` to `provider:
+vertex_ai` (e.g. the `vertex_gemini` role added to `runtime/models.yaml` in
+§2 above), CI/CD needs two more things `DEPLOY_COMMAND` alone doesn't give
+you: a way for GitHub Actions to authenticate to GCP, and a decision about
+*what kind* of compute actually runs `worker.py`.
+
+**1. Authenticating GitHub Actions to GCP.**
+
+The CD workflows (`cd-staging.yml`, `cd-production.yml`) already include a
+`.github/actions/gcp-auth` step — it runs before the image build and deploy
+steps and skips gracefully if neither GCP secret is configured. You only
+need to set the right secrets on each GitHub Environment:
+
+| Secret | What to set | Notes |
+|---|---|---|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/<project-number>/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider` | **Preferred** — see one-time setup below |
+| `GCP_SERVICE_ACCOUNT` | `github-deployer@<project-id>.iam.gserviceaccount.com` | Required alongside WIF |
+| `GCP_SA_KEY` | base64-encoded service-account JSON key | Fallback only — long-lived secret, harder to rotate |
+| `GCP_PROJECT_ID` | `my-gcp-project` | Used in `DEPLOY_COMMAND` / `models.yaml` |
+
+`VertexAIAdapter` resolves credentials via `google.auth.default()`
+(`runtime/provider_dispatch.py`) — after `gcp-auth` runs, ADC is written to
+the runner filesystem so any subsequent step (`gcloud`, `kubectl`, the Python
+gateway) is automatically authenticated.
+
+**One-time WIF setup:** identical to the step-by-step checklist in §4.1
+above (pool + provider + `github-deployer` SA + repo binding) — do it once
+per GCP project there; don't repeat it here.
+
+**Service-account JSON key (simpler fallback — prefer WIF above):** generate
+one (`gcloud iam service-accounts keys create key.json --iam-account=...`),
+store its base64-encoded contents as `GCP_SA_KEY` on the GitHub Environment.
+For the deployed runtime's own ADC, mount it as a Cloud Run/GKE secret volume
+and set `GOOGLE_APPLICATION_CREDENTIALS` — never bake the key into the image.
+
+**2. What actually gets deployed.** `gcloud run deploy` deploys a
+request/response HTTP service — but `worker.py` (and any tenant's
+Temporal-backed worker) is a long-running poller with no HTTP listener at
+all. Don't assume Cloud Run "just works" here without one of:
+
+| Option | Fit | Caveat |
+|---|---|---|
+| **Cloud Run, `--no-cpu-throttling --min-instances=1`** | Works for low/moderate-throughput workers; closest to the `DEPLOY_COMMAND` pattern already documented | No autoscaling on queue depth; you're paying for one always-on instance regardless of task-queue load. `worker.py` already serves `GET /healthz` on `$PORT` (default 8080) so Cloud Run's health checks have something to hit |
+| **GKE (or any k8s)** | Best fit for a long-running poller — a `Deployment` with no `Service`/ingress needed at all, scales on whatever metric you choose (queue depth via KEDA, etc.) | More infra to operate — bring your own cluster; not scaffolded by `ai-onprem-deploy-scaffold` |
+| **Compute Engine (single VM/MIG)** | Simplest mental model, no container platform needed | Manual scaling, no rolling-deploy story beyond replacing the VM/instance template yourself |
+
+Set `DEPLOY_COMMAND` on each GitHub Environment to whichever platform you
+choose. The `gcp-auth` step runs first so `gcloud`/`kubectl` is already
+authenticated when `DEPLOY_COMMAND` executes:
+
+```bash
+# Cloud Run (worker.py already has /healthz — see above):
+DEPLOY_COMMAND = "gcloud run deploy YOUR_WORKER_SERVICE \
+  --image $IMAGE_REF \
+  --region YOUR_REGION \
+  --project $GCP_PROJECT_ID \
+  --no-cpu-throttling \
+  --min-instances=1 \
+  --port=8080 \
+  --set-env-vars TENANT_ID=YOUR_TENANT_ID,TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST,TEMPORAL_TLS=true"
+
+# GKE (Deployment must already exist — this just rolls the new image):
+DEPLOY_COMMAND = "gcloud container clusters get-credentials YOUR_CLUSTER --region YOUR_REGION --project $GCP_PROJECT_ID \
+  && kubectl set image deployment/YOUR_WORKER_DEPLOYMENT worker=$IMAGE_REF"
+```
+
+Set `GCP_PROJECT_ID` as a GitHub Environment variable (not secret — no
+credential, just a project identifier) so `DEPLOY_COMMAND` can reference
+`$GCP_PROJECT_ID` without hardcoding it in the workflow YAML or in
+`runtime/models.yaml` (§29 "Cloud-Native Provider Adapters").
+
+**Live-verification status**: the Vertex AI *call path* was verified
+live against a real GCP project (`gemini-2.5-flash` via
+`LLMGateway.complete(model_hint="vertex_gemini")` — §29). The
+`gcp-auth` composite action is now **fully verified end-to-end** through
+real GitHub Actions runs against GCP project `agentsmith-500916` on
+2026-07-01: both `bobbyaqlaar/oil-price-demo` and `bobbyaqlaar/AgentSmith`
+completed successful staging + production deploys to Cloud Run. The
+three worker-hosting options (Cloud Run, GKE, Compute Engine) have been
+exercised for Cloud Run only — verify `kubectl` invocations against your
+own project before relying on them.
+
+**Multi-repo WIF note:** the WIF provider's `--attribute-condition` is a
+single expression that applies to all repos bound to the pool. When adding
+a second repo to the same GCP project, update the condition from a single
+`==` to an `in` list:
+```bash
+gcloud iam workload-identity-pools providers update-oidc github-provider \
+  --project="$GCP_PROJECT_ID" --location=global \
+  --workload-identity-pool=github-actions-pool \
+  --attribute-condition="assertion.repository in ['ORG/REPO1', 'ORG/REPO2']"
+```
+Forgetting this update causes `unauthorized_client: The given credential is
+rejected by the attribute condition` for the new repo even if its WIF principal
+binding is correctly set.
+
+### Cloud SQL Auth Proxy for the portal database (Cloud Run)
+
+When deploying a Next.js portal (or any app) to Cloud Run that needs to connect to Cloud SQL, **do not** configure TCP + SSL cert verification. Cloud Run natively supports the **Cloud SQL Auth Proxy** via the `--add-cloudsql-instances` flag — it injects a sidecar that creates a Unix socket, handles Google-managed mTLS transparently, and never exposes TCP.
+
+**Why not `sslmode=require` or `sslmode=no-verify`:**
+- `sslmode=require` with `node-postgres` attempts full leaf-cert chain verification; Cloud SQL's cert is Google-managed and not in Node's default CA bundle → `UNABLE_TO_VERIFY_LEAF_SIGNATURE`.
+- `sslmode=no-verify` skips verification entirely — MITM-vulnerable, not acceptable for production.
+
+**Correct approach — Cloud SQL Auth Proxy via Unix socket:**
+
+1. **Grant the Compute SA `roles/cloudsql.client`:**
+   ```bash
+   PROJECT_NUMBER=$(gcloud projects describe agentsmith-500916 --format='value(projectNumber)')
+   COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+   gcloud projects add-iam-policy-binding agentsmith-500916 \
+     --member="serviceAccount:${COMPUTE_SA}" \
+     --role="roles/cloudsql.client"
+   ```
+
+2. **Add `--add-cloudsql-instances` to the DEPLOY_COMMAND:**
+   ```bash
+   gcloud run deploy agentsmith-portal-staging \
+     --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID \
+     --platform managed --allow-unauthenticated \
+     --add-cloudsql-instances=agentsmith-500916:us-central1:temporal-pg \
+     --set-secrets=DATABASE_URL=ops-portal-db-url:latest,...
+   ```
+
+3. **DATABASE_URL must use the Unix socket path** (stored in Secret Manager, never hardcoded):
+   ```
+   postgresql://USER:PASSWORD@/DBNAME?host=/cloudsql/PROJECT:REGION:INSTANCE
+   # e.g.:
+   postgresql://postgres:***@/agenticframework?host=/cloudsql/agentsmith-500916:us-central1:temporal-pg
+   ```
+   No `sslmode` param needed — the proxy socket is always mutually authenticated.
+
+4. **Secret Manager accessor on Compute SA** — `gcloud run deploy --set-secrets` is resolved at deploy time by the Compute SA (not the deployer SA). Each new secret must grant the Compute SA accessor before deploy:
+   ```bash
+   gcloud secrets add-iam-policy-binding SECRET_NAME \
+     --member="serviceAccount:${COMPUTE_SA}" \
+     --role="roles/secretmanager.secretAccessor"
+   ```
+
+### Worked example: a tenant demo UI on Cloud Run (Streamlit)
+
+> **Tenant-specific:** the `demo/` directory and `cd-demo-ui.yml` exist in the
+> `bobbyaqlaar/oil-price-demo` tenant repo only — they are not part of the
+> framework or of `examples/oil-price-agent/`, and are not scaffolded by
+> `ai-tenant-init`. Treat this subsection as a worked example of adding your
+> own UI layer to a tenant repo.
+
+The `demo/` directory in the oil-price-demo tenant repo contains a Streamlit app (`demo/app.py`) that
+provides a GUI frontend for the pipeline. It connects directly to the **live** Temporal
+server — it is not a simulation. No changes to the existing Temporal worker, Postgres, or
+Ops Portal setup are required; the demo app is a thin UI layer on top.
+
+**Architecture:**
+```
+Browser → Streamlit (Cloud Run: YOUR_UI_SERVICE)
+              │
+              ├── temporalio.client → Temporal server (start workflow, poll, signal)
+              └── (no direct DB — reads Temporal workflow state only)
+```
+
+**Environment variables (set via `--set-env-vars` or Cloud Run console):**
+
+| Variable | Default | Notes |
+|---|---|---|
+| `TEMPORAL_ADDRESS` | `localhost:7233` | Override to point at your live Temporal server |
+| `TEMPORAL_TLS` | `` (empty) | Set to `"1"` if Temporal server uses TLS |
+| `TENANT_ID` | *(required)* | Must match the tenant ID registered in the worker |
+| `PORT` | `8080` | Set automatically by Cloud Run |
+
+**CD workflow:** `.github/workflows/cd-demo-ui.yml` deploys on push to `develop`/`main`
+when any file under `demo/**` changes. It uses the `gcp-auth` composite action (same WIF
+flow as the worker CD) and runs:
+```bash
+gcloud run deploy YOUR_UI_SERVICE \
+  --source . \
+  --dockerfile demo/Dockerfile \
+  --region YOUR_REGION \
+  --project $GCP_PROJECT_ID \
+  --allow-unauthenticated \
+  --port 8080 \
+  --set-env-vars TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST,TENANT_ID=YOUR_TENANT_ID
+```
+
+**Manual deploy** (once GCP secrets are set on the `staging` environment):
+```bash
+# From inside the tenant repo root
+gcloud run deploy YOUR_UI_SERVICE \
+  --source . \
+  --dockerfile demo/Dockerfile \
+  --region YOUR_REGION \
+  --project YOUR_GCP_PROJECT_ID \
+  --allow-unauthenticated \
+  --port 8080 \
+  --set-env-vars TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST,TENANT_ID=YOUR_TENANT_ID
+```
+
+**Get the service URL after deploy:**
+```bash
+gcloud run services describe YOUR_UI_SERVICE \
+  --region YOUR_REGION --project YOUR_GCP_PROJECT_ID \
+  --format="value(status.url)"
+```
+
+**HITL flow via the demo UI:**
+1. Enter a price series (or pick a preset from the sidebar) → click **Start Workflow**
+2. The Streamlit app calls `client.start_workflow("OilPricePredictionWorkflow", ...)`
+3. Status auto-refreshes — when the workflow halts for HITL approval, an
+   **Approve / Reject** panel appears
+4. Clicking Approve/Reject sends `handle.signal("hitl_approved", True/False)` —
+   identical to what `scripts/resolve_hitl.py` does from the CLI
+5. The workflow completes; the result (prediction, confidence, anomaly flag) is
+   displayed in the run history table
+
+**Spike preset:** uses series `[70.0, 70.1, 69.9, 70.0, 70.1, 70.0, 70.2, 69.8, 70.1, 70.0, 110.0]`
+(10 stable values ~70 then spike to 110). This definitively exceeds the 3σ anomaly threshold
+because the stable prefix keeps mean and σ tight — a short series with the outlier included
+inflates σ and can mask the spike.
+
+**Prerequisites:** GCP secrets must be set on the `staging` GitHub Environment (see
+`Product_Archive.md` §P11) before the CD workflow can deploy. See "GCP deployment specifics" above for the WIF setup.
+
+---
+
+### Dedicated isolation tier (own worker pool)
 
 If you scaffolded with `--isolation dedicated`, provision the tenant's own
 Kubernetes worker pool:
@@ -1024,112 +1555,325 @@ tenant-scoped credentials. See
 
 ---
 
-## Part D — Production Runtime
+### On-premise / air-gapped deployment
 
-`scripts/multi_agent_system.py` / `local_agent_stack.py` are the **dev/IDE**
-path. Production agent execution uses `runtime/` instead — never deployed
-directly from this repo (tenant repos build their own worker image, §25).
-
-### D.1 — LLM Gateway (budget + degrade ladder)
-
-```python
-from runtime.llm_gateway import LLMGateway
-
-gateway = LLMGateway(tenant_id="acme", budget_cap_usd=150.0)
-result = await gateway.complete(prompt="...", model_hint="developer")
-```
-
-Model registry: `runtime/models.yaml` (framework defaults) →
-tenant-repo-root `models.yaml` (override) → `.agenticframework/tenant.yaml`
-`gateway.routing_overrides` (per-role shorthand).
-
-Budget backend — set before instantiating:
+For tenants whose customers run the agent app on their own hardware
+instead of a managed cloud platform — opt-in, never auto-written the way
+the CI/CD workflow templates are:
 
 ```bash
-export BUDGET_BACKEND=postgres   # or redis, or memory (dev/CI only)
-export DATABASE_URL="postgresql://..."
+ai-onprem-deploy-scaffold   # run inside the tenant repo — writes deploy/onprem/
 ```
 
-Ollama endpoint — `OLLAMA_BASE_URL` is optional; the gateway defaults to
-`http://localhost:11434` if the variable is unset or unresolved. Set it
-only when Ollama is running on a non-default host or port:
+This copies `templates/onprem-deploy/` (vendored to
+`~/.agent-framework/templates/onprem-deploy/` by `install-ai-stack.sh`,
+same mechanism as `agent-rules.yaml`) into the repo. The template is
+**stack-agnostic by design**, consistent with the framework's own
+position as something that "provides a ready-to-use framework from design
+to deploy to operate to continuously improve other applications built
+with different architectures" — it doesn't know or assume your agent
+app's internal language/framework, only that it ships as one container
+image, listens on one HTTP port with `GET /healthz`, reads config from env
+vars only (never a cloud secret manager — see the secrets note below),
+and logs JSON-Lines to stdout (already `runtime/agent_logger.py`'s
+convention everywhere else in this framework).
+
+**Two deployment targets**, picked based on the customer:
+
+| Target | When | Command |
+|---|---|---|
+| Docker Compose (`deploy/onprem/`) | ~80% of on-prem customers — single bare-metal server/VM | `./scripts/up.sh` |
+| Kubernetes / Helm (`deploy/onprem/kubernetes/`) | High-compliance enterprise customers running their own managed cluster who won't run raw Docker | `helm install` |
+
+**Canary + shadow traffic, on-prem.** Cloud load balancers (ALB, Cloud Run
+traffic splitting) aren't available on a customer's private hardware, so
+the proxy/ingress ships *inside* the deployment package — choose per
+customer via `PROXY_ENGINE=traefik|envoy` (Compose) or
+`--set proxyEngine=traefik|envoy-gateway` (Helm):
+
+- **Traefik** — simpler config, smaller learning curve; uses Traefik's
+  native `weighted` + `mirroring` service kinds.
+- **Envoy** — more precise traffic-shaping (`weighted_clusters` +
+  `request_mirror_policies`), the better fit if the customer already runs
+  Envoy/Envoy Gateway elsewhere.
+
+Both render their proxy config from `.env` via
+`scripts/render-traefik-config.py`/`render-envoy-config.py` (a real dict
++ `yaml.safe_dump`, not string templating) — verified directly: rendering
+with canary+shadow images set produces a valid weighted+mirrored Traefik
+dynamic config and a valid Envoy `weighted_clusters`/
+`request_mirror_policies` bootstrap, and `docker compose config --quiet`
+validates the resulting compose merge for both proxy engines plus the
+optional `with-db` (pgvector) profile. On Kubernetes, `helm lint` and
+`helm template` (default + canary/shadow/db enabled + both proxy engines)
+all render valid manifests using the **core** Gateway API's
+`backendRefs[].weight` (canary) and `RequestMirror` filter (shadow) —
+note the K8s path has one real limitation vs. Compose: core Gateway API's
+mirror filter has no percentage field (always mirrors 100% of matched
+traffic), unlike Traefik's/Envoy's own native mirroring used directly in
+Compose, which do support a percent. See
+`templates/onprem-deploy/kubernetes/README.md` for the vendor-extension
+workaround if a customer needs partial mirroring specifically on K8s.
+
+**Mirroring vs. shadow-eval (P1c) — these are two different things, don't
+conflate them:** this section's shadow *traffic* mirroring tests a new version of
+the whole app against live request shape before promotion, at the
+proxy/infrastructure layer — it has no idea what your app does with a
+mirrored request. The framework's separate shadow-eval sampler
+(`scripts/shadow-eval.py`, SPECS.md §9) does *application-level*,
+side-effect-safe shadow evaluation: judging a 5% sample of already-served
+production traces after the fact by reading Phoenix, never re-executing
+anything. If your agent has side effects (writes, external API calls), do
+not point `APP_IMAGE_SHADOW`/`shadow.enabled` at a build that isn't
+dry-run-safe — that's on your app's build, this template can't make that
+safe for you given it treats your image as a black box.
+
+**Air-gapped bundling:** `scripts/bundle-airgapped.sh` (run where there's
+internet access) pulls + `docker save`s every image the stack needs —
+app versions, the chosen proxy image, pgvector if enabled — into one
+`onprem-bundle.tar.gz`; `scripts/load-airgapped.sh` (run on the
+air-gapped server) `docker load`s it with zero registry calls. Transfer
+via USB drive, secure copy, or a private registry mirror.
+
+**Secrets:** strictly `.env` (Compose) or a pre-existing Kubernetes
+`Secret` referenced by `envSecretName` (Helm) — no AWS Secrets Manager /
+GCP Secret Manager call anywhere in this template, matching
+`runtime/environment.py`'s existing fail-closed `ENVIRONMENT` resolver
+convention used framework-wide.
+
+Full detail: `templates/onprem-deploy/README.md`,
+`templates/onprem-deploy/kubernetes/README.md`.
+
+---
+
+---
+
+## 5 — Monitor in Production
+
+### Operating surfaces at a glance
+
+| Surface | What it shows | Where |
+|---|---|---|
+| **Phoenix** | This tenant's traces, evals, HITL annotation queue | `http://localhost:6006` (or your team server) |
+| **Ops Portal** | Cross-tenant cost/spend + cap, real run status (incl. **Working**/in-progress), Phoenix error rate, per-tenant DLQ triage (edit/Replay/Discard), shadow-eval suggested promotions, signed audit log | `https://ops.example.com` (below) |
+| **Demo UI (Streamlit)** | GUI for submitting oil-price workflows, viewing status, approving/rejecting HITL, seeing results — connects to the live Temporal server | Cloud Run: get URL via `gcloud run services describe YOUR_UI_SERVICE --region YOUR_REGION --project YOUR_GCP_PROJECT_ID --format="value(status.url)"` |
+| **`.agent-history.log`** | Local append-only event log this tenant repo produces | `ai-stack-check` surfaces unresolved entries from it |
+| **In-App Widget** | End-user-facing status badge (own tenant only, token-scoped) | embedded in the tenant's own app (below) |
+| **GitHub Actions** | CI/CD run history, eval scorecard artifacts per run | the tenant repo's Actions tab |
+
+**Demo UI quick-test after deploy:**
+1. Open the `YOUR_UI_SERVICE` Cloud Run URL
+2. Sidebar → pick **HITL — price spike** preset → click **Start Workflow**
+3. Status refreshes automatically — workflow pauses at HITL gate
+4. Click **Approve** → workflow completes → result (prediction, confidence, anomaly=True) appears in run history
+
+**CLI alternative (no UI):** `scripts/resolve_hitl.py` in the oil-price-demo repo does
+the same HITL signal from the terminal — useful for scripting or when the UI isn't deployed yet.
+
+Day-to-day operational tasks (rotating tokens/keys, checking unresolved
+issues, upgrading the framework version) are in [§9 — Maintain](#9--maintain-day-2-operations).
+
+---
+
+### Ops Portal
+
+Cross-tenant cost/issues dashboard. Full detail:
+[portal/README.md](./portal/README.md).
+
+#### E.1 — Setup
 
 ```bash
-export OLLAMA_BASE_URL="http://localhost:11434"   # default — omit if using the standard port
+cd portal
+cp .env.example .env.local
+npm install
+npm run db:migrate      # applies db/schema.sql against DATABASE_URL
+npm run dev             # http://localhost:3000
 ```
 
-The gateway automatically walks the `degrade_to` chain in `models.yaml`
-(e.g. `architect` → `developer` → `validator` → `fast`/Ollama) in two
-situations: (1) the tenant's monthly spend breaches the cap, or (2) the
-provider itself returns a billing, quota, or rate-limit error (HTTP 400
-"credit balance too low", 429, overload). In both cases the chain is walked
-until a tier succeeds or all tiers are exhausted — at which point
-`complete()` raises `RuntimeError("All model tiers exhausted …")` with the
-last error included. If the requested tier is already the free/local tier, a
-budget breach never blocks it.
+Minimum required env vars: `DATABASE_URL` (same Postgres as the LLM
+Gateway's budget backend — the portal reads `llm_gateway_budget` directly,
+read-only), `OPS_PORTAL_USER`, `OPS_PORTAL_PASSWORD`. The portal **refuses
+to serve traffic** without basic-auth credentials configured (or, with SSO
+enabled, without `SSO_SESSION_SECRET`) — there is no unauthenticated mode.
 
-Budget spend is reserved atomically **before** the provider call (an upper
-bound from `max_tokens`), then reconciled to the actual cost afterward —
-not read-checked-then-written-after, which would let concurrent in-flight
-calls for the same tenant all slip past the cap before any of them recorded
-spend. If a reservation would exceed the cap, `complete()` raises
-`BudgetExceededError` immediately rather than making the provider call.
-
-### D.2 — Trace redaction
+**Multi-user RBAC (optional):** set `OPS_PORTAL_USERS` instead of/alongside
+`OPS_PORTAL_USER`/`PASSWORD` for per-user roles and tenant scoping:
 
 ```bash
-export ENVIRONMENT=development   # explicit opt-in for local/IDE work — see note below
+OPS_PORTAL_USERS='[
+  {"username":"alice","password":"...","role":"admin","tenants":"*"},
+  {"username":"bob-readonly","password":"...","role":"viewer","tenants":["acme"]}
+]'
 ```
 
-```python
-from runtime.trace_redactor import TraceRedactor
-provider.add_span_processor(TraceRedactor())
-```
-
-`$ENVIRONMENT` is resolved by the shared, **fail-closed**
-`runtime/environment.py:get_environment()` — an unset or unrecognized value
-(typo, blank, etc.) resolves to `"production"`, never to `"development"`.
-This is a deliberate change from "missing var = least-restrictive
-default": a worker that loses its `ENVIRONMENT` var should fail toward
-*more* redaction and *more* durable checkpointing, not less. **Set
-`ENVIRONMENT=development` explicitly for local/IDE work** — don't rely on
-it being the default for an unset variable.
-
-| `ENVIRONMENT` (resolved) | Behaviour |
-|---|---|
-| `development` (must be set explicitly) | No scrubbing |
-| `staging` | Secrets/PII replaced with `[REDACTED:<hash8>]`; structure preserved |
-| `production` (also the fallback for unset/unrecognized) | Scrubbed + truncated to 50 chars; full original payload stored in an AES-256-GCM-encrypted blob (`HITL_ENCRYPTION_KEY` / `HITL_ENCRYPTION_KEY_<TENANT>`), keyed per-span by `{trace_id}.{span_id}.{attr_key}` |
-
-The tenant id used for HITL blob encryption is read from each span's own
-`tenant.id` attribute, not bound once when the processor is constructed —
-required for correctness on a shared (non-dedicated) worker pool processing
-spans for more than one tenant in the same process.
-
-CI check (also wired into `cd-staging.yml` / `cd-production.yml`):
+For SSO, set `OPS_PORTAL_SSO_USERS` the same way, keyed by email instead of
+username/password:
 
 ```bash
-ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
+OPS_PORTAL_SSO_USERS='[{"email":"alice@corp.com","role":"admin","tenants":"*"}]'
 ```
 
-### D.3 — Postgres checkpointer (staging/production LangGraph)
+Roles: `viewer` (read-only, scoped tenants), `operator` (+ create tenants,
+mint widget tokens), `admin` (+ revoke widget tokens, read the audit log,
+implicitly all tenants if `"tenants": "*"`). An authenticated SSO identity
+not listed in `OPS_PORTAL_SSO_USERS` gets `viewer` with **zero** tenant
+access, not full access — there is no implicit-admin fallback for "any
+authenticated user." See SPECS.md §26 "Role-Based Access Control".
+
+#### E.2 — Wire tenant history sync
+
+In each tenant's CD workflow (or a local `ai-stack-check` run):
 
 ```bash
-export ENVIRONMENT=production
-export DATABASE_URL="postgresql://..."
+curl -X POST https://ops.example.com/api/sync/history \
+  -H "Authorization: Bearer $OPS_PORTAL_SYNC_TOKEN" -H "Content-Type: application/json" \
+  -d '{"tenantId":"acme","entries":[{"entryId":"...","level":"CRITICAL","event":"...","timestamp":"...","raw":{}}]}'
 ```
 
-`scripts/multi_agent_system.py` uses the same `get_environment()` resolver
-as D.2 above and will use a real `PostgresSaver` instead of `MemorySaver`
-whenever the resolved environment is `staging`/`production` — **including
-an unset or unrecognized `ENVIRONMENT`**, which now resolves to
-`production` rather than `development`. It **raises** rather than silently
-falling back if `DATABASE_URL` is missing in that case — `MemorySaver`
-loses all HITL pause state on crash and is dev-only by design (SPECS.md §25,
-§28). Local/IDE runs must set `ENVIRONMENT=development` explicitly to get
-`MemorySaver` without a `DATABASE_URL`.
+A tenant auto-registers on its first sync — no separate provisioning step.
 
-### D.4 — Temporal workflow pattern, HITL, and the recoverable-step DLQ
+#### E.3 — Audit log (enterprise pack, §30)
+
+```bash
+# .env.local
+AUDIT_LOG_WRITE_TOKEN=...
+AUDIT_LOG_HMAC_KEY=...     # rotate carefully — old events stay signed with the old key
+```
+
+```bash
+curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" "http://localhost:3000/api/audit?tenantId=acme"
+```
+
+Every event is HMAC-signed and the table has DB-level `UPDATE`/`DELETE`
+triggers — `GET /api/audit` recomputes each signature on read and flags
+`verified: false` on any row altered outside the app (even by someone who
+disabled the trigger). `GET /api/audit` requires the `admin` role. Wired
+call sites: `ai-tenant-init` → `tenant_created`, `ai-tenant-promote` →
+`hitl_promotion`, `ai-stack-off` under an enterprise policy →
+`hook_bypass`. Set `OPS_PORTAL_URL` and `AUDIT_LOG_WRITE_TOKEN` in the
+shell environment those commands run in.
+
+**Local fallback:** if `OPS_PORTAL_URL`/`AUDIT_LOG_WRITE_TOKEN` aren't set,
+or the write to the portal fails (down, network error, non-2xx), the event
+is appended to `~/.agent-framework/local-audit-fallback.log` as a JSON line
+instead of being dropped silently. This is a local, unsigned trace for
+manual reconciliation — it is not a substitute for the portal's audit log
+and has no tamper protection.
+
+#### E.4 — SSO/OIDC (replaces basic auth, §30)
+
+```bash
+SSO_ENABLED=true
+SSO_ISSUER=https://corp.okta.com
+SSO_CLIENT_ID=...
+SSO_CLIENT_SECRET=...
+SSO_REDIRECT_URI=https://ops.example.com/api/auth/callback
+SSO_SESSION_SECRET=<random 32+ byte string>
+```
+
+This is exclusive with basic auth, not additive — once `SSO_ENABLED=true`,
+`OPS_PORTAL_USER`/`PASSWORD` no longer grant access. Machine-to-machine
+endpoints (`/api/sync/*`, `/api/widget/*`, `/api/audit/append`) are
+unaffected either way.
+
+`SSO_ALLOW_INSECURE_HTTP=true` is for testing against a local non-TLS IdP
+only — never set it in a real deployment.
+
+Each SSO identity's role and tenant access are resolved via
+`OPS_PORTAL_SSO_USERS` (see E.1 above) — logging in via SSO grants
+`viewer`/no-tenants by default, not admin access, until the identity is
+added to that list.
+
+`POST /api/auth/logout` revokes the session server-side (not just the
+client cookie) by recording the session's `jti` claim in the
+`revoked_sessions` table; every subsequent request's session check calls
+`GET /api/auth/session-status` to confirm the `jti` isn't revoked before
+trusting an otherwise-valid cookie. This check fails open on a DB/network
+error — it won't lock out every SSO user over a transient outage, given the
+session's 8h TTL already bounds the exposure of a missed revocation.
+
+---
+
+### In-App Widget
+
+Embeddable, read-only status component for tenant end users. Full detail:
+[templates/in-app-widget/README.md](./templates/in-app-widget/README.md).
+
+#### F.1 — Mint a token
+
+```bash
+curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" -X POST https://ops.example.com/api/tenants/acme/widget-token
+# => { "token": "...", "note": "Store this now — it will not be shown again." }
+```
+
+Minting (and revoking) widget tokens requires the `admin` role.
+
+#### F.1a — Revoke a leaked token
+
+The portal never retains a token's plaintext after minting (only its hash),
+so revocation is by tenant, not by the specific token string — it revokes
+**every** still-active token for that tenant:
+
+```bash
+curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" -X DELETE https://ops.example.com/api/tenants/acme/widget-token
+# => { "ok": true, "revoked": 2 }
+```
+
+Mint a replacement and update the tenant's embed snippet afterward.
+
+#### F.2 — Embed
+
+```html
+<!-- Self-hosted: download widget.js from a tagged release and serve it yourself -->
+<script src="/static/widget.js"></script>
+<agent-status tenant-id="acme" token="<token>" portal-url="https://ops.example.com"></agent-status>
+```
+
+The token is the **only** access-control boundary — `tenant-id` is a
+display label. A forged `tenant-id` cannot read another tenant's data.
+
+Status prefers the `agent_runs` table (populated by `runtime/llm_gateway.py`'s
+best-effort `POST /api/runs/ingest` on call start/end) when an open or recent
+run exists for the tenant, so `running` is a real, reachable status — not
+just `success` / `degraded` / `failed`. Falls back to the most recent synced
+`.agent-history.log` entry when no `agent_runs` row exists (e.g. a tenant
+whose gateway predates this, or `OPS_PORTAL_URL` unset).
+
+Tenant detail pages additionally show a 24h trace count and error rate
+pulled live from the tenant's own Phoenix instance via GraphQL
+(`portal/lib/phoenix.ts`'s `getRecentTraceStats()`) when `phoenixBaseUrl` is
+configured — degrades silently (omits the line) if that Phoenix is
+unreachable or has no `default` project yet.
+
+---
+
+---
+
+## 6 — Evals & Tracing in Production
+
+Eval thresholds by environment (enforced in the CD workflows, not just
+locally): development is warn-only, staging fails below 0.75, production
+fails below 0.80 (SPECS.md §9/§24).
+
+```bash
+# Shadow-eval a sample of production traces (async, post-hoc — never blocks
+# the live request; see SPECS.md §9). Needs real production-environment
+# spans in Phoenix to have anything to sample. Results land as Phoenix
+# annotations tagged eval.type: shadow and feed the Ops Portal's
+# suggested-promotion queue.
+python3 scripts/shadow-eval.py --sample-rate 0.05
+```
+
+Filter Phoenix to one tenant's production traffic with
+`tenant.id = "<id>" AND environment = "production"` (SPECS.md §15). The Ops
+Portal's tenant detail page adds a live 24h trace count + error rate per
+tenant (§5 above).
+
+---
+
+## 7 — HITL & DLQ Operations
+
+### HITL gates and the recoverable-step DLQ (Temporal)
 
 `runtime/workflows/base_workflow.py` has two related but distinct patterns:
 
@@ -1265,566 +2009,115 @@ HMAC-verifying receiver: `POST /api/dlq/:taskId/replay` with an edited
 payload produced a correctly-signed webhook call with the edited JSON
 intact.
 
-### D.5 — Wire your platform (CD deploy + rollback)
+---
 
-Before the deploy step, both CD workflows run
-`.github/actions/build-push-ghcr`: if a `Dockerfile` exists at the repo
-root, it builds and pushes `ghcr.io/<org>/<repo>:<sha>` using the
-workflow's own `GITHUB_TOKEN` (no extra registry secret) and exports the
-image ref as `$IMAGE_REF` for the deploy step below to consume — e.g.
-`DEPLOY_COMMAND = "gcloud run deploy myapp-staging --image $IMAGE_REF"`.
-No Dockerfile present → this step skips cleanly (exit 0, no CD failure),
-same "optional infra never fails CD" posture as the Ops Portal history
-sync. This is also the artifact `templates/onprem-deploy/` (D.6 below)
-expects — point its `APP_IMAGE_PROD`/`_CANARY`/`_SHADOW` at the pushed
-`$IMAGE_REF` tags instead of building separately for on-prem.
+## 8 — Continuous Improvement
 
-`cd-staging.yml`/`cd-production.yml`'s deploy step is
-`.github/actions/deploy-placeholder` — a documented composite action, not
-literal text to find-and-delete. It runs `secrets.DEPLOY_COMMAND` if set on
-the tenant's GitHub Environment; unset, it no-ops and prints the platform
-commands below. No workflow YAML edit needed to wire in a real deploy:
+Two independent loops turn production reality into stronger gates
+(SPECS.md §9) — both end at a human decision, never an auto-promote:
+
+**1. HITL promotion loop (active).** A human reviews a Phoenix trace,
+annotates the span (`hitl_approved = true`, label), then:
 
 ```bash
-# Set on the tenant's GitHub Environment (Settings → Environments → staging/production):
-DEPLOY_COMMAND   = "flyctl deploy --app myapp-staging"        # Fly.io
-DEPLOY_COMMAND   = "railway up --environment staging"          # Railway
-DEPLOY_COMMAND   = "aws ecs update-service --cluster staging --service myapp --force-new-deployment"  # AWS ECS
-DEPLOY_COMMAND   = "gcloud run deploy myapp-staging --image $IMAGE"  # GCP Run
+ai-test-evals                       # syncs annotations, re-runs the scorecard
+ai-stack-promote <case-id> "<input query>" "<correct output>"
 ```
 
-On a post-deploy smoke-test failure, `cd-production.yml` invokes
-`.github/actions/rollback-notify`: posts to Slack/Teams
-(`SLACK_WEBHOOK_URL`/`TEAMS_WEBHOOK_URL` secrets, optional), runs
-`secrets.ROLLBACK_COMMAND` if set, then fails the job (red status
-preserved either way — notification/rollback never silently swallows the
-failure):
+`promote-learning.py` appends the case to `golden_evals.json`, archives the
+resolution as a versioned judge-criteria learning (semantic dedup, never
+silent FIFO eviction), and marks the log entry `hitl_resolved: true`. The
+rule now gates every future PR.
 
-```bash
-ROLLBACK_COMMAND = "fly releases list && fly deploy --image <prev-image>"  # Fly.io
-ROLLBACK_COMMAND = "railway rollback"                                      # Railway
-ROLLBACK_COMMAND = "aws ecs update-service --task-definition <prev-arn>"   # AWS ECS
-```
+**2. Shadow-eval loop (passive).** The §6 sampler surfaces failing
+production patterns as *suggested promotions* in the Ops Portal
+(`portal/lib/promotions.ts`) — a human triages them into loop 1; nothing is
+promoted automatically.
 
-Actual rollback *execution* stays tenant-supplied (this framework has no
-opinion on which platform CLI to run) — same posture as the deploy step.
-Verified against `act` (local GitHub Actions runner): both actions execute
-correctly with and without a configured command, and a forced failure
-correctly propagates a red job status after rollback/notify run.
-
-### D.5b — GCP deployment specifics (Vertex AI credentials + worker hosting)
-
-§D.5 above covers `DEPLOY_COMMAND` generically, with `gcloud run deploy` as
-one example value — that's enough if your tenant app only talks to direct
-Anthropic/OpenAI APIs. If it routes any `model_hint` to `provider:
-vertex_ai` (e.g. the `vertex_gemini` role added to `runtime/models.yaml` in
-§2 above), CI/CD needs two more things `DEPLOY_COMMAND` alone doesn't give
-you: a way for GitHub Actions to authenticate to GCP, and a decision about
-*what kind* of compute actually runs `worker.py`.
-
-**1. Authenticating GitHub Actions to GCP.**
-
-The CD workflows (`cd-staging.yml`, `cd-production.yml`) already include a
-`.github/actions/gcp-auth` step — it runs before the image build and deploy
-steps and skips gracefully if neither GCP secret is configured. You only
-need to set the right secrets on each GitHub Environment:
-
-| Secret | What to set | Notes |
-|---|---|---|
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/<project-number>/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider` | **Preferred** — see one-time setup below |
-| `GCP_SERVICE_ACCOUNT` | `github-deployer@<project-id>.iam.gserviceaccount.com` | Required alongside WIF |
-| `GCP_SA_KEY` | base64-encoded service-account JSON key | Fallback only — long-lived secret, harder to rotate |
-| `GCP_PROJECT_ID` | `my-gcp-project` | Used in `DEPLOY_COMMAND` / `models.yaml` |
-
-`VertexAIAdapter` resolves credentials via `google.auth.default()`
-(`runtime/provider_dispatch.py`) — after `gcp-auth` runs, ADC is written to
-the runner filesystem so any subsequent step (`gcloud`, `kubectl`, the Python
-gateway) is automatically authenticated.
-
-**One-time GCP setup (Workload Identity Federation — recommended):**
-```bash
-# Run locally with gcloud authenticated to the target project:
-export GCP_PROJECT_ID=my-gcp-project
-export GCP_PROJECT_NUMBER=$(gcloud projects describe $GCP_PROJECT_ID --format='value(projectNumber)')
-export GITHUB_ORG=my-org
-export GITHUB_REPO=oil-price-sample   # or AgentSmith
-
-gcloud iam workload-identity-pools create "github-actions-pool" \
-  --project="$GCP_PROJECT_ID" --location="global"
-gcloud iam workload-identity-pools providers create-oidc "github-provider" \
-  --project="$GCP_PROJECT_ID" --location="global" \
-  --workload-identity-pool="github-actions-pool" \
-  --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository"
-gcloud iam service-accounts create "github-deployer" --project="$GCP_PROJECT_ID"
-gcloud iam service-accounts add-iam-policy-binding \
-  "github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
-  --project="$GCP_PROJECT_ID" --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/$GITHUB_ORG/$GITHUB_REPO"
-
-# Grant deployer SA the rights it needs:
-for ROLE in roles/run.admin roles/artifactregistry.writer roles/iam.serviceAccountUser roles/aiplatform.user; do
-  gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-    --member="serviceAccount:github-deployer@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
-    --role="$ROLE"
-done
-
-# The WIF provider resource name to set as GCP_WORKLOAD_IDENTITY_PROVIDER:
-echo "projects/$GCP_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider"
-```
-
-**Service-account JSON key (simpler fallback — prefer WIF above):** generate
-one (`gcloud iam service-accounts keys create key.json --iam-account=...`),
-store its base64-encoded contents as `GCP_SA_KEY` on the GitHub Environment.
-For the deployed runtime's own ADC, mount it as a Cloud Run/GKE secret volume
-and set `GOOGLE_APPLICATION_CREDENTIALS` — never bake the key into the image.
-
-**2. What actually gets deployed.** `gcloud run deploy` deploys a
-request/response HTTP service — but `worker.py` (and any tenant's
-Temporal-backed worker) is a long-running poller with no HTTP listener at
-all. Don't assume Cloud Run "just works" here without one of:
-
-| Option | Fit | Caveat |
-|---|---|---|
-| **Cloud Run, `--no-cpu-throttling --min-instances=1`** | Works for low/moderate-throughput workers; closest to the `DEPLOY_COMMAND` pattern already documented | No autoscaling on queue depth; you're paying for one always-on instance regardless of task-queue load. `worker.py` already serves `GET /healthz` on `$PORT` (default 8080) so Cloud Run's health checks have something to hit |
-| **GKE (or any k8s)** | Best fit for a long-running poller — a `Deployment` with no `Service`/ingress needed at all, scales on whatever metric you choose (queue depth via KEDA, etc.) | More infra to operate — bring your own cluster; not scaffolded by `ai-onprem-deploy-scaffold` |
-| **Compute Engine (single VM/MIG)** | Simplest mental model, no container platform needed | Manual scaling, no rolling-deploy story beyond replacing the VM/instance template yourself |
-
-Set `DEPLOY_COMMAND` on each GitHub Environment to whichever platform you
-choose. The `gcp-auth` step runs first so `gcloud`/`kubectl` is already
-authenticated when `DEPLOY_COMMAND` executes:
-
-```bash
-# Cloud Run (worker.py already has /healthz — OPERATIONS.md §D.5b):
-DEPLOY_COMMAND = "gcloud run deploy YOUR_WORKER_SERVICE \
-  --image $IMAGE_REF \
-  --region YOUR_REGION \
-  --project $GCP_PROJECT_ID \
-  --no-cpu-throttling \
-  --min-instances=1 \
-  --port=8080 \
-  --set-env-vars TENANT_ID=YOUR_TENANT_ID,TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST,TEMPORAL_TLS=true"
-
-# GKE (Deployment must already exist — this just rolls the new image):
-DEPLOY_COMMAND = "gcloud container clusters get-credentials YOUR_CLUSTER --region YOUR_REGION --project $GCP_PROJECT_ID \
-  && kubectl set image deployment/YOUR_WORKER_DEPLOYMENT worker=$IMAGE_REF"
-```
-
-Set `GCP_PROJECT_ID` as a GitHub Environment variable (not secret — no
-credential, just a project identifier) so `DEPLOY_COMMAND` can reference
-`$GCP_PROJECT_ID` without hardcoding it in the workflow YAML or in
-`runtime/models.yaml` (§29 "Cloud-Native Provider Adapters").
-
-**Live-verification status**: the Vertex AI *call path* was verified
-live against a real GCP project (`gemini-2.5-flash` via
-`LLMGateway.complete(model_hint="vertex_gemini")` — §29). The
-`gcp-auth` composite action is now **fully verified end-to-end** through
-real GitHub Actions runs against GCP project `agentsmith-500916` on
-2026-07-01: both `bobbyaqlaar/oil-price-demo` and `bobbyaqlaar/AgentSmith`
-completed successful staging + production deploys to Cloud Run. The
-three worker-hosting options (Cloud Run, GKE, Compute Engine) have been
-exercised for Cloud Run only — verify `kubectl` invocations against your
-own project before relying on them.
-
-**Multi-repo WIF note:** the WIF provider's `--attribute-condition` is a
-single expression that applies to all repos bound to the pool. When adding
-a second repo to the same GCP project, update the condition from a single
-`==` to an `in` list:
-```bash
-gcloud iam workload-identity-pools providers update-oidc github-provider \
-  --project="$GCP_PROJECT_ID" --location=global \
-  --workload-identity-pool=github-actions-pool \
-  --attribute-condition="assertion.repository in ['ORG/REPO1', 'ORG/REPO2']"
-```
-Forgetting this update causes `unauthorized_client: The given credential is
-rejected by the attribute condition` for the new repo even if its WIF principal
-binding is correctly set.
-
-### D.5b-2 — Cloud SQL Auth Proxy for portal database (Cloud Run)
-
-When deploying a Next.js portal (or any app) to Cloud Run that needs to connect to Cloud SQL, **do not** configure TCP + SSL cert verification. Cloud Run natively supports the **Cloud SQL Auth Proxy** via the `--add-cloudsql-instances` flag — it injects a sidecar that creates a Unix socket, handles Google-managed mTLS transparently, and never exposes TCP.
-
-**Why not `sslmode=require` or `sslmode=no-verify`:**
-- `sslmode=require` with `node-postgres` attempts full leaf-cert chain verification; Cloud SQL's cert is Google-managed and not in Node's default CA bundle → `UNABLE_TO_VERIFY_LEAF_SIGNATURE`.
-- `sslmode=no-verify` skips verification entirely — MITM-vulnerable, not acceptable for production.
-
-**Correct approach — Cloud SQL Auth Proxy via Unix socket:**
-
-1. **Grant the Compute SA `roles/cloudsql.client`:**
-   ```bash
-   PROJECT_NUMBER=$(gcloud projects describe agentsmith-500916 --format='value(projectNumber)')
-   COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-   gcloud projects add-iam-policy-binding agentsmith-500916 \
-     --member="serviceAccount:${COMPUTE_SA}" \
-     --role="roles/cloudsql.client"
-   ```
-
-2. **Add `--add-cloudsql-instances` to the DEPLOY_COMMAND:**
-   ```bash
-   gcloud run deploy agentsmith-portal-staging \
-     --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID \
-     --platform managed --allow-unauthenticated \
-     --add-cloudsql-instances=agentsmith-500916:us-central1:temporal-pg \
-     --set-secrets=DATABASE_URL=ops-portal-db-url:latest,...
-   ```
-
-3. **DATABASE_URL must use the Unix socket path** (stored in Secret Manager, never hardcoded):
-   ```
-   postgresql://USER:PASSWORD@/DBNAME?host=/cloudsql/PROJECT:REGION:INSTANCE
-   # e.g.:
-   postgresql://postgres:***@/agenticframework?host=/cloudsql/agentsmith-500916:us-central1:temporal-pg
-   ```
-   No `sslmode` param needed — the proxy socket is always mutually authenticated.
-
-4. **Secret Manager accessor on Compute SA** — `gcloud run deploy --set-secrets` is resolved at deploy time by the Compute SA (not the deployer SA). Each new secret must grant the Compute SA accessor before deploy:
-   ```bash
-   gcloud secrets add-iam-policy-binding SECRET_NAME \
-     --member="serviceAccount:${COMPUTE_SA}" \
-     --role="roles/secretmanager.secretAccessor"
-   ```
-
-### D.5c — Demo UI (Streamlit) — Cloud Run deployment
-
-The `demo/` directory in your tenant repo contains a Streamlit app (`demo/app.py`) that
-provides a GUI frontend for the pipeline. It connects directly to the **live** Temporal
-server — it is not a simulation. No changes to the existing Temporal worker, Postgres, or
-Ops Portal setup are required; the demo app is a thin UI layer on top.
-
-**Architecture:**
-```
-Browser → Streamlit (Cloud Run: YOUR_UI_SERVICE)
-              │
-              ├── temporalio.client → Temporal server (start workflow, poll, signal)
-              └── (no direct DB — reads Temporal workflow state only)
-```
-
-**Environment variables (set via `--set-env-vars` or Cloud Run console):**
-
-| Variable | Default | Notes |
-|---|---|---|
-| `TEMPORAL_ADDRESS` | `localhost:7233` | Override to point at your live Temporal server |
-| `TEMPORAL_TLS` | `` (empty) | Set to `"1"` if Temporal server uses TLS |
-| `TENANT_ID` | *(required)* | Must match the tenant ID registered in the worker |
-| `PORT` | `8080` | Set automatically by Cloud Run |
-
-**CD workflow:** `.github/workflows/cd-demo-ui.yml` deploys on push to `develop`/`main`
-when any file under `demo/**` changes. It uses the `gcp-auth` composite action (same WIF
-flow as the worker CD) and runs:
-```bash
-gcloud run deploy YOUR_UI_SERVICE \
-  --source . \
-  --dockerfile demo/Dockerfile \
-  --region YOUR_REGION \
-  --project $GCP_PROJECT_ID \
-  --allow-unauthenticated \
-  --port 8080 \
-  --set-env-vars TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST,TENANT_ID=YOUR_TENANT_ID
-```
-
-**Manual deploy** (once GCP secrets are set on the `staging` environment):
-```bash
-# From inside the tenant repo root
-gcloud run deploy YOUR_UI_SERVICE \
-  --source . \
-  --dockerfile demo/Dockerfile \
-  --region YOUR_REGION \
-  --project YOUR_GCP_PROJECT_ID \
-  --allow-unauthenticated \
-  --port 8080 \
-  --set-env-vars TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST,TENANT_ID=YOUR_TENANT_ID
-```
-
-**Get the service URL after deploy:**
-```bash
-gcloud run services describe YOUR_UI_SERVICE \
-  --region YOUR_REGION --project YOUR_GCP_PROJECT_ID \
-  --format="value(status.url)"
-```
-
-**HITL flow via the demo UI:**
-1. Enter a price series (or pick a preset from the sidebar) → click **Start Workflow**
-2. The Streamlit app calls `client.start_workflow("OilPricePredictionWorkflow", ...)`
-3. Status auto-refreshes — when the workflow halts for HITL approval, an
-   **Approve / Reject** panel appears
-4. Clicking Approve/Reject sends `handle.signal("hitl_approved", True/False)` —
-   identical to what `scripts/resolve_hitl.py` does from the CLI
-5. The workflow completes; the result (prediction, confidence, anomaly flag) is
-   displayed in the run history table
-
-**Spike preset:** uses series `[70.0, 70.1, 69.9, 70.0, 70.1, 70.0, 70.2, 69.8, 70.1, 70.0, 110.0]`
-(10 stable values ~70 then spike to 110). This definitively exceeds the 3σ anomaly threshold
-because the stable prefix keeps mean and σ tight — a short series with the outlier included
-inflates σ and can mask the spike.
-
-**Prerequisites:** GCP secrets must be set on the `staging` GitHub Environment (P11b in
-`FIXES_AND_CLEANUP.md`) before the CD workflow can deploy. See §D.5b for the WIF setup.
+**Fixture changes ride PRs.** Golden dataset and judge-criteria updates go
+through a pull request in the tenant repo — never a direct push to `main`;
+CI must validate the new cases (no `[skip ci]`). SPECS.md §9 "CD Golden
+Dataset Commits".
 
 ---
 
-### D.6 — On-premise / air-gapped deployment
+## 9 — Maintain (Day-2 Operations)
 
-For tenants whose customers run the agent app on their own hardware
-instead of a managed cloud platform — opt-in, never auto-written the way
-the CI/CD workflow templates are:
-
-```bash
-ai-onprem-deploy-scaffold   # run inside the tenant repo — writes deploy/onprem/
-```
-
-This copies `templates/onprem-deploy/` (vendored to
-`~/.agent-framework/templates/onprem-deploy/` by `install-ai-stack.sh`,
-same mechanism as `agent-rules.yaml`) into the repo. The template is
-**stack-agnostic by design**, consistent with the framework's own
-position as something that "provides a ready-to-use framework from design
-to deploy to operate to continuously improve other applications built
-with different architectures" — it doesn't know or assume your agent
-app's internal language/framework, only that it ships as one container
-image, listens on one HTTP port with `GET /healthz`, reads config from env
-vars only (never a cloud secret manager — see D.6's secrets note below),
-and logs JSON-Lines to stdout (already `runtime/agent_logger.py`'s
-convention everywhere else in this framework).
-
-**Two deployment targets**, picked based on the customer:
-
-| Target | When | Command |
-|---|---|---|
-| Docker Compose (`deploy/onprem/`) | ~80% of on-prem customers — single bare-metal server/VM | `./scripts/up.sh` |
-| Kubernetes / Helm (`deploy/onprem/kubernetes/`) | High-compliance enterprise customers running their own managed cluster who won't run raw Docker | `helm install` |
-
-**Canary + shadow traffic, on-prem.** Cloud load balancers (ALB, Cloud Run
-traffic splitting) aren't available on a customer's private hardware, so
-the proxy/ingress ships *inside* the deployment package — choose per
-customer via `PROXY_ENGINE=traefik|envoy` (Compose) or
-`--set proxyEngine=traefik|envoy-gateway` (Helm):
-
-- **Traefik** — simpler config, smaller learning curve; uses Traefik's
-  native `weighted` + `mirroring` service kinds.
-- **Envoy** — more precise traffic-shaping (`weighted_clusters` +
-  `request_mirror_policies`), the better fit if the customer already runs
-  Envoy/Envoy Gateway elsewhere.
-
-Both render their proxy config from `.env` via
-`scripts/render-traefik-config.py`/`render-envoy-config.py` (a real dict
-+ `yaml.safe_dump`, not string templating) — verified directly: rendering
-with canary+shadow images set produces a valid weighted+mirrored Traefik
-dynamic config and a valid Envoy `weighted_clusters`/
-`request_mirror_policies` bootstrap, and `docker compose config --quiet`
-validates the resulting compose merge for both proxy engines plus the
-optional `with-db` (pgvector) profile. On Kubernetes, `helm lint` and
-`helm template` (default + canary/shadow/db enabled + both proxy engines)
-all render valid manifests using the **core** Gateway API's
-`backendRefs[].weight` (canary) and `RequestMirror` filter (shadow) —
-note the K8s path has one real limitation vs. Compose: core Gateway API's
-mirror filter has no percentage field (always mirrors 100% of matched
-traffic), unlike Traefik's/Envoy's own native mirroring used directly in
-Compose, which do support a percent. See
-`templates/onprem-deploy/kubernetes/README.md` for the vendor-extension
-workaround if a customer needs partial mirroring specifically on K8s.
-
-**Mirroring vs. shadow-eval (P1c) — these are two different things, don't
-conflate them:** D.6's shadow *traffic* mirroring tests a new version of
-the whole app against live request shape before promotion, at the
-proxy/infrastructure layer — it has no idea what your app does with a
-mirrored request. The framework's separate shadow-eval sampler
-(`scripts/shadow-eval.py`, SPECS.md §9) does *application-level*,
-side-effect-safe shadow evaluation: judging a 5% sample of already-served
-production traces after the fact by reading Phoenix, never re-executing
-anything. If your agent has side effects (writes, external API calls), do
-not point `APP_IMAGE_SHADOW`/`shadow.enabled` at a build that isn't
-dry-run-safe — that's on your app's build, this template can't make that
-safe for you given it treats your image as a black box.
-
-**Air-gapped bundling:** `scripts/bundle-airgapped.sh` (run where there's
-internet access) pulls + `docker save`s every image the stack needs —
-app versions, the chosen proxy image, pgvector if enabled — into one
-`onprem-bundle.tar.gz`; `scripts/load-airgapped.sh` (run on the
-air-gapped server) `docker load`s it with zero registry calls. Transfer
-via USB drive, secure copy, or a private registry mirror.
-
-**Secrets:** strictly `.env` (Compose) or a pre-existing Kubernetes
-`Secret` referenced by `envSecretName` (Helm) — no AWS Secrets Manager /
-GCP Secret Manager call anywhere in this template, matching
-`runtime/environment.py`'s existing fail-closed `ENVIRONMENT` resolver
-convention used framework-wide.
-
-Full detail: `templates/onprem-deploy/README.md`,
-`templates/onprem-deploy/kubernetes/README.md`.
+| Task | Command |
+|---|---|
+| Upgrade vendored scripts in a tenant repo | `ai-stack-upgrade --to <version>` |
+| Promote staging → production | `ai-tenant-promote <id> --from staging --to production` |
+| Rotate a widget token | Mint a new one (`POST .../widget-token`) — old one keeps working until explicitly revoked |
+| Rotate the audit-log HMAC key | New events sign with the new key; old events will report `verified: false` against it — re-sign history or accept the discontinuity, document which |
+| Rotate the org GPG signing key | Re-run `package-hook-bundle.sh` with the new key; redistribute the new public key to MDM before the next deploy |
+| Check unresolved MAJOR/CRITICAL | `ai-stack-check`, or `GET /api/audit` / `GET /api/tenants` on the Ops Portal |
+| Remove the framework from a machine | `ai-stack-uninstall` |
 
 ---
 
-## Part E — Ops Portal
+---
 
-Cross-tenant cost/issues dashboard. Full detail:
-[portal/README.md](./portal/README.md).
+## 10 — Shutdown & Teardown
 
-### E.1 — Setup
+In dependency order — tenants first, shared infra second, machine last.
 
-```bash
-cd portal
-cp .env.example .env.local
-npm install
-npm run db:migrate      # applies db/schema.sql against DATABASE_URL
-npm run dev             # http://localhost:3000
-```
-
-Minimum required env vars: `DATABASE_URL` (same Postgres as the LLM
-Gateway's budget backend — the portal reads `llm_gateway_budget` directly,
-read-only), `OPS_PORTAL_USER`, `OPS_PORTAL_PASSWORD`. The portal **refuses
-to serve traffic** without basic-auth credentials configured (or, with SSO
-enabled, without `SSO_SESSION_SECRET`) — there is no unauthenticated mode.
-
-**Multi-user RBAC (optional):** set `OPS_PORTAL_USERS` instead of/alongside
-`OPS_PORTAL_USER`/`PASSWORD` for per-user roles and tenant scoping:
+**Pause vs. remove (machine):**
 
 ```bash
-OPS_PORTAL_USERS='[
-  {"username":"alice","password":"...","role":"admin","tenants":"*"},
-  {"username":"bob-readonly","password":"...","role":"viewer","tenants":["acme"]}
-]'
+ai-stack-off          # developer mode only: mutes all hooks, unlinks init.templateDir
+ai-stack-uninstall    # full removal: restores the previous templateDir, surgically
+                      # removes the shell-rc block, prompts before deleting
+                      # ~/.agent-framework and ~/.git_templates
 ```
 
-For SSO, set `OPS_PORTAL_SSO_USERS` the same way, keyed by email instead of
-username/password:
+**Retire a tenant:**
 
 ```bash
-OPS_PORTAL_SSO_USERS='[{"email":"alice@corp.com","role":"admin","tenants":"*"}]'
+# 1. Revoke every live widget token (breaks all embeds for the tenant)
+curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" -X DELETE \
+  https://ops.example.com/api/tenants/<id>/widget-token
+
+# 2. Drain the DLQ — Replay or Discard every pending entry in /dlq/<id>;
+#    a parked recoverable-step workflow holds state until resolved or timeout.
+
+# 3. Stop the worker (Cloud Run service, k8s Deployment, or local process).
+#    Dedicated tier: kubectl delete namespace tenant-<id>
+
+# 4. Clear replay-webhook routing if set (sync never unsets — SPECS.md §25):
+#    UPDATE tenants SET replay_webhook_url = NULL, replay_webhook_secret = NULL
+#    WHERE tenant_id = '<id>';
 ```
 
-Roles: `viewer` (read-only, scoped tenants), `operator` (+ create tenants,
-mint widget tokens), `admin` (+ revoke widget tokens, read the audit log,
-implicitly all tenants if `"tenants": "*"`). An authenticated SSO identity
-not listed in `OPS_PORTAL_SSO_USERS` gets `viewer` with **zero** tenant
-access, not full access — there is no implicit-admin fallback for "any
-authenticated user." See SPECS.md §26 "Role-Based Access Control".
+Note: a tenant with audit history **cannot be deleted** from the portal
+database — the `audit_log` FK has no cascade, by design (SPECS.md §30).
+Retired tenants stay queryable for their audit trail.
 
-### E.2 — Wire tenant history sync
-
-In each tenant's CD workflow (or a local `ai-stack-check` run):
+**Stop shared infra (AgentSmith root):**
 
 ```bash
-curl -X POST https://ops.example.com/api/sync/history \
-  -H "Authorization: Bearer $OPS_PORTAL_SYNC_TOKEN" -H "Content-Type: application/json" \
-  -d '{"tenantId":"acme","entries":[{"entryId":"...","level":"CRITICAL","event":"...","timestamp":"...","raw":{}}]}'
+ai-dashboard-stop            # stops Phoenix, unsets OTel env vars
+docker compose down          # portal + Postgres + Phoenix containers
+docker compose down -v       # ⚠️  also deletes volumes: budgets, DLQ, audit log — irreversible
 ```
 
-A tenant auto-registers on its first sync — no separate provisioning step.
-
-### E.3 — Audit log (enterprise pack, §30)
+**GCP teardown (when a cloud demo/deployment is done — these bill while up):**
 
 ```bash
-# .env.local
-AUDIT_LOG_WRITE_TOKEN=...
-AUDIT_LOG_HMAC_KEY=...     # rotate carefully — old events stay signed with the old key
+gcloud run services delete <worker-service> --region <region> --project <project>
+gcloud run services delete temporal-server  --region <region> --project <project>
+gcloud sql instances delete temporal-pg     --project <project>
+# Optional: artifacts + secrets
+gcloud artifacts repositories delete <repo> --location <region> --project <project>
+gcloud secrets delete <secret-name> --project <project>
 ```
 
-```bash
-curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" "http://localhost:3000/api/audit?tenantId=acme"
-```
-
-Every event is HMAC-signed and the table has DB-level `UPDATE`/`DELETE`
-triggers — `GET /api/audit` recomputes each signature on read and flags
-`verified: false` on any row altered outside the app (even by someone who
-disabled the trigger). `GET /api/audit` requires the `admin` role. Wired
-call sites: `ai-tenant-init` → `tenant_created`, `ai-tenant-promote` →
-`hitl_promotion`, `ai-stack-off` under an enterprise policy →
-`hook_bypass`. Set `OPS_PORTAL_URL` and `AUDIT_LOG_WRITE_TOKEN` in the
-shell environment those commands run in.
-
-**Local fallback:** if `OPS_PORTAL_URL`/`AUDIT_LOG_WRITE_TOKEN` aren't set,
-or the write to the portal fails (down, network error, non-2xx), the event
-is appended to `~/.agent-framework/local-audit-fallback.log` as a JSON line
-instead of being dropped silently. This is a local, unsigned trace for
-manual reconciliation — it is not a substitute for the portal's audit log
-and has no tamper protection.
-
-### E.4 — SSO/OIDC (replaces basic auth, §30)
-
-```bash
-SSO_ENABLED=true
-SSO_ISSUER=https://corp.okta.com
-SSO_CLIENT_ID=...
-SSO_CLIENT_SECRET=...
-SSO_REDIRECT_URI=https://ops.example.com/api/auth/callback
-SSO_SESSION_SECRET=<random 32+ byte string>
-```
-
-This is exclusive with basic auth, not additive — once `SSO_ENABLED=true`,
-`OPS_PORTAL_USER`/`PASSWORD` no longer grant access. Machine-to-machine
-endpoints (`/api/sync/*`, `/api/widget/*`, `/api/audit/append`) are
-unaffected either way.
-
-`SSO_ALLOW_INSECURE_HTTP=true` is for testing against a local non-TLS IdP
-only — never set it in a real deployment.
-
-Each SSO identity's role and tenant access are resolved via
-`OPS_PORTAL_SSO_USERS` (see Part E.1 above) — logging in via SSO grants
-`viewer`/no-tenants by default, not admin access, until the identity is
-added to that list.
-
-`POST /api/auth/logout` revokes the session server-side (not just the
-client cookie) by recording the session's `jti` claim in the
-`revoked_sessions` table; every subsequent request's session check calls
-`GET /api/auth/session-status` to confirm the `jti` isn't revoked before
-trusting an otherwise-valid cookie. This check fails open on a DB/network
-error — it won't lock out every SSO user over a transient outage, given the
-session's 8h TTL already bounds the exposure of a missed revocation.
+**Scrub a repo** (remove AgentSmith runtime artefacts from a project you're
+handing off): `ai-stack-scrub [dir]` — interactive confirmation, removes
+generated configs/fixtures, leaves your source untouched.
 
 ---
 
-## Part F — In-App Widget
-
-Embeddable, read-only status component for tenant end users. Full detail:
-[templates/in-app-widget/README.md](./templates/in-app-widget/README.md).
-
-### F.1 — Mint a token
-
-```bash
-curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" -X POST https://ops.example.com/api/tenants/acme/widget-token
-# => { "token": "...", "note": "Store this now — it will not be shown again." }
-```
-
-Minting (and revoking) widget tokens requires the `admin` role.
-
-### F.1a — Revoke a leaked token
-
-The portal never retains a token's plaintext after minting (only its hash),
-so revocation is by tenant, not by the specific token string — it revokes
-**every** still-active token for that tenant:
-
-```bash
-curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" -X DELETE https://ops.example.com/api/tenants/acme/widget-token
-# => { "ok": true, "revoked": 2 }
-```
-
-Mint a replacement and update the tenant's embed snippet afterward.
-
-### F.2 — Embed
-
-```html
-<!-- Self-hosted: download widget.js from a tagged release and serve it yourself -->
-<script src="/static/widget.js"></script>
-<agent-status tenant-id="acme" token="<token>" portal-url="https://ops.example.com"></agent-status>
-```
-
-The token is the **only** access-control boundary — `tenant-id` is a
-display label. A forged `tenant-id` cannot read another tenant's data.
-
-Status prefers the `agent_runs` table (populated by `runtime/llm_gateway.py`'s
-best-effort `POST /api/runs/ingest` on call start/end) when an open or recent
-run exists for the tenant, so `running` is a real, reachable status — not
-just `success` / `degraded` / `failed`. Falls back to the most recent synced
-`.agent-history.log` entry when no `agent_runs` row exists (e.g. a tenant
-whose gateway predates this, or `OPS_PORTAL_URL` unset).
-
-Tenant detail pages additionally show a 24h trace count and error rate
-pulled live from the tenant's own Phoenix instance via GraphQL
-(`portal/lib/phoenix.ts`'s `getRecentTraceStats()`) when `phoenixBaseUrl` is
-configured — degrades silently (omits the line) if that Phoenix is
-unreachable or has no `default` project yet.
-
----
-
-## Part G — Enterprise Pack
+## Appendix A — Enterprise Pack
 
 Optional governance layer (SPECS.md §30). Full detail:
 [enterprise/README.md](./enterprise/README.md).
@@ -1884,7 +2177,7 @@ supplied.
 Every attempt (granted or denied) is audit-logged as `hook_bypass` —
 best-effort to the Ops Portal when configured, falling back to
 `~/.agent-framework/local-audit-fallback.log` otherwise so a bypass attempt
-is never silently unrecorded (see Part E.3).
+is never silently unrecorded (see §5, "Audit log").
 
 ### G.5 — Uninstall on a managed machine
 
@@ -1900,87 +2193,9 @@ removing `~/.agent-framework` / `~/.git_templates`.
 
 ---
 
-## 9. Testing Checklist
-
-Minimal real validation for each subsystem (no mocks):
-
-```bash
-# Framework scripts + shell
-find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
-bash -n install-ai-stack.sh && zsh -n install-ai-stack.sh
-
-# Knowledge Graph rebuild + non-empty assertion (Pillar 2 / P10a — wired into self-test.yml)
-python3 scripts/verify_system.py --check-kg
-
-# Ops Portal (includes a cross-tenant isolation regression suite — see SPECS.md §26)
-cd portal && npx tsc --noEmit && npm test && npm run build
-
-# In-App Widget (includes an XSS-attribute-injection regression test)
-cd templates/in-app-widget && npm install && npm test
-
-# Redaction (needs ENVIRONMENT set; staging/production exercise real scrubbing)
-ENVIRONMENT=staging python3 scripts/verify_system.py --check-redaction
-ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
-
-# Hook bundle signing (needs a real GPG key; see Part G.1)
-gpg --verify agenticframework-hooks-<version>.tar.gz.sig agenticframework-hooks-<version>.tar.gz
-
-# On-prem deployment template (D.6) — compose/proxy/Helm syntax, no live cluster needed
-python3 scripts/verify_system.py --check-onprem-deploy
-
-# Dedicated worker pool manifests — kubectl (even --dry-run=client) needs a
-# reachable cluster for API discovery; a free local one takes ~30s:
-brew install kind && kind create cluster --name af-test
-runtime/k8s/dedicated-tenant/render.sh acme nginx:alpine --apply
-kubectl get pods -n tenant-acme   # CreateContainerConfigError until you create the Secret — expected
-kind delete cluster --name af-test
-```
-
-For LLM Gateway / Postgres checkpointer / Ops Portal database code, spin up
-a throwaway Postgres rather than trusting the code path untested:
-
-```bash
-docker run -d --name pg-test -e POSTGRES_PASSWORD=test -e POSTGRES_USER=test -e POSTGRES_DB=test -p 55432:5432 postgres:16-alpine
-export DATABASE_URL="postgresql://test:test@localhost:55432/test"
-# ... run your test, then:
-docker rm -f pg-test
-```
-
-For `run_with_recoverable_step` (D.4) specifically — the workflow-side
-mechanics (parking alive, retry-policy override, signal resume) can't be
-exercised by a throwaway Postgres alone; it needs a real Temporal test
-server:
-
-```bash
-pip install temporalio
-python3 -c "
-import asyncio
-from temporalio.testing import WorkflowEnvironment
-asyncio.run(WorkflowEnvironment.start_local())  # downloads/starts the test server once
-"
-# Then run a worker + workflow against env.client inside that context —
-# see the pattern in FIXES_AND_CLEANUP.md's HITL/DLQ redesign section for
-# a worked example (CRM-style hallucinated-field-name failure -> parked
-# workflow -> human_fix_payload signal -> resumed with the correction).
-```
-
 ---
 
-## 10. Day-2 Operations
-
-| Task | Command |
-|---|---|
-| Upgrade vendored scripts in a tenant repo | `ai-stack-upgrade --to <version>` |
-| Promote staging → production | `ai-tenant-promote <id> --from staging --to production` |
-| Rotate a widget token | Mint a new one (`POST .../widget-token`) — old one keeps working until explicitly revoked |
-| Rotate the audit-log HMAC key | New events sign with the new key; old events will report `verified: false` against it — re-sign history or accept the discontinuity, document which |
-| Rotate the org GPG signing key | Re-run `package-hook-bundle.sh` with the new key; redistribute the new public key to MDM before the next deploy |
-| Check unresolved MAJOR/CRITICAL | `ai-stack-check`, or `GET /api/audit` / `GET /api/tenants` on the Ops Portal |
-| Remove the framework from a machine | `ai-stack-uninstall` |
-
----
-
-## 11. Troubleshooting
+## Appendix B — Troubleshooting
 
 See [UserManual.md §16](./UserManual.md#16-troubleshooting) for dev-mode
 issues (Phoenix, Ollama, hooks, commit message format, circuit breaker).
@@ -2011,13 +2226,15 @@ while the dev server only binds IPv4).
 **LangGraph raises "MemorySaver is prohibited"** — you set
 `ENVIRONMENT=production`/`staging` without `DATABASE_URL`, **or you simply
 didn't set `ENVIRONMENT` at all** — unset/unrecognized values resolve to
-`production` (fail-closed, see D.2/D.3), not `development`. Either set
+`production` (fail-closed, see §2), not `development`. Either set
 `DATABASE_URL`, or set `ENVIRONMENT=development` explicitly for a
 throwaway/dev run.
 
 ---
 
-## 12. Spec Cross-Reference
+---
+
+## Appendix C — Spec Cross-Reference
 
 | Area | SPECS.md section | Implementation |
 |---|---|---|
@@ -2028,3 +2245,10 @@ throwaway/dev run.
 | In-App Widget | §15, §26 | `templates/in-app-widget/` |
 | Enterprise pack | §30 | `enterprise/`, `portal/lib/auditLog.ts`, `portal/lib/oidc.ts` |
 | Framework hygiene | §22 Phase 5 | `hooks/`, `scripts/generate-ide-config.py`, `.github/workflows/` |
+| Fairness / hallucination suites | §9 | `scripts/run-evals.py --suite …`, `workflow-templates/eval-fairness.yml` / `eval-hallucination.yml` (§3) |
+| TTFT budget | §29 | `runtime/llm_gateway.py:complete_stream()`, `scripts/verify_ttft.py`, `eval-ttft-live.yml` (§2, §3) |
+| Pre-call input guardrail (PDPL) | §27, §4a | `runtime/input_guardrail.py` (§2) |
+| LLM self-correction | §25 | `runtime/self_correction.py`, `runtime/workflows/base_workflow.py:run_with_self_correction` (§2) |
+| Memory / RAG substrate | §4a | `runtime/conversation_memory.py`, `runtime/vector_store.py`, `runtime/embeddings.py` (§2, `docs/rag-memory.md`) |
+| UAE sovereign profile | §30 | `templates/uae-sovereign/`, `scripts/verify_sovereign_endpoint.py` (§2, `docs/uae-regulatory.md`) |
+| Delivery Model soft gate | — | `scripts/delivery_model.py`, `scripts/delivery_evidence.py`, `verify_system.py --check-delivery-model` (§2, `docs/delivery-model.md`) |

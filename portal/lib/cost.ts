@@ -13,7 +13,7 @@ export interface CostByPeriod {
 export interface TenantCost {
   tenantId: string;
   spentUsd: number;       // current month
-  cap: number | null;     // tenants.budget_cap_usd — null until synced from tenant.yaml (FIXES_AND_CLEANUP.md P2b)
+  cap: number | null;     // tenants.budget_cap_usd — null until synced from tenant.yaml (Product_Archive.md P2b)
   history: CostByPeriod[];
 }
 

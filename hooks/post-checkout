@@ -8,6 +8,22 @@ if [ "${DISABLE_AI_STACK:-false}" = "true" ]; then exit 0; fi
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 [ -z "$REPO_ROOT" ] && exit 0
 
+# ── Developer opt-in gate for PRE-EXISTING repos (SPECS.md §7) ────────────────
+# Global init.templateDir installs these hooks into every repo on the
+# machine, including a third-party project someone just `git clone`'d. A
+# repo that already has commit history and has never opted in is not ours
+# to provision — writing .cursorrules/CI workflows/.gitignore entries into
+# it would pollute someone else's project. A brand-new `git init` (no HEAD
+# yet) or an already-opted-in repo (.agenticframework/ marker or
+# tenant.yaml, possibly committed) provisions normally.
+if git rev-parse --verify HEAD >/dev/null 2>&1 \
+   && [ ! -f "$REPO_ROOT/.agenticframework/enabled" ] \
+   && [ ! -f "$REPO_ROOT/.agenticframework/tenant.yaml" ]; then
+  echo "ℹ️  AgentSmith: existing repo, not opted in — skipping provisioning."
+  echo "   To opt in: mkdir -p .agenticframework && touch .agenticframework/enabled, then run: git checkout ."
+  exit 0
+fi
+
 FRAMEWORK_DIR="$HOME/.agent-framework"
 SCRIPTS_DIR="$FRAMEWORK_DIR/scripts"
 
@@ -106,7 +122,12 @@ fi
 
 if [ -d "$TMPL_DIR" ] && [ -n "$WF_CI" ]; then
   mkdir -p "$GITHUB_WF"
-  for wf in "$WF_CI" "cd-staging.yml" "cd-production.yml" "eval-scorecard.yml"; do
+  # eval-fairness/eval-hallucination/eval-ttft-live are referenced by every
+  # ci-<stack>.yml as `uses: ./.github/workflows/<name>` — a missing callee
+  # makes GitHub reject the whole CI workflow as invalid, so they ship
+  # together with the caller.
+  for wf in "$WF_CI" "cd-staging.yml" "cd-production.yml" "eval-scorecard.yml" \
+            "eval-fairness.yml" "eval-hallucination.yml" "eval-ttft-live.yml"; do
     src="$TMPL_DIR/$wf"
     dest="$GITHUB_WF/$wf"
     if [ ! -f "$src" ]; then
@@ -119,6 +140,25 @@ if [ -d "$TMPL_DIR" ] && [ -n "$WF_CI" ]; then
     sed "s/{{TENANT_ID}}/${TENANT_ID}/g" "$src" > "$dest"
     echo "✅ Written $dest (from workflow-templates)"
   done
+
+  # Composite actions the cd-* workflows call as `uses: ./.github/actions/<name>`
+  # — resolved inside THIS repo, so they must be copied in alongside the
+  # workflows (vendored to ~/.agent-framework/github-actions/ by the installer).
+  ACTIONS_SRC="$FRAMEWORK_DIR/github-actions"
+  if [ -d "$ACTIONS_SRC" ] && [ "$(ls -A "$ACTIONS_SRC" 2>/dev/null)" ]; then
+    mkdir -p "$REPO_ROOT/.github/actions"
+    for action_dir in "$ACTIONS_SRC"/*/; do
+      [ -d "$action_dir" ] || continue
+      action_name="$(basename "$action_dir")"
+      if [ -d "$REPO_ROOT/.github/actions/$action_name" ]; then
+        continue
+      fi
+      cp -r "$action_dir" "$REPO_ROOT/.github/actions/$action_name"
+      echo "✅ Written .github/actions/$action_name (from github-actions)"
+    done
+  else
+    echo "⚠️  ~/.agent-framework/github-actions/ missing — cd-staging/cd-production reference ./.github/actions/* and will fail. Re-run install-ai-stack.sh."
+  fi
 elif [ "$STACK" != "GENERIC" ] && [ ! -d "$TMPL_DIR" ]; then
   echo "⚠️  workflow-templates not installed — run install-ai-stack.sh. CI/CD workflows not written."
 fi
@@ -134,9 +174,19 @@ fi
 REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
 IS_PUBLIC=0
 
-# Heuristic: github.com URL that doesn't match known private org patterns
+# Real visibility via `gh` when available (SPECS.md §20); if gh is missing,
+# unauthenticated, or the lookup fails, fall back to treating any github.com
+# remote as potentially public — the safe direction, since the consequence
+# is only a .gitignore prompt (or a conservative auto-append in CI).
 if echo "$REMOTE_URL" | grep -q "github.com"; then
   IS_PUBLIC=1
+  if command -v gh >/dev/null 2>&1; then
+    REPO_SLUG=$(echo "$REMOTE_URL" | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
+    VISIBILITY=$(gh repo view "$REPO_SLUG" --json visibility --jq .visibility 2>/dev/null || echo "")
+    case "$VISIBILITY" in
+      PRIVATE|private|INTERNAL|internal) IS_PUBLIC=0 ;;
+    esac
+  fi
 fi
 
 if [ "$IS_PUBLIC" -eq 1 ] && [ -t 1 ]; then
@@ -170,15 +220,12 @@ elif [ "$IS_PUBLIC" -eq 1 ]; then
 fi
 
 # ── Write the developer opt-in marker (FIXES_AND_CLEANUP.md P1a) ────────────
-# This hook is the bootstrap step — it must keep running unconditionally
-# (besides DISABLE_AI_STACK) regardless of opt-in state, since it's the
-# thing that establishes opt-in for every other hook in the first place.
-# pre-commit/commit-msg/post-commit gate on .agenticframework/enabled (or
-# tenant.yaml) existing before they enforce anything — that prevents git's
-# global init.templateDir from silently enforcing AgentSmith rules in
-# a totally unrelated repo someone just `git clone`'d, while still letting
-# every AgentSmith-provisioned repo opt in automatically on first
-# checkout, exactly as documented in UserManual.md §3.
+# Reached only for a brand-new `git init` (no HEAD) or an already-opted-in
+# repo — the gate at the top of this hook skips pre-existing repos that
+# never opted in, so a totally unrelated repo someone just `git clone`'d is
+# never provisioned or opted in behind their back. Writing the marker here
+# is what makes pre-commit/commit-msg/post-commit enforce in THIS repo from
+# now on (they no-op without it), exactly as documented in UserManual.md §3.
 if [ ! -f "$REPO_ROOT/.agenticframework/enabled" ] && [ ! -f "$REPO_ROOT/.agenticframework/tenant.yaml" ]; then
   mkdir -p "$REPO_ROOT/.agenticframework"
   touch "$REPO_ROOT/.agenticframework/enabled"

@@ -1,6 +1,6 @@
 """
 shadow-eval.py — Async shadow eval sampler over live production traces
-(FIXES_AND_CLEANUP.md P1c, SPECS.md §9: "An async sampler evaluates 5% of
+(Product_Archive.md P1c, SPECS.md §9: "An async sampler evaluates 5% of
 production traces post-hoc").
 
 Workflow:
@@ -39,7 +39,7 @@ Called by:
 
 Requires:
   AGENT_PHOENIX_ENDPOINT — Phoenix server URL (default: http://localhost:6006)
-  AGENT_JUDGE_MODEL       — judge model id (default: claude-3-5-sonnet-20241022)
+  AGENT_JUDGE_MODEL       — judge model id (default: scripts/_shared.py DEFAULT_JUDGE_MODEL)
 """
 
 from __future__ import annotations
@@ -68,6 +68,7 @@ SHADOW_CRITERIA = {
 from _shared import _repo_root  # noqa: E402
 from _shared import _phoenix_get as _shared_phoenix_get  # noqa: E402
 from _shared import _phoenix_post as _shared_phoenix_post  # noqa: E402
+from _shared import judge_model as _resolve_judge_model  # noqa: E402
 
 
 def _load_sync_state() -> dict:
@@ -160,7 +161,7 @@ def _annotate_shadow_result(span_id: str, scored: dict) -> None:
 def run_shadow_eval(sample_rate: float = 0.05, since_hours: float = 24.0) -> dict:
     from eval_judge import judge_prompt, run_judge
 
-    judge_model = os.environ.get("AGENT_JUDGE_MODEL", "claude-3-5-sonnet-20241022")
+    judge_model = _resolve_judge_model()
     stats = {"sampled": 0, "judged": 0, "failed": 0, "skipped": 0, "errors": 0}
 
     print(

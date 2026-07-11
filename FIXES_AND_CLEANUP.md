@@ -1,459 +1,173 @@
-# AgentSmith — Active Work and Future Phases
+# AgentSmith — Remaining To-Do Items
 
-**Last reviewed:** 2026-07-10 (Memory/RAG v1 shipped)  
-**Purpose:** Active planned work and confirmed future gaps with their
-trigger conditions, rationale, and embedded design decisions. Completed
-build history lives in `Product_Archive.md`.
+**Last reviewed:** 2026-07-11 (doc restructure — completed work moved out)
 
----
+> **Scope:** this document owns only *not-yet-done* work: the active phase
+> and confirmed future gaps with their trigger conditions. Completed build
+> history (P0–P11c, phase deliverables) lives in `Product_Archive.md`.
+> The formal specification is `SPECS.md`; operator procedures are
+> `OPERATIONS.md`.
 
-## P11 — GCP deployment + oil-price-demo CI green + demo publication 🟡 P11a/b/c DONE · P11d NOT STARTED
+Each future item records a **trigger condition** (the concrete signal that
+means "build this now," not a calendar date) and rationale, so a future
+session can decide whether the trigger has actually fired instead of
+re-litigating whether the gap matters.
 
-**Goal:** Deploy AgentSmith framework and oil-price-demo (tenant: `bobbyaqlaar/oil-price-demo`)
-to GCP via GitHub Actions CI/CD, then publish a demo + article series
-(LinkedIn, Substack, Medium) documenting the process.
-
-**Repos involved:**
-- AgentSmith framework: `bobbyaqlaar/AgentSmith` (or local `AgenticFramework/`)
-- Tenant demo: `bobbyaqlaar/oil-price-demo` — branch `develop`, PR #1 open (`develop → main`)
-
----
-
-### P11a — oil-price-demo CI green ✅ DONE (2026-07-01)
-
-**Context:** Oil-price-demo repo is checked out locally at
-`/Users/mac/Documents/Bobby/Aqlaar/Apps/oil-price-demo` — edits go via
-normal `git` + push, NOT `gh api PUT`. The `git clone` avoidance rule
-applies only when cloning FROM WITHIN the AgentSmith directory.
-
-**Final CI state (branch: `develop`, PR #1 open `develop → main`):**
-
-| Job | Status |
-|---|---|
-| Guardrails — Python/FastAPI | ✅ PASS |
-| Eval scorecard | ✅ PASS |
-| Deploy to Staging | 🔄 in progress (GCP secrets present, smoke test pending) |
-
-**Fixes applied to get CI green (cumulative):**
-1. `scripts/run-evals.py` — detect `result["status"] == "failed"` from
-   `run_pipeline()` as pipeline error → `pipeline_error=True` → all-errors
-   path exits cleanly.
-2. Ruff lint fixes: unused imports (F401), unnecessary f-strings (F541),
-   invalid `# noqa` directives.
-3. `ruff format` must be run separately from `ruff check` — both must pass.
-4. `scripts/run-evals.py::run_scorecard()` — results path `relative_to()`
-   raises `ValueError` when monkeypatched to `tmp_path` outside repo root;
-   wrapped in try/except.
-5. `test/test_activities.py` — spike series sigma inflation fixed with
-   10-stable + 1-spike series.
-6. `scripts/check_bare_except.py` (repo + `~/.agent-framework/scripts/`) —
-   updated to accept BOTH `# noqa: bare-except` (legacy) AND `# fail-open:`
-   (new convention). The global `~/.agent-framework` copy is what the
-   pre-commit hook actually executes; the repo copy was updated previously
-   but the hook was still using the outdated global version.
-7. `scripts/cost_router.py` — 4-attempt retry with full jitter:
-   `wait = (2**attempt)*5 + random.uniform(0, 3)` (10–13s, 20–23s, 40–43s).
-   Simple `2**n * 5` without jitter caused thundering-herd retries that still
-   saturated Groq's 30 RPM free tier.
-8. `scripts/run-evals.py` — `all(pipeline_error)` path now returns `0` not `2`.
-   Exit code 2 is non-zero and fails the CI step; "skip gracefully on infra
-   errors" requires exit 0.
-9. `test/test_run_evals.py` — updated `test_skip_when_all_pipeline_errors`
-   assertion from `== 2` to `== 0` to match above.
-
-**Repeated-action lessons (do not repeat these):**
-- **Groq 429 retry without jitter** — `2**n * 5` gives fixed waits; concurrent
-  CI jobs retry in lockstep and re-saturate the rate window together. Always
-  add `random.uniform(0, 3)` jitter.
-- **`# fail-open:` vs `# noqa: bare-except`** — the hook reads the GLOBAL
-  `~/.agent-framework/scripts/check_bare_except.py`, not the repo copy. Always
-  update both, or use `# noqa: bare-except` until the global copy is patched.
-- **Non-zero "skip" exit code** — `return 2` in `run_scorecard()` still fails
-  the shell step. Graceful skip = `return 0`.
-- **Test/code skew** — when changing a return value, update the test in the
-  same commit; CI will catch the skew if they ship separately.
-
-**Note:** `cd-demo-ui.yml` fails (no demo UI Dockerfile) — expected, not blocking.
+**Settled design decisions (do not re-open without a concrete reason):**
+- MCP integration stays tenant-owned (BYO) — the framework does not ship an
+  MCP client/server. Rationale recorded in SPECS.md §4a and below.
+- LLM self-correction shipped as a separate opt-in method
+  (`run_with_self_correction`), never inserted in front of the existing
+  human DLQ escalation path.
 
 ---
 
-### P11b — GCP resources + oil-price-demo GitHub Environments ✅ DONE
+## P11d — Demo publication (LinkedIn / Substack / Medium) 🟡 NOT STARTED
 
-**oil-price-demo GitHub Environments** (`bobbyaqlaar/oil-price-demo` → Settings → Environments):
+**Goal:** publish a demo + article series documenting AgentSmith and the
+oil-price-demo tenant (`bobbyaqlaar/oil-price-demo`) built on it.
+P11a/b/c (CI green, GCP resources, portal deploy) are done — see
+`Product_Archive.md` §P11.
 
-| Secret | staging | production |
-|---|---|---|
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | ✅ set | ✅ set |
-| `GCP_SERVICE_ACCOUNT` | ✅ set | ✅ set |
-| `GCP_PROJECT_ID` | ✅ set | ✅ set |
-| `DEPLOY_COMMAND` | ✅ Cloud Run deploy cmd | ✅ set |
-| `GROQ_API_KEY` | ✅ set | ✅ set |
-| `AGENT_MODEL_ARCHITECT` | ✅ `llama-3.3-70b-versatile` | ✅ set |
-| `AGENT_MODEL_COMPLEX` | ✅ `llama-3.3-70b-versatile` | ✅ set |
-| `AGENT_JUDGE_MODEL` | ✅ `llama-3.3-70b-versatile` | ✅ set |
-| `ANTHROPIC_API_KEY` | ✅ present (zero balance — Groq is fallback) | ✅ set |
+**Trigger:** already fired (CI green + staging deploys succeeded 2026-07-01).
 
-**GCP resources provisioned (project: `agentsmith-500916`, us-central1):**
-- Cloud SQL Postgres: `temporal-pg` (db-f1-micro, public IP `35.255.14.25`, ssl-mode=ENCRYPTED_ONLY)
-- Cloud Run: `temporal-server` (min-instances=1, BIND_ON_IP=0.0.0.0, SQL_TLS_ENABLED=true)
-- Cloud Run: `oil-price-worker-staging` (deployed; /healthz 404 anomaly under investigation, not blocking)
-- Artifact Registry: `oil-price-demo` repo
-- Artifact Registry: `agentsmith-portal` repo (portal images)
-- WIF pool: `github-actions-pool` / provider `github-provider`
-  - **Attribute condition:** `assertion.repository in ['bobbyaqlaar/oil-price-demo', 'bobbyaqlaar/AgentSmith']`
-    (updated from single-repo `==` to multi-repo `in [...]` when second repo was added)
-- SA: `github-deployer@agentsmith-500916.iam.gserviceaccount.com`
-  - Also granted `roles/cloudsql.client` (for Cloud SQL Auth Proxy on the Compute SA — see P11c)
-- Secret Manager: `oil-price-demo-anthropic-key`, `ops-portal-user`, `ops-portal-password`,
-  `ops-portal-db-url`, `ops-portal-audit-hmac-key`, `ops-portal-sync-token`
-- `agenticframework` database created on `temporal-pg`; schema migrated (all portal tables + triggers)
-
-**oil-price-demo PR #1 merged to main** ✅ Production CD deployed successfully ✅
-
-**Billable resources — explicitly deferred:** Cloud SQL `temporal-pg` (~$7–10/month) and `temporal-server` Cloud Run (min-instances=1) remain live to support the P11d demo publication. Tear down after demo article is published. Owner: Bobby.
-
----
-
-### P11c — AgentSmith Ops Portal deployed to GCP ✅ DONE (2026-07-01)
-
-**AgentSmith GitHub Environments** (`bobbyaqlaar/AgentSmith` → Settings → Environments):
-
-| Secret | staging | production |
-|---|---|---|
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | ✅ set | ✅ set |
-| `GCP_SERVICE_ACCOUNT` | ✅ `github-deployer@agentsmith-500916.iam.gserviceaccount.com` | ✅ set |
-| `GCP_PROJECT_ID` | ✅ set | ✅ set |
-| `DEPLOY_COMMAND` (staging) | ✅ see full command below | ✅ production equivalent |
-
-**Current DEPLOY_COMMAND (staging):**
-> ⚠️ `$IMAGE_REF` and `$GCP_PROJECT_ID` are set as env vars by the `cd-portal.yml` workflow steps before this command runs. This command cannot be pasted into a terminal as-is — those variables will be empty outside the GitHub Actions job context.
-```
-gcloud run deploy agentsmith-portal-staging \
-  --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID \
-  --platform managed --allow-unauthenticated \
-  --add-cloudsql-instances=agentsmith-500916:us-central1:temporal-pg \
-  --set-secrets=OPS_PORTAL_USER=ops-portal-user:latest,OPS_PORTAL_PASSWORD=ops-portal-password:latest,DATABASE_URL=ops-portal-db-url:latest,AUDIT_LOG_HMAC_KEY=ops-portal-audit-hmac-key:latest,OPS_PORTAL_SYNC_TOKEN=ops-portal-sync-token:latest
-```
-
-**DATABASE_URL (stored in Secret Manager `ops-portal-db-url`):**
-```
-postgresql://postgres:***@/agenticframework?host=/cloudsql/agentsmith-500916:us-central1:temporal-pg
-```
-Unix socket via Cloud SQL Auth Proxy — no TCP, no cert management, Google-managed mTLS.
-
-**Live Cloud Run services:**
-- Staging: https://agentsmith-portal-staging-431995395208.us-central1.run.app
-- Production: https://agentsmith-portal-production-431995395208.us-central1.run.app
-- Credentials: `ops` / stored in Secret Manager `ops-portal-password`
-
-**Fixes applied during portal deploy (do not repeat):**
-1. WIF attribute condition was locked to `oil-price-demo` only — updated to `in [...]` list.
-2. `build-push-ghcr` action defaulted to root `Dockerfile` (absent) — added `dockerfile_path: portal/Dockerfile` in `cd-portal.yml`.
-3. GHCR image name preserved repo casing (`AgentSmith`) — added `| tr '[:upper:]' '[:lower:]'` to `build-push-ghcr/action.yml`.
-4. Cloud Run rejects GHCR images — added "Push to Artifact Registry" step in `cd-portal.yml` that retags and pushes before `gcloud run deploy`.
-5. `DEPLOY_COMMAND` referenced `$GCP_PROJECT_ID` but it wasn't exported — added `env: GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}` at the job level.
-6. `GCP_SERVICE_ACCOUNT` secret had wrong value — corrected to `github-deployer@agentsmith-500916.iam.gserviceaccount.com`.
-7. Portal startup check requires `OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD` — created Secret Manager secrets and wired via `--set-secrets` in `DEPLOY_COMMAND`.
-8. `DATABASE_URL` not set — created `agenticframework` DB on Cloud SQL, ran schema migration, stored connection string in Secret Manager.
-9. SSL cert verification failure (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`) — **do not use `sslmode=no-verify`** (MITM-vulnerable). Fixed by switching to **Cloud SQL Auth Proxy** via `--add-cloudsql-instances`: Unix socket connection, IAM auth, Google-managed mTLS. Compute SA granted `roles/cloudsql.client`.
-10. New Secret Manager secrets need explicit SA binding before `gcloud run deploy` can reference them — grant `roles/secretmanager.secretAccessor` to the Compute SA for each secret.
-
----
-
-### P11d — Demo publication (LinkedIn / Substack / Medium) 🟡 NOT STARTED
-
-**Trigger:** CI green on `develop` + at least one successful staging deploy to GCP.
-
-**Demo URL:** will be the Cloud Run service URL from `gcloud run services describe`.
+**Demo URL:** the Cloud Run service URL from `gcloud run services describe`.
 
 **Article content to cover:**
 1. The AgentSmith framework architecture (Ten Pillars, multi-agent, eval scorecard)
 2. Building the oil-price-demo tenant app from `ai-tenant-init` to production
 3. The CI/CD pipeline story: GitHub Actions → GCP Cloud Run via WIF (keyless auth)
-4. Lessons: Groq rate limits in CI, `set +e` exit code capture, GitHub Models as free CI eval backend
+4. Lessons: Groq rate limits in CI, `set +e` exit-code capture, GitHub Models as free CI eval backend
 5. Screenshots: Phoenix traces, Ops Portal, the HITL DLQ flow, eval scorecard output
 
-**Source material already written:**
-- `OPERATIONS.md` §D.5b — full GCP auth + Cloud Run deploy story
-- `Product_Archive.md` — build history P0–P10 (use as article structure)
-- `README.md` — framework overview (use as intro)
+**Source material:** `OPERATIONS.md` (GCP deploy story),
+`Product_Archive.md` (build history P0–P11, use as article structure),
+`README.md` (framework overview, use as intro).
+
+**Cost note:** Cloud SQL `temporal-pg` (~$7–10/month) and `temporal-server`
+Cloud Run (min-instances=1) stay live to support this demo. Tear down after
+the article is published. Owner: Bobby.
 
 ---
 
 ## Future Phases — confirmed gaps, not yet scheduled
 
-Surfaced by a deliberate audit against a functional/non-functional layer
-checklist (Readme.md "Architecture by Layer" / SPECS.md §4). Each is listed
-with a **trigger condition** (the concrete signal that means "build this
-now," not a calendar date) and **rationale**, so a future session can
-decide whether the trigger has actually fired instead of re-litigating
-whether the gap matters.
+### Compliance gap status boards (pointers, not copies)
 
-One design decision is settled for items below and recorded so it is not
-re-opened: MCP integration stays tenant-owned (BYO), not shipped by the
-framework. The LLM self-correction loop is now shipped as a separate opt-in
-method, not inserted in front of the existing human DLQ escalation path.
+Live status for the two compliance tracks is maintained in one place each —
+do **not** duplicate their tables here:
 
----
+- **UAE Regulatory** (sovereign infra, bias law, HITL, PDPL, oversight):
+  [`docs/uae-regulatory.md`](./docs/uae-regulatory.md) +
+  [`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md).
+  Still open there: live verification against a *named* UAE sovereign API
+  (beyond the verified Ollama Falcon 3 pattern), and org-level certification
+  work (never framework-owned).
+  **Trigger:** a bid requires a live sovereign-endpoint verification, or an
+  auditor demands a licensed clause-ID matrix beyond the thematic pack
+  (engage a certification body — out of scope for inventing clause text).
+- **Enterprise Delivery Model** (approved platforms, in-pipeline governance):
+  [`docs/delivery-model.md`](./docs/delivery-model.md). v1 soft pack
+  shipped. Still open: hard-fail enterprise mode; auto-inject `delivery.*`
+  defaults from `ai-tenant-init`; CD step uploading the evidence pack as a
+  release artifact.
+  **Trigger:** an org wants promote blocked when a platform isn't approved,
+  or tenant-init must stamp `delivery.platform` automatically.
 
-### Delivery Model — gap register (consultant review)
+### Tool Orchestration — `@tool` registration / schema extraction
 
-Enterprise agent delivery is not a feature checklist ("RAG + multi-model +
-GDPR + deploy-by-Friday"). It is a **Delivery Model**: how teams ship agents
-on shared, governed rails instead of one-off solutions. AgentSmith stance
-against that fantasy maps to four requirements:
+**Gap:** no decorator extracting a Python function's signature into a JSON
+schema; `llm_gateway.complete()` sends a prompt and gets text back — no
+function-calling fields in the provider request.
 
-| # | Delivery Model need | Status | Pointer |
-|---|---|---|---|
-| 1 | Teams use pre-approved environments, data access patterns, security controls, and deployment pipelines — no repeated approvals, no unscalable one-offs | **Partial** | Catalog + soft gate shipped: [`docs/delivery-model.md`](./docs/delivery-model.md), [`templates/delivery-model/`](./templates/delivery-model/), `verify_system.py --check-delivery-model`. Hard bind into `ai-tenant-init` still open → [Enterprise Delivery Model](#enterprise-delivery-model--approved-platforms--in-pipeline-governance) |
-| 2 | Rules for data use, risk, auditability, and access live **in** the delivery process, not reviewed afterwards | **Partial** | Hooks, RFC, eval/redaction CD, input guardrail, `delivery_evidence.py` promote pack → same phase |
-| 3 | Compliance demonstrated through logs and artifacts, not slide decks | **Met** | HMAC-signed append-only audit log (SPECS.md §30), Phoenix OTel traces, eval scorecards, encrypted HITL blobs |
-| 4 | Standard functions and frameworks for RAG | **Partial** | v1 shipped: [`docs/rag-memory.md`](./docs/rag-memory.md) — `conversation_memory` + `vector_store` (memory/pgvector) + local ST embedder. Gateway auto-RAG / ingest CLI still open → [Memory Management](#memory-management--short-term-token-window--long-term-vector-store) |
-
----
-
-### UAE Regulatory — gap register
-
-UAE differentiator map (sovereign infra, bias law, HITL, PDPL, oversight).
-Canonical narrative: [`docs/uae-regulatory.md`](./docs/uae-regulatory.md).
-Not legal advice / not certification.
-
-| # | Mandate | Status | Pointer |
-|---|---|---|---|
-| 1 | Sovereign infrastructure — national data + models in UAE borders (G42-class clouds, TII Falcon, etc.) | **Partial** | Sketch shipped: [`templates/uae-sovereign/`](./templates/uae-sovereign/) (Falcon `models.yaml`, env, residency checklist). ISO/Authority pack still open → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map); narrative in `docs/uae-regulatory.md` §1 |
-| 2 | Bias & fairness — Federal Decree-Law No. 34/2023; routine bias audits | **Partial** | Suite + CI opt-in: `run-evals.py --suite fairness`, `FAIRNESS_FAIL_BELOW` in `.env` (default 0.80), `eval-fairness.yml` (warn / `FAIRNESS_EVALS=required`) → [Data Bias & Fairness](#data-bias--fairness--fairnessrobustness-evaluation) |
-| 3 | HITL stop-gates for high-impact actions + accountability trail | **Met** | `run_with_hitl_gate`, recoverable DLQ, HMAC audit log, HITL blobs |
-| 4 | PDPL — mask/anonymize PII (e.g. Emirates ID) in the decision path | **Partial** | Pre-call scrub shipped: `runtime/input_guardrail.py` in `complete()`. Extend patterns via `register_input_guardrail` → [Security & Guardrails](#security--guardrails--pre-call-input-sanitization) |
-| 5 | Oversight bodies — embed governance (ISO/IEC 42001) from day one | **Partial** | Thematic map + evidence checklist shipped: [`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md). Certification and live sovereign-API verify still org/Future Phase → [UAE Regulatory Alignment](#uae-regulatory-alignment--sovereign-profile--iso-42001-map) |
-
----
-
-**Gap:** sovereign profile sketch and ISO/IEC 42001 **thematic control map +
-evidence checklist** are shipped
-([`templates/uae-sovereign/`](./templates/uae-sovereign/),
-[`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md)).
-Fairness suite and pre-call PII scrub also shipped (v1) — see those Future
-Phase sections. Still open: live verification against a named UAE sovereign
-API (beyond Ollama pattern), and any org-level certification work (never
-framework-owned).
-
-**Already shipped (do not re-litigate):**
-- Pattern A/B sovereign profile + residency checklist
-- Thematic ISO/IEC 42001 map with Met/Partial/Gap/Org-owned + framework vs
-  tenant ownership + auditor evidence checklist
-- SPECS.md §30 ISO/IEC 42001-oriented summary table linking the full doc
-- `runtime/input_guardrail.py` + `run-evals.py --suite fairness`
-
-**Trigger:** live verification against a specific sovereign provider
-endpoint is required for a bid, **or** an auditor demands a licensed
-clause-ID matrix beyond the thematic pack (out of scope for inventing
-clause text — engage a certification body).
-
-**In progress → nearly done (Pattern A):** Ollama Falcon 3 live-verified
-2026-07-10 — `falcon3:3b` + `falcon3:1b` via local Ollama `/v1` chat.
-Template default: [`templates/uae-sovereign/models.yaml`](./templates/uae-sovereign/models.yaml).
-Smoke: `scripts/verify_sovereign_endpoint.py`. HF Pattern C remains optional
-research path (router unsupported). Public HF ≠ UAE residency.
-
-**Out of scope:** claiming G42/TII partnership; claiming PDPL/ISO
-certification; reproducing ISO standard text.
-
-**Fix sketch, when triggered:**
-- Optional: live-verify one sovereign OpenAI-compatible endpoint and record
-  the working `models.yaml` id/base URL in the template (same bar as
-  `vertex_gemini` live notes in `runtime/models.yaml`).
-- Keep `docs/iso-42001-control-map.md` status board in sync when remaining
-  Partial items move.
-
----
-
-### Enterprise Delivery Model — approved platforms + in-pipeline governance
-
-**Status:** **Shipped (v1 soft pack).**
-- [`docs/delivery-model.md`](./docs/delivery-model.md) — catalog + need→gate→artifact
-- [`templates/delivery-model/org-policy.example.yaml`](./templates/delivery-model/org-policy.example.yaml)
-- `scripts/delivery_model.py` + `verify_system.py --check-delivery-model` (warn-only)
-- `scripts/delivery_evidence.py` → `delivery_evidence.json` + `.md`
-
-**Remaining:** hard-fail enterprise mode; auto-inject `delivery.*` defaults from
-`ai-tenant-init`; CD step that uploads evidence pack as release artifact.
-
-**Out of scope:** RAG/vector (Memory phase); claiming GDPR/SOC2 certification.
-
-**Trigger for remaining work:** org wants promote blocked when platform not
-approved, or tenant-init must stamp `delivery.platform` automatically.
-
----
-
-### Memory Management — short-term (token-window) + long-term (vector store)
-
-**Delivery Model link:** Delivery Model need #4 (standard RAG functions).
-See [`docs/rag-memory.md`](./docs/rag-memory.md).
-
-**Status:** **Shipped (v1).**
-- `runtime/conversation_memory.py` — token-budget truncate-oldest
-- `runtime/embeddings.py` — `HashEmbedder` (default) + `SentenceTransformerEmbedder` (`EMBEDDER=sentence-transformers`)
-- `runtime/vector_store.py` — `MemoryVectorStore` + optional `PgVectorStore` (`VECTOR_BACKEND=postgres`)
-
-**Already implemented (unchanged):** codebase Knowledge Graph (structured
-recall, not vector RAG).
-
-**Remaining:** summarization eviction; auto-RAG in gateway; ingest/chunk CLI;
-live pgvector CI job (extension often absent in bare Postgres).
-
-**Trigger for remaining:** tenant needs summarization or gateway-native retrieve.
-
----
-
-### Tool Orchestration — registration/schema-extraction, MCP
-
-**Gap:** no `@tool`-style decorator extracting a Python function's signature
-into a JSON schema; `llm_gateway.py.complete()` sends a prompt and gets text
-back — no function-calling fields in the provider request.
-
-**Design decision (settled — do not re-open without a concrete reason):** MCP
-integration stays **bring-your-own** — the framework does not ship an MCP
-client/server. Rationale: AgentSmith's design goal is supporting tenant apps
-of "any architecture or language," and MCP is one tool-orchestration standard
-among several a tenant might already use; shipping it as first-class would tie
-every tenant to that standard and commit this framework to tracking MCP's spec
-evolution, for a capability orthogonal to what this framework owns
-(budget/redaction/tracing/HITL around an LLM call, not the orchestration
-logic in front of it). If your tenant app uses MCP, treat `llm_gateway.py` as
-the place the resulting LLM call flows through; the MCP client/tool-schema
-layer sits in front of it in your own code.
+**Design decision (settled):** MCP integration stays **bring-your-own**.
+AgentSmith supports tenant apps of any architecture/language; shipping MCP
+first-class would tie every tenant to one standard and commit the framework
+to tracking its spec evolution, for a capability orthogonal to what the
+framework owns (budget/redaction/tracing/HITL around an LLM call). A tenant
+using MCP treats `llm_gateway.py` as the place the resulting LLM call flows
+through; the MCP client/tool-schema layer sits in front, in tenant code.
 
 **Trigger:** a tenant reference app whose domain needs the LLM to choose
 among several tools dynamically, as opposed to fixed activity sequences.
 
-**Fix sketch, when triggered:** a small `runtime/tool_registry.py` with a
-decorator that introspects type hints/docstrings into a JSON schema,
-independent of any specific orchestration protocol.
+**Fix sketch:** small `runtime/tool_registry.py` decorator introspecting
+type hints/docstrings into a JSON schema, independent of any orchestration
+protocol.
 
----
+### Perception & Input Parsing — structured output, prompt templating
 
-### Perception & Input Parsing — structured output parsing, prompt templating
-
-**Gap:** the reference pipelines extract JSON from LLM text via bare
-`re.search`+`json.loads()` with a hardcoded fallback shape — no schema
+**Gap:** reference pipelines extract JSON from LLM text via bare
+`re.search` + `json.loads()` with a hardcoded fallback shape — no schema
 validation. No reusable prompt-template engine; prompts are inline f-strings.
 
-**Trigger:** a second reference pipeline (or a real tenant app) that duplicates
-either the JSON-extraction pattern or a near-identical prompt structure — once
-there are 2+ real call sites with the same shape, not before.
+**Trigger:** a second reference pipeline (or real tenant app) duplicating
+either the JSON-extraction pattern or a near-identical prompt structure —
+2+ real call sites with the same shape, not before.
 
-**Fix sketch, when triggered:** `runtime/structured_output.py` (Pydantic model
-+ `model_validate_json`, typed error on mismatch) and
+**Fix sketch:** `runtime/structured_output.py` (Pydantic model +
+`model_validate_json`, typed error on mismatch) and
 `runtime/prompt_templates.py` (minimal Jinja2 or `string.Template` wrapper).
 
----
+### Memory / RAG — remaining extensions (v1 shipped)
 
-### Human-in-the-Loop — LLM-driven self-correction
+Shipped v1: `conversation_memory.py`, `embeddings.py` (hash / optional
+sentence-transformers), `vector_store.py` (memory / pgvector). See
+[`docs/rag-memory.md`](./docs/rag-memory.md) and OPERATIONS.md.
 
-**Status:** **Shipped (v1).** `runtime/self_correction.py` provides
-`propose_corrected_payload()` and `run_self_correction_loop()`; Temporal
-workflows can opt in via `BaseAgentWorkflow.run_with_self_correction()`.
+**Remaining:** summarization eviction; auto-RAG in the gateway;
+ingest/chunk CLI; live pgvector CI job (extension often absent in bare
+Postgres).
 
-**Behavior:** on activity failure, `self_correct_payload_activity` builds an
-`LLMGateway(tenant_id=...)`, asks for only corrected JSON, parses the payload,
-and retries the activity up to `max_self_correction_attempts` (default 1).
-If the corrected payload still fails, the method falls through to
-`run_with_recoverable_step` with the last payload, preserving the existing
-human DLQ escalation path.
+**Trigger:** a tenant needs summarization or gateway-native retrieve.
 
-**Unchanged:** existing `run_with_recoverable_step` callers are not modified;
-tenants opt into model-driven retry per step.
+### HITL self-correction — remaining extensions (v1 shipped)
 
-**Remaining:** tenant-specific policies for which error classes should opt in;
-multi-turn planner/tool-choice correction remains out of scope.
+**Remaining:** tenant-specific policies for which error classes opt in;
+multi-turn planner/tool-choice correction stays out of scope.
 
----
+### Eval suites — remaining extensions (v1 shipped)
 
-### Security & Guardrails — pre-call input sanitization
+- **Hallucination:** expand golden cases beyond seed pairs; human review UI
+  for flagged cases.
+- **Fairness:** domain-specific sets beyond seed pairs; statistical
+  disparate-impact metrics beyond judge + pair parity.
+- **TTFT:** portal chat UI streaming; TTFT on the non-stream path (not
+  measurable without a fake first token).
 
-**UAE / PDPL link:** Delivery Model and UAE Regulatory need #4 — masking
-personal data (names, Emirates ID, etc.) in the agent decision path, not only
-in post-call traces. See `docs/uae-regulatory.md` §4.
+### Input guardrail — remaining extensions (v1 shipped)
 
-**Status:** **Shipped (hybrid).** `runtime/input_guardrail.py` scrubs prompts
-before `_invoke()` in `llm_gateway.complete()`. Default regex covers Emirates
-ID, email, phone, Luhn cards; `register_input_guardrail()` for custom;
-`INPUT_GUARDRAIL=off|default|custom` (unset → off in development, default in
-staging/production).
-
-**Remaining:** tenant-specific PII vocabularies beyond the default patterns;
-content moderation (toxicity) is still out of scope.
-
-**Trigger (done):** PDPL / UAE deployments needing decision-path masking.
+**Remaining:** tenant-specific PII vocabularies beyond the default patterns
+(Emirates ID, email, phone, Luhn cards); content moderation (toxicity)
+stays out of scope for the framework.
 
 ---
 
-### Reliability & Accuracy — hallucination-rate metric
+## Appendix — Lessons (do not repeat)
 
-**Status:** **Shipped (v1).** Judge dimension `hallucination` (0.0–1.0,
-distinct from `correctness`); flagged when score ≥ 0.5; rate =
-`flagged_count / scored_count`. Hard fail when rate exceeds threshold.
+Operational lessons distilled from past phases; full incident context in
+`Product_Archive.md`.
 
-**Run:** `scripts/run-evals.py --suite hallucination`
-
-**Threshold:** **`HALLUCINATION_FAIL_ABOVE`** in tenant `.env` (default
-`0.05`; CLI `--hallucination-fail-above` overrides)
-
-**CI:** `workflow-templates/eval-hallucination.yml` (hard-fail gate)
-
-**Fixtures:** `fixtures/hallucination_evals_base.json`,
-`fixtures/hallucination_judge_criteria_base.json` (copy into
-`.agent-rfc/fixtures/` per tenant)
-
-**Remaining:** expand golden cases beyond seed pairs; human review UI for
-flagged cases.
-
----
-
-### Scalability & Performance — Time-to-First-Token
-
-**Status:** **Shipped (v1).** Opt-in streaming via `LLMGateway.complete_stream()`
-records `ttft_ms` on `CompletionResult` and OTel span `llm.gateway.ttft_ms`.
-Non-streaming `complete()` unchanged.
-
-**Unit CI:** `runtime/test/test_ttft_stream.py` (mock stream; hard-fail if
-`ttft_ms` absent).
-
-**Live gate:** `scripts/verify_ttft.py` streams `falcon3:1b` against
-`OLLAMA_BASE_URL`; fails when `ttft_ms > TTFT_FAIL_ABOVE_MS` (default
-`2000`). Enable in CI with repo variable **`TTFT_LIVE=required`**
-(`workflow-templates/eval-ttft-live.yml`).
-
-**Config:** `TTFT_FAIL_ABOVE_MS` in AgentSmith / tenant `.env`.
-
-**Remaining:** portal chat UI streaming; TTFT on non-stream path (not
-measurable without fake first-token).
-
----
-
-### Data Bias & Fairness — fairness/robustness evaluation
-
-**UAE link:** UAE Regulatory need #2 — Federal Decree-Law No. 34/2023 and
-routine bias audits before launch. See `docs/uae-regulatory.md` §2.
-
-**Status:** **Shipped (v1 suite + CI opt-in).** Paired fixtures;
-`run-evals.py --suite fairness`; threshold from **`FAIRNESS_FAIL_BELOW`**
-in tenant `.env` (default `0.80`, CLI `--fail-below` overrides);
-`workflow-templates/eval-fairness.yml` wired into ci-* (warn-only unless
-`FAIRNESS_EVALS=required` / `fairness_mode: required`).
-
-**Remaining:** domain-specific fairness sets beyond seed pairs; statistical
-disparate-impact metrics beyond judge + pair parity.
-
-**How to enable hard gate:** set repo variable `FAIRNESS_EVALS=required` and
-put cases in `.agent-rfc/fixtures/fairness_evals.json`. Set threshold in `.env`:
-
-```bash
-FAIRNESS_FAIL_BELOW=0.80
-```
-
----
-
-*Build history (P0–P10) lives in `Product_Archive.md`.
-SPECS.md and Readme.md are the canonical specification record.
-OPERATIONS.md is the canonical operator-facing reference.*
+- **Groq 429 retry needs FULL JITTER** — `(2**attempt)*5 + random.uniform(0, 3)`.
+  A bare `2**n * 5` gives concurrent CI jobs identical waits; they retry in
+  lockstep and re-saturate the rate window. Now baked into
+  `scripts/cost_router.py`.
+- **`# fail-open:` convention + global-copy drift** — the pre-commit hook
+  executes the GLOBAL `~/.agent-framework/scripts/check_bare_except.py`,
+  not the repo copy; always sync both when changing checker behavior. The
+  one accepted suppression form is `# fail-open: <reason>`
+  (`# noqa: bare-except` was retired — ruff rejects unknown noqa codes).
+- **Graceful skip = exit 0** — `return 2` from `run_scorecard()` still
+  fails the CI step; "skip gracefully on infra errors" requires `0`.
+- **Test/code skew** — when changing a return value, update the test in the
+  same commit; CI catches the skew if they ship separately.
+- **Cloud SQL from Cloud Run** — use the Auth Proxy
+  (`--add-cloudsql-instances`, Unix-socket `DATABASE_URL`), never
+  `sslmode=no-verify`; grant the Compute SA `roles/cloudsql.client` and
+  `roles/secretmanager.secretAccessor` per secret.
+- **WIF attribute condition is one expression** — adding a repo means
+  updating `==` to `in [...]`, or the new repo gets
+  `unauthorized_client: rejected by attribute condition`.
+- **oil-price-demo: cherry-pick, don't rebase** — the post-commit hook
+  regenerates the Knowledge Graph on every git operation; rebasing dozens
+  of commits fires it each step and blocks the rebase with unstaged changes.

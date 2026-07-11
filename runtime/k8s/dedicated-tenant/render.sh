@@ -18,7 +18,7 @@ WORKER_IMAGE="${2:-}"
 # Both values land inside a sed replacement string with no escaping below —
 # a tenant_id or image ref containing '/', '&', or other sed-significant
 # characters would corrupt the substitution (or, for tenant_id, K8s namespace
-# naming requires this pattern anyway) (FIXES_AND_CLEANUP.md 4.12).
+# naming requires this pattern anyway) (Product_Archive.md 4.12).
 if ! [[ "$TENANT_ID" =~ ^[a-z0-9-]+$ ]]; then
   echo "❌ <tenant-id> must match ^[a-z0-9-]+$ (Kubernetes namespace naming rules): got '$TENANT_ID'"
   exit 1

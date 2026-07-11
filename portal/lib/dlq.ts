@@ -1,5 +1,5 @@
 // portal/lib/dlq.ts — dead-letter queue depth + per-entry triage for the
-// Ops Portal (FIXES_AND_CLEANUP.md HITL/DLQ redesign).
+// Ops Portal (Product_Archive.md HITL/DLQ redesign).
 //
 // runtime/dead_letter.py's DeadLetterQueue is Postgres-backed and creates
 // `dlq_entries` itself (CREATE TABLE IF NOT EXISTS) the first time a worker

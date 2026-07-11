@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Badge, toneForDlqReason } from "./ui/Badge";
 import type { DLQEntry } from "@/lib/dlq";
 
-// CRM example (FIXES_AND_CLEANUP.md HITL/DLQ redesign): the agent
+// CRM example (Product_Archive.md HITL/DLQ redesign): the agent
 // hallucinated {"account_status": "active"} where the schema expects
 // "status" — an operator edits the JSON below to {"status": "active"}
 // and clicks Replay. If the entry has a workflowId/gateId (came from

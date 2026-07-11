@@ -23,7 +23,7 @@ distinct because they answer different questions:
     doesn't support) for "should this prediction be acted on at all."
   - run_with_recoverable_step for "decide_action_activity rejected this
     specific payload" — e.g. a malformed action shape — demonstrating the
-    CRM-style edit-and-replay pattern (FIXES_AND_CLEANUP.md's HITL/DLQ
+    CRM-style edit-and-replay pattern (Product_Archive.md's HITL/DLQ
     redesign) on the order-placement step specifically, since that's the
     step a downstream system could plausibly reject on a bad field.
 

@@ -161,7 +161,7 @@ class HITLBlobStore:
         encryption key) — silently swallowing that case used to leave a span
         with an `hitl_blob_ref` pointing at a blob that was never written,
         defeating the "full payload preserved for compliance review"
-        guarantee with zero error or alert (FIXES_AND_CLEANUP.md 2.3).
+        guarantee with zero error or alert (Product_Archive.md 2.3).
         Storage I/O errors (disk full, S3 unreachable) are logged at ERROR
         and swallowed — a transient storage outage still shouldn't break
         trace export, but it must not be invisible either.
@@ -228,7 +228,7 @@ def _make_blob_ref(trace_id: str, span_id: str, attr_key: str) -> str:
     # HITL-flagged sibling spans (e.g. Architect/Developer/Validator) would
     # otherwise all compute the same ref `{trace_id}.{attr_key}` and the last
     # write wins, permanently overwriting the earlier spans' encrypted
-    # payloads before anyone reviews them (FIXES_AND_CLEANUP.md 2.2).
+    # payloads before anyone reviews them (Product_Archive.md 2.2).
     return f"{trace_id}.{span_id}.{attr_key}"
 
 
@@ -266,7 +266,7 @@ class TraceRedactor(_OTelSpanProcessor):
         # time) was the actual cross-tenant leak: on a shared worker pool
         # processing spans for multiple tenants in one process, every
         # HITL-flagged span got encrypted with whichever tenant's key the
-        # processor happened to be constructed with (FIXES_AND_CLEANUP.md 1.2).
+        # processor happened to be constructed with (Product_Archive.md 1.2).
         self.default_tenant_id = tenant_id or os.environ.get("TENANT_ID", "unknown")
         self.enable_ip_redaction = (
             os.environ.get("ENABLE_IP_REDACTION", "false").lower() == "true"

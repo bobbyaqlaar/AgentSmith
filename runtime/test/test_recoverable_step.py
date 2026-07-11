@@ -1,6 +1,6 @@
 """
 runtime/test/test_recoverable_step.py — regression test for
-run_with_recoverable_step (FIXES_AND_CLEANUP.md "HITL/DLQ redesign").
+run_with_recoverable_step (Product_Archive.md "HITL/DLQ redesign").
 
 Exercises the exact CRM example end to end against a real Temporal test
 server (temporalio.testing.WorkflowEnvironment) and a real throwaway
@@ -25,7 +25,7 @@ defining module restricts `pathlib.Path.resolve()`, which this file's own
 sys.path setup below would otherwise trip if it lived in the same module).
 
 Requires DATABASE_URL (throwaway Postgres) — same as test_llm_gateway_budget.py's
-sibling tests, run via `pytest runtime/test/ -v` per OPERATIONS.md §9.
+sibling tests, run via `pytest runtime/test/ -v` per OPERATIONS.md §3.
 Downloads/starts a local Temporal test-server binary on first use
 (cached by the SDK afterward) — this is the one test in this directory
 that needs network access on a cold CI cache.

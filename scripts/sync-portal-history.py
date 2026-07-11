@@ -1,6 +1,6 @@
 """
 sync-portal-history.py — Pushes .agent-history.log entries to the Ops
-Portal's history sync endpoint (FIXES_AND_CLEANUP.md P1b).
+Portal's history sync endpoint (Product_Archive.md P1b).
 
 Workflow:
   1. Read .agent-history.log (JSONL), skip entries already synced
@@ -78,7 +78,7 @@ def _load_tenant_yaml() -> dict:
 
 
 def _budget_cap_usd(tenant_yaml_data: dict) -> Optional[float]:
-    """Reads gateway.budget_cap_usd from tenant.yaml (FIXES_AND_CLEANUP.md
+    """Reads gateway.budget_cap_usd from tenant.yaml (Product_Archive.md
     P2b) — an optional, user-added section (same optionality as the
     already-documented gateway.routing_overrides), not something
     ai-tenant-init writes by default. Returns None if the gateway section

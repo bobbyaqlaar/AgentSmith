@@ -1,6 +1,6 @@
 // portal/lib/runStatus.ts — "last agent run status" for the In-App Widget.
 //
-// Prefers the agent_runs table (FIXES_AND_CLEANUP.md P2a) — populated by
+// Prefers the agent_runs table (Product_Archive.md P2a) — populated by
 // runtime/llm_gateway.py's best-effort POST /api/runs/ingest at run
 // start/end — when a row exists for the tenant; this is what makes
 // "running" a reachable status for the first time. Falls back to deriving
