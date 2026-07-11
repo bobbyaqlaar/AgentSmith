@@ -17,8 +17,21 @@ consolidated here.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Optional
+
+# Single source for the eval-judge model default. Before this constant,
+# run-evals.py / shadow-eval.py / verify_system.py each hardcoded their own
+# fallback and drifted apart — shadow evals were judged by a different model
+# than the PR gate. Docs referencing the default: SPECS.md §7/§21,
+# OPERATIONS.md §0, UserManual.md §8.
+DEFAULT_JUDGE_MODEL = "claude-sonnet-4-6"
+
+
+def judge_model() -> str:
+    """Resolve the eval-judge model: AGENT_JUDGE_MODEL env var, else default."""
+    return os.environ.get("AGENT_JUDGE_MODEL", DEFAULT_JUDGE_MODEL)
 
 
 def _repo_root() -> Path:

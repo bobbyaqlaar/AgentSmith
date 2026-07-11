@@ -44,7 +44,7 @@ REQUIRED_PACKAGES = [
 SOFT_PACKAGES = {"langgraph"}  # warn-only; not hard requirement
 
 
-from _shared import _repo_root  # noqa: E402
+from _shared import _repo_root, judge_model as _resolve_judge_model  # noqa: E402
 
 
 def _check(label: str, ok: bool, detail: str = "", warn_only: bool = False) -> bool:
@@ -181,7 +181,7 @@ def run_checks() -> bool:
         "AGENT_OWNER_NAME set", bool(owner_name), "export AGENT_OWNER_NAME='Your Name'"
     ):
         failures += 1
-    judge = os.environ.get("AGENT_JUDGE_MODEL", "claude-3-5-sonnet-20241022")
+    judge = _resolve_judge_model()
     _check(f"AGENT_JUDGE_MODEL: {judge}", True)
     print()
 
@@ -419,7 +419,7 @@ def check_dlq() -> bool:
 def check_hooks() -> bool:
     """
     CI validation for the developer opt-in + enterprise RFC gate
-    (FIXES_AND_CLEANUP.md P1a) — simulates both scenarios in throwaway git
+    (Product_Archive.md P1a) — simulates both scenarios in throwaway git
     repos so a regression in hooks/pre-commit / hooks/commit-msg fails CI
     instead of only being caught by hand.
     """
@@ -536,7 +536,7 @@ def check_hooks() -> bool:
 def check_history_sync() -> bool:
     """
     CI/manual validation for scripts/sync-portal-history.py against a real
-    running Ops Portal (FIXES_AND_CLEANUP.md P1b) — requires OPS_PORTAL_URL
+    running Ops Portal (Product_Archive.md P1b) — requires OPS_PORTAL_URL
     and OPS_PORTAL_SYNC_TOKEN pointing at one, run from a throwaway tenant
     repo (with .agenticframework/tenant.yaml and a fixture .agent-history.log).
 
@@ -620,7 +620,7 @@ def check_history_sync() -> bool:
 
 def check_kg() -> bool:
     """
-    CI validation for the Knowledge Graph (FIXES_AND_CLEANUP.md P10a, Pillar 2).
+    CI validation for the Knowledge Graph (Product_Archive.md P10a, Pillar 2).
     Runs map_codebase.py against the framework's own codebase and asserts the
     resulting graph is non-empty with at least the known scripts/ file nodes.
 
@@ -859,7 +859,7 @@ def check_onprem_deploy() -> bool:
 
 def check_delivery_model() -> bool:
     """
-    Soft gate for Enterprise Delivery Model (FIXES_AND_CLEANUP.md).
+    Soft gate for Enterprise Delivery Model (Product_Archive.md).
 
     If `.agenticframework/org-policy.yaml` defines `delivery_model`, warn when
     tenant `delivery.platform` / `data_access_pattern` are missing or not in

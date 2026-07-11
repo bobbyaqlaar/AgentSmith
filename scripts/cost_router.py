@@ -109,7 +109,7 @@ _consecutive_failures: dict[str, int] = {}
 # individual models — fine for this file's actual usage (dev-mode, one
 # process per session, a handful of model names), but unbounded if ever used
 # in a long-running process with many distinct/dynamic model ids
-# (FIXES_AND_CLEANUP.md 4.4). This is a cheap upper bound, not an LRU — if it
+# (Product_Archive.md 4.4). This is a cheap upper bound, not an LRU — if it
 # ever fires, dropping the whole dict just means the escalation counters
 # reset to 0, which is the same as every model's first call ever.
 _MAX_TRACKED_MODELS = 256
@@ -366,7 +366,7 @@ def call(
         # runtime/llm_gateway.py via runtime/provider_dispatch.py — this
         # used to independently re-derive "is this Anthropic" from the
         # base_url string and build/parse bodies inline, drifting from
-        # llm_gateway.py's own copy of the same logic (FIXES_AND_CLEANUP.md 4.3).
+        # llm_gateway.py's own copy of the same logic (Product_Archive.md 4.3).
         provider = infer_provider(route_result.base_url)
         path_suffix, headers, body = build_request(
             provider,
@@ -384,8 +384,24 @@ def call(
             "/messages" if provider == "anthropic" else path_suffix
         )
 
-        resp = httpx.post(url, json=body, headers=headers, timeout=120.0)
-        resp.raise_for_status()
+        # Rate-limit retry with FULL JITTER (P11a lesson — do not remove the
+        # jitter): a bare `2**n * 5` gives every concurrent CI job identical
+        # waits, so they retry in lockstep and re-saturate the provider's
+        # rate window together (observed live against Groq's 30 RPM free
+        # tier). random.uniform(0, 3) de-synchronizes them.
+        # Waits: ~10–13s, ~20–23s, ~40–43s across the 3 retries (4 attempts).
+        import random
+        import time as _time
+
+        max_attempts = 4
+        for attempt in range(1, max_attempts + 1):
+            resp = httpx.post(url, json=body, headers=headers, timeout=120.0)
+            if resp.status_code == 429 and attempt < max_attempts:
+                wait = (2**attempt) * 5 + random.uniform(0, 3)
+                _time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            break
         data = resp.json()
 
         text, in_tok, out_tok = parse_response(provider, data)
