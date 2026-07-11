@@ -8,6 +8,10 @@
 #   hooks.tar.gz                (hooks/)
 #   workflow-templates.tar.gz   (workflow-templates/)
 #   templates.tar.gz            (templates/agent-rules.yaml)
+#   github-actions.tar.gz       (.github/actions/ — composite actions the
+#                                ci-*/cd-* templates reference as
+#                                ./.github/actions/<name>; copied into each
+#                                tenant repo by post-checkout/ai-tenant-init)
 #
 # Optionally GPG-signs each tarball if ORG_GPG_KEY_ID + ORG_GPG_PRIVATE_KEY
 # secrets are configured — same signing mechanism as
@@ -42,7 +46,8 @@ jobs:
           tar -czf dist/hooks.tar.gz -C hooks .
           tar -czf dist/workflow-templates.tar.gz -C workflow-templates .
           tar -czf dist/templates.tar.gz -C templates agent-rules.yaml
-          # In-App Widget: no cdn.agenticframework.io exists (FIXES_AND_CLEANUP.md
+          tar -czf dist/github-actions.tar.gz -C .github/actions .
+          # In-App Widget: no cdn.agenticframework.io exists (Product_Archive.md
           # 5.11) — ship widget.js as a release asset so tenants can self-host it
           # (e.g. <script src="/static/widget.js">) instead of pointing at a
           # domain that was never actually provisioned.
@@ -56,7 +61,7 @@ jobs:
         # contents-only archives); this step makes a regression in the build
         # step (e.g. someone "fixing" it back to `tar -czf x.tar.gz scripts`)
         # fail CI instead of silently shipping a release that breaks every
-        # fresh `install-ai-stack.sh` run (FIXES_AND_CLEANUP.md 4.13).
+        # fresh `install-ai-stack.sh` run (Product_Archive.md 4.13).
         run: |
           set -euo pipefail
           for f in dist/*.tar.gz; do

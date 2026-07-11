@@ -15,7 +15,7 @@
 #    AI_STACK_FRAMEWORK_REPO=https://github.com/acme-corp/AgentSmith ./install-ai-stack.sh
 #
 #  Enterprise mode (skips mutating git's GLOBAL init.templateDir — see
-#  OPERATIONS.md Part G for the MDM-distributed hooks path instead):
+#  OPERATIONS.md Appendix A for the MDM-distributed hooks path instead):
 #    ./install-ai-stack.sh --mode enterprise
 #    # piped form needs `-s --` to forward args through stdin:
 #    curl -fsSL .../install-ai-stack.sh | bash -s -- --mode enterprise
@@ -30,7 +30,7 @@ set -uo pipefail
 # --mode enterprise: skips the global init.templateDir mutation entirely.
 #   Intended for shared/managed machines where IT distributes hooks via the
 #   signed MDM bundle instead (enterprise/package-hook-bundle.sh +
-#   mdm-deploy-hooks.sh, see OPERATIONS.md Part G) — this installer still
+#   mdm-deploy-hooks.sh, see OPERATIONS.md Appendix A) — this installer still
 #   vendors scripts/templates/shell functions, just without taking over
 #   every user's global git config on a machine it doesn't fully own.
 INSTALL_MODE="developer"
@@ -62,7 +62,7 @@ FRAMEWORK_VERSION="1.0.0"
 # script substituted anywhere — it was used verbatim as a URL component in
 # release-download fallback paths (SCRIPTS_URL etc. below), which would
 # fail outright the moment any of those fallback paths actually executed
-# (FIXES_AND_CLEANUP.md 5.10).
+# (Product_Archive.md 5.10).
 FRAMEWORK_REPO="${AI_STACK_FRAMEWORK_REPO:-https://github.com/bobbyaqlaar/AgentSmith}"
 FRAMEWORK_DIR="$HOME/.agent-framework"
 TEMPLATE_DIR="$HOME/.git_templates"
@@ -70,7 +70,7 @@ SCRIPTS_DIR="$FRAMEWORK_DIR/scripts"
 SHARED_DIR="$FRAMEWORK_DIR/shared"
 WORKFLOW_TEMPLATES_DIR="$FRAMEWORK_DIR/workflow-templates"
 # Standing, machine-wide Phoenix + Postgres + Ops Portal stack — shared
-# across every repo on this machine (FIXES_AND_CLEANUP.md P0.5), not
+# across every repo on this machine (Product_Archive.md P0.5), not
 # scoped to any one project checkout. Managed via ai-dashboard-start/-stop.
 OBSERVABILITY_DIR="$FRAMEWORK_DIR/observability"
 
@@ -280,6 +280,28 @@ else
   fi
 fi
 
+# Composite GitHub Actions (.github/actions/) — the ci-*/cd-* workflow
+# templates reference these as `uses: ./.github/actions/<name>`, which
+# resolves inside the TENANT repo, so post-checkout/ai-tenant-init must copy
+# them into each tenant repo alongside the workflows. Vendored here the same
+# way workflow-templates are.
+GITHUB_ACTIONS_DIR="$FRAMEWORK_DIR/github-actions"
+mkdir -p "$GITHUB_ACTIONS_DIR"
+if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/.github/actions" ]; then
+  cp -r "$INSTALLER_DIR/.github/actions/." "$GITHUB_ACTIONS_DIR/"
+  success "Composite GitHub Actions copied from local repo"
+elif [ "$(ls -A "$GITHUB_ACTIONS_DIR" 2>/dev/null)" ]; then
+  success "Composite GitHub Actions already present in ~/.agent-framework/github-actions/"
+else
+  info "Downloading github-actions from GitHub..."
+  GITHUB_ACTIONS_URL="${FRAMEWORK_REPO}/releases/latest/download/github-actions.tar.gz"
+  if command_exists curl && curl -fsSL "$GITHUB_ACTIONS_URL" | tar -xz -C "$GITHUB_ACTIONS_DIR" 2>/dev/null; then
+    success "Composite GitHub Actions downloaded from GitHub"
+  else
+    warn "No composite GitHub Actions found — tenant cd-staging/cd-production will fail on 'uses: ./.github/actions/*' until ~/.agent-framework/github-actions/ is populated"
+  fi
+fi
+
 # agent-rules.yaml — single source of truth for .cursorrules/CLAUDE.md/Antigravity
 # skill generation (SPECS.md §4, §13, §22 Phase 5). The post-checkout hook reads
 # it from here via scripts/generate-ide-config.py.
@@ -302,7 +324,7 @@ fi
 # On-prem/air-gapped deployment template (Docker Compose + Traefik/Envoy
 # canary+shadow routing, Helm chart for K8s) — opt-in, vendored like
 # agent-rules.yaml above but only ever copied into a tenant repo on
-# explicit request via ai-onprem-deploy-scaffold (FIXES_AND_CLEANUP.md P4
+# explicit request via ai-onprem-deploy-scaffold (Product_Archive.md P4
 # on-prem follow-up), never written automatically the way the CI/CD
 # workflow templates are by ai-tenant-init/post-checkout.
 if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/templates/onprem-deploy" ]; then
@@ -474,7 +496,7 @@ success "All four git hook templates written and made executable"
 if [ "$INSTALL_MODE" = "enterprise" ]; then
   info "Enterprise mode (--mode enterprise): skipping global git init.templateDir."
   info "Hooks are vendored to $TEMPLATE_DIR but not linked machine-wide — distribute"
-  info "via enterprise/package-hook-bundle.sh + mdm-deploy-hooks.sh instead (OPERATIONS.md Part G)."
+  info "via enterprise/package-hook-bundle.sh + mdm-deploy-hooks.sh instead (OPERATIONS.md Appendix A)."
 else
   if [ ! -f "$FRAMEWORK_DIR/previous_template_dir" ]; then
     git config --global init.templateDir 2>/dev/null > "$FRAMEWORK_DIR/previous_template_dir" || true
@@ -568,7 +590,7 @@ function _ai_org_policy_get() {
 # HMAC-over-shared-secret pattern already used for widget tokens (hashed,
 # portal/lib/widgetTokens.ts) and the audit log's tamper-evident signatures
 # (portal/lib/auditLog.ts), instead of accepting any non-empty string as a
-# valid token (FIXES_AND_CLEANUP.md 1.5 — the control was a UI speed bump,
+# valid token (Product_Archive.md 1.5 — the control was a UI speed bump,
 # not a real gate). Token format: "<actor>:<expires_epoch>.<hex_hmac_sha256>",
 # issued by IT and signed with BREAK_GLASS_HMAC_KEY (a secret IT controls,
 # distributed out-of-band — never the same value as AI_BREAK_GLASS_TOKEN
@@ -736,7 +758,7 @@ function ai-stack-status() {
 }
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
-# Per-repo opt-out (FIXES_AND_CLEANUP.md P0.5c): a repo with this marker is
+# Per-repo opt-out (Product_Archive.md P0.5c): a repo with this marker is
 # treated as fully standalone — ai-dashboard-start falls back to the plain-
 # process Phoenix launch even when the shared stack is available, so this
 # repo's traces/work never touch the machine-wide stack at all.
@@ -833,7 +855,7 @@ function _ai_audit_log_event() {
   # audit log" — unconditionally, not "when the Ops Portal happens to be
   # configured and reachable". Previously a missing OPS_PORTAL_URL/
   # AUDIT_LOG_WRITE_TOKEN, or `|| true` swallowing a curl failure, dropped
-  # the event with zero error and zero record anywhere (FIXES_AND_CLEANUP.md
+  # the event with zero error and zero record anywhere (Product_Archive.md
   # 1.6). This keeps the "never block the calling command" design (the
   # bypass/promotion/etc. still proceeds either way) but now always leaves a
   # local trace when the remote write didn't happen, so a hook_bypass under
@@ -881,7 +903,7 @@ function ai-tenant-init() {
   fi
   # tenant_id is interpolated into a sed replacement string below with no
   # escaping — an id containing '/', '&', or other sed-significant
-  # characters would corrupt the substitution (FIXES_AND_CLEANUP.md 4.12).
+  # characters would corrupt the substitution (Product_Archive.md 4.12).
   # Same pattern Kubernetes namespace naming already requires, so this also
   # keeps shared- and dedicated-isolation tenant ids consistent.
   if ! [[ "$tenant_id" =~ ^[a-z0-9-]+$ ]]; then
@@ -933,7 +955,12 @@ TENANT_EOF
 
   mkdir -p ".github/workflows"
   local wrote_any=0
-  for wf in "ci-${stack}.yml" "cd-staging.yml" "cd-production.yml" "eval-scorecard.yml"; do
+  # eval-fairness/eval-hallucination/eval-ttft-live are referenced by every
+  # ci-<stack>.yml as `uses: ./.github/workflows/<name>` — a missing callee
+  # makes GitHub reject the whole CI workflow as invalid, so they ship
+  # together with the caller.
+  for wf in "ci-${stack}.yml" "cd-staging.yml" "cd-production.yml" "eval-scorecard.yml" \
+            "eval-fairness.yml" "eval-hallucination.yml" "eval-ttft-live.yml"; do
     local src="$tmpl_dir/$wf"
     local dest=".github/workflows/$wf"
     if [ ! -f "$src" ]; then
@@ -949,6 +976,27 @@ TENANT_EOF
     wrote_any=1
   done
 
+  # Composite actions the cd-* workflows call as `uses: ./.github/actions/<name>`
+  # — resolved inside THIS repo, so they must exist here, not just in the
+  # framework repo (vendored to ~/.agent-framework/github-actions/ by the installer).
+  local actions_src="$HOME/.agent-framework/github-actions"
+  if [ -d "$actions_src" ] && [ "$(ls -A "$actions_src" 2>/dev/null)" ]; then
+    mkdir -p ".github/actions"
+    local action_dir action_name
+    for action_dir in "$actions_src"/*/; do
+      [ -d "$action_dir" ] || continue
+      action_name="$(basename "$action_dir")"
+      if [ -d ".github/actions/$action_name" ]; then
+        echo "⚠️  .github/actions/$action_name already exists — leaving untouched"
+        continue
+      fi
+      cp -r "$action_dir" ".github/actions/$action_name"
+      echo "✅ Wrote .github/actions/$action_name"
+    done
+  else
+    echo "⚠️  ~/.agent-framework/github-actions/ missing — cd-staging/cd-production reference ./.github/actions/* and will fail; re-run install-ai-stack.sh"
+  fi
+
   _ai_audit_log_event "tenant_created" "${AGENT_OWNER_ID:-unknown}" "$tenant_id" \
     "{\"stack\":\"${stack}\",\"isolation\":\"${isolation}\"}"
 
@@ -963,7 +1011,7 @@ TENANT_EOF
     echo "   at a dedicated instance of your own for this tenant's CD secrets."
   else
     echo "   Set OPS_PORTAL_URL + OPS_PORTAL_SYNC_TOKEN as GitHub Environment secrets to"
-    echo "   sync this tenant's history to the shared Ops Portal automatically (OPERATIONS.md §2.6)."
+    echo "   sync this tenant's history to the shared Ops Portal automatically (OPERATIONS.md §5)."
   fi
   if [ "$isolation" = "dedicated" ]; then
     echo ""
@@ -1037,7 +1085,7 @@ function ai-tenant-promote() {
   # Exact match on the parsed field, not a substring grep: "id: acme" would
   # previously also match "id: acme-sandbox" or "id: acme2", letting
   # ai-tenant-promote run against the wrong tenant's repo if it happened to
-  # share a prefix (FIXES_AND_CLEANUP.md 1.4). Same field-parsing approach as
+  # share a prefix (Product_Archive.md 1.4). Same field-parsing approach as
   # ai-stack-upgrade's tenant_id extraction further down this file.
   local actual_tenant_id
   actual_tenant_id="$(grep '^  id:' .agenticframework/tenant.yaml | head -1 | sed 's/^  id:[[:space:]]*//')"
@@ -1083,7 +1131,7 @@ function ai-stack-scrub() {
   # Find every match FIRST and show the exact paths before asking — a
   # confirmation that only names the top-level directory (e.g. "$HOME")
   # gives no idea that -maxdepth 3 reaches across every sibling project's
-  # .cursorrules/CLAUDE.md/.agents/ underneath it (FIXES_AND_CLEANUP.md
+  # .cursorrules/CLAUDE.md/.agents/ underneath it (Product_Archive.md
   # 4.11). Note: .agent-history.log was listed in the old warning text but
   # never actually matched/removed by any command below — that mismatch is
   # dropped here rather than carried forward or silently "fixed" by adding

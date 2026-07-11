@@ -25,13 +25,35 @@ jobs:
       - name: "py_compile sweep"
         run: |
           find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
+      - name: "SPECS.md repo-tree drift check (top level)"
+        # SPECS.md §16 holds the only copy of the repository tree (README links
+        # to it). This diffs its top-level entries against git ls-files so tree
+        # drift (renamed/added/removed top-level files or dirs) fails CI instead
+        # of accumulating silently.
+        run: |
+          python3 - <<'EOF'
+          import re, subprocess, pathlib, sys
+          specs = pathlib.Path("SPECS.md").read_text()
+          m = re.search(r"### Repository Structure\n\n```\n(.*?)\n```", specs, re.S)
+          assert m, "Repository Structure block missing from SPECS.md"
+          tree = {e.rstrip("/") for e in re.findall(r"^[├└]── ([A-Za-z0-9_.\-]+/?)", m.group(1), re.M)}
+          tracked = {p.split("/")[0] for p in subprocess.check_output(["git","ls-files"],text=True).splitlines()}
+          ignore = {".DS_Store", ".claude"}
+          missing = sorted(tracked - tree - ignore)
+          ghost = sorted(e for e in tree if not pathlib.Path(e).exists())
+          if missing or ghost:
+              print("missing from SPECS.md tree:", missing)
+              print("in tree but absent on disk:", ghost)
+              sys.exit(1)
+          print(f"SPECS.md tree matches repo top level ({len(tree)} entries)")
+          EOF
       - name: "Redaction compliance (staging + production profiles)"
         run: |
           ENVIRONMENT=staging python3 scripts/verify_system.py --check-redaction
           ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
       - name: "Hook opt-in / enterprise RFC gate"
         run: python3 scripts/verify_system.py --check-hooks
-      - name: "verify_system.py --check-kg (Knowledge Graph, FIXES_AND_CLEANUP.md P10a)"
+      - name: "verify_system.py --check-kg (Knowledge Graph, Product_Archive.md P10a)"
         run: python3 scripts/verify_system.py --check-kg
       - name: "Set up Helm"
         uses: azure/setup-helm@v4

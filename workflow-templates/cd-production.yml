@@ -45,7 +45,7 @@ jobs:
       # Must run before build-push-ghcr when pushing to Artifact Registry, and
       # before the deploy step when using gcloud/kubectl. Sets ADC on the runner
       # so any subsequent step calling google.auth.default() is authenticated.
-      # See OPERATIONS.md §D.5b for one-time GCP setup instructions.
+      # See OPERATIONS.md §4 (GCP deployment specifics) for one-time setup instructions.
       - name: "Authenticate to GCP"
         uses: ./.github/actions/gcp-auth
         with:
