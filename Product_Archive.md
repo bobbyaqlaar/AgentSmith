@@ -1,7 +1,7 @@
 # AgentSmith — Product Build Archive
 
 **Purpose:** Authoritative record of every implementation PR, design
-decision, and acceptance-criteria audit from P0 through P9. This is a
+decision, and acceptance-criteria audit from P0 through P11. This is a
 read-only historical log — do not re-open items here unless a regression
 has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
@@ -481,6 +481,152 @@ via GitHub Actions with keyless Workload Identity Federation auth.
 | oil-price-demo production CD (worker → Cloud Run) | ✅ deployed |
 | AgentSmith Ops Portal staging + production (Next.js → Cloud Run via AR) | ✅ deployed |
 
+### P11a/b/c — full detail (moved from FIXES_AND_CLEANUP.md, 2026-07-11)
+
+### P11a — oil-price-demo CI green ✅ DONE (2026-07-01)
+
+**Context:** Oil-price-demo repo is checked out locally at
+`/Users/mac/Documents/Bobby/Aqlaar/Apps/oil-price-demo` — edits go via
+normal `git` + push, NOT `gh api PUT`. The `git clone` avoidance rule
+applies only when cloning FROM WITHIN the AgentSmith directory.
+
+**Final CI state (branch: `develop`, PR #1 open `develop → main`):**
+
+| Job | Status |
+|---|---|
+| Guardrails — Python/FastAPI | ✅ PASS |
+| Eval scorecard | ✅ PASS |
+| Deploy to Staging | 🔄 in progress (GCP secrets present, smoke test pending) |
+
+**Fixes applied to get CI green (cumulative):**
+1. `scripts/run-evals.py` — detect `result["status"] == "failed"` from
+   `run_pipeline()` as pipeline error → `pipeline_error=True` → all-errors
+   path exits cleanly.
+2. Ruff lint fixes: unused imports (F401), unnecessary f-strings (F541),
+   invalid `# noqa` directives.
+3. `ruff format` must be run separately from `ruff check` — both must pass.
+4. `scripts/run-evals.py::run_scorecard()` — results path `relative_to()`
+   raises `ValueError` when monkeypatched to `tmp_path` outside repo root;
+   wrapped in try/except.
+5. `test/test_activities.py` — spike series sigma inflation fixed with
+   10-stable + 1-spike series.
+6. `scripts/check_bare_except.py` (repo + `~/.agent-framework/scripts/`) —
+   suppression convention is `# fail-open: <reason>` ONLY (the interim
+   `# noqa: bare-except` form was dropped: ruff validates rule codes after
+   any `# noqa:` and flags unknown ones as invalid). The global
+   `~/.agent-framework` copy is what the pre-commit hook actually executes;
+   it drifted from the repo copy during P11a and was re-synced 2026-07-11.
+7. `scripts/cost_router.py` — 4-attempt retry with full jitter:
+   `wait = (2**attempt)*5 + random.uniform(0, 3)` (10–13s, 20–23s, 40–43s).
+   Simple `2**n * 5` without jitter caused thundering-herd retries that still
+   saturated Groq's 30 RPM free tier.
+8. `scripts/run-evals.py` — `all(pipeline_error)` path now returns `0` not `2`.
+   Exit code 2 is non-zero and fails the CI step; "skip gracefully on infra
+   errors" requires exit 0.
+9. `test/test_run_evals.py` — updated `test_skip_when_all_pipeline_errors`
+   assertion from `== 2` to `== 0` to match above.
+
+**Repeated-action lessons (do not repeat these):**
+- **Groq 429 retry without jitter** — `2**n * 5` gives fixed waits; concurrent
+  CI jobs retry in lockstep and re-saturate the rate window together. Always
+  add `random.uniform(0, 3)` jitter.
+- **`# fail-open:` convention + global-copy drift** — the hook reads the
+  GLOBAL `~/.agent-framework/scripts/check_bare_except.py`, not the repo
+  copy; always sync both when changing checker behavior. The one accepted
+  suppression form is `# fail-open: <reason>` (`# noqa: bare-except` was
+  retired — ruff rejects unknown noqa codes).
+- **Non-zero "skip" exit code** — `return 2` in `run_scorecard()` still fails
+  the shell step. Graceful skip = `return 0`.
+- **Test/code skew** — when changing a return value, update the test in the
+  same commit; CI will catch the skew if they ship separately.
+
+**Note:** `cd-demo-ui.yml` fails (no demo UI Dockerfile) — expected, not blocking.
+
+---
+
+### P11b — GCP resources + oil-price-demo GitHub Environments ✅ DONE
+
+**oil-price-demo GitHub Environments** (`bobbyaqlaar/oil-price-demo` → Settings → Environments):
+
+| Secret | staging | production |
+|---|---|---|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | ✅ set | ✅ set |
+| `GCP_SERVICE_ACCOUNT` | ✅ set | ✅ set |
+| `GCP_PROJECT_ID` | ✅ set | ✅ set |
+| `DEPLOY_COMMAND` | ✅ Cloud Run deploy cmd | ✅ set |
+| `GROQ_API_KEY` | ✅ set | ✅ set |
+| `AGENT_MODEL_ARCHITECT` | ✅ `llama-3.3-70b-versatile` | ✅ set |
+| `AGENT_MODEL_COMPLEX` | ✅ `llama-3.3-70b-versatile` | ✅ set |
+| `AGENT_JUDGE_MODEL` | ✅ `llama-3.3-70b-versatile` | ✅ set |
+| `ANTHROPIC_API_KEY` | ✅ present (zero balance — Groq is fallback) | ✅ set |
+
+**GCP resources provisioned (project: `agentsmith-500916`, us-central1):**
+- Cloud SQL Postgres: `temporal-pg` (db-f1-micro, public IP `35.255.14.25`, ssl-mode=ENCRYPTED_ONLY)
+- Cloud Run: `temporal-server` (min-instances=1, BIND_ON_IP=0.0.0.0, SQL_TLS_ENABLED=true)
+- Cloud Run: `oil-price-worker-staging` (deployed; /healthz 404 anomaly under investigation, not blocking)
+- Artifact Registry: `oil-price-demo` repo
+- Artifact Registry: `agentsmith-portal` repo (portal images)
+- WIF pool: `github-actions-pool` / provider `github-provider`
+  - **Attribute condition:** `assertion.repository in ['bobbyaqlaar/oil-price-demo', 'bobbyaqlaar/AgentSmith']`
+    (updated from single-repo `==` to multi-repo `in [...]` when second repo was added)
+- SA: `github-deployer@agentsmith-500916.iam.gserviceaccount.com`
+  - Also granted `roles/cloudsql.client` (for Cloud SQL Auth Proxy on the Compute SA — see P11c)
+- Secret Manager: `oil-price-demo-anthropic-key`, `ops-portal-user`, `ops-portal-password`,
+  `ops-portal-db-url`, `ops-portal-audit-hmac-key`, `ops-portal-sync-token`
+- `agenticframework` database created on `temporal-pg`; schema migrated (all portal tables + triggers)
+
+**oil-price-demo PR #1 merged to main** ✅ Production CD deployed successfully ✅
+
+**Billable resources — explicitly deferred:** Cloud SQL `temporal-pg` (~$7–10/month) and `temporal-server` Cloud Run (min-instances=1) remain live to support the P11d demo publication. Tear down after demo article is published. Owner: Bobby.
+
+---
+
+### P11c — AgentSmith Ops Portal deployed to GCP ✅ DONE (2026-07-01)
+
+**AgentSmith GitHub Environments** (`bobbyaqlaar/AgentSmith` → Settings → Environments):
+
+| Secret | staging | production |
+|---|---|---|
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | ✅ set | ✅ set |
+| `GCP_SERVICE_ACCOUNT` | ✅ `github-deployer@agentsmith-500916.iam.gserviceaccount.com` | ✅ set |
+| `GCP_PROJECT_ID` | ✅ set | ✅ set |
+| `DEPLOY_COMMAND` (staging) | ✅ see full command below | ✅ production equivalent |
+
+**Current DEPLOY_COMMAND (staging):**
+> ⚠️ `$IMAGE_REF` and `$GCP_PROJECT_ID` are set as env vars by the `cd-portal.yml` workflow steps before this command runs. This command cannot be pasted into a terminal as-is — those variables will be empty outside the GitHub Actions job context.
+```
+gcloud run deploy agentsmith-portal-staging \
+  --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID \
+  --platform managed --allow-unauthenticated \
+  --add-cloudsql-instances=agentsmith-500916:us-central1:temporal-pg \
+  --set-secrets=OPS_PORTAL_USER=ops-portal-user:latest,OPS_PORTAL_PASSWORD=ops-portal-password:latest,DATABASE_URL=ops-portal-db-url:latest,AUDIT_LOG_HMAC_KEY=ops-portal-audit-hmac-key:latest,OPS_PORTAL_SYNC_TOKEN=ops-portal-sync-token:latest
+```
+
+**DATABASE_URL (stored in Secret Manager `ops-portal-db-url`):**
+```
+postgresql://postgres:***@/agenticframework?host=/cloudsql/agentsmith-500916:us-central1:temporal-pg
+```
+Unix socket via Cloud SQL Auth Proxy — no TCP, no cert management, Google-managed mTLS.
+
+**Live Cloud Run services:**
+- Staging: https://agentsmith-portal-staging-431995395208.us-central1.run.app
+- Production: https://agentsmith-portal-production-431995395208.us-central1.run.app
+- Credentials: `ops` / stored in Secret Manager `ops-portal-password`
+
+**Fixes applied during portal deploy (do not repeat):**
+1. WIF attribute condition was locked to `oil-price-demo` only — updated to `in [...]` list.
+2. `build-push-ghcr` action defaulted to root `Dockerfile` (absent) — added `dockerfile_path: portal/Dockerfile` in `cd-portal.yml`.
+3. GHCR image name preserved repo casing (`AgentSmith`) — added `| tr '[:upper:]' '[:lower:]'` to `build-push-ghcr/action.yml`.
+4. Cloud Run rejects GHCR images — added "Push to Artifact Registry" step in `cd-portal.yml` that retags and pushes before `gcloud run deploy`.
+5. `DEPLOY_COMMAND` referenced `$GCP_PROJECT_ID` but it wasn't exported — added `env: GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}` at the job level.
+6. `GCP_SERVICE_ACCOUNT` secret had wrong value — corrected to `github-deployer@agentsmith-500916.iam.gserviceaccount.com`.
+7. Portal startup check requires `OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD` — created Secret Manager secrets and wired via `--set-secrets` in `DEPLOY_COMMAND`.
+8. `DATABASE_URL` not set — created `agenticframework` DB on Cloud SQL, ran schema migration, stored connection string in Secret Manager.
+9. SSL cert verification failure (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`) — **do not use `sslmode=no-verify`** (MITM-vulnerable). Fixed by switching to **Cloud SQL Auth Proxy** via `--add-cloudsql-instances`: Unix socket connection, IAM auth, Google-managed mTLS. Compute SA granted `roles/cloudsql.client`.
+10. New Secret Manager secrets need explicit SA binding before `gcloud run deploy` can reference them — grant `roles/secretmanager.secretAccessor` to the Compute SA for each secret.
+
+---
+
 ### GCP resources (project: `agentsmith-500916`, us-central1)
 
 | Resource | Name / Detail |
@@ -516,6 +662,67 @@ via GitHub Actions with keyless Workload Identity Federation auth.
 | `.github/actions/gcp-auth/action.yml` | Composite: WIF keyless auth + optional SA key fallback; graceful skip when secrets absent |
 | `.github/actions/build-push-ghcr/action.yml` | Composite: multi-stage Docker build → GHCR push; skips cleanly if no Dockerfile |
 
+## Phase deliverables checklist (moved from SPECS.md §22, 2026-07-11)
+
+All items delivered; retained here as the historical record of what each
+phase shipped.
+
+### Phase 0 — Spec Alignment (current)
+- [x] Apply all changes from architecture review to SPECS.md (this document)
+- [x] Fix `.claudecode.json` → `CLAUDE.md` across all docs and scripts
+- [x] Standardize knowledge graph path to `.agent-rfc/fixtures/knowledge_graph.json`
+- [x] Fix hybrid data-locality wording in §8 and scripts
+- [x] Fix `ai-stack-on` → `ai-mode-local` in installation steps
+- [x] Refresh §21 with decisions 12–21
+- [x] Phase §22 deliverables
+
+### Phase 1 — Tenant Scaffold
+- [x] `.agenticframework/tenant.yaml` schema and `ai-tenant-init` command
+- [x] Per-tenant CI/CD workflow templates (ci + cd-staging + cd-production)
+- [x] `tenant.id` wired into all OTel spans and log entries in `agent_logger.py`
+
+### Phase 2 — Production Runtime
+- [x] `runtime/` package stubs (worker, gateway, redactor, idempotency, DLQ)
+- [x] Temporal reference workflow in `examples/oil-price-agent/`
+- [x] Full implementation of `runtime/llm_gateway.py`
+- [x] Full implementation of `runtime/trace_redactor.py`
+- [x] Postgres checkpointer; `MemorySaver` marked dev-only in docs
+
+### Phase 3 — Observability
+- [x] `portal/` stub directory
+- [x] `templates/in-app-widget/` stub
+- [x] Ops Portal v1 implementation
+- [x] In-App Widget implementation
+- [x] Phoenix auth sidecar in `docker-compose.yml`
+
+### Phase 4 — Enterprise Pack (optional)
+- [x] Org hook bundle signing and MDM deploy script
+- [~] SSO for portal and Phoenix — Ops Portal OIDC done (`portal/lib/oidc.ts`); Phoenix is still basic-auth-only via the Caddy sidecar (§15) — true Phoenix OIDC needs a custom Caddy build with an auth plugin (e.g. `caddy-security`), not yet built/tested
+- [x] Immutable audit log schema
+- [x] Dedicated worker pool per tenant (`isolation: dedicated`)
+
+### Phase 5 — Framework Hygiene
+- [x] Extract hooks to `hooks/` directory (from heredocs in `install-ai-stack.sh`)
+- [x] `.github/workflows/self-test.yml` and `release.yml` for framework itself
+- [x] `templates/agent-rules.yaml` single-source IDE config generation
+- [x] `generate-ide-config.py --check-only` IDE config drift gate + `verify_system.py --check-kg` Knowledge Graph gate wired into tenant CI and `self-test.yml` (FIXES_AND_CLEANUP.md P10)
+- [x] `ai-stack-uninstall` command implementation
+- [x] `ai-stack-upgrade` command implementation
+
+### Already Delivered (from v0.3.0)
+- [x] `SPECS.md` formal specification
+- [x] `Readme.md` (formal, with happy-flow example)
+- [x] `UserManual.md` (17 sections)
+- [x] `install-ai-stack.sh` (9-section idempotent installer)
+- [x] `requirements.txt` (pinned ranges)
+- [x] All 14 Python scripts in `scripts/`
+- [x] IDE config single source (`templates/agent-rules.yaml` + `scripts/generate-ide-config.py`)
+- [x] GitHub Actions workflow templates (`workflow-templates/`)
+- [x] `docker-compose.yml` (Phoenix + PostgreSQL)
+- [x] `docs/team-observability.md`
+
+---
+
 *Active work lives in `FIXES_AND_CLEANUP.md` (P11d demo publication pending).
-SPECS.md and Readme.md are the canonical specification record.
-OPERATIONS.md is the canonical operator-facing reference.*
+SPECS.md is the canonical specification record; README.md is the framework
+introduction; OPERATIONS.md is the canonical operator-facing reference.*

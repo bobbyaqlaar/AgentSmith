@@ -106,7 +106,7 @@ async def run_prediction_activity(payload: dict) -> dict:
     # workflow run id alone — a Temporal activity retry of THIS SPECIFIC call
     # must dedupe against itself, but a different activity in the same
     # workflow run (or the same activity called again with different input)
-    # must not collide with it (FIXES_AND_CLEANUP.md P0).
+    # must not collide with it (Product_Archive.md P0).
     idempotency_key = make_key(
         {
             "activity": "run_prediction_activity",
@@ -154,7 +154,7 @@ async def decide_action_activity(payload: dict) -> dict:
     require before calling it — wrapped by
     oil_price_workflow.py's run_with_recoverable_step, so a payload this
     rejects parks the workflow alive for a human to correct via the Ops
-    Portal's DLQ view (FIXES_AND_CLEANUP.md's HITL/DLQ redesign) instead
+    Portal's DLQ view (Product_Archive.md's HITL/DLQ redesign) instead
     of failing the run. This is the exact CRM-example shape: a malformed
     field is the kind of error a human edit fixes, not a retry.
     """

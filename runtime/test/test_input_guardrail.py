@@ -1,6 +1,6 @@
 """
 runtime/test/test_input_guardrail.py — pre-call PII scrubbing
-(FIXES_AND_CLEANUP.md Security & Guardrails / UAE PDPL).
+(Product_Archive.md Security & Guardrails / UAE PDPL).
 """
 
 from __future__ import annotations

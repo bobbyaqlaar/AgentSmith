@@ -33,7 +33,7 @@ without string-matching. `workflow_id`/`gate_id` identify which live
 workflow and which specific gate within it this entry came from — needed
 because a workflow can have multiple recoverable steps (sequential or
 concurrent), so a single global signal isn't enough to route a fix back to
-the right one (FIXES_AND_CLEANUP.md HITL/DLQ redesign).
+the right one (Product_Archive.md HITL/DLQ redesign).
 
 On enqueue, posts to SLACK_WEBHOOK_URL/TEAMS_WEBHOOK_URL if configured —
 same fail-open notify-don't-block philosophy as
@@ -150,7 +150,7 @@ class DeadLetterQueue:
                 # CREATE TABLE IF NOT EXISTS above is a no-op against an
                 # already-existing table from before this column set —
                 # same gotcha as portal/db/schema.sql's budget_cap_usd
-                # (FIXES_AND_CLEANUP.md P2b) — ALTER is what actually
+                # (Product_Archive.md P2b) — ALTER is what actually
                 # applies these columns to a pre-existing dlq_entries.
                 cur.execute(
                     "ALTER TABLE dlq_entries ADD COLUMN IF NOT EXISTS reason TEXT"

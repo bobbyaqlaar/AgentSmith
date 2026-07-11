@@ -10,7 +10,7 @@
 //   { "tenantId": "acme", "entries": [...], "budgetCapUsd"?: number,
 //     "replayWebhookUrl"?: string, "replayWebhookSecret"?: string }
 //
-// budgetCapUsd (FIXES_AND_CLEANUP.md P2b) is optional — when
+// budgetCapUsd (Product_Archive.md P2b) is optional — when
 // scripts/sync-portal-history.py finds gateway.budget_cap_usd in this
 // tenant's .agenticframework/tenant.yaml, it's included on every sync call
 // (not just the first) so the portal's displayed cap stays current if the

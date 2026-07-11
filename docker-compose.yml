@@ -12,7 +12,7 @@
 # `ai-dashboard-stop` (install-ai-stack.sh) so every repo on this machine
 # shares one Phoenix + one Ops Portal rather than each spinning up its own.
 # A repo can opt out entirely with `touch .agenticframework/no-shared-infra`
-# (see hooks/post-checkout) — see OPERATIONS.md §2 / Part B.
+# (see hooks/post-checkout) — see OPERATIONS.md §0.
 #
 # Usage (solo local dev — unchanged from before, no auth required):
 #   Start:   docker compose up -d

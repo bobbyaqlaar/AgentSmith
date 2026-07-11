@@ -18,7 +18,7 @@ real `<agent-status>` custom element (jsdom) including an XSS-attribute-
 injection regression test, and wired against the Ops Portal's
 `/api/widget/status` endpoint.
 
-`running` is a reachable status (FIXES_AND_CLEANUP.md P2a/P2c) —
+`running` is a reachable status (Product_Archive.md P2a/P2c) —
 `runtime/llm_gateway.py`'s `complete()` posts best-effort run-start/end
 events to `POST /api/runs/ingest` (gated on `OPS_PORTAL_URL`/
 `OPS_PORTAL_SYNC_TOKEN` being set), landing in the portal's `agent_runs`

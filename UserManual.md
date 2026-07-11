@@ -1,8 +1,12 @@
 # AgentSmith — User Manual
 
-**Version:** 1.0  
-**For:** Developers and teams using AgentSmith day-to-day  
-**See also:** [README.md](./README.md) for overview · [SPECS.md](./SPECS.md) for full specification
+**For:** Developers using AgentSmith day-to-day (solo / dev mode)
+
+> **Scope:** this document owns day-to-day dev-mode usage and the
+> **canonical command reference (§17)**. Framework introduction:
+> [README.md](./README.md) · formal specification: [SPECS.md](./SPECS.md) ·
+> operator lifecycle (teams, production, CI/CD, portal, enterprise):
+> [OPERATIONS.md](./OPERATIONS.md) · versions: [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
@@ -149,22 +153,29 @@ The `post-checkout` hook fires on `git init` and automatically:
 - Writes `.agenticframework/enabled` — this is what tells `pre-commit`,
   `commit-msg`, and `post-commit` that this repo has opted into
   AgentSmith. The framework's hooks are installed **globally**
-  (`git config --global init.templateDir`), so they fire on every
-  `git init`/`git clone` on your machine — those three hooks silently
-  no-op in any repo that hasn't been through `post-checkout` at least once
-  (or doesn't have `.agenticframework/tenant.yaml` from `ai-tenant-init`),
-  so cloning an unrelated repo never trips your AgentSmith guardrails.
+  (`git config --global init.templateDir`), so they land in every
+  `git init`/`git clone` on your machine — but `post-checkout` itself
+  skips any pre-existing repo (one that already has commit history) that
+  hasn't opted in, and the other three hooks no-op without the marker.
+  Cloning an unrelated repo therefore neither trips your AgentSmith
+  guardrails nor gets AgentSmith files written into it.
 
 ### Existing Project
 
+Pre-existing and freshly cloned repos are **not** provisioned automatically —
+opt in explicitly, then re-fire the hook:
+
 ```bash
 cd /path/to/existing-project
-git init   # safe on an existing repo — only writes missing files, never overwrites
+mkdir -p .agenticframework && touch .agenticframework/enabled
+git checkout .   # post-checkout now provisions — only writes missing files, never overwrites
 ```
 
 ### Public vs. Private Repositories
 
-If your remote URL appears to be a public repository, the hook will prompt:
+If the repository is public (checked via `gh repo view` when the `gh` CLI is
+available; otherwise any `github.com` remote is conservatively treated as
+potentially public), the hook will prompt:
 
 ```
 ⚠️  This repo appears to be public. Add IDE config files to .gitignore?
@@ -228,7 +239,7 @@ ai-mode-local
 ai-mode-hybrid
 ```
 
-- Architect tasks → Claude 3.5 Sonnet (complex design)
+- Architect tasks → Claude Sonnet 4.6 (complex design)
 - Developer tasks → routed by cost router: GPT-4o for complex code, Llama3-70b (Groq) for standard tasks, Gemma2 for formatting/docs
 - Fallback → automatic if network drops (detected via socket ping to `1.1.1.1`)
 - Traces → Local Phoenix (data never leaves your machine)
@@ -336,7 +347,7 @@ Data is persisted to SQLite (local) or PostgreSQL (team). No data is lost when t
 
 ### What Evals Do
 
-`ai-test-evals` runs your golden dataset cases through the active agent pipeline, scores each output using the LLM judge (default: Claude 3.5 Sonnet), and reports a scorecard. In CI this gates merges; locally it gives you visibility into quality trends.
+`ai-test-evals` runs your golden dataset cases through the active agent pipeline, scores each output using the LLM judge (default: Claude Sonnet 4.6), and reports a scorecard. In CI this gates merges; locally it gives you visibility into quality trends.
 
 ### Run Locally
 
@@ -362,9 +373,20 @@ This does three things in sequence:
 No code change required — set the environment variable:
 
 ```bash
-export AGENT_JUDGE_MODEL="claude-3-5-sonnet-20241022"   # default
+export AGENT_JUDGE_MODEL="claude-sonnet-4-6"   # default
 export AGENT_JUDGE_MODEL="gpt-4o"
 export AGENT_JUDGE_MODEL="llama3-70b-8192"              # local/Groq
+```
+
+### Additional Suites (Reliability Pack)
+
+Beyond the golden suite, the same entry point runs two more (full operator
+detail, thresholds, and CI wiring: OPERATIONS.md §3):
+
+```bash
+python3 scripts/run-evals.py --suite fairness        # paired cases + pair parity; FAIRNESS_FAIL_BELOW (default 0.80)
+python3 scripts/run-evals.py --suite hallucination   # hard-fail rate gate; HALLUCINATION_FAIL_ABOVE (default 0.05)
+python3 scripts/verify_ttft.py                       # live Ollama time-to-first-token budget; TTFT_FAIL_ABOVE_MS (default 2000)
 ```
 
 ### Greenfield Projects (No Golden Dataset Yet)
@@ -477,133 +499,34 @@ When set, agents and `run-evals.py` also read from this directory alongside the 
 
 ## 11. Team Setup
 
-### Option A — Each Developer Runs Local Phoenix
+Team-shared infrastructure (Phoenix with auth, shared Ops Portal, shared
+Postgres) is operator territory, not day-to-day dev usage — the canonical
+procedure lives in **[OPERATIONS.md §0](./OPERATIONS.md#0--install--start)**
+("Team-shared Phoenix with auth" and "standing infra"). Short version:
 
-Every developer installs the framework independently and runs their own Phoenix instance. Traces are not shared.
+- One team server runs `docker compose -f docker-compose.yml -f docker-compose.auth.yml up -d`.
+- Every developer sets `AGENT_PHOENIX_ENDPOINT="http://ops:<password>@<server-ip>:6007"`
+  (port 6007 = the auth sidecar; 6006 stays loopback-only).
+- An unauthenticated shared Phoenix is non-compliant (SPECS.md §15).
 
-```bash
-# Each developer
-curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
-ai-mode-hybrid
-ai-dashboard-start
-```
-
-### Option B — Shared Team Phoenix (Recommended)
-
-Run a single Phoenix + PostgreSQL instance on a team server. All developers point at it.
-
-**On the server:**
-
-```bash
-# Clone the framework repo
-git clone https://github.com/bobbyaqlaar/AgentSmith.git
-cd AgentSmith
-
-# Start the shared stack
-docker compose up -d
-
-# Confirm it's running
-curl http://localhost:6006
-```
-
-**On each developer machine:**
-
-```bash
-# Add to ~/.zshrc
-export AGENT_PHOENIX_ENDPOINT="http://<server-ip>:6006"
-
-# Framework picks this up automatically — no other changes needed
-source ~/.zshrc
-```
-
-**Filtering by developer in the shared UI:**
-
-In Phoenix, filter traces by `agent.owner_id` to see one developer's activity, or by `project.name` to see one project's activity across the whole team.
-
-### Syncing Framework Updates Across the Team
-
-When you update the framework rules (e.g., new `.cursorrules` content or updated hooks):
-
-```bash
-# On your machine — pull latest framework
-cd AgentSmith && git pull
-
-# Re-run the installer to update hooks and templates
-./install-ai-stack.sh
-source ~/.zshrc
-
-# Tell team members to do the same, then apply to their repos:
-git init   # inside each project directory
-```
-
----
 
 ## 12. CI/CD via GitHub Actions
 
-### What Gets Created Automatically
+The full pipeline — what each workflow gates, GitHub Environments,
+deploy/rollback wiring, GCP via WIF — is operator territory:
+**[OPERATIONS.md §4](./OPERATIONS.md#4--deploy-via-github-cicd)**.
+What a developer needs day-to-day:
 
-When you first run `git init` (or `git checkout`) in a project, the `post-checkout` hook writes a CI workflow appropriate for your stack:
+- **PR** → `ci-<stack>.yml`: lint, tests, eval scorecard (warn-only in dev),
+  plus the Ten-Pillars gates (Knowledge Graph, RFC, IDE-config drift).
+- **Merge to `develop`** → `cd-staging.yml`: eval gate at 0.75 + smoke test.
+- **Merge to `main`** → `cd-production.yml`: eval gate at 0.80 + smoke test +
+  rollback hook. Production CD opens a PR for any golden-dataset fixture
+  updates — it never pushes directly to `main`.
+- Required repo secrets: `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`
+  (`AGENT_PHOENIX_ENDPOINT` optional). Greenfield repos with <3 golden cases
+  skip the eval gate gracefully.
 
-| Stack | File created |
-|---|---|
-| TypeScript/React | `.github/workflows/ci-ts-react.yml` |
-| Python/FastAPI | `.github/workflows/ci-python-fastapi.yml` |
-| Go | `.github/workflows/ci-go.yml` |
-
-The workflow runs on every pull request and includes:
-- Type checking / linting / tests
-- Eval scorecard (skips gracefully if no golden dataset exists)
-
-### Required GitHub Secrets
-
-In your GitHub repository → **Settings → Secrets and variables → Actions**, add:
-
-| Secret | Required | Notes |
-|---|---|---|
-| `OPENAI_API_KEY` | Yes (if using OpenAI judge) | Used by `run-evals.py` |
-| `ANTHROPIC_API_KEY` | Yes (if using Claude judge) | Default judge is Claude |
-| `AGENT_PHOENIX_ENDPOINT` | Optional | Team Phoenix URL for persisting CI scorecard results |
-| `AI_STACK_SLACK_WEBHOOK` | Optional | CI failure alerts |
-
-### Enforcing Branch Protection
-
-In **Settings → Branches → Add rule** for `main`:
-
-- ✅ Require status checks to pass: `validate`
-- ✅ Require at least 1 approving review
-- ✅ Dismiss stale reviews on new commits
-- ✅ Require linear history
-
-Or via the GitHub CLI:
-
-```bash
-gh api repos/:owner/:repo/branches/main/protection \
-  --method PUT \
-  --field required_status_checks='{"strict":true,"contexts":["validate"]}' \
-  --field enforce_admins=true \
-  --field required_pull_request_reviews='{"required_approving_review_count":1}' \
-  --field restrictions=null
-```
-
-### Setting the Eval Quality Threshold
-
-The default pass threshold is 80%. Adjust in the workflow file:
-
-```yaml
-- name: "Guardrail: Run Eval Scorecards"
-  run: python3 scripts/run-evals.py --fail-below 0.85   # 85% threshold
-```
-
-### Post-Deploy Promotion
-
-Tenant repos get two CD workflows from `workflow-templates/` (via `post-checkout` or `ai-tenant-init`):
-
-- **`cd-staging.yml`** — runs on push to `develop` (staging eval gate at 0.75)
-- **`cd-production.yml`** — runs on push to `main` after a reviewed promotion PR
-
-Production CD runs `sync-ui-feedback.py` after deploy, then opens a **PR** for any golden-dataset fixture updates (never pushes directly to `main`). See [OPERATIONS.md §C.3](./OPERATIONS.md#c3--promote-staging--production).
-
----
 
 ## 13. Agent Identity
 
@@ -847,6 +770,9 @@ echo '{"config": {}, "monthly_accumulated_spend_usd": 0, "current_month_identifi
 ---
 
 ## 17. Command Reference
+
+The canonical `ai-*` command table — other documents link here instead of
+carrying their own copies.
 
 ### Mode & Environment
 

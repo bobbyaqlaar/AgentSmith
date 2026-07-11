@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- budget_cap_usd (FIXES_AND_CLEANUP.md P2b), added after the table already
+-- budget_cap_usd (Product_Archive.md P2b), added after the table already
 -- shipped — CREATE TABLE IF NOT EXISTS above is a no-op against an
 -- already-existing `tenants` table, so the column has to be added via
 -- ALTER for this migration to actually apply to a pre-existing database
@@ -108,7 +108,7 @@ DROP TRIGGER IF EXISTS audit_log_no_delete ON audit_log;
 CREATE TRIGGER audit_log_no_delete BEFORE DELETE ON audit_log
     FOR EACH ROW EXECUTE FUNCTION audit_log_immutable();
 
--- Server-side session revocation (FIXES_AND_CLEANUP.md 4.14). The SSO
+-- Server-side session revocation (Product_Archive.md 4.14). The SSO
 -- session JWT (portal/lib/sessionToken.ts) is stateless and otherwise valid
 -- for its full 8h TTL even after logout if it was copied/leaked elsewhere —
 -- this lets POST /api/auth/logout actually invalidate it server-side instead
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS revoked_sessions (
 -- calling `DELETE FROM revoked_sessions WHERE revoked_at < now() - interval '1 day'`);
 -- not automated here since this schema file only runs migrations, not cron.
 
--- Agent run status (FIXES_AND_CLEANUP.md P2a). Unlike dlq_entries/
+-- Agent run status (Product_Archive.md P2a). Unlike dlq_entries/
 -- llm_gateway_budget, this IS portal-owned state — runtime/llm_gateway.py
 -- only ever POSTs to it via the ingest API (best-effort, optional), it
 -- never connects to Postgres to create this table itself — so the

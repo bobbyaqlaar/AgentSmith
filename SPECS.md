@@ -1,8 +1,22 @@
+<p align="center">
+  <img src="assets/Logo_AgentSmith.png" alt="AgentSmith Logo" width="200">
+</p>
+
 # AgentSmith — Formal Specification
 
-**Version:** 0.5.0-draft
-**Date:** 2026-06-23
-**Status:** Draft — incorporates tenancy, production runtime, observability review, and the security/correctness fix pass tracked in `FIXES_AND_CLEANUP.md`
+> **Scope:** this document owns the technical specification — architecture,
+> the functional→technical component mapping (§4a is the canonical copy),
+> component inventory, data schemas, integration contracts, and the decision
+> log. It contains no step-by-step procedures: installation and operations
+> live in [OPERATIONS.md](./OPERATIONS.md), the framework introduction in
+> [README.md](./README.md), day-to-day dev usage in
+> [UserManual.md](./UserManual.md), build history in
+> [Product_Archive.md](./Product_Archive.md), remaining to-dos in
+> [FIXES_AND_CLEANUP.md](./FIXES_AND_CLEANUP.md).
+
+**Version:** 1.0.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` — the single version source)
+**Date:** 2026-07-11
+**Status:** Current — incorporates tenancy, production runtime, observability review, the reliability/compliance pack v1, and the security/correctness fix passes (history: `Product_Archive.md`; open items: `Product_Archive.md`)
 
 ---
 
@@ -34,7 +48,7 @@ Installed once (developer mode) or deployed as org bundle (enterprise mode), it 
 
 Everything in the list above is implemented and verified against real
 infrastructure (Postgres, Redis, a real OIDC provider, `kind` Kubernetes,
-real GPG keys) — see `FIXES_AND_CLEANUP.md` for the line-by-line audit
+real GPG keys) — see `Product_Archive.md` for the line-by-line audit
 trail. Specifically real, not aspirational:
 
 - Dev lifecycle layer (hooks, IDE rules, Knowledge Graph, dev-mode LLM routing, eval gate)
@@ -166,6 +180,49 @@ extensions (e.g. richer fairness stats, portal streaming UI).
 ```
 
 Production runtime components are defined in Section 25. The OTel contract (span attributes, `tenant.id`, `agent.owner_id`, `project.name`) is the interface between Layer 1 and Layer 2.
+
+### End-to-End Component Integration
+
+How the pieces connect across one full pass through the system — each hop
+names the contract that joins the two components:
+
+```
+git init / checkout                       (tenant repo)
+  └─ hooks/post-checkout ── reads templates/agent-rules.yaml (§13)
+       ├─ writes IDE configs (.cursorrules, CLAUDE.md, .agents/skills/)
+       ├─ copies workflow-templates/* + .github/actions/* into the repo (§17)
+       └─ seeds golden dataset + Knowledge Graph (§9, §10)
+
+IDE agent session                         (dev, Layer 1)
+  └─ scripts/multi_agent_system.py | local_agent_stack.py (§8)
+       ├─ scripts/cost_router.py picks the model (Pillar 10)
+       ├─ scripts/circuit_breaker.py enforces session budget (§11)
+       └─ OTel spans → $AGENT_PHOENIX_ENDPOINT (§15 span contract)
+
+git commit / PR                           (gates)
+  ├─ pre-commit / commit-msg hooks (§5.2)
+  ├─ post-commit → map_codebase.py → knowledge_graph.json (§10)
+  └─ ci-<stack>.yml → eval-scorecard/fairness/hallucination (§9, §17)
+
+Production workflow                       (cloud, Layer 2)
+  └─ runtime/worker.py (Temporal/Celery, partitioned by tenant.id, §25)
+       └─ runtime/workflows/base_workflow.py
+            ├─ activities call runtime/llm_gateway.py
+            │    ├─ input_guardrail.py scrubs PII pre-call (§27)
+            │    ├─ budget backend reserves spend atomically (§29)
+            │    ├─ provider_dispatch.py builds the provider request (§29)
+            │    └─ trace_redactor.py scrubs the span pre-export (§27)
+            ├─ failure → self_correction.py (opt-in) → dead_letter.py (§25)
+            └─ HITL fix: Ops Portal /dlq → tenant replay webhook →
+               temporal_replay.py signals the parked workflow (§25)
+
+Observability + improvement               (loop closes)
+  ├─ Phoenix: traces filtered by tenant.id / project.name (§15, §26)
+  ├─ Ops Portal: agent_runs, cost vs cap, DLQ triage, audit log (§26, §30)
+  ├─ scripts/shadow-eval.py samples production spans → suggested promotions (§9)
+  └─ HITL promotion: sync-ui-feedback.py / promote-learning.py →
+     golden_evals.json + judge criteria → gates the next PR (§9)
+```
 
 ---
 
@@ -341,7 +398,7 @@ design choice that's recorded here as settled.
 | `pre-commit` | Before every commit | Blocks: unresolved AI markers, empty catch blocks (JS/TS), double blank identifiers (Go). Enterprise mode: also requires `RFC-NNN` reference in commit message or matching RFC file in `.agent-rfc/`. |
 | `commit-msg` | Commit message validation | Enforces Conventional Commits: `<type>(<scope>)?: <summary>` (max 72 chars) |
 | `post-commit` | After every commit | Runs `map_codebase.py`; auto-tags semver; appends to `.agent-history.log`; pushes tags if remote tracked; runs log rotation |
-| `post-checkout` | After branch switch / git init | Detects stack; creates `.agent-rfc/`; generates IDE config from `agent-rules.yaml`; writes CI workflows; seeds golden dataset |
+| `post-checkout` | After branch switch / git init | **Opt-in gate first:** a pre-existing repo (has commit history) that carries no `.agenticframework/enabled`/`tenant.yaml` is skipped with a hint — cloning an unrelated repo is never provisioned. Otherwise: detects stack; creates `.agent-rfc/`; generates IDE config from `agent-rules.yaml`; writes CI workflows + reusable eval workflows + `.github/actions/` composite actions; seeds golden dataset |
 
 ### 5.3 IDE Configuration Files (auto-generated per repo)
 
@@ -373,8 +430,8 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `sync-ui-feedback.py` | Pulls Phoenix annotations; promotes unsynced negative feedback to golden dataset. |
 | `agent_logger.py` | JSON-Lines to stdout + `.agent-history.log`. Four levels: INFO/MINOR/MAJOR/CRITICAL. Calls `audit_token_velocity_circuit()`. All entries carry `owner_id`, `tenant.id` (if available), `agent.role`. |
 | `circuit_breaker.py` | Dual-tier burst/monthly guard. Dev-mode: raises `CircuitBreakerTripped`. Production: degrade ladder via LLM Gateway (see §11, §29). |
-| `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-history-sync`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / FIXES_AND_CLEANUP.md P10a). |
-| `generate-ide-config.py` | Renders `.cursorrules` / `CLAUDE.md` / `.agents/skills/*/skill.md` from `templates/agent-rules.yaml` (single source, §13). Called by `post-checkout`. `--check-only` regenerates in memory and diffs against the committed files, exiting 1 on drift (Pillar 6/7 CI gate — FIXES_AND_CLEANUP.md P10c). |
+| `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-history-sync`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / Product_Archive.md P10a). |
+| `generate-ide-config.py` | Renders `.cursorrules` / `CLAUDE.md` / `.agents/skills/*/skill.md` from `templates/agent-rules.yaml` (single source, §13). Called by `post-checkout`. `--check-only` regenerates in memory and diffs against the committed files, exiting 1 on drift (Pillar 6/7 CI gate — Product_Archive.md P10c). |
 
 ### 5.5 Production Runtime (runtime/)
 
@@ -533,7 +590,7 @@ For internal registries, the installer supports fetching from a private artifact
 | `OPENAI_API_KEY` | Required for hybrid mode | `sk-...` |
 | `ANTHROPIC_API_KEY` | Required for hybrid mode | `sk-ant-...` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Set by `ai-dashboard-start` | `http://localhost:6006/v1/traces` |
-| `AGENT_JUDGE_MODEL` | LLM judge; no code change required | `claude-3-5-sonnet-20241022` (default) |
+| `AGENT_JUDGE_MODEL` | LLM judge; no code change required | `claude-sonnet-4-6` (default — single source: `scripts/_shared.py:DEFAULT_JUDGE_MODEL`) |
 | `AGENT_OWNER_ID` | Real user identity | `bobby@example.com` |
 | `AGENT_OWNER_NAME` | Display name | `Bobby Rajagopal` |
 | `AGENT_PHOENIX_ENDPOINT` | Phoenix URL | `http://localhost:6006` |
@@ -748,7 +805,7 @@ session that learned it ended.
 | **Stay within context budget** | `fetch_subgraph_context_window(anchor, hops=n)` → ~200-token subgraph | Loading full files and exhausting the window (§3 "Headroom") |
 
 Because the graph is rebuilt on every commit/checkout (and now validated in
-CI via `verify_system.py --check-kg`, FIXES_AND_CLEANUP.md P10a), the recall
+CI via `verify_system.py --check-kg`, Product_Archive.md P10a), the recall
 a new session reads is current with the committed code rather than a stale
 snapshot.
 
@@ -877,7 +934,7 @@ tenant:
   name: Acme Corp
   isolation: shared              # shared | dedicated (dedicated = own worker pool)
 framework:
-  version: "1.2.0"               # pinned AgentSmith version
+  version: "1.0.0"               # pinned AgentSmith version
   mode: enterprise               # developer | enterprise
 environments:
   development:
@@ -992,20 +1049,11 @@ tenant.id = "acme" AND environment = "production"
 
 ### Framework Distribution Repository
 
-```bash
-# Developer install
-curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
-
-# Pinned version (recommended for team environments)
-curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh | bash
-
-# With checksum verification (supply-chain safety)
-curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh \
-  -o install-ai-stack.sh
-curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh.sha256 \
-  | sha256sum --check
-bash install-ai-stack.sh
-```
+Distributed from `github.com/bobbyaqlaar/AgentSmith` as a curl-able
+installer plus versioned release artifacts (`scripts.tar.gz`, `hooks.tar.gz`,
+`workflow-templates.tar.gz`, `templates.tar.gz`, `github-actions.tar.gz`,
+`widget.js` — see `release.yml`). Installation commands, including pinned-
+version and checksum-verified variants, live in OPERATIONS.md §0.
 
 ### Repository Structure
 
@@ -1064,6 +1112,7 @@ AgentSmith/
 │   ├── onprem-deploy/
 │   └── in-app-widget/           # Embeddable end-user status widget + Ops Portal API
 ├── portal/                      # Ops Portal (Next.js + TypeScript + Tailwind)
+├── workflow-templates/          # Tenant CI/CD templates (ci-* / cd-* / eval-* reusable workflows) — §17
 ├── examples/
 │   ├── oil-price-agent/         # Reference tenant app (fork per customer)
 │   └── README.md                # "Copy and rename — do not deploy from framework repo"
@@ -1079,18 +1128,36 @@ AgentSmith/
 │   ├── rag-memory.md
 │   └── superpowers/             # Design specs + implementation plans
 ├── .github/
+│   ├── actions/                 # Composite actions copied into tenant repos (§17): gcp-auth,
+│   │                            #   build-push-ghcr, deploy-placeholder, rollback-notify
 │   └── workflows/
 │       ├── self-test.yml        # py_compile/shellcheck/portal/widget tests on the framework itself
-│       └── release.yml          # Builds + optionally signs scripts/hooks/workflow-templates/templates tarballs
+│       ├── release.yml          # Builds + optionally signs release tarballs (§28)
+│       └── cd-portal.yml        # CD for the framework's own Ops Portal (GHCR → AR → Cloud Run)
 ├── caddy/
 │   └── Caddyfile                # Phoenix auth sidecar (§15) — used by docker-compose.auth.yml
+├── assets/                      # Logo + static images used by the docs
+├── .agent-rfc/                  # The framework repo's own RFC dir + Knowledge Graph fixture
+├── init-db/                     # Postgres bootstrap for docker-compose.yml (creates agenticframework DB)
 ├── requirements.txt
+├── pytest.ini
+├── .gitignore
 ├── docker-compose.yml
 ├── docker-compose.auth.yml      # Optional overlay: HTTP basic auth in front of Phoenix (§15)
+├── LICENSE                      # AGPL-3.0
+├── CHANGELOG.md                 # Release notes + canonical compatibility matrix (§28)
+├── TRADEMARK.md
+├── README.md
 ├── SPECS.md
-├── Readme.md
-└── UserManual.md
+├── OPERATIONS.md
+├── UserManual.md
+├── Product_Archive.md           # Build history (P0–P11) + phase deliverables checklist
+└── FIXES_AND_CLEANUP.md         # Remaining to-do items only
 ```
+
+This tree is the **only** copy — README.md links here instead of carrying
+its own. `self-test.yml` diffs the top-level entries above against
+`git ls-files` so drift fails CI instead of accumulating silently.
 
 ### `self-test.yml` Requirements
 
@@ -1115,14 +1182,27 @@ The framework has its own versioned release process (see Section 28). It is not 
 
 ### Per-Tenant Workflow Set
 
-Each tenant repo receives four workflow files:
+Each tenant repo receives seven workflow files:
 
 | Workflow | Trigger | Environment | Gate |
 |---|---|---|---|
-| `ci-<stack>.yml` | PR to `develop` or `main` | — | lint, test, calls `eval-scorecard.yml`; plus four Ten-Pillars gates (FIXES_AND_CLEANUP.md P10): Validate Knowledge Graph (Pillar 2, `map_codebase.py --quiet`, warn-only), RFC gate (Pillar 1, enforced only when `.agenticframework/org-policy.yaml` is present), IDE config drift (Pillar 6/7, `generate-ide-config.py --check-only`, warn-only), framework health check (Pillar 3/5, `verify_system.py`, non-blocking) |
+| `ci-<stack>.yml` | PR to `develop` or `main` | — | lint, test, calls `eval-scorecard.yml`; plus four Ten-Pillars gates (Product_Archive.md P10): Validate Knowledge Graph (Pillar 2, `map_codebase.py --quiet`, warn-only), RFC gate (Pillar 1, enforced only when `.agenticframework/org-policy.yaml` is present), IDE config drift (Pillar 6/7, `generate-ide-config.py --check-only`, warn-only), framework health check (Pillar 3/5, `verify_system.py`, non-blocking) |
 | `eval-scorecard.yml` | `workflow_call` from `ci-<stack>.yml` (not triggered standalone) | — | eval scorecard, warn below 0.7 — shared by all three stacks (`ci-go.yml`/`ci-python-fastapi.yml`/`ci-ts-react.yml`) so a threshold/dependency change lands in one place, not three copy-pasted blocks |
+| `eval-fairness.yml` | `workflow_call` from `ci-<stack>.yml` | — | fairness suite (`FAIRNESS_FAIL_BELOW`, default 0.80); warn-only unless repo variable `FAIRNESS_EVALS=required` |
+| `eval-hallucination.yml` | `workflow_call` from `ci-<stack>.yml` | — | hallucination rate hard-fail (`HALLUCINATION_FAIL_ABOVE`, default 0.05) |
+| `eval-ttft-live.yml` | `workflow_call` from `ci-<stack>.yml` | — | live Ollama TTFT budget (`TTFT_FAIL_ABOVE_MS`); no-op unless repo variable `TTFT_LIVE=required` |
 | `cd-staging.yml` | Push to `develop` | staging | eval fail below 0.75 + smoke |
 | `cd-production.yml` | Push to `main` | production | eval fail below 0.80 + smoke; **no `continue-on-error`** |
+
+All three reusable eval workflows must exist in the tenant repo — a missing
+`workflow_call` callee makes GitHub reject the calling `ci-<stack>.yml` as
+an invalid workflow. `post-checkout` and `ai-tenant-init` copy them
+alongside the callers, plus the composite actions the CD workflows
+reference as `uses: ./.github/actions/<name>` (`gcp-auth`,
+`build-push-ghcr`, `deploy-placeholder`, `rollback-notify`) — the `./`
+form resolves inside the *tenant* repo, so the actions are copied in from
+`~/.agent-framework/github-actions/` (vendored by `install-ai-stack.sh`,
+released as `github-actions.tar.gz`).
 
 All workflow files include a tenant-scoped header:
 
@@ -1274,7 +1354,12 @@ MAJOR/CRITICAL entries are synced to the Ops Portal unresolved queue in addition
 
 ## 20. IDE Config Security (`.gitignore` Confirmation)
 
-When the `post-checkout` hook writes IDE config files into a repository, it checks the git remote URL visibility. If a public remote is detected:
+When the `post-checkout` hook writes IDE config files into a repository, it
+determines repository visibility: if the `gh` CLI is available, it asks
+GitHub directly (`gh repo view --json visibility`) — `private`/`internal`
+suppresses the prompt entirely; without `gh` (or when the lookup fails), any
+`github.com` remote is conservatively treated as potentially public, since
+the only consequence is this `.gitignore` prompt. If treated as public:
 
 ```
 ⚠️  AgentSmith: IDE config files contain system prompt content.
@@ -1302,7 +1387,7 @@ In non-interactive environments (CI), the hook defaults to yes.
 | 5 | Notifications | Cross-platform via `plyer`; macOS additionally uses `osascript` |
 | 6 | Log levels & rotation | INFO/MINOR/MAJOR/CRITICAL; MAJOR+CRITICAL protected until HITL resolved; INFO+MINOR capped at 10,000 (FIFO) |
 | 7 | IDE config in public repos | Hook prompts for confirmation; auto-adds to `.gitignore` on yes; CI defaults to yes |
-| 8 | Judge model | Default `claude-3-5-sonnet-20241022`; override via `AGENT_JUDGE_MODEL` — no code change |
+| 8 | Judge model | Default `claude-sonnet-4-6` (`scripts/_shared.py:DEFAULT_JUDGE_MODEL` — one constant shared by run-evals/shadow-eval/verify_system); override via `AGENT_JUDGE_MODEL` — no code change |
 | 9 | Team Phoenix | Docker Compose included; auth required for team/production deployments |
 | 10 | Monorepo scope | Monorepo and multi-repo fully in scope; nested `.agent-rfc/` for sub-packages |
 | 11 | Agent identity | Full orchestrator + sub-agent hierarchy linked to `AGENT_OWNER_ID` |
@@ -1319,61 +1404,14 @@ In non-interactive environments (CI), the hook defaults to yes.
 
 ---
 
-## 22. Deliverables Checklist
+## 22. Deliverables Checklist (moved)
 
-### Phase 0 — Spec Alignment (current)
-- [x] Apply all changes from architecture review to SPECS.md (this document)
-- [x] Fix `.claudecode.json` → `CLAUDE.md` across all docs and scripts
-- [x] Standardize knowledge graph path to `.agent-rfc/fixtures/knowledge_graph.json`
-- [x] Fix hybrid data-locality wording in §8 and scripts
-- [x] Fix `ai-stack-on` → `ai-mode-local` in installation steps
-- [x] Refresh §21 with decisions 12–21
-- [x] Phase §22 deliverables
-
-### Phase 1 — Tenant Scaffold
-- [x] `.agenticframework/tenant.yaml` schema and `ai-tenant-init` command
-- [x] Per-tenant CI/CD workflow templates (ci + cd-staging + cd-production)
-- [x] `tenant.id` wired into all OTel spans and log entries in `agent_logger.py`
-
-### Phase 2 — Production Runtime
-- [x] `runtime/` package stubs (worker, gateway, redactor, idempotency, DLQ)
-- [x] Temporal reference workflow in `examples/oil-price-agent/`
-- [x] Full implementation of `runtime/llm_gateway.py`
-- [x] Full implementation of `runtime/trace_redactor.py`
-- [x] Postgres checkpointer; `MemorySaver` marked dev-only in docs
-
-### Phase 3 — Observability
-- [x] `portal/` stub directory
-- [x] `templates/in-app-widget/` stub
-- [x] Ops Portal v1 implementation
-- [x] In-App Widget implementation
-- [x] Phoenix auth sidecar in `docker-compose.yml`
-
-### Phase 4 — Enterprise Pack (optional)
-- [x] Org hook bundle signing and MDM deploy script
-- [~] SSO for portal and Phoenix — Ops Portal OIDC done (`portal/lib/oidc.ts`); Phoenix is still basic-auth-only via the Caddy sidecar (§15) — true Phoenix OIDC needs a custom Caddy build with an auth plugin (e.g. `caddy-security`), not yet built/tested
-- [x] Immutable audit log schema
-- [x] Dedicated worker pool per tenant (`isolation: dedicated`)
-
-### Phase 5 — Framework Hygiene
-- [x] Extract hooks to `hooks/` directory (from heredocs in `install-ai-stack.sh`)
-- [x] `.github/workflows/self-test.yml` and `release.yml` for framework itself
-- [x] `templates/agent-rules.yaml` single-source IDE config generation
-- [x] `generate-ide-config.py --check-only` IDE config drift gate + `verify_system.py --check-kg` Knowledge Graph gate wired into tenant CI and `self-test.yml` (FIXES_AND_CLEANUP.md P10)
-- [x] `ai-stack-uninstall` command implementation
-- [x] `ai-stack-upgrade` command implementation
-
-### Already Delivered (from v0.3.0)
-- [x] `SPECS.md` formal specification
-- [x] `Readme.md` (formal, with happy-flow example)
-- [x] `UserManual.md` (17 sections)
-- [x] `install-ai-stack.sh` (9-section idempotent installer)
-- [x] `requirements.txt` (pinned ranges)
-- [x] All 14 Python scripts in `scripts/`
-- [x] IDE config single source (`templates/agent-rules.yaml` + `scripts/generate-ide-config.py`)
-- [x] GitHub Actions workflow templates (`workflow-templates/`)
-- [x] `docker-compose.yml` (Phoenix + PostgreSQL)
-- [x] `docs/team-observability.md`
+All phase deliverables (Phase 0–5 and the v0.3.0 baseline) shipped; the
+checklist is preserved verbatim in
+[`Product_Archive.md`](./Product_Archive.md) § "Phase deliverables
+checklist". References elsewhere to "§22 Phase 5" (framework hygiene:
+hooks extraction, `agent-rules.yaml` single-source IDE config, self-test /
+release CI) remain valid — that work is done and specified in §5, §13, §16.
 
 ---
 
@@ -1464,10 +1502,10 @@ Golden dataset and judge criteria changes go through pull request review in the 
 ai-stack-status
 
 # Upgrade vendored scripts in current tenant repo
-ai-stack-upgrade --to 1.2.0
+ai-stack-upgrade --to <version>
 
 # Applies: copies new script versions to scripts/, commits as:
-# "chore(framework): upgrade AgentSmith to v1.2.0"
+# "chore(framework): upgrade AgentSmith to v<version>"
 ```
 
 ---
@@ -1654,7 +1692,7 @@ Air-gapped bundling: `scripts/bundle-airgapped.sh`/`load-airgapped.sh`
 (`docker save`/`docker load`, zero registry calls on the target host).
 See `templates/onprem-deploy/README.md` and
 `templates/onprem-deploy/kubernetes/README.md` for the full walkthrough;
-OPERATIONS.md §D.6 for the operator-facing quickstart.
+OPERATIONS.md §4 ("On-premise / air-gapped deployment") for the operator-facing quickstart.
 
 ---
 
@@ -1853,20 +1891,19 @@ Tenants pin the framework version in `.agenticframework/tenant.yaml`:
 
 ```yaml
 framework:
-  version: "1.2.0"
+  version: "1.0.0"
 ```
 
 The `ai-stack-upgrade` command upgrades vendored scripts to the pinned version. Tenants upgrade on their own schedule — there is no forced upgrade.
 
 ### Compatibility Matrix
 
-The framework maintains a compatibility matrix in `CHANGELOG.md`:
+The canonical compatibility matrix lives in [`CHANGELOG.md`](./CHANGELOG.md)
+and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 1.0.x | 3.11 | 0.2 | 4.0 | Initial release |
-| 1.1.x | 3.11 | 0.2 | 4.0 | None |
-| 1.2.x | 3.11 | 0.2 | 4.1 | Span attribute `project.name` renamed from `service.name` for project-level spans |
+| 1.0.x | 3.11 | 0.2 | 4.0 | Initial public release |
 
 ### Examples as Forks
 
@@ -2094,7 +2131,7 @@ Policy file schema:
 ```yaml
 # agenticframework-org.yaml
 hooks:
-  version: "1.2.0"
+  version: "1.0.0"
   bypass_policy: disabled           # disabled | break-glass
   break_glass_approvers: ["it-sec@example.com"]
 phoenix:

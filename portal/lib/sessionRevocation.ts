@@ -1,5 +1,5 @@
 // portal/lib/sessionRevocation.ts — server-side denylist for SSO session
-// JWTs (FIXES_AND_CLEANUP.md 4.14). Node-runtime only (uses `pg` via
+// JWTs (Product_Archive.md 4.14). Node-runtime only (uses `pg` via
 // lib/db.ts) — see lib/sessionToken.ts's header comment for why this can't
 // be imported directly from middleware.ts (Edge runtime). middleware.ts
 // instead calls GET /api/auth/session-status (Node runtime) over fetch,

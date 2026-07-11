@@ -1,4 +1,4 @@
-// POST /api/dlq/:taskId/replay — "Replay with edits" (FIXES_AND_CLEANUP.md
+// POST /api/dlq/:taskId/replay — "Replay with edits" (Product_Archive.md
 // HITL/DLQ redesign). Body: { payload: <edited JSON> }.
 //
 // tenantId is ALWAYS derived from the DLQ entry's own row, never trusted

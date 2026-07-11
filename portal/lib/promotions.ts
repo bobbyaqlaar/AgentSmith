@@ -1,5 +1,5 @@
 // portal/lib/promotions.ts — reads shadow-eval failures (scripts/shadow-eval.py,
-// FIXES_AND_CLEANUP.md P1c) from a tenant's Phoenix and surfaces them as a
+// Product_Archive.md P1c) from a tenant's Phoenix and surfaces them as a
 // read-only "suggested promotion" list. Promotion itself stays HITL-gated
 // via `ai-stack-promote` — this is a queue for a human to act on, not an
 // auto-promotion path (SPECS.md §9).

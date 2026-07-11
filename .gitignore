@@ -42,3 +42,9 @@ runtime/.hitl_blobs/
 .env
 .env.local
 docker-compose.override.yml
+
+# Obsidian vault config (personal editor state)
+.obsidian/
+
+# Framework repo's own event log (generated)
+.agent-history.log

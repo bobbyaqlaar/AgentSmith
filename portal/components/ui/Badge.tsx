@@ -33,7 +33,7 @@ export function toneForRunStatus(status: string): BadgeTone {
 
 // DLQ entry reason (runtime/dead_letter.py's REASON_* constants) —
 // "needs a human decision" (warning) vs. "needs an engineer" (danger),
-// the distinction FIXES_AND_CLEANUP.md's HITL/DLQ redesign added a
+// the distinction Product_Archive.md's HITL/DLQ redesign added a
 // structured `reason` column specifically to let this view render.
 export function toneForDlqReason(reason: string | null): BadgeTone {
   if (reason === "infra_error") return "danger";

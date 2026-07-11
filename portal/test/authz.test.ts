@@ -1,5 +1,5 @@
 // portal/test/authz.test.ts — cross-tenant isolation regression tests
-// (FIXES_AND_CLEANUP.md Part 3: "there is no test anywhere that asserts
+// (Product_Archive.md Part 3: "there is no test anywhere that asserts
 // tenant A's session/token/gateway instance cannot read tenant B's data").
 //
 // Run: node --experimental-strip-types test/authz.test.ts (from portal/),
