@@ -2207,10 +2207,14 @@ When enterprise pack is enabled:
   revocation: `POST /api/auth/logout` records the session's `jti` in the
   `revoked_sessions` table (not the token itself), and every authenticated
   request checks it via `GET /api/auth/session-status` before trusting an
-  otherwise-valid, unexpired session cookie. This check fails open (treats
-  an unreachable revocation store as "not revoked") rather than locking out
-  every SSO user on a transient DB hiccup — the 8h session TTL already
-  bounds how long a missed revocation can matter.
+  otherwise-valid, unexpired session cookie. Default behaviour is **fail-open**
+  (treats an unreachable revocation store / `session-status` probe as "not
+  revoked") rather than locking out every SSO user on a transient DB hiccup —
+  the 8h session TTL already bounds how long a missed revocation can matter.
+  Set `SSO_REVOCATION_MODE=fail-closed` to instead return **HTTP 503** when
+  the middleware cannot reach `session-status` (SEC-SSO-001). Regulated
+  deployments that prefer availability loss over missed revocation should
+  enable fail-closed; the default remains fail-open for backwards compatibility.
 
 ### Dedicated Worker Pool
 
@@ -2238,19 +2242,42 @@ Thematic AIMS-style mapping (not a licensed clause dump, not a certification).
 Full control → status → owner → **evidence artifact** pack:
 [`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md).
 
+### Compliance Notes (Multi-Framework Security Harness)
+
+Unified crosswalk for **OWASP LLM Top 10**, **NIST AI RMF**, **MITRE ATLAS**,
+and **ISO/IEC 42001** with stable `SEC-*` control IDs and a reusable test
+harness for every tenant app:
+[`docs/security-framework-map.md`](./docs/security-framework-map.md).
+
+Design + plan (P12, shipped 2026-07-15):
+[`docs/superpowers/specs/2026-07-15-security-compliance-harness-design.md`](./docs/superpowers/specs/2026-07-15-security-compliance-harness-design.md),
+[`docs/superpowers/plans/2026-07-15-security-compliance-harness.md`](./docs/superpowers/plans/2026-07-15-security-compliance-harness.md).
+
+| Harness entry | Purpose |
+|---|---|
+| `scripts/run-security-checks.py` | Orchestrator + per-framework evidence pack |
+| `fixtures/security/control_registry.json` | Canonical SEC-* registry |
+| `.agent-rfc/security/` | Tenant risk register, agency manifest, tool allowlist, adversarial overlays |
+| `workflow-templates/eval-security.yml` | CI gate (`strict: true` in tenant Python template + framework self-test) |
+| `runtime/prompt_guard.py` | Prompt injection heuristics (`PROMPT_GUARD`) |
+| `runtime/structured_output.py` | Pydantic JSON parse gate |
+| `runtime/tool_registry.py` | `@tool` + YAML allowlist |
+| `runtime/moderation.py` | Pluggable output moderator (`MODERATION_HOOK`) |
+
 | Theme | Status | Primary AgentSmith evidence |
 |---|---|---|
 | Human oversight | Met | HITL gates, DLQ Replay/Discard, opt-in `run_with_self_correction`, `hitl_promotion` audit events |
 | Transparency & logging | Met | Phoenix OTel traces (`ttft_ms` on stream); HMAC audit log (`GET /api/audit`) |
-| Performance evaluation | Met | `run-evals.py` golden / fairness / hallucination; CD `--fail-below`; shadow-eval |
-| Change management | Met | Eval gates; enterprise RFC hooks; fixture PRs |
+| Performance evaluation | Met | `run-evals.py` golden / fairness / hallucination / adversarial; CD `--fail-below`; shadow-eval |
+| Change management | Met | Eval gates; enterprise RFC hooks; fixture PRs; security harness CI |
 | Incident & recovery | Met | Recoverable DLQ; self-correction then human; MAJOR/CRITICAL protection; budget degrade |
 | Continual improvement | Met | HITL → golden promotion; shadow suggested queue (no auto-promote) |
 | AI policy & roles | Partial | Org policy YAML; Delivery Model soft pack; portal RBAC; `AGENT_OWNER_ID` |
 | Third-party & models | Partial | `models.yaml`; UAE sovereign Falcon 3 template + `verify_sovereign_endpoint.py` |
 | Fairness & bias | Partial | `run-evals.py --suite fairness`; pair parity; Decree-Law 34/2023 map in `docs/uae-regulatory.md` |
-| Data for AI / privacy | Partial | Golden fixtures; pre-call `input_guardrail` (Emirates ID) + post-call redaction |
-| Risk assessment | Org-owned | Tenant risk register; map high-risk actions to `needs_hitl` |
+| Data for AI / privacy | Partial | Golden fixtures; pre-call `input_guardrail` + `prompt_guard`; post-call redaction |
+| Security & privacy (AI) | Partial→Met | `SEC-PROMPT-001` / `SEC-MOD-001` / `SEC-PII-*` via harness |
+| Risk assessment | Org-owned | `.agent-rfc/security/risk_register.yaml` schema gate (`SEC-RISK-001`) |
 
 **UAE regulatory map (differentiator):** [`docs/uae-regulatory.md`](./docs/uae-regulatory.md) —
 sovereign Falcon 3 / PDPL / HITL / fairness / ISO themes. Not legal advice.

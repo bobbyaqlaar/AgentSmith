@@ -50,6 +50,28 @@ the article is published. Owner: Bobby.
 
 ---
 
+## P12 — Security Compliance Harness ✅ DONE (2026-07-15)
+
+**Goal:** reusable test harness covering **OWASP LLM**, **NIST AI RMF**,
+**MITRE ATLAS**, and **ISO/IEC 42001**, plus close security gaps (prompt
+injection, structured output, tool allowlist, adversarial eval, moderation
+hook, SSO fail-closed).
+
+**Shipped:**
+- [`docs/security-framework-map.md`](./docs/security-framework-map.md) — live `SEC-*` status
+- `scripts/run-security-checks.py` + `fixtures/security/control_registry.json`
+- `workflow-templates/eval-security.yml` + framework self-test `strict: true`
+- Runtime: `prompt_guard`, `structured_output`, `tool_registry`, `moderation`
+- `run-evals.py --suite adversarial`; `SSO_REVOCATION_MODE=fail-closed`
+
+**Strict CI:** framework self-test + tenant Python template use `strict: true`.
+Set `MODERATION_HOOK=required` for regulated tenants; default CI env is `optional`.
+
+Remaining Partial/Org-owned rows stay in the security map (RBAC matrix runner,
+RAG poison fixture, sovereign smoke, etc.) — not P12 blockers.
+
+---
+
 ## Future Phases — confirmed gaps, not yet scheduled
 
 ### Compliance gap status boards (pointers, not copies)
@@ -74,40 +96,31 @@ do **not** duplicate their tables here:
   **Trigger:** an org wants promote blocked when a platform isn't approved,
   or tenant-init must stamp `delivery.platform` automatically.
 
-### Tool Orchestration — `@tool` registration / schema extraction
+### Tool Orchestration — provider function-calling wire-up
 
-**Gap:** no decorator extracting a Python function's signature into a JSON
-schema; `llm_gateway.complete()` sends a prompt and gets text back — no
-function-calling fields in the provider request.
+**Shipped (P12):** `runtime/tool_registry.py` (`@tool` + YAML allowlist,
+`SEC-TOOL-001`). MCP stays **bring-your-own** (settled).
 
-**Design decision (settled):** MCP integration stays **bring-your-own**.
-AgentSmith supports tenant apps of any architecture/language; shipping MCP
-first-class would tie every tenant to one standard and commit the framework
-to tracking its spec evolution, for a capability orthogonal to what the
-framework owns (budget/redaction/tracing/HITL around an LLM call). A tenant
-using MCP treats `llm_gateway.py` as the place the resulting LLM call flows
-through; the MCP client/tool-schema layer sits in front, in tenant code.
+**Remaining gap:** `llm_gateway.complete()` still does not emit provider
+function-calling request fields — registry is allowlist/schema extraction,
+not an MCP/tool-choice runtime.
 
-**Trigger:** a tenant reference app whose domain needs the LLM to choose
-among several tools dynamically, as opposed to fixed activity sequences.
+**Trigger:** a tenant reference app needs the LLM to choose among tools
+dynamically inside the gateway request, not only fixed activity sequences.
 
-**Fix sketch:** small `runtime/tool_registry.py` decorator introspecting
-type hints/docstrings into a JSON schema, independent of any orchestration
-protocol.
+### Perception & Input Parsing — prompt templating
 
-### Perception & Input Parsing — structured output, prompt templating
+**Shipped (P12):** `runtime/structured_output.py` (`parse_llm_json`,
+`SEC-OUTPUT-001`).
 
-**Gap:** reference pipelines extract JSON from LLM text via bare
-`re.search` + `json.loads()` with a hardcoded fallback shape — no schema
-validation. No reusable prompt-template engine; prompts are inline f-strings.
+**Remaining gap:** no reusable prompt-template engine; prompts are often
+inline f-strings. Reference apps may still use ad-hoc JSON extraction until
+migrated to `parse_llm_json`.
 
-**Trigger:** a second reference pipeline (or real tenant app) duplicating
-either the JSON-extraction pattern or a near-identical prompt structure —
-2+ real call sites with the same shape, not before.
+**Trigger:** 2+ real call sites sharing the same prompt structure.
 
-**Fix sketch:** `runtime/structured_output.py` (Pydantic model +
-`model_validate_json`, typed error on mismatch) and
-`runtime/prompt_templates.py` (minimal Jinja2 or `string.Template` wrapper).
+**Fix sketch:** `runtime/prompt_templates.py` (minimal Jinja2 or
+`string.Template` wrapper).
 
 ### Memory / RAG — remaining extensions (v1 shipped)
 

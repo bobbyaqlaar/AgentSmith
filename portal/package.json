@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "node --experimental-strip-types scripts/migrate.ts",
-    "test": "node --experimental-strip-types test/authz.test.ts && node --experimental-strip-types test/phoenix.test.ts",
+    "test": "node --experimental-strip-types test/authz.test.ts && node --experimental-strip-types test/phoenix.test.ts && node --experimental-strip-types test/ssoRevocation.test.ts",
     "test:db": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/auditLog.test.ts"
   },
   "dependencies": {

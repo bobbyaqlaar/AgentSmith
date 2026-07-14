@@ -43,14 +43,14 @@ SPECS.md §30 (enterprise pack + SOC2-oriented notes),
 | # | Theme | ISO 42001 focus (plain language) | Status | Owner | AgentSmith mechanism | Evidence artifact path |
 |---|---|---|---|---|---|---|
 | 1 | AI policy & roles | Define AI use, roles, accountability | **Partial** | Shared | Enterprise org policy (`agenticframework-org.yaml`), tenant `tenant.yaml`, portal RBAC (viewer/operator/admin) | Org policy file in MDM bundle; portal role assignments; `AGENT_OWNER_ID` on spans |
-| 2 | Risk assessment | Identify AI risks before/during operation | **Org-owned** | Tenant | No built-in risk register; HITL + budget caps reduce operational blast radius | Tenant risk register (external); link high-risk actions to `needs_hitl` in workflow code |
+| 2 | Risk assessment | Identify AI risks before/during operation | **Org-owned** | Tenant | Template + schema gate at `.agent-rfc/security/risk_register.yaml` (`SEC-RISK-001`); HITL + budget caps reduce operational blast radius | Filled tenant risk register; `run-security-checks.py` schema result; link high-risk actions to `needs_hitl` |
 | 3 | Data for AI systems | Govern training/eval/runtime data quality & provenance | **Partial** | Shared | Golden datasets under `.agent-rfc/`; fixture PRs; Knowledge Graph for code context — **not** a full data-governance suite | Golden JSON fixtures + PR history; KG rebuild via `map_codebase.py` / `verify_system.py --check-kg` |
 | 4 | Third-party & models | Control providers, models, supply chain | **Partial** | Shared | `models.yaml` registry + degrade ladder; pluggable providers; UAE sovereign template | Tenant `models.yaml`; `templates/uae-sovereign/` residency checklist; provider adapter tests |
 | 5 | Human oversight | Human control over significant AI decisions | **Met** | Framework | `run_with_hitl_gate`, recoverable DLQ + Ops Portal Replay/Discard, HITL promotion loop | Temporal HITL signals; portal DLQ actions; Phoenix HITL annotations; audit `hitl_promotion` |
 | 6 | Transparency & logging | Traceability of AI system behaviour | **Met** | Framework | OTel → Phoenix; JSON agent logs; HMAC append-only audit log | Phoenix traces (filter `agent.owner_id` / `tenant.id`); `GET /api/audit`; `.agent-history.log` |
 | 7 | Performance evaluation | Measure whether the AI system meets objectives | **Met** | Shared | `run-evals.py` scorecard; CD `--fail-below`; shadow-eval sampler | CI eval job logs; scorecard output; Phoenix shadow annotations; portal suggested-promotion queue |
 | 8 | Fairness & bias | Prevent discriminatory outcomes | **Partial** | Shared | `run-evals.py --suite fairness`; paired fixtures; optional `fairness` judge field | Fairness scorecard + pair parity in `fairness_eval_results.json`; extend domain pairs in tenant fixtures |
-| 9 | Security & privacy | Protect data in AI processing (incl. PII) | **Partial** | Shared | Pre-call `input_guardrail.py` + post-call `trace_redactor.py`; encrypted HITL blobs; CD `--check-redaction` | Guardrail span attrs; redaction CI; HITL blob config; `INPUT_GUARDRAIL` mode |
+| 9 | Security & privacy | Protect data in AI processing (incl. PII) | **Partial→Met** | Shared | Pre-call `input_guardrail.py` + `prompt_guard.py`; post-call `trace_redactor.py` + optional `moderation.py`; encrypted HITL blobs; CD `--check-redaction`; security harness CI | Guardrail/prompt-guard spans; redaction CI; `PROMPT_GUARD` / `MODERATION_HOOK`; `run-security-checks.py` evidence pack |
 | 10 | Change management | Control changes to AI systems | **Met** | Shared | Branch protection; eval gates; enterprise RFC hook; IDE config drift check | PR + CI green; RFC files under `.agent-rfc/`; `generate-ide-config.py --check-only` |
 | 11 | Incident & recovery | Detect, contain, recover from AI failures | **Met** | Framework | DLQ / recoverable steps; MAJOR/CRITICAL log protection; circuit breaker; budget degrade | Portal DLQ history; unresolved issues in `verify_system.py`; audit `hook_bypass` / config events |
 | 12 | Continual improvement | Learn from production and improve | **Met** | Shared | HITL → golden dataset promotion; shadow-eval suggestions (never auto-promote) | Promoted fixtures PRs; portal promotion queue; `sync-ui-feedback.py` / `promote-learning.py` runs |
@@ -98,14 +98,15 @@ configured Ops Portal + Phoenix + tenant CI.
 - [ ] Confirmation national/personal data does **not** use non-approved
       frontier hybrid endpoints (or counsel waiver on file)
 - [ ] PII handling note: post-call redaction **plus** tenant pre-gateway scrub
-      until pre-call guardrail ships
+      (pre-call `input_guardrail` + `prompt_guard` shipped)
 
 ### F. Gaps to disclose (honesty pack)
 
 - [ ] Fairness/bias: **Partial** — run `python3 scripts/run-evals.py --suite fairness`; attach scorecard; extend pairs for domain
-- [ ] Pre-call PII: **Partial** — `INPUT_GUARDRAIL=default` in staging/prod; confirm Emirates ID/email scrub on sample prompts; extend via `register_input_guardrail` if needed
-- [ ] Formal AI risk register: **Org-owned** — not generated by AgentSmith
+- [ ] Pre-call PII: **Partial→Met** — `INPUT_GUARDRAIL=default` + harness `SEC-PII-001`; extend via `register_input_guardrail` if needed
+- [ ] Formal AI risk register: **Org-owned** — fill `.agent-rfc/security/risk_register.yaml` (schema gated by harness)
 - [ ] ISO/IEC 42001 certificate: **not provided by this software**
+- [ ] Multi-framework harness evidence: attach `run-security-checks.py --evidence-pack` output ([`docs/security-framework-map.md`](./security-framework-map.md))
 
 ---
 

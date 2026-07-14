@@ -37,6 +37,29 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+try:
+    from runtime.moderation import (  # noqa: F401 — re-export for tenants
+        ModerationBlockedError,
+        ModerationHookRequiredError,
+        ModerationResult,
+        apply_output_moderation,
+        get_output_moderator,
+        register_output_moderator,
+        reset_output_moderator,
+        resolve_mode as resolve_moderation_mode,
+    )
+except ImportError:  # pragma: no cover
+    from moderation import (  # type: ignore
+        ModerationBlockedError,
+        ModerationHookRequiredError,
+        ModerationResult,
+        apply_output_moderation,
+        get_output_moderator,
+        register_output_moderator,
+        reset_output_moderator,
+        resolve_mode as resolve_moderation_mode,
+    )
+
 
 @dataclass
 class CompletionResult:
@@ -581,6 +604,35 @@ class LLMGateway:
         model_id = cfg["id"]
         messages = self._coerce_messages(prompt)
 
+        # Prompt injection heuristics (SEC-PROMPT-001) — before PII scrub.
+        try:
+            from runtime.prompt_guard import (
+                PromptGuardBlockedError,
+                apply_prompt_guard,
+                resolve_mode as resolve_prompt_guard_mode,
+            )
+        except ImportError:  # pragma: no cover
+            from prompt_guard import (  # type: ignore
+                PromptGuardBlockedError,
+                apply_prompt_guard,
+                resolve_mode as resolve_prompt_guard_mode,
+            )
+
+        pg_mode = resolve_prompt_guard_mode()
+        if pg_mode != "off":
+            pg_result = apply_prompt_guard(messages)
+            if pg_result.blocked:
+                logger.warning(
+                    "prompt_guard blocked tenant=%s mode=%s reasons=%s",
+                    self.tenant_id,
+                    pg_mode,
+                    pg_result.reasons,
+                )
+                raise PromptGuardBlockedError(
+                    f"prompt blocked: {', '.join(pg_result.reasons)}",
+                    reasons=pg_result.reasons,
+                )
+
         try:
             from runtime.input_guardrail import resolve_mode, scrub_messages
         except ImportError:  # pragma: no cover
@@ -685,6 +737,18 @@ class LLMGateway:
         # Stream v1 has no usage tokens; keep the try_reserve() amount as cost.
         cost_usd = estimated_cost_usd if (reserved and estimated_cost_usd) else 0.0
 
+        # Output moderation (SEC-MOD-001) — before success status (audit truth).
+        try:
+            apply_output_moderation(text, raise_on_block=True)
+        except (ModerationBlockedError, ModerationHookRequiredError) as exc:
+            self._report_run_status(
+                run_id,
+                "failed",
+                workflow_id=workflow_id,
+                error_summary=str(exc)[:500],
+            )
+            raise
+
         self._record_span_attributes(
             role, model_id, degrade_tier, workflow_id, cost_usd, ttft_ms
         )
@@ -726,12 +790,18 @@ class LLMGateway:
                         self.tenant_id,
                         idempotency_key,
                     )
-                    return CompletionResult(**cached)
+                    cached_result = CompletionResult(**cached)
+                    # Re-run moderation on cache hits (SEC-MOD-001) so a newly
+                    # registered/stricter hook cannot be bypassed by idempotency.
+                    apply_output_moderation(cached_result.text, raise_on_block=True)
+                    return cached_result
                 logger.debug(
                     "idempotency cache miss tenant=%s key=%s",
                     self.tenant_id,
                     idempotency_key,
                 )
+            except (ModerationBlockedError, ModerationHookRequiredError):
+                raise
             except Exception as exc:
                 # Now that the backends are real (Postgres/Redis), a failure
                 # here is a live infra error (DB down, bad creds), not the
@@ -756,6 +826,37 @@ class LLMGateway:
         model_id = cfg["id"]
         messages = self._coerce_messages(prompt)
 
+        # Prompt injection heuristics (SEC-PROMPT-001) — before PII scrub.
+        # PROMPT_GUARD=off|default|strict (default=default). Strict raises inside
+        # apply_prompt_guard; default also refuses the provider call here.
+        try:
+            from runtime.prompt_guard import (
+                PromptGuardBlockedError,
+                apply_prompt_guard,
+                resolve_mode as resolve_prompt_guard_mode,
+            )
+        except ImportError:  # pragma: no cover
+            from prompt_guard import (  # type: ignore
+                PromptGuardBlockedError,
+                apply_prompt_guard,
+                resolve_mode as resolve_prompt_guard_mode,
+            )
+
+        pg_mode = resolve_prompt_guard_mode()
+        if pg_mode != "off":
+            pg_result = apply_prompt_guard(messages)
+            if pg_result.blocked:
+                logger.warning(
+                    "prompt_guard blocked tenant=%s mode=%s reasons=%s",
+                    self.tenant_id,
+                    pg_mode,
+                    pg_result.reasons,
+                )
+                raise PromptGuardBlockedError(
+                    f"prompt blocked: {', '.join(pg_result.reasons)}",
+                    reasons=pg_result.reasons,
+                )
+
         # Pre-call PII scrub (PDPL / FIXES Security & Guardrails) — masks
         # personal data in the prompt before provider invoke. Symmetric to
         # post-call trace_redactor.py. Mode: INPUT_GUARDRAIL or env default.
@@ -778,6 +879,7 @@ class LLMGateway:
 
             span = _otel_trace.get_current_span()
             if span and span.is_recording():
+                span.set_attribute("llm.gateway.prompt_guard.mode", pg_mode)
                 span.set_attribute("llm.gateway.input_guardrail.mode", guardrail_mode)
                 span.set_attribute(
                     "llm.gateway.input_guardrail.redactions",
@@ -905,6 +1007,18 @@ class LLMGateway:
                 self._budget.add_spend(self.tenant_id, delta)
         elif cost_usd:
             self._budget.add_spend(self.tenant_id, cost_usd)
+
+        # Output moderation (SEC-MOD-001) — before success status (audit truth).
+        try:
+            apply_output_moderation(text, raise_on_block=True)
+        except (ModerationBlockedError, ModerationHookRequiredError) as exc:
+            self._report_run_status(
+                run_id,
+                "failed",
+                workflow_id=workflow_id,
+                error_summary=str(exc)[:500],
+            )
+            raise
 
         self._record_span_attributes(
             role, model_id, degrade_tier, workflow_id, cost_usd

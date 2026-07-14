@@ -201,6 +201,12 @@ jobs:
           OPS_PORTAL_SYNC_TOKEN: "ci-test-sync-token-not-a-real-secret"
         run: python3 scripts/verify_system.py --check-history-sync
 
+  security:
+    name: "Security harness"
+    uses: ./.github/workflows/eval-security.yml
+    with:
+      strict: true
+
   widget:
     name: "In-App Widget"
     runs-on: ubuntu-latest

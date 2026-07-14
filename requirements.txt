@@ -43,6 +43,8 @@ tenacity>=8.2,<10.0
 
 # ── Config and serialisation ──────────────────────────────────────────────────
 pyyaml>=6.0,<7.0
+# Security harness artifact validation (scripts/security/runners/risk_register.py)
+jsonschema>=4.0,<5.0
 
 # ── Database (PostgreSQL for team-shared Phoenix) ─────────────────────────────
 psycopg2-binary>=2.9,<3.0

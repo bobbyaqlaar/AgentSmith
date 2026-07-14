@@ -160,3 +160,10 @@ jobs:
     name: "TTFT live (opt-in)"
     uses: ./.github/workflows/eval-ttft-live.yml
     secrets: inherit
+
+  security-checks:
+    name: "Security harness"
+    uses: ./.github/workflows/eval-security.yml
+    secrets: inherit
+    with:
+      strict: true

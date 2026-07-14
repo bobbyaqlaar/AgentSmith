@@ -206,6 +206,7 @@ ISO/IEC 42001). AgentSmith maps each mandate to shipped controls:
 | HITL for high-impact actions | `run_with_hitl_gate`, `run_with_recoverable_step`, opt-in `run_with_self_correction` → DLQ |
 | PDPL / PII in the decision path | Pre-call `runtime/input_guardrail.py` (Emirates ID, etc.) + post-call `trace_redactor.py` |
 | Oversight / ISO/IEC 42001 themes | `docs/iso-42001-control-map.md` + HMAC audit log + eval gates (hallucination, fairness, TTFT) |
+| Multi-framework security (OWASP · NIST · ATLAS · ISO) | `docs/security-framework-map.md` — `SEC-*` controls + `run-security-checks.py` (P12 shipped) |
 | Delivery governance | `docs/delivery-model.md` + `verify_system.py --check-delivery-model` |
 
 Canonical map: **[docs/uae-regulatory.md](./docs/uae-regulatory.md)**
@@ -224,7 +225,7 @@ Starter pack: **[templates/uae-sovereign/](./templates/uae-sovereign/)**.
 | [CHANGELOG.md](./CHANGELOG.md) | Release notes + compatibility matrix |
 | [Product_Archive.md](./Product_Archive.md) | Build history (read-only) |
 | [FIXES_AND_CLEANUP.md](./FIXES_AND_CLEANUP.md) | Remaining to-do items |
-| [docs/](./docs/) | Topic canon: UAE regulatory, ISO 42001 map, delivery model, RAG/memory, team observability |
+| [docs/](./docs/) | Topic canon: security framework map, UAE regulatory, ISO 42001 map, delivery model, RAG/memory, team observability |
 
 ---
 

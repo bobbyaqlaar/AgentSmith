@@ -19,6 +19,10 @@ import {
   verifyBasicAuthCredentials,
 } from "./lib/authz";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "./lib/sessionToken";
+import {
+  checkSessionRevocation,
+  resolveRevocationMode,
+} from "./lib/ssoRevocationMode";
 
 // /api/sync/* is machine-to-machine (tenant CD workflows) and authenticates
 // with its own bearer token (OPS_PORTAL_SYNC_TOKEN) inside the route handler
@@ -66,20 +70,22 @@ function withAccessHeaders(headers: Headers, role: string, tenantScope: "*" | st
   return headers;
 }
 
-async function isRevoked(request: NextRequest, jti: string | undefined): Promise<boolean> {
-  if (!jti) return false;
-  try {
-    const url = new URL("/api/auth/session-status", request.nextUrl.origin);
-    url.searchParams.set("jti", jti);
-    const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
-    const data = await res.json();
-    return data.revoked === true;
-  } catch {
-    return false; // fail open — see app/api/auth/session-status/route.ts
-  }
+async function probeSessionStatus(
+  request: NextRequest,
+  jti: string
+): Promise<{ ok: boolean; revoked?: boolean }> {
+  const url = new URL("/api/auth/session-status", request.nextUrl.origin);
+  url.searchParams.set("jti", jti);
+  const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+  if (!res.ok) return { ok: false };
+  const data = (await res.json()) as { revoked?: boolean };
+  return { ok: true, revoked: data.revoked === true };
 }
 
-async function checkSsoSession(request: NextRequest): Promise<{ email?: string } | null> {
+/** SSO session check. `unavailable` means session-status probe failed under fail-closed. */
+async function checkSsoSession(
+  request: NextRequest
+): Promise<{ email?: string } | null | "unavailable"> {
   if (!process.env.SSO_SESSION_SECRET) return null; // misconfigured — fail closed, see middleware() below
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
@@ -89,10 +95,18 @@ async function checkSsoSession(request: NextRequest): Promise<{ email?: string }
   // jwtVerify call (Product_Archive.md 4.2).
   const session = await verifySessionToken(token);
   if (!session) return null;
-  // Server-side revocation check (Product_Archive.md 4.14) — see
-  // lib/sessionRevocation.ts for why this is a fetch to a Node-runtime route
-  // rather than a direct DB call from this Edge-runtime middleware.
-  if (await isRevoked(request, session.jti)) return null;
+  // Server-side revocation check (Product_Archive.md 4.14 / SEC-SSO-001) —
+  // see lib/sessionRevocation.ts for why this is a fetch to a Node-runtime
+  // route rather than a direct DB call from this Edge-runtime middleware.
+  // SSO_REVOCATION_MODE=fail-closed → 503 when session-status unreachable;
+  // default remains fail-open (legacy).
+  const decision = await checkSessionRevocation({
+    jti: session.jti,
+    mode: resolveRevocationMode(),
+    fetchStatus: (jti) => probeSessionStatus(request, jti),
+  });
+  if (decision === "unavailable") return "unavailable";
+  if (decision === "deny") return null;
   return { email: session.email };
 }
 
@@ -111,6 +125,15 @@ export async function middleware(request: NextRequest) {
     }
 
     const session = await checkSsoSession(request);
+    if (session === "unavailable") {
+      return NextResponse.json(
+        {
+          error:
+            "session revocation check unavailable (SSO_REVOCATION_MODE=fail-closed)",
+        },
+        { status: 503 }
+      );
+    }
     if (session) {
       const access = getAccessForSsoEmail(session.email);
       const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.role, access.tenantScope);

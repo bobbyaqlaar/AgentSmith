@@ -1,0 +1,27 @@
+name: Security Harness
+on:
+  workflow_call:
+    inputs:
+      strict:
+        type: boolean
+        default: false
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    # Default optional so day-one tenant CI with strict:true does not fail
+    # SEC-MOD-001; regulated tenants set MODERATION_HOOK=required (+ register).
+    env:
+      MODERATION_HOOK: ${{ vars.MODERATION_HOOK || 'optional' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest pyyaml pydantic jsonschema
+      - run: PYTHONPATH=scripts:. pytest scripts/test/test_security_*.py -q
+      - run: python3 scripts/run-security-checks.py --mode ci ${{ inputs.strict && '--strict' || '' }}
+      - run: python3 scripts/run-security-checks.py --mode smoke --evidence-pack ./security-evidence
+      - uses: actions/upload-artifact@v4
+        with:
+          name: security-evidence
+          path: security-evidence/

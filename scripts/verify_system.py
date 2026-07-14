@@ -233,6 +233,45 @@ def run_checks() -> bool:
     return failures == 0
 
 
+def check_security() -> bool:
+    """
+    Smoke subset of the unified security harness (SEC-PII-001/002 + audit).
+
+    Delegates to scripts/run-security-checks.py --mode smoke.
+        python3 scripts/verify_system.py --check-security
+    """
+    root = Path(__file__).resolve().parent.parent
+    script = root / "scripts" / "run-security-checks.py"
+
+    print("═══════════════════════════════════════════════════")
+    print("  Security Harness Smoke Check")
+    print("═══════════════════════════════════════════════════\n")
+
+    if not script.exists():
+        _check("run-security-checks.py present", False, f"missing {script}")
+        return False
+
+    proc = subprocess.run(
+        [sys.executable, str(script), "--mode", "smoke"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+    )
+    detail = (proc.stderr or proc.stdout or "").strip()
+    if len(detail) > 400:
+        detail = detail[:400] + "…"
+    ok = proc.returncode == 0
+    _check("security harness smoke (--mode smoke)", ok, detail)
+    print()
+    print("═══════════════════════════════════════════════════")
+    if ok:
+        print("  🎉  Security smoke passed")
+    else:
+        print("  🛑  Security smoke failed")
+    print("═══════════════════════════════════════════════════")
+    return ok
+
+
 def check_redaction() -> bool:
     """
     CI validation for §27 trace redaction. Runs the active redaction profile
@@ -906,6 +945,8 @@ def check_delivery_model() -> bool:
 if __name__ == "__main__":
     if "--check-redaction" in sys.argv:
         sys.exit(0 if check_redaction() else 1)
+    if "--check-security" in sys.argv:
+        sys.exit(0 if check_security() else 1)
     if "--check-idempotency" in sys.argv:
         sys.exit(0 if check_idempotency() else 1)
     if "--check-dlq" in sys.argv:
