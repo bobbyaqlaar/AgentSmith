@@ -1,6 +1,6 @@
 # AgentSmith — Remaining To-Do Items
 
-**Last reviewed:** 2026-07-11 (doc restructure — completed work moved out)
+**Last reviewed:** 2026-07-15 (P12 security compliance harness shipped)
 
 > **Scope:** this document owns only *not-yet-done* work: the active phase
 > and confirmed future gaps with their trigger conditions. Completed build

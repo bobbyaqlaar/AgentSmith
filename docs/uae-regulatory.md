@@ -160,11 +160,14 @@ in logs after the fact.
 | Post-call trace redaction / anonymization | **Shipped** — `runtime/trace_redactor.py`, CD redaction compliance checks                    |
 | Encrypted HITL blob storage               | **Shipped** — full payload for review without leaving cleartext in traces                    |
 | Pre-call PII scrub before model invoke    | **Shipped** — `runtime/input_guardrail.py` in `llm_gateway.complete()` (Emirates ID, email, phone, cards; pluggable) |
+| Prompt injection guard + adversarial eval | **Shipped** — `runtime/prompt_guard.py` + `run-evals.py --suite adversarial` (`SEC-PROMPT-001` / `SEC-ADV-001`) |
+| Security harness evidence pack            | **Shipped** — `run-security-checks.py --evidence-pack` ([`docs/security-framework-map.md`](./security-framework-map.md)) |
 
 
 **How to run:** staging/production default `INPUT_GUARDRAIL=default` (or unset).
 Development defaults to `off`. Force on: `export INPUT_GUARDRAIL=default`.
 Custom: `register_input_guardrail(fn)` + `INPUT_GUARDRAIL=custom`.
+Also: `PROMPT_GUARD=default` (or `strict`); harness probes as `SEC-PII-001`.
 
 Keep national/personal datasets on in-border stores (see §1).
 
@@ -189,8 +192,9 @@ controls, logs, and promote gates — rather than bolting them on after launch.
 | Enterprise pack                       | GPG-signed hooks, MDM deploy, break-glass with audited bypass |
 | Immutable audit log + RBAC Ops Portal | Evidence substrate for oversight reviews                      |
 | Eval / redaction / promote gates      | Controls in the delivery path (Delivery Model needs 2–3)      |
+| Multi-framework security harness      | **Shipped** — [`docs/security-framework-map.md`](./security-framework-map.md) + strict CI |
 | ISO/IEC 42001 control map             | **Shipped (thematic)** — [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md) |
-| Authority-facing artifact checklist   | **Shipped** — evidence checklist in the same doc              |
+| Authority-facing artifact checklist   | **Shipped** — evidence checklist in ISO map + harness pack    |
 
 
 AgentSmith’s bet: **compliance is demonstrated through logs and artifacts**
@@ -211,8 +215,8 @@ for technical standards alignment (still not a certificate).
 | 1   | Sovereign infrastructure    | Partial | [`templates/uae-sovereign/`](../templates/uae-sovereign/); this doc §1    |
 | 2   | Bias & fairness             | Partial | `run-evals.py --suite fairness`; FIXES Data Bias & Fairness              |
 | 3   | HITL stop-gates             | Met     | README HITL; `run_with_hitl_gate`; Ops Portal                            |
-| 4   | PDPL / PII in decision path | Partial | `input_guardrail.py` + `trace_redactor.py`                               |
-| 5   | Oversight / ISO 42001       | Partial | [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md); enterprise pack |
+| 4   | PDPL / PII in decision path | Partial→Met | `input_guardrail.py` + `prompt_guard.py` + `trace_redactor.py`; harness `SEC-PII-*` |
+| 5   | Oversight / ISO 42001       | Partial | [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md); [`docs/security-framework-map.md`](./security-framework-map.md); enterprise pack |
 
 
 ---
@@ -221,11 +225,12 @@ for technical standards alignment (still not a certificate).
 
 ## Related docs
 
-- [`FIXES_AND_CLEANUP.md`](../FIXES_AND_CLEANUP.md) — UAE gap register + Future Phase
+- [`FIXES_AND_CLEANUP.md`](../FIXES_AND_CLEANUP.md) — remaining gaps (P12 security harness ✅)
 - [`templates/uae-sovereign/`](../templates/uae-sovereign/) — Falcon models.yaml, env, residency checklist
+- [`docs/security-framework-map.md`](./security-framework-map.md) — OWASP · NIST · ATLAS · ISO crosswalk + harness
 - [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md) — ISO/IEC 42001 thematic map + evidence checklist
 - [`README.md`](../README.md) — Ten Pillars, HITL, enterprise layer
-- [`OPERATIONS.md`](../OPERATIONS.md) — Install, modes, on-prem, portal
+- [`OPERATIONS.md`](../OPERATIONS.md) — Install, modes, on-prem, portal, security harness
 - [`SPECS.md`](../SPECS.md) — §27 redaction, §29 gateway, §30 enterprise/compliance
 - [`enterprise/README.md`](../enterprise/README.md) — Hook bundles, bypass policy
 

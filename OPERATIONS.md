@@ -214,6 +214,7 @@ HITL_ENCRYPTION_KEY=<32-byte-hex>        # generate: openssl rand -hex 32
 # SSO_CLIENT_SECRET=
 # SSO_REDIRECT_URI=https://ops.example.com/api/auth/callback
 # SSO_SESSION_SECRET=
+# SSO_REVOCATION_MODE=fail-open   # or fail-closed → HTTP 503 when session-status unreachable (SEC-SSO-001)
 ```
 
 #### b. Tenant app `.env` — your agentic app's runtime config
@@ -423,8 +424,9 @@ Stack options: `python-fastapi` (default), `go`, `ts-react`. Add
 
 This writes:
 - `.agenticframework/tenant.yaml` — tenant id, isolation tier, framework version pin, per-environment Phoenix namespaces and eval thresholds
-- `.github/workflows/ci-<stack>.yml`, `cd-staging.yml`, `cd-production.yml`, plus the reusable eval workflows the CI file calls (`eval-scorecard.yml`, `eval-fairness.yml`, `eval-hallucination.yml`, `eval-ttft-live.yml`)
+- `.github/workflows/ci-<stack>.yml`, `cd-staging.yml`, `cd-production.yml`, plus the reusable eval / security workflows the CI file calls (`eval-scorecard.yml`, `eval-fairness.yml`, `eval-hallucination.yml`, `eval-ttft-live.yml`, `eval-security.yml` with `strict: true` on the Python FastAPI template)
 - `.github/actions/{gcp-auth,build-push-ghcr,deploy-placeholder,rollback-notify}` — composite actions the CD workflows reference as `uses: ./.github/actions/<name>` (resolved inside this repo)
+- Copy security templates from `fixtures/security/templates/` into `.agent-rfc/security/` (risk register, agency manifest, tool allowlist, NIST profile) — see [docs/security-framework-map.md](./docs/security-framework-map.md)
 
 Re-running is idempotent — existing files are never overwritten.
 
@@ -685,8 +687,23 @@ export INPUT_GUARDRAIL=default   # off | default | custom
 ```
 
 Tenant-specific vocabularies: `register_input_guardrail(fn)` +
-`INPUT_GUARDRAIL=custom`. Content moderation (toxicity etc.) stays
-tenant-supplied — the framework owns the scrub hook, not a moderation model.
+`INPUT_GUARDRAIL=custom`.
+
+**Prompt injection guard (`runtime/prompt_guard.py`).** Runs *before* the
+input guardrail inside `complete()` / `complete_stream()`. Heuristics +
+denylist; `PROMPT_GUARD=off|default|strict` (default `default` after P12).
+
+**Structured output (`runtime/structured_output.py`).** `parse_llm_json(...)`
+validates LLM text against a Pydantic model — prefer this over bare
+`json.loads` in tenant activities (`SEC-OUTPUT-001`).
+
+**Tool allowlist (`runtime/tool_registry.py`).** `@tool` registration +
+`.agent-rfc/security/tool_allowlist.yaml`; unlisted tools raise
+`ToolNotAllowedError` (`SEC-TOOL-001`).
+
+**Output moderation hook (`runtime/moderation.py`).** Pluggable classifier
+via `register_output_moderator`. `MODERATION_HOOK=optional|required|off`
+(CI defaults to `optional`; regulated tenants set `required` and register).
 
 **LLM self-correction before human DLQ (`runtime/self_correction.py`).**
 `BaseAgentWorkflow.run_with_self_correction()` asks the gateway for one
@@ -729,6 +746,26 @@ python3 scripts/verify_system.py --check-delivery-model   # warn-only gate
 python3 scripts/delivery_evidence.py                      # writes delivery_evidence.json + .md
 ```
 
+**Multi-framework security harness (P12 — [docs/security-framework-map.md](./docs/security-framework-map.md)).**
+Unified `SEC-*` registry drives `scripts/run-security-checks.py` (OWASP LLM,
+NIST AI RMF, MITRE ATLAS, ISO/IEC 42001). Framework Self-Test and the Python
+FastAPI tenant template run with `strict: true`.
+
+```bash
+# Smoke (install health) / CI gate / full
+python3 scripts/verify_system.py --check-security
+MODERATION_HOOK=optional python3 scripts/run-security-checks.py --mode ci --strict
+python3 scripts/run-security-checks.py --mode smoke --evidence-pack ./security-evidence
+
+# Adversarial red-team suite (also wired as SEC-ADV-001)
+python3 scripts/run-evals.py --suite adversarial
+```
+
+Tenant onboarding: fill `.agent-rfc/security/risk_register.yaml` (schema-gated),
+`agency_manifest.yaml`, `tool_allowlist.yaml`; set `MODERATION_HOOK=required`
+for regulated content; enable `SSO_REVOCATION_MODE=fail-closed` when missed
+revocation is worse than a 503.
+
 ---
 
 ---
@@ -748,9 +785,14 @@ python3 scripts/verify_system.py --check-hooks
 # Knowledge Graph: rebuild via map_codebase.py and assert non-empty with known nodes (Pillar 2 / P10a)
 python3 scripts/verify_system.py --check-kg
 
-# Reliability pack suites (fairness / hallucination — framework seed fixtures; see below)
+# Reliability pack suites (fairness / hallucination / adversarial — framework seed fixtures)
 python3 scripts/run-evals.py --suite fairness
 python3 scripts/run-evals.py --suite hallucination
+python3 scripts/run-evals.py --suite adversarial
+
+# Security harness (same bar as Self-Test security job — strict)
+MODERATION_HOOK=optional python3 scripts/run-security-checks.py --mode ci --strict
+python3 scripts/verify_system.py --check-security
 
 # Delivery Model soft gate (warn-only; §2 "Reliability & compliance pack")
 python3 scripts/verify_system.py --check-delivery-model
@@ -784,7 +826,7 @@ cd templates/in-app-widget && npm install && npm test && cd ../..
 docker rm -f pg-test
 ```
 
-A passing run here is the same bar CI enforces — see `.github/workflows/self-test.yml`'s `python`, `python-behaviour`, `portal`, and `widget` jobs.
+A passing run here is the same bar CI enforces — see `.github/workflows/self-test.yml`'s `python`, `python-behaviour`, `portal`, `security`, and `widget` jobs.
 
 ### Manual test walkthrough: the UIs
 
@@ -1011,9 +1053,17 @@ ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
 # Reliability pack (§2, §3) — eval suites, input guardrail unit tests, TTFT
 python3 scripts/run-evals.py --suite fairness
 python3 scripts/run-evals.py --suite hallucination
+python3 scripts/run-evals.py --suite adversarial
 pytest runtime/test/test_input_guardrail.py runtime/test/test_ttft_stream.py \
-       runtime/test/test_self_correction.py runtime/test/test_memory_and_vector.py -q
+       runtime/test/test_self_correction.py runtime/test/test_memory_and_vector.py \
+       runtime/test/test_prompt_guard.py runtime/test/test_structured_output.py \
+       runtime/test/test_tool_registry.py runtime/test/test_moderation.py -q
 python3 scripts/verify_ttft.py            # needs a local Ollama with falcon3:1b pulled
+
+# Security harness (P12 — Self-Test security job, strict)
+MODERATION_HOOK=optional python3 scripts/run-security-checks.py --mode ci --strict
+PYTHONPATH=scripts:. pytest scripts/test/test_security_*.py -q
+python3 scripts/verify_system.py --check-security
 
 # Hook bundle signing (needs a real GPG key; see Appendix A)
 gpg --verify agenticframework-hooks-<version>.tar.gz.sig agenticframework-hooks-<version>.tar.gz
@@ -1769,6 +1819,7 @@ SSO_CLIENT_ID=...
 SSO_CLIENT_SECRET=...
 SSO_REDIRECT_URI=https://ops.example.com/api/auth/callback
 SSO_SESSION_SECRET=<random 32+ byte string>
+# SSO_REVOCATION_MODE=fail-open   # default; fail-closed → 503 if session-status unreachable
 ```
 
 This is exclusive with basic auth, not additive — once `SSO_ENABLED=true`,
@@ -1777,7 +1828,9 @@ endpoints (`/api/sync/*`, `/api/widget/*`, `/api/audit/append`) are
 unaffected either way.
 
 `SSO_ALLOW_INSECURE_HTTP=true` is for testing against a local non-TLS IdP
-only — never set it in a real deployment.
+only — never set it in a real deployment. Session `jti` revocation is always
+on; `SSO_REVOCATION_MODE=fail-closed` prefers availability loss over a missed
+revoke when `session-status` is down (SEC-SSO-001 / SPECS.md §30).
 
 Each SSO identity's role and tenant access are resolved via
 `OPS_PORTAL_SSO_USERS` (see E.1 above) — logging in via SSO grants

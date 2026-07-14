@@ -16,6 +16,24 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 |---|---|---|---|---|
 | 1.0.x | 3.11 | 0.2 | 4.0 | Initial public release |
 
+## [Unreleased]
+
+### Added — Security Compliance Harness (P12, 2026-07-15)
+
+- **Harness:** `scripts/run-security-checks.py` + `fixtures/security/control_registry.json`
+  (`SEC-*` controls) with smoke / ci / full modes, `--strict`, and
+  `--evidence-pack` (OWASP / NIST / ATLAS / ISO markdown rollups).
+- **CI:** `workflow-templates/eval-security.yml`; framework Self-Test and
+  Python FastAPI tenant template run with `strict: true`.
+  `verify_system.py --check-security` smoke path.
+- **Runtime:** `prompt_guard.py`, `structured_output.py`, `tool_registry.py`,
+  `moderation.py` wired through `llm_gateway`; adversarial eval suite
+  (`run-evals.py --suite adversarial`).
+- **Portal:** `SSO_REVOCATION_MODE=fail-open|fail-closed` (503 when
+  session-status unreachable in fail-closed).
+- **Docs:** [`docs/security-framework-map.md`](./docs/security-framework-map.md),
+  ISO map + UAE regulatory cross-links, tenant `.agent-rfc/security/` templates.
+
 ## [1.0.0] — 2026-07-11
 
 Initial public release. Licensed under AGPL-3.0 (see `LICENSE`;

@@ -287,10 +287,11 @@ Use with ISO pack. Automated items marked **auto**.
 > OWASP LLM Top 10, NIST AI RMF, MITRE ATLAS, and ISO/IEC 42001 themes.
 > Automated checks produce CI scorecards and an exportable evidence pack;
 > the organisation supplies policy, risk registers, and certification scope.
-> Pre-call PII scrubbing, post-call redaction, HITL gates, tamper-evident
-> audit, and eval gates are framework-owned; prompt-injection defense,
-> structured output validation, and tool allowlists are shipping under the
-> security harness implementation plan.
+> Pre-call PII scrubbing, prompt-injection defense, structured-output
+> validation, tool allowlists, post-call redaction, HITL gates,
+> tamper-evident audit, adversarial evals, and moderation hooks are
+> framework-owned (P12 shipped); remaining Partial rows (RAG poison,
+> sovereign smoke runners, RBAC matrix harness) are tracked above.
 
 ---
 

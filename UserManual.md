@@ -380,14 +380,30 @@ export AGENT_JUDGE_MODEL="llama3-70b-8192"              # local/Groq
 
 ### Additional Suites (Reliability Pack)
 
-Beyond the golden suite, the same entry point runs two more (full operator
+Beyond the golden suite, the same entry point runs more suites (full operator
 detail, thresholds, and CI wiring: OPERATIONS.md §3):
 
 ```bash
 python3 scripts/run-evals.py --suite fairness        # paired cases + pair parity; FAIRNESS_FAIL_BELOW (default 0.80)
 python3 scripts/run-evals.py --suite hallucination   # hard-fail rate gate; HALLUCINATION_FAIL_ABOVE (default 0.05)
+python3 scripts/run-evals.py --suite adversarial     # prompt-injection / jailbreak; ADVERSARIAL_FAIL_ABOVE (default 0.10)
 python3 scripts/verify_ttft.py                       # live Ollama time-to-first-token budget; TTFT_FAIL_ABOVE_MS (default 2000)
 ```
+
+### Security harness (P12)
+
+Multi-framework `SEC-*` checks (OWASP LLM · NIST AI RMF · MITRE ATLAS ·
+ISO/IEC 42001). Canonical map: [`docs/security-framework-map.md`](./docs/security-framework-map.md).
+Operator detail: OPERATIONS.md §2 “Multi-framework security harness”.
+
+```bash
+python3 scripts/verify_system.py --check-security
+MODERATION_HOOK=optional python3 scripts/run-security-checks.py --mode ci --strict
+python3 scripts/run-security-checks.py --mode smoke --evidence-pack ./security-evidence
+```
+
+Runtime knobs (gateway): `PROMPT_GUARD`, `INPUT_GUARDRAIL`, `MODERATION_HOOK`.
+Tenant files under `.agent-rfc/security/` (risk register, tool allowlist, …).
 
 ### Greenfield Projects (No Golden Dataset Yet)
 
@@ -797,6 +813,9 @@ carrying their own copies.
 |---|---|---|
 | `ai-test-evals` | — | Sync HITL feedback from Phoenix, then run eval scorecard. |
 | `ai-stack-promote` | `<id> <query> <output>` | Promote a production fix to the golden dataset and re-run evals. |
+| `python3 scripts/run-evals.py --suite adversarial` | — | Prompt-injection / jailbreak suite (`ADVERSARIAL_FAIL_ABOVE`). |
+| `python3 scripts/run-security-checks.py` | `--mode ci --strict` | Multi-framework security harness (P12). |
+| `python3 scripts/verify_system.py --check-security` | — | Smoke subset of the security harness. |
 
 ### Maintenance
 
