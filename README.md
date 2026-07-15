@@ -34,9 +34,23 @@ self-improvement, and CI/CD — automatically.
    month, with atomic reservation and a graceful degrade ladder.
 6. **Learn from production** — real failures become eval cases and judge
    rules that gate every future change.
-7. **Stay compliant by architecture** — PII scrubbing, tamper-evident audit
-   logs, sovereign-model profiles, and fairness gates are built into the
-   rails, not bolted on.
+7. **Ensure security by design** — controls map to **OWASP LLM Top 10**,
+   **NIST AI RMF**, **MITRE ATLAS**, and **ISO/IEC 42001** themes via a
+   unified `SEC-*` harness: prompt injection guard, tool allowlist,
+   structured-output gate, PII scrub, moderation hook, tamper-evident
+   audit, and strict CI evidence packs.
+8. **Stay compliant to evolving regulations** — UAE **PDPL** decision-path
+   PII handling, **Federal Decree-Law No. 34/2023** fairness gates,
+   sovereign / in-border model profiles, and mandatory HITL for high-impact
+   actions — built into the rails, not bolted on after launch.
+9. **Stay reliable** — three-tier recovery (Temporal retries → opt-in
+   self-correction → human DLQ), hallucination-rate hard gates, and
+   streaming TTFT budgets so failures are recovered, not lost.
+10. **Scale with the workload** — shared or dedicated Temporal worker pools,
+    multi-tenant isolation, on-prem canary/shadow routing, and a degrade
+    ladder that keeps serving when providers or budgets tighten.
+11. **Enforce fairness** — paired fairness suites with pair-parity scoring,
+    CI-gateable thresholds, and domain overlays for protected attributes.
 
 ---
 
@@ -46,13 +60,19 @@ self-improvement, and CI/CD — automatically.
 |---|---|
 | **IDE Guardrails** | `.cursorrules`, `CLAUDE.md`, `.agents/skills/` — generated for Cursor, Claude Code, and Antigravity from one template on every checkout |
 | **Git Hooks** | Pre-commit safety checks, commit message linting, automatic semantic versioning, AST codebase mapping |
-| **Observability** | Arize Phoenix tracing dashboard — one instance per machine or team, per-project and per-tenant namespacing |
-| **Evaluations** | Golden dataset + LLM-as-judge scorecard gating every PR, calibrated continuously from production traces |
+| **OpenTelemetry & Observability** | OTel span contract → Arize Phoenix — one instance per machine or team, per-project and per-tenant namespacing, owner/cost/token attribution |
+| **Ops Portal** | Cross-tenant ops dashboard — run history, cost vs cap, DLQ triage, HMAC append-only audit log, RBAC / optional SSO |
+| **Workflow Orchestration** | Durable agents via **Temporal** (primary) or **Celery** — HITL pause/resume, recoverable steps, shared or dedicated worker pools |
+| **LLM Gateway** | Single choke point for provider calls — budget reservation, degrade ladder, circuit breaker, redaction, prompt guard, moderation hook |
+| **Vector / RAG Memory** | Short-term conversation memory + vector store substrate (`embeddings.py` / `vector_store.py`; hash or sentence-transformers; optional pgvector) |
+| **Security Framework** | `run-security-checks.py` + `SEC-*` registry — OWASP LLM · NIST AI RMF · MITRE ATLAS · ISO/IEC 42001 evidence packs in CI (`strict: true`) |
+| **Regulations Compliance** | UAE / sovereign starter (`templates/uae-sovereign/`), PDPL pre-call scrub, fairness + adversarial eval suites, ISO thematic control map |
+| **Evaluations** | Golden dataset + LLM-as-judge scorecard gating every PR; fairness, hallucination, adversarial, and TTFT suites |
 | **Multi-Agent Orchestration** | Architect → Developer → Validator pipeline — local Ollama or cloud frontier models |
 | **Knowledge Graph** | AST-driven codebase graph, auto-updated on every commit and checkout — zero context drift |
 | **Self-Improvement** | Human-in-the-Loop promotion loop: production failures become test cases become guardrail rules |
 | **Cost & Budget Guard** | Dual-tier circuit breaker — burst velocity limit + monthly spend cap with cross-platform notifications |
-| **CI/CD** | GitHub Actions workflows for TypeScript/React, Python/FastAPI, and Go — written automatically per project |
+| **CI/CD** | GitHub Actions workflows for TypeScript/React, Python/FastAPI, and Go — written automatically per project (incl. security harness) |
 | **Agent Identity** | Every span, log entry, and trace tied to an orchestrator, sub-agents, and a real human owner |
 
 ---
@@ -79,7 +99,7 @@ deliberately *not* built and why) is **SPECS.md §4a**.
 | Reasoning & Planning | Reference patterns | Architect→Developer→Validator graphs (`multi_agent_system.py` / `local_agent_stack.py`) — a shape to copy, not a generic planner |
 | Tool Orchestration | Execution + recovery | Temporal activities + recoverable steps; `@tool` schema-extraction and MCP stay tenant-owned (settled decision) |
 | Memory Management | Shipped v1 | Short-term `conversation_memory.py`; structured long-term Knowledge Graph; vector RAG substrate (`vector_store.py` + `embeddings.py`) |
-| Perception & Input Parsing | Narrow | JSON-from-text extraction in reference pipelines; schema validation is a triggered future phase |
+| Perception & Input Parsing | Shipped v1 | `structured_output.parse_llm_json` (Pydantic); reference pipelines may still use ad-hoc JSON until migrated |
 | Human-in-the-Loop | Most built-out | Approve/reject gate, edit-and-resume DLQ, opt-in LLM self-correction |
 
 ### Non-functional layers
@@ -88,7 +108,7 @@ deliberately *not* built and why) is **SPECS.md §4a**.
 |---|---|---|
 | Observability & Traceability | Full | Per-span tenant/owner/cost/token attribution via OTel → Phoenix; opt-in TTFT on streaming |
 | Reliability & Accuracy | Shipped v1 | Correctness/tool-accuracy/latency/hallucination judged per case; three-tier auto-retry (Temporal → self-correction → human DLQ) |
-| Security & Guardrails | Shipped | Pre-call PII input guardrail + post-call trace redaction; encrypted HITL blobs |
+| Security & Guardrails | Shipped | Pre-call PII + prompt guard; tool allowlist; moderation hook; post-call redaction; encrypted HITL blobs; security harness CI |
 | Explainability | Infrastructure-level | HMAC-signed append-only audit log + full trace history — every action auditable |
 | Scalability & Performance | Shipped | Shared/dedicated Temporal worker pools; on-prem canary/shadow routing; TTFT budget gate |
 | Data Bias & Fairness | Shipped v1 | Paired fairness suite + pair parity, CI-gateable |
