@@ -21,8 +21,11 @@ model-graded evaluation.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional, Sequence
+
+logger = logging.getLogger(__name__)
 
 
 # ── Citation grounding ───────────────────────────────────────────────────────
@@ -100,6 +103,39 @@ def pair_parity(results: Sequence[dict], *, outcome_key: str = "fairness") -> di
             a, b = int(a or 0), int(b or 0)
         out[pid] = 1.0 if outcomes_match(a, b) else 0.0
     return out
+
+
+# ── Judge/actor independence ─────────────────────────────────────────────────
+
+
+def judge_independence_warning(
+    actor_model_id: Optional[str], judge_model_id: Optional[str]
+) -> Optional[str]:
+    """Return a warning when the judge model equals the model it grades.
+
+    A rationale's own author is the worst-placed reviewer of its soundness —
+    self-grading inflates scores and hides the failure modes an independent
+    judge would catch (TestbedFeedback-2026-07-21 E3). This makes the check
+    a framework primitive so any tenant's judge, and the eval harness, can
+    call it instead of re-deriving it. Returns None when they differ or
+    either is unset (nothing to compare)."""
+    if actor_model_id and judge_model_id and actor_model_id == judge_model_id:
+        return (
+            f"judge model {judge_model_id!r} is the same model it grades — "
+            "judge/actor separation is lost; grading is not independent. "
+            "Point the judge role at a different model (RFC judge/actor separation)."
+        )
+    return None
+
+
+def warn_if_judge_not_independent(
+    actor_model_id: Optional[str], judge_model_id: Optional[str]
+) -> None:
+    """Log `judge_independence_warning` at WARNING if it fires. Convenience
+    for callers that just want the side effect."""
+    msg = judge_independence_warning(actor_model_id, judge_model_id)
+    if msg:
+        logger.warning(msg)
 
 
 def parity_violation(a: Any, b: Any, *, attribute: str = "protected attribute") -> Optional[str]:

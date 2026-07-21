@@ -16,9 +16,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from runtime.judging import (  # noqa: E402
     CitationCheck,
     citations_grounded,
+    judge_independence_warning,
     outcomes_match,
     pair_parity,
     parity_violation,
+    warn_if_judge_not_independent,
 )
 
 
@@ -93,6 +95,36 @@ def test_parity_violation_none_when_equal():
 def test_parity_violation_reports_the_divergence():
     msg = parity_violation("LOW", "HIGH", attribute="nationality")
     assert msg and "nationality" in msg and "'LOW'" in msg and "'HIGH'" in msg
+
+
+# ── judge/actor independence (E3) ────────────────────────────────────────────
+
+
+def test_independence_warning_when_same_model():
+    msg = judge_independence_warning("claude-sonnet-4-6", "claude-sonnet-4-6")
+    assert msg and "not independent" in msg
+
+
+def test_no_warning_when_models_differ():
+    assert judge_independence_warning("claude-sonnet-4-6", "claude-opus-4-8") is None
+
+
+def test_no_warning_when_either_unset():
+    assert judge_independence_warning(None, "x") is None
+    assert judge_independence_warning("x", None) is None
+
+
+def test_warn_helper_logs_only_when_not_independent(caplog):
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        warn_if_judge_not_independent("m", "m")
+    assert any("not independent" in r.message for r in caplog.records)
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        warn_if_judge_not_independent("actor", "judge")
+    assert not caplog.records
 
 
 def test_run_evals_delegates_to_the_shared_function():

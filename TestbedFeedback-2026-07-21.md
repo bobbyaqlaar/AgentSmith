@@ -500,9 +500,9 @@ bookkeeping; it was not needed to make `required` satisfiable.
 | # | Issue | Status |
 |---|---|---|
 | E1 | `agents/analyst.py` calls `complete_stream()` with an Anthropic route → guaranteed `NotImplementedError` in real mode (fake mode masked it). This is G1 landing as a live crash. | **Fixed** — provider-aware: stream when supported, else `complete()` with a logged reason. |
-| E2 | The Research agent never makes an LLM call (`del gateway`), so the Groq route is only ever reached as a *degrade target*. The spec claims four exercised routes; only three are. | **Open** — give Research a real triage/summarization call so the cheap tier is genuinely exercised. |
-| E3 | `tenant.yaml` sets `judge` and `analyst` to the same model id, contradicting RFC-002's judge/actor separation. | **Open** — point judge at a different model; consider a framework warning when a judge role resolves to the same id as the role it grades. |
-| E4 | CI security step is `\|\| true` because the tenant `.agent-rfc/security/` pack is incomplete (see G5). | **Open** — author the three missing artifacts, then hard-fail. |
+| E2 | The Research agent never makes an LLM call (`del gateway`), so the Groq route is only ever reached as a *degrade target*. The spec claims four exercised routes; only three are. | ✅ **Fixed** — Research makes its own `model_hint="research"` screening-summary call; `demo.py f5` shows all four routes used in one run. Degrades to a deterministic brief on failure (the tool findings drive the decision, not the prose). |
+| E3 | `tenant.yaml` sets `judge` and `analyst` to the same model id, contradicting RFC-002's judge/actor separation. | ✅ **Fixed** — judge → `claude-opus-4-8`, analyst → `claude-sonnet-4-6`. **Framework gained `runtime.judging.judge_independence_warning`** (a self-grading model inflates scores); the tenant judge logs it if the two ever collapse to one id, with a test forcing that case. |
+| E4 | CI security step is `\|\| true` because the tenant `.agent-rfc/security/` pack is incomplete (see G5). | ✅ **Fixed** (with G5/G10) — pack authored with real content; CI runs `--strict` with no `\|\| true`. |
 
 ---
 
