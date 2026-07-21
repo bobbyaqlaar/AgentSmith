@@ -14,10 +14,11 @@ combine them.
 
 ## A. Framework gaps
 
-> **Status 2026-07-21 (same day):** G1–G4 are **fixed** — see the per-item
-> notes and CHANGELOG [Unreleased]. Framework suite 170 → **198 passing**.
-> G5–G8 remain open; **G9 is new** (found while fixing G3) and needs an
-> owner decision because it changes a security control's default posture.
+> **Status 2026-07-21 (same day):** G1–G4 and G9 are **fixed** — see the
+> per-item notes and CHANGELOG [Unreleased]. Framework suite 170 →
+> **225 passing**. G5–G8 remain open. G9 was found while fixing G3 and
+> resolved by owner decision (option C: add the missing `warn` tier rather
+> than weaken the blocking default).
 
 ### G1 — `complete_stream()` cannot stream the frontier providers (**High**) ✅ FIXED
 
@@ -219,7 +220,7 @@ allow/deny outcome, duration), and expose a small
 `runtime/tracing.py:agent_span(name, **attrs)` context manager for tenant
 steps.
 
-### G9 — `PROMPT_GUARD=default` behaves exactly like `strict` (**Needs a decision**)
+### G9 — `PROMPT_GUARD=default` behaves exactly like `strict` ✅ RESOLVED (option C)
 
 Found while wiring G3. `prompt_guard.apply_prompt_guard()` documents three
 modes and explicitly promises that **default does not raise**:
@@ -258,12 +259,40 @@ posture, so it needs an explicit decision:
   `off | block | strict`), and note that `prompt_guard_reasons` is
   structurally always empty.
 
-Recommend (a) plus a `PROMPT_GUARD=block` alias for tenants that want
-today's behavior explicitly. Whichever is chosen, `runtime/prompt_guard.py`'s
-docstring and OPERATIONS §"Prompt guard" must agree with the code.
+A third option emerged while writing this up and is the one taken:
 
-**Not attempted here.** `prompt_guard_reasons` is wired and documented as
-structurally-empty-until-this-is-settled, so no behavior changed.
+- **(c) Add an explicit `warn` tier and keep `default` blocking.** Modes
+  become `off | warn | default(=block) | strict`. No upgrade regression, a
+  real rollout path, and `prompt_guard_reasons` becomes meaningful for
+  tenants who opt into `warn`.
+
+**Resolved (option C, owner decision 2026-07-21).** Option (a) was rejected
+precisely because of the upgrade risk: every deployment on the shipped
+default would have silently stopped blocking injections, and — as this
+finding also established — the security harness would not have caught it.
+Adding the missing tier fixes the false contract without weakening what
+ships.
+
+Implemented:
+
+- `PROMPT_GUARD=off|warn|default|strict`, `block` accepted as an explicit
+  alias for `default`; unrecognised values still fall back to `default`, so
+  a typo cannot disable the guard.
+- New `prompt_guard.is_enforcing(mode)` — one definition of "blocking",
+  used by both the gateway and the harness runner, so they cannot drift.
+- The gateway raises in `default`/`strict` and logs-and-proceeds in `warn`,
+  populating `CompletionResult.prompt_guard_reasons`.
+- **`SEC-PROMPT-001` now proves enforcement, not just detection** (the
+  second half of the same finding — the runner only called `scan_prompt()`,
+  so the control reported *Met* regardless of whether anything was blocked).
+  Verified end-to-end: `default → pass`, `warn → warn` (fails `--strict`),
+  `off → fail`, with the mode recorded in the evidence pack.
+- Tests: `runtime/test/test_prompt_guard_modes.py` (17) and
+  `scripts/test/test_security_prompt_guard_enforcement.py` (6), including
+  an explicit regression guard that an unset `PROMPT_GUARD` still blocks —
+  i.e. that option (a) was not taken by accident.
+- Docs: module docstring, OPERATIONS prompt-guard section (mode table +
+  rollout procedure), SPECS §5.5, `docs/security-framework-map.md`, CHANGELOG.
 
 ---
 
@@ -310,7 +339,7 @@ structurally-empty-until-this-is-settled, so no behavior changed.
 1. ~~**G1** (High) — fallback now, Anthropic streaming next; fix D2 with it.~~ ✅ done
 2. ~~**G4** (`runtime/testing.py`) — unblocks every future tenant, small.~~ ✅ done
 3. ~~**G3** + **G2**~~ ✅ done (D2/D3 docs updated with them)
-4. **G9** — decide the prompt-guard mode semantics (owner call; see above).
+4. ~~**G9** — decide the prompt-guard mode semantics~~ ✅ done (option C + harness enforcement check)
 5. **G5** — one vendoring step in `ai-tenant-init`; unblocks tenant strict CI.
 6. **G6** — packaging; larger, but removes a whole class of import boilerplate.
 7. **G7/G8**, then D1/D4 in the next docs pass.
@@ -321,7 +350,7 @@ Tenant-side: E1 fixed; E2–E4 tracked in `KYC_Sentinel/DEVLOG.md`.
 
 | Suite | Before | After |
 |---|---|---|
-| Framework `scripts/test/` + `runtime/test/` | 170 passed | **198 passed**, 14 skipped |
+| Framework `scripts/test/` + `runtime/test/` | 170 passed | **225 passed**, 14 skipped |
 | KYC Sentinel `test/` | 25 passed | **25 passed** (now on the shipped double) |
 | `demo.py all` | 8 controls fire | 8 controls fire |
 

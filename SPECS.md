@@ -459,7 +459,7 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/trace_redactor.py` | Environment-aware OTLP span scrubbing before export (§27), encrypted HITL blobs. |
 | `runtime/luhn.py` | Single shared Luhn validator used by both `input_guardrail.py` and `trace_redactor.py` (pre/post-call card detection can never diverge). |
 | `runtime/testing.py` | Shipped test doubles — `FakeGateway` (scripted responses, recorded calls, budget simulation, prompt assertions) and `RecordingGateway` (wraps a live gateway). Deliberately no more capable than the real gateway: it refuses to stream what the real one cannot. Override `_resolve_text(call)` for domain scripting. |
-| `runtime/prompt_guard.py` | Pre-call prompt-injection heuristics (SEC-PROMPT-001), `PROMPT_GUARD` modes. |
+| `runtime/prompt_guard.py` | Pre-call prompt-injection heuristics (SEC-PROMPT-001). `PROMPT_GUARD=off\|warn\|default\|strict`, blocking by default; `warn` is the observe-first rollout tier (findings on `CompletionResult.prompt_guard_reasons`). `is_enforcing()` is the single definition of "blocking", shared with the harness runner. |
 | `runtime/moderation.py` | Pluggable output moderation hook (SEC-MOD-001), `MODERATION_HOOK=off\|optional\|required`. |
 | `runtime/structured_output.py` | `parse_llm_json` — fenced/bare JSON extraction + Pydantic validation (SEC-OUTPUT-001). |
 | `runtime/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (§4a). |

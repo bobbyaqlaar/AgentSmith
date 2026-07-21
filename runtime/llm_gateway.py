@@ -80,16 +80,12 @@ class CompletionResult:
     # had to re-run the scrub itself and pay for it twice.
     # {"emirates_id": 1, "card": 1, ...}; empty when the guardrail is off.
     guardrail_counts: dict[str, int] = field(default_factory=dict)
-    # Prompt-guard heuristics that fired but did not block. NOTE: today this
-    # is always empty on a returned result, because the gateway raises on
-    # ANY `blocked` result regardless of PROMPT_GUARD mode — which also
-    # means PROMPT_GUARD=default currently behaves exactly like strict,
-    # contradicting prompt_guard.apply_prompt_guard's documented contract
-    # ("default: scan; return result; does not raise").
-    # See TestbedFeedback-2026-07-21 G9: that inconsistency needs an owner
-    # decision (tighten the doc, or make default warn-only). This field is
-    # wired now so it carries evidence the moment default becomes
-    # non-blocking, with no further change at the call sites.
+    # Prompt-guard heuristics that fired but did NOT block — i.e. populated
+    # under PROMPT_GUARD=warn, the observe-first tier added in
+    # TestbedFeedback-2026-07-21 G9. Under the blocking modes (`default`,
+    # `strict`) a flagged prompt raises instead, so this stays empty on any
+    # result they return. Use it to measure a guard rollout against real
+    # traffic before switching that tenant to enforcing.
     prompt_guard_reasons: list[str] = field(default_factory=list)
 
 
@@ -688,12 +684,14 @@ class LLMGateway:
             from runtime.prompt_guard import (
                 PromptGuardBlockedError,
                 apply_prompt_guard,
+                is_enforcing as prompt_guard_is_enforcing,
                 resolve_mode as resolve_prompt_guard_mode,
             )
         except ImportError:  # pragma: no cover
             from prompt_guard import (  # type: ignore
                 PromptGuardBlockedError,
                 apply_prompt_guard,
+                is_enforcing as prompt_guard_is_enforcing,
                 resolve_mode as resolve_prompt_guard_mode,
             )
 
@@ -703,15 +701,27 @@ class LLMGateway:
             pg_result = apply_prompt_guard(messages)
             pg_reasons = list(pg_result.reasons)
             if pg_result.blocked:
+                # PROMPT_GUARD=warn reports without blocking; every other
+                # non-off mode enforces (TestbedFeedback-2026-07-21 G9).
+                # is_enforcing() is the single definition of "blocking",
+                # shared with the SEC-PROMPT-001 harness.
+                if prompt_guard_is_enforcing(pg_mode):
+                    logger.warning(
+                        "prompt_guard blocked tenant=%s mode=%s reasons=%s",
+                        self.tenant_id,
+                        pg_mode,
+                        pg_result.reasons,
+                    )
+                    raise PromptGuardBlockedError(
+                        f"prompt blocked: {', '.join(pg_result.reasons)}",
+                        reasons=pg_result.reasons,
+                    )
                 logger.warning(
-                    "prompt_guard blocked tenant=%s mode=%s reasons=%s",
+                    "prompt_guard flagged (not blocked) tenant=%s mode=%s reasons=%s "
+                    "— call proceeding; findings on CompletionResult.prompt_guard_reasons",
                     self.tenant_id,
                     pg_mode,
                     pg_result.reasons,
-                )
-                raise PromptGuardBlockedError(
-                    f"prompt blocked: {', '.join(pg_result.reasons)}",
-                    reasons=pg_result.reasons,
                 )
 
         try:
@@ -902,12 +912,14 @@ class LLMGateway:
             from runtime.prompt_guard import (
                 PromptGuardBlockedError,
                 apply_prompt_guard,
+                is_enforcing as prompt_guard_is_enforcing,
                 resolve_mode as resolve_prompt_guard_mode,
             )
         except ImportError:  # pragma: no cover
             from prompt_guard import (  # type: ignore
                 PromptGuardBlockedError,
                 apply_prompt_guard,
+                is_enforcing as prompt_guard_is_enforcing,
                 resolve_mode as resolve_prompt_guard_mode,
             )
 
@@ -917,15 +929,27 @@ class LLMGateway:
             pg_result = apply_prompt_guard(messages)
             pg_reasons = list(pg_result.reasons)
             if pg_result.blocked:
+                # PROMPT_GUARD=warn reports without blocking; every other
+                # non-off mode enforces (TestbedFeedback-2026-07-21 G9).
+                # is_enforcing() is the single definition of "blocking",
+                # shared with the SEC-PROMPT-001 harness.
+                if prompt_guard_is_enforcing(pg_mode):
+                    logger.warning(
+                        "prompt_guard blocked tenant=%s mode=%s reasons=%s",
+                        self.tenant_id,
+                        pg_mode,
+                        pg_result.reasons,
+                    )
+                    raise PromptGuardBlockedError(
+                        f"prompt blocked: {', '.join(pg_result.reasons)}",
+                        reasons=pg_result.reasons,
+                    )
                 logger.warning(
-                    "prompt_guard blocked tenant=%s mode=%s reasons=%s",
+                    "prompt_guard flagged (not blocked) tenant=%s mode=%s reasons=%s "
+                    "— call proceeding; findings on CompletionResult.prompt_guard_reasons",
                     self.tenant_id,
                     pg_mode,
                     pg_result.reasons,
-                )
-                raise PromptGuardBlockedError(
-                    f"prompt blocked: {', '.join(pg_result.reasons)}",
-                    reasons=pg_result.reasons,
                 )
 
         # Pre-call PII scrub (PDPL / FIXES Security & Guardrails) — masks

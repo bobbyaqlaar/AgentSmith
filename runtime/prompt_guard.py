@@ -1,10 +1,27 @@
 """
 runtime/prompt_guard.py — pre-call prompt-injection heuristics (SEC-PROMPT-001).
 
-Modes (PROMPT_GUARD env):
-  off      — no-op
-  default  — scan; block returns PromptGuardResult(blocked=True); gateway may log
-  strict   — scan; gateway raises PromptGuardBlockedError on block
+Modes (PROMPT_GUARD env) — secure by default:
+
+  off      — no-op; nothing is scanned.
+  warn     — scan and REPORT: a flagged prompt still reaches the provider,
+             and the findings surface on CompletionResult.prompt_guard_reasons
+             plus the span. The observe-first posture for rolling the guard
+             out against real traffic before enforcing it.
+  default  — scan and BLOCK: the gateway raises PromptGuardBlockedError on a
+             flagged prompt. This is what ships when PROMPT_GUARD is unset,
+             and what any unrecognised value falls back to. `block` is an
+             accepted alias for callers who prefer to say it explicitly.
+  strict   — as default, but the raise happens inside apply_prompt_guard()
+             itself, so ANY direct caller of this module is protected, not
+             just the gateway.
+
+History (TestbedFeedback-2026-07-21 G9): `warn` did not exist, and this
+docstring used to claim `default` "does not raise" — but the gateway raised
+on any blocked result regardless of mode, so default and strict were
+indistinguishable and there was no way to observe the guard before
+enforcing it. The fix added the missing tier rather than weakening the
+default, so upgrading cannot silently stop blocking anyone.
 
 Optional tenant denylist: .agent-rfc/security/prompt_denylist.txt
 or PROMPT_DENYLIST_PATH.
@@ -80,10 +97,24 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
 
 
 def resolve_mode() -> str:
+    """off | warn | default | strict. Unrecognised values fall back to
+    `default` (blocking) — a typo must never silently disable the guard."""
     raw = os.environ.get("PROMPT_GUARD", "").strip().lower()
-    if raw in {"off", "default", "strict"}:
+    if raw == "block":  # explicit alias for the blocking default
+        return "default"
+    if raw in {"off", "warn", "default", "strict"}:
         return raw
     return "default"
+
+
+def is_enforcing(mode: Optional[str] = None) -> bool:
+    """True when a flagged prompt must be blocked rather than reported.
+
+    Single source of truth for the gateway's raise decision and for the
+    SEC-PROMPT-001 harness's enforcement check, so the control cannot
+    report Met while enforcement is actually off (TestbedFeedback G9).
+    """
+    return (mode or resolve_mode()) in {"default", "strict"}
 
 
 def _denylist_path() -> Optional[Path]:
@@ -169,10 +200,16 @@ def scan_messages(
 
 def apply_prompt_guard(messages: list[dict[str, Any]]) -> PromptGuardResult:
     """
-    Gateway helper. Respects PROMPT_GUARD mode.
-    - off: no-op pass
-    - default: scan; return result (caller may log); does not raise
-    - strict: scan; raise PromptGuardBlockedError when blocked
+    Gateway helper. Respects PROMPT_GUARD mode (see module docstring).
+    - off:     no-op pass, never flagged
+    - warn:    scan; return findings; caller MUST NOT block on them
+    - default: scan; return findings; caller (the gateway) blocks
+    - strict:  scan; raise PromptGuardBlockedError here, so direct callers
+               of this module are protected too, not just the gateway
+
+    Callers decide enforcement with `is_enforcing()` rather than comparing
+    mode strings themselves — that keeps one definition of "blocking" for
+    the gateway and the SEC-PROMPT-001 harness alike.
     """
     mode = resolve_mode()
     if mode == "off":

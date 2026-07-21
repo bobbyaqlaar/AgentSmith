@@ -48,8 +48,26 @@ Found by building the KYC Sentinel testbed tenant
 - **Internal:** `LLMGateway._resolve_endpoint()` extracted — `_invoke()` and
   `complete_stream()` shared near-duplicate endpoint resolution and the
   streaming copy silently omitted the `anthropic` branch.
-- **Docs:** SPECS §3/§5.5/§16, OPERATIONS TTFT section updated with provider
-  support, guardrail evidence, and tenant-testing guidance.
+- **Prompt guard — new `warn` mode (G9):** `PROMPT_GUARD` accepts
+  `off | warn | default | strict` (`block` is an alias for `default`).
+  **No change to what ships:** `default` still blocks, and unrecognised
+  values still fall back to it, so upgrading cannot silently stop blocking
+  an existing deployment. What's new is the observe-first tier — `warn`
+  lets a flagged prompt through and surfaces the findings on
+  `CompletionResult.prompt_guard_reasons`, so a tenant can tune its
+  denylist against real traffic before enforcing. Previously `default` and
+  `strict` both hard-blocked despite the module documenting `default` as
+  non-raising, and the only way to observe the guard was to disable it.
+  New `prompt_guard.is_enforcing()` is the single definition of "blocking".
+- **`SEC-PROMPT-001` now checks enforcement, not just detection:** the
+  runner previously called `scan_prompt()` only, so the control could
+  report *Met* while nothing was blocked at the gateway. It now reports
+  `fail` when `PROMPT_GUARD=off`, `warn` on the non-enforcing `warn` tier
+  (so it fails `--strict` CI), and `pass` only when the configured mode
+  actually blocks. The mode is recorded in the evidence pack.
+- **Docs:** SPECS §3/§5.5/§16, OPERATIONS TTFT + prompt-guard sections
+  (incl. a rollout procedure and mode table), `docs/security-framework-map.md`
+  SEC-PROMPT-001 row.
 
 ### Added — Security Compliance Harness (P12, 2026-07-15)
 

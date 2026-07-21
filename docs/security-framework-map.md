@@ -57,7 +57,7 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | `SEC-DLQ-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Met** | Framework | Recoverable step + DLQ | `verify_system.py --check-dlq` |
 | `SEC-SELF-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Partial** | Shared | Opt-in `run_with_self_correction` | Unit + workflow tests; not default path |
 | `SEC-GW-001` | LLM07 | MAP 2.3 | AML.T0040 | Theme 4 | **Partial** | Shared | `llm_gateway.py` choke point | Static: tenant activities import gateway, not raw provider |
-| `SEC-PROMPT-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Framework | `runtime/prompt_guard.py` heuristics + denylist | Adversarial fixture suite: injection/jailbreak blocked or flagged |
+| `SEC-PROMPT-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Framework | `runtime/prompt_guard.py` heuristics + denylist; `PROMPT_GUARD=off\|warn\|default\|strict` (blocking by default) | Two-part: detection over the injection fixture corpus **and** enforcement — the runner reports `fail` on `off`, `warn` on the observe-first `warn` tier, `pass` only when the configured mode actually blocks |
 | `SEC-OUTPUT-001` | LLM02 | MEASURE 2.7 | — | Theme 7 | **Met** | Shared | `runtime/structured_output.py` `parse_llm_json` | Schema validation rejects malformed LLM JSON |
 | `SEC-TOOL-001` | LLM07 | GOVERN 1.3 | AML.T0040 | Theme 4 | **Met** | Shared | `runtime/tool_registry.py` + allowlist | Tool call without allowlist → hard fail |
 | `SEC-MOD-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Tenant | `runtime/moderation.py` + `MODERATION_HOOK` | Harness runner `scripts/security/runners/moderation_hook.py` — strict mode: unset hook fails CI; tenant registers classifier |

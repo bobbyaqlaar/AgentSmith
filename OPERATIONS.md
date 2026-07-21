@@ -695,7 +695,24 @@ Tenant-specific vocabularies: `register_input_guardrail(fn)` +
 
 **Prompt injection guard (`runtime/prompt_guard.py`).** Runs *before* the
 input guardrail inside `complete()` / `complete_stream()`. Heuristics +
-denylist; `PROMPT_GUARD=off|default|strict` (default `default` after P12).
+denylist. `PROMPT_GUARD=off|warn|default|strict` — **`default` (blocking) is
+what ships**, and any unrecognised value falls back to it, so a typo can
+never silently disable the guard.
+
+| Mode | Flagged prompt | Use it for |
+|---|---|---|
+| `off` | reaches the provider, unscanned | never in production; `SEC-PROMPT-001` reports **fail** |
+| `warn` | reaches the provider; findings land on `CompletionResult.prompt_guard_reasons` + the span | rolling the guard out against real traffic before enforcing; `SEC-PROMPT-001` reports **warn** (fails `--strict` CI) |
+| `default` (alias `block`) | gateway raises `PromptGuardBlockedError` | production default |
+| `strict` | `apply_prompt_guard()` itself raises, so direct callers of the module are protected too, not just the gateway | tenants calling `prompt_guard` outside the gateway |
+
+**Rolling out the guard on a noisy corpus:** run `PROMPT_GUARD=warn` for a
+period, collect `prompt_guard_reasons` off the results (or the
+`llm.gateway.prompt_guard.*` span attributes), tune
+`.agent-rfc/security/prompt_denylist.txt` against the false positives, then
+promote that tenant to `default`. Before G9 this was impossible — `default`
+and `strict` both hard-blocked, so the only way to observe the guard was to
+turn it `off`.
 
 **Structured output (`runtime/structured_output.py`).** `parse_llm_json(...)`
 validates LLM text against a Pydantic model — prefer this over bare
