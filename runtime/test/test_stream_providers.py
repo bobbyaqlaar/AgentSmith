@@ -1,0 +1,180 @@
+"""
+runtime/test/test_stream_providers.py — streaming across providers
+(TestbedFeedback-2026-07-21 G1).
+
+complete_stream() used to raise NotImplementedError for anthropic and every
+cloud-native provider, while SPECS/OPERATIONS/CHANGELOG advertised TTFT
+without caveat — so the obvious tenant design (frontier model on the
+latency-critical path) could not use the latency budget at all. The KYC
+Sentinel testbed hit this on its Analyst route.
+
+These tests pin: Anthropic SSE is parsed, non-text events don't start the
+TTFT clock, and a provider with no streaming surface falls back to
+complete() instead of raising.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from llm_gateway import CompletionResult, LLMGateway  # noqa: E402
+from provider_dispatch import parse_stream_delta, supports_streaming  # noqa: E402
+
+
+class _FakeStreamResp:
+    def __init__(self, lines: list[str]) -> None:
+        self.status_code = 200
+        self._lines = lines
+
+    async def __aenter__(self) -> "_FakeStreamResp":
+        return self
+
+    async def __aexit__(self, *args: object) -> bool:
+        return False
+
+    def raise_for_status(self) -> None:
+        return None
+
+    async def aiter_lines(self):
+        for line in self._lines:
+            yield line
+
+
+# A realistic Anthropic Messages stream: the text arrives only in
+# content_block_delta; everything else is protocol noise.
+ANTHROPIC_SSE = [
+    'data: {"type":"message_start","message":{"usage":{"input_tokens":12}}}',
+    'data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}',
+    'data: {"type":"ping"}',
+    'data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Risk"}}',
+    'data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":" LOW"}}',
+    'data: {"type":"content_block_stop","index":0}',
+    'data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":7}}',
+    'data: {"type":"message_stop"}',
+]
+
+
+# ── provider_dispatch unit level ─────────────────────────────────────────────
+
+
+def test_supports_streaming_matrix():
+    for p in ("openai", "groq", "ollama", "anthropic"):
+        assert supports_streaming(p), p
+    for p in ("vertex_ai", "azure_openai", "bedrock", "huawei_modelarts"):
+        assert not supports_streaming(p), p
+
+
+def test_parse_stream_delta_anthropic_only_returns_text_events():
+    import json
+
+    texts = [parse_stream_delta("anthropic", json.loads(line[len("data: "):])) for line in ANTHROPIC_SSE]
+    assert texts == [None, None, None, "Risk", " LOW", None, None, None]
+
+
+def test_parse_stream_delta_ignores_tool_use_json_deltas():
+    """input_json_delta carries tool arguments, not assistant prose — it
+    must not be counted as the first token."""
+    event = {"type": "content_block_delta", "delta": {"type": "input_json_delta", "partial_json": '{"a":'}}
+    assert parse_stream_delta("anthropic", event) is None
+
+
+def test_parse_stream_delta_openai_compatible():
+    assert parse_stream_delta("openai", {"choices": [{"delta": {"content": "hi"}}]}) == "hi"
+    assert parse_stream_delta("groq", {"choices": [{"delta": {}}]}) is None
+    assert parse_stream_delta("openai", {"choices": [{"delta": {"role": "assistant"}}]}) is None
+
+
+# ── gateway level ────────────────────────────────────────────────────────────
+
+
+def _gateway(provider: str, **cfg_over) -> LLMGateway:
+    gw = LLMGateway.__new__(LLMGateway)
+    gw.tenant_id = "t"
+    cfg = {"id": "test-model", "provider": provider}
+    cfg.update(cfg_over)
+    gw.models = {"analyst": cfg}
+    gw.budget_cap_usd = 10.0
+    gw._idempotency = None
+    gw.get_budget_status = MagicMock(
+        return_value={"ok": True, "remaining_usd": 10, "spent_usd": 0, "cap_usd": 10}
+    )
+    gw._resolve_role = MagicMock(return_value=("analyst", None))
+    gw._coerce_messages = MagicMock(return_value=[{"role": "user", "content": "hi"}])
+    gw._record_span_attributes = MagicMock()
+    gw._report_run_status = MagicMock()
+    gw._degrade_chain = MagicMock(return_value=["analyst"])
+    gw._is_free_tier = MagicMock(return_value=True)
+    return gw
+
+
+@pytest.mark.asyncio
+async def test_anthropic_streams_and_measures_ttft(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    gw = _gateway("anthropic")
+
+    captured: dict = {}
+    fake = _FakeStreamResp(ANTHROPIC_SSE)
+    mock_client = MagicMock()
+
+    def _stream(method, url, json=None, headers=None):
+        captured.update(url=url, body=json, headers=headers)
+        return fake
+
+    mock_client.stream = _stream
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await gw.complete_stream("hi", model_hint="analyst")
+
+    assert isinstance(result, CompletionResult)
+    assert result.text == "Risk LOW"          # protocol frames contributed nothing
+    assert result.ttft_ms is not None and result.ttft_ms >= 0
+    # Messages API shape, not chat/completions
+    assert captured["url"] == "https://api.anthropic.com/v1/messages"
+    assert captured["body"]["stream"] is True
+    assert captured["headers"]["x-api-key"] == "test-key"
+    assert captured["headers"]["anthropic-version"] == "2023-06-01"
+
+
+@pytest.mark.asyncio
+async def test_cloud_provider_falls_back_to_complete_instead_of_raising():
+    """G1: a models.yaml provider swap must not take the pipeline down."""
+    gw = _gateway("bedrock")
+    fallback = CompletionResult(
+        text="ok", model_used="test-model", input_tokens=1, output_tokens=1, cost_usd=0.0
+    )
+    gw.complete = AsyncMock(return_value=fallback)
+
+    result = await gw.complete_stream("hi", model_hint="analyst", max_tokens=99)
+
+    assert result is fallback
+    assert result.ttft_ms is None  # honest: no TTFT was measured
+    gw.complete.assert_awaited_once()
+    # Falls back BEFORE reserving budget or opening a run row — complete()
+    # owns the whole call, so there is no double reservation.
+    gw._report_run_status.assert_not_called()
+    assert gw.complete.await_args.kwargs["max_tokens"] == 99
+    assert gw.complete.await_args.kwargs["model_hint"] == "analyst"
+
+
+@pytest.mark.asyncio
+async def test_endpoint_resolution_shared_with_invoke(monkeypatch):
+    """_resolve_endpoint is one implementation for both paths — the
+    streaming copy used to omit anthropic entirely."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k1")
+    monkeypatch.setenv("GROQ_API_KEY", "k2")
+    monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama.internal:11434")
+    resolve = LLMGateway._resolve_endpoint
+
+    assert resolve({"provider": "anthropic"}) == ("https://api.anthropic.com", "k1")
+    assert resolve({"provider": "groq"}) == ("https://api.groq.com/openai/v1", "k2")
+    assert resolve({"provider": "ollama"}) == ("http://ollama.internal:11434/v1", "ollama")
+    # per-model override wins
+    assert resolve({"provider": "anthropic", "endpoint": "https://proxy.internal"})[0] == "https://proxy.internal"

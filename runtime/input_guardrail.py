@@ -51,20 +51,12 @@ _PHONE = re.compile(
 _CARD_CANDIDATE = re.compile(r"(?:\d[ -]?){13,19}")
 
 
-def _luhn_valid(raw: str) -> bool:
-    digits = re.sub(r"\D", "", raw)
-    if not 13 <= len(digits) <= 19:
-        return False
-    total = 0
-    reverse = digits[::-1]
-    for i, ch in enumerate(reverse):
-        n = int(ch)
-        if i % 2 == 1:
-            n *= 2
-            if n > 9:
-                n -= 9
-        total += n
-    return total % 10 == 0
+# Shared with trace_redactor.py — one Luhn implementation for both the
+# pre-call guard and the post-call redactor (ReviewFindings-2026-07-18 B1).
+try:
+    from runtime.luhn import luhn_valid as _luhn_valid
+except ImportError:  # pragma: no cover — flat (non-package) import layout
+    from luhn import luhn_valid as _luhn_valid  # type: ignore
 
 
 def reset_input_guardrail() -> None:

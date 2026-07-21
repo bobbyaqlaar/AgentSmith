@@ -39,6 +39,8 @@ runtime/.hitl_blobs/
 .idea/
 .vscode/
 *.swp
+# Claude local (per-machine) settings — .claude/settings.json stays tracked
+.claude/settings.local.json
 
 # Local secrets
 .env

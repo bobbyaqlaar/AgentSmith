@@ -60,18 +60,34 @@ export interface SyncEntryInput {
 export async function syncHistoryEntries(tenantId: string, entries: SyncEntryInput[]): Promise<number> {
   if (entries.length === 0) return 0;
   const pool = getPool();
+  // One multi-VALUES statement instead of one awaited INSERT per entry
+  // (ReviewFindings-2026-07-18 C3) — a sync batch is one round-trip.
+  // Chunked so a very large backfill can't exceed Postgres's 65535
+  // bind-parameter limit (7 params per row → 9000 rows ≈ 63k params).
+  // Dedupe by entryId first (last occurrence wins): the old per-row loop
+  // tolerated in-batch duplicates, but a single ON CONFLICT statement
+  // errors if the same key appears twice in its VALUES list.
+  const deduped = [...new Map(entries.map((e) => [e.entryId, e])).values()];
+  const CHUNK = 500;
   let written = 0;
-  for (const e of entries) {
+  for (let i = 0; i < deduped.length; i += CHUNK) {
+    const chunk = deduped.slice(i, i + CHUNK);
+    const params: unknown[] = [tenantId];
+    const rows = chunk.map((e) => {
+      const base = params.length;
+      params.push(e.entryId, e.level, e.event, e.timestamp, e.hitlResolved ?? false, JSON.stringify(e.raw));
+      return `($1, $${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
+    });
     await pool.query(
       `INSERT INTO agent_history_entries (tenant_id, entry_id, level, event, timestamp, hitl_resolved, raw)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       VALUES ${rows.join(", ")}
        ON CONFLICT (tenant_id, entry_id) DO UPDATE SET
          hitl_resolved = EXCLUDED.hitl_resolved,
          raw = EXCLUDED.raw,
          synced_at = now()`,
-      [tenantId, e.entryId, e.level, e.event, e.timestamp, e.hitlResolved ?? false, JSON.stringify(e.raw)]
+      params
     );
-    written += 1;
+    written += chunk.length;
   }
   return written;
 }

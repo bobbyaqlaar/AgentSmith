@@ -35,19 +35,10 @@ DEFAULT_HF_BASE = "https://router.huggingface.co/v1"
 DEFAULT_OLLAMA_BASE = "http://127.0.0.1:11434"
 
 
-def _load_dotenv(repo_root: Path) -> None:
-    env_path = repo_root / ".env"
-    if not env_path.is_file():
-        return
-    for raw in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, val = line.partition("=")
-        key = key.strip()
-        val = val.strip().strip("'").strip('"')
-        if key and key not in os.environ:
-            os.environ[key] = val
+# _load_dotenv lives in _shared.py (ReviewFindings-2026-07-18 B3). This
+# script's old private copy raised on unreadable .env; the shared version
+# is best-effort (never fatal), matching the other callers.
+from _shared import _load_dotenv  # noqa: E402
 
 
 def _chat_url(base_url: str) -> str:

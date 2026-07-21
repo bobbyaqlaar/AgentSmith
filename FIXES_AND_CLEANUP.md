@@ -184,3 +184,7 @@ Operational lessons distilled from past phases; full incident context in
 - **oil-price-demo: cherry-pick, don't rebase** — the post-commit hook
   regenerates the Knowledge Graph on every git operation; rebasing dozens
   of commits fires it each step and blocks the rebase with unstaged changes.
+  *Update 2026-07-21:* `AGENT_KG_DEFER=1 git rebase ...` now skips the
+  per-step rebuild (run `python3 scripts/map_codebase.py` once afterwards),
+  and the walk itself is incremental (unchanged files skipped by mtime) —
+  rebase is safe again with the guard set.

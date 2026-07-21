@@ -25,31 +25,41 @@ import sys
 from typing import Any, Optional
 
 PHOENIX_ENDPOINT = os.environ.get("AGENT_PHOENIX_ENDPOINT", "http://localhost:6006")
-SYNC_STATE_FILE = ".agent-rfc/fixtures/sync_state.json"
+
+# Dedupe-list bound (ReviewFindings-2026-07-18 C4): synced_span_ids used to
+# grow forever — loaded and rewritten on every run. Only the newest entries
+# matter for deduping (Phoenix annotations well behind the cursor don't
+# re-surface), so keep the most recent N.
+MAX_SYNCED_IDS = 5000
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-from _shared import _repo_root, _iso_now  # noqa: E402
+from _shared import _repo_root, _iso_now  # noqa: E402,F401 — _repo_root re-exported for tests
+from _shared import _load_sync_state, _save_sync_state  # noqa: E402,F401
 from _shared import _phoenix_get as _shared_phoenix_get  # noqa: E402
 
 
-def _load_sync_state() -> dict:
-    path = _repo_root() / SYNC_STATE_FILE
-    if not path.exists():
-        return {"synced_span_ids": [], "last_sync": ""}
-    try:
-        with path.open() as fh:
-            return json.load(fh)
-    except Exception:
-        return {"synced_span_ids": [], "last_sync": ""}
+def _load_promote():
+    """Load promote() from promote-learning.py by file path.
 
+    The old `from promote_learning import promote` could NEVER resolve —
+    the file is `promote-learning.py` (dash, not a valid module name) — so
+    every negative annotation raised ModuleNotFoundError inside the loop's
+    try/except and was counted as an error instead of promoted. Found by
+    scripts/test/test_promotion_loop.py (TestCoverageReview gap 4)."""
+    import importlib.util
+    from pathlib import Path
 
-def _save_sync_state(state: dict) -> None:
-    path = _repo_root() / SYNC_STATE_FILE
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w") as fh:
-        json.dump(state, fh, indent=2)
+    if "promote_learning" in sys.modules:
+        return sys.modules["promote_learning"].promote
+    path = Path(__file__).resolve().parent / "promote-learning.py"
+    spec = importlib.util.spec_from_file_location("promote_learning", path)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    sys.modules["promote_learning"] = mod
+    return mod.promote
 
 
 # ── Phoenix API client ────────────────────────────────────────────────────────
@@ -95,7 +105,8 @@ def sync() -> dict:
     print(f"🔄 Syncing Phoenix feedback from {PHOENIX_ENDPOINT}...")
 
     state = _load_sync_state()
-    already_synced = set(state.get("synced_span_ids", []))
+    synced_ids = list(state.get("synced_span_ids", []))  # insertion-ordered
+    already_synced = set(synced_ids)
     stats = {"synced": 0, "skipped": 0, "errors": 0}
 
     # Check Phoenix availability
@@ -153,7 +164,7 @@ def sync() -> dict:
         case_id = f"phoenix:{span_id[:12]}"
 
         try:
-            from promote_learning import promote
+            promote = _load_promote()
 
             promote(
                 case_id=case_id,
@@ -167,14 +178,15 @@ def sync() -> dict:
                 rerun_evals=False,  # Caller decides when to re-run
             )
             already_synced.add(span_id)
+            synced_ids.append(span_id)
             stats["synced"] += 1
             print(f"   ✅ Promoted: {case_id} (label={label})")
         except Exception as exc:
             print(f"   ❌ Failed to promote {span_id}: {exc}")
             stats["errors"] += 1
 
-    # Persist updated sync state
-    state["synced_span_ids"] = list(already_synced)
+    # Persist updated sync state — newest MAX_SYNCED_IDS only (C4 bound)
+    state["synced_span_ids"] = synced_ids[-MAX_SYNCED_IDS:]
     state["last_sync"] = _iso_now()
     _save_sync_state(state)
 

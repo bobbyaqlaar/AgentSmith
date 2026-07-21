@@ -40,7 +40,7 @@ from typing import Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-from _shared import _repo_root, judge_model as _judge_model  # noqa: E402
+from _shared import _repo_root, _load_dotenv, judge_model as _judge_model  # noqa: E402
 
 
 def _evals_path(suite: str = "golden") -> Path:
@@ -578,24 +578,8 @@ def _resolve_fail_below(suite: str, cli_value: float | None) -> float:
     return float(raw)
 
 
-def _load_dotenv(root: Path | None = None) -> None:
-    """Best-effort load of repo-root .env into os.environ (no overwrite)."""
-    path = (root or _repo_root()) / ".env"
-    if not path.exists():
-        return
-    try:
-        for line in path.read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            key = key.strip()
-            val = val.strip().strip("'").strip('"')
-            if key and key not in os.environ:
-                os.environ[key] = val
-    except Exception:
-        pass
-
+# _load_dotenv lives in _shared.py (ReviewFindings-2026-07-18 B3) — imported
+# at the top of this file with the other _shared helpers.
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 

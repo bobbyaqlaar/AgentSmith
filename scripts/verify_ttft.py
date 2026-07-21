@@ -22,30 +22,11 @@ from pathlib import Path
 
 import httpx
 
-from _shared import _repo_root  # noqa: E402
+from _shared import _repo_root, _load_dotenv  # noqa: E402,F401 — _repo_root kept for callers
 
 DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 DEFAULT_FAIL_ABOVE_MS = 2000
 DEFAULT_MODEL = "falcon3:1b"
-
-
-def _load_dotenv(root: Path | None = None) -> None:
-    """Best-effort load of repo-root .env into os.environ (no overwrite)."""
-    path = (root or _repo_root()) / ".env"
-    if not path.exists():
-        return
-    try:
-        for line in path.read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            key = key.strip()
-            val = val.strip().strip("'").strip('"')
-            if key and key not in os.environ:
-                os.environ[key] = val
-    except Exception:
-        pass
 
 
 def _resolve_base_url() -> str:

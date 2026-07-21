@@ -22,7 +22,15 @@ from security.runners import RUNNERS
 Mode = Literal["smoke", "ci", "full"]
 
 
-def _repo_root() -> Path:
+def _install_root() -> Path:
+    """Root of the checkout this script lives in (file-relative).
+
+    Renamed from `_repo_root` (ReviewFindings-2026-07-18 B4): it shared a
+    name with `_shared._repo_root()` but NOT its semantics — that one walks
+    up from the *current working directory* to the nearest `.git`, while
+    the harness must find its fixtures relative to where it is installed,
+    regardless of cwd. Same-name-different-behavior is drift bait; the
+    rename records that this is intentional, not a leftover copy."""
     return Path(__file__).resolve().parent.parent
 
 
@@ -50,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--evidence-pack", type=Path)
     args = p.parse_args(argv)
 
-    root = _repo_root()
+    root = _install_root()
     strict = args.strict or os.environ.get("SECURITY_STRICT", "") == "1"
     registry_path = root / "fixtures" / "security" / "control_registry.json"
     controls = load_control_registry(registry_path)

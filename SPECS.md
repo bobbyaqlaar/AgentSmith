@@ -371,11 +371,11 @@ design choice that's recorded here as settled.
 
 | Layer | Current state | Detail |
 |---|---|---|
-| **Observability & Traceability** | Full span attribution (tenant/agent/cost/tokens) via OTel→Phoenix. TTFT via opt-in `LLMGateway.complete_stream()` (`ttft_ms` on result + `llm.gateway.ttft_ms` span); non-stream `complete()` unchanged | §15, §29 |
+| **Observability & Traceability** | Full span attribution (tenant/agent/cost/tokens) via OTel→Phoenix. TTFT via opt-in `LLMGateway.complete_stream()` (`ttft_ms` on result + `llm.gateway.ttft_ms` span) for direct-API providers (openai/groq/ollama/anthropic); cloud-native adapters fall back to `complete()` with `ttft_ms=None`. Guardrail evidence (`guardrail_counts`) returned on every result | §15, §29 |
 | **Reliability & Accuracy** | `correctness`/`tool_accuracy`/`latency`/`hallucination` scored per case (§9). Hallucination rate hard-fail via `HALLUCINATION_FAIL_ABOVE`. Auto-retry is three-tiered: Temporal retries transient failures automatically; `run_with_self_correction` can ask the gateway for one corrected JSON payload before DLQ; `run_with_recoverable_step` deliberately disables bare retries for validation-shaped failures (`RetryPolicy(maximum_attempts=1)`) since they need a *different* payload | §9, §25 |
 | **Security & Guardrails** | Pre-call: `runtime/input_guardrail.py` scrubs PII in prompts before `_invoke()` (`INPUT_GUARDRAIL`); post-call: `trace_redactor.py` for observability. Content-moderation models remain tenant-pluggable, not shipped | §27, `input_guardrail.py` |
 | **Explainability** | Infrastructure-level: HMAC-signed, tamper-evident, append-only audit log (§30) + full OTel trace history — not per-decision natural-language reasoning narration | §30, §15 |
-| **Scalability & Performance** | Workflow concurrency via Temporal's shared/dedicated worker-pool model (§23, §25); app-version traffic-shaping via on-prem canary routing, customer's choice of Traefik or Envoy (§25 "On-Premise / Air-Gapped Deployment"). TTFT budget gate: `complete_stream()` + `scripts/verify_ttft.py` + optional `eval-ttft-live.yml` when `TTFT_LIVE=required` | §23, §25 |
+| **Scalability & Performance** | Workflow concurrency via Temporal's shared/dedicated worker-pool model (§23, §25); app-version traffic-shaping via on-prem canary routing, customer's choice of Traefik or Envoy (§25 "On-Premise / Air-Gapped Deployment"). TTFT budget gate: `complete_stream()` + `scripts/verify_ttft.py` + optional `eval-ttft-live.yml` when `TTFT_LIVE=required` (streaming providers only — see §29) | §23, §25 |
 | **Data Bias & Fairness** | v1 suite: `run-evals.py --suite fairness` with paired fixtures + fairness judge field / pair parity; not a full statistical disparate-impact package | §9 |
 | **Continuous Improvement** | Two independent loops: the HITL promotion loop (§9 "HITL Promotion Flow" — human-annotated production traces become golden-dataset cases) and the shadow-eval sampler (§9 — passive 5% production-trace sampling, judged the same way, surfaced as a read-only suggested-promotion queue, never auto-promoting) | §9 |
 
@@ -425,26 +425,54 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `cost_router.py` | Dev-mode routing: token count + keyword analysis → model selection. Not suitable for production. See §29 for production LLM Gateway. |
 | `network_watchdog.py` | Socket ping to `1.1.1.1:53`. Auto-switches active LLM endpoint. Background keepalive thread. |
 | `notifier.py` | Cross-platform desktop notifications via `plyer` + `osascript` (macOS). Background webhook thread (Slack / Teams / custom). |
-| `run-evals.py` | Loads tenant-local fixtures. Suites: `golden` (default), `fairness`, `hallucination`. `--fail-below` / `HALLUCINATION_FAIL_ABOVE`. Skips gracefully when <3 golden cases. |
+| `run-evals.py` | Loads tenant-local fixtures. Suites: `golden` (default), `fairness`, `hallucination`, `adversarial` (P12). `--fail-below` / `HALLUCINATION_FAIL_ABOVE`. Skips gracefully when <3 golden cases. |
+| `eval_judge.py` | Shared LLM-judge invocation (prompting + JSON parsing), factored out so `run-evals.py` and `shadow-eval.py` judge identically. |
+| `shadow-eval.py` | Async shadow-eval sampler: judges a 5% sample of already-served production traces from Phoenix post-hoc (§9). Never re-executes, never auto-promotes. |
+| `sync-portal-history.py` | Pushes `.agent-history.log` entries to the Ops Portal history-sync endpoint; skips already-synced entries. |
+| `run-security-checks.py` | `SEC-*` security harness (P12): `--mode smoke\|ci\|full`, `--strict`, `--framework`, `--evidence-pack` (OWASP / NIST / ATLAS / ISO rollups). Driven by `fixtures/security/control_registry.json`. |
+| `security/` | Harness internals: `registry.py` (control registry loader), `report.py` (evidence-pack rendering), `runners/` (one module per control check — prompt guard, tool allowlist, PII pre/post-call, moderation hook, adversarial eval, structured output, SSO revocation, risk register, noop). |
+| `delivery_model.py` | Enterprise Delivery Model soft gate: reads org policy + tenant.yaml `delivery.*`; returns ok/warn/skip, never hard-fails CI. |
+| `delivery_evidence.py` | Promote-time evidence pack (JSON + Markdown) collecting scorecard/fairness/redaction/HITL artifacts into `.agent-rfc/fixtures/`. |
+| `check_bare_except.py` | AST detector for empty exception handlers (pre-commit Guardrail 2); `# fail-open: <reason>` opts a handler out. Global copy at `~/.agent-framework/scripts/` must be kept in sync. |
+| `_shared.py` | Consolidated helpers (`_repo_root`, Phoenix REST get/post, `judge_model()` default). Deliberately not shared with `runtime/` (vendoring boundary — see module docstring). |
+| `test/` | Framework self-tests for the above (run by `self-test.yml`). |
 | `promote-learning.py` | Appends to `golden_evals.json`; archives resolution as judge learning (versioned, not FIFO-evicted); marks log entry `hitl_resolved: true` with `hitl_resolved_by` + `hitl_resolved_at`. |
 | `sync-ui-feedback.py` | Pulls Phoenix annotations; promotes unsynced negative feedback to golden dataset. |
 | `agent_logger.py` | JSON-Lines to stdout + `.agent-history.log`. Four levels: INFO/MINOR/MAJOR/CRITICAL. Calls `audit_token_velocity_circuit()`. All entries carry `owner_id`, `tenant.id` (if available), `agent.role`. |
 | `circuit_breaker.py` | Dual-tier burst/monthly guard. Dev-mode: raises `CircuitBreakerTripped`. Production: degrade ladder via LLM Gateway (see §11, §29). |
-| `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-history-sync`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / Product_Archive.md P10a). |
+| `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-history-sync`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / Product_Archive.md P10a), `--check-security` (P12 smoke path), `--check-delivery-model` (warn-only gate). |
 | `generate-ide-config.py` | Renders `.cursorrules` / `CLAUDE.md` / `.agents/skills/*/skill.md` from `templates/agent-rules.yaml` (single source, §13). Called by `post-checkout`. `--check-only` regenerates in memory and diffs against the committed files, exiting 1 on drift (Pillar 6/7 CI gate — Product_Archive.md P10c). |
 
 ### 5.5 Production Runtime (runtime/)
 
-See Section 25 for full specification. Stub implementations in `runtime/`.
+See Section 25 for full specification (§27 redaction, §29 gateway).
 
 | File | Purpose |
 |---|---|
 | `runtime/worker.py` | Temporal/Celery worker entrypoint. Partitioned by `tenant.id`. |
-| `runtime/llm_gateway.py` | Production LLM routing with per-model pricing, per-tenant budget enforcement, degrade ladder. |
-| `runtime/trace_redactor.py` | Environment-aware OTLP span scrubbing before export. |
-| `runtime/idempotency.py` | Idempotency key store and deduplication. |
-| `runtime/dead_letter.py` | Failed task queue and replay API. |
+| `runtime/llm_gateway.py` | Production LLM routing with per-model pricing, per-tenant budget enforcement, degrade ladder. `complete()` + `complete_stream()` (ttft_ms). |
+| `runtime/models.yaml` | Framework default model registry (§29); overridable per tenant. |
+| `runtime/provider_dispatch.py` | Shared provider request building/parsing for `llm_gateway.py` and `scripts/cost_router.py` (Vertex AI, Azure OpenAI, Bedrock, Huawei ModelArts, Groq, Ollama). |
+| `runtime/pg_pool.py` | Process-wide Postgres connection pool shared by the budget backend, idempotency store, and DLQ (`PG_POOL_MAX`, default 5). Pooled `.close()` releases, never tears down. |
+| `runtime/environment.py` | Canonical fail-closed `$ENVIRONMENT` resolver used framework-wide. |
+| `runtime/input_guardrail.py` | Pre-call PII scrub (PDPL / Emirates ID, email, phone, Luhn cards) — SEC-PII precall. |
+| `runtime/trace_redactor.py` | Environment-aware OTLP span scrubbing before export (§27), encrypted HITL blobs. |
+| `runtime/luhn.py` | Single shared Luhn validator used by both `input_guardrail.py` and `trace_redactor.py` (pre/post-call card detection can never diverge). |
+| `runtime/testing.py` | Shipped test doubles — `FakeGateway` (scripted responses, recorded calls, budget simulation, prompt assertions) and `RecordingGateway` (wraps a live gateway). Deliberately no more capable than the real gateway: it refuses to stream what the real one cannot. Override `_resolve_text(call)` for domain scripting. |
+| `runtime/prompt_guard.py` | Pre-call prompt-injection heuristics (SEC-PROMPT-001), `PROMPT_GUARD` modes. |
+| `runtime/moderation.py` | Pluggable output moderation hook (SEC-MOD-001), `MODERATION_HOOK=off\|optional\|required`. |
+| `runtime/structured_output.py` | `parse_llm_json` — fenced/bare JSON extraction + Pydantic validation (SEC-OUTPUT-001). |
+| `runtime/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (§4a). |
+| `runtime/conversation_memory.py` | Short-term token-window message buffer (RAG substrate). |
+| `runtime/embeddings.py` / `runtime/vector_store.py` | Pluggable embedders (hash / sentence-transformers) + memory/pgvector store — long-term retrieval. |
+| `runtime/idempotency.py` | Idempotency key store and deduplication (Redis or Postgres). |
+| `runtime/dead_letter.py` | Failed task queue and replay API (DLQ). |
+| `runtime/self_correction.py` | Opt-in corrected-payload loop helper (never inserted before the human DLQ path). |
+| `runtime/temporal_replay.py` | Concrete Temporal `replay_handler` — signals a live, parked workflow. |
+| `runtime/replay_webhook_server.py` | Reference receiver for the Ops Portal's "Replay with edits" action. |
 | `runtime/workflows/` | Reference durable workflows (tenant repos own their production definitions). |
+| `runtime/requirements-runtime.txt` | Minimal runtime-only dependency set (vendored independently of `scripts/`). |
+| `runtime/test/` | Runtime self-tests (no external infra; run by `self-test.yml`). |
 
 ### 5.6 Observability Surfaces
 
@@ -1068,20 +1096,39 @@ AgentSmith/
 │   ├── cost_router.py
 │   ├── network_watchdog.py
 │   ├── notifier.py
-│   ├── run-evals.py             # golden | fairness | hallucination suites
+│   ├── run-evals.py             # golden | fairness | hallucination | adversarial suites
+│   ├── run-security-checks.py   # SEC-* harness (P12): smoke|ci|full, --strict, --evidence-pack
+│   ├── security/                # Harness internals: registry.py, report.py, runners/, schemas/
+│   ├── eval_judge.py            # Shared LLM-judge path (run-evals + shadow-eval)
+│   ├── shadow-eval.py           # 5% post-hoc production-trace sampler (§9)
+│   ├── sync-portal-history.py   # .agent-history.log → Ops Portal history sync
+│   ├── delivery_model.py        # Delivery Model soft gate (ok|warn|skip)
+│   ├── delivery_evidence.py     # Promote-time evidence pack (JSON + Markdown)
+│   ├── check_bare_except.py     # AST empty-handler detector (pre-commit Guardrail 2)
+│   ├── _shared.py               # Consolidated scripts/ helpers (repo root, Phoenix REST, judge model)
 │   ├── verify_ttft.py           # live Ollama TTFT smoke (`TTFT_FAIL_ABOVE_MS`)
 │   ├── verify_sovereign_endpoint.py  # Falcon 3 / HF sovereign smoke
 │   ├── promote-learning.py
 │   ├── sync-ui-feedback.py
 │   ├── agent_logger.py
 │   ├── circuit_breaker.py
-│   ├── verify_system.py         # incl. --check-delivery-model
+│   ├── verify_system.py         # incl. --check-security, --check-delivery-model
+│   ├── test/                    # Framework self-tests for scripts/
 │   └── generate-ide-config.py  # Reads templates/agent-rules.yaml, writes target-repo IDE config
 ├── runtime/                     # Production runtime components
 │   ├── worker.py
 │   ├── llm_gateway.py           # complete() + complete_stream() (ttft_ms)
 │   ├── models.yaml              # Framework default model registry (§29)
+│   ├── provider_dispatch.py     # Shared provider request building/parsing (gateway + cost_router)
+│   ├── pg_pool.py               # Shared Postgres connection pool (budget / idempotency / DLQ)
+│   ├── environment.py           # Canonical fail-closed $ENVIRONMENT resolver
 │   ├── input_guardrail.py       # Pre-call PII scrub (PDPL)
+│   ├── luhn.py                  # Single Luhn validator (input_guardrail + trace_redactor)
+│   ├── testing.py               # FakeGateway / RecordingGateway test doubles for tenant suites
+│   ├── prompt_guard.py          # Prompt-injection heuristics (SEC-PROMPT-001)
+│   ├── moderation.py            # Output moderation hook (SEC-MOD-001)
+│   ├── structured_output.py     # parse_llm_json + Pydantic (SEC-OUTPUT-001)
+│   ├── tool_registry.py         # @tool + YAML allowlist (SEC-TOOL-001)
 │   ├── self_correction.py       # Opt-in corrected-payload loop helper
 │   ├── conversation_memory.py   # Short-term memory (RAG substrate)
 │   ├── embeddings.py / vector_store.py
@@ -1090,6 +1137,8 @@ AgentSmith/
 │   ├── dead_letter.py
 │   ├── temporal_replay.py       # Concrete Temporal replay_handler — signals a live, parked workflow
 │   ├── replay_webhook_server.py # Reference receiver for the Ops Portal's "Replay with edits" action
+│   ├── requirements-runtime.txt # Minimal runtime-only deps (vendored independently of scripts/)
+│   ├── test/                    # Runtime self-tests (no external infra)
 │   ├── workflows/
 │   │   └── base_workflow.py     # HITL + self-correction + recoverable DLQ
 │   └── k8s/dedicated-tenant/    # tenant.isolation: dedicated manifests (§23, §30)
@@ -1120,12 +1169,18 @@ AgentSmith/
 │   ├── golden_evals_base.json
 │   ├── fairness_evals_base.json
 │   ├── hallucination_evals_base.json
-│   └── *_judge_criteria_base.json
+│   ├── *_judge_criteria_base.json
+│   └── security/                # P12: control_registry.json, adversarial/PII/injection cases,
+│                                #   atlas_technique_map.json, tenant .agent-rfc/security templates
 ├── docs/
 │   ├── uae-regulatory.md
 │   ├── iso-42001-control-map.md
+│   ├── security-framework-map.md # Live SEC-* status: OWASP · NIST AI RMF · ATLAS · ISO 42001
 │   ├── delivery-model.md
 │   ├── rag-memory.md
+│   ├── team-observability.md
+│   ├── testbed-tenant-spec.md   # Proposed "KYC Sentinel" E2E testbed tenant (multi-LLM, multi-agent)
+│   ├── session-handoff/         # Cross-session working notes
 │   └── superpowers/             # Design specs + implementation plans
 ├── .github/
 │   ├── actions/                 # Composite actions copied into tenant repos (§17): gcp-auth,
@@ -1138,6 +1193,7 @@ AgentSmith/
 │   └── Caddyfile                # Phoenix auth sidecar (§15) — used by docker-compose.auth.yml
 ├── assets/                      # Logo + static images used by the docs
 ├── .agent-rfc/                  # The framework repo's own RFC dir + Knowledge Graph fixture
+│   └── security/                # This repo's own agency manifest, NIST profile, risk register, tool allowlist
 ├── init-db/                     # Postgres bootstrap for docker-compose.yml (creates agenticframework DB)
 ├── requirements.txt
 ├── pytest.ini
@@ -1152,11 +1208,16 @@ AgentSmith/
 ├── OPERATIONS.md
 ├── UserManual.md
 ├── Product_Archive.md           # Build history (P0–P11) + phase deliverables checklist
-└── FIXES_AND_CLEANUP.md         # Remaining to-do items only
+├── FIXES_AND_CLEANUP.md         # Remaining to-do items only
+├── ReviewFindings-2026-07-18.md # Docs↔code sync + code-quality audit (P1–P3 status)
+├── TestCoverageReview-2026-07-21.md # Test coverage matrix, gaps, testbed-tenant recommendation
+└── TestbedFeedback-2026-07-21.md # Framework gaps found by building the KYC Sentinel tenant
 ```
 
 This tree is the **only** copy — README.md links here instead of carrying
-its own. `self-test.yml` diffs the top-level entries above against
+its own. `self-test.yml` diffs the top-level entries above — plus the
+second-level entries of `scripts/`, `runtime/`, `docs/`, and `fixtures/`
+(the depth at which the P12 additions drifted undetected) — against
 `git ls-files` so drift fails CI instead of accumulating silently.
 
 ### `self-test.yml` Requirements

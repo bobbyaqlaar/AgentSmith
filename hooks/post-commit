@@ -25,10 +25,19 @@ if [ ! -f "$REPO_ROOT/.agenticframework/enabled" ] && [ ! -f "$REPO_ROOT/.agenti
 fi
 
 # ── 1. Update Knowledge Graph ─────────────────────────────────────────────────
-MAP_SCRIPT="$REPO_ROOT/scripts/map_codebase.py"
-[ ! -f "$MAP_SCRIPT" ] && MAP_SCRIPT="$HOME/.agent-framework/scripts/map_codebase.py"
-if [ -f "$MAP_SCRIPT" ]; then
-  python3 "$MAP_SCRIPT" 2>/dev/null || true
+# AGENT_KG_DEFER=1 skips the rebuild for batch git operations (rebase /
+# cherry-pick chains) that would otherwise fire it once per step and block
+# the operation with unstaged KG changes (FIXES_AND_CLEANUP.md lesson;
+# ReviewFindings-2026-07-18 C2). Run `python3 scripts/map_codebase.py`
+# once after the batch instead. The walk itself is also incremental now
+# (unchanged files skipped by mtime), so the un-deferred per-commit cost
+# is proportional to what the commit touched.
+if [ "${AGENT_KG_DEFER:-0}" != "1" ]; then
+  MAP_SCRIPT="$REPO_ROOT/scripts/map_codebase.py"
+  [ ! -f "$MAP_SCRIPT" ] && MAP_SCRIPT="$HOME/.agent-framework/scripts/map_codebase.py"
+  if [ -f "$MAP_SCRIPT" ]; then
+    python3 "$MAP_SCRIPT" 2>/dev/null || true
+  fi
 fi
 
 # ── 2. Semver auto-tagging ────────────────────────────────────────────────────

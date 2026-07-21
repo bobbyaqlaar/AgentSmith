@@ -25,27 +25,78 @@ jobs:
       - name: "py_compile sweep"
         run: |
           find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
-      - name: "SPECS.md repo-tree drift check (top level)"
+      - name: "SPECS.md repo-tree drift check (top level + key sub-trees)"
         # SPECS.md §16 holds the only copy of the repository tree (README links
         # to it). This diffs its top-level entries against git ls-files so tree
         # drift (renamed/added/removed top-level files or dirs) fails CI instead
-        # of accumulating silently.
+        # of accumulating silently. Extended (ReviewFindings-2026-07-18 A2):
+        # second-level entries of scripts/, runtime/, docs/, fixtures/ are now
+        # diffed too — the P12 additions drifted for months at exactly that
+        # depth while the top-level-only check stayed green.
         run: |
           python3 - <<'EOF'
-          import re, subprocess, pathlib, sys
+          import fnmatch, re, subprocess, pathlib, sys
           specs = pathlib.Path("SPECS.md").read_text()
           m = re.search(r"### Repository Structure\n\n```\n(.*?)\n```", specs, re.S)
           assert m, "Repository Structure block missing from SPECS.md"
-          tree = {e.rstrip("/") for e in re.findall(r"^[├└]── ([A-Za-z0-9_.\-]+/?)", m.group(1), re.M)}
-          tracked = {p.split("/")[0] for p in subprocess.check_output(["git","ls-files"],text=True).splitlines()}
+
+          # Parse the box-drawing tree into (depth, name) entries. A line like
+          # "│   ├── foo.py  # comment" is depth 1, name "foo.py". Lines may
+          # carry several names ("embeddings.py / vector_store.py") or a path
+          # ("k8s/dedicated-tenant/" -> first component "k8s").
+          entries = []  # (depth, name)
+          for line in m.group(1).splitlines():
+              lm = re.match(r"^((?:(?:│   )|(?:    ))*)[├└]── (.+)$", line)
+              if not lm:
+                  continue
+              depth = len(lm.group(1)) // 4
+              body = lm.group(2).split("#", 1)[0].strip()
+              for name in (n.strip() for n in body.split(" / ")):
+                  if name:
+                      entries.append((depth, name.rstrip("/").split("/")[0]))
+
+          top = {name for depth, name in entries if depth == 0}
+          tracked_paths = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
+          tracked_top = {p.split("/")[0] for p in tracked_paths}
           ignore = {".DS_Store", ".claude"}
-          missing = sorted(tracked - tree - ignore)
-          ghost = sorted(e for e in tree if not pathlib.Path(e).exists())
-          if missing or ghost:
-              print("missing from SPECS.md tree:", missing)
-              print("in tree but absent on disk:", ghost)
+          missing = sorted(tracked_top - top - ignore)
+          ghost = sorted(e for e in top if not pathlib.Path(e).exists())
+
+          # Second-level check for the directories that actually drifted (P12).
+          DEEP_DIRS = ["scripts", "runtime", "docs", "fixtures"]
+          IGNORE_SECOND = {"__init__.py", ".gitignore"}
+          # Map: top-level dir -> second-level names listed under it in the tree.
+          second: dict[str, set] = {d: set() for d in DEEP_DIRS}
+          current_top = None
+          for depth, name in entries:
+              if depth == 0:
+                  current_top = name
+              elif depth == 1 and current_top in second:
+                  second[current_top].add(name)
+          deep_missing, deep_ghost = [], []
+          for d in DEEP_DIRS:
+              tracked_second = {
+                  p.split("/")[1] for p in tracked_paths
+                  if p.startswith(d + "/") and p.count("/") >= 1
+              } - IGNORE_SECOND
+              listed = second[d]
+              for name in sorted(tracked_second):
+                  if not any(fnmatch.fnmatch(name, pat) for pat in listed):
+                      deep_missing.append(f"{d}/{name}")
+              for name in sorted(listed):
+                  if "*" in name:
+                      continue
+                  if not pathlib.Path(d, name).exists():
+                      deep_ghost.append(f"{d}/{name}")
+
+          if missing or ghost or deep_missing or deep_ghost:
+              print("missing from SPECS.md tree (top level):", missing)
+              print("in tree but absent on disk (top level):", ghost)
+              print("missing from SPECS.md tree (second level):", deep_missing)
+              print("in tree but absent on disk (second level):", deep_ghost)
               sys.exit(1)
-          print(f"SPECS.md tree matches repo top level ({len(tree)} entries)")
+          n2 = sum(len(v) for v in second.values())
+          print(f"SPECS.md tree matches repo ({len(top)} top-level, {n2} second-level entries)")
           EOF
       - name: "Redaction compliance (staging + production profiles)"
         run: |

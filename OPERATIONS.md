@@ -122,6 +122,10 @@ export REDIS_URL="redis://localhost:6379/0"     # only if IDEMPOTENCY_BACKEND=re
 export TEMPORAL_ADDRESS="localhost:7233"        # only if WORKER_BACKEND=temporal
 export IDEMPOTENCY_BACKEND="postgres"           # postgres | redis | memory
 export BUDGET_BACKEND="postgres"                # postgres | redis
+# PG_POOL_MAX=5 — max pooled Postgres connections per DSN per worker process
+# (runtime/pg_pool.py, shared by budget/idempotency/DLQ stores). Keep
+# workers × PG_POOL_MAX + the portal's own pool (10) under the server's
+# max_connections. Default is fine for most deployments.
 
 # ── HITL and trace redaction (production only) ────────────────────────────────────
 export HITL_ENCRYPTION_KEY="<32-byte-hex>"      # generate: openssl rand -hex 32
@@ -727,6 +731,38 @@ export VECTOR_BACKEND=memory           # memory (default) | postgres (needs pgve
 `ttft_ms` on `CompletionResult` and span attribute `llm.gateway.ttft_ms`;
 non-streaming `complete()` is unchanged (total-call latency only). Live
 budget gate: §3's `verify_ttft.py` / `TTFT_LIVE=required`.
+
+*Provider support:* streaming works for the direct-API providers —
+`openai`, `groq`, `ollama`, and `anthropic`. The cloud-native adapters
+(`vertex_ai`, `azure_openai`, `bedrock`, `huawei_modelarts`) have no shared
+SSE surface, so `complete_stream()` **falls back to `complete()`** for them
+and returns `ttft_ms=None` — a `models.yaml` provider swap degrades the
+latency metric, never the call. If you gate on TTFT, assert `ttft_ms is not
+None` rather than assuming every route reports it.
+
+**Guardrail evidence on the result.** `CompletionResult.guardrail_counts`
+carries the pre-call PII redactions the gateway performed
+(`{"emirates_id": 1, "card": 1, ...}`), so a decision-path app can record
+*what* was scrubbed without re-running the scrub itself — required evidence
+for PDPL/GDPR reviews. `prompt_guard_reasons` carries non-blocking
+prompt-guard findings.
+
+**Testing your tenant app.** `runtime/testing.py` ships `FakeGateway` and
+`RecordingGateway` — use them instead of hand-rolling a double:
+
+```python
+from runtime.testing import FakeGateway
+
+gw = FakeGateway(responses={"analyst": '{"rating": "LOW"}'},
+                 providers={"analyst": "anthropic"})
+result = await gw.complete("...", model_hint="analyst")
+assert gw.routes_used() == ["analyst"]
+gw.assert_prompt_excludes("784-1985-1234567-1")   # PII never reached the model
+```
+
+The double is deliberately no more capable than the real gateway (it won't
+stream what the real one can't). A double that over-promises hides exactly
+the bugs a test suite exists to find — see `TestbedFeedback-2026-07-21`.
 
 **UAE sovereign profile (`templates/uae-sovereign/`).** Pattern A: Falcon 3
 on Ollama (`falcon3:3b` / `falcon3:1b`, live-verified 2026-07-10); Pattern B:
@@ -1625,7 +1661,7 @@ with different architectures" — it doesn't know or assume your agent
 app's internal language/framework, only that it ships as one container
 image, listens on one HTTP port with `GET /healthz`, reads config from env
 vars only (never a cloud secret manager — see the secrets note below),
-and logs JSON-Lines to stdout (already `runtime/agent_logger.py`'s
+and logs JSON-Lines to stdout (already `scripts/agent_logger.py`'s
 convention everywhere else in this framework).
 
 **Two deployment targets**, picked based on the customer:

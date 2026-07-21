@@ -253,7 +253,7 @@ def run_map(verbose: bool = False) -> dict:
 
     # Track which files we see during this walk
     seen_files: set[str] = set()
-    stats = {"upserted": 0, "edges": 0, "guardrails": 0, "purged": 0}
+    stats = {"upserted": 0, "unchanged": 0, "edges": 0, "guardrails": 0, "purged": 0}
 
     # ── Walk source files ─────────────────────────────────────────────────────
     for abs_path in _iter_source_files(root):
@@ -261,8 +261,6 @@ def run_map(verbose: bool = False) -> dict:
         rel_path = str(abs_path.relative_to(root))
         seen_files.add(rel_path)
 
-        parser = _PARSERS.get(lang)
-        symbols, raw_imports = parser(abs_path) if parser else ([], [])
         last_modified = abs_path.stat().st_mtime
 
         from datetime import datetime, timezone
@@ -270,6 +268,29 @@ def run_map(verbose: bool = False) -> dict:
         mtime_str = datetime.fromtimestamp(last_modified, tz=timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
+
+        # Incremental skip (ReviewFindings-2026-07-18 C2): a node whose stored
+        # last_modified matches the file's current mtime was already parsed by
+        # a previous run — its symbols and import edges are in the graph.
+        # Skipping unchanged files turns the per-commit rebuild from
+        # "re-parse the whole repo" into "re-parse what the commit touched",
+        # and also skips the per-upsert graph save each node would trigger.
+        # (mtime granularity is 1s ISO here — a same-second rewrite is caught
+        # on the next run once the clock ticks; commits are slower than that.)
+        existing = kg._g.nodes[rel_path] if kg._g.has_node(rel_path) else None
+        if (
+            existing is not None
+            and existing.get("node_type") == "CodebaseFile"
+            and existing.get("last_modified") == mtime_str
+            and existing.get("language") == lang
+        ):
+            stats["unchanged"] += 1
+            if verbose:
+                print(f"  [{lang}] {rel_path} — unchanged, skipped")
+            continue
+
+        parser = _PARSERS.get(lang)
+        symbols, raw_imports = parser(abs_path) if parser else ([], [])
 
         kg.upsert_file(
             rel_path, language=lang, symbols=symbols, last_modified=mtime_str

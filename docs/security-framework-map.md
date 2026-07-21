@@ -60,7 +60,7 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | `SEC-PROMPT-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Framework | `runtime/prompt_guard.py` heuristics + denylist | Adversarial fixture suite: injection/jailbreak blocked or flagged |
 | `SEC-OUTPUT-001` | LLM02 | MEASURE 2.7 | — | Theme 7 | **Met** | Shared | `runtime/structured_output.py` `parse_llm_json` | Schema validation rejects malformed LLM JSON |
 | `SEC-TOOL-001` | LLM07 | GOVERN 1.3 | AML.T0040 | Theme 4 | **Met** | Shared | `runtime/tool_registry.py` + allowlist | Tool call without allowlist → hard fail |
-| `SEC-MOD-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Tenant | `runtime/moderation.py` + `MODERATION_HOOK` | Strict mode: unset hook fails CI; tenant registers classifier |
+| `SEC-MOD-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Tenant | `runtime/moderation.py` + `MODERATION_HOOK` | Harness runner `scripts/security/runners/moderation_hook.py` — strict mode: unset hook fails CI; tenant registers classifier |
 | `SEC-RISK-001` | — | MAP 1.5 | AML.T0000 | Theme 2 | **Org-owned** | Tenant | *Planned:* risk register template generator | Harness checks `.agent-rfc/security/risk_register.yaml` exists + schema |
 | `SEC-ADV-001` | LLM01 | MEASURE 2.7 | AML.T0024 | Theme 7 | **Met** | Shared | `run-evals.py --suite adversarial` + prompt_guard | Red-team fixtures in `--suite adversarial` |
 | `SEC-SSO-001` | — | GOVERN 1.3 | AML.T0048 | Theme 1 | **Met** | Framework | `jti` revocation + `SSO_REVOCATION_MODE=fail-open\|fail-closed` | — |

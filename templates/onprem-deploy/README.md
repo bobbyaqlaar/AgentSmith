@@ -29,7 +29,7 @@ know or care what's inside your agent app. It only assumes your app:
    On Kubernetes, the same variables are sourced from a `Secret` instead
    (see `kubernetes/templates/secret.yaml`) — your app code doesn't need to
    know which.
-4. **Logs JSON-Lines to stdout.** Already how `runtime/agent_logger.py`
+4. **Logs JSON-Lines to stdout.** Already how `scripts/agent_logger.py`
    works framework-wide — Docker's default `json-file` log driver and
    Kubernetes' own log pipeline both capture this without extra config.
    Point the customer's own ELK/Loki/Splunk at the container runtime's log

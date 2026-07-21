@@ -74,6 +74,58 @@ def _tenant_id() -> Optional[str]:
         return None
 
 
+# One sync-state file shared by shadow-eval.py, sync-portal-history.py and
+# sync-ui-feedback.py — each keeps its own keys inside it. The load/save
+# pair below was copied byte-for-byte in all three before this
+# consolidation (ReviewFindings-2026-07-18 B2).
+SYNC_STATE_FILE = ".agent-rfc/fixtures/sync_state.json"
+
+
+def _load_sync_state() -> dict:
+    """Read the shared sync-state JSON; {} if missing or unreadable.
+    Callers use state.get(key, fallback) for their own keys."""
+    import json
+
+    path = _repo_root() / SYNC_STATE_FILE
+    if not path.exists():
+        return {}
+    try:
+        with path.open() as fh:
+            return json.load(fh)
+    except Exception:
+        return {}
+
+
+def _save_sync_state(state: dict) -> None:
+    import json
+
+    path = _repo_root() / SYNC_STATE_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as fh:
+        json.dump(state, fh, indent=2)
+
+
+def _load_dotenv(root: Optional[Path] = None) -> None:
+    """Best-effort load of repo-root .env into os.environ (no overwrite).
+    Previously copied in run-evals.py / verify_ttft.py /
+    verify_sovereign_endpoint.py (ReviewFindings-2026-07-18 B3)."""
+    path = (root or _repo_root()) / ".env"
+    if not path.exists():
+        return
+    try:
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            key = key.strip()
+            val = val.strip().strip("'").strip('"')
+            if key and key not in os.environ:
+                os.environ[key] = val
+    except Exception:  # fail-open: .env is optional convenience; never fatal
+        pass
+
+
 def _phoenix_get(
     phoenix_endpoint: str, path: str, params: Optional[dict] = None
 ) -> Any:

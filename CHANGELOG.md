@@ -18,6 +18,39 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Added / Fixed — Testbed feedback (2026-07-21)
+
+Found by building the KYC Sentinel testbed tenant
+(`docs/testbed-tenant-spec.md`); full analysis in
+`TestbedFeedback-2026-07-21.md`.
+
+- **Gateway (behaviour change):** `complete_stream()` now streams
+  **Anthropic** (Messages SSE) in addition to OpenAI-compatible providers,
+  and **falls back to `complete()` instead of raising `NotImplementedError`**
+  for providers with no shared SSE surface (`vertex_ai`, `azure_openai`,
+  `bedrock`, `huawei_modelarts`), returning `ttft_ms=None`. Previously the
+  TTFT budget could not be applied to any frontier provider — the obvious
+  shape for a latency-critical route. Callers gating on TTFT must assert
+  `ttft_ms is not None` rather than assume it is populated.
+- **Gateway (behaviour change):** the budget-breach degrade ladder now walks
+  the **whole** `degrade_to` chain to the first free tier instead of
+  descending a single rung, so SPECS §29's "Local — switch to Ollama" rung
+  is reachable when a paid tier sits between the caller's role and the local
+  one. Previously such a call degraded to the next *paid* tier and then
+  hard-failed its reservation.
+- **`CompletionResult`:** new `guardrail_counts` and `prompt_guard_reasons`
+  fields expose the guardrail evidence the gateway already computes
+  (backward-compatible; both default to empty). Decision-path apps no longer
+  need to re-run the PII scrub to record what was redacted.
+- **New `runtime/testing.py`:** shipped `FakeGateway` / `RecordingGateway`
+  test doubles for tenant suites, deliberately no more capable than the real
+  gateway (a double that over-promises hid the streaming bug above).
+- **Internal:** `LLMGateway._resolve_endpoint()` extracted — `_invoke()` and
+  `complete_stream()` shared near-duplicate endpoint resolution and the
+  streaming copy silently omitted the `anthropic` branch.
+- **Docs:** SPECS §3/§5.5/§16, OPERATIONS TTFT section updated with provider
+  support, guardrail evidence, and tenant-testing guidance.
+
 ### Added — Security Compliance Harness (P12, 2026-07-15)
 
 - **Harness:** `scripts/run-security-checks.py` + `fixtures/security/control_registry.json`

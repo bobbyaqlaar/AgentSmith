@@ -165,9 +165,14 @@ class DeadLetterQueue:
             conn.close()
 
     def _connect(self):
-        import psycopg2  # type: ignore
+        # Pooled (runtime/pg_pool.py) — .close() releases to the pool, so
+        # the `finally: conn.close()` call sites below stay correct as-is.
+        try:
+            from runtime.pg_pool import connect as pg_connect
+        except ImportError:  # pragma: no cover — flat (non-package) import layout
+            from pg_pool import connect as pg_connect  # type: ignore
 
-        return psycopg2.connect(self._dsn)
+        return pg_connect(self._dsn)
 
     @staticmethod
     def _row_to_entry(row: tuple) -> DLQEntry:

@@ -40,7 +40,7 @@ from __future__ import annotations
 import json
 import os
 import time
-from typing import Any, Protocol
+from typing import Any, Optional, Protocol
 
 
 # ── Direct-API providers (anthropic / openai-compatible) ──────────────────────
@@ -105,6 +105,53 @@ def parse_response(provider: str, data: dict) -> tuple[str, int, int]:
     text = data["choices"][0]["message"]["content"]
     usage = data.get("usage", {})
     return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+
+
+# ── Streaming (TTFT path — llm_gateway.complete_stream) ───────────────────────
+#
+# Streaming lives here with the rest of the per-provider envelope knowledge
+# (TestbedFeedback-2026-07-21 G1). Before this, complete_stream() inlined the
+# OpenAI delta shape and raised NotImplementedError for everything else — so
+# a tenant routing its latency-critical call to Anthropic (the obvious
+# design) could not use the TTFT budget at all.
+
+_STREAMING_PROVIDERS = {"openai", "ollama", "groq", "anthropic"}
+
+
+def supports_streaming(provider: str) -> bool:
+    """True when complete_stream can measure TTFT for this provider.
+
+    Cloud-native adapters (vertex_ai / azure_openai / bedrock /
+    huawei_modelarts) each have their own auth, URL and event envelope with
+    no shared SSE surface, so they stay non-streaming for now — callers
+    fall back to the non-streaming path rather than failing.
+    """
+    return provider in _STREAMING_PROVIDERS and not is_cloud_provider(provider)
+
+
+def parse_stream_delta(provider: str, data: dict) -> Optional[str]:
+    """Extract the incremental text from one decoded SSE `data:` event.
+
+    Returns None for events that carry no text (keep-alives, message/
+    content-block start and stop, usage-only deltas) — the caller skips
+    those, so TTFT is timed from the first real TOKEN rather than from the
+    first protocol frame, which is what the budget is meant to measure.
+    """
+    if provider == "anthropic":
+        # Anthropic Messages streaming: message_start, content_block_start,
+        # content_block_delta (the only text-bearing event), ping,
+        # content_block_stop, message_delta, message_stop.
+        if data.get("type") != "content_block_delta":
+            return None
+        delta = data.get("delta") or {}
+        # text_delta carries prose; input_json_delta (tool use) carries no
+        # assistant text and must not be counted as a first token.
+        if delta.get("type") not in (None, "text_delta"):
+            return None
+        return delta.get("text") or None
+
+    choices = data.get("choices") or [{}]
+    return (choices[0].get("delta") or {}).get("content") or None
 
 
 # ── Cloud-native providers (Vertex AI / Azure OpenAI / Bedrock / Huawei ModelArts) ──

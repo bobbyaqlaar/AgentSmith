@@ -79,19 +79,15 @@ _REDACTED_MARKER = "[REDACTED]"
 _PAYLOAD_ATTRIBUTES = {"input.value", "output.value"}
 
 
-def _luhn_valid(digits: str) -> bool:
-    digits = re.sub(r"[ -]", "", digits)
-    if not digits.isdigit() or not (13 <= len(digits) <= 19):
-        return False
-    total = 0
-    for i, ch in enumerate(reversed(digits)):
-        d = int(ch)
-        if i % 2 == 1:
-            d *= 2
-            if d > 9:
-                d -= 9
-        total += d
-    return total % 10 == 0
+# Shared with input_guardrail.py — one Luhn implementation for both the
+# pre-call guard and the post-call redactor (ReviewFindings-2026-07-18 B1).
+# The shared version strips ALL non-digit separators (this module's old
+# copy stripped only spaces/hyphens — identical on today's
+# _CARD_CANDIDATE matches, divergent the moment that regex widens).
+try:
+    from runtime.luhn import luhn_valid as _luhn_valid
+except ImportError:  # pragma: no cover — flat (non-package) import layout
+    from luhn import luhn_valid as _luhn_valid  # type: ignore
 
 
 def _redact_credit_cards(text: str) -> str:

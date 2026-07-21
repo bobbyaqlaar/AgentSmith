@@ -31,7 +31,7 @@ import os
 import threading
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
@@ -72,6 +72,25 @@ class CompletionResult:
     cost_usd: float
     degrade_tier: Optional[str] = None  # None = nominal; "downgrade" | "local" | etc.
     ttft_ms: Optional[float] = None
+    # Guardrail evidence (TestbedFeedback-2026-07-21 G3). The gateway
+    # already computes these while scrubbing; before they were exposed here
+    # they only reached logs and span attributes, so an app that must
+    # record WHAT was redacted in its own decision record — every PDPL /
+    # GDPR decision-path app, the exact use case this framework markets —
+    # had to re-run the scrub itself and pay for it twice.
+    # {"emirates_id": 1, "card": 1, ...}; empty when the guardrail is off.
+    guardrail_counts: dict[str, int] = field(default_factory=dict)
+    # Prompt-guard heuristics that fired but did not block. NOTE: today this
+    # is always empty on a returned result, because the gateway raises on
+    # ANY `blocked` result regardless of PROMPT_GUARD mode — which also
+    # means PROMPT_GUARD=default currently behaves exactly like strict,
+    # contradicting prompt_guard.apply_prompt_guard's documented contract
+    # ("default: scan; return result; does not raise").
+    # See TestbedFeedback-2026-07-21 G9: that inconsistency needs an owner
+    # decision (tighten the doc, or make default warn-only). This field is
+    # wired now so it carries evidence the moment default becomes
+    # non-blocking, with no further change at the call sites.
+    prompt_guard_reasons: list[str] = field(default_factory=list)
 
 
 class BudgetExceededError(RuntimeError):
@@ -272,9 +291,17 @@ class _PostgresBudgetBackend(_BudgetBackend):
             conn.close()
 
     def _connect(self):
-        import psycopg2  # type: ignore
+        # Pooled since ReviewFindings-2026-07-18 C1: try_reserve + add_spend
+        # sit inside every gateway LLM call — a fresh TCP+auth handshake per
+        # operation was the hottest avoidable cost in the runtime. The
+        # returned object's .close() releases back to the pool, so the
+        # existing `finally: conn.close()` call sites stay correct as-is.
+        try:
+            from runtime.pg_pool import connect as pg_connect
+        except ImportError:  # pragma: no cover — flat (non-package) import layout
+            from pg_pool import connect as pg_connect  # type: ignore
 
-        return psycopg2.connect(self._dsn)
+        return pg_connect(self._dsn)
 
     def _period(self) -> str:
         return _current_period()
@@ -476,10 +503,33 @@ class LLMGateway:
                 f"and no cheaper tier available below {model_hint!r}. Halting (alert tier)."
             )
 
-        next_role = chain[1]
-        next_cfg = self.models.get(next_role, {})
-        tier = "local" if self._is_free_tier(next_cfg) else "downgrade"
-        return next_role, tier
+        # Walk the WHOLE chain to the first free tier, not one rung
+        # (TestbedFeedback-2026-07-21 G2). Taking only chain[1] meant a
+        # caller always asking for the top role degraded to the next PAID
+        # tier and then hard-failed its reservation — rung 4 of the
+        # documented ladder ("Local — switch to Ollama") was unreachable
+        # whenever a paid tier sat between the caller's role and the local
+        # one, which is the normal shape of a cost ladder. The budget is
+        # already breached here, so a paid rung only buys one more call
+        # before failing; a free rung keeps the tenant serving.
+        for candidate in chain[1:]:
+            cfg = self.models.get(candidate)
+            if not cfg:
+                continue
+            if self._is_free_tier(cfg):
+                return candidate, "local"
+
+        # No free tier anywhere in the chain — fall back to the next
+        # configured rung (cheaper than the caller's, may still fail its
+        # reservation) rather than refusing to serve at all.
+        for candidate in chain[1:]:
+            if self.models.get(candidate):
+                return candidate, "downgrade"
+
+        raise BudgetExceededError(
+            f"tenant={self.tenant_id} budget exhausted (${budget.spent_usd:.2f}/${budget.cap_usd:.2f}) "
+            f"and no configured tier below {model_hint!r}. Halting (alert tier)."
+        )
 
     # ── Run status reporting (Ops Portal, Product_Archive.md P2a) ─────────
 
@@ -574,7 +624,18 @@ class LLMGateway:
         temperature: float = 0.2,
         **kwargs: Any,
     ) -> CompletionResult:
-        """Route an OpenAI-compatible streaming completion and measure TTFT."""
+        """Stream a completion and measure TTFT.
+
+        Supports every direct-API provider — OpenAI-compatible (openai /
+        groq / ollama) and Anthropic. Providers with no shared SSE surface
+        (the cloud-native adapters) fall back to the non-streaming path
+        with `ttft_ms=None` rather than raising: streaming is a latency
+        optimisation, never a correctness requirement, so a `models.yaml`
+        provider swap must not take a tenant's pipeline down
+        (TestbedFeedback-2026-07-21 G1 — this method used to raise
+        NotImplementedError for exactly the frontier providers a tenant
+        puts on its latency-critical path).
+        """
         del kwargs
 
         budget = self.get_budget_status()
@@ -588,17 +649,35 @@ class LLMGateway:
 
         provider = cfg.get("provider", "openai")
         try:
-            from runtime.provider_dispatch import build_request, is_cloud_provider
-        except ImportError:
-            from provider_dispatch import build_request, is_cloud_provider  # type: ignore
-
-        if is_cloud_provider(provider) or provider == "anthropic":
-            raise NotImplementedError(
-                f"complete_stream currently supports OpenAI-compatible providers only; got {provider!r}."
+            from runtime.provider_dispatch import (
+                build_request,
+                parse_stream_delta,
+                supports_streaming,
             )
-        if provider not in {"openai", "ollama", "groq"}:
-            raise NotImplementedError(
-                f"complete_stream currently supports provider values 'openai', 'ollama', and 'groq'; got {provider!r}."
+        except ImportError:
+            from provider_dispatch import (  # type: ignore
+                build_request,
+                parse_stream_delta,
+                supports_streaming,
+            )
+
+        if not supports_streaming(provider):
+            # Fall back BEFORE reserving budget or reporting run status, so
+            # complete() owns the whole call exactly as if it had been
+            # invoked directly — no double reservation, no orphaned run row.
+            logger.info(
+                "provider %r does not support streaming; falling back to complete() "
+                "for tenant=%s role=%s (ttft_ms will be None)",
+                provider,
+                self.tenant_id,
+                role,
+            )
+            return await self.complete(
+                prompt,
+                model_hint=model_hint,
+                workflow_id=workflow_id,
+                max_tokens=max_tokens,
+                temperature=temperature,
             )
 
         model_id = cfg["id"]
@@ -619,8 +698,10 @@ class LLMGateway:
             )
 
         pg_mode = resolve_prompt_guard_mode()
+        pg_reasons: list[str] = []
         if pg_mode != "off":
             pg_result = apply_prompt_guard(messages)
+            pg_reasons = list(pg_result.reasons)
             if pg_result.blocked:
                 logger.warning(
                     "prompt_guard blocked tenant=%s mode=%s reasons=%s",
@@ -670,23 +751,9 @@ class LLMGateway:
         )
         self._report_run_status(run_id, "running", workflow_id=workflow_id)
 
-        if provider == "ollama":
-            base_url = os.path.expandvars(
-                cfg.get("endpoint", "${OLLAMA_BASE_URL}/v1")
-            )
-            if not base_url.startswith("http"):
-                base_url = (
-                    os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-                    + "/v1"
-                )
-            api_key = "ollama"
-        elif provider == "groq":
-            api_key = os.environ.get(cfg.get("api_key_env", "GROQ_API_KEY"), "")
-            base_url = cfg.get("endpoint") or "https://api.groq.com/openai/v1"
-        else:
-            api_key = os.environ.get(cfg.get("api_key_env", "OPENAI_API_KEY"), "")
-            base_url = cfg.get("endpoint") or "https://api.openai.com/v1"
-        base_url = os.path.expandvars(base_url)
+        # Shared with _invoke() — this used to be a near-copy that omitted
+        # the anthropic branch entirely (TestbedFeedback G1).
+        base_url, api_key = self._resolve_endpoint(cfg)
 
         path, headers, body = build_request(
             provider, model_id, messages, api_key, max_tokens, temperature
@@ -712,11 +779,11 @@ class LLMGateway:
                         if not payload or payload == "[DONE]":
                             continue
                         data = json.loads(payload)
-                        content = (
-                            data.get("choices", [{}])[0]
-                            .get("delta", {})
-                            .get("content")
-                        )
+                        # Per-provider envelope lives in provider_dispatch;
+                        # non-text events (keep-alives, block start/stop,
+                        # usage-only deltas) return None so TTFT is timed
+                        # from the first real token, not the first frame.
+                        content = parse_stream_delta(provider, data)
                         if not content:
                             continue
                         if ttft_ms is None:
@@ -764,6 +831,8 @@ class LLMGateway:
             cost_usd=cost_usd,
             degrade_tier=degrade_tier,
             ttft_ms=ttft_ms,
+            guardrail_counts=dict(guardrail_counts),
+            prompt_guard_reasons=list(pg_reasons),
         )
 
     async def complete(
@@ -843,8 +912,10 @@ class LLMGateway:
             )
 
         pg_mode = resolve_prompt_guard_mode()
+        pg_reasons: list[str] = []
         if pg_mode != "off":
             pg_result = apply_prompt_guard(messages)
+            pg_reasons = list(pg_result.reasons)
             if pg_result.blocked:
                 logger.warning(
                     "prompt_guard blocked tenant=%s mode=%s reasons=%s",
@@ -1034,6 +1105,8 @@ class LLMGateway:
             output_tokens=out_tok,
             cost_usd=cost_usd,
             degrade_tier=degrade_tier,
+            guardrail_counts=dict(guardrail_counts),
+            prompt_guard_reasons=list(pg_reasons),
         )
 
         if idempotency_key and self._idempotency is not None:
@@ -1071,6 +1144,46 @@ class LLMGateway:
             status = exc.response.status_code
             return status == 429 or status >= 500
         return False
+
+    @staticmethod
+    def _resolve_endpoint(cfg: dict) -> tuple[str, str]:
+        """(base_url, api_key) for a direct-API provider config.
+
+        base_url/api_key_env are config-driven (models.yaml `endpoint` /
+        `api_key_env` fields) so a tenant can point a provider at a proxy,
+        a region-pinned host, or a differently-named API key env var
+        (e.g. per-tenant keys) without editing this code. The literals
+        below are fallbacks for the common case only — direct Anthropic/
+        OpenAI calls — not a ceiling on what's supported.
+
+        Shared by _invoke() and complete_stream(). They used to carry
+        near-duplicate copies and the streaming one silently omitted the
+        anthropic branch, which is part of why streaming never worked for
+        it (TestbedFeedback-2026-07-21 G1).
+        """
+        provider = cfg.get("provider", "openai")
+        if provider == "anthropic":
+            api_key = os.environ.get(cfg.get("api_key_env", "ANTHROPIC_API_KEY"), "")
+            base_url = cfg.get("endpoint") or "https://api.anthropic.com"
+        elif provider == "ollama":
+            base_url = os.path.expandvars(cfg.get("endpoint", "${OLLAMA_BASE_URL}/v1"))
+            # expandvars leaves unset variables as literal "${VAR}" — not a valid URL.
+            if not base_url.startswith("http"):
+                base_url = (
+                    os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434") + "/v1"
+                )
+            api_key = "ollama"
+        elif provider == "groq":
+            # Groq's API is OpenAI-compatible (same request/response shape,
+            # parse_response's non-anthropic branch handles it) — only the
+            # host and API key env var differ from direct OpenAI, same as
+            # every other "openai_compatible" provider in this codebase.
+            api_key = os.environ.get(cfg.get("api_key_env", "GROQ_API_KEY"), "")
+            base_url = cfg.get("endpoint") or "https://api.groq.com/openai/v1"
+        else:
+            api_key = os.environ.get(cfg.get("api_key_env", "OPENAI_API_KEY"), "")
+            base_url = cfg.get("endpoint") or "https://api.openai.com/v1"
+        return os.path.expandvars(base_url), api_key
 
     async def _invoke(
         self, cfg: dict, messages: list[dict], max_tokens: int, temperature: float
@@ -1132,40 +1245,7 @@ class LLMGateway:
                 provider, model_id, messages, cfg, max_tokens, temperature
             )
         else:
-            # base_url/api_key_env are config-driven (models.yaml `endpoint` /
-            # `api_key_env` fields) so a tenant can point a provider at a proxy,
-            # a region-pinned host, or a differently-named API key env var
-            # (e.g. per-tenant keys) without editing this code. The literals
-            # below are fallbacks for the common case only — direct Anthropic/
-            # OpenAI calls — not a ceiling on what's supported.
-            if provider == "anthropic":
-                api_key_env = cfg.get("api_key_env", "ANTHROPIC_API_KEY")
-                api_key = os.environ.get(api_key_env, "")
-                base_url = cfg.get("endpoint") or "https://api.anthropic.com"
-            elif provider == "ollama":
-                base_url = os.path.expandvars(
-                    cfg.get("endpoint", "${OLLAMA_BASE_URL}/v1")
-                )
-                # expandvars leaves unset variables as literal "${VAR}" — not a valid URL.
-                if not base_url.startswith("http"):
-                    base_url = (
-                        os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-                        + "/v1"
-                    )
-                api_key = "ollama"
-            elif provider == "groq":
-                # Groq's API is OpenAI-compatible (same request/response shape,
-                # parse_response's non-anthropic branch handles it) — only the
-                # host and API key env var differ from direct OpenAI, same as
-                # every other "openai_compatible" provider in this codebase.
-                api_key_env = cfg.get("api_key_env", "GROQ_API_KEY")
-                api_key = os.environ.get(api_key_env, "")
-                base_url = cfg.get("endpoint") or "https://api.groq.com/openai/v1"
-            else:
-                api_key_env = cfg.get("api_key_env", "OPENAI_API_KEY")
-                api_key = os.environ.get(api_key_env, "")
-                base_url = cfg.get("endpoint") or "https://api.openai.com/v1"
-            base_url = os.path.expandvars(base_url)
+            base_url, api_key = self._resolve_endpoint(cfg)
 
             path, headers, body = build_request(
                 provider, model_id, messages, api_key, max_tokens, temperature

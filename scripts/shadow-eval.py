@@ -55,7 +55,6 @@ from typing import Any, Optional
 sys.path.insert(0, str(Path(__file__).parent))
 
 PHOENIX_ENDPOINT = os.environ.get("AGENT_PHOENIX_ENDPOINT", "http://localhost:6006")
-SYNC_STATE_FILE = ".agent-rfc/fixtures/sync_state.json"
 SHADOW_CRITERIA = {
     "name": "Shadow Eval (production sample)",
     "instructions": (
@@ -65,28 +64,11 @@ SHADOW_CRITERIA = {
 }
 
 
-from _shared import _repo_root  # noqa: E402
+from _shared import _repo_root  # noqa: E402,F401 — re-export for callers/tests
+from _shared import _load_sync_state, _save_sync_state  # noqa: E402,F401
 from _shared import _phoenix_get as _shared_phoenix_get  # noqa: E402
 from _shared import _phoenix_post as _shared_phoenix_post  # noqa: E402
 from _shared import judge_model as _resolve_judge_model  # noqa: E402
-
-
-def _load_sync_state() -> dict:
-    path = _repo_root() / SYNC_STATE_FILE
-    if not path.exists():
-        return {}
-    try:
-        with path.open() as fh:
-            return json.load(fh)
-    except Exception:
-        return {}
-
-
-def _save_sync_state(state: dict) -> None:
-    path = _repo_root() / SYNC_STATE_FILE
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w") as fh:
-        json.dump(state, fh, indent=2)
 
 
 def _phoenix_get(path: str, params: Optional[dict] = None) -> Any:

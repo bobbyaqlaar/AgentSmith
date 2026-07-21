@@ -32,29 +32,11 @@ from typing import Any, Optional
 
 OPS_PORTAL_URL = os.environ.get("OPS_PORTAL_URL", "")
 OPS_PORTAL_SYNC_TOKEN = os.environ.get("OPS_PORTAL_SYNC_TOKEN", "")
-SYNC_STATE_FILE = ".agent-rfc/fixtures/sync_state.json"
 HISTORY_LOG_FILE = ".agent-history.log"
 
 
 from _shared import _repo_root, _tenant_id  # noqa: E402
-
-
-def _load_sync_state() -> dict:
-    path = _repo_root() / SYNC_STATE_FILE
-    if not path.exists():
-        return {}
-    try:
-        with path.open() as fh:
-            return json.load(fh)
-    except Exception:
-        return {}
-
-
-def _save_sync_state(state: dict) -> None:
-    path = _repo_root() / SYNC_STATE_FILE
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w") as fh:
-        json.dump(state, fh, indent=2)
+from _shared import _load_sync_state, _save_sync_state  # noqa: E402,F401
 
 
 def _load_tenant_yaml() -> dict:

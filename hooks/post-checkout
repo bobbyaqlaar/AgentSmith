@@ -164,10 +164,14 @@ elif [ "$STACK" != "GENERIC" ] && [ ! -d "$TMPL_DIR" ]; then
 fi
 
 # ── Update Knowledge Graph ────────────────────────────────────────────────────
-MAP_SCRIPT="$REPO_ROOT/scripts/map_codebase.py"
-[ ! -f "$MAP_SCRIPT" ] && MAP_SCRIPT="$SCRIPTS_DIR/map_codebase.py"
-if [ -f "$MAP_SCRIPT" ]; then
-  python3 "$MAP_SCRIPT" 2>/dev/null && echo "✅ Knowledge Graph seeded" || true
+# AGENT_KG_DEFER=1 skips the rebuild during batch git operations — see
+# hooks/post-commit for the full rationale (ReviewFindings-2026-07-18 C2).
+if [ "${AGENT_KG_DEFER:-0}" != "1" ]; then
+  MAP_SCRIPT="$REPO_ROOT/scripts/map_codebase.py"
+  [ ! -f "$MAP_SCRIPT" ] && MAP_SCRIPT="$SCRIPTS_DIR/map_codebase.py"
+  if [ -f "$MAP_SCRIPT" ]; then
+    python3 "$MAP_SCRIPT" 2>/dev/null && echo "✅ Knowledge Graph seeded" || true
+  fi
 fi
 
 # ── .gitignore for public repos ───────────────────────────────────────────────
