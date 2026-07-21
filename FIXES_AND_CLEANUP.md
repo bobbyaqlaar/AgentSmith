@@ -1,12 +1,54 @@
 # AgentSmith — Remaining To-Do Items
 
-**Last reviewed:** 2026-07-15 (P12 security compliance harness shipped)
+**Last reviewed:** 2026-07-21 (testbed tenant + framework hardening G1–G10)
 
 > **Scope:** this document owns only *not-yet-done* work: the active phase
 > and confirmed future gaps with their trigger conditions. Completed build
 > history (P0–P11c, phase deliverables) lives in `Product_Archive.md`.
 > The formal specification is `SPECS.md`; operator procedures are
 > `OPERATIONS.md`.
+
+## Current state (2026-07-21)
+
+The **KYC Sentinel testbed tenant** (`../KYC_Sentinel`,
+spec `docs/testbed-tenant-spec.md`) was built end-to-end, and doing so
+surfaced framework gaps **G1–G10 — all fixed**. Full analysis, reproduction
+and per-gap fix notes: [`TestbedFeedback-2026-07-21.md`](./TestbedFeedback-2026-07-21.md).
+Two prior reviews from the same push are also complete:
+[`ReviewFindings-2026-07-18.md`](./ReviewFindings-2026-07-18.md) (docs↔code
+sync + perf, P1–P3) and [`TestCoverageReview-2026-07-21.md`](./TestCoverageReview-2026-07-21.md)
+(coverage gaps 1–7). Framework suite 287 passing; changes are in
+CHANGELOG [Unreleased]. Session handoff:
+[`docs/session-handoff/2026-07-21-testbed-and-hardening.md`](./docs/session-handoff/2026-07-21-testbed-and-hardening.md).
+
+**The one open build item is deployment** — see "Active: deploy the testbed
+tenant" below. Everything code-side (framework + tenant) is done and green.
+
+Still-optional follow-ups (no trigger fired): docs polish D1/D4 in
+TestbedFeedback §B; the SEC-MOD-002 control split (G10 option c); the generic
+`runtime` → `agentsmith_runtime` package rename (major-version only, noted in
+`pyproject.toml`).
+
+---
+
+## Active: deploy the testbed tenant (was P11d demo path) 🟡 NOT STARTED
+
+**Goal:** take KYC Sentinel from green-offline to running in production, then
+publish the demo/article series (the original P11d intent, now with a
+purpose-built tenant instead of oil-price-demo).
+
+**Trigger:** fired — the tenant is feature-complete and its strict CI gate
+passes locally; only credentials are missing.
+
+**Blocked on:** GitHub + GCP credentials (the build arc ran in a sandbox
+without them). Not a code blocker.
+
+**Steps + round-trip proof:** `KYC_Sentinel/DEVLOG.md` "CI/CD (GitHub) —
+pending" and "Deployment — pending" (stub sections to fill), and the
+"Deployment starting points" in the session-handoff note above. Append
+progress to the DEVLOG as you go.
+
+---
 
 Each future item records a **trigger condition** (the concrete signal that
 means "build this now," not a calendar date) and rationale, so a future
