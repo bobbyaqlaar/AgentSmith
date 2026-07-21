@@ -41,15 +41,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Union
 
-try:
-    from runtime.llm_gateway import BudgetExceededError, CompletionResult
-except ImportError:  # pragma: no cover — flat (non-package) import layout
-    from llm_gateway import BudgetExceededError, CompletionResult  # type: ignore
-
-try:
-    from runtime.provider_dispatch import supports_streaming
-except ImportError:  # pragma: no cover
-    from provider_dispatch import supports_streaming  # type: ignore
+from runtime.llm_gateway import BudgetExceededError, CompletionResult
+from runtime.provider_dispatch import supports_streaming
 
 # What a role's response can be: a fixed string, a queue of strings consumed
 # one per call, or a callable taking the prompt text.

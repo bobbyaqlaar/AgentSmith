@@ -790,6 +790,24 @@ carries the pre-call PII redactions the gateway performed
 for PDPL/GDPR reviews. `prompt_guard_reasons` carries non-blocking
 prompt-guard findings.
 
+**Installing the runtime in a tenant app.** `runtime/` is a pip-installable
+package (`agentsmith-runtime`), so a tenant depends on it like any other
+library instead of bootstrapping `sys.path`:
+
+```bash
+pip install -e /path/to/AgenticFramework                     # local checkout
+pip install "agentsmith-runtime @ git+https://github.com/bobbyaqlaar/AgentSmith@v1.0.0"
+```
+
+Backends are extras, matching the runtime's own lazy imports — take only
+what you use: `[postgres]`, `[redis]`, `[temporal]`, `[hitl]`, `[cloud]`,
+or `[all]`. Then `from runtime.llm_gateway import LLMGateway` works from any
+directory, and a tenant Dockerfile builds from the tenant repo alone.
+
+For development against a live framework checkout, set `AGENTSMITH_DIR` —
+tenant code that follows the `agents/_framework.py` pattern prefers it over
+the installed copy, so framework edits take effect without reinstalling.
+
 **Testing your tenant app.** `runtime/testing.py` ships `FakeGateway` and
 `RecordingGateway` — use them instead of hand-rolling a double:
 

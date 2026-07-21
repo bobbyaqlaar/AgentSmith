@@ -21,10 +21,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from llm_gateway import CompletionResult, LLMGateway  # noqa: E402
-from provider_dispatch import parse_stream_delta, supports_streaming  # noqa: E402
+from runtime.llm_gateway import CompletionResult, LLMGateway  # noqa: E402
+from runtime.provider_dispatch import parse_stream_delta, supports_streaming  # noqa: E402
 
 
 class _FakeStreamResp:

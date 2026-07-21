@@ -14,12 +14,14 @@ combine them.
 
 ## A. Framework gaps
 
-> **Status 2026-07-21 (same day):** G1–G5, G9 and G10 are **fixed** — see
+> **Status 2026-07-21 (same day):** G1–G6, G9 and G10 are **fixed** — see
 > the per-item notes and CHANGELOG [Unreleased]. Framework suite 170 →
-> **252 passing**; the testbed tenant 25 → **35**. Only G6–G8 remain open.
-> Two of the findings were discovered by fixing others: G9 while wiring G3,
-> G10 while hardening the tenant's security CI after G5 — each fix exposed
-> the next layer down.
+> **252 passing**; the testbed tenant 25 → **35**, and the tenant now runs
+> entirely against the installed package. Only **G7 and G8** remain open.
+> Three findings were discovered by fixing others: G9 while wiring G3, G10
+> while hardening the tenant's security CI after G5, and G6's `scripts/`
+> breakage while removing the import fallbacks — each fix exposed the next
+> layer down, which is the argument for keeping the testbed permanently.
 
 ### G1 — `complete_stream()` cannot stream the frontier providers (**High**) ✅ FIXED
 
@@ -194,7 +196,7 @@ cannot know — so a later branch switch must not clobber it. Tests:
 seed-only-missing, never-overwrite, the opt-in gate still applying, and a
 machine whose install predates the step.
 
-### G6 — `runtime/` is not an installable package (**Medium**)
+### G6 — `runtime/` is not an installable package (**Medium**) ✅ FIXED
 
 There is no `pyproject.toml`/`setup.py` anywhere in the repo, so a tenant
 cannot `pip install` the runtime. Consequences observed:
@@ -210,6 +212,40 @@ cannot `pip install` the runtime. Consequences observed:
 **Fix:** add a minimal `pyproject.toml` exposing `runtime` as
 `agentsmith_runtime`, publish to an internal index (or install from git
 ref). This also kills the dual-import boilerplate.
+
+**Fixed.** `pyproject.toml` publishes `agentsmith-runtime` with backend
+extras (`[postgres] [redis] [temporal] [hitl] [cloud] [all]`) mirroring the
+runtime's lazy imports, so a tenant takes only what it uses.
+
+*Deviation from the original note:* the import name stays **`runtime`**, not
+`agentsmith_runtime`. Renaming would break every `from runtime.X import Y`
+in every tenant repo simultaneously — a major-version change, not something
+to land under a live tenant. The generic name is a real collision risk in a
+crowded virtualenv and is recorded in `pyproject.toml` as the follow-up.
+
+Removed: **16 dual-import blocks** across 6 runtime modules, plus 8 more in
+the tenant. Verified the actual goal — from an unrelated working directory,
+with no `sys.path` manipulation and no `AGENTSMITH_DIR`:
+
+```
+$ python -c "from runtime.testing import FakeGateway; ..."
+gateway call: hello
+cross-module import (trace_redactor -> environment) OK: [REDACTED]
+```
+
+and the tenant's full suite (35) plus all eight F-scenarios pass against the
+installed package alone.
+
+**What this nearly broke, and the lesson:** removing the fallbacks made
+`scripts/verify_system.py --check-redaction` fail, which surfaced as
+`SEC-PII-002` failing in the *tenant's* strict CI — several `scripts/`
+imported runtime modules flat after inserting `runtime/` onto `sys.path`.
+That works only while runtime modules don't import each other; the moment
+they do, the package root is required. Those scripts now add the repo
+**root** and import `runtime.X`. Worth noting the failure showed up two
+layers away from the change, in a different repo's compliance gate — the
+kind of coupling a packaging change is supposed to eliminate, caught only
+because the tenant's security harness was already wired to hard-fail (G5).
 
 ### G7 — No runtime primitives for the two hard judge checks (**Low**)
 
@@ -458,7 +494,7 @@ bookkeeping; it was not needed to make `required` satisfiable.
 3. ~~**G3** + **G2**~~ ✅ done (D2/D3 docs updated with them)
 4. ~~**G9** — decide the prompt-guard mode semantics~~ ✅ done (option C + harness enforcement check)
 5. ~~**G5** — one vendoring step; unblocks tenant strict CI.~~ ✅ done
-6. **G6** — packaging; larger, but removes a whole class of import boilerplate.
+6. ~~**G6** — packaging~~ ✅ done (24 dual-import blocks removed across both repos)
 7. ~~**G10**~~ ✅ done (option a: declared hook, runtime-bound)
 8. **G7/G8**, then D1/D4 in the next docs pass.
 

@@ -1195,6 +1195,7 @@ AgentSmith/
 ├── .agent-rfc/                  # The framework repo's own RFC dir + Knowledge Graph fixture
 │   └── security/                # This repo's own agency manifest, NIST profile, risk register, tool allowlist
 ├── init-db/                     # Postgres bootstrap for docker-compose.yml (creates agenticframework DB)
+├── pyproject.toml               # Packages runtime/ as `agentsmith-runtime` (§25) — pip-installable by tenants
 ├── requirements.txt
 ├── pytest.ini
 ├── .gitignore

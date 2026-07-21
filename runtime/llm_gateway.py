@@ -37,30 +37,16 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-try:
-    from runtime.moderation import (  # noqa: F401 — re-export for tenants
-        ModerationBlockedError,
-        ModerationHookRequiredError,
-        ModerationResult,
-        apply_output_moderation,
-        get_output_moderator,
-        register_output_moderator,
-        reset_output_moderator,
-        resolve_mode as resolve_moderation_mode,
-    )
-except ImportError:  # pragma: no cover
-    from moderation import (  # type: ignore
-        ModerationBlockedError,
-        ModerationHookRequiredError,
-        ModerationResult,
-        apply_output_moderation,
-        get_output_moderator,
-        register_output_moderator,
-        reset_output_moderator,
-        resolve_mode as resolve_moderation_mode,
-    )
-
-
+from runtime.moderation import (  # noqa: F401 — re-export for tenants
+    ModerationBlockedError,
+    ModerationHookRequiredError,
+    ModerationResult,
+    apply_output_moderation,
+    get_output_moderator,
+    register_output_moderator,
+    reset_output_moderator,
+    resolve_mode as resolve_moderation_mode,
+)
 @dataclass
 class CompletionResult:
     """Result of a gateway-routed completion."""
@@ -292,11 +278,7 @@ class _PostgresBudgetBackend(_BudgetBackend):
         # operation was the hottest avoidable cost in the runtime. The
         # returned object's .close() releases back to the pool, so the
         # existing `finally: conn.close()` call sites stay correct as-is.
-        try:
-            from runtime.pg_pool import connect as pg_connect
-        except ImportError:  # pragma: no cover — flat (non-package) import layout
-            from pg_pool import connect as pg_connect  # type: ignore
-
+        from runtime.pg_pool import connect as pg_connect
         return pg_connect(self._dsn)
 
     def _period(self) -> str:
@@ -644,19 +626,11 @@ class LLMGateway:
             )
 
         provider = cfg.get("provider", "openai")
-        try:
-            from runtime.provider_dispatch import (
-                build_request,
-                parse_stream_delta,
-                supports_streaming,
-            )
-        except ImportError:
-            from provider_dispatch import (  # type: ignore
-                build_request,
-                parse_stream_delta,
-                supports_streaming,
-            )
-
+        from runtime.provider_dispatch import (
+            build_request,
+            parse_stream_delta,
+            supports_streaming,
+        )
         if not supports_streaming(provider):
             # Fall back BEFORE reserving budget or reporting run status, so
             # complete() owns the whole call exactly as if it had been
@@ -680,21 +654,12 @@ class LLMGateway:
         messages = self._coerce_messages(prompt)
 
         # Prompt injection heuristics (SEC-PROMPT-001) — before PII scrub.
-        try:
-            from runtime.prompt_guard import (
-                PromptGuardBlockedError,
-                apply_prompt_guard,
-                is_enforcing as prompt_guard_is_enforcing,
-                resolve_mode as resolve_prompt_guard_mode,
-            )
-        except ImportError:  # pragma: no cover
-            from prompt_guard import (  # type: ignore
-                PromptGuardBlockedError,
-                apply_prompt_guard,
-                is_enforcing as prompt_guard_is_enforcing,
-                resolve_mode as resolve_prompt_guard_mode,
-            )
-
+        from runtime.prompt_guard import (
+            PromptGuardBlockedError,
+            apply_prompt_guard,
+            is_enforcing as prompt_guard_is_enforcing,
+            resolve_mode as resolve_prompt_guard_mode,
+        )
         pg_mode = resolve_prompt_guard_mode()
         pg_reasons: list[str] = []
         if pg_mode != "off":
@@ -724,11 +689,7 @@ class LLMGateway:
                     pg_result.reasons,
                 )
 
-        try:
-            from runtime.input_guardrail import resolve_mode, scrub_messages
-        except ImportError:  # pragma: no cover
-            from input_guardrail import resolve_mode, scrub_messages  # type: ignore
-
+        from runtime.input_guardrail import resolve_mode, scrub_messages
         guardrail_mode = resolve_mode()
         messages, guardrail_counts = scrub_messages(messages, mode=guardrail_mode)
         if guardrail_counts:
@@ -908,21 +869,12 @@ class LLMGateway:
         # Prompt injection heuristics (SEC-PROMPT-001) — before PII scrub.
         # PROMPT_GUARD=off|default|strict (default=default). Strict raises inside
         # apply_prompt_guard; default also refuses the provider call here.
-        try:
-            from runtime.prompt_guard import (
-                PromptGuardBlockedError,
-                apply_prompt_guard,
-                is_enforcing as prompt_guard_is_enforcing,
-                resolve_mode as resolve_prompt_guard_mode,
-            )
-        except ImportError:  # pragma: no cover
-            from prompt_guard import (  # type: ignore
-                PromptGuardBlockedError,
-                apply_prompt_guard,
-                is_enforcing as prompt_guard_is_enforcing,
-                resolve_mode as resolve_prompt_guard_mode,
-            )
-
+        from runtime.prompt_guard import (
+            PromptGuardBlockedError,
+            apply_prompt_guard,
+            is_enforcing as prompt_guard_is_enforcing,
+            resolve_mode as resolve_prompt_guard_mode,
+        )
         pg_mode = resolve_prompt_guard_mode()
         pg_reasons: list[str] = []
         if pg_mode != "off":
@@ -955,11 +907,7 @@ class LLMGateway:
         # Pre-call PII scrub (PDPL / FIXES Security & Guardrails) — masks
         # personal data in the prompt before provider invoke. Symmetric to
         # post-call trace_redactor.py. Mode: INPUT_GUARDRAIL or env default.
-        try:
-            from runtime.input_guardrail import resolve_mode, scrub_messages
-        except ImportError:  # pragma: no cover
-            from input_guardrail import resolve_mode, scrub_messages  # type: ignore
-
+        from runtime.input_guardrail import resolve_mode, scrub_messages
         guardrail_mode = resolve_mode()
         messages, guardrail_counts = scrub_messages(messages, mode=guardrail_mode)
         if guardrail_counts:
@@ -1238,23 +1186,13 @@ class LLMGateway:
             wait_exponential,
         )
 
-        try:
-            from runtime.provider_dispatch import (
-                build_cloud_request,
-                build_request,
-                is_cloud_provider,
-                parse_cloud_response,
-                parse_response,
-            )
-        except ImportError:
-            from provider_dispatch import (  # type: ignore
-                build_cloud_request,
-                build_request,
-                is_cloud_provider,
-                parse_cloud_response,
-                parse_response,
-            )
-
+        from runtime.provider_dispatch import (
+            build_cloud_request,
+            build_request,
+            is_cloud_provider,
+            parse_cloud_response,
+            parse_response,
+        )
         provider = cfg.get("provider", "openai")
         model_id = cfg["id"]
 

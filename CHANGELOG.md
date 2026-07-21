@@ -73,9 +73,25 @@ Found by building the KYC Sentinel testbed tenant
   filled-in risk register is the tenant's own document. Previously the SEC-*
   harness looked for these four artifacts in every tenant repo while nothing
   ever put them there.
-- **Docs:** SPECS §3/§5.5/§16, OPERATIONS TTFT + prompt-guard sections
-  (incl. a rollout procedure and mode table), `docs/security-framework-map.md`
-  SEC-PROMPT-001 row.
+- **`runtime/` is now a pip-installable package (G6):** new `pyproject.toml`
+  publishes it as `agentsmith-runtime` (imports as `runtime`), with optional
+  extras `[postgres] [redis] [temporal] [hitl] [cloud] [all]` mirroring the
+  runtime's lazy backend imports. Consequences:
+  - The `try: from runtime.X import Y / except ImportError: from X import Y`
+    dance is **gone** — 16 blocks removed across 6 runtime modules. Modules
+    now import each other as `runtime.X`, unconditionally.
+  - Tenants no longer need a `sys.path` bootstrap, and a tenant Dockerfile
+    builds from the tenant repo alone instead of `COPY`-ing the framework
+    from a parent directory.
+  - `scripts/` that touch the runtime now put the repo **root** on
+    `sys.path` (not `runtime/`) and import `runtime.X`; a flat `runtime/`
+    path can no longer satisfy the runtime's internal package imports.
+  - Import name stays `runtime` so every existing call site keeps working.
+    Renaming it to `agentsmith_runtime` is a follow-up for a major version —
+    it would break every tenant's imports at once.
+- **Docs:** SPECS §3/§5.5/§16, OPERATIONS TTFT + prompt-guard + install
+  sections (incl. a rollout procedure and mode table),
+  `docs/security-framework-map.md` SEC-PROMPT-001 row.
 
 - **Declared moderation hook (G10):** a tenant can now commit
   `moderation.hook: "module.path:callable"` in

@@ -24,10 +24,7 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-try:
-    from runtime.environment import get_environment
-except ImportError:  # pragma: no cover
-    from environment import get_environment  # type: ignore
+from runtime.environment import get_environment
 
 # ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,10 +50,7 @@ _CARD_CANDIDATE = re.compile(r"(?:\d[ -]?){13,19}")
 
 # Shared with trace_redactor.py — one Luhn implementation for both the
 # pre-call guard and the post-call redactor (ReviewFindings-2026-07-18 B1).
-try:
-    from runtime.luhn import luhn_valid as _luhn_valid
-except ImportError:  # pragma: no cover — flat (non-package) import layout
-    from luhn import luhn_valid as _luhn_valid  # type: ignore
+from runtime.luhn import luhn_valid as _luhn_valid
 
 
 def reset_input_guardrail() -> None:

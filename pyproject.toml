@@ -1,0 +1,83 @@
+# AgentSmith — packaging for the production runtime (TestbedFeedback G6).
+#
+# Why this exists: `runtime/` was importable only by putting the framework
+# checkout (or the runtime/ directory itself) on sys.path. That ambiguity is
+# what produced the `try: from runtime.X import Y / except ImportError: from X
+# import Y` dance in 8 runtime modules — every module had to work under both
+# layouts because neither was guaranteed. A tenant additionally needed a
+# path-bootstrap module before it could import anything, and its Dockerfile
+# had to COPY the framework from a parent directory, so the image could not
+# be built from the tenant repo alone.
+#
+# Installing makes `import runtime` unconditional, so the fallbacks are gone
+# and a tenant can just depend on the framework:
+#
+#     pip install -e /path/to/AgenticFramework          # local checkout
+#     pip install "agentsmith-runtime @ git+https://github.com/bobbyaqlaar/AgentSmith@v1.0.0"
+#
+# Scope: only `runtime/` is packaged. `scripts/` stays file-invoked — it is
+# installed to ~/.agent-framework by install-ai-stack.sh and run as
+# `python3 scripts/foo.py`, and several of its filenames contain dashes, so
+# it is not importable as a package anyway.
+#
+# NOTE on the import name: the package is distributed as `agentsmith-runtime`
+# but imports as `runtime`, matching every existing call site. `runtime` is a
+# generic top-level name and could collide in a crowded virtualenv; renaming
+# it to `agentsmith_runtime` is a follow-up worth doing on a major version,
+# not something to change under a tenant mid-release (it would break every
+# `from runtime.X import Y` in every tenant repo at once).
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentsmith-runtime"
+version = "1.0.0"
+description = "AgentSmith production runtime — LLM gateway, guardrails, durable workflow helpers"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-only" }
+authors = [{ name = "Bobby Rajagopal" }]
+keywords = ["agents", "llm", "guardrails", "observability", "temporal"]
+
+# Kept in sync with runtime/requirements-runtime.txt, which stays the
+# canonical list for deployments that vendor rather than install.
+dependencies = [
+    "httpx>=0.25,<1.0",
+    "tenacity>=8.2,<10.0",
+    "pyyaml>=6.0,<7.0",
+    "pydantic>=2.0,<3.0",
+]
+
+[project.optional-dependencies]
+# Backends are optional so a tenant that only needs the gateway + guardrails
+# doesn't pull psycopg2/boto3/temporalio. Matches how the runtime imports
+# them lazily inside the methods that need them.
+postgres = ["psycopg2-binary>=2.9,<3.0"]
+redis = ["redis>=5.0,<6.0"]
+temporal = ["temporalio>=1.5,<2.0"]
+hitl = ["cryptography>=42.0,<44.0"]
+cloud = ["google-auth>=2.30,<3.0", "boto3>=1.34,<2.0", "aiohttp>=3.9,<4.0"]
+all = [
+    "psycopg2-binary>=2.9,<3.0",
+    "redis>=5.0,<6.0",
+    "temporalio>=1.5,<2.0",
+    "cryptography>=42.0,<44.0",
+    "google-auth>=2.30,<3.0",
+    "boto3>=1.34,<2.0",
+    "aiohttp>=3.9,<4.0",
+]
+dev = ["pytest>=8.0,<9.0", "pytest-asyncio>=0.23,<1.0"]
+
+[project.urls]
+Homepage = "https://github.com/bobbyaqlaar/AgentSmith"
+
+[tool.setuptools]
+# Explicit list, not auto-discovery: the repo root also contains scripts/,
+# portal/, templates/, examples/ and fixtures/, none of which are Python
+# packages meant for distribution.
+packages = ["runtime", "runtime.workflows"]
+
+[tool.setuptools.package-data]
+runtime = ["models.yaml", "requirements-runtime.txt"]

@@ -28,11 +28,14 @@ from pathlib import Path
 from typing import Any, Literal, Optional, TypedDict
 
 try:
-    # Normal case: repo root on sys.path, runtime/ is a package.
     from runtime.environment import get_environment
 except ImportError:
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runtime"))
-    from environment import get_environment  # type: ignore
+    # scripts/ is invoked as a file (python3 scripts/foo.py), so sys.path[0]
+    # is scripts/, not the repo root. Add the ROOT — not runtime/ — so the
+    # runtime imports as a package; its modules import each other that way
+    # (framework G6), which a flat runtime/ path can no longer satisfy.
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from runtime.environment import get_environment
 
 # Guard import
 try:

@@ -354,13 +354,18 @@ def call(
                 parse_response,
             )
         except ImportError:
+            # Add the repo ROOT, not runtime/: the runtime's modules import
+            # each other as `runtime.X` (framework G6), so a flat runtime/
+            # path no longer resolves them.
             import sys as _sys
             from pathlib import Path as _Path
 
-            _sys.path.insert(
-                0, str(_Path(__file__).resolve().parent.parent / "runtime")
+            _sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+            from runtime.provider_dispatch import (
+                build_request,
+                infer_provider,
+                parse_response,
             )
-            from provider_dispatch import build_request, infer_provider, parse_response  # type: ignore
 
         # Request building / response parsing shared with
         # runtime/llm_gateway.py via runtime/provider_dispatch.py — this

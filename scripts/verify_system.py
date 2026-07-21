@@ -281,8 +281,8 @@ def check_redaction() -> bool:
     Used by cd-staging.yml / cd-production.yml:
         python3 scripts/verify_system.py --check-redaction
     """
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runtime"))
-    from trace_redactor import TraceRedactor  # type: ignore
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from runtime.trace_redactor import TraceRedactor
 
     redactor = TraceRedactor()
     fixtures = [
@@ -337,9 +337,9 @@ def check_idempotency() -> bool:
         DATABASE_URL=postgresql://test:test@localhost:5432/test \
             IDEMPOTENCY_BACKEND=postgres python3 scripts/verify_system.py --check-idempotency
     """
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runtime"))
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     os.environ.setdefault("IDEMPOTENCY_BACKEND", "postgres")
-    from idempotency import IdempotencyStore, make_key  # type: ignore
+    from runtime.idempotency import IdempotencyStore, make_key
 
     print("═══════════════════════════════════════════════════")
     print("  Idempotency Store Check")
@@ -384,8 +384,8 @@ def check_dlq() -> bool:
         DATABASE_URL=postgresql://test:test@localhost:5432/test \
             python3 scripts/verify_system.py --check-dlq
     """
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "runtime"))
-    from dead_letter import DeadLetterQueue  # type: ignore
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from runtime.dead_letter import DeadLetterQueue
 
     print("═══════════════════════════════════════════════════")
     print("  Dead-Letter Queue Check")

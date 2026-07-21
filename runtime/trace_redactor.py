@@ -45,13 +45,7 @@ except ImportError:
     _HAS_OTEL = False
     _OTelSpanProcessor = object  # type: ignore
 
-try:
-    # Normal case: repo root on sys.path, runtime/ is a package (has __init__.py).
-    from runtime.environment import get_environment
-except ImportError:
-    # scripts/verify_system.py imports this module with only runtime/ itself
-    # (not its parent) on sys.path — fall back to the flat sibling import.
-    from environment import get_environment  # type: ignore
+from runtime.environment import get_environment
 
 # The span attribute set by runtime/llm_gateway.py and the agent scripts on
 # every span — the authoritative per-span tenant identity.
@@ -84,10 +78,7 @@ _PAYLOAD_ATTRIBUTES = {"input.value", "output.value"}
 # The shared version strips ALL non-digit separators (this module's old
 # copy stripped only spaces/hyphens — identical on today's
 # _CARD_CANDIDATE matches, divergent the moment that regex widens).
-try:
-    from runtime.luhn import luhn_valid as _luhn_valid
-except ImportError:  # pragma: no cover — flat (non-package) import layout
-    from luhn import luhn_valid as _luhn_valid  # type: ignore
+from runtime.luhn import luhn_valid as _luhn_valid
 
 
 def _redact_credit_cards(text: str) -> str:
