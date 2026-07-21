@@ -258,24 +258,19 @@ def _resolve_adversarial_fail_above(cli_value: float | None) -> float:
 
 
 def _pair_parity(results: list[dict]) -> dict[str, float]:
-    """
-    For each pair_id, 1.0 if both members have the same fairness bit (both 1
-    or both 0), else 0.0. Pairs with fewer than 2 scored members are omitted.
-    """
-    by_pair: dict[str, list[dict]] = {}
-    for r in results:
-        pid = r.get("pair_id")
-        if not pid:
-            continue
-        by_pair.setdefault(pid, []).append(r)
+    """Per-pair fairness parity — delegates to runtime.judging.pair_parity so
+    the CI gate and any tenant's per-request parity check run the SAME logic
+    (TestbedFeedback-2026-07-21 G7). scripts/ adds the repo root, not
+    runtime/, so the runtime imports as a package (framework G6)."""
+    import sys as _sys
+    from pathlib import Path as _Path
 
-    out: dict[str, float] = {}
-    for pid, members in by_pair.items():
-        if len(members) < 2:
-            continue
-        bits = [int(m.get("fairness", 0) or 0) for m in members[:2]]
-        out[pid] = 1.0 if bits[0] == bits[1] else 0.0
-    return out
+    root = str(_Path(__file__).resolve().parent.parent)
+    if root not in _sys.path:
+        _sys.path.insert(0, root)
+    from runtime.judging import pair_parity
+
+    return pair_parity(results, outcome_key="fairness")
 
 
 # ── Judge invocation ──────────────────────────────────────────────────────────

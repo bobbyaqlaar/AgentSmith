@@ -158,11 +158,34 @@ class ToolRegistry:
             raise ToolNotAllowedError(f"tool not allowlisted: {name}")
 
     def invoke(self, name: str, args: dict[str, Any]) -> Any:
-        self._assert_allowed(name)
-        spec = self._tools.get(name)
-        if spec is None:
-            raise ToolNotFoundError(name)
-        return spec.fn(**args)
+        # Every tool call annotates the active span with its name, allow/deny
+        # outcome, duration and any error (TestbedFeedback-2026-07-21 G8) —
+        # the "every tool call streamed to Phoenix" claim required this and
+        # nothing delivered it. record_tool_call no-ops without OTel, so the
+        # allow/deny path below is unchanged when tracing is off.
+        import time
+
+        from runtime.tracing import record_tool_call
+
+        start = time.perf_counter()
+        try:
+            self._assert_allowed(name)
+            spec = self._tools.get(name)
+            if spec is None:
+                raise ToolNotFoundError(name)
+            result = spec.fn(**args)
+        except Exception as exc:
+            record_tool_call(
+                name,
+                allowed=not isinstance(exc, ToolNotAllowedError),
+                duration_ms=(time.perf_counter() - start) * 1000,
+                error=type(exc).__name__,
+            )
+            raise
+        record_tool_call(
+            name, allowed=True, duration_ms=(time.perf_counter() - start) * 1000
+        )
+        return result
 
 
 _DEFAULT_REGISTRY = ToolRegistry(strict=False)

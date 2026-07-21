@@ -14,14 +14,15 @@ combine them.
 
 ## A. Framework gaps
 
-> **Status 2026-07-21 (same day):** G1–G6, G9 and G10 are **fixed** — see
-> the per-item notes and CHANGELOG [Unreleased]. Framework suite 170 →
-> **252 passing**; the testbed tenant 25 → **35**, and the tenant now runs
-> entirely against the installed package. Only **G7 and G8** remain open.
-> Three findings were discovered by fixing others: G9 while wiring G3, G10
-> while hardening the tenant's security CI after G5, and G6's `scripts/`
-> breakage while removing the import fallbacks — each fix exposed the next
-> layer down, which is the argument for keeping the testbed permanently.
+> **Status 2026-07-21 (same day):** **every framework gap G1–G10 is fixed.**
+> Framework suite 170 → **283 passing**; the testbed tenant 25 → **36**, and
+> the tenant now runs entirely against the installed package. Four findings
+> were discovered by fixing others: G9 while wiring G3, G10 while hardening
+> the tenant's security CI after G5, G6's `scripts/` breakage while removing
+> the import fallbacks, and G8's clobber bug while writing its test — each
+> fix exposed the next layer down, which is the argument for keeping the
+> testbed permanently. Remaining work is the tenant's own (E2/E3) and the
+> deployment path (DEVLOG pending sections), not framework gaps.
 
 ### G1 — `complete_stream()` cannot stream the frontier providers (**High**) ✅ FIXED
 
@@ -247,7 +248,7 @@ layers away from the change, in a different repo's compliance gate — the
 kind of coupling a packaging change is supposed to eliminate, caught only
 because the tenant's security harness was already wired to hard-fail (G5).
 
-### G7 — No runtime primitives for the two hard judge checks (**Low**)
+### G7 — No runtime primitives for the two hard judge checks (**Low**) ✅ FIXED
 
 Citation-grounding and pair-parity exist in `run-evals.py` as *offline
 eval* suites, but a live app that wants to enforce them per-request writes
@@ -258,6 +259,40 @@ them itself (KYC Sentinel's `judge.check_citations` / `check_parity`,
 `run-evals.py` import them, so the CI gate and the production check are
 provably the same logic — the same argument that justified `_shared.py`'s
 `DEFAULT_JUDGE_MODEL`.
+
+**Fixed.** `runtime/judging.py` ships `citations_grounded`,
+`pair_parity` (the CI shape: result dicts keyed by `pair_id`) and
+`parity_violation` (the per-request shape: two outcomes). `run-evals.py`'s
+`_pair_parity` now delegates to `judging.pair_parity` — a test
+(`test_judging.test_run_evals_delegates_to_the_shared_function`) asserts the
+two produce identical output, so the "same logic" guarantee isn't just a
+comment. KYC Sentinel's `judge.check_citations` / `check_parity` are now
+thin wrappers over the same functions. Tests:
+`runtime/test/test_judging.py` (11).
+
+### G8 — Tenant pipeline steps have no span helper (**Low**) ✅ FIXED
+
+The gateway emitted richly-attributed spans for LLM calls, but a tenant's
+non-LLM steps (tool invocations, scrub counts, judge verdicts, HITL
+decisions) had no framework way onto a span — and `ToolRegistry.invoke()`
+emitted nothing, so the "every tool call streamed to Phoenix" claim was
+unmet at the tool layer.
+
+**Fixed.** `runtime/tracing.py` ships `agent_span(name, tenant_id=..., **attrs)`
+for tenant steps, and `ToolRegistry.invoke` emits a **child span per tool
+call** (`agent.tool.<name>`: allow/deny outcome, duration, error class).
+
+Building the test caught a design bug I'd have shipped otherwise: the first
+version *annotated the enclosing step span* instead of creating a child
+span. A single research step calls three tools, so they clobbered each
+other's `agent.tool.*` attributes and only the last survived — the tenant
+test failed showing `adverse_media_search` where it expected
+`sanctions_lookup`. Switched to a child span per call, nested under the
+active step. Everything no-ops without OpenTelemetry, so a tenant wraps
+every step unconditionally. KYC Sentinel's `pipeline.py` now wraps all four
+stages; the round-trip is asserted in the tenant's `test_tracing.py`
+(step spans + per-tool child spans present). Tests:
+`runtime/test/test_tracing.py` (13).
 
 ### G8 — Tenant pipeline steps have no span helper (**Low**)
 

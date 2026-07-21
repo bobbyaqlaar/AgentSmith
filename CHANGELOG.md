@@ -89,6 +89,18 @@ Found by building the KYC Sentinel testbed tenant
   - Import name stays `runtime` so every existing call site keeps working.
     Renaming it to `agentsmith_runtime` is a follow-up for a major version —
     it would break every tenant's imports at once.
+- **New `runtime/judging.py` (G7):** the citation-grounding and pair-parity
+  checks are now shared primitives. `scripts/run-evals.py._pair_parity`
+  delegates to `judging.pair_parity`, so the CI fairness gate and any
+  tenant's per-request parity check run one implementation instead of two
+  copies that can drift. `citations_grounded` is the hard hallucination
+  check (every citation must resolve to a retrieved id) a decision-path app
+  wants alongside the judge-model-scored suite.
+- **New `runtime/tracing.py` (G8):** `agent_span()` puts a tenant's non-LLM
+  pipeline steps onto Phoenix, and `ToolRegistry.invoke` now emits a child
+  span per tool call (`agent.tool.<name>` with allow/deny outcome, duration,
+  error). Previously tool calls emitted nothing despite the "every tool call
+  streamed to Phoenix" claim. All of it no-ops cleanly without OpenTelemetry.
 - **Docs:** SPECS §3/§5.5/§16, OPERATIONS TTFT + prompt-guard + install
   sections (incl. a rollout procedure and mode table),
   `docs/security-framework-map.md` SEC-PROMPT-001 row.
