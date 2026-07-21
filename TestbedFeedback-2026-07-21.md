@@ -14,12 +14,12 @@ combine them.
 
 ## A. Framework gaps
 
-> **Status 2026-07-21 (same day):** G1–G5 and G9 are **fixed** — see the
-> per-item notes and CHANGELOG [Unreleased]. Framework suite 170 →
-> **232 passing**. G6–G8 remain open, plus **G10** (new, found while
-> hardening the tenant's security CI). G9 was found while fixing G3 and
-> resolved by owner decision (option C: add the missing `warn` tier rather
-> than weaken the blocking default).
+> **Status 2026-07-21 (same day):** G1–G5, G9 and G10 are **fixed** — see
+> the per-item notes and CHANGELOG [Unreleased]. Framework suite 170 →
+> **252 passing**; the testbed tenant 25 → **35**. Only G6–G8 remain open.
+> Two of the findings were discovered by fixing others: G9 while wiring G3,
+> G10 while hardening the tenant's security CI after G5 — each fix exposed
+> the next layer down.
 
 ### G1 — `complete_stream()` cannot stream the frontier providers (**High**) ✅ FIXED
 
@@ -311,7 +311,7 @@ Implemented:
 - Docs: module docstring, OPERATIONS prompt-guard section (mode table +
   rollout procedure), SPECS §5.5, `docs/security-framework-map.md`, CHANGELOG.
 
-### G10 — `MODERATION_HOOK=required` can never pass the harness (**Low**)
+### G10 — `MODERATION_HOOK=required` can never pass the harness ✅ FIXED (option a)
 
 Found while flipping the testbed's security CI to hard-fail. The
 `moderation_hook` runner calls `reset_output_moderator()` as part of its API
@@ -333,12 +333,83 @@ regulated tenants to `set MODERATION_HOOK=required`, which is exactly the
 setting that makes their strict CI un-passable. KYC Sentinel's CI therefore
 runs `optional` with a comment explaining why.
 
-**Fix options:** have the runner look for a declared registration the
-tenant can commit (e.g. `moderation.hook` in `.agenticframework/tenant.yaml`
-or an entry in `agency_manifest.yaml`) and pass when it resolves to an
-importable callable; or keep the fail and change the guidance so `required`
-is understood as a deployment-time setting that CI must not use. Either
-way, the docs and the runner should stop contradicting each other.
+**Root cause, stated precisely:** SEC-MOD-001 conflates two different
+claims — "the framework's moderation API works" (framework-owned, always
+checkable) and "this tenant has a classifier registered" (tenant-owned,
+only observable if the tenant declares it somewhere the harness can read).
+The runner proves the first and then fails the second by construction.
+
+**Fix options:**
+
+- **(a) Declared hook — recommended.** The tenant commits a dotted path,
+  e.g. in `.agenticframework/tenant.yaml`:
+
+  ```yaml
+  moderation:
+    hook: "agents.moderation:classify_output"
+  ```
+
+  Under `required`, the runner imports it, asserts it is callable, and runs
+  the same smoke pair it already runs against its own lambda (clean text
+  allowed, unsafe text blocked). Pass only if the tenant's *real* classifier
+  behaves. This upgrades the control from "the API exists" to "this tenant
+  has a working classifier", which is the evidence a regulated tenant
+  actually needs — and it makes `required` usable, matching the guidance.
+
+  Worth pairing with: have `runtime/moderation.py` auto-register from the
+  same key at startup. Otherwise the declaration and what the worker really
+  registers can drift, and the harness would be certifying the wrong thing.
+
+- **(b) Keep the fail, fix the guidance.** Document `required` as a
+  deployment-time setting that CI must not use, and correct the P12 /
+  FIXES notes. Zero code change and honest, but SEC-MOD-001 then never
+  proves anything tenant-specific — the weakest option for the control
+  that regulated deployments lean on hardest.
+
+- **(c) Split the control.** `SEC-MOD-001` stays the framework API smoke
+  (owner: framework, always passes), and a new `SEC-MOD-002` covers tenant
+  registration (owner: tenant, skips when undeclared). Architecturally the
+  cleanest — it matches the registry's existing `owner` field, which today
+  labels SEC-MOD-001 "Tenant" while the runner mostly tests framework code.
+  Bigger change: new control id, registry entry, framework-map row, and
+  evidence-pack columns.
+
+(a) and (c) compose: (a) is the detection mechanism, (c) is the
+bookkeeping. Whichever is chosen, the runner and the docs must stop
+contradicting each other.
+
+**Fixed (option a, owner decision 2026-07-21).**
+
+- `moderation.hook: "module.path:callable"` in
+  `.agenticframework/tenant.yaml`, overridable per-deployment with
+  `MODERATION_HOOK_PATH`.
+- **The runtime loads the same declaration** (`_ensure_declared_moderator()`
+  on first use, imperative `register_output_moderator()` still wins). This
+  binding is the point: a harness that checked a config key production
+  ignored would be certifying the wrong thing.
+- The SEC-MOD-001 runner imports the declared hook under `required` and
+  smoke-tests **the tenant's own classifier** — it must return a
+  `ModerationResult` and must not block benign text, so a block-everything
+  stub cannot "pass" the control. A broken declaration fails loudly
+  (`ModerationHookImportError`) rather than degrading to a silent skip,
+  which would leave a regulated tenant unmoderated while CI looked green.
+- `load_declared_moderator()` puts the tenant repo root on `sys.path` before
+  importing: a declared hook is tenant code by definition, and the harness
+  runs from the framework install, so without this every tenant would have
+  had to set `PYTHONPATH` by hand.
+- Tests: `runtime/test/test_moderation_declared.py` (12) and
+  `scripts/test/test_security_moderation_declared.py` (8).
+
+Verified on the testbed: KYC Sentinel declares
+`agents.moderation:classify_output`, and `--mode ci --strict` with
+`MODERATION_HOOK=required` now exits 0 with evidence reading *"tenant
+moderator declared and verified (agents.moderation:classify_output)"* —
+the control now proves something tenant-specific instead of only that the
+framework API exists.
+
+Option (c) — splitting into SEC-MOD-001 (framework API) and SEC-MOD-002
+(tenant registration) — remains available and is still the cleaner
+bookkeeping; it was not needed to make `required` satisfiable.
 
 ---
 
@@ -388,7 +459,8 @@ way, the docs and the runner should stop contradicting each other.
 4. ~~**G9** — decide the prompt-guard mode semantics~~ ✅ done (option C + harness enforcement check)
 5. ~~**G5** — one vendoring step; unblocks tenant strict CI.~~ ✅ done
 6. **G6** — packaging; larger, but removes a whole class of import boilerplate.
-7. **G7/G8/G10**, then D1/D4 in the next docs pass.
+7. ~~**G10**~~ ✅ done (option a: declared hook, runtime-bound)
+8. **G7/G8**, then D1/D4 in the next docs pass.
 
 Tenant-side: E1 fixed; E2–E4 tracked in `KYC_Sentinel/DEVLOG.md`.
 
@@ -396,8 +468,8 @@ Tenant-side: E1 fixed; E2–E4 tracked in `KYC_Sentinel/DEVLOG.md`.
 
 | Suite | Before | After |
 |---|---|---|
-| Framework `scripts/test/` + `runtime/test/` | 170 passed | **232 passed**, 14 skipped |
-| KYC Sentinel `test/` | 25 passed | **25 passed** (now on the shipped double) |
+| Framework `scripts/test/` + `runtime/test/` | 170 passed | **252 passed**, 14 skipped |
+| KYC Sentinel `test/` | 25 passed | **35 passed** (on the shipped double; + classifier tests) |
 | `demo.py all` | 8 controls fire | 8 controls fire |
 
 Also clean: `py_compile` sweep, `check_bare_except.py` on every changed

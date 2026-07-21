@@ -77,14 +77,18 @@ Found by building the KYC Sentinel testbed tenant
   (incl. a rollout procedure and mode table), `docs/security-framework-map.md`
   SEC-PROMPT-001 row.
 
-### Known issue
-
-- `MODERATION_HOOK=required` cannot pass the SEC-MOD-001 harness runner: the
-  runner resets the moderator during its API smoke test and has no way to
-  observe a durable tenant registration, so `required` always fails while
-  `optional` passes. Regulated-tenant guidance currently points at the one
-  setting that makes strict CI un-passable. Tracked as G10 in
-  `TestbedFeedback-2026-07-21.md`.
+- **Declared moderation hook (G10):** a tenant can now commit
+  `moderation.hook: "module.path:callable"` in
+  `.agenticframework/tenant.yaml` (or set `MODERATION_HOOK_PATH`). The
+  runtime auto-registers it on first use, and the SEC-MOD-001 runner
+  imports and smoke-tests **that same classifier** under
+  `MODERATION_HOOK=required` — it must return a `ModerationResult` and must
+  not block benign text. Previously `required` failed unconditionally
+  (the runner cannot see a `register_output_moderator()` call made in the
+  worker process), so the setting regulated tenants are told to use was the
+  one that made their strict CI un-passable. An imperative registration
+  still wins over the declaration; a broken declaration now raises
+  `ModerationHookImportError` rather than silently skipping moderation.
 
 ### Added — Security Compliance Harness (P12, 2026-07-15)
 

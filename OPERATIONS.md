@@ -722,9 +722,35 @@ validates LLM text against a Pydantic model — prefer this over bare
 `.agent-rfc/security/tool_allowlist.yaml`; unlisted tools raise
 `ToolNotAllowedError` (`SEC-TOOL-001`).
 
-**Output moderation hook (`runtime/moderation.py`).** Pluggable classifier
-via `register_output_moderator`. `MODERATION_HOOK=optional|required|off`
-(CI defaults to `optional`; regulated tenants set `required` and register).
+**Output moderation hook (`runtime/moderation.py`).** Pluggable classifier,
+`MODERATION_HOOK=optional|required|off`. Two ways to supply it:
+
+1. `register_output_moderator(fn)` at worker startup — imperative, wins over
+   any declaration.
+2. **Declared** (required for `MODERATION_HOOK=required`) — commit a dotted
+   path so both the runtime and the security harness bind to the same
+   classifier:
+
+   ```yaml
+   # .agenticframework/tenant.yaml
+   moderation:
+     hook: "agents.moderation:classify_output"   # module.path:callable
+   ```
+
+   `MODERATION_HOOK_PATH` overrides it per-deployment. The runtime resolves
+   and registers it on first use; `SEC-MOD-001` imports the same path and
+   verifies the classifier returns a `ModerationResult` and does not block
+   benign text — so the control proves *this tenant has a working
+   classifier*, not merely that the framework API exists.
+
+   A declaration that cannot be imported raises `ModerationHookImportError`
+   rather than degrading to a skip: silently unmoderated output in a
+   regulated tenant is the failure mode worth being loud about.
+
+   Before this (framework G10), `required` failed unconditionally in CI
+   because an imperative registration happens in the worker process and is
+   invisible to the harness — regulated tenants were told to set exactly
+   the value that made their strict CI un-passable.
 
 **LLM self-correction before human DLQ (`runtime/self_correction.py`).**
 `BaseAgentWorkflow.run_with_self_correction()` asks the gateway for one
@@ -814,10 +840,12 @@ python3 scripts/run-security-checks.py --mode smoke --evidence-pack ./security-e
 python3 scripts/run-evals.py --suite adversarial
 ```
 
-Tenant onboarding: fill `.agent-rfc/security/risk_register.yaml` (schema-gated),
-`agency_manifest.yaml`, `tool_allowlist.yaml`; set `MODERATION_HOOK=required`
-for regulated content; enable `SSO_REVOCATION_MODE=fail-closed` when missed
-revocation is worse than a 503.
+Tenant onboarding: `post-checkout` seeds `.agent-rfc/security/` with template
+copies of `risk_register.yaml` (schema-gated), `agency_manifest.yaml`,
+`nist_profile.yaml` and `tool_allowlist.yaml` — fill them in with real
+content (existing files are never overwritten). For regulated content, declare
+`moderation.hook` in `tenant.yaml` and set `MODERATION_HOOK=required`; enable
+`SSO_REVOCATION_MODE=fail-closed` when missed revocation is worse than a 503.
 
 ---
 
