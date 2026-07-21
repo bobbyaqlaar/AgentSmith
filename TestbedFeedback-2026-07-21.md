@@ -14,9 +14,10 @@ combine them.
 
 ## A. Framework gaps
 
-> **Status 2026-07-21 (same day):** G1–G4 and G9 are **fixed** — see the
+> **Status 2026-07-21 (same day):** G1–G5 and G9 are **fixed** — see the
 > per-item notes and CHANGELOG [Unreleased]. Framework suite 170 →
-> **225 passing**. G5–G8 remain open. G9 was found while fixing G3 and
+> **232 passing**. G6–G8 remain open, plus **G10** (new, found while
+> hardening the tenant's security CI). G9 was found while fixing G3 and
 > resolved by owner decision (option C: add the missing `warn` tier rather
 > than weaken the blocking default).
 
@@ -155,7 +156,7 @@ the framework's internal method of the same name; the internal one is now
 `_build_result()` and `_resolve_text(call)` is documented as the single
 override hook.
 
-### G5 — Tenant security pack is never seeded (**Medium**)
+### G5 — Tenant security pack is never seeded (**Medium**) ✅ FIXED
 
 `fixtures/security/templates/` contains `agency_manifest.yaml`,
 `nist_profile.yaml`, `risk_register.yaml`, `tool_allowlist.yaml`, and the
@@ -176,6 +177,22 @@ which is why its CI security step is currently `|| true`.
 copies `fixtures/security/templates/*` into `.agent-rfc/security/` when
 absent — the same vendoring mechanism already used for
 `agent-rules.yaml` and the golden-eval seeds.
+
+**Fixed** via exactly that two-stage vendoring path:
+
+1. `install-ai-stack.sh` copies `fixtures/security/templates/*.yaml` into
+   `~/.agent-framework/shared/security/` (refreshed every install — these
+   are pristine templates, never a tenant's edited copy).
+2. `hooks/post-checkout` seeds any of the four that are **missing** from an
+   opted-in repo's `.agent-rfc/security/`, and prints which ones are
+   placeholders plus the command to verify them.
+
+The never-overwrite guard is the important half: a filled-in risk register
+is the tenant's own document — its content is precisely what the framework
+cannot know — so a later branch switch must not clobber it. Tests:
+`scripts/test/test_security_pack_seeding.py` (7), covering seed-all,
+seed-only-missing, never-overwrite, the opt-in gate still applying, and a
+machine whose install predates the step.
 
 ### G6 — `runtime/` is not an installable package (**Medium**)
 
@@ -294,6 +311,35 @@ Implemented:
 - Docs: module docstring, OPERATIONS prompt-guard section (mode table +
   rollout procedure), SPECS §5.5, `docs/security-framework-map.md`, CHANGELOG.
 
+### G10 — `MODERATION_HOOK=required` can never pass the harness (**Low**)
+
+Found while flipping the testbed's security CI to hard-fail. The
+`moderation_hook` runner calls `reset_output_moderator()` as part of its API
+smoke test and then:
+
+```python
+if mode == "required":
+    return ControlResult(status="fail",
+                         message="no output moderator registered (MODERATION_HOOK=required)")
+```
+
+That branch is unconditional — the runner has just cleared any registration
+and has no way to observe a durable one made in tenant code (a worker
+registers its classifier at startup, in a different process from the
+harness). So `required` always fails, while `optional` passes.
+
+The consequence is backwards: FIXES_AND_CLEANUP and the P12 notes tell
+regulated tenants to `set MODERATION_HOOK=required`, which is exactly the
+setting that makes their strict CI un-passable. KYC Sentinel's CI therefore
+runs `optional` with a comment explaining why.
+
+**Fix options:** have the runner look for a declared registration the
+tenant can commit (e.g. `moderation.hook` in `.agenticframework/tenant.yaml`
+or an entry in `agency_manifest.yaml`) and pass when it resolves to an
+importable callable; or keep the fail and change the guidance so `required`
+is understood as a deployment-time setting that CI must not use. Either
+way, the docs and the runner should stop contradicting each other.
+
 ---
 
 ## B. Documentation corrections
@@ -340,9 +386,9 @@ Implemented:
 2. ~~**G4** (`runtime/testing.py`) — unblocks every future tenant, small.~~ ✅ done
 3. ~~**G3** + **G2**~~ ✅ done (D2/D3 docs updated with them)
 4. ~~**G9** — decide the prompt-guard mode semantics~~ ✅ done (option C + harness enforcement check)
-5. **G5** — one vendoring step in `ai-tenant-init`; unblocks tenant strict CI.
+5. ~~**G5** — one vendoring step; unblocks tenant strict CI.~~ ✅ done
 6. **G6** — packaging; larger, but removes a whole class of import boilerplate.
-7. **G7/G8**, then D1/D4 in the next docs pass.
+7. **G7/G8/G10**, then D1/D4 in the next docs pass.
 
 Tenant-side: E1 fixed; E2–E4 tracked in `KYC_Sentinel/DEVLOG.md`.
 
@@ -350,7 +396,7 @@ Tenant-side: E1 fixed; E2–E4 tracked in `KYC_Sentinel/DEVLOG.md`.
 
 | Suite | Before | After |
 |---|---|---|
-| Framework `scripts/test/` + `runtime/test/` | 170 passed | **225 passed**, 14 skipped |
+| Framework `scripts/test/` + `runtime/test/` | 170 passed | **232 passed**, 14 skipped |
 | KYC Sentinel `test/` | 25 passed | **25 passed** (now on the shipped double) |
 | `demo.py all` | 8 controls fire | 8 controls fire |
 

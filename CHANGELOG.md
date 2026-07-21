@@ -65,9 +65,26 @@ Found by building the KYC Sentinel testbed tenant
   `fail` when `PROMPT_GUARD=off`, `warn` on the non-enforcing `warn` tier
   (so it fails `--strict` CI), and `pass` only when the configured mode
   actually blocks. The mode is recorded in the evidence pack.
+- **Tenant security pack is now seeded (G5):** `install-ai-stack.sh` vendors
+  `fixtures/security/templates/*.yaml` into
+  `~/.agent-framework/shared/security/`, and `hooks/post-checkout` seeds any
+  missing artifact into an opted-in repo's `.agent-rfc/security/` (printing
+  which files are placeholders). Existing files are **never overwritten** — a
+  filled-in risk register is the tenant's own document. Previously the SEC-*
+  harness looked for these four artifacts in every tenant repo while nothing
+  ever put them there.
 - **Docs:** SPECS §3/§5.5/§16, OPERATIONS TTFT + prompt-guard sections
   (incl. a rollout procedure and mode table), `docs/security-framework-map.md`
   SEC-PROMPT-001 row.
+
+### Known issue
+
+- `MODERATION_HOOK=required` cannot pass the SEC-MOD-001 harness runner: the
+  runner resets the moderator during its API smoke test and has no way to
+  observe a durable tenant registration, so `required` always fails while
+  `optional` passes. Regulated-tenant guidance currently points at the one
+  setting that makes strict CI un-passable. Tracked as G10 in
+  `TestbedFeedback-2026-07-21.md`.
 
 ### Added — Security Compliance Harness (P12, 2026-07-15)
 

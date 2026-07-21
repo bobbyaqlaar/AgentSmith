@@ -58,6 +58,38 @@ if [ ! -f "$CRITERIA_FILE" ] && [ -f "$FRAMEWORK_DIR/shared/custom_judge_criteri
   echo "✅ Seeded baseline judge criteria"
 fi
 
+# ── Seed .agent-rfc/security/ pack from framework templates ──────────────────
+# The SEC-* harness looks for these four artifacts in every tenant repo, but
+# nothing used to put them there — so a new tenant started with those controls
+# skipping/failing and had to discover fixtures/security/templates/ by reading
+# the framework tree (TestbedFeedback-2026-07-21 G5).
+#
+# Seeded, never overwritten: a filled-in risk register is the tenant's own
+# document (its content is exactly what the framework CANNOT know), so a
+# later checkout must never clobber it. Same guard as the golden dataset.
+SECURITY_TEMPLATES="$FRAMEWORK_DIR/shared/security"
+if [ -d "$SECURITY_TEMPLATES" ]; then
+  mkdir -p "$REPO_ROOT/.agent-rfc/security"
+  SEEDED_SECURITY=0
+  for TEMPLATE in "$SECURITY_TEMPLATES"/*.yaml; do
+    [ -f "$TEMPLATE" ] || continue
+    TARGET="$REPO_ROOT/.agent-rfc/security/$(basename "$TEMPLATE")"
+    if [ ! -f "$TARGET" ]; then
+      cp "$TEMPLATE" "$TARGET"
+      SEEDED_SECURITY=$((SEEDED_SECURITY + 1))
+    fi
+  done
+  if [ "$SEEDED_SECURITY" -gt 0 ]; then
+    echo "✅ Seeded $SEEDED_SECURITY security artifact(s) into .agent-rfc/security/"
+    echo "   ⚠️  These are PLACEHOLDERS — edit them before promoting to production:"
+    echo "      risk_register.yaml   your real residual risks and owners"
+    echo "      agency_manifest.yaml your high-impact actions requiring HITL"
+    echo "      tool_allowlist.yaml  your registered tool names (deny-by-default)"
+    echo "      nist_profile.yaml    your org name and control owners"
+    echo "   Verify with: python3 scripts/run-security-checks.py --mode ci --strict"
+  fi
+fi
+
 # ── Resolve project name and owner ────────────────────────────────────────────
 PROJECT_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$REPO_ROOT")
 OWNER_ID="${AGENT_OWNER_ID:-unknown@unknown}"

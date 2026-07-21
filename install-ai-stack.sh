@@ -453,6 +453,23 @@ if [ ! -f "$SHARED_DIR/fairness_judge_criteria_base.json" ]; then
   fi
 fi
 
+# Security pack templates (SEC-* harness artifacts) — vendored here so
+# hooks/post-checkout can seed them into each opted-in repo's
+# .agent-rfc/security/. The harness has always LOOKED for these four files in
+# tenant repos; until this step nothing ever PUT them there, so every new
+# tenant started with those controls skipping/failing and had to find
+# fixtures/security/templates/ by reading the framework tree
+# (TestbedFeedback-2026-07-21 G5). Refreshed on every install (unlike the
+# eval fixtures) because these are pristine templates, never the tenant's
+# edited copies — post-checkout is what refuses to overwrite those.
+if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/fixtures/security/templates" ]; then
+  mkdir -p "$SHARED_DIR/security"
+  cp "$INSTALLER_DIR"/fixtures/security/templates/*.yaml "$SHARED_DIR/security/" 2>/dev/null || true
+  success "Security pack templates written to ~/.agent-framework/shared/security/"
+else
+  info "security templates not found in installer — tenant .agent-rfc/security/ will not be seeded"
+fi
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 6 — GIT HOOK: pre-commit
 # ═══════════════════════════════════════════════════════════════════════════════
