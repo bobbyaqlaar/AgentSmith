@@ -68,7 +68,7 @@ if _HAS_TEMPORAL:
         domain-specific payload shaping the generic version shouldn't
         assume.
         """
-        from dead_letter import DeadLetterQueue  # type: ignore
+        from runtime.dead_letter import DeadLetterQueue
 
         dlq = DeadLetterQueue()
         entry = dlq.enqueue(
@@ -89,12 +89,8 @@ if _HAS_TEMPORAL:
         Kept outside workflow code because gateway calls are network I/O and
         therefore non-deterministic from Temporal's point of view.
         """
-        try:
-            from runtime.llm_gateway import LLMGateway
-            from runtime.self_correction import propose_corrected_payload
-        except ImportError:
-            from llm_gateway import LLMGateway  # type: ignore
-            from self_correction import propose_corrected_payload  # type: ignore
+        from runtime.llm_gateway import LLMGateway
+        from runtime.self_correction import propose_corrected_payload
 
         gateway = LLMGateway(tenant_id=input["tenant_id"])
         return await propose_corrected_payload(

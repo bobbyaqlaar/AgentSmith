@@ -28,9 +28,13 @@ from runtime.provider_dispatch import parse_stream_delta, supports_streaming  # 
 
 
 class _FakeStreamResp:
-    def __init__(self, lines: list[str]) -> None:
-        self.status_code = 200
+    def __init__(self, lines: list[str], status_code: int = 200) -> None:
+        self.status_code = status_code
         self._lines = lines
+
+    @property
+    def is_success(self) -> bool:
+        return 200 <= self.status_code < 400
 
     async def __aenter__(self) -> "_FakeStreamResp":
         return self
@@ -40,6 +44,16 @@ class _FakeStreamResp:
 
     def raise_for_status(self) -> None:
         return None
+
+    async def aread(self) -> bytes:
+        return b""
+
+    def json(self) -> dict:
+        return {}
+
+    @property
+    def text(self) -> str:
+        return ""
 
     async def aiter_lines(self):
         for line in self._lines:
@@ -144,6 +158,41 @@ async def test_anthropic_streams_and_measures_ttft(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_streaming_provider_exhaustion_falls_back_to_complete(monkeypatch):
+    """Found running KYC Sentinel's Analyst live against a real,
+    credit-exhausted Anthropic key: the streaming path's bare
+    resp.raise_for_status() raises httpx.HTTPStatusError, whose str() is
+    just "Client error '400 Bad Request' for url ..." — the response BODY
+    ("Your credit balance is too low...") that _is_provider_exhausted()
+    pattern-matches on was never in that string, so a billing/quota failure
+    here used to propagate raw instead of degrading to the next tier the
+    way complete()'s equivalent failure already does."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    gw = _gateway("anthropic")
+
+    class _ErrorResp(_FakeStreamResp):
+        def json(self) -> dict:
+            return {"error": {"message": "Your credit balance is too low to access the Anthropic API."}}
+
+    fake = _ErrorResp([], status_code=400)
+    mock_client = MagicMock()
+    mock_client.stream = lambda method, url, json=None, headers=None: fake
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    fallback = CompletionResult(
+        text="degraded ok", model_used="test-model", input_tokens=1, output_tokens=1, cost_usd=0.0
+    )
+    gw.complete = AsyncMock(return_value=fallback)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await gw.complete_stream("hi", model_hint="analyst")
+
+    assert result is fallback
+    gw.complete.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_cloud_provider_falls_back_to_complete_instead_of_raising():
     """G1: a models.yaml provider swap must not take the pipeline down."""
     gw = _gateway("bedrock")
@@ -178,3 +227,28 @@ async def test_endpoint_resolution_shared_with_invoke(monkeypatch):
     assert resolve({"provider": "ollama"}) == ("http://ollama.internal:11434/v1", "ollama")
     # per-model override wins
     assert resolve({"provider": "anthropic", "endpoint": "https://proxy.internal"})[0] == "https://proxy.internal"
+
+
+@pytest.mark.asyncio
+async def test_api_key_env_override_and_fallback(monkeypatch):
+    """A per-role api_key_env (e.g. giving the judge its own Anthropic
+    account, distinct from the analyst's) is used when populated, and falls
+    back to the provider default when configured but not yet populated —
+    a tenant can roll out a dedicated key one role at a time without either
+    role going dark in between."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "shared-key")
+    monkeypatch.delenv("ANTHROPIC_API_KEY_JUDGE", raising=False)
+    resolve = LLMGateway._resolve_endpoint
+
+    # Not configured at all — default env var, unchanged behavior.
+    assert resolve({"provider": "anthropic"})[1] == "shared-key"
+
+    # Configured but not populated yet — falls back rather than going empty.
+    assert resolve({"provider": "anthropic", "api_key_env": "ANTHROPIC_API_KEY_JUDGE"})[1] == "shared-key"
+
+    # Configured and populated — the override wins.
+    monkeypatch.setenv("ANTHROPIC_API_KEY_JUDGE", "judge-only-key")
+    assert (
+        resolve({"provider": "anthropic", "api_key_env": "ANTHROPIC_API_KEY_JUDGE"})[1]
+        == "judge-only-key"
+    )

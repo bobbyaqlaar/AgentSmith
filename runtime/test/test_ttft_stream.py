@@ -12,9 +12,13 @@ from runtime.llm_gateway import CompletionResult, LLMGateway  # noqa: E402
 
 
 class _FakeStreamResp:
-    def __init__(self, lines: list[str]) -> None:
-        self.status_code = 200
+    def __init__(self, lines: list[str], status_code: int = 200) -> None:
+        self.status_code = status_code
         self._lines = lines
+
+    @property
+    def is_success(self) -> bool:
+        return 200 <= self.status_code < 400
 
     async def __aenter__(self) -> "_FakeStreamResp":
         return self
@@ -24,6 +28,16 @@ class _FakeStreamResp:
 
     def raise_for_status(self) -> None:
         return None
+
+    async def aread(self) -> bytes:
+        return b""
+
+    def json(self) -> dict:
+        return {}
+
+    @property
+    def text(self) -> str:
+        return ""
 
     async def aiter_lines(self):
         for line in self._lines:

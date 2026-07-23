@@ -105,11 +105,13 @@ class ReplayWebhookHandler(BaseHTTPRequestHandler):
         self.wfile.write(b'{"ok":true}')
 
     def _replay(self, task_id: str, payload: dict) -> None:
-        sys.path.insert(
-            0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/runtime"
-        )
-        from dead_letter import DeadLetterQueue  # type: ignore
-        from temporal_replay import make_temporal_replay_handler  # type: ignore
+        # Inserts the framework ROOT (not runtime/ itself), so the imports
+        # below resolve as proper `runtime.X` package members — consistent
+        # with every other runtime module post-G6 — rather than the old
+        # bare-name dance this used to rely on.
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from runtime.dead_letter import DeadLetterQueue
+        from runtime.temporal_replay import make_temporal_replay_handler
         from temporalio.client import Client  # type: ignore
 
         async def _connect():

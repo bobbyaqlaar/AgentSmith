@@ -392,7 +392,7 @@ class LLMGateway:
     @staticmethod
     def _make_idempotency_store():
         try:
-            from idempotency import IdempotencyStore  # type: ignore
+            from runtime.idempotency import IdempotencyStore
 
             return IdempotencyStore()
         except Exception as exc:
@@ -742,7 +742,32 @@ class LLMGateway:
                 async with client.stream(
                     "POST", url, json=body, headers=headers
                 ) as resp:
-                    resp.raise_for_status()
+                    if not resp.is_success:
+                        # Mirrors _invoke()'s _post_with_retry: surface the
+                        # provider's actual error body, not just the status
+                        # line. resp.raise_for_status() alone raises
+                        # httpx.HTTPStatusError whose str() omits the body
+                        # entirely (just "Client error '400 Bad Request' for
+                        # url ...") — _is_provider_exhausted() pattern-matches
+                        # on message text like "credit balance is too low",
+                        # which was invisible to it here, so a billing/quota
+                        # failure never degraded to the next tier; it just
+                        # propagated raw (TestbedFeedback-2026-07-23-style
+                        # gap: found running this tenant's Analyst live
+                        # against a real, credit-exhausted Anthropic key).
+                        await resp.aread()
+                        try:
+                            err_body = resp.json()
+                            err_msg = (
+                                err_body.get("error", {}).get("message")
+                                or err_body.get("message")
+                                or resp.text[:400]
+                            )
+                        except Exception:
+                            err_msg = resp.text[:400]
+                        raise RuntimeError(
+                            f"LLM API error {resp.status_code} (model={model_id!r}): {err_msg}"
+                        )
                     async for line in resp.aiter_lines():
                         if not line.startswith("data:"):
                             continue
@@ -769,6 +794,32 @@ class LLMGateway:
                 workflow_id=workflow_id,
                 error_summary=str(exc)[:500],
             )
+            if self._is_provider_exhausted(exc):
+                # The streaming path resolves and tries exactly ONE tier —
+                # unlike complete(), it has no degrade-chain loop of its
+                # own. A billing/quota/overload failure here used to
+                # propagate straight out with no fallback at all, taking
+                # down a tenant's whole pipeline over an account issue that
+                # complete() already knows how to walk around. Streaming is
+                # a latency optimisation, never a correctness requirement
+                # (same principle as the supports_streaming() fallback
+                # above) — losing ttft_ms must not mean losing the
+                # completion, so hand off to complete()'s degrade chain
+                # instead of raising.
+                logger.warning(
+                    "streaming attempt exhausted for role=%r model=%r: %s — "
+                    "falling back to complete()'s degrade chain (ttft_ms will be None)",
+                    role,
+                    model_id,
+                    exc,
+                )
+                return await self.complete(
+                    prompt,
+                    model_hint=model_hint,
+                    workflow_id=workflow_id,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
             raise
 
         text = "".join(chunks)
@@ -1135,7 +1186,7 @@ class LLMGateway:
         """
         provider = cfg.get("provider", "openai")
         if provider == "anthropic":
-            api_key = os.environ.get(cfg.get("api_key_env", "ANTHROPIC_API_KEY"), "")
+            api_key = LLMGateway._lookup_api_key(cfg, "ANTHROPIC_API_KEY")
             base_url = cfg.get("endpoint") or "https://api.anthropic.com"
         elif provider == "ollama":
             base_url = os.path.expandvars(cfg.get("endpoint", "${OLLAMA_BASE_URL}/v1"))
@@ -1150,12 +1201,32 @@ class LLMGateway:
             # parse_response's non-anthropic branch handles it) — only the
             # host and API key env var differ from direct OpenAI, same as
             # every other "openai_compatible" provider in this codebase.
-            api_key = os.environ.get(cfg.get("api_key_env", "GROQ_API_KEY"), "")
+            api_key = LLMGateway._lookup_api_key(cfg, "GROQ_API_KEY")
             base_url = cfg.get("endpoint") or "https://api.groq.com/openai/v1"
         else:
-            api_key = os.environ.get(cfg.get("api_key_env", "OPENAI_API_KEY"), "")
+            api_key = LLMGateway._lookup_api_key(cfg, "OPENAI_API_KEY")
             base_url = cfg.get("endpoint") or "https://api.openai.com/v1"
         return os.path.expandvars(base_url), api_key
+
+    @staticmethod
+    def _lookup_api_key(cfg: dict, default_env: str) -> str:
+        """Resolve a model's API key, honoring a per-role `api_key_env`
+        override (e.g. a tenant giving the judge role its own Anthropic
+        account, distinct from the analyst's — RFC-002 "judge/actor
+        separation" extended to the account level, not just the model id).
+
+        Falls back to `default_env` when `api_key_env` is configured but its
+        target variable isn't populated yet, rather than resolving to an
+        empty string and sending a broken auth header — a tenant can roll
+        out a dedicated key for one role at a time without both roles going
+        dark in between.
+        """
+        custom_env = cfg.get("api_key_env")
+        if custom_env and custom_env != default_env:
+            value = os.environ.get(custom_env, "")
+            if value:
+                return value
+        return os.environ.get(default_env, "")
 
     async def _invoke(
         self, cfg: dict, messages: list[dict], max_tokens: int, temperature: float
