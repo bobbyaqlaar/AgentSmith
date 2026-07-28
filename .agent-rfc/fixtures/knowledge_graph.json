@@ -79,1503 +79,6 @@
     },
     {
       "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "metadata",
-        "RootLayout"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/layout.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "TenantOverviewPage"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "TenantDetailPage"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/tenants/[id]/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "AuditLogPage"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/audit/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "DLQPage"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/dlq/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "TenantDlqPage"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/dlq/[tenantId]/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "OPTIONS",
-        "GET"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/widget/status/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/app/api/auth/session-status/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/app/api/auth/logout/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "GET"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/auth/callback/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "GET"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/auth/login/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET",
-        "POST"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/tenants/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/tenants/[id]/cost/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST",
-        "DELETE"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/tenants/[id]/widget-token/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/tenants/[id]/issues/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/audit/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/audit/append/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/dlq/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/app/api/dlq/[taskId]/discard/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/app/api/dlq/[taskId]/replay/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/app/api/sync/history/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/app/api/runs/ingest/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-07-20T21:04:04Z",
-      "id": "portal/test/dlqCostWidget.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/test/authz.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/test/phoenix.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-07-14T21:46:41Z",
-      "id": "portal/test/ssoRevocation.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/test/auditLog.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/page.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/layout.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/tenants/[id]/page.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/audit/page.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/dlq/page.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/dlq/[tenantId]/page.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/widget/status/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/auth/session-status/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/auth/logout/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/auth/callback/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/auth/login/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/tenants/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/tenants/[id]/cost/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/tenants/[id]/widget-token/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/tenants/[id]/issues/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/audit/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/audit/append/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/dlq/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/dlq/[taskId]/discard/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/dlq/[taskId]/replay/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/sync/history/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "PageProps",
-        "LayoutProps"
-      ],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/types/app/api/runs/ingest/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/server.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/edge-runtime-webpack.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/next-font-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/server-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/middleware-react-loadable-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/middleware.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/webpack-runtime.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/middleware-build-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/tenants/[id]/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/tenants/[id]/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/audit/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/audit/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/dlq/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/dlq/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/dlq/[tenantId]/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/dlq/[tenantId]/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/widget/status/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/auth/session-status/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/auth/logout/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/auth/callback/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/auth/login/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/tenants/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/tenants/[id]/cost/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/tenants/[id]/widget-token/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/tenants/[id]/issues/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/audit/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/audit/append/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/dlq/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/dlq/[taskId]/discard/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/dlq/[taskId]/replay/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/sync/history/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/api/runs/ingest/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/_not-found/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/app/_not-found/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/chunks/271.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/chunks/201.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/chunks/944.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/chunks/707.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/chunks/682.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/chunks/972.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/chunks/615.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/chunks/323.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/chunks/276.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/pages/_error.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/pages/_app.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:07Z",
-      "id": "portal/.next/standalone/.next/server/pages/_document.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:54Z",
-      "id": "portal/.next/server/edge-runtime-webpack.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/server/next-font-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:54Z",
-      "id": "portal/.next/server/interception-route-rewrite-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/server-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/server/middleware-react-loadable-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:54Z",
-      "id": "portal/.next/server/middleware.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/webpack-runtime.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/server/middleware-build-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/server/app/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/tenants/[id]/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/server/app/tenants/[id]/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/audit/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/server/app/audit/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/dlq/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/server/app/dlq/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/dlq/[tenantId]/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/server/app/dlq/[tenantId]/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/widget/status/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/auth/session-status/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/auth/logout/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/auth/callback/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/auth/login/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/tenants/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/tenants/[id]/cost/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/tenants/[id]/widget-token/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/tenants/[id]/issues/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/audit/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/audit/append/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/dlq/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/dlq/[taskId]/discard/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/dlq/[taskId]/replay/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/sync/history/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/api/runs/ingest/route.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/app/_not-found/page.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/server/app/_not-found/page_client-reference-manifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/chunks/271.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/chunks/201.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/chunks/944.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/chunks/707.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/chunks/682.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/chunks/972.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/chunks/615.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/chunks/323.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/chunks/276.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/pages/_error.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/pages/_app.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:51Z",
-      "id": "portal/.next/server/pages/_document.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:27:01Z",
-      "id": "portal/.next/static/zvT4i9edNnQrE-ss9ryOU/_ssgManifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/zvT4i9edNnQrE-ss9ryOU/_buildManifest.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/275-6097e622ad0b2b6d.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/main-b21e8ab62b24c9c6.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/fd9d1056-91c43e371218826e.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/webpack-d757b501b8c835e1.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/117-1035b5c1cab7f31e.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/framework-f66176bb897dc684.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/972-9da74f87f9e80e44.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/main-app-36e95929c56c8bfd.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/polyfills-42372ed130431b0a.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/app/layout-d77ce05ed541762f.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/app/page-9bffca2a84195b95.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/app/tenants/[id]/page-e8f0f9f82c9535ff.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/app/audit/page-eb93607134d93d1f.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/app/dlq/page-b0b51c808fa800fa.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/app/dlq/[tenantId]/page-bc686afc58e5bcb5.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/app/_not-found/page-1bfec97e597bb293.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/pages/_app-72b849fbd24ac258.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-27T15:26:56Z",
-      "id": "portal/.next/static/chunks/pages/_error-7ba65e1336b92748.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "CostChart"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/components/CostChart.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "DlqEntryCard"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/components/DlqEntryCard.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "BadgeTone",
-        "Badge",
-        "toneForLevel",
-        "toneForRunStatus",
-        "toneForDlqReason"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/components/ui/Badge.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "Card",
-        "MetricCard"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/components/ui/Card.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "ThemeToggle"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/components/ui/ThemeToggle.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/scripts/migrate.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "DLQStatus",
-        "DLQEntry",
-        "getDLQStatus",
-        "listDLQEntries",
-        "getDlqEntry",
-        "ReplayNotConfiguredError",
-        "ReplayWebhookError",
-        "replayDlqEntry",
-        "discardDlqEntry"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/lib/dlq.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "getPool",
-        "tableExists",
-        "columnExists"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/lib/db.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "Tenant",
-        "listTenants",
-        "getTenant",
-        "getReplayWebhookConfig",
-        "upsertTenant"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/lib/tenants.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "tenantTraceUrl",
-        "checkPhoenixHealth",
-        "RecentTraceStats",
-        "getRecentTraceStats"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/lib/phoenix.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "CostByPeriod",
-        "TenantCost",
-        "getTenantCost",
-        "getAllTenantsCurrentSpend"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/lib/cost.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "AuditEventType",
-        "AuditEvent",
-        "verifySignature",
-        "AppendAuditEventInput",
-        "appendAuditEvent",
-        "AuditEventWithVerification",
-        "listAuditEvents"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/lib/auditLog.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "RunStatus",
-        "WidgetStatus",
-        "UpsertAgentRunInput",
-        "upsertAgentRun",
-        "getWidgetStatus"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/lib/runStatus.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "createWidgetToken",
-        "resolveWidgetToken",
-        "revokeWidgetToken",
-        "revokeWidgetTokensForTenant"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/lib/widgetTokens.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "revokeSession",
-        "isSessionRevoked"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/lib/sessionRevocation.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "HistoryEntry",
-        "getUnresolvedIssues",
-        "getUnresolvedCountByTenant",
-        "SyncEntryInput",
-        "syncHistoryEntries"
-      ],
-      "last_modified": "2026-07-20T20:31:53Z",
-      "id": "portal/lib/issues.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "secureCookies",
-        "OidcSettings",
-        "getOidcSettings",
-        "getOidcClientConfig",
-        "buildAuthorizationUrl",
-        "OidcIdentity",
-        "handleCallback"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/lib/oidc.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "ISOLATION_VALUES",
-        "Isolation",
-        "isValidIsolation"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "portal/lib/isolation.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "SuggestedPromotion",
-        "getSuggestedPromotions"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "portal/lib/promotions.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
         "StructuredOutputError",
@@ -1620,6 +123,21 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_NoopSpan",
+        "agent_span",
+        "_stamp",
+        "record_tool_call",
+        "set_attribute",
+        "record_exception",
+        "is_recording"
+      ],
+      "last_modified": "2026-07-28T20:22:52Z",
+      "id": "runtime/tracing.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "_strip_markdown_fences",
         "propose_corrected_payload",
         "run_self_correction_loop"
@@ -1636,6 +154,7 @@
         "resolve_mode",
         "scrub_text",
         "_default_scrub",
+        "detect_pii",
         "scrub_messages",
         "_sub_emirates_hyphen",
         "_sub_emirates_digits",
@@ -1643,7 +162,7 @@
         "_sub_phone",
         "_sub_card"
       ],
-      "last_modified": "2026-07-21T10:41:18Z",
+      "last_modified": "2026-07-28T19:10:52Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -1723,7 +242,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-06-29T22:37:00Z",
+      "last_modified": "2026-07-23T07:49:52Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -1747,7 +266,7 @@
         "invoke",
         "decorator"
       ],
-      "last_modified": "2026-07-14T21:46:41Z",
+      "last_modified": "2026-07-28T19:11:44Z",
       "id": "runtime/tool_registry.py"
     },
     {
@@ -1774,6 +293,21 @@
       ],
       "last_modified": "2026-07-21T10:41:18Z",
       "id": "runtime/trace_redactor.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "CitationCheck",
+        "citations_grounded",
+        "outcomes_match",
+        "pair_parity",
+        "judge_independence_warning",
+        "warn_if_judge_not_independent",
+        "parity_violation"
+      ],
+      "last_modified": "2026-07-21T20:52:04Z",
+      "id": "runtime/judging.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1814,10 +348,11 @@
         "_coerce_messages",
         "_is_retryable_provider_error",
         "_resolve_endpoint",
+        "_lookup_api_key",
         "_invoke",
         "_post_with_retry"
       ],
-      "last_modified": "2026-07-21T10:39:49Z",
+      "last_modified": "2026-07-23T08:33:52Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -1973,500 +508,6 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "test_valid_cards_pass",
-        "test_invalid_candidates_fail",
-        "test_guard_and_redactor_share_one_implementation",
-        "test_guard_and_redactor_agree_end_to_end"
-      ],
-      "last_modified": "2026-07-20T20:08:28Z",
-      "id": "runtime/test/test_luhn_parity.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_make_gateway",
-        "test_concurrent_calls_cannot_exceed_cap",
-        "test_reservation_releases_on_invoke_failure",
-        "test_free_tier_model_bypasses_reservation",
-        "test_reservation_reconciles_to_actual_cost",
-        "test_invoke_retries_transient_errors_with_backoff",
-        "test_invoke_does_not_retry_non_transient_errors",
-        "test_invoke_groq_provider_uses_groq_base_url_and_key",
-        "fake_invoke",
-        "run_one",
-        "failing_invoke",
-        "fake_post",
-        "fake_post_401"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "runtime/test/test_llm_gateway_budget.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "FakeCursor",
-        "FakeConnection",
-        "FakePoolError",
-        "FakePool",
-        "fake_psycopg2",
-        "_the_pool",
-        "test_connections_are_reused_across_borrow_cycles",
-        "test_close_releases_instead_of_closing",
-        "test_stale_pooled_connection_is_discarded_and_replaced",
-        "test_pool_exhaustion_falls_back_to_direct_connect",
-        "test_budget_backend_reuses_pooled_connection",
-        "__init__",
-        "execute",
-        "fetchone",
-        "rowcount",
-        "__enter__",
-        "__exit__",
-        "cursor",
-        "rollback",
-        "close",
-        "getconn",
-        "putconn",
-        "closeall",
-        "_direct_connect"
-      ],
-      "last_modified": "2026-07-20T20:07:24Z",
-      "id": "runtime/test/test_pg_pool.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_blocks_ignore_previous_instructions",
-        "test_allows_benign_prompt",
-        "test_blocks_system_role_injection",
-        "test_tenant_denylist",
-        "test_resolve_mode_defaults_to_default",
-        "test_strict_mode_raises_on_block"
-      ],
-      "last_modified": "2026-07-14T21:46:41Z",
-      "id": "runtime/test/test_prompt_guard.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_gw",
-        "test_no_degrade_while_budget_is_healthy",
-        "test_breach_walks_past_the_paid_rung_to_the_free_tier",
-        "test_breach_from_the_middle_rung_also_reaches_free",
-        "test_free_tier_caller_is_never_blocked_by_a_breach",
-        "test_chain_without_any_free_tier_falls_back_to_next_paid_rung",
-        "test_no_cheaper_tier_halts_with_alert",
-        "test_broken_chain_link_is_skipped_not_fatal",
-        "test_cycle_in_degrade_chain_terminates"
-      ],
-      "last_modified": "2026-07-21T08:27:27Z",
-      "id": "runtime/test/test_degrade_ladder.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "crm_update_activity",
-        "CRMWorkflow",
-        "__init__",
-        "run"
-      ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "runtime/test/_recoverable_step_fixtures.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_FakeStreamResp",
-        "test_supports_streaming_matrix",
-        "test_parse_stream_delta_anthropic_only_returns_text_events",
-        "test_parse_stream_delta_ignores_tool_use_json_deltas",
-        "test_parse_stream_delta_openai_compatible",
-        "_gateway",
-        "test_anthropic_streams_and_measures_ttft",
-        "test_cloud_provider_falls_back_to_complete_instead_of_raising",
-        "test_endpoint_resolution_shared_with_invoke",
-        "__init__",
-        "__aenter__",
-        "__aexit__",
-        "raise_for_status",
-        "aiter_lines",
-        "_stream"
-      ],
-      "last_modified": "2026-07-21T10:40:12Z",
-      "id": "runtime/test/test_stream_providers.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_register_and_invoke_tool",
-        "test_allowlist_permits_listed_tool",
-        "test_allowlist_denies_unlisted_tool_in_strict",
-        "test_load_allowlist_reads_template",
-        "add",
-        "echo",
-        "secret_tool"
-      ],
-      "last_modified": "2026-07-14T21:46:41Z",
-      "id": "runtime/test/test_tool_registry.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_resolve_mode",
-        "test_secure_by_default_when_unset",
-        "test_is_enforcing_matrix",
-        "test_warn_reports_without_raising",
-        "test_strict_raises_inside_the_library",
-        "test_off_never_flags",
-        "_gateway",
-        "test_gateway_blocks_in_enforcing_modes",
-        "test_gateway_warn_mode_proceeds_and_reports",
-        "test_clean_prompt_reports_nothing",
-        "test_upgrade_does_not_silently_stop_blocking"
-      ],
-      "last_modified": "2026-07-21T08:56:33Z",
-      "id": "runtime/test/test_prompt_guard_modes.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_is_cloud_provider",
-        "test_unknown_cloud_provider_raises",
-        "test_vertex_ai_anthropic_publisher",
-        "test_vertex_ai_default_publisher_is_gemini",
-        "test_vertex_ai_gemini_publisher",
-        "test_azure_openai",
-        "test_bedrock",
-        "test_vertex_ai_default_region_is_verified_working_region",
-        "test_vertex_ai_project_supports_env_var_expansion",
-        "test_bedrock_default_region_is_us_east_1",
-        "test_vertex_ai_url_template_override",
-        "test_bedrock_url_template_override",
-        "test_huawei_modelarts_path_template_override",
-        "test_huawei_modelarts"
-      ],
-      "last_modified": "2026-06-29T22:37:00Z",
-      "id": "runtime/test/test_provider_dispatch_cloud.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "FakeSpanContext",
-        "FakeSpan",
-        "_redactor",
-        "test_staging_profile_hashes_secrets_preserving_structure",
-        "test_production_profile_truncates_and_flattens",
-        "test_development_profile_does_not_scrub",
-        "test_unrecognized_profile_value_falls_back_to_strictest",
-        "test_per_span_tenant_id_used_for_hitl_blob_not_constructor_default",
-        "test_blob_ref_includes_span_id_for_collision_safety",
-        "test_missing_hitl_key_logs_error_not_silently_swallowed",
-        "test_credit_card_redaction_validates_luhn",
-        "test_get_environment_fail_closed_for_unrecognized_value",
-        "test_get_environment_fail_closed_for_unset",
-        "test_get_environment_explicit_development",
-        "__init__"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "runtime/test/test_trace_redactor.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_reset_moderation",
-        "test_no_hook_optional_allows_text",
-        "test_required_mode_without_hook_raises",
-        "test_registered_hook_blocks",
-        "test_registered_hook_raise_on_block",
-        "test_llm_gateway_reexports_register",
-        "classifier"
-      ],
-      "last_modified": "2026-07-14T21:46:41Z",
-      "id": "runtime/test/test_moderation.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "Demo",
-        "test_parse_fenced_json",
-        "test_parse_bare_json",
-        "test_parse_fenced_without_language_tag",
-        "test_invalid_schema_raises",
-        "test_malformed_json_raises"
-      ],
-      "last_modified": "2026-07-14T21:46:41Z",
-      "id": "runtime/test/test_structured_output.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "FakeWorkflow",
-        "test_run_with_self_correction_retries_corrected_payload",
-        "test_run_with_self_correction_falls_back_to_recoverable_step_with_last_payload",
-        "__init__",
-        "execute_activity",
-        "fallback"
-      ],
-      "last_modified": "2026-07-21T10:40:12Z",
-      "id": "runtime/test/test_self_correction_workflow.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_gateway",
-        "test_complete_returns_scrub_counts",
-        "test_clean_prompt_reports_no_redactions",
-        "test_guardrail_off_reports_nothing",
-        "test_result_defaults_are_independent_instances"
-      ],
-      "last_modified": "2026-07-21T08:28:01Z",
-      "id": "runtime/test/test_guardrail_evidence.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_FakeStreamResp",
-        "test_complete_stream_sets_ttft_ms",
-        "_stream_gateway",
-        "test_complete_stream_keeps_budget_reservation_on_success",
-        "__init__",
-        "__aenter__",
-        "__aexit__",
-        "raise_for_status",
-        "aiter_lines"
-      ],
-      "last_modified": "2026-07-21T10:40:12Z",
-      "id": "runtime/test/test_ttft_stream.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_conversation_memory_evicts_oldest_when_over_budget",
-        "test_conversation_memory_as_messages_preserves_order",
-        "test_hash_embedder_is_deterministic_and_fixed_dim",
-        "test_make_embedder_defaults_to_hash_when_embedder_hash",
-        "test_memory_vector_store_add_and_query_returns_nearest",
-        "test_make_vector_store_defaults_to_memory"
-      ],
-      "last_modified": "2026-07-10T11:23:32Z",
-      "id": "runtime/test/test_memory_and_vector.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_returns_real_completion_result_shape",
-        "test_scripted_sequence_then_sticky_last",
-        "test_callable_response_sees_the_prompt",
-        "test_streaming_reports_ttft_and_records_the_call",
-        "test_double_is_not_more_capable_than_the_real_gateway",
-        "test_budget_cap_raises_the_real_error_type",
-        "test_assertion_helpers",
-        "test_message_list_prompts_are_flattened_for_assertions",
-        "test_recording_gateway_wraps_and_delegates"
-      ],
-      "last_modified": "2026-07-21T08:25:18Z",
-      "id": "runtime/test/test_testing_doubles.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_reset_guardrail_state",
-        "test_default_scrub_masks_emirates_id",
-        "test_default_scrub_masks_email_and_phone",
-        "test_off_mode_leaves_text_unchanged",
-        "test_scrub_messages_rewrites_content_strings",
-        "test_custom_callback_replaces_default",
-        "test_resolve_mode_defaults_off_in_development",
-        "test_resolve_mode_defaults_default_in_production",
-        "test_resolve_mode_respects_explicit_off",
-        "custom"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "runtime/test/test_input_guardrail.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "FakeCompletion",
-        "FakeGateway",
-        "test_propose_corrected_payload_parses_json_from_fenced_response",
-        "test_run_self_correction_loop_succeeds_after_one_correction",
-        "test_run_self_correction_loop_returns_sentinel_when_exhausted",
-        "__init__",
-        "complete",
-        "activity_fn"
-      ],
-      "last_modified": "2026-07-21T10:40:12Z",
-      "id": "runtime/test/test_self_correction.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "backend",
-        "test_reserve_and_reconcile",
-        "test_concurrent_reserves_never_exceed_cap",
-        "one"
-      ],
-      "last_modified": "2026-07-20T20:53:41Z",
-      "id": "runtime/test/test_pg_budget_live.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_workflow_stays_alive_and_resumes_with_human_fix",
-        "test_retries_exactly_once_not_temporals_default_policy"
-      ],
-      "last_modified": "2026-07-21T10:40:12Z",
-      "id": "runtime/test/test_recoverable_step.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_clean",
-        "tenant",
-        "_declare",
-        "test_undeclared_returns_none",
-        "test_declared_in_tenant_yaml",
-        "test_env_overrides_tenant_yaml",
-        "test_broken_declaration_is_loud",
-        "test_runtime_auto_registers_the_declared_hook",
-        "test_required_still_raises_without_a_declaration",
-        "test_use_declared_false_isolates_the_harness_assertion",
-        "test_imperative_registration_wins",
-        "test_off_mode_never_loads_the_declaration"
-      ],
-      "last_modified": "2026-07-21T09:36:23Z",
-      "id": "runtime/test/test_moderation_declared.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "runtime/workflows/__init__.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "AgentWorkflowInput",
-        "AgentWorkflowResult",
-        "BaseAgentWorkflow",
-        "dlq_enqueue_activity",
-        "self_correct_payload_activity",
-        "__init__",
-        "run_with_hitl_gate",
-        "run_with_self_correction",
-        "run_with_recoverable_step",
-        "_Workflow",
-        "hitl_approved",
-        "human_fix_payload",
-        "signal"
-      ],
-      "last_modified": "2026-07-10T16:36:46Z",
-      "id": "runtime/workflows/base_workflow.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_run_health_server",
-        "_run_worker_with_retry",
-        "main",
-        "healthz"
-      ],
-      "last_modified": "2026-06-29T22:37:00Z",
-      "id": "examples/oil-price-agent/worker.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "OilPriceWorkflowInput",
-        "main"
-      ],
-      "last_modified": "2026-06-29T22:37:00Z",
-      "id": "examples/oil-price-agent/trigger_workflow.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "main"
-      ],
-      "last_modified": "2026-06-29T22:37:00Z",
-      "id": "examples/oil-price-agent/resolve_hitl.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "check_model",
-        "main"
-      ],
-      "last_modified": "2026-06-29T22:44:05Z",
-      "id": "examples/oil-price-agent/check_model_ids.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_ensure_runtime_on_path",
-        "fetch_oil_price_activity",
-        "run_prediction_activity",
-        "decide_action_activity",
-        "dead_letter_activity",
-        "_NoopActivity",
-        "defn"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "examples/oil-price-agent/workflows/activities.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "OilPriceWorkflowInput",
-        "OilPricePredictionWorkflow",
-        "__init__",
-        "run",
-        "_decide"
-      ],
-      "last_modified": "2026-07-11T07:39:22Z",
-      "id": "examples/oil-price-agent/workflows/oil_price_workflow.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "examples/oil-price-agent/workflows/__init__.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
         "_setup_otel",
         "_NoopSpan",
         "_NoopTracer",
@@ -2496,7 +537,7 @@
         "_annotate_shadow_result",
         "run_shadow_eval"
       ],
-      "last_modified": "2026-07-20T20:29:04Z",
+      "last_modified": "2026-07-28T20:11:29Z",
       "id": "scripts/shadow-eval.py"
     },
     {
@@ -2572,7 +613,7 @@
         "_resolve_hallucination_fail_above",
         "_resolve_fail_below"
       ],
-      "last_modified": "2026-07-20T20:29:51Z",
+      "last_modified": "2026-07-21T20:23:57Z",
       "id": "scripts/run-evals.py"
     },
     {
@@ -2580,11 +621,12 @@
       "language": "python",
       "symbols": [
         "_install_root",
+        "_tenant_root",
         "_tenant_security_dir",
         "_resolve_exit",
         "main"
       ],
-      "last_modified": "2026-07-20T20:30:19Z",
+      "last_modified": "2026-07-28T20:28:53Z",
       "id": "scripts/run-security-checks.py"
     },
     {
@@ -2655,6 +697,8 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "load_registry",
+        "_registry_judge_model",
         "judge_model",
         "_repo_root",
         "_iso_now",
@@ -2665,7 +709,7 @@
         "_phoenix_get",
         "_phoenix_post"
       ],
-      "last_modified": "2026-07-20T20:28:49Z",
+      "last_modified": "2026-07-28T20:39:16Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -2802,7 +846,7 @@
         "_resolve_local_import",
         "run_map"
       ],
-      "last_modified": "2026-07-20T20:31:08Z",
+      "last_modified": "2026-07-28T20:36:22Z",
       "id": "scripts/map_codebase.py"
     },
     {
@@ -2849,6 +893,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_required_ollama_models",
         "_check",
         "run_checks",
         "check_security",
@@ -2863,8 +908,59 @@
         "_run",
         "_git_repo"
       ],
-      "last_modified": "2026-07-21T10:44:01Z",
+      "last_modified": "2026-07-28T20:39:23Z",
       "id": "scripts/verify_system.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "javascript",
+      "symbols": [],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "templates/in-app-widget/widget.js"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "load_env",
+        "main"
+      ],
+      "last_modified": "2026-06-29T22:37:00Z",
+      "id": "templates/onprem-deploy/scripts/render-traefik-config.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "load_env",
+        "cluster",
+        "main"
+      ],
+      "last_modified": "2026-06-29T22:37:00Z",
+      "id": "templates/onprem-deploy/scripts/render-envoy-config.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "AgentStatusProps",
+        "AgentStatus"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "templates/in-app-widget/react/AgentStatus.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_referenced_callees",
+        "_provisioned_workflows",
+        "test_every_referenced_callee_exists_as_a_template",
+        "test_every_referenced_callee_is_provisioned_into_tenants",
+        "test_reusable_security_workflow_matches_its_tenant_template"
+      ],
+      "last_modified": "2026-07-28T20:31:23Z",
+      "id": "scripts/test/test_workflow_template_wiring.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -2939,6 +1035,19 @@
       ],
       "last_modified": "2026-07-20T20:53:11Z",
       "id": "scripts/test/test_promotion_loop.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_harness",
+        "test_tenant_root_follows_cwd_not_the_install",
+        "test_tenant_root_walks_up_to_the_repo_root",
+        "test_env_override_wins",
+        "test_framework_grading_itself_is_unchanged"
+      ],
+      "last_modified": "2026-07-28T20:30:49Z",
+      "id": "scripts/test/test_security_harness_roots.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -3047,6 +1156,24 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_no_env_override",
+        "test_resolves_the_judge_role_from_the_framework_registry",
+        "test_judge_is_not_the_architect_model",
+        "test_fallback_matches_the_registry_role",
+        "test_registry_is_readable_from_a_directly_invoked_script",
+        "test_env_var_wins_over_the_registry",
+        "test_blank_env_var_is_treated_as_unset",
+        "test_falls_back_when_the_registry_cannot_be_read",
+        "test_a_tenant_judge_role_overrides_the_framework_default",
+        "test_routing_override_also_reaches_the_judge"
+      ],
+      "last_modified": "2026-07-28T20:40:04Z",
+      "id": "scripts/test/test_judge_model_resolution.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "_sample_results",
         "test_write_evidence_pack_creates_five_markdown_reports",
         "test_owasp_rollup_includes_sec_pii_001",
@@ -3062,9 +1189,14 @@
         "_control",
         "test_missing_risk_register_warns_non_strict",
         "test_missing_risk_register_fails_strict",
-        "test_valid_template_passes_schema"
+        "test_valid_template_passes_schema",
+        "_seed_template",
+        "test_seeded_but_unedited_register_fails_strict",
+        "test_seeded_but_unedited_register_warns_non_strict",
+        "test_validating_the_template_itself_is_still_allowed",
+        "test_the_frameworks_own_register_is_not_the_template"
       ],
-      "last_modified": "2026-07-14T21:46:41Z",
+      "last_modified": "2026-07-28T20:30:32Z",
       "id": "scripts/test/test_security_risk_register.py"
     },
     {
@@ -3296,909 +1428,99 @@
       "language": "python",
       "symbols": [
         "_resolve_path",
+        "_template_path",
         "run"
       ],
-      "last_modified": "2026-07-14T21:46:41Z",
+      "last_modified": "2026-07-28T20:25:19Z",
       "id": "scripts/security/runners/risk_register.py"
     },
     {
       "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "templates/in-app-widget/widget.js"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
+      "language": "python",
       "symbols": [
-        "AgentStatusProps",
-        "AgentStatus"
+        "_run_health_server",
+        "_run_worker_with_retry",
+        "main",
+        "healthz"
       ],
-      "last_modified": "2026-06-26T21:15:31Z",
-      "id": "templates/in-app-widget/react/AgentStatus.tsx"
+      "last_modified": "2026-06-29T22:37:00Z",
+      "id": "examples/oil-price-agent/worker.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "load_env",
+        "OilPriceWorkflowInput",
         "main"
       ],
       "last_modified": "2026-06-29T22:37:00Z",
-      "id": "templates/onprem-deploy/scripts/render-traefik-config.py"
+      "id": "examples/oil-price-agent/trigger_workflow.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "load_env",
-        "cluster",
         "main"
       ],
       "last_modified": "2026-06-29T22:37:00Z",
-      "id": "templates/onprem-deploy/scripts/render-envoy-config.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "config",
-        "middleware"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/portal/middleware.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "Role",
-        "Access",
-        "ROLE_HEADER",
-        "TENANT_SCOPE_HEADER",
-        "getBasicAuthUsers",
-        "getSsoUsers",
-        "getAccessForBasicAuthUser",
-        "verifyBasicAuthCredentials",
-        "getAccessForSsoEmail",
-        "encodeTenantScopeHeader",
-        "decodeTenantScopeHeader",
-        "canAccessTenant",
-        "filterTenantIds",
-        "canWrite",
-        "canAdmin",
-        "getAccessFromHeaderValues"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/authz.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "SESSION_COOKIE_NAME",
-        "SESSION_TTL_SECONDS",
-        "OidcIdentity",
-        "createSessionToken",
-        "VerifiedSession",
-        "verifySessionToken"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/sessionToken.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "RevocationMode",
-        "RevocationDecision",
-        "resolveRevocationMode",
-        "checkSessionRevocation"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/ssoRevocationMode.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/tailwind.config.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "metadata",
-        "RootLayout"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/layout.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "TenantOverviewPage"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "TenantDetailPage"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/tenants/[id]/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "AuditLogPage"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/audit/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "DLQPage"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/dlq/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "TenantDlqPage"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/dlq/[tenantId]/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "OPTIONS",
-        "GET"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/widget/status/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/auth/session-status/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/auth/logout/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "GET"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/auth/callback/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "GET"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/auth/login/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET",
-        "POST"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/tenants/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/tenants/[id]/cost/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST",
-        "DELETE"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/tenants/[id]/widget-token/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/tenants/[id]/issues/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/audit/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/audit/append/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "GET"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/dlq/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/dlq/[taskId]/discard/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/dlq/[taskId]/replay/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/sync/history/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "POST"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/app/api/runs/ingest/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/test/authz.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/test/phoenix.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/portal/test/ssoRevocation.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/test/auditLog.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "CostChart"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/components/CostChart.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "DlqEntryCard"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/components/DlqEntryCard.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "BadgeTone",
-        "Badge",
-        "toneForLevel",
-        "toneForRunStatus",
-        "toneForDlqReason"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/components/ui/Badge.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "Card",
-        "MetricCard"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/components/ui/Card.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "ThemeToggle"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/components/ui/ThemeToggle.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/scripts/migrate.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "DLQStatus",
-        "DLQEntry",
-        "getDLQStatus",
-        "listDLQEntries",
-        "getDlqEntry",
-        "ReplayNotConfiguredError",
-        "ReplayWebhookError",
-        "replayDlqEntry",
-        "discardDlqEntry"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/dlq.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "getPool",
-        "tableExists",
-        "columnExists"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/db.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "Tenant",
-        "listTenants",
-        "getTenant",
-        "getReplayWebhookConfig",
-        "upsertTenant"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/tenants.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "tenantTraceUrl",
-        "checkPhoenixHealth",
-        "RecentTraceStats",
-        "getRecentTraceStats"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/phoenix.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "CostByPeriod",
-        "TenantCost",
-        "getTenantCost",
-        "getAllTenantsCurrentSpend"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/cost.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "AuditEventType",
-        "AuditEvent",
-        "verifySignature",
-        "AppendAuditEventInput",
-        "appendAuditEvent",
-        "AuditEventWithVerification",
-        "listAuditEvents"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/auditLog.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "RunStatus",
-        "WidgetStatus",
-        "UpsertAgentRunInput",
-        "upsertAgentRun",
-        "getWidgetStatus"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/runStatus.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "createWidgetToken",
-        "resolveWidgetToken",
-        "revokeWidgetToken",
-        "revokeWidgetTokensForTenant"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/widgetTokens.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "revokeSession",
-        "isSessionRevoked"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/sessionRevocation.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "HistoryEntry",
-        "getUnresolvedIssues",
-        "getUnresolvedCountByTenant",
-        "SyncEntryInput",
-        "syncHistoryEntries"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/issues.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "secureCookies",
-        "OidcSettings",
-        "getOidcSettings",
-        "getOidcClientConfig",
-        "buildAuthorizationUrl",
-        "OidcIdentity",
-        "handleCallback"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/oidc.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "ISOLATION_VALUES",
-        "Isolation",
-        "isValidIsolation"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/isolation.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "SuggestedPromotion",
-        "getSuggestedPromotions"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/portal/lib/promotions.ts"
+      "id": "examples/oil-price-agent/resolve_hitl.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "StructuredOutputError",
-        "_extract_json_text",
-        "parse_llm_json"
+        "check_model",
+        "main"
       ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/runtime/structured_output.py"
+      "last_modified": "2026-06-29T22:44:05Z",
+      "id": "examples/oil-price-agent/check_model_ids.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "main",
-        "_load_tenant_worker_module",
-        "_start_temporal_worker",
-        "_start_celery_worker"
+        "_ensure_runtime_on_path",
+        "fetch_oil_price_activity",
+        "run_prediction_activity",
+        "decide_action_activity",
+        "dead_letter_activity",
+        "_NoopActivity",
+        "defn"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/worker.py"
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "examples/oil-price-agent/workflows/activities.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "_strip_markdown_fences",
-        "propose_corrected_payload",
-        "run_self_correction_loop"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/self_correction.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_luhn_valid",
-        "reset_input_guardrail",
-        "register_input_guardrail",
-        "resolve_mode",
-        "scrub_text",
-        "_default_scrub",
-        "scrub_messages",
-        "_sub_emirates_hyphen",
-        "_sub_emirates_digits",
-        "_sub_email",
-        "_sub_phone",
-        "_sub_card"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/input_guardrail.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "VectorHit",
-        "VectorStore",
-        "_cosine",
-        "MemoryVectorStore",
-        "PgVectorStore",
-        "make_vector_store",
-        "add",
-        "query",
+        "OilPriceWorkflowInput",
+        "OilPricePredictionWorkflow",
         "__init__",
-        "_connect",
-        "_ensure_schema"
+        "run",
+        "_decide"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/vector_store.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "make_key",
-        "IdempotencyStore",
-        "_RedisBackend",
-        "_PostgresBackend",
-        "__init__",
-        "get",
-        "set",
-        "_connect",
-        "purge_expired"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/idempotency.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "ModerationHookRequiredError",
-        "ModerationBlockedError",
-        "ModerationResult",
-        "reset_output_moderator",
-        "register_output_moderator",
-        "get_output_moderator",
-        "resolve_mode",
-        "apply_output_moderation",
-        "__init__"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/runtime/moderation.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_verify_signature",
-        "ReplayWebhookHandler",
-        "main",
-        "do_POST",
-        "_replay",
-        "log_message",
-        "_connect"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/replay_webhook_server.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "ToolNotAllowedError",
-        "ToolNotFoundError",
-        "ToolSpec",
-        "_json_type",
-        "_schema_from_fn",
-        "load_allowlist",
-        "default_allowlist_path",
-        "ToolRegistry",
-        "tool",
-        "__init__",
-        "register",
-        "names",
-        "get_schema",
-        "_assert_allowed",
-        "invoke",
-        "decorator"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/runtime/tool_registry.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_luhn_valid",
-        "_redact_credit_cards",
-        "_hash8",
-        "_load_extra_patterns",
-        "HITLBlobStore",
-        "_make_blob_ref",
-        "TraceRedactor",
-        "_sub",
-        "__init__",
-        "_key",
-        "put",
-        "_blob_store_for",
-        "on_start",
-        "on_end",
-        "shutdown",
-        "force_flush",
-        "_scrub",
-        "_truncate"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/trace_redactor.py"
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "examples/oil-price-agent/workflows/oil_price_workflow.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/__init__.py"
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "examples/oil-price-agent/workflows/__init__.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "CompletionResult",
-        "BudgetExceededError",
-        "_repo_root",
-        "_load_yaml",
-        "load_model_registry",
-        "_current_period",
-        "BudgetStatus",
-        "_BudgetBackend",
-        "_MemoryBudgetBackend",
-        "_RedisBudgetBackend",
-        "_PostgresBudgetBackend",
-        "_make_budget_backend",
-        "LLMGateway",
-        "remaining_usd",
-        "breached",
-        "get_spend",
-        "add_spend",
-        "try_reserve",
-        "__init__",
-        "_key",
-        "_connect",
-        "_period",
-        "_make_idempotency_store",
-        "get_budget_status",
-        "_degrade_chain",
-        "_is_free_tier",
-        "_is_provider_exhausted",
-        "_resolve_role",
-        "_report_run_status",
-        "_record_span_attributes",
-        "complete_stream",
-        "complete",
-        "_coerce_messages",
-        "_is_retryable_provider_error",
-        "_invoke",
-        "_post_with_retry"
+        "test_valid_cards_pass",
+        "test_invalid_candidates_fail",
+        "test_guard_and_redactor_share_one_implementation",
+        "test_guard_and_redactor_agree_end_to_end"
       ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/runtime/llm_gateway.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "PromptGuardBlockedError",
-        "PromptGuardResult",
-        "resolve_mode",
-        "_denylist_path",
-        "_load_denylist",
-        "_control_char_ratio",
-        "scan_prompt",
-        "scan_messages",
-        "apply_prompt_guard",
-        "__init__"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/runtime/prompt_guard.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "Embedder",
-        "HashEmbedder",
-        "SentenceTransformerEmbedder",
-        "make_embedder",
-        "embed",
-        "__init__",
-        "_one",
-        "_load"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/embeddings.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "get_environment"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/environment.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_notify",
-        "DLQEntry",
-        "DeadLetterQueue",
-        "__init__",
-        "_migrate",
-        "_connect",
-        "_row_to_entry",
-        "enqueue",
-        "list",
-        "_get",
-        "replay",
-        "discard"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/dead_letter.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "make_temporal_replay_handler",
-        "handler",
-        "_signal"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/temporal_replay.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "infer_provider",
-        "build_request",
-        "parse_response",
-        "CloudProviderAdapter",
-        "_anthropic_messages_body",
-        "VertexAIAdapter",
-        "AzureOpenAIAdapter",
-        "BedrockAdapter",
-        "HuaweiModelArtsAdapter",
-        "is_cloud_provider",
-        "get_cloud_adapter",
-        "build_cloud_request",
-        "parse_cloud_response",
-        "_get_access_token"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/provider_dispatch.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_count_tokens",
-        "ConversationMemory",
-        "__init__",
-        "messages",
-        "add",
-        "as_messages",
-        "token_count",
-        "clear",
-        "_evict"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/conversation_memory.py"
+      "last_modified": "2026-07-20T20:08:28Z",
+      "id": "runtime/test/test_luhn_parity.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4218,8 +1540,65 @@
         "fake_post",
         "fake_post_401"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_llm_gateway_budget.py"
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "runtime/test/test_llm_gateway_budget.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "FakeCursor",
+        "FakeConnection",
+        "FakePoolError",
+        "FakePool",
+        "fake_psycopg2",
+        "_the_pool",
+        "test_connections_are_reused_across_borrow_cycles",
+        "test_close_releases_instead_of_closing",
+        "test_stale_pooled_connection_is_discarded_and_replaced",
+        "test_pool_exhaustion_falls_back_to_direct_connect",
+        "test_budget_backend_reuses_pooled_connection",
+        "__init__",
+        "execute",
+        "fetchone",
+        "rowcount",
+        "__enter__",
+        "__exit__",
+        "cursor",
+        "rollback",
+        "close",
+        "getconn",
+        "putconn",
+        "closeall",
+        "_direct_connect"
+      ],
+      "last_modified": "2026-07-20T20:07:24Z",
+      "id": "runtime/test/test_pg_pool.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_agent_span_noops_without_a_tracer",
+        "test_record_tool_call_noops_without_a_tracer",
+        "test_agent_span_reraises_but_still_noops",
+        "test_tool_registry_invoke_unchanged_without_tracer",
+        "_exporter",
+        "spans",
+        "_attrs",
+        "test_agent_span_records_attributes_and_duration",
+        "test_agent_span_stamps_error_and_reraises",
+        "test_each_tool_call_gets_its_own_child_span",
+        "test_denied_tool_records_allowed_false",
+        "test_tool_call_outside_a_step_emits_no_lone_span",
+        "adder",
+        "sanctions",
+        "registry_lookup",
+        "wire_transfer",
+        "solo"
+      ],
+      "last_modified": "2026-07-21T20:28:07Z",
+      "id": "runtime/test/test_tracing.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4232,8 +1611,25 @@
         "test_resolve_mode_defaults_to_default",
         "test_strict_mode_raises_on_block"
       ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_prompt_guard.py"
+      "last_modified": "2026-07-14T21:46:41Z",
+      "id": "runtime/test/test_prompt_guard.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_gw",
+        "test_no_degrade_while_budget_is_healthy",
+        "test_breach_walks_past_the_paid_rung_to_the_free_tier",
+        "test_breach_from_the_middle_rung_also_reaches_free",
+        "test_free_tier_caller_is_never_blocked_by_a_breach",
+        "test_chain_without_any_free_tier_falls_back_to_next_paid_rung",
+        "test_no_cheaper_tier_halts_with_alert",
+        "test_broken_chain_link_is_skipped_not_fatal",
+        "test_cycle_in_degrade_chain_terminates"
+      ],
+      "last_modified": "2026-07-21T08:27:27Z",
+      "id": "runtime/test/test_degrade_ladder.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4244,8 +1640,61 @@
         "__init__",
         "run"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/_recoverable_step_fixtures.py"
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "runtime/test/_recoverable_step_fixtures.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_all_citations_resolve",
+        "test_unresolved_citation_flagged",
+        "test_empty_citations_flagged_by_default",
+        "test_empty_citations_allowed_when_opted_out",
+        "test_pair_parity_matches_and_mismatches",
+        "test_pair_parity_omits_singletons_and_unpaired",
+        "test_pair_parity_coerces_missing_fairness_bit_to_zero",
+        "test_pair_parity_custom_outcome_key",
+        "test_parity_violation_none_when_equal",
+        "test_parity_violation_reports_the_divergence",
+        "test_independence_warning_when_same_model",
+        "test_no_warning_when_models_differ",
+        "test_no_warning_when_either_unset",
+        "test_warn_helper_logs_only_when_not_independent",
+        "test_run_evals_delegates_to_the_shared_function"
+      ],
+      "last_modified": "2026-07-21T20:52:36Z",
+      "id": "runtime/test/test_judging.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_FakeStreamResp",
+        "test_supports_streaming_matrix",
+        "test_parse_stream_delta_anthropic_only_returns_text_events",
+        "test_parse_stream_delta_ignores_tool_use_json_deltas",
+        "test_parse_stream_delta_openai_compatible",
+        "_gateway",
+        "test_anthropic_streams_and_measures_ttft",
+        "test_streaming_provider_exhaustion_falls_back_to_complete",
+        "test_cloud_provider_falls_back_to_complete_instead_of_raising",
+        "test_endpoint_resolution_shared_with_invoke",
+        "test_api_key_env_override_and_fallback",
+        "__init__",
+        "is_success",
+        "__aenter__",
+        "__aexit__",
+        "raise_for_status",
+        "aread",
+        "json",
+        "text",
+        "aiter_lines",
+        "_stream",
+        "_ErrorResp"
+      ],
+      "last_modified": "2026-07-23T08:35:24Z",
+      "id": "runtime/test/test_stream_providers.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4259,8 +1708,27 @@
         "echo",
         "secret_tool"
       ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_tool_registry.py"
+      "last_modified": "2026-07-14T21:46:41Z",
+      "id": "runtime/test/test_tool_registry.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_resolve_mode",
+        "test_secure_by_default_when_unset",
+        "test_is_enforcing_matrix",
+        "test_warn_reports_without_raising",
+        "test_strict_raises_inside_the_library",
+        "test_off_never_flags",
+        "_gateway",
+        "test_gateway_blocks_in_enforcing_modes",
+        "test_gateway_warn_mode_proceeds_and_reports",
+        "test_clean_prompt_reports_nothing",
+        "test_upgrade_does_not_silently_stop_blocking"
+      ],
+      "last_modified": "2026-07-21T08:56:33Z",
+      "id": "runtime/test/test_prompt_guard_modes.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4281,8 +1749,35 @@
         "test_huawei_modelarts_path_template_override",
         "test_huawei_modelarts"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_provider_dispatch_cloud.py"
+      "last_modified": "2026-06-29T22:37:00Z",
+      "id": "runtime/test/test_provider_dispatch_cloud.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_FakeWorkflowModule",
+        "fake_workflow",
+        "_gate",
+        "test_supplied_gate_result_does_not_re_run_any_gate_activity",
+        "test_high_risk_gate_result_waits_for_approval_before_resuming",
+        "test_rejection_never_runs_the_high_impact_action",
+        "test_gate_result_without_hitl_resumes_directly",
+        "test_gate_activity_name_still_runs_the_gate",
+        "test_rejects_both_gate_activity_and_gate_result",
+        "test_rejects_neither_gate_activity_nor_gate_result",
+        "test_timeout_with_tenant_id_emits_the_generic_dlq_envelope",
+        "test_timeout_without_tenant_id_keeps_the_legacy_flattened_shape",
+        "__init__",
+        "execute_activity",
+        "wait_condition",
+        "info",
+        "signal",
+        "_install",
+        "_Info"
+      ],
+      "last_modified": "2026-07-28T19:08:56Z",
+      "id": "runtime/test/test_hitl_gate.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4304,8 +1799,8 @@
         "test_get_environment_explicit_development",
         "__init__"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_trace_redactor.py"
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "runtime/test/test_trace_redactor.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4319,8 +1814,8 @@
         "test_llm_gateway_reexports_register",
         "classifier"
       ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_moderation.py"
+      "last_modified": "2026-07-14T21:46:41Z",
+      "id": "runtime/test/test_moderation.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4333,8 +1828,8 @@
         "test_invalid_schema_raises",
         "test_malformed_json_raises"
       ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_structured_output.py"
+      "last_modified": "2026-07-14T21:46:41Z",
+      "id": "runtime/test/test_structured_output.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4347,8 +1842,21 @@
         "execute_activity",
         "fallback"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_self_correction_workflow.py"
+      "last_modified": "2026-07-21T10:40:12Z",
+      "id": "runtime/test/test_self_correction_workflow.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_gateway",
+        "test_complete_returns_scrub_counts",
+        "test_clean_prompt_reports_no_redactions",
+        "test_guardrail_off_reports_nothing",
+        "test_result_defaults_are_independent_instances"
+      ],
+      "last_modified": "2026-07-21T08:28:01Z",
+      "id": "runtime/test/test_guardrail_evidence.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4359,13 +1867,17 @@
         "_stream_gateway",
         "test_complete_stream_keeps_budget_reservation_on_success",
         "__init__",
+        "is_success",
         "__aenter__",
         "__aexit__",
         "raise_for_status",
+        "aread",
+        "json",
+        "text",
         "aiter_lines"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_ttft_stream.py"
+      "last_modified": "2026-07-23T08:34:45Z",
+      "id": "runtime/test/test_ttft_stream.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4378,8 +1890,25 @@
         "test_memory_vector_store_add_and_query_returns_nearest",
         "test_make_vector_store_defaults_to_memory"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_memory_and_vector.py"
+      "last_modified": "2026-07-10T11:23:32Z",
+      "id": "runtime/test/test_memory_and_vector.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_returns_real_completion_result_shape",
+        "test_scripted_sequence_then_sticky_last",
+        "test_callable_response_sees_the_prompt",
+        "test_streaming_reports_ttft_and_records_the_call",
+        "test_double_is_not_more_capable_than_the_real_gateway",
+        "test_budget_cap_raises_the_real_error_type",
+        "test_assertion_helpers",
+        "test_message_list_prompts_are_flattened_for_assertions",
+        "test_recording_gateway_wraps_and_delegates"
+      ],
+      "last_modified": "2026-07-21T08:25:18Z",
+      "id": "runtime/test/test_testing_doubles.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4394,10 +1923,14 @@
         "test_resolve_mode_defaults_off_in_development",
         "test_resolve_mode_defaults_default_in_production",
         "test_resolve_mode_respects_explicit_off",
+        "test_detect_pii_counts_without_rewriting",
+        "test_detect_pii_agrees_with_scrub_text",
+        "test_detect_pii_rejects_long_non_luhn_digit_runs",
+        "test_detect_pii_ignores_guardrail_mode",
         "custom"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_input_guardrail.py"
+      "last_modified": "2026-07-28T19:17:19Z",
+      "id": "runtime/test/test_input_guardrail.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4412,8 +1945,20 @@
         "complete",
         "activity_fn"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_self_correction.py"
+      "last_modified": "2026-07-21T10:40:12Z",
+      "id": "runtime/test/test_self_correction.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "backend",
+        "test_reserve_and_reconcile",
+        "test_concurrent_reserves_never_exceed_cap",
+        "one"
+      ],
+      "last_modified": "2026-07-20T20:53:41Z",
+      "id": "runtime/test/test_pg_budget_live.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4422,15 +1967,35 @@
         "test_workflow_stays_alive_and_resumes_with_human_fix",
         "test_retries_exactly_once_not_temporals_default_policy"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/test/test_recoverable_step.py"
+      "last_modified": "2026-07-21T10:40:12Z",
+      "id": "runtime/test/test_recoverable_step.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_clean",
+        "tenant",
+        "_declare",
+        "test_undeclared_returns_none",
+        "test_declared_in_tenant_yaml",
+        "test_env_overrides_tenant_yaml",
+        "test_broken_declaration_is_loud",
+        "test_runtime_auto_registers_the_declared_hook",
+        "test_required_still_raises_without_a_declaration",
+        "test_use_declared_false_isolates_the_harness_assertion",
+        "test_imperative_registration_wins",
+        "test_off_mode_never_loads_the_declaration"
+      ],
+      "last_modified": "2026-07-21T09:36:23Z",
+      "id": "runtime/test/test_moderation_declared.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/workflows/__init__.py"
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "runtime/workflows/__init__.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4450,820 +2015,484 @@
         "human_fix_payload",
         "signal"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/runtime/workflows/base_workflow.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_run_health_server",
-        "_run_worker_with_retry",
-        "main",
-        "healthz"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/examples/oil-price-agent/worker.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "OilPriceWorkflowInput",
-        "main"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/examples/oil-price-agent/trigger_workflow.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "main"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/examples/oil-price-agent/resolve_hitl.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "check_model",
-        "main"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/examples/oil-price-agent/check_model_ids.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_ensure_runtime_on_path",
-        "fetch_oil_price_activity",
-        "run_prediction_activity",
-        "decide_action_activity",
-        "dead_letter_activity",
-        "_NoopActivity",
-        "defn"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/examples/oil-price-agent/workflows/activities.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "OilPriceWorkflowInput",
-        "OilPricePredictionWorkflow",
-        "__init__",
-        "run",
-        "_decide"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/examples/oil-price-agent/workflows/oil_price_workflow.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/examples/oil-price-agent/workflows/__init__.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_setup_otel",
-        "_NoopSpan",
-        "_NoopTracer",
-        "PipelineState",
-        "_architect_node",
-        "_developer_node",
-        "_validator_node",
-        "run_pipeline",
-        "__enter__",
-        "__exit__",
-        "set_attribute",
-        "set_status",
-        "record_exception",
-        "start_as_current_span"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/local_agent_stack.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_sync_state",
-        "_save_sync_state",
-        "_phoenix_get",
-        "_phoenix_post",
-        "_fetch_production_spans",
-        "_sample",
-        "_annotate_shadow_result",
-        "run_shadow_eval"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/shadow-eval.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_dotenv",
-        "_resolve_base_url",
-        "_resolve_fail_above_ms",
-        "measure_ttft_ms",
-        "main"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/verify_ttft.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_sync_state",
-        "_save_sync_state",
-        "_phoenix_get",
-        "_fetch_annotations",
-        "_fetch_span",
-        "sync"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/sync-ui-feedback.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_graph_path",
-        "AgentKnowledgeGraph",
-        "__init__",
-        "_load",
-        "save",
-        "upsert_file",
-        "upsert_guardrail",
-        "inject_production_learning",
-        "add_import",
-        "link_file_to_guardrail",
-        "remove_file",
-        "fetch_subgraph_context_window",
-        "find_files_by_symbol",
-        "impacted_files",
-        "stats",
-        "as_json"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/local_knowledge_graph.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_evals_path",
-        "_criteria_path_for",
-        "_golden_path",
-        "_criteria_path",
-        "_results_path",
-        "_adversarial_base_path",
-        "_load_cases",
-        "_load_adversarial_cases",
-        "_load_golden_cases",
-        "_load_criteria",
-        "score_adversarial_case",
-        "adversarial_miss_rate",
-        "_resolve_adversarial_fail_above",
-        "_pair_parity",
-        "_judge_case",
-        "run_scorecard",
-        "hallucination_flag_rate",
-        "_resolve_hallucination_fail_above",
-        "_resolve_fail_below",
-        "_load_dotenv"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/run-evals.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_repo_root",
-        "_tenant_security_dir",
-        "_resolve_exit",
-        "main"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/run-security-checks.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_golden_path",
-        "_criteria_path",
-        "_log_path",
-        "promote",
-        "_mark_log_resolved",
-        "_load_json",
-        "_save_json"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/promote-learning.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_project_name",
-        "AgentLogger",
-        "get_logger",
-        "__init__",
-        "info",
-        "minor",
-        "major",
-        "critical",
-        "llm_call",
-        "_write",
-        "resolve_hitl",
-        "unresolved_issues"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/agent_logger.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_notify_plyer",
-        "_notify_osascript",
-        "_send_webhook",
-        "send_notification",
-        "notify_hitl_required",
-        "notify_circuit_breaker",
-        "notify_eval_result",
-        "_post",
-        "_dispatch"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/notifier.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_yaml",
-        "org_policy_path",
-        "tenant_yaml_path",
-        "check_tenant_against_policy"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/delivery_model.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "judge_model",
-        "_repo_root",
-        "_iso_now",
-        "_tenant_id",
-        "_phoenix_get",
-        "_phoenix_post"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/_shared.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "is_online",
-        "get_llm_endpoint",
-        "require_online",
-        "start_background_watcher",
-        "stop_background_watcher",
-        "_notify_offline",
-        "_notify_recovery",
-        "_run"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/network_watchdog.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_cache_path",
-        "_load_state",
-        "_save_state",
-        "CircuitBreakerTripped",
-        "audit_token_velocity_circuit",
-        "_notify_if_requested",
-        "get_status",
-        "reset_monthly",
-        "__init__"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/circuit_breaker.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_iso_now",
-        "_item",
-        "collect_evidence",
-        "render_markdown",
-        "write_evidence_pack",
-        "main"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/delivery_evidence.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_sync_state",
-        "_save_sync_state",
-        "_load_tenant_yaml",
-        "_budget_cap_usd",
-        "_replay_webhook_config",
-        "_entry_id",
-        "sync"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/sync-portal-history.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_count_tokens",
-        "_keyword_tier",
-        "record_failure",
-        "record_success",
-        "_should_escalate",
-        "ModelRoute",
-        "route",
-        "_build_cloud_route",
-        "_local_route",
-        "_route_for_model",
-        "call",
-        "__init__",
-        "__repr__"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/cost_router.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_dotenv",
-        "_chat_url",
-        "_chat",
-        "_ollama_base",
-        "_generate_local_hf",
-        "main"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/verify_sovereign_endpoint.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_is_noop_body",
-        "find_violations",
-        "main"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/check_bare_except.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_rules",
-        "_render_cursorrules",
-        "_render_claude_md",
-        "_render_skill",
-        "_detect_stack",
-        "_default_project_name",
-        "main",
-        "_check_drift"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/generate-ide-config.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_iter_source_files",
-        "_parse_python",
-        "_parse_typescript",
-        "_parse_go",
-        "_extract_guardrails_from_cursorrules",
-        "_extract_guardrails_from_rfc",
-        "_resolve_local_import",
-        "run_map"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/map_codebase.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "AgentState",
-        "_default_state",
-        "_get_tracer",
-        "_get_model",
-        "_run_llm",
-        "architect_node",
-        "developer_node",
-        "validator_node",
-        "hitl_node",
-        "route_after_validator",
-        "route_after_hitl",
-        "_get_checkpointer",
-        "build_graph",
-        "run_pipeline",
-        "_Noop",
-        "start_as_current_span",
-        "_Span",
-        "__enter__",
-        "__exit__",
-        "set_attribute",
-        "record_exception"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/multi_agent_system.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "judge_prompt",
-        "run_judge",
-        "judge_case"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/eval_judge.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_check",
-        "run_checks",
-        "check_security",
-        "check_redaction",
-        "check_idempotency",
-        "check_dlq",
-        "check_hooks",
-        "check_history_sync",
-        "check_kg",
-        "check_onprem_deploy",
-        "check_delivery_model",
-        "_run",
-        "_git_repo"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/verify_system.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_shadow_eval",
-        "test_sample_is_deterministic_across_runs",
-        "test_sample_rate_roughly_matches_requested_fraction",
-        "test_sample_disjoint_at_zero_and_full_rate",
-        "test_judge_prompt_includes_no_reference_marker_for_shadow_cases"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/test/test_shadow_eval.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_run_evals",
-        "test_hallucination_flag_rate_empty",
-        "test_hallucination_flag_rate_threshold",
-        "test_resolve_hallucination_fail_above_cli_wins",
-        "test_resolve_hallucination_fail_above_env",
-        "test_resolve_hallucination_fail_above_default",
-        "test_judge_prompt_includes_hallucination_field",
-        "test_hallucination_base_fixture_has_grounded_cases",
-        "test_hallucination_suite_paths_use_agent_rfc_fixtures",
-        "test_load_hallucination_cases_falls_back_to_base_fixture",
-        "test_run_scorecard_fails_when_hallucination_rate_exceeds_gate",
-        "test_load_dotenv_sets_hallucination_threshold",
-        "fake_judge_case"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/test/test_hallucination_evals.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_registry_file_exists",
-        "test_load_control_registry_returns_sec_pii_001",
-        "test_every_control_has_framework_tags",
-        "test_duplicate_ids_rejected"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/test/test_security_registry.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_checker",
-        "test_multiline_reraise_is_not_flagged",
-        "test_multiline_log_and_continue_is_not_flagged",
-        "test_bare_pass_is_flagged",
-        "test_bare_ellipsis_is_flagged",
-        "test_fail_open_comment_suppresses_flag",
-        "test_fail_open_comment_on_wrapped_header_suppresses_flag",
-        "test_syntax_error_does_not_raise"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/test/test_check_bare_except.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_run_evals",
-        "test_fairness_base_fixture_has_paired_cases",
-        "test_suite_fairness_resolves_fairness_paths",
-        "test_judge_prompt_includes_fairness_when_requested",
-        "test_pair_parity_score_is_one_when_outcomes_match",
-        "test_pair_parity_score_is_zero_when_fairness_diverges",
-        "test_resolve_fail_below_fairness_uses_env",
-        "test_resolve_fail_below_fairness_defaults_to_080",
-        "test_load_dotenv_sets_fairness_threshold"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/test/test_fairness_evals.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_run_security_checks_smoke_exits_zero",
-        "test_run_security_checks_writes_report"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/test/test_security_harness.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_sample_results",
-        "test_write_evidence_pack_creates_five_markdown_reports",
-        "test_owasp_rollup_includes_sec_pii_001",
-        "test_framework_filter_limits_markdown"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/test/test_security_evidence_pack.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_control",
-        "test_missing_risk_register_warns_non_strict",
-        "test_missing_risk_register_fails_strict",
-        "test_valid_template_passes_schema"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/test/test_security_risk_register.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load",
-        "test_org_policy_example_has_delivery_model_catalog",
-        "test_soft_gate_warns_when_platform_not_approved",
-        "test_soft_gate_ok_when_platform_approved",
-        "test_soft_gate_skips_without_org_policy",
-        "test_delivery_evidence_writes_json_and_markdown"
-      ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/scripts/test/test_delivery_model.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_run_evals",
-        "test_adversarial_base_fixture_shape",
-        "test_adversarial_suite_paths",
-        "test_load_adversarial_cases_falls_back_to_base",
-        "test_resolve_adversarial_fail_above_env",
-        "test_score_adversarial_case_block_and_safe",
-        "test_adversarial_miss_rate",
-        "test_run_scorecard_adversarial_passes_on_base"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/test/test_adversarial_evals.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "FrameworkTags",
-        "ControlSpec",
-        "load_control_registry"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/registry.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/__init__.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "ControlResult",
-        "_results_by_id",
-        "_filter_controls",
-        "_status_for",
-        "_message_for",
-        "_render_table",
-        "_render_security_report_md",
-        "write_evidence_pack"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/report.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_SmokeModel",
-        "run"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/structured_output.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "run"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/pii_postcall.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "run",
-        "example_tool",
-        "not_allowed"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/tool_allowlist.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_run_evals",
-        "run"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/adversarial_eval.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/__init__.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "run"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/sso_revocation.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "run"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/moderation_hook.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "run"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/prompt_guard.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "run"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/pii_precall.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "run"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/noop.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_resolve_path",
-        "run"
-      ],
-      "last_modified": "2026-07-17T20:35:42Z",
-      "id": ".worktrees/security-compliance-harness/scripts/security/runners/risk_register.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "javascript",
-      "symbols": [],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/templates/in-app-widget/widget.js"
+      "last_modified": "2026-07-28T19:08:09Z",
+      "id": "runtime/workflows/base_workflow.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
-        "AgentStatusProps",
-        "AgentStatus"
+        "metadata",
+        "RootLayout"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/templates/in-app-widget/react/AgentStatus.tsx"
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/layout.tsx"
     },
     {
       "node_type": "CodebaseFile",
-      "language": "python",
+      "language": "typescript",
       "symbols": [
-        "load_env",
-        "main"
+        "dynamic",
+        "TenantOverviewPage"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/templates/onprem-deploy/scripts/render-traefik-config.py"
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/page.tsx"
     },
     {
       "node_type": "CodebaseFile",
-      "language": "python",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-07-20T21:04:04Z",
+      "id": "portal/test/dlqCostWidget.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/test/authz.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/test/phoenix.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-07-14T21:46:41Z",
+      "id": "portal/test/ssoRevocation.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/test/auditLog.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
       "symbols": [
-        "load_env",
-        "cluster",
-        "main"
+        "CostChart"
       ],
-      "last_modified": "2026-07-14T20:46:52Z",
-      "id": ".worktrees/security-compliance-harness/templates/onprem-deploy/scripts/render-envoy-config.py"
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/components/CostChart.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "DlqEntryCard"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/components/DlqEntryCard.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "BadgeTone",
+        "Badge",
+        "toneForLevel",
+        "toneForRunStatus",
+        "toneForDlqReason"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/scripts/migrate.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "DLQStatus",
+        "DLQEntry",
+        "getDLQStatus",
+        "listDLQEntries",
+        "getDlqEntry",
+        "ReplayNotConfiguredError",
+        "ReplayWebhookError",
+        "replayDlqEntry",
+        "discardDlqEntry"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/lib/dlq.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "getPool",
+        "tableExists",
+        "columnExists"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/lib/db.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "Tenant",
+        "listTenants",
+        "getTenant",
+        "getReplayWebhookConfig",
+        "upsertTenant"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/lib/tenants.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "tenantTraceUrl",
+        "checkPhoenixHealth",
+        "RecentTraceStats",
+        "getRecentTraceStats"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/lib/phoenix.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "CostByPeriod",
+        "TenantCost",
+        "getTenantCost",
+        "getAllTenantsCurrentSpend"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/lib/cost.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "AuditEventType",
+        "AuditEvent",
+        "verifySignature",
+        "AppendAuditEventInput",
+        "appendAuditEvent",
+        "AuditEventWithVerification",
+        "listAuditEvents"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/lib/auditLog.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "RunStatus",
+        "WidgetStatus",
+        "UpsertAgentRunInput",
+        "upsertAgentRun",
+        "getWidgetStatus"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/lib/runStatus.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "createWidgetToken",
+        "resolveWidgetToken",
+        "revokeWidgetToken",
+        "revokeWidgetTokensForTenant"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/lib/widgetTokens.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "revokeSession",
+        "isSessionRevoked"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/lib/sessionRevocation.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "HistoryEntry",
+        "getUnresolvedIssues",
+        "getUnresolvedCountByTenant",
+        "SyncEntryInput",
+        "syncHistoryEntries"
+      ],
+      "last_modified": "2026-07-20T20:31:53Z",
+      "id": "portal/lib/issues.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "secureCookies",
+        "OidcSettings",
+        "getOidcSettings",
+        "getOidcClientConfig",
+        "buildAuthorizationUrl",
+        "OidcIdentity",
+        "handleCallback"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/lib/oidc.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "ISOLATION_VALUES",
+        "Isolation",
+        "isValidIsolation"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/lib/isolation.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "SuggestedPromotion",
+        "getSuggestedPromotions"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/lib/promotions.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "Card",
+        "MetricCard"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/components/ui/Card.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "ThemeToggle"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/components/ui/ThemeToggle.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "AuditLogPage"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/audit/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "DLQPage"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/dlq/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET",
+        "POST"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/tenants/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/audit/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/dlq/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/app/api/runs/ingest/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/app/api/sync/history/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/dlq/[taskId]/discard/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/app/api/dlq/[taskId]/replay/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/audit/append/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/tenants/[id]/cost/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST",
+        "DELETE"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/tenants/[id]/widget-token/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/tenants/[id]/issues/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "GET"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/app/api/auth/session-status/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-07-11T07:39:22Z",
+      "id": "portal/app/api/auth/logout/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "GET"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/auth/callback/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "GET"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/auth/login/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "OPTIONS",
+        "GET"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/api/widget/status/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "TenantDlqPage"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/dlq/[tenantId]/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "TenantDetailPage"
+      ],
+      "last_modified": "2026-06-26T21:15:31Z",
+      "id": "portal/app/tenants/[id]/page.tsx"
     },
     {
       "node_type": "Guardrail",
       "title": "Delivery Model \u2014 promote evidence pack",
-      "source_file": "/sessions/zealous-practical-turing/mnt/Apps/AgenticFramework/.agent-rfc/fixtures/delivery_evidence.md",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/fixtures/delivery_evidence.md",
       "pillar": null,
-      "created_at": "2026-07-21T10:44:49Z",
+      "created_at": "2026-07-28T20:34:13Z",
       "id": "rfc:fixtures/delivery_evidence.md"
     }
   ],
-  "links": [
+  "edges": [
     {
       "edge_type": "IMPORTS",
       "source": "portal/middleware.ts",
@@ -5278,6 +2507,231 @@
       "edge_type": "IMPORTS",
       "source": "portal/middleware.ts",
       "target": "portal/lib/ssoRevocationMode.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/input_guardrail.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/vector_store.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/idempotency.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/replay_webhook_server.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/tool_registry.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/trace_redactor.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/llm_gateway.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/testing.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/dead_letter.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-evals.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/_shared.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/cost_router.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/multi_agent_system.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_system.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_moderation_declared.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_judge_model_resolution.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/structured_output.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/tool_allowlist.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/moderation_hook.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/prompt_guard.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/pii_precall.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_luhn_parity.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_llm_gateway_budget.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_pg_pool.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_tracing.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_prompt_guard.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_degrade_ladder.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_judging.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_stream_providers.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_tool_registry.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_prompt_guard_modes.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_provider_dispatch_cloud.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_hitl_gate.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_trace_redactor.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_moderation.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_structured_output.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_guardrail_evidence.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_ttft_stream.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_memory_and_vector.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_testing_doubles.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_input_guardrail.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_self_correction.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_pg_budget_live.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_moderation_declared.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/workflows/base_workflow.py",
+      "target": "runtime/__init__.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -5348,391 +2802,6 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/oidc.ts",
       "target": "portal/lib/sessionToken.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/input_guardrail.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/vector_store.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/idempotency.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/trace_redactor.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/llm_gateway.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/testing.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/dead_letter.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_luhn_parity.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_llm_gateway_budget.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_pg_pool.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_prompt_guard.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_degrade_ladder.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_stream_providers.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_tool_registry.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_prompt_guard_modes.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_provider_dispatch_cloud.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_trace_redactor.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_moderation.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_structured_output.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_guardrail_evidence.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_ttft_stream.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_memory_and_vector.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_testing_doubles.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_input_guardrail.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_self_correction.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_pg_budget_live.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_moderation_declared.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/workflows/base_workflow.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/run-evals.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/cost_router.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/multi_agent_system.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/verify_system.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/test/test_security_moderation_declared.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/security/runners/structured_output.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/security/runners/tool_allowlist.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/security/runners/moderation_hook.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/security/runners/prompt_guard.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/security/runners/pii_precall.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/middleware.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/authz.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/middleware.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/sessionToken.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/middleware.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/ssoRevocationMode.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/components/DlqEntryCard.tsx",
-      "target": ".worktrees/security-compliance-harness/portal/components/ui/Badge.tsx"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/dlq.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/db.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/dlq.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/tenants.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/tenants.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/db.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/cost.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/db.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/cost.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/tenants.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/auditLog.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/db.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/runStatus.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/db.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/runStatus.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/tenants.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/runStatus.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/phoenix.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/widgetTokens.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/db.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/sessionRevocation.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/db.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/issues.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/db.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/portal/lib/oidc.ts",
-      "target": ".worktrees/security-compliance-harness/portal/lib/sessionToken.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/input_guardrail.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/vector_store.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/trace_redactor.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/llm_gateway.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/test/test_llm_gateway_budget.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/test/test_prompt_guard.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/test/test_tool_registry.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/test/test_provider_dispatch_cloud.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/test/test_trace_redactor.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/test/test_moderation.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/test/test_structured_output.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/test/test_memory_and_vector.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/test/test_input_guardrail.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/runtime/workflows/base_workflow.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/scripts/run-evals.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/scripts/cost_router.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/scripts/multi_agent_system.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/scripts/security/runners/structured_output.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/scripts/security/runners/tool_allowlist.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/scripts/security/runners/moderation_hook.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/scripts/security/runners/prompt_guard.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": ".worktrees/security-compliance-harness/scripts/security/runners/pii_precall.py",
-      "target": "runtime/__init__.py"
     }
   ]
 }

@@ -39,7 +39,8 @@ Called by:
 
 Requires:
   AGENT_PHOENIX_ENDPOINT — Phoenix server URL (default: http://localhost:6006)
-  AGENT_JUDGE_MODEL       — judge model id (default: scripts/_shared.py DEFAULT_JUDGE_MODEL)
+  AGENT_JUDGE_MODEL       — judge model id override (unset: the `judge` role
+                            in models.yaml, via scripts/_shared.py judge_model())
 """
 
 from __future__ import annotations

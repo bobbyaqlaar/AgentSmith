@@ -6,12 +6,23 @@ Routing logic:
   2. Semantic keyword analysis
   3. Network availability (via network_watchdog)
 
-Route table (overridable via env vars):
-  AGENT_MODEL_ARCHITECT   default: claude-sonnet-4-6
-  AGENT_MODEL_COMPLEX     default: gpt-4o
-  AGENT_MODEL_STANDARD    default: llama-3.3-70b-versatile (Groq / Ollama)
-  AGENT_MODEL_FAST        default: gemma2 (Ollama local)
-  AGENT_MODEL_LOCAL       default: llama3 (Ollama fallback)
+Route table — each tier resolves in this order:
+  1. its AGENT_MODEL_* env var (per-run override, no code change)
+  2. the matching role in models.yaml (framework ← tenant ← routing_overrides)
+  3. a literal fallback, used only when runtime/ isn't importable
+
+  env var                 registry role
+  AGENT_MODEL_ARCHITECT   architect
+  AGENT_MODEL_COMPLEX     developer
+  AGENT_MODEL_STANDARD    validator
+  AGENT_MODEL_FAST        fast
+  AGENT_MODEL_LOCAL       fast
+
+(2) is what stops this table drifting. These defaults were hardcoded cloud ids
+— claude-sonnet-4-6 / gpt-4o / llama-3.3-70b-versatile / gemma2 / llama3 —
+that had no relationship to what models.yaml actually routed to, so the
+Layer-1 dev router and the production gateway named different models for the
+same tier and neither knew.
 
 Escalation policy: only escalate to a frontier model after two consecutive
 failures on the cheaper tier.
@@ -20,16 +31,26 @@ failures on the cheaper tier.
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 from typing import Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from _shared import role_model  # noqa: E402
 
 # ── Model config ──────────────────────────────────────────────────────────────
 
-MODEL_ARCHITECT = os.environ.get("AGENT_MODEL_ARCHITECT", "claude-sonnet-4-6")
-MODEL_COMPLEX = os.environ.get("AGENT_MODEL_COMPLEX", "gpt-4o")
-MODEL_STANDARD = os.environ.get(
-    "AGENT_MODEL_STANDARD", "llama-3.3-70b-versatile"
-)  # Groq id
-MODEL_FAST = os.environ.get("AGENT_MODEL_FAST", "gemma2")  # Ollama
+
+def _tier(env_var: str, role: str, fallback: str) -> str:
+    override = os.environ.get(env_var, "").strip()
+    return override or role_model(role, fallback)
+
+
+MODEL_ARCHITECT = _tier("AGENT_MODEL_ARCHITECT", "architect", "qwen2.5")
+MODEL_COMPLEX = _tier("AGENT_MODEL_COMPLEX", "developer", "llama3.2:3b")
+MODEL_STANDARD = _tier("AGENT_MODEL_STANDARD", "validator", "falcon3:3b")
+MODEL_FAST = _tier("AGENT_MODEL_FAST", "fast", "smollm2")
 
 # GitHub Models (https://docs.github.com/en/github-models) — free-tier
 # OpenAI-compatible inference using a GitHub token instead of a billed
@@ -39,7 +60,9 @@ MODEL_FAST = os.environ.get("AGENT_MODEL_FAST", "gemma2")  # Ollama
 GITHUB_MODELS_TOKEN = os.environ.get("GITHUB_MODELS_TOKEN") or os.environ.get(
     "GITHUB_TOKEN", ""
 )
-MODEL_LOCAL = os.environ.get("AGENT_MODEL_LOCAL", "llama3")  # Ollama fallback
+# Offline fallback — the registry's smallest local tier, so "what runs when the
+# network drops" is the same model the gateway's degrade ladder bottoms out on.
+MODEL_LOCAL = _tier("AGENT_MODEL_LOCAL", "fast", "smollm2")
 
 # Token thresholds
 TOKEN_TIER_HIGH = 8_000

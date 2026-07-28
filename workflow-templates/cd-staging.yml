@@ -114,7 +114,7 @@ jobs:
           GITHUB_TOKEN:           ${{ secrets.GITHUB_TOKEN }}
           AGENT_MODEL_ARCHITECT:  ${{ secrets.AGENT_MODEL_ARCHITECT }}
           AGENT_MODEL_COMPLEX:    ${{ secrets.AGENT_MODEL_COMPLEX }}
-          AGENT_JUDGE_MODEL:      ${{ secrets.AGENT_JUDGE_MODEL || 'claude-sonnet-4-6' }}
+          AGENT_JUDGE_MODEL:      ${{ secrets.AGENT_JUDGE_MODEL }}   # unset -> the `judge` role in models.yaml
           AGENT_PHOENIX_ENDPOINT: ${{ secrets.AGENT_PHOENIX_ENDPOINT }}
           AGENT_OWNER_ID:         ${{ secrets.AGENT_OWNER_ID || 'cd@agenticframework' }}
         run: python3 scripts/run-evals.py --fail-below 0.75

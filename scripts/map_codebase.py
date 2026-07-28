@@ -38,6 +38,21 @@ IGNORED_DIRS = {
     ".agent-rfc",
     ".agents",
     ".github",
+    # Framework/tooling build output. `dist` and `build` were here but not the
+    # JS framework equivalents, so the portal's Next.js output put 297 minified
+    # bundle files into the graph — two thirds of every node in it — and they
+    # rode into the agent context window that fetch_subgraph_context_window
+    # builds. Generated artifacts are never the code an agent should reason
+    # about.
+    ".next",
+    ".nuxt",
+    ".svelte-kit",
+    ".turbo",
+    "out",
+    "coverage",
+    ".ruff_cache",
+    ".tox",
+    "site-packages",
 }
 
 EXTENSION_TO_LANG = {

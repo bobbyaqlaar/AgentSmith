@@ -26,7 +26,42 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-OLLAMA_MODELS = ("falcon3:3b", "falcon3:1b")
+
+def _sovereign_ollama_models() -> tuple[str, ...]:
+    """Ollama model ids from the UAE sovereign starter registry.
+
+    Sourced from templates/uae-sovereign/models.yaml — the file this script
+    exists to verify — rather than a hardcoded tuple beside it. That registry
+    IS the sovereign profile's definition; a smoke test that checks different
+    tags than the profile declares proves nothing about the profile.
+
+    Falls back to the historical pair if the template is missing or unreadable,
+    so the script still runs from a partial install.
+    """
+    try:
+        import yaml  # type: ignore
+
+        data = yaml.safe_load(
+            (ROOT / "templates" / "uae-sovereign" / "models.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        ids = {
+            cfg["id"]
+            for cfg in (data or {}).get("models", {}).values()
+            if isinstance(cfg, dict)
+            and cfg.get("provider") == "ollama"
+            and cfg.get("id")
+        }
+        if ids:
+            # Largest first: the profile's primary route before its fallback.
+            return tuple(sorted(ids, reverse=True))
+    except Exception:  # fail-open: a smoke test must not die on a missing template
+        pass
+    return ("falcon3:3b", "falcon3:1b")  # model-literal-ok: fallback == the template's own ids
+
+
+OLLAMA_MODELS = _sovereign_ollama_models()
 HF_MODELS = (
     "tiiuae/Falcon-E-3B-Base-prequantized",
     "tiiuae/Falcon-H1-Tiny-R-0.6B-pre-GRPO",

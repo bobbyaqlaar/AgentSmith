@@ -7,7 +7,11 @@
 #   scripts.tar.gz             (scripts/)
 #   hooks.tar.gz                (hooks/)
 #   workflow-templates.tar.gz   (workflow-templates/)
-#   templates.tar.gz            (templates/agent-rules.yaml)
+#   templates.tar.gz            (templates/ — agent-rules.yaml AND the
+#                                onprem-deploy / uae-sovereign / delivery-model
+#                                trees; install-ai-stack.sh downloads this ONE
+#                                tarball for two different destinations, so it
+#                                has to carry both)
 #   github-actions.tar.gz       (.github/actions/ — composite actions the
 #                                ci-*/cd-* templates reference as
 #                                ./.github/actions/<name>; copied into each
@@ -45,7 +49,15 @@ jobs:
           tar --exclude='__pycache__' -czf dist/scripts.tar.gz -C scripts .
           tar -czf dist/hooks.tar.gz -C hooks .
           tar -czf dist/workflow-templates.tar.gz -C workflow-templates .
-          tar -czf dist/templates.tar.gz -C templates agent-rules.yaml
+          # The WHOLE templates/ tree, not just agent-rules.yaml.
+          # install-ai-stack.sh fetches this same tarball twice — once for
+          # agent-rules.yaml and once for templates/onprem-deploy/ — so a
+          # single-file archive left `ai-onprem-deploy-scaffold` permanently
+          # broken on any remote install, with only a warn to show for it.
+          # node_modules is a build artifact of the widget template, never
+          # shipped.
+          tar --exclude='node_modules' --exclude='__pycache__' \
+              -czf dist/templates.tar.gz -C templates .
           tar -czf dist/github-actions.tar.gz -C .github/actions .
           # In-App Widget: no cdn.agenticframework.io exists (Product_Archive.md
           # 5.11) — ship widget.js as a release asset so tenants can self-host it

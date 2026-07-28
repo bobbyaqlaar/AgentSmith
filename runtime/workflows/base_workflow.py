@@ -153,28 +153,67 @@ class BaseAgentWorkflow:
 
     async def run_with_hitl_gate(
         self,
-        gate_activity_name: str,
+        gate_activity_name: Optional[str],
         gate_input: Any,
         resume_activity_name: str,
         resume_input: Any,
         dead_letter_activity_name: str,
+        *,
+        gate_result: Optional[dict] = None,
+        tenant_id: Optional[str] = None,
+        gate_id: str = "hitl-gate",
     ) -> AgentWorkflowResult:
         """
-        Run `gate_activity_name`; if it requests human review, wait on the
+        Decide whether a step needs human review; if it does, wait on the
         `hitl_approved` signal up to HITL_SIGNAL_TIMEOUT. On timeout, route to
         the dead-letter activity instead of blocking the workflow forever.
+
+        The `needs_hitl` decision comes from EITHER end of the gate — pass
+        exactly one:
+
+        - `gate_activity_name` — this method executes it and reads
+          `needs_hitl` off the result. Use when the gate is a cheap, dedicated
+          check the workflow has not run yet.
+        - `gate_result` — a result the caller already has. Use when the
+          preceding step ALREADY produced `needs_hitl`, which is the common
+          shape: re-running that step here would (a) pay for its work twice
+          and (b) let a non-deterministic re-run return `needs_hitl=False`,
+          at which point this method would run the resume activity with no
+          human approval at all. That is a silent HITL bypass on exactly the
+          high-impact action the gate exists to protect, so the caller now
+          hands over the decision it already made instead.
+
+        `tenant_id` selects the dead-letter payload shape. With it, the
+        timeout path emits the generic `dlq_enqueue_activity` envelope
+        (`payload` / `error` / `tenant_id` / `reason` / `gate_id`) that
+        `run_with_recoverable_step` uses. Without it, the legacy flattened
+        `{**gate_input, "error": "hitl_timeout"}` shape is kept for tenants
+        whose own dead-letter activity expects the payload's fields inline
+        (see examples/oil-price-agent's `dead_letter_activity`). Passing
+        `dead_letter_activity_name="dlq_enqueue_activity"` WITHOUT a
+        `tenant_id` raises a KeyError inside that activity, since the
+        flattened shape carries none of the three keys it reads.
         """
+        if (gate_activity_name is None) == (gate_result is None):
+            raise ValueError(
+                "run_with_hitl_gate needs exactly one of gate_activity_name "
+                "(run the gate here) or gate_result (the caller already has "
+                "the needs_hitl decision) — got "
+                + ("both" if gate_activity_name is not None else "neither")
+            )
+
         if not _HAS_TEMPORAL:
             raise RuntimeError(
                 "temporalio is not installed. Run: pip install temporalio. "
                 "See SPECS.md §25 for the production runtime spec."
             )
 
-        gate_result = await workflow.execute_activity(
-            gate_activity_name,
-            gate_input,
-            start_to_close_timeout=timedelta(minutes=10),
-        )
+        if gate_result is None:
+            gate_result = await workflow.execute_activity(
+                gate_activity_name,
+                gate_input,
+                start_to_close_timeout=timedelta(minutes=10),
+            )
 
         if not gate_result.get("needs_hitl"):
             return await workflow.execute_activity(
@@ -189,9 +228,20 @@ class BaseAgentWorkflow:
                 timeout=HITL_SIGNAL_TIMEOUT,
             )
         except TimeoutError:
+            if tenant_id is None:
+                dead_letter_input: Any = {**gate_input, "error": "hitl_timeout"}
+            else:
+                dead_letter_input = {
+                    "payload": gate_input,
+                    "error": "hitl_timeout",
+                    "tenant_id": tenant_id,
+                    "reason": "hitl_timeout",
+                    "workflow_id": workflow.info().workflow_id,
+                    "gate_id": gate_id,
+                }
             await workflow.execute_activity(
                 dead_letter_activity_name,
-                {**gate_input, "error": "hitl_timeout"},
+                dead_letter_input,
                 start_to_close_timeout=timedelta(minutes=5),
             )
             return AgentWorkflowResult(status="dead_letter")

@@ -370,13 +370,21 @@ This does three things in sequence:
 
 ### Changing the Judge Model
 
-No code change required — set the environment variable:
+The judge comes from the `judge` role in `models.yaml` — framework default
+`falcon3:3b` on local Ollama, deliberately a different model from `architect`
+so the grader is never the author of what it grades. To change it for good,
+edit that role (or declare your own in a tenant `models.yaml`), which keeps
+your CI evals and your runtime judge on the same model. To override a single
+run, no code change required — set the environment variable:
 
 ```bash
-export AGENT_JUDGE_MODEL="claude-sonnet-4-6"   # default
-export AGENT_JUDGE_MODEL="gpt-4o"
-export AGENT_JUDGE_MODEL="llama3-70b-8192"              # local/Groq
+export AGENT_JUDGE_MODEL="qwen2.5"             # local, larger
+export AGENT_JUDGE_MODEL="gpt-4o"              # cloud, needs OPENAI_API_KEY
+export AGENT_JUDGE_MODEL="llama-3.3-70b-versatile"   # Groq, needs GROQ_API_KEY
 ```
+
+Avoid exporting it from your shell profile: it wins over every repo's declared
+`judge` role, machine-wide.
 
 ### Additional Suites (Reliability Pack)
 

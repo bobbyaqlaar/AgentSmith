@@ -114,7 +114,11 @@ export OTEL_EXPORTER_OTLP_ENDPOINT="${AGENT_PHOENIX_ENDPOINT}/v1/traces"  # set 
 
 # ── Budget and routing ─────────────────────────────────────────────────────────────
 export AGENT_MONTHLY_USD_CAP="50"               # hard cap across all projects (dev mode)
-export AGENT_JUDGE_MODEL="claude-sonnet-4-6"            # LLM used to grade evals
+# AGENT_JUDGE_MODEL — leave unset. The eval judge comes from the `judge` role
+# in models.yaml (framework default: falcon3:3b, local — distinct from the
+# architect model so the grader is never the author). Set this only to override
+# a single run; exporting it from your profile overrides every tenant's own
+# declared judge route.
 
 # ── Production runtime (only needed when running runtime/ against real backends) ───
 export DATABASE_URL="postgresql://user:pass@localhost:5433/agenticframework"
@@ -1457,12 +1461,13 @@ correctly propagates a red job status after rollback/notify run.
 ### GCP deployment specifics (Vertex AI credentials + worker hosting)
 
 "Wire your platform" above covers `DEPLOY_COMMAND` generically, with `gcloud run deploy` as
-one example value — that's enough if your tenant app only talks to direct
-Anthropic/OpenAI APIs. If it routes any `model_hint` to `provider:
-vertex_ai` (e.g. the `vertex_gemini` role added to `runtime/models.yaml` in
-§2 above), CI/CD needs two more things `DEPLOY_COMMAND` alone doesn't give
-you: a way for GitHub Actions to authenticate to GCP, and a decision about
-*what kind* of compute actually runs `worker.py`.
+one example value — that's enough if your tenant app stays on the local-only
+framework defaults or only talks to direct Anthropic/OpenAI APIs. If it routes
+any `model_hint` to `provider: vertex_ai` (the `vertex_gemini` role, shipped
+commented-out in `runtime/models.yaml` — uncomment it there or declare it in
+your tenant `models.yaml`), CI/CD needs two more things `DEPLOY_COMMAND` alone
+doesn't give you: a way for GitHub Actions to authenticate to GCP, and a
+decision about *what kind* of compute actually runs `worker.py`.
 
 **1. Authenticating GitHub Actions to GCP.**
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  AgentSmith Installer — v1.0.0
+#  AgentSmith Installer — v1.1.0
 #  https://github.com/bobbyaqlaar/AgentSmith  (override AI_STACK_FRAMEWORK_REPO for forks)
 #
 #  Installs once per machine. Safe to re-run (idempotent).
@@ -56,7 +56,7 @@ fi
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-FRAMEWORK_VERSION="1.0.0"
+FRAMEWORK_VERSION="1.1.0"
 # Overridable for forks/self-hosted mirrors: AI_STACK_FRAMEWORK_REPO=https://github.com/your-org/AgentSmith ./install-ai-stack.sh
 # The literal "<org>" previously here was not a placeholder convention this
 # script substituted anywhere — it was used verbatim as a URL component in
@@ -536,13 +536,19 @@ cat >> "$SHELL_RC" << 'SHELL_EOF'
 
 # >>> AgentSmith managed block — DO NOT EDIT, removed by ai-stack-uninstall >>>
 # ══════════════════════════════════════════════════════════════════════════════
-# AI AGENT FRAMEWORK CONTROLLER — AgentSmith v1.0.0
+# AI AGENT FRAMEWORK CONTROLLER — AgentSmith v1.1.0
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ── Environment defaults ──────────────────────────────────────────────────────
 export AGENT_PHOENIX_ENDPOINT="${AGENT_PHOENIX_ENDPOINT:-http://localhost:6006}"
 export AGENT_PHOENIX_PORT="${AGENT_PHOENIX_PORT:-6006}"
-export AGENT_JUDGE_MODEL="${AGENT_JUDGE_MODEL:-claude-3-5-sonnet-20241022}"
+# AGENT_JUDGE_MODEL is deliberately NOT defaulted here. It is an *override*:
+# scripts/_shared.py:judge_model() checks it first, then falls back to the
+# `judge` role in models.yaml. Exporting a default from the shell profile
+# would silently win over every tenant's declared judge route, machine-wide —
+# which is what the old hardcoded `claude-3-5-sonnet-20241022` here did (a
+# model id already stale against the framework registry). Set it by hand for a
+# one-off run; change the `judge` role in models.yaml for a lasting choice.
 export AI_STACK_MODE="${AI_STACK_MODE:-local}"
 export DISABLE_AI_STACK="${DISABLE_AI_STACK:-false}"
 
@@ -680,6 +686,30 @@ function ai-stack-off() {
   echo "🔒 AI Stack: DISABLED — hooks muted, templates unlinked"
 }
 
+# ── Model registry lookup ─────────────────────────────────────────────────────
+# The Ollama model ids models.yaml routes to, whitespace-separated. Single
+# source: scripts/_shared.py:provider_models() performs the same framework ←
+# tenant ← routing_overrides merge the gateway does, so this shell function and
+# the Python side can never name different models.
+#
+# Prints nothing on any failure (no python3, no runtime/, unreadable YAML); the
+# caller falls back to its own literal list, so a health check never becomes a
+# hard dependency on the runtime being installed.
+function ai-stack-required-models() {
+  local shared="$HOME/.agent-framework/scripts/_shared.py"
+  [ -f "$shared" ] || shared="${AGENTSMITH_DIR:-$HOME/.agent-framework}/scripts/_shared.py"
+  [ -f "$shared" ] || return 0
+  python3 -c "
+import sys
+sys.path.insert(0, '$(dirname "$shared")')
+try:
+    from _shared import provider_models
+    print(' '.join(provider_models('ollama')))
+except Exception:
+    pass
+" 2>/dev/null
+}
+
 # ── Health check ──────────────────────────────────────────────────────────────
 function ai-stack-check() {
   echo "🩺 AgentSmith Health Check — Mode: [${AI_STACK_MODE:-not set}]"
@@ -697,10 +727,25 @@ function ai-stack-check() {
   if [ "${AI_STACK_MODE:-local}" = "local" ]; then
     if curl -s http://localhost:11434/api/tags > /dev/null 2>&1; then
       echo "   ✅ [ENGINE]  Ollama daemon responding"
-      local models
+      local models required
       models=$(curl -s http://localhost:11434/api/tags 2>/dev/null)
-      for m in llama3 mistral gemma2; do
-        if echo "$models" | grep -q "$m"; then
+      # Read the required models FROM models.yaml rather than listing them
+      # here. A hand-maintained copy drifts: this one still said
+      # llama3/mistral/gemma2 long after the registry moved on, so it told
+      # users to pull models nothing routes to while the ones the gateway
+      # needs went unchecked. `ai-stack-check` runs from the user's shell in
+      # any directory, so the lookup is cwd-aware — inside a tenant repo it
+      # picks up that tenant's own models.yaml overrides too.
+      required=$(ai-stack-required-models)
+      # Literal fallback only when the registry can't be read at all. Keep it
+      # equal to models.yaml's ollama roles — it is a safety net, not a second
+      # source of truth.
+      [ -n "$required" ] || required="qwen2.5 llama3.2:3b falcon3:3b smollm2"
+      for m in $required; do
+        # Exact id, or the same id with an implicit ":latest" tag — not a
+        # substring match, which is why "llama3" used to report present just
+        # because llama3.2:latest happened to be installed.
+        if echo "$models" | grep -qE "\"name\":\"${m}(:latest)?\""; then
           echo "   ✅ [MODEL]   $m loaded"
         else
           echo "   ⚠️  [MODEL]   $m not found — run: ollama pull $m"
@@ -976,8 +1021,13 @@ TENANT_EOF
   # ci-<stack>.yml as `uses: ./.github/workflows/<name>` — a missing callee
   # makes GitHub reject the whole CI workflow as invalid, so they ship
   # together with the caller.
+  # eval-security.yml belongs to that same "callee ships with the caller" rule:
+  # ci-python-fastapi.yml does `uses: ./.github/workflows/eval-security.yml`,
+  # and it was missing from this list — so every Python/FastAPI tenant was
+  # provisioned with a CI workflow GitHub rejects outright as invalid.
   for wf in "ci-${stack}.yml" "cd-staging.yml" "cd-production.yml" "eval-scorecard.yml" \
-            "eval-fairness.yml" "eval-hallucination.yml" "eval-ttft-live.yml"; do
+            "eval-fairness.yml" "eval-hallucination.yml" "eval-ttft-live.yml" \
+            "eval-security.yml"; do
     local src="$tmpl_dir/$wf"
     local dest=".github/workflows/$wf"
     if [ ! -f "$src" ]; then
@@ -1242,7 +1292,7 @@ function ai-stack-uninstall() {
 }
 
 function ai-stack-upgrade() {
-  local target_version="${FRAMEWORK_VERSION:-1.0.0}"
+  local target_version="${FRAMEWORK_VERSION:-1.1.0}"
   while [ $# -gt 0 ]; do
     case "$1" in
       --to) target_version="${2:-$target_version}"; shift 2 ;;

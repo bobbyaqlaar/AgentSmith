@@ -1,7 +1,11 @@
 # Testbed Tenant Spec — "KYC Sentinel"
 
-**Status:** proposal (from TestCoverageReview-2026-07-21)
-**Repo (proposed):** `bobbyaqlaar/kyc-sentinel`, created via `ai-tenant-init kyc-sentinel`
+**Status:** built and deployed to staging (2026-07-22). This document is now the
+tenant's spec of record, not a proposal — where it and the repo disagree, the
+repo wins and this file is the thing to correct.
+**Repo:** [`bobbyaqlaar/KycSentinel`](https://github.com/bobbyaqlaar/KycSentinel)
+(the `ai-tenant-init kyc-sentinel` naming in §6 T1 was the plan; the repo was
+created directly)
 **Purpose:** a corporate-onboarding (KYC) copilot whose day-to-day operation
 *necessarily* exercises every layer of AgentSmith — multiple LLMs, multiple
 agents, PII in the decision path, fairness-sensitive outcomes, mandatory HITL,
@@ -65,7 +69,7 @@ Engineered failure paths (each is a demo scenario AND an E2E test):
 |---|---|
 | Requirements & Design (Pillar 1) | Each agent lands as an RFC in `.agent-rfc/` (enterprise hooks enforce reference) |
 | Knowledge Graph | Tenant repo's own KG; `fetch_subgraph_context_window` feeds the Analyst's code-context prompt in dev mode |
-| Tracing & Evals | Every agent span carries tenant/owner/cost/tokens → Phoenix → portal cost-vs-cap chart; scorecard + fairness + hallucination + adversarial + TTFT gates in CI |
+| Tracing & Evals | Every agent span carries tenant/owner/cost/tokens → Phoenix → portal cost-vs-cap chart. CI gates (`.github/workflows/ci.yml`): **adversarial** runs on every PR unconditionally (deterministic, no judge model); **scorecard / fairness / hallucination** run when `ANTHROPIC_API_KEY` is set, since the judge route resolves to this tenant's declared `judge` model — skipped, not failed, without it. **TTFT** needs a live streaming provider and is not wired. |
 | Testing Guardrails | Paired tests per agent module; golden dataset seeded from `fixtures/*_base.json` |
 | Ops & Self-Improvement | F1–F8 write MAJOR entries → history sync → portal unresolved queue; resolutions promoted via `promote-learning.py` (closing the currently-untested loop); thumbs-down annotations in Phoenix → `sync-ui-feedback.py` |
 | Multi-Agent Orchestration | 5 agents, stateful, HITL-paused, Temporal-durable |

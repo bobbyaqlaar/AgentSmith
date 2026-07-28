@@ -630,11 +630,22 @@ if __name__ == "__main__":
     adversarial_threshold = _resolve_adversarial_fail_above(
         args.adversarial_fail_above
     )
-    sys.exit(
-        run_scorecard(
-            fail_below=threshold,
-            suite=args.suite,
-            hallucination_fail_above=hallucination_threshold,
-            adversarial_fail_above=adversarial_threshold,
-        )
+    code = run_scorecard(
+        fail_below=threshold,
+        suite=args.suite,
+        hallucination_fail_above=hallucination_threshold,
+        adversarial_fail_above=adversarial_threshold,
     )
+    # 2 means "skipped: too few cases to gate" — a state every tenant starts
+    # in. As a process exit code it failed the CI step, so a fresh
+    # `ai-tenant-init` repo went red on its first push for having no golden
+    # dataset yet, and eval-scorecard.yml's own comment ("exit 2 = skip
+    # gracefully (not a failure)") described behaviour the code never had.
+    # FIXES_AND_CLEANUP.md records the rule — "graceful skip = exit 0" — but
+    # only cost_router's call site was ever fixed. run_scorecard still returns
+    # 2 so programmatic callers can tell skipped from passed; the CLI boundary
+    # is where it has to become 0.
+    if code == 2:
+        print("   → skipped (not a failure); CI step exits 0")
+        code = 0
+    sys.exit(code)

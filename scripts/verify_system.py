@@ -47,6 +47,24 @@ SOFT_PACKAGES = {"langgraph"}  # warn-only; not hard requirement
 from _shared import _repo_root, judge_model as _resolve_judge_model  # noqa: E402
 
 
+def _required_ollama_models() -> list[str]:
+    """Ollama model ids the merged registry actually routes to.
+
+    Read from models.yaml rather than hardcoded, for the same reason the eval
+    judge is (scripts/_shared.py:judge_model()): a second hand-maintained list
+    of model names drifts silently, and this one had — it still named
+    llama3/mistral/gemma2 long after the registry moved on, so the check told
+    users to pull models nothing used while the ones the gateway needs went
+    unverified. Falls back to that historical list only if runtime/ isn't
+    importable (scripts-only install).
+    """
+    from _shared import provider_models
+
+    # Same helper install-ai-stack.sh's ai-stack-required-models shells out to,
+    # so the health check and this check can never disagree about what to pull.
+    return provider_models("ollama") or ["qwen2.5", "llama3.2:3b", "falcon3:3b", "smollm2"]
+
+
 def _check(label: str, ok: bool, detail: str = "", warn_only: bool = False) -> bool:
     if ok:
         print(f"  ✅  {label}")
@@ -157,8 +175,19 @@ def run_checks() -> bool:
             "Run: ollama serve" if not ollama_ok else "",
             warn_only=True,
         )
-        for required_model in ["llama3", "mistral", "gemma2"]:
-            present = any(required_model in m for m in models)
+        for required_model in _required_ollama_models():
+            # Exact id, or the same id with an implicit ":latest" tag — not a
+            # substring match. The old hardcoded ["llama3", "mistral",
+            # "gemma2"] list drifted from models.yaml AND matched loosely, so
+            # "llama3" reported present because llama3.2:latest happened to be
+            # installed, while the models the registry actually routes to went
+            # unchecked.
+            present = any(
+                m == required_model or m.split(":")[0] == required_model.split(":")[0]
+                if ":" not in required_model
+                else m == required_model
+                for m in models
+            )
             _check(
                 f"  model: {required_model}",
                 present,

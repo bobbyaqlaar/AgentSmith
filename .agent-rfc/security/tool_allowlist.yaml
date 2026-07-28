@@ -1,7 +1,21 @@
-# Tool allowlist (SEC-TOOL-001). Deny-by-default in strict mode.
-# Copy to .agent-rfc/security/tool_allowlist.yaml
+# AgentSmith framework — tool allowlist (SEC-TOOL-001). Deny-by-default under
+# TOOL_ALLOWLIST_STRICT=1.
+#
+# The framework registers no production @tools of its own — ToolRegistry is the
+# mechanism it ships for tenants to use, and a tenant's own allowlist is what
+# governs its tools (KYC_Sentinel/.agent-rfc/security/tool_allowlist.yaml is a
+# filled-in example). This file exists so the repo carries an explicit,
+# deliberately-empty allowlist rather than the shipped `example_tool`
+# placeholder it used to hold verbatim.
+#
+# Empty `tools` is not the same as no file: with strict mode on, a loaded but
+# empty allowlist denies every tool, which is the correct posture for a repo
+# that should be registering none.
+#
+# Note on SEC-TOOL-001 coverage: its runner
+# (scripts/security/runners/tool_allowlist.py) smoke-tests the ToolRegistry
+# allow/deny mechanism against the shipped template, not against this file. It
+# proves deny-by-default works; it does not inspect a tenant's allowlist
+# contents.
 version: 1
-tools:
-  - name: example_tool
-    allowed: true
-    notes: Replace with tenant-registered tool names.
+tools: []

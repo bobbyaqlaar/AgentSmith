@@ -14,9 +14,216 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 1.0.x | 3.11 | 0.2 | 4.0 | Initial public release |
+| 1.1.x | 3.11 | 0.2 | 4.0 | Default model registry is local-only; `local_large`/`local_small` roles removed |
+| 1.0.x | 3.11 | 0.2 | 4.0 | Initial public release (documented only — never tagged or published) |
 
 ## [Unreleased]
+
+_Nothing yet._
+
+## [1.1.0] — 2026-07-29
+
+**First actually-published release.** 1.0.0 was written up below and dated
+2026-07-11, but no `v1.0.0` tag was ever created and no release artifacts were
+ever built — so `install-ai-stack.sh`'s `releases/latest/download/*.tar.gz`
+path 404'd and no tenant could pin a version. Nothing external consumed 1.0.0;
+this is the first tag.
+
+**Upgrading from a 1.0.x checkout:** if a tenant `models.yaml` points a
+`degrade_to` at `local_large` or `local_small`, repoint it — those roles are
+gone (they had become duplicates of `architect` and `developer`). Tenants
+relying on cloud routing must now declare it: the framework defaults are
+local-only. `framework.version` pins in `.agenticframework/tenant.yaml` move
+from `1.0.x` to `1.1.x`.
+
+### Changed — Local-only default model registry (2026-07-29)
+
+- **`runtime/models.yaml` now routes every role to Ollama.** `architect:
+  qwen2.5`, `developer: llama3.2:3b`, `validator: falcon3:3b`, `fast:
+  smollm2`, chaining `architect → developer → validator → fast → halt`. No
+  prompt leaves the machine and no call is billable under framework defaults;
+  every tier is zero-cost, so the budget ladder degrades to a smaller local
+  model instead of across a trust boundary.
+- **Removed roles:** `local_large` (qwen2.5) and `local_small` (llama3.2) —
+  now duplicates of `architect` and `developer`. Nothing in the codebase
+  referenced them by name; `templates/uae-sovereign/models.yaml` defines its
+  own `local_small` and is unaffected. A tenant `models.yaml` or
+  `routing_overrides` pointing a `degrade_to` at either name must be
+  repointed.
+- **`groq_fast` and `vertex_gemini` are commented out**, not deleted — both
+  blocks are preserved in place with their verification notes. Uncomment to
+  opt back in. `groq_fast` was previously in the default chain
+  (`validator → groq_fast → local_large`), so a budget breach could reach a
+  billable cloud model from the defaults; it no longer can.
+- **Prerequisite:** `ollama pull qwen2.5 && ollama pull llama3.2:3b &&
+  ollama pull falcon3:3b && ollama pull smollm2`. `ai-stack-check` in
+  `install-ai-stack.sh` now verifies exactly these four (it had drifted to
+  checking `llama3`/`mistral`/`gemma2`, none of which the registry routed to).
+- **New `judge` role (`falcon3:3b`)** — the eval judge is now declared in the
+  registry rather than hardcoded in `scripts/_shared.py`.
+  `_shared.judge_model()` resolves `AGENT_JUDGE_MODEL` → the `judge` role in
+  the **merged** registry → `DEFAULT_JUDGE_MODEL` (now only a last-resort
+  fallback for scripts-only installs where `runtime/` isn't importable).
+  `runtime/` is imported lazily and its absence tolerated, so the
+  scripts↔runtime vendoring boundary still holds.
+  **Effect for tenants:** a tenant declaring its own `judge` role now gets its
+  CI evals and its runtime judge on the same model automatically. KYC Sentinel
+  resolves to its declared `claude-opus-4-8` instead of the framework
+  constant — previously those were two independent settings that could
+  silently disagree. A blank `AGENT_JUDGE_MODEL=` is now treated as unset
+  rather than passed through as an empty model id.
+  **Judge/actor separation:** `judge` is `falcon3:3b`, deliberately not
+  `architect`'s `qwen2.5`, so the grader is never the model that wrote what it
+  grades — asserted by a test against
+  `runtime.judging.judge_independence_warning`. It does share `falcon3:3b`
+  with `validator`, unavoidable in a four-model local registry; that overlap
+  only matters if you grade validator output specifically, in which case add a
+  fifth local model. `judge` degrades to `fast`, not `validator`, since the
+  latter would have been a same-model no-op dressed as a fallback.
+- **`install-ai-stack.sh` no longer exports `AGENT_JUDGE_MODEL`.** It had
+  pinned a stale `claude-3-5-sonnet-20241022` into the shell profile, and
+  since the env var wins over the registry, that default would have overridden
+  every repo's declared `judge` role machine-wide.
+- **Every model id now resolves from `models.yaml`.** There were four
+  independent copies of "which model is the architect tier" and all four
+  disagreed — the registry, `cost_router.py`, `multi_agent_system.py`, and the
+  CI templates' `AGENT_JUDGE_MODEL || 'claude-sonnet-4-6'` — so editing
+  `models.yaml` changed almost nothing. New `_shared.role_model(role,
+  fallback)` and `_shared.provider_models(provider)` are the single accessor;
+  the registry is cached per cwd rather than re-parsed per lookup. Converted:
+  - `cost_router.py` — the five route tiers (`AGENT_MODEL_ARCHITECT` →
+    `architect`, `COMPLEX` → `developer`, `STANDARD` → `validator`, `FAST` and
+    `LOCAL` → `fast`). Env var still wins for a per-run override.
+  - `multi_agent_system.py` — the same table, which had drifted separately
+    (`claude-3-5-sonnet-20241022` where cost_router said `claude-sonnet-4-6`).
+  - `verify_system.py` and `install-ai-stack.sh`'s `ai-stack-check` — the
+    "is it pulled?" preflight, now via a shared `ai-stack-required-models`
+    shell function that calls `provider_models("ollama")`, so the two checks
+    cannot disagree. Both also match exact ids: the old substring test
+    reported `llama3` present because `llama3.2:latest` happened to exist.
+  - `verify_ttft.py` — `DEFAULT_MODEL` was `falcon3:1b`, an id the registry
+    never referenced, so the TTFT number described nothing in the system.
+  - `verify_sovereign_endpoint.py` — reads
+    `templates/uae-sovereign/models.yaml`, the profile it exists to verify.
+  - `workflow-templates/*.yml` (7 occurrences) — dropped the
+    `|| 'claude-sonnet-4-6'` fallback. It looked harmless but the env var wins
+    over the registry, so every tenant CI run overrode its own declared judge.
+  Guarded by `scripts/test/test_no_hardcoded_model_ids.py`: a model id may
+  appear in `scripts/` or `runtime/` only on a line resolving it from the
+  registry, or with `# model-literal-ok: <reason>` (the same convention as
+  `# fail-open:`). Docstrings and comments are exempt — recording what a
+  default used to be is history, not configuration.
+- **Docs:** SPECS §5 `_shared.py` row, §7 env table, §21 decision 8, §29
+  registry snippet + `vertex_gemini` note; OPERATIONS §0 env block + §4 Vertex
+  AI paragraph; UserManual §8 judge-model section; `shadow-eval.py` docstring.
+
+### Fixed — Review findings, phase 2 (2026-07-29)
+
+- **Security harness graded the wrong repo.** `run-security-checks.py`
+  resolved the `.agent-rfc/security/` pack under review from
+  `_install_root()` (file-relative), so a tenant running
+  `cd my-tenant && python3 $AGENTSMITH_DIR/scripts/run-security-checks.py
+  --strict` graded the **framework's** pack, not its own. The pack
+  `ai-tenant-init` seeds into a tenant (G5) was read by nothing, and a
+  tenant's green SEC-RISK-001 was evidence about a different repo. New
+  `_tenant_root()` resolves it from cwd (walk up to `.git`, same semantics as
+  `_shared._repo_root()`), overridable with `AGENTSMITH_TENANT_ROOT`; the
+  control registry and templates still come from the install root. The
+  framework-grading-itself path is unchanged — both roots agree there.
+- **An un-edited security pack now fails `--strict`.** The shipped risk
+  register is a placeholder by design and validates perfectly, so a repo that
+  seeded the pack and never filled it in passed strict CI and published an
+  evidence pack citing `RISK-EXAMPLE-001`. `SEC-RISK-001` now fails (warns,
+  non-strict) when the register still carries template sentinel ids.
+  Validating the template *as* the template — the `use_template_fallback`
+  path — is unaffected.
+- **The framework's own `.agent-rfc/security/` pack is now real.** All four
+  files were byte-identical copies of `fixtures/security/templates/`, down to
+  `organization: "REPLACE_ME"`, so the framework's self-test graded its own
+  placeholders. Replaced with the framework's actual risks, high-impact
+  actions, allowlist posture and NIST role mapping.
+- **`eval-security.yml` was never provisioned into tenants.**
+  `ci-python-fastapi.yml` does `uses: ./.github/workflows/eval-security.yml`,
+  but the workflow was missing from `install-ai-stack.sh`'s copy list — and a
+  missing callee makes GitHub reject the entire CI workflow as invalid, so
+  every Python/FastAPI tenant was provisioned with CI that could not run. Added
+  to the list, with a test asserting every `uses: ./.github/workflows/*`
+  referenced by a template both exists and ships.
+- **Drift guards for the copies that must stay identical:**
+  `.github/workflows/eval-security.yml` ≡ `workflow-templates/eval-security.yml`
+  (framework self-test vs tenant CI) is asserted in `scripts/test/`; KYC
+  Sentinel's vendored `gcp-auth` composite action is diffed against the
+  framework checkout its CI already clones.
+- **`pytest.ini` runs both suites.** `testpaths = runtime/test scripts/test`
+  (plus `pythonpath = . scripts`): a bare `pytest` collected 171 of 292 tests
+  and reported green while skipping the security harness, eval suites, hooks
+  behaviour, cost router and promotion loop.
+- **`judge_model()` never actually read the registry in real runs.** Every
+  `scripts/*.py` is invoked as `python3 scripts/foo.py`, which puts `scripts/`
+  on `sys.path[0]` and NOT the repo root, so the lazy `import runtime` failed
+  in exactly the normal invocation path and every run silently fell back to
+  `DEFAULT_JUDGE_MODEL` — invisible only because the constant was kept in step
+  with the role. `_shared.load_registry()` now puts the install root on the
+  path first. A tenant's declared `judge` role reaches `run-evals.py` /
+  `shadow-eval.py` for the first time; regression test invokes a script as a
+  subprocess rather than trusting pytest's sys.path.
+- **`verify_system.py` checked a stale, loosely-matched model list.** It
+  required `llama3`/`mistral`/`gemma2` by substring, so `llama3` reported
+  present because `llama3.2:latest` happened to be installed while the models
+  the registry actually routes to went unverified. Now reads the ollama-provider
+  ids from the merged registry (same single-source principle as the judge) and
+  matches exact ids. `install-ai-stack.sh`'s `ai-stack-check` carried the same
+  stale trio and was corrected alongside it.
+- **`map_codebase.py` indexed build output.** `dist`/`build` were ignored but
+  not their JS equivalents, so the portal's Next.js output contributed 297 of
+  the Knowledge Graph's 449 nodes — minified bundles riding into the agent
+  context window `fetch_subgraph_context_window` builds. Added `.next`,
+  `.nuxt`, `.svelte-kit`, `.turbo`, `out`, `coverage`, `.ruff_cache`, `.tox`,
+  `site-packages`; the graph is now 175 source-only nodes.
+- **Dead code removed:** `runtime/tracing._live_span()` (defined, never
+  called) and KYC Sentinel's `_complete_maybe_stream` shim.
+
+### Fixed — Review findings (2026-07-28)
+
+From a docs+code review of the framework and the KYC Sentinel tenant.
+
+- **HITL gate (interface change, `BaseAgentWorkflow.run_with_hitl_gate`):**
+  the `needs_hitl` decision can now be supplied by the caller via a new
+  keyword-only `gate_result=`, as an alternative to `gate_activity_name`
+  (now `Optional[str]`; pass `None` when supplying `gate_result`). Exactly
+  one is required — passing both or neither raises `ValueError`. Existing
+  positional callers are unaffected.
+  **Why this matters:** the only shape previously available re-executed the
+  gate activity. A caller whose preceding step had *already* produced
+  `needs_hitl` (the common case) therefore paid for that step twice AND let
+  the gate read the decision off the **second** run — so a non-deterministic
+  re-run returning `needs_hitl=False` ran the resume activity with no
+  `hitl_approved` signal at all. That is a silent bypass of the mandatory-HITL
+  control on a high-impact action. Tenants using `run_with_hitl_gate` with an
+  activity they have already run should switch to `gate_result=`.
+- **HITL gate dead-letter payload:** new optional `tenant_id=` / `gate_id=`.
+  With `tenant_id`, the timeout path emits the generic `dlq_enqueue_activity`
+  envelope (`payload` / `error` / `tenant_id` / `reason` / `workflow_id` /
+  `gate_id`) that `run_with_recoverable_step` already used. Without it the
+  legacy flattened `{**gate_input, "error": "hitl_timeout"}` shape is
+  unchanged, so tenant-specific dead-letter activities (e.g.
+  `examples/oil-price-agent`'s) keep working. Pairing
+  `dead_letter_activity_name="dlq_enqueue_activity"` with no `tenant_id`
+  previously raised `KeyError` inside the activity, losing the payload the
+  timeout path exists to park.
+- **Span attribute — `agent.tool.*` spans now carry `tenant.id`:**
+  `ToolRegistry` takes an optional `tenant_id=` (falling back to `$TENANT_ID`)
+  and passes it to `record_tool_call`. Tool spans were the only spans in the
+  system emitted without tenant attribution, so filtering a shared Phoenix
+  instance to one tenant hid every tool call.
+- **`runtime.input_guardrail.detect_pii(text)`** — new: counts PII by type
+  without rewriting the text, delegating to the same `_default_scrub` the
+  pre-call guard uses. For output-side checks (a tenant moderation hook, an
+  audit assertion) that must classify text identically to the pre-call scrub.
+  Re-deriving those patterns is what `runtime/luhn.py` was extracted to
+  prevent: KYC Sentinel's moderation hook had drifted to a card regex with no
+  Luhn call, blocking rationales over long non-card digit runs the pre-call
+  guard deliberately ignores.
 
 ### Added / Fixed — Testbed feedback (2026-07-21)
 

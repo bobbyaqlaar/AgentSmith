@@ -106,7 +106,16 @@ class ToolRegistry:
         self,
         allowlist_path: Optional[Path] = None,
         strict: Optional[bool] = None,
+        tenant_id: Optional[str] = None,
     ) -> None:
+        # Stamped onto every tool span. Without it the `agent.tool.*` spans
+        # G8 added were the only spans in the system with no `tenant.id`, so
+        # filtering a shared Phoenix instance to one tenant showed that
+        # tenant's steps and LLM calls but none of its tool calls — the
+        # "every tool call streamed to Phoenix, attributed" claim held for
+        # the span and failed for the attribution. Falls back to TENANT_ID so
+        # a tenant that never touches this constructor still gets it.
+        self._tenant_id = tenant_id or os.environ.get("TENANT_ID", "").strip() or None
         self._tools: dict[str, ToolSpec] = {}
         path = allowlist_path if allowlist_path is not None else default_allowlist_path()
         self._allowlist: Optional[set[str]] = (
@@ -180,10 +189,14 @@ class ToolRegistry:
                 allowed=not isinstance(exc, ToolNotAllowedError),
                 duration_ms=(time.perf_counter() - start) * 1000,
                 error=type(exc).__name__,
+                tenant_id=self._tenant_id,
             )
             raise
         record_tool_call(
-            name, allowed=True, duration_ms=(time.perf_counter() - start) * 1000
+            name,
+            allowed=True,
+            duration_ms=(time.perf_counter() - start) * 1000,
+            tenant_id=self._tenant_id,
         )
         return result
 

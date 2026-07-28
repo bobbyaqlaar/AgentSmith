@@ -45,18 +45,6 @@ class _NoopSpan:
         return False
 
 
-def _live_span():
-    """The current OTel span if one is recording, else None."""
-    try:
-        from opentelemetry import trace
-    except Exception:  # opentelemetry not installed
-        return None
-    span = trace.get_current_span()
-    if span is None or not getattr(span, "is_recording", lambda: False)():
-        return None
-    return span
-
-
 @contextmanager
 def agent_span(
     name: str,

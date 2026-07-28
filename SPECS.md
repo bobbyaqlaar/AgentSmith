@@ -434,7 +434,7 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `delivery_model.py` | Enterprise Delivery Model soft gate: reads org policy + tenant.yaml `delivery.*`; returns ok/warn/skip, never hard-fails CI. |
 | `delivery_evidence.py` | Promote-time evidence pack (JSON + Markdown) collecting scorecard/fairness/redaction/HITL artifacts into `.agent-rfc/fixtures/`. |
 | `check_bare_except.py` | AST detector for empty exception handlers (pre-commit Guardrail 2); `# fail-open: <reason>` opts a handler out. Global copy at `~/.agent-framework/scripts/` must be kept in sync. |
-| `_shared.py` | Consolidated helpers (`_repo_root`, Phoenix REST get/post, `judge_model()` default). Deliberately not shared with `runtime/` (vendoring boundary — see module docstring). |
+| `_shared.py` | Consolidated helpers (`_repo_root`, Phoenix REST get/post, `judge_model()` — reads the `judge` role from `models.yaml` via a lazy, optional `runtime/` import). Helpers are otherwise deliberately not shared with `runtime/` (vendoring boundary — see module docstring). |
 | `test/` | Framework self-tests for the above (run by `self-test.yml`). |
 | `promote-learning.py` | Appends to `golden_evals.json`; archives resolution as judge learning (versioned, not FIFO-evicted); marks log entry `hitl_resolved: true` with `hitl_resolved_by` + `hitl_resolved_at`. |
 | `sync-ui-feedback.py` | Pulls Phoenix annotations; promotes unsynced negative feedback to golden dataset. |
@@ -620,7 +620,7 @@ For internal registries, the installer supports fetching from a private artifact
 | `OPENAI_API_KEY` | Required for hybrid mode | `sk-...` |
 | `ANTHROPIC_API_KEY` | Required for hybrid mode | `sk-ant-...` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Set by `ai-dashboard-start` | `http://localhost:6006/v1/traces` |
-| `AGENT_JUDGE_MODEL` | LLM judge; no code change required | `claude-sonnet-4-6` (default — single source: `scripts/_shared.py:DEFAULT_JUDGE_MODEL`) |
+| `AGENT_JUDGE_MODEL` | LLM judge; no code change required | *(unset)* — resolves to the `judge` role in `models.yaml` (framework default `falcon3:3b`); `scripts/_shared.py:DEFAULT_JUDGE_MODEL` is only the last-resort fallback when `runtime/` isn't importable |
 | `AGENT_OWNER_ID` | Real user identity | `bobby@example.com` |
 | `AGENT_OWNER_NAME` | Display name | `Bobby Rajagopal` |
 | `AGENT_PHOENIX_ENDPOINT` | Phoenix URL | `http://localhost:6006` |
@@ -1453,7 +1453,7 @@ In non-interactive environments (CI), the hook defaults to yes.
 | 5 | Notifications | Cross-platform via `plyer`; macOS additionally uses `osascript` |
 | 6 | Log levels & rotation | INFO/MINOR/MAJOR/CRITICAL; MAJOR+CRITICAL protected until HITL resolved; INFO+MINOR capped at 10,000 (FIFO) |
 | 7 | IDE config in public repos | Hook prompts for confirmation; auto-adds to `.gitignore` on yes; CI defaults to yes |
-| 8 | Judge model | Default `claude-sonnet-4-6` (`scripts/_shared.py:DEFAULT_JUDGE_MODEL` — one constant shared by run-evals/shadow-eval/verify_system); override via `AGENT_JUDGE_MODEL` — no code change |
+| 8 | Judge model | The `judge` role in `models.yaml` (framework default `falcon3:3b` — deliberately not `architect`'s model, so the grader is never the author), resolved by `scripts/_shared.py:judge_model()` for run-evals/shadow-eval/verify_system alike — so a tenant declaring its own `judge` route gets its CI evals and its runtime judge on one model. Override for a single run via `AGENT_JUDGE_MODEL` — no code change |
 | 9 | Team Phoenix | Docker Compose included; auth required for team/production deployments |
 | 10 | Monorepo scope | Monorepo and multi-repo fully in scope; nested `.agent-rfc/` for sub-packages |
 | 11 | Agent identity | Full orchestrator + sub-agent hierarchy linked to `AGENT_OWNER_ID` |
@@ -1969,7 +1969,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 1.0.x | 3.11 | 0.2 | 4.0 | Initial public release |
+| 1.1.x | 3.11 | 0.2 | 4.0 | Default model registry is local-only; `local_large`/`local_small` roles removed |
 
 ### Examples as Forks
 
@@ -2010,31 +2010,49 @@ gateway.complete(
 
 Per tenant repo (overrides) with framework defaults:
 
+The framework defaults are **local-only**: every role routes to Ollama, so no
+prompt leaves the machine and no call can be billed until a tenant opts into a
+cloud tier. Degrade chain: `architect → developer → validator → fast → halt`,
+strongest to smallest. `runtime/models.yaml` keeps the Groq and Vertex AI
+entries commented out with their verification notes for opting back in.
+
 ```yaml
-# models.yaml
+# models.yaml — framework defaults (runtime/models.yaml)
 models:
   architect:
-    id: claude-sonnet-4-6
-    provider: anthropic
-    cost_per_input_token: 0.000003
-    cost_per_output_token: 0.000015
-  developer:
-    id: gpt-4o
-    provider: openai
-    cost_per_input_token: 0.0000025
-    cost_per_output_token: 0.00001
-  groq_fast:
-    id: llama-3.3-70b-versatile
-    provider: groq             # OpenAI-compatible; defaults to GROQ_API_KEY
-    cost_per_input_token: 0.00000059
-    cost_per_output_token: 0.00000079
-  fast:
-    id: gemma2
+    id: qwen2.5
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
     cost_per_output_token: 0
+    degrade_to: developer
+  developer:
+    id: llama3.2:3b
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: validator
+  validator:
+    id: falcon3:3b
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: fast
+  fast:
+    id: smollm2
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: null
 ```
+
+Cloud tiers are a per-tenant opt-in — either a tenant `models.yaml` at the
+tenant repo root, or `gateway.routing_overrides` in
+`.agenticframework/tenant.yaml` (see below). `templates/uae-sovereign/` is a
+worked example of an all-local sovereign registry.
 
 ### Per-Tenant Routing Overrides
 
@@ -2151,10 +2169,12 @@ provider, just no longer the default; verify model availability live
 before relying on one, especially for Bedrock (no AWS credentials were
 available to test its GCC region the way Vertex AI's was).
 
-`runtime/models.yaml` has a live-verified `vertex_gemini` role
-(`gemini-2.5-flash` / `us-central1`) as an opt-in entry — not wired into
-the architect/developer/validator degrade chain, since most tenants won't
-have GCP credentials configured. Route to it via
+`runtime/models.yaml` carries a live-verified `vertex_gemini` role
+(`gemini-2.5-flash` / `us-central1`) **commented out**, since the default
+registry is local-only (§29 "Model Registry"); it was never in the
+architect/developer/validator degrade chain even when active, because most
+tenants won't have GCP credentials configured. Uncomment it there, or declare
+the same block in a tenant `models.yaml`, then route to it via
 `model_hint="vertex_gemini"` or a tenant's `routing_overrides`.
 
 All four adapters are covered by mocked request/response-shape tests

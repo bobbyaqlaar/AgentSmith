@@ -13,7 +13,7 @@
 # and a tenant can just depend on the framework:
 #
 #     pip install -e /path/to/AgenticFramework          # local checkout
-#     pip install "agentsmith-runtime @ git+https://github.com/bobbyaqlaar/AgentSmith@v1.0.0"
+#     pip install "agentsmith-runtime @ git+https://github.com/bobbyaqlaar/AgentSmith@v1.1.0"
 #
 # Scope: only `runtime/` is packaged. `scripts/` stays file-invoked — it is
 # installed to ~/.agent-framework by install-ai-stack.sh and run as
@@ -33,7 +33,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentsmith-runtime"
-version = "1.0.0"
+version = "1.1.0"
 description = "AgentSmith production runtime — LLM gateway, guardrails, durable workflow helpers"
 readme = "README.md"
 requires-python = ">=3.11"

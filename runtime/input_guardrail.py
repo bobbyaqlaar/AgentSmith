@@ -123,6 +123,30 @@ def _default_scrub(text: str) -> tuple[str, dict[str, int]]:
     return out, counts
 
 
+def detect_pii(text: str) -> dict[str, int]:
+    """Count PII occurrences by type WITHOUT rewriting the text.
+
+    `scrub_text` answers "what may I send to the model". This answers "does
+    this text contain PII at all", which is what an OUTPUT-side check needs —
+    a tenant moderation hook asserting a model didn't reconstruct into its
+    answer what the pre-call guard stripped from the prompt, or an audit
+    assertion over a stored rationale.
+
+    It delegates to `_default_scrub` and discards the rewritten text, so the
+    two sides cannot disagree about what counts as an Emirates ID or a card.
+    Re-deriving the patterns in the output check is exactly the divergence
+    runtime/luhn.py was extracted to prevent (ReviewFindings-2026-07-18 B1):
+    a hand-rolled `(?:\\d[ -]?){13,19}` with no Luhn call flags any long digit
+    run — an invoice number, a registry filing reference — that the pre-call
+    guard deliberately leaves alone.
+
+    Ignores INPUT_GUARDRAIL mode: "is there PII in this text" is a question
+    about the text, not about whether prompts are currently being scrubbed.
+    """
+    _, counts = _default_scrub(text)
+    return counts
+
+
 def scrub_messages(
     messages: list[dict[str, Any]],
     mode: Optional[str] = None,

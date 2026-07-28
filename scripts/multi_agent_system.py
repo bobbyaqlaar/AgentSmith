@@ -27,6 +27,10 @@ import uuid
 from pathlib import Path
 from typing import Any, Literal, Optional, TypedDict
 
+# scripts/ so `_shared` resolves however this module is loaded (invoked as a
+# file, sys.path[0] is already scripts/; imported from a test, it is not).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 try:
     from runtime.environment import get_environment
 except ImportError:
@@ -145,13 +149,24 @@ def _get_model(role: Literal["architect", "developer", "validator"]) -> Any:
     Return a LangChain chat model appropriate for the given role.
     Falls back through Anthropic → OpenAI → local Ollama.
     """
+    # Same resolution order as cost_router.py: env override → the matching
+    # models.yaml role → literal fallback (scripts-only install). These were
+    # hardcoded to claude-3-5-sonnet-20241022 / gpt-4o / llama3 — ids that had
+    # drifted from both models.yaml AND from cost_router's own copy of the
+    # same table, so three places named three different architect models.
+    from _shared import role_model
+
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
     openai_key = os.environ.get("OPENAI_API_KEY", "")
-    architect_model = os.environ.get(
-        "AGENT_MODEL_ARCHITECT", "claude-3-5-sonnet-20241022"
+    architect_model = os.environ.get("AGENT_MODEL_ARCHITECT", "").strip() or role_model(
+        "architect", "qwen2.5"
     )
-    complex_model = os.environ.get("AGENT_MODEL_COMPLEX", "gpt-4o")
-    local_model = os.environ.get("AGENT_MODEL_LOCAL", "llama3")
+    complex_model = os.environ.get("AGENT_MODEL_COMPLEX", "").strip() or role_model(
+        "developer", "llama3.2:3b"
+    )
+    local_model = os.environ.get("AGENT_MODEL_LOCAL", "").strip() or role_model(
+        "fast", "smollm2"
+    )
 
     if role == "architect" and anthropic_key:
         from langchain_anthropic import ChatAnthropic

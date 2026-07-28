@@ -18,20 +18,120 @@ consolidated here.
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Any, Optional
 
-# Single source for the eval-judge model default. Before this constant,
-# run-evals.py / shadow-eval.py / verify_system.py each hardcoded their own
-# fallback and drifted apart — shadow evals were judged by a different model
-# than the PR gate. Docs referencing the default: SPECS.md §7/§21,
-# OPERATIONS.md §0, UserManual.md §8.
-DEFAULT_JUDGE_MODEL = "claude-sonnet-4-6"
+# ── Eval-judge model ──────────────────────────────────────────────────────────
+#
+# Resolution order (see judge_model() below):
+#   1. AGENT_JUDGE_MODEL env var — one-off override, no code change
+#   2. the `judge` role in the MERGED model registry: framework
+#      runtime/models.yaml ← tenant models.yaml ← tenant.yaml
+#      gateway.routing_overrides
+#   3. DEFAULT_JUDGE_MODEL below — last resort, only when runtime/ isn't
+#      importable at all
+#
+# (2) is why this is no longer a bare constant. A hardcoded id here made the
+# judge a *second*, independent model setting: a tenant could declare
+# `judge: <model>` in its own models.yaml for its runtime judge and still have
+# CI evals graded by whatever this file happened to say. KYC Sentinel is the
+# concrete case — it declares an independent judge route, and its scorecard was
+# nonetheless being judged by the framework constant. One role, one id, both
+# consumers. Before the constant existed at all, run-evals.py / shadow-eval.py
+# / verify_system.py each carried their own fallback and drifted apart —
+# reading the registry keeps that fixed while removing the duplicate source.
+#
+# Docs referencing the default: SPECS.md §7/§21, OPERATIONS.md §0,
+# UserManual.md §8.
+# Kept in step with the `judge` role in runtime/models.yaml so the fallback and
+# the registry never name different graders.
+DEFAULT_JUDGE_MODEL = "falcon3:3b"
+
+JUDGE_ROLE = "judge"
+
+
+_REGISTRY_CACHE: dict[str, Optional[dict]] = {}
+
+
+def role_model(role: str, fallback: str) -> str:
+    """Model id for a registry role, or `fallback` when it can't be resolved.
+
+    The single accessor every scripts/*.py should use instead of hardcoding a
+    model name. `fallback` is a last resort for scripts-only installs with no
+    runtime/ on the path — it is NOT a second source of truth, so keep it equal
+    to what models.yaml says for that role.
+    """
+    registry = load_registry() or {}
+    return (registry.get(role) or {}).get("id") or fallback
+
+
+def provider_models(provider: str) -> list[str]:
+    """Sorted model ids the merged registry routes to a given provider —
+    e.g. every `ollama` id, for a "are these pulled?" preflight check."""
+    registry = load_registry() or {}
+    return sorted(
+        {
+            cfg["id"]
+            for cfg in registry.values()
+            if cfg.get("provider") == provider and cfg.get("id")
+        }
+    )
+
+
+def load_registry() -> Optional[dict]:
+    """The merged model registry, or None when runtime/ isn't available.
+
+    Every scripts/*.py file is invoked as `python3 scripts/whatever.py`, which
+    puts `scripts/` on sys.path[0] — NOT the repo root — so a bare
+    `import runtime` fails in exactly the normal invocation path and this
+    would silently fall back forever. (Caught by running verify_system.py for
+    real: it reported the registry as unreadable while pytest, which has the
+    root on the path, read it fine.) The insert below is the same one several
+    scripts/*.py already do before importing runtime.
+
+    runtime/ is still imported lazily and its absence tolerated: scripts/ is
+    installed to ~/.agent-framework/scripts and invoked inside tenant repos
+    that may carry no runtime/ at all (the vendoring boundary in this module's
+    docstring). Resolving a default must not turn that into a hard dependency —
+    hence None, and the caller falls back.
+    """
+    # Cached per cwd: the merge pulls in a tenant models.yaml and tenant.yaml
+    # found from the CURRENT directory, so the answer legitimately differs
+    # between repos, but re-parsing three YAML files on every lookup does not.
+    cwd = str(Path.cwd().resolve())
+    if cwd in _REGISTRY_CACHE:
+        return _REGISTRY_CACHE[cwd]
+
+    install_root = Path(__file__).resolve().parent.parent
+    if str(install_root) not in sys.path:
+        sys.path.insert(0, str(install_root))
+    registry: Optional[dict]
+    try:
+        from runtime.llm_gateway import load_model_registry
+
+        registry = load_model_registry() or None
+    except Exception:  # fail-open: no runtime/, or an unreadable registry
+        registry = None
+    _REGISTRY_CACHE[cwd] = registry
+    return registry
+
+
+def _registry_judge_model() -> Optional[str]:
+    """The `judge` role's model id from the merged registry, or None."""
+    registry = load_registry()
+    if not registry:
+        return None
+    return (registry.get(JUDGE_ROLE) or {}).get("id") or None
 
 
 def judge_model() -> str:
-    """Resolve the eval-judge model: AGENT_JUDGE_MODEL env var, else default."""
-    return os.environ.get("AGENT_JUDGE_MODEL", DEFAULT_JUDGE_MODEL)
+    """Resolve the eval-judge model: AGENT_JUDGE_MODEL, else the `judge` role
+    in models.yaml, else DEFAULT_JUDGE_MODEL."""
+    env = os.environ.get("AGENT_JUDGE_MODEL", "").strip()
+    if env:
+        return env
+    return _registry_judge_model() or DEFAULT_JUDGE_MODEL
 
 
 def _repo_root() -> Path:

@@ -97,3 +97,33 @@ def test_resolve_mode_respects_explicit_off(
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("INPUT_GUARDRAIL", "off")
     assert ig.resolve_mode() == "off"
+
+
+# ── detect_pii — the output-side companion ───────────────────────────────────
+
+
+def test_detect_pii_counts_without_rewriting() -> None:
+    text = "Emirates ID 784-1985-1234567-1, card 4111 1111 1111 1111."
+    counts = ig.detect_pii(text)
+    assert counts == {"emirates_id": 1, "card": 1}
+
+
+def test_detect_pii_agrees_with_scrub_text() -> None:
+    """The whole reason detect_pii exists: an output-side check must classify
+    text exactly as the pre-call scrub does. A hook that re-derives the
+    patterns drifts (KYC Sentinel's did — a card regex with no Luhn call)."""
+    text = "Contact a@b.com, ID 784-1985-1234567-1, card 4111-1111-1111-1111."
+    _, scrub_counts = ig.scrub_text(text, mode="default")
+    assert ig.detect_pii(text) == scrub_counts
+
+
+def test_detect_pii_rejects_long_non_luhn_digit_runs() -> None:
+    assert "card" not in ig.detect_pii("Registry filing 2024 0918 3345 1207 66.")
+
+
+def test_detect_pii_ignores_guardrail_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    """'Does this text contain PII' is a question about the text, not about
+    whether prompts are currently being scrubbed — an output check must still
+    work in development, where resolve_mode() is off."""
+    monkeypatch.setenv("INPUT_GUARDRAIL", "off")
+    assert ig.detect_pii("card 4111 1111 1111 1111") == {"card": 1}

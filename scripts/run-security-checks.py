@@ -34,6 +34,34 @@ def _install_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def _tenant_root() -> Path:
+    """Root of the repo BEING GRADED — cwd-relative, unlike `_install_root`.
+
+    These two are the same directory only when the framework grades itself.
+    A tenant runs the harness out of a framework checkout:
+
+        cd my-tenant && python3 $AGENTSMITH_DIR/scripts/run-security-checks.py
+
+    and the pack under review is the TENANT's `.agent-rfc/security/`, while the
+    control registry and templates still come from the install. Resolving both
+    from `_install_root()` meant every tenant's `--strict` gate silently graded
+    the FRAMEWORK's pack: the authored risk register, agency manifest and tool
+    allowlist that `ai-tenant-init` seeds (G5) were never read by anything, and
+    a tenant's green SEC-RISK-001 was evidence about a different repo. Same
+    walk-up-to-.git semantics as `_shared._repo_root()`.
+
+    `AGENTSMITH_TENANT_ROOT` overrides, for callers that cannot set cwd.
+    """
+    override = os.environ.get("AGENTSMITH_TENANT_ROOT", "").strip()
+    if override:
+        return Path(override).resolve()
+    cwd = Path.cwd().resolve()
+    for parent in [cwd, *cwd.parents]:
+        if (parent / ".git").exists():
+            return parent
+    return cwd
+
+
 def _tenant_security_dir(root: Path) -> Path:
     return root / ".agent-rfc" / "security"
 
@@ -67,11 +95,15 @@ def main(argv: list[str] | None = None) -> int:
         allow = {"SEC-PII-001", "SEC-PII-002", "SEC-AUDIT-001"}
         controls = [c for c in controls if c.id in allow]
 
-    tenant_security = _tenant_security_dir(root)
+    # `root` (install) owns fixtures, templates and the runtime import path;
+    # `tenant_root` (cwd) owns the .agent-rfc/security pack under review.
+    tenant_root = _tenant_root()
+    tenant_security = _tenant_security_dir(tenant_root)
     template_risk = root / "fixtures" / "security" / "templates" / "risk_register.yaml"
     results: list[ControlResult] = []
     ctx = {
         "root": root,
+        "tenant_root": tenant_root,
         "tenant_security": tenant_security,
         "mode": args.mode,
         "strict": strict,

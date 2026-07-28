@@ -1,7 +1,57 @@
-# High-impact actions requiring HITL (SEC-AGENCY-001).
-# Copy to .agent-rfc/security/agency_manifest.yaml
+# AgentSmith framework — high-impact actions requiring HITL (SEC-AGENCY-001).
+#
+# The framework ships no production workflow of its own, so "high-impact" here
+# means the actions its own tooling takes against a developer's machine and
+# repos — writing hook/IDE/CI files, tagging and publishing releases, promoting
+# eval rules. Those are the framework's real blast radius. Application-level
+# actions (approving an account, moving money) belong in a tenant's manifest;
+# see KYC_Sentinel/.agent-rfc/security/agency_manifest.yaml.
+#
+# Replaces the shipped placeholder (example_workflow / high_impact_step), which
+# this repo was carrying verbatim.
 version: 1
 actions:
-  - workflow: example_workflow
-    action: high_impact_step
+  - workflow: promote-learning.py
+    action: promote_rule_to_guardrail
     needs_hitl: true
+    notes: >-
+      A promoted failure becomes a gate on every future change in the repo.
+      The promotion loop is human-in-the-loop by design and shadow-eval.py
+      never auto-promotes — it only samples and scores.
+
+  - workflow: install-ai-stack.sh
+    action: write_repo_governance_files
+    needs_hitl: true
+    notes: >-
+      Writes IDE rules, git hooks and CI workflows into a repo. Gated by the
+      opt-in model rather than a runtime signal: a pre-existing or cloned repo
+      is untouched until a human creates .agenticframework/enabled.
+
+  - workflow: release.yml
+    action: publish_release_artifacts
+    needs_hitl: true
+    notes: >-
+      Release tarballs are what `curl | bash` installs on every new machine.
+      Triggered only by a human-pushed vX.Y.Z tag, and optionally GPG-signed.
+
+  - workflow: BaseAgentWorkflow
+    action: run_with_hitl_gate
+    needs_hitl: true
+    notes: >-
+      The framework primitive tenants use to make an action non-autonomous.
+      Listed here as the contract itself: the resume activity must not run
+      without either needs_hitl=false or a recorded hitl_approved signal
+      (runtime/test/test_hitl_gate.py).
+
+  - workflow: BaseAgentWorkflow
+    action: run_with_recoverable_step
+    needs_hitl: false
+    notes: >-
+      Failures park in the DLQ for a human-edited payload rather than pausing
+      on an approval gate. Human involvement is required to resume, but it is
+      an edit-and-replay path, not an approve/reject decision.
+
+  - workflow: scripts/map_codebase.py
+    action: rebuild_knowledge_graph
+    needs_hitl: false
+    notes: Read-only AST walk over the repo; writes only its own graph fixture.

@@ -22,11 +22,14 @@ from pathlib import Path
 
 import httpx
 
-from _shared import _repo_root, _load_dotenv  # noqa: E402,F401 — _repo_root kept for callers
+from _shared import _repo_root, _load_dotenv, role_model  # noqa: E402,F401 — _repo_root kept for callers
 
 DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 DEFAULT_FAIL_ABOVE_MS = 2000
-DEFAULT_MODEL = "falcon3:1b"
+# The registry's smallest local tier, so a TTFT smoke test measures a model the
+# stack actually routes to. Was hardcoded `falcon3:1b`, which models.yaml never
+# referenced at all — the number it produced described nothing in the system.
+DEFAULT_MODEL = role_model("fast", "smollm2")
 
 
 def _resolve_base_url() -> str:

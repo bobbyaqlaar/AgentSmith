@@ -69,86 +69,85 @@
 # the region note in its comment. azure_openai/bedrock/huawei_modelarts
 # remain mock-tested only.
 
+# ── LOCAL-ONLY DEFAULT REGISTRY ──────────────────────────────────────────────
+#
+# Every role below routes to Ollama. No prompt leaves the machine under the
+# framework defaults, and no call can be billed: every tier is zero-cost, so
+# the budget ladder never degrades across a trust boundary — it only ever
+# picks a smaller local model.
+#
+# Prerequisite — pull all four:
+#   ollama pull qwen2.5 && ollama pull llama3.2:3b \
+#     && ollama pull falcon3:3b && ollama pull smollm2
+#
+# Degrade chain: architect → developer → validator → fast → (halt).
+# Ordered strongest → smallest, so a breach or a provider error walks down to
+# a lighter local model rather than out to a cloud API.
+#
+# Cloud tiers are NOT deleted, just not wired in — the previously live-verified
+# Groq and Vertex AI entries are preserved commented-out at the bottom of this
+# file with their verification notes. Uncomment one and point a `degrade_to`
+# at it (or hint it by role name) to opt back in; that is a deliberate act,
+# not something a default can do behind your back. Per-tenant overrides work
+# the same as before: a tenant `models.yaml` at the tenant repo root, or
+# `gateway.routing_overrides` in `.agenticframework/tenant.yaml`.
+
 models:
   architect:
-    id: claude-sonnet-4-6
-    provider: anthropic
-    cost_per_input_token: 0.000003
-    cost_per_output_token: 0.000015
-    degrade_to: developer
-
-  developer:
-    id: gpt-4o
-    provider: openai
-    cost_per_input_token: 0.0000025
-    cost_per_output_token: 0.00001
-    degrade_to: validator
-
-  validator:
-    id: claude-haiku-4-5-20251001
-    provider: anthropic
-    cost_per_input_token: 0.00000025
-    cost_per_output_token: 0.00000125
-    degrade_to: groq_fast
-
-  # ── Groq (cheap/fast cloud tier, ahead of local Ollama in the degrade
-  # ladder) ────────────────────────────────────────────────────────────────────
-  # Groq's OpenAI-compatible API — handled by llm_gateway.py's `provider:
-  # groq` branch (base_url https://api.groq.com/openai/v1, api_key_env
-  # defaults to GROQ_API_KEY). Sits between validator and the local Ollama
-  # tier: cheaper/faster than validator's direct-API call, but still a real
-  # cloud model (no quality cliff) rather than dropping straight to local —
-  # only falls through to local_large if GROQ_API_KEY is unset/invalid or
-  # Groq itself is exhausted (rate-limited/billing), via the same
-  # provider-exhaustion degrade logic as every other tier. cost_per_*_token
-  # are placeholders — confirm against Groq's current pricing page.
-  groq_fast:
-    id: llama-3.3-70b-versatile
-    provider: groq
-    cost_per_input_token: 0.00000059
-    cost_per_output_token: 0.00000079
-    degrade_to: local_large
-
-  # ── Local Ollama tier ────────────────────────────────────────────────────────
-  # Bottom of the degrade ladder and the models used in offline mode
-  # (ai-mode-local). Free (zero cost), ordered strongest → fastest. Pull with:
-  #   ollama pull qwen2.5 && ollama pull llama3.2 && ollama pull smollm2
-  local_large:
     id: qwen2.5
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
     cost_per_output_token: 0
-    degrade_to: local_small
+    degrade_to: developer
 
-  local_small:
-    id: llama3.2
+  developer:
+    id: llama3.2:3b
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: validator
+
+  validator:
+    id: falcon3:3b
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
     cost_per_output_token: 0
     degrade_to: fast
 
-  # ── GCP Vertex AI (opt-in, not in the default degrade chain) ───────────────────
-  # Live-verified: gemini-2.5-flash in us-central1 against a real GCP
-  # project (2026-06-29) — request/response round-tripped correctly through
-  # VertexAIAdapter. Requires GOOGLE_APPLICATION_CREDENTIALS (or another
-  # google-auth-supported credential source) and the Vertex AI API enabled
-  # on `project`. cost_per_*_token below are placeholders — confirm against
-  # GCP's current Vertex AI pricing page before relying on them for budget
-  # enforcement. Route to this role explicitly via model_hint="vertex_gemini"
-  # or a tenant's routing_overrides; it isn't wired into
-  # architect/developer/validator's degrade_to chain since most tenants
-  # won't have GCP credentials configured.
-  vertex_gemini:
-    id: gemini-2.5-flash
-    provider: vertex_ai
-    project: "${GCP_PROJECT_ID}"   # set per-tenant; no project id is committed here
-    region: us-central1            # GCC regions (me-central1/me-central2) confirmed NOT to serve this model
-    cost_per_input_token: 0.0000003
-    cost_per_output_token: 0.0000025
-    degrade_to: null
+  # Eval judge — the model that grades golden/fairness/hallucination cases in
+  # run-evals.py, shadow-eval.py and verify_system.py. Declared here so the
+  # judge id has ONE source: scripts/_shared.py:judge_model() reads this role
+  # rather than carrying its own constant, and a tenant that declares its own
+  # `judge` role (as KYC Sentinel does) automatically gets its CI evals and its
+  # runtime judge on the same model instead of two independent settings that
+  # drift. `AGENT_JUDGE_MODEL` still overrides, for a one-off run.
+  #
+  # Judge/actor independence: deliberately NOT qwen2.5, so the judge is never
+  # the model that wrote what it grades — architect output is the tier where
+  # self-grading does the most damage, and runtime.judging.
+  # judge_independence_warning exists to flag exactly that collision.
+  #
+  # It does share falcon3:3b with `validator`, which a four-model local
+  # registry can't avoid — every id here is already spoken for. That overlap
+  # is the mild one: validator is itself a checking role, not the primary
+  # author of the rationales the judge scores. It only becomes a real
+  # independence problem if you start judging validator output specifically;
+  # at that point add a fifth local model rather than reusing one of these.
+  judge:
+    id: falcon3:3b
+    provider: ollama
+    endpoint: "${OLLAMA_BASE_URL}/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    # Degrades to the smallest model, not to `validator` — validator is the
+    # same falcon3:3b, so that rung would have been a no-op that looked like
+    # a fallback.
+    degrade_to: fast
 
+  # Smallest local model — the last rung before the ladder halts.
   fast:
     id: smollm2
     provider: ollama
@@ -156,3 +155,44 @@ models:
     cost_per_input_token: 0
     cost_per_output_token: 0
     degrade_to: null
+
+# ── Opt-in cloud tiers (commented out — this registry is local-only) ──────────
+#
+# The `local_large` (qwen2.5) and `local_small` (llama3.2) roles that used to
+# sit here were dropped rather than commented: they are now duplicates of
+# architect and developer respectively, and two role names resolving to the
+# same model is how a registry starts lying about what ran.
+#
+# ── Groq (cheap/fast cloud tier) ─────────────────────────────────────────────
+# OpenAI-compatible API — handled by llm_gateway.py's `provider: groq` branch
+# (base_url https://api.groq.com/openai/v1, api_key_env defaults to
+# GROQ_API_KEY). Was the rung between validator and the local tier: a real
+# cloud model rather than dropping straight to local, falling through only if
+# GROQ_API_KEY was unset/invalid or Groq itself was exhausted. cost_per_*_token
+# are placeholders — confirm against Groq's current pricing page.
+#
+#   groq_fast:
+#     id: llama-3.3-70b-versatile
+#     provider: groq
+#     cost_per_input_token: 0.00000059
+#     cost_per_output_token: 0.00000079
+#     degrade_to: architect
+#
+# ── GCP Vertex AI ────────────────────────────────────────────────────────────
+# Live-verified: gemini-2.5-flash in us-central1 against a real GCP project
+# (2026-06-29) — request/response round-tripped correctly through
+# VertexAIAdapter. Requires GOOGLE_APPLICATION_CREDENTIALS (or another
+# google-auth-supported credential source) and the Vertex AI API enabled on
+# `project`. cost_per_*_token are placeholders — confirm against GCP's current
+# Vertex AI pricing page before relying on them for budget enforcement. Was
+# never in the degrade chain even when active; route to it explicitly via
+# model_hint="vertex_gemini" or a tenant's routing_overrides.
+#
+#   vertex_gemini:
+#     id: gemini-2.5-flash
+#     provider: vertex_ai
+#     project: "${GCP_PROJECT_ID}"   # set per-tenant; no project id is committed here
+#     region: us-central1            # GCC regions (me-central1/me-central2) confirmed NOT to serve this model
+#     cost_per_input_token: 0.0000003
+#     cost_per_output_token: 0.0000025
+#     degrade_to: null
