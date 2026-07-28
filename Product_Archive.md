@@ -662,6 +662,35 @@ Unix socket via Cloud SQL Auth Proxy — no TCP, no cert management, Google-mana
 | `.github/actions/gcp-auth/action.yml` | Composite: WIF keyless auth + optional SA key fallback; graceful skip when secrets absent |
 | `.github/actions/build-push-ghcr/action.yml` | Composite: multi-stage Docker build → GHCR push; skips cleanly if no Dockerfile |
 
+## T1–T4 — KYC Sentinel testbed tenant ✅ DONE (2026-07-21 → 2026-07-29)
+
+Spec: [`docs/testbed-tenant-spec.md`](./docs/testbed-tenant-spec.md).
+Repo: [`bobbyaqlaar/KycSentinel`](https://github.com/bobbyaqlaar/KycSentinel).
+Per-day build log lives in that repo's `DEVLOG.md` — not duplicated here.
+
+Built as the standing E2E bed for framework releases, and it earned its keep
+immediately: constructing it surfaced framework gaps **G1–G10**
+([`TestbedFeedback-2026-07-21.md`](./TestbedFeedback-2026-07-21.md)), and
+reviewing it afterwards surfaced a further set fixed in the 1.1.0 release.
+
+| Milestone | Outcome |
+|---|---|
+| T1–T3 build | 5 agents / 4 model routes, F1–F8 scenario drivers, Temporal workflow on `BaseAgentWorkflow`, security pack authored, `MODERATION_HOOK=required` satisfiable |
+| GitHub + CI | Pushed 2026-07-22; strict security harness hard-fails on this tenant's own pack |
+| GCP staging | Cloud Run Job `kyc-sentinel-smoke` in project `kycsentinel` via WIF — `EXECUTION_SUCCEEDED`, all eight scenarios fired |
+| Eval gates | Wired 2026-07-29: adversarial unconditional; scorecard/fairness/hallucination gated on the judge route's declared credential |
+| Framework pin | `agentsmith-runtime @ v1.1.0` — reproducible builds, no longer tracking `main` |
+
+**Framework defects the testbed caught** (all fixed, see CHANGELOG 1.1.0):
+`run_with_hitl_gate` could approve a high-impact action with no human signal;
+the security harness graded the framework's pack instead of the tenant's;
+`run-evals.py`'s graceful skip failed the CI step; `eval-security.yml` was
+never provisioned into tenants; `templates.tar.gz` shipped one file of the
+tree the installer expected.
+
+**Still open — the "Running live" milestone.** See `FIXES_AND_CLEANUP.md`;
+the tenant runs offline and in a smoke job, not yet against real backends.
+
 ## Phase deliverables checklist (moved from SPECS.md §22, 2026-07-11)
 
 All items delivered; retained here as the historical record of what each
@@ -723,6 +752,7 @@ phase shipped.
 
 ---
 
-*Active work lives in `FIXES_AND_CLEANUP.md` (P11d demo publication pending).
+*Active work lives in `FIXES_AND_CLEANUP.md` (KYC Sentinel "Running live",
+then demo publication).
 SPECS.md is the canonical specification record; README.md is the framework
 introduction; OPERATIONS.md is the canonical operator-facing reference.*

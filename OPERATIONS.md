@@ -1359,6 +1359,13 @@ The `cd-staging.yml` workflow: authenticates via WIF → builds the worker image
 The `cd-demo-ui.yml` workflow: authenticates via WIF → builds the demo UI from
 `demo/Dockerfile` → deploys `YOUR_UI_SERVICE` to Cloud Run.
 
+> **Tenant-specific, not shipped.** `cd-demo-ui.yml` and `demo/` are not
+> framework templates — `ai-tenant-init` never writes them. They exist in the
+> oil-price-demo tenant and are described here as a worked example of adding a
+> second deployable to a tenant's CD. Skip this workflow if your tenant has no
+> separate UI. The workflow templates the framework does provide are listed in
+> §1 "CI/CD workflows written per stack".
+
 **Step 4 — Get the service URLs:**
 
 ```bash

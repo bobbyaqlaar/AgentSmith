@@ -246,6 +246,8 @@ Starter pack: **[templates/uae-sovereign/](./templates/uae-sovereign/)**.
 | [Product_Archive.md](./Product_Archive.md) | Build history (read-only) |
 | [FIXES_AND_CLEANUP.md](./FIXES_AND_CLEANUP.md) | Remaining to-do items |
 | [docs/](./docs/) | Topic canon: security framework map, UAE regulatory, ISO 42001 map, delivery model, RAG/memory, team observability |
+| [docs/session-handoff/](./docs/session-handoff/) | Point-in-time notes for picking up where a work session left off |
+| Review reports (root, read-only) | Findings from specific audits, kept for their reasoning rather than their status: [ReviewFindings-2026-07-18](./ReviewFindings-2026-07-18.md) (docs↔code sync), [TestCoverageReview-2026-07-21](./TestCoverageReview-2026-07-21.md), [TestbedFeedback-2026-07-21](./TestbedFeedback-2026-07-21.md) (what building a tenant found in the framework). All items closed — current work is in FIXES_AND_CLEANUP.md |
 
 ---
 

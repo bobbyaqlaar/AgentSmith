@@ -26,9 +26,14 @@ know or care what's inside your agent app. It only assumes your app:
    AWS Secrets Manager / GCP Secret Manager / any cloud metadata service —
    consistent with `runtime/environment.py`'s existing fail-closed
    `ENVIRONMENT` resolver and the rest of the framework's `.env` convention.
-   On Kubernetes, the same variables are sourced from a `Secret` instead
-   (see `kubernetes/templates/secret.yaml`) — your app code doesn't need to
-   know which.
+   On Kubernetes the same variables are sourced from a `Secret` instead —
+   your app code doesn't need to know which. The chart deliberately ships no
+   `secret.yaml` template: it references a **pre-existing** Secret by name
+   (`envSecretName` in `kubernetes/values.yaml`, and
+   `withDb.credentialsSecretName` when the bundled Postgres is enabled), so
+   secret material is created by whatever the customer already uses —
+   `kubectl create secret generic`, sealed-secrets, an external operator —
+   and never lands in a chart value or in git.
 4. **Logs JSON-Lines to stdout.** Already how `scripts/agent_logger.py`
    works framework-wide — Docker's default `json-file` log driver and
    Kubernetes' own log pipeline both capture this without extra config.

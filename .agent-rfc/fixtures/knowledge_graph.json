@@ -470,6 +470,8 @@
         "infer_provider",
         "build_request",
         "parse_response",
+        "default_api_key_env",
+        "credential_env_for_model",
         "supports_streaming",
         "parse_stream_delta",
         "CloudProviderAdapter",
@@ -484,7 +486,7 @@
         "parse_cloud_response",
         "_get_access_token"
       ],
-      "last_modified": "2026-07-21T08:22:44Z",
+      "last_modified": "2026-07-28T21:51:18Z",
       "id": "runtime/provider_dispatch.py"
     },
     {
@@ -549,7 +551,7 @@
         "measure_ttft_ms",
         "main"
       ],
-      "last_modified": "2026-07-20T20:29:56Z",
+      "last_modified": "2026-07-28T21:15:42Z",
       "id": "scripts/verify_ttft.py"
     },
     {
@@ -609,11 +611,12 @@
         "_pair_parity",
         "_judge_case",
         "run_scorecard",
+        "_missing_judge_credential",
         "hallucination_flag_rate",
         "_resolve_hallucination_fail_above",
         "_resolve_fail_below"
       ],
-      "last_modified": "2026-07-21T20:23:57Z",
+      "last_modified": "2026-07-28T21:52:15Z",
       "id": "scripts/run-evals.py"
     },
     {
@@ -697,6 +700,9 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "role_model",
+        "role_credential_env",
+        "provider_models",
         "load_registry",
         "_registry_judge_model",
         "judge_model",
@@ -709,7 +715,7 @@
         "_phoenix_get",
         "_phoenix_post"
       ],
-      "last_modified": "2026-07-28T20:39:16Z",
+      "last_modified": "2026-07-28T21:51:26Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -776,6 +782,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_tier",
         "_count_tokens",
         "_keyword_tier",
         "record_failure",
@@ -790,20 +797,21 @@
         "__init__",
         "__repr__"
       ],
-      "last_modified": "2026-07-21T10:44:15Z",
+      "last_modified": "2026-07-28T21:13:48Z",
       "id": "scripts/cost_router.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_sovereign_ollama_models",
         "_chat_url",
         "_chat",
         "_ollama_base",
         "_generate_local_hf",
         "main"
       ],
-      "last_modified": "2026-07-20T20:29:59Z",
+      "last_modified": "2026-07-28T21:18:09Z",
       "id": "scripts/verify_sovereign_endpoint.py"
     },
     {
@@ -875,7 +883,7 @@
         "set_attribute",
         "record_exception"
       ],
-      "last_modified": "2026-07-21T10:44:12Z",
+      "last_modified": "2026-07-28T21:14:20Z",
       "id": "scripts/multi_agent_system.py"
     },
     {
@@ -908,7 +916,7 @@
         "_run",
         "_git_repo"
       ],
-      "last_modified": "2026-07-28T20:39:23Z",
+      "last_modified": "2026-07-28T21:15:13Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -1165,9 +1173,12 @@
         "test_blank_env_var_is_treated_as_unset",
         "test_falls_back_when_the_registry_cannot_be_read",
         "test_a_tenant_judge_role_overrides_the_framework_default",
-        "test_routing_override_also_reaches_the_judge"
+        "test_routing_override_also_reaches_the_judge",
+        "test_local_judge_needs_no_credential",
+        "test_credential_follows_the_role_not_a_hardcoded_provider",
+        "test_per_role_api_key_env_wins"
       ],
-      "last_modified": "2026-07-28T20:40:04Z",
+      "last_modified": "2026-07-28T21:53:48Z",
       "id": "scripts/test/test_judge_model_resolution.py"
     },
     {
@@ -2490,6 +2501,33 @@
       "pillar": null,
       "created_at": "2026-07-28T20:34:13Z",
       "id": "rfc:fixtures/delivery_evidence.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_requested_artifacts",
+        "_built_artifacts",
+        "test_every_downloaded_artifact_is_built",
+        "test_templates_tarball_carries_both_destinations",
+        "test_artifacts_extract_flat"
+      ],
+      "last_modified": "2026-07-28T21:30:13Z",
+      "id": "scripts/test/test_release_artifact_contract.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_scannable_files",
+        "_docstring_lines",
+        "_offending_lines",
+        "test_no_unresolved_model_ids_in_scripts_or_runtime",
+        "test_ci_templates_do_not_pin_a_judge_model",
+        "test_the_guard_actually_catches_a_hardcoded_id"
+      ],
+      "last_modified": "2026-07-28T21:17:52Z",
+      "id": "scripts/test/test_no_hardcoded_model_ids.py"
     }
   ],
   "edges": [

@@ -1,116 +1,130 @@
 # AgentSmith — Remaining To-Do Items
 
-**Last reviewed:** 2026-07-21 (testbed tenant + framework hardening G1–G10)
+**Last reviewed:** 2026-07-29 (post-1.1.0 release + cross-repo review)
 
-> **Scope:** this document owns only *not-yet-done* work: the active phase
-> and confirmed future gaps with their trigger conditions. Completed build
-> history (P0–P11c, phase deliverables) lives in `Product_Archive.md`.
-> The formal specification is `SPECS.md`; operator procedures are
-> `OPERATIONS.md`.
+> **Scope:** this document owns only *not-yet-done* work: the active item and
+> confirmed future gaps with their trigger conditions. Completed build history
+> lives in `Product_Archive.md`; the formal specification is `SPECS.md`;
+> operator procedures are `OPERATIONS.md`; release notes are `CHANGELOG.md`.
+>
+> If an entry here says something is missing, check it still is — this file
+> spent a week claiming the testbed deploy had not started, six days after it
+> had.
 
-## Current state (2026-07-21)
+## Current state (2026-07-29)
 
-The **KYC Sentinel testbed tenant** (`../KYC_Sentinel`,
-spec `docs/testbed-tenant-spec.md`) was built end-to-end, and doing so
-surfaced framework gaps **G1–G10 — all fixed**. Full analysis, reproduction
-and per-gap fix notes: [`TestbedFeedback-2026-07-21.md`](./TestbedFeedback-2026-07-21.md).
-Two prior reviews from the same push are also complete:
-[`ReviewFindings-2026-07-18.md`](./ReviewFindings-2026-07-18.md) (docs↔code
-sync + perf, P1–P3) and [`TestCoverageReview-2026-07-21.md`](./TestCoverageReview-2026-07-21.md)
-(coverage gaps 1–7). Framework suite 287 passing; changes are in
-CHANGELOG [Unreleased]. Session handoff:
-[`docs/session-handoff/2026-07-21-testbed-and-hardening.md`](./docs/session-handoff/2026-07-21-testbed-and-hardening.md).
+**v1.1.0 is released** — the first actually-published version (1.0.0 was
+documented but never tagged, so `install-ai-stack.sh`'s remote path 404'd and
+no tenant could pin). Framework suite 331 passing; KYC Sentinel 50 passing with
+its strict security harness and adversarial eval gate green in CI.
 
-**The one open build item is deployment** — see "Active: deploy the testbed
-tenant" below. Everything code-side (framework + tenant) is done and green.
+The **KYC Sentinel testbed tenant** (`../KYC_Sentinel`) is built, pushed,
+CI-green and deployed as a GCP staging smoke job — full history in
+`Product_Archive.md` "T1–T4". Everything code-side is done.
 
-Still-optional follow-ups (no trigger fired): docs polish D1/D4 in
-TestbedFeedback §B; the SEC-MOD-002 control split (G10 option c); the generic
-`runtime` → `agentsmith_runtime` package rename (major-version only, noted in
-`pyproject.toml`).
+**The one open build item is running it against real backends** — see below.
 
 ---
 
-## Active: deploy the testbed tenant (was P11d demo path) 🟡 NOT STARTED
+## Active: KYC Sentinel "Running live" 🟡 NOT STARTED
 
-**Goal:** take KYC Sentinel from green-offline to running in production, then
-publish the demo/article series (the original P11d intent, now with a
-purpose-built tenant instead of oil-price-demo).
+**Goal:** take the tenant from offline/smoke-job to serving real traffic, so
+the observability, HITL and promotion loops are exercised end-to-end rather
+than asserted.
 
-**Trigger:** fired — the tenant is feature-complete and its strict CI gate
-passes locally; only credentials are missing.
+**Trigger:** fired — everything upstream of it is done.
 
-**Blocked on:** GitHub + GCP credentials (the build arc ran in a sandbox
-without them). Not a code blocker.
+**Blocked on:** standing up infrastructure and providing credentials. Not a
+code blocker; deliberately deferred when the deploy pipeline was proven.
 
-**Steps + round-trip proof:** `KYC_Sentinel/DEVLOG.md` "CI/CD (GitHub) —
-pending" and "Deployment — pending" (stub sections to fill), and the
-"Deployment starting points" in the session-handoff note above. Append
-progress to the DEVLOG as you go.
+**What it needs** (from `KYC_Sentinel/DEVLOG.md` 2026-07-22):
+
+1. Cloud SQL (`BUDGET_BACKEND=postgres`, `IDEMPOTENCY_BACKEND=postgres`),
+   a Temporal server, Ollama for the sovereign `intake` route, and Phoenix.
+2. Real provider keys: `ANTHROPIC_API_KEY_JUDGE` (the judge route's declared
+   variable — setting it also turns on the three judge-backed eval gates),
+   `ANTHROPIC_API_KEY`, `GROQ_API_KEY`.
+3. Swap `cd-staging.yml`'s Cloud Run **Job** for a `gcloud run deploy` of
+   `worker.py` as a long-running service (`--no-cpu-throttling
+   --min-instances=1`, OPERATIONS.md §4), pointed at the real
+   `TEMPORAL_ADDRESS`.
+4. Then, in order: Phoenix/Ops Portal wiring → widget embed → first HITL
+   round-trip through the portal → shadow-eval sampling on → first production
+   golden case promoted.
+
+Append progress to `KYC_Sentinel/DEVLOG.md` as you go.
+
+---
+
+## Demo publication (LinkedIn / Substack / Medium) 🟡 NOT STARTED
+
+**Subject: KYC Sentinel**, not oil-price-demo. This file previously carried two
+contradictory versions of this item; oil-price-demo was superseded as the demo
+tenant when the purpose-built testbed was built.
+
+**Trigger:** partially fired. The framework story and the tenant build are
+publishable now; the operational screenshots (live Phoenix traces, a real HITL
+round-trip) need "Running live" above.
+
+**Article content:**
+
+1. The framework architecture — Ten Pillars, multi-agent, eval scorecard.
+2. Building KYC Sentinel: why KYC is the domain where compliance features are
+   load-bearing rather than decorative (`docs/testbed-tenant-spec.md` opening).
+3. What building a tenant found in the framework — G1–G10, then the 1.1.0
+   review findings. The honest version of this is the most useful part: a HITL
+   gate that could approve without a human, a security harness grading the
+   wrong repo, a "graceful skip" that failed CI.
+4. CI/CD: GitHub Actions → GCP Cloud Run via WIF (keyless).
+5. Screenshots: Phoenix traces, Ops Portal, HITL DLQ flow, eval scorecard.
+
+**Source material:** `Product_Archive.md` (build history, use as structure),
+`README.md` (intro), `CHANGELOG.md` 1.1.0 (what the review found).
+
+**Open cost:** Cloud SQL `temporal-pg` (~$7–10/month) and `temporal-server`
+Cloud Run (min-instances=1) in `agentsmith-500916` are still live from the
+oil-price-demo work. Either reuse them for KYC Sentinel's "Running live" or
+tear them down — they are currently billing for nothing. Owner: Bobby.
 
 ---
 
 Each future item records a **trigger condition** (the concrete signal that
-means "build this now," not a calendar date) and rationale, so a future
-session can decide whether the trigger has actually fired instead of
-re-litigating whether the gap matters.
+means "build this now," not a calendar date), so a future session can decide
+whether the trigger has fired instead of re-litigating whether the gap matters.
 
 **Settled design decisions (do not re-open without a concrete reason):**
-- MCP integration stays tenant-owned (BYO) — the framework does not ship an
-  MCP client/server. Rationale recorded in SPECS.md §4a and below.
-- LLM self-correction shipped as a separate opt-in method
-  (`run_with_self_correction`), never inserted in front of the existing
-  human DLQ escalation path.
+- MCP integration stays tenant-owned (BYO) — the framework ships no MCP
+  client/server. Rationale in SPECS.md §4a.
+- LLM self-correction is a separate opt-in method
+  (`run_with_self_correction`), never inserted in front of the human DLQ path.
+- The default model registry is local-only. Cloud tiers are a deliberate
+  per-tenant opt-in, not something a budget breach can reach.
 
 ---
 
-## P11d — Demo publication (LinkedIn / Substack / Medium) 🟡 NOT STARTED
+## Known gaps carried forward from the 1.1.0 review
 
-**Goal:** publish a demo + article series documenting AgentSmith and the
-oil-price-demo tenant (`bobbyaqlaar/oil-price-demo`) built on it.
-P11a/b/c (CI green, GCP resources, portal deploy) are done — see
-`Product_Archive.md` §P11.
+Small, specific, and deliberately not fixed in that release.
 
-**Trigger:** already fired (CI green + staging deploys succeeded 2026-07-01).
-
-**Demo URL:** the Cloud Run service URL from `gcloud run services describe`.
-
-**Article content to cover:**
-1. The AgentSmith framework architecture (Ten Pillars, multi-agent, eval scorecard)
-2. Building the oil-price-demo tenant app from `ai-tenant-init` to production
-3. The CI/CD pipeline story: GitHub Actions → GCP Cloud Run via WIF (keyless auth)
-4. Lessons: Groq rate limits in CI, `set +e` exit-code capture, GitHub Models as free CI eval backend
-5. Screenshots: Phoenix traces, Ops Portal, the HITL DLQ flow, eval scorecard output
-
-**Source material:** `OPERATIONS.md` (GCP deploy story),
-`Product_Archive.md` (build history P0–P11, use as article structure),
-`README.md` (framework overview, use as intro).
-
-**Cost note:** Cloud SQL `temporal-pg` (~$7–10/month) and `temporal-server`
-Cloud Run (min-instances=1) stay live to support this demo. Tear down after
-the article is published. Owner: Bobby.
-
----
-
-## P12 — Security Compliance Harness ✅ DONE (2026-07-15)
-
-**Goal:** reusable test harness covering **OWASP LLM**, **NIST AI RMF**,
-**MITRE ATLAS**, and **ISO/IEC 42001**, plus close security gaps (prompt
-injection, structured output, tool allowlist, adversarial eval, moderation
-hook, SSO fail-closed).
-
-**Shipped:**
-- [`docs/security-framework-map.md`](./docs/security-framework-map.md) — live `SEC-*` status
-- `scripts/run-security-checks.py` + `fixtures/security/control_registry.json`
-- `workflow-templates/eval-security.yml` + framework self-test `strict: true`
-- Runtime: `prompt_guard`, `structured_output`, `tool_registry`, `moderation`
-- `run-evals.py --suite adversarial`; `SSO_REVOCATION_MODE=fail-closed`
-
-**Strict CI:** framework self-test + tenant Python template use `strict: true`.
-Set `MODERATION_HOOK=required` for regulated tenants; default CI env is `optional`.
-
-Remaining Partial/Org-owned rows stay in the security map (RBAC matrix runner,
-RAG poison fixture, sovereign smoke, etc.) — not P12 blockers.
+- **`SEC-TOOL-001` verifies the mechanism, not your allowlist.** Its runner
+  smoke-tests `ToolRegistry` deny-by-default against the shipped *template*,
+  so a tenant's green SEC-TOOL-001 says the enforcement works — not that the
+  tenant's own `tool_allowlist.yaml` is sane. **Trigger:** an auditor reads the
+  evidence pack as a statement about the tenant's tools.
+- **12 of 23 `SEC-*` controls have no runner** and report `skip`
+  (`hitl_gate`, `audit_hmac`, `rbac_matrix`, `eval_*`, `budget_caps`,
+  `change_gates`, `dlq_check`, `self_correction`, `gateway_static`,
+  `sovereign_smoke`, `rag_poison`, `agency_manifest`). `skip` does not fail
+  `--strict`, so an evidence pack can look complete while half of it is
+  unverified. The live status is in `docs/security-framework-map.md`.
+  **Trigger:** a control moves from "Partial" to a claim someone relies on.
+- **`agency_manifest` is authored but ungraded** — both the framework's and
+  KYC's manifests are real content that nothing validates (see above).
+- **`.env.swp`** — an orphaned vim swap file at the repo root, gitignored. Left
+  in place because it may hold unsaved `.env` edits; delete once you're sure.
+- **`scripts/verify_ttft.py:21`** — unused `from pathlib import Path`, flagged
+  by ruff. Its sibling import carries a deliberate `noqa`, so the pair was left
+  alone rather than half-changed.
 
 ---
 
@@ -118,115 +132,137 @@ RAG poison fixture, sovereign smoke, etc.) — not P12 blockers.
 
 ### Compliance gap status boards (pointers, not copies)
 
-Live status for the two compliance tracks is maintained in one place each —
-do **not** duplicate their tables here:
+Live status for the two compliance tracks is maintained in one place each — do
+**not** duplicate their tables here:
 
-- **UAE Regulatory** (sovereign infra, bias law, HITL, PDPL, oversight):
-  [`docs/uae-regulatory.md`](./docs/uae-regulatory.md) +
-  [`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md).
-  Still open there: live verification against a *named* UAE sovereign API
-  (beyond the verified Ollama Falcon 3 pattern), and org-level certification
-  work (never framework-owned).
-  **Trigger:** a bid requires a live sovereign-endpoint verification, or an
-  auditor demands a licensed clause-ID matrix beyond the thematic pack
-  (engage a certification body — out of scope for inventing clause text).
-- **Enterprise Delivery Model** (approved platforms, in-pipeline governance):
-  [`docs/delivery-model.md`](./docs/delivery-model.md). v1 soft pack
-  shipped. Still open: hard-fail enterprise mode; auto-inject `delivery.*`
-  defaults from `ai-tenant-init`; CD step uploading the evidence pack as a
-  release artifact.
-  **Trigger:** an org wants promote blocked when a platform isn't approved,
-  or tenant-init must stamp `delivery.platform` automatically.
+- **UAE Regulatory:** [`docs/uae-regulatory.md`](./docs/uae-regulatory.md) +
+  [`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md). Still
+  open there: live verification against a *named* UAE sovereign API (beyond the
+  verified Ollama Falcon 3 pattern), and org-level certification work (never
+  framework-owned).
+  **Trigger:** a bid requires live sovereign-endpoint verification, or an
+  auditor demands a licensed clause-ID matrix beyond the thematic pack.
+- **Enterprise Delivery Model:**
+  [`docs/delivery-model.md`](./docs/delivery-model.md). v1 soft pack shipped.
+  Still open: hard-fail enterprise mode; auto-inject `delivery.*` defaults from
+  `ai-tenant-init`; a CD step uploading the evidence pack as a release artifact.
+  **Trigger:** an org wants promote blocked when a platform isn't approved.
 
 ### Tool Orchestration — provider function-calling wire-up
 
-**Shipped (P12):** `runtime/tool_registry.py` (`@tool` + YAML allowlist,
-`SEC-TOOL-001`). MCP stays **bring-your-own** (settled).
+**Shipped:** `runtime/tool_registry.py` (`@tool` + YAML allowlist,
+`SEC-TOOL-001`, tenant-attributed spans). MCP stays **bring-your-own**.
 
 **Remaining gap:** `llm_gateway.complete()` still does not emit provider
-function-calling request fields — registry is allowlist/schema extraction,
-not an MCP/tool-choice runtime.
+function-calling request fields — the registry is allowlist/schema extraction,
+not a tool-choice runtime.
 
-**Trigger:** a tenant reference app needs the LLM to choose among tools
-dynamically inside the gateway request, not only fixed activity sequences.
+**Trigger:** a tenant needs the LLM to choose among tools dynamically inside
+the gateway request, not only fixed activity sequences.
 
 ### Perception & Input Parsing — prompt templating
 
-**Shipped (P12):** `runtime/structured_output.py` (`parse_llm_json`,
+**Shipped:** `runtime/structured_output.py` (`parse_llm_json`,
 `SEC-OUTPUT-001`).
 
-**Remaining gap:** no reusable prompt-template engine; prompts are often
-inline f-strings. Reference apps may still use ad-hoc JSON extraction until
-migrated to `parse_llm_json`.
+**Remaining gap:** no reusable prompt-template engine; prompts are inline
+f-strings (KYC Sentinel has four such prompts across its agents).
 
 **Trigger:** 2+ real call sites sharing the same prompt structure.
 
-**Fix sketch:** `runtime/prompt_templates.py` (minimal Jinja2 or
-`string.Template` wrapper).
+**Fix sketch:** `runtime/prompt_templates.py` — a minimal Jinja2 or
+`string.Template` wrapper.
 
 ### Memory / RAG — remaining extensions (v1 shipped)
 
-Shipped v1: `conversation_memory.py`, `embeddings.py` (hash / optional
-sentence-transformers), `vector_store.py` (memory / pgvector). See
-[`docs/rag-memory.md`](./docs/rag-memory.md) and OPERATIONS.md.
+Shipped: `conversation_memory.py`, `embeddings.py`, `vector_store.py`
+(memory / pgvector). See [`docs/rag-memory.md`](./docs/rag-memory.md).
 
-**Remaining:** summarization eviction; auto-RAG in the gateway;
-ingest/chunk CLI; live pgvector CI job (extension often absent in bare
-Postgres).
+**Remaining:** summarization eviction; auto-RAG in the gateway; ingest/chunk
+CLI; a live pgvector CI job (the extension is often absent in bare Postgres).
 
 **Trigger:** a tenant needs summarization or gateway-native retrieve.
 
 ### HITL self-correction — remaining extensions (v1 shipped)
 
-**Remaining:** tenant-specific policies for which error classes opt in;
-multi-turn planner/tool-choice correction stays out of scope.
+**Remaining:** tenant-specific policies for which error classes opt in.
+Multi-turn planner/tool-choice correction stays out of scope.
 
 ### Eval suites — remaining extensions (v1 shipped)
 
-- **Hallucination:** expand golden cases beyond seed pairs; human review UI
+- **Hallucination:** expand golden cases beyond seed pairs; a human review UI
   for flagged cases.
 - **Fairness:** domain-specific sets beyond seed pairs; statistical
   disparate-impact metrics beyond judge + pair parity.
 - **TTFT:** portal chat UI streaming; TTFT on the non-stream path (not
-  measurable without a fake first token).
+  measurable without a fake first token). Not wired into KYC Sentinel's CI —
+  it needs a live streaming provider.
 
 ### Input guardrail — remaining extensions (v1 shipped)
 
 **Remaining:** tenant-specific PII vocabularies beyond the default patterns
-(Emirates ID, email, phone, Luhn cards); content moderation (toxicity)
-stays out of scope for the framework.
+(Emirates ID, email, phone, Luhn cards). Content moderation (toxicity) stays
+out of framework scope — tenants declare a `moderation.hook`.
+
+### Package rename — `runtime` → `agentsmith_runtime`
+
+The distribution is `agentsmith-runtime` but imports as the generic top-level
+`runtime`, which could collide in a crowded virtualenv. Noted in
+`pyproject.toml`.
+
+**Trigger:** a real collision, or the next major version — it breaks every
+`from runtime.X import Y` in every tenant at once, so it is a 2.0.0 change.
 
 ---
 
 ## Appendix — Lessons (do not repeat)
 
 Operational lessons distilled from past phases; full incident context in
-`Product_Archive.md`.
+`Product_Archive.md` and `CHANGELOG.md`.
 
+- **A test double must never be more capable than the real thing.** KYC
+  Sentinel's original fake gateway aliased `complete_stream` to `complete`,
+  hiding a production crash on the analyst's own route. `runtime/testing.py`'s
+  shipped double now refuses to stream what the real gateway can't.
+- **A guard assertion inside the `try` it guards is not a guard.** Two F-scenario
+  drivers raised `AssertionError` inside a block caught by
+  `except Exception`, so they reported their control proven while it was
+  broken — through CI and a Cloud Run smoke job.
+- **Config that is read from two places will disagree.** There were four
+  copies of "which model is the architect tier", a judge id in a constant
+  *and* in models.yaml, and a security pack that was a byte-copy of its own
+  template. Every one had drifted. Read from one source; guard it with a test.
+- **cwd-relative vs install-relative is a real distinction.** The security
+  harness resolved the tenant pack from its install location, so every tenant
+  graded the framework's pack. Two roots that coincide during self-test hide
+  this completely.
+- **"Skip gracefully" means exit 0.** `return 2` from `run_scorecard()` still
+  failed the CI step, so every fresh tenant went red for not yet having a
+  golden dataset. This lesson was recorded here and applied to only one of two
+  call sites for months.
+- **A CI callee must ship with its caller.** `ci-python-fastapi.yml`
+  referenced `eval-security.yml`, which `ai-tenant-init` never copied — GitHub
+  rejects the whole workflow as invalid, not just the missing job.
+- **GitHub Actions rejects YAML anchors.** They parse fine locally and fail on
+  the runner.
 - **Groq 429 retry needs FULL JITTER** — `(2**attempt)*5 + random.uniform(0, 3)`.
-  A bare `2**n * 5` gives concurrent CI jobs identical waits; they retry in
-  lockstep and re-saturate the rate window. Now baked into
+  A bare `2**n * 5` gives concurrent CI jobs identical waits. Baked into
   `scripts/cost_router.py`.
 - **`# fail-open:` convention + global-copy drift** — the pre-commit hook
-  executes the GLOBAL `~/.agent-framework/scripts/check_bare_except.py`,
-  not the repo copy; always sync both when changing checker behavior. The
-  one accepted suppression form is `# fail-open: <reason>`
-  (`# noqa: bare-except` was retired — ruff rejects unknown noqa codes).
-- **Graceful skip = exit 0** — `return 2` from `run_scorecard()` still
-  fails the CI step; "skip gracefully on infra errors" requires `0`.
-- **Test/code skew** — when changing a return value, update the test in the
-  same commit; CI catches the skew if they ship separately.
+  executes the GLOBAL `~/.agent-framework/scripts/check_bare_except.py`, not
+  the repo copy; sync both when changing checker behaviour.
 - **Cloud SQL from Cloud Run** — use the Auth Proxy
   (`--add-cloudsql-instances`, Unix-socket `DATABASE_URL`), never
   `sslmode=no-verify`; grant the Compute SA `roles/cloudsql.client` and
   `roles/secretmanager.secretAccessor` per secret.
-- **WIF attribute condition is one expression** — adding a repo means
-  updating `==` to `in [...]`, or the new repo gets
+- **New GCP projects grant the default compute SA nothing.** Cloud Run
+  `--source` deploys use it via Cloud Build; it needs
+  `roles/storage.objectViewer`, `roles/artifactregistry.writer`,
+  `roles/logging.logWriter` before a first deploy will work.
+- **WIF attribute condition is one expression** — adding a repo means updating
+  `==` to `in [...]`, or the new repo gets
   `unauthorized_client: rejected by attribute condition`.
 - **oil-price-demo: cherry-pick, don't rebase** — the post-commit hook
-  regenerates the Knowledge Graph on every git operation; rebasing dozens
-  of commits fires it each step and blocks the rebase with unstaged changes.
-  *Update 2026-07-21:* `AGENT_KG_DEFER=1 git rebase ...` now skips the
-  per-step rebuild (run `python3 scripts/map_codebase.py` once afterwards),
-  and the walk itself is incremental (unchanged files skipped by mtime) —
-  rebase is safe again with the guard set.
+  regenerates the Knowledge Graph on every git operation. `AGENT_KG_DEFER=1 git
+  rebase ...` now skips the per-step rebuild (run `python3
+  scripts/map_codebase.py` once afterwards).
