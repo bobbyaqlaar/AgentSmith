@@ -100,7 +100,8 @@ entries:
     mitigations:
       - Release artifacts are optionally GPG-signed (release.yml, same mechanism as the enterprise hook bundle).
       - AI_STACK_FRAMEWORK_REPO allows pinning to a self-hosted mirror or fork.
-      - Known gap — no vX.Y.Z tag has been cut, so the release path currently 404s and only the local-checkout install works. Tracked in FIXES_AND_CLEANUP.md; cut a release before advertising the one-liner.
+      - v1.1.0 (2026-07-29) is the first published release; the five artifacts install-ai-stack.sh fetches are verified reachable from releases/latest/download/. Before it, the remote path 404'd and only the local-checkout install worked.
+      - scripts/test/test_release_artifact_contract.py asserts every artifact the installer downloads is one release.yml actually builds, and that each extracts flat — a release cannot be fixed in place after machines have run the one-liner.
     control_ids:
       - SEC-CHANGE-001
       - SEC-RISK-001
