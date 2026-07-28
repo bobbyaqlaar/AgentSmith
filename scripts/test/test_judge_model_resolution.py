@@ -172,3 +172,36 @@ def test_per_role_api_key_env_wins(
     monkeypatch.chdir(tmp_path)
     _shared._REGISTRY_CACHE.clear()
     assert _shared.role_credential_env("judge") == "ANTHROPIC_API_KEY_JUDGE"
+
+
+def test_credential_resolution_survives_an_older_runtime(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """scripts/ can be NEWER than the runtime package a tenant pins — CI runs
+    the framework checkout's scripts against the pinned wheel. When
+    credential_env_for_model isn't there yet, returning None means "can't tell,
+    don't skip", which ran twelve judge calls that all 401'd and failed KYC
+    Sentinel's build. It must degrade to the same answer instead."""
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "models.yaml").write_text(
+        "models:\n"
+        "  judge:\n"
+        "    id: claude-opus-4-8\n"
+        "    provider: anthropic\n"
+        "    api_key_env: ANTHROPIC_API_KEY_JUDGE\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    _shared._REGISTRY_CACHE.clear()
+
+    import runtime.provider_dispatch as pd
+
+    monkeypatch.delattr(pd, "credential_env_for_model")
+    assert _shared.role_credential_env("judge") == "ANTHROPIC_API_KEY_JUDGE"
+
+
+def test_fallback_map_matches_the_runtime_mapping() -> None:
+    """The duplicate exists only as a version-skew shim; it must not drift."""
+    from runtime.provider_dispatch import _DEFAULT_API_KEY_ENV
+
+    assert _shared._FALLBACK_API_KEY_ENV == _DEFAULT_API_KEY_ENV

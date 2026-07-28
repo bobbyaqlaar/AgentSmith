@@ -90,8 +90,38 @@ def role_credential_env(role: str) -> Optional[str]:
         from runtime.provider_dispatch import credential_env_for_model
 
         return credential_env_for_model(cfg)
-    except Exception:  # fail-open: no runtime/ on the path
+    except Exception:
+        # The installed runtime predates credential_env_for_model (a tenant
+        # pins a framework VERSION, so scripts/ can be newer than the package
+        # it imports). Degrade to the same mapping rather than returning None:
+        # None means "can't tell, don't skip", which in CI meant running twelve
+        # judge calls that all 401'd and failed the build. Broke KYC Sentinel's
+        # CI exactly that way — scripts/ from the checkout, runtime/ from the
+        # v1.1.0 wheel.
+        return _fallback_credential_env(cfg)
+
+
+# Mirrors runtime.provider_dispatch._DEFAULT_API_KEY_ENV. Duplicated on
+# purpose and only reachable when that module is too old to ask — the
+# alternative is a hard version coupling between scripts/ and the pinned
+# runtime, which is the thing the vendoring boundary exists to avoid.
+_FALLBACK_API_KEY_ENV = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "groq": "GROQ_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "azure_openai": "AZURE_OPENAI_API_KEY",
+    "ollama": None,
+    "vertex_ai": None,
+    "bedrock": None,
+    "huawei_modelarts": None,
+}
+
+
+def _fallback_credential_env(cfg: dict) -> Optional[str]:
+    default_env = _FALLBACK_API_KEY_ENV.get(cfg.get("provider", "openai"), "OPENAI_API_KEY")
+    if default_env is None:
         return None
+    return cfg.get("api_key_env") or default_env
 
 
 def provider_models(provider: str) -> list[str]:
