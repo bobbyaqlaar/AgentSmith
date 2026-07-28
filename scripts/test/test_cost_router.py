@@ -154,3 +154,92 @@ def test_success_resets_failure_counter(monkeypatch):
     _stub_transport(monkeypatch, [_Resp(200)])
     assert cost_router.call("hi") == "ok"
     assert "llama-3.3-70b-versatile" not in cost_router._consecutive_failures
+
+
+# ── Judge credential resolution (eval path) ──────────────────────────────────
+
+
+def test_forced_model_honours_a_registry_role_api_key_env(
+    monkeypatch, tmp_path
+) -> None:
+    """The eval judge routes through _route_for_model, which read
+    ANTHROPIC_API_KEY only. A tenant whose judge declares its own
+    `api_key_env` — KYC Sentinel's does, for judge/actor separation at the
+    billing level — passed the eval preflight (which checks the DECLARED
+    variable, correctly) and then sent an empty auth header. 401 on every
+    judge call, from a configuration that is right everywhere else."""
+    import importlib
+
+    import _shared
+
+    (tmp_path / "models.yaml").write_text(
+        "models:\n"
+        "  judge:\n"
+        "    id: claude-opus-4-8\n"
+        "    provider: anthropic\n"
+        "    api_key_env: ANTHROPIC_API_KEY_JUDGE\n",
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY_JUDGE", "sk-declared")
+    _shared._REGISTRY_CACHE.clear()
+    router = importlib.reload(cost_router)
+
+    route = router._route_for_model("claude-opus-4-8")
+    assert route.api_key == "sk-declared"
+    assert route.base_url == "https://api.anthropic.com/v1"
+
+
+def test_declared_key_wins_over_the_provider_default(monkeypatch, tmp_path) -> None:
+    import importlib
+
+    import _shared
+
+    (tmp_path / "models.yaml").write_text(
+        "models:\n"
+        "  judge:\n"
+        "    id: claude-opus-4-8\n"
+        "    provider: anthropic\n"
+        "    api_key_env: ANTHROPIC_API_KEY_JUDGE\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-fallback")
+    monkeypatch.setenv("ANTHROPIC_API_KEY_JUDGE", "sk-declared")
+    _shared._REGISTRY_CACHE.clear()
+    router = importlib.reload(cost_router)
+
+    assert router._route_for_model("claude-opus-4-8").api_key == "sk-declared"
+
+
+def test_provider_default_still_used_without_a_declared_env(
+    monkeypatch, tmp_path
+) -> None:
+    """Roles with no api_key_env must keep working off the provider default —
+    the fix must not require every tenant to declare one."""
+    import importlib
+
+    import _shared
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-fallback")
+    monkeypatch.delenv("ANTHROPIC_API_KEY_JUDGE", raising=False)
+    _shared._REGISTRY_CACHE.clear()
+    router = importlib.reload(cost_router)
+
+    assert router._route_for_model("claude-sonnet-4-6").api_key == "sk-fallback"
+
+
+def test_local_model_ids_route_to_ollama(monkeypatch, tmp_path) -> None:
+    """The framework's default judge is falcon3:3b — an id _route_for_model
+    recognises via none of its substring rules, so it must land on the local
+    fallback rather than an unauthenticated cloud host."""
+    import importlib
+
+    import _shared
+
+    _shared._REGISTRY_CACHE.clear()
+    router = importlib.reload(cost_router)
+
+    for model in ("falcon3:3b", "qwen2.5", "smollm2", "llama3.2:3b"):
+        route = router._route_for_model(model)
+        assert route.is_local, f"{model} should route locally, got {route.base_url}"
+        assert route.api_key == "ollama"

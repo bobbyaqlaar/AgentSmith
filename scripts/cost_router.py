@@ -286,6 +286,38 @@ def _local_route(model: Optional[str] = None) -> ModelRoute:
     )
 
 
+def _credential_for(model: str, default_env: str) -> str:
+    """API key for an exact model id, honouring a registry role's `api_key_env`.
+
+    Mirrors `LLMGateway._lookup_api_key`: a role's own variable wins when it is
+    populated, else the provider default. Without this the two paths disagreed
+    about which credential a route uses, and the eval judge was the casualty —
+    KYC Sentinel's judge declares `api_key_env: ANTHROPIC_API_KEY_JUDGE` (its
+    own account, so a rate limit on the analyst can't also take out its
+    reviewer), the gateway honoured it, and this function read
+    ANTHROPIC_API_KEY only. Setting exactly the variable the tenant declared
+    passed the eval preflight and then sent an empty auth header: 401 on every
+    judge call, from a config that is correct everywhere else.
+
+    Falls back silently when the registry can't be read — scripts/ is installed
+    to ~/.agent-framework and may run with no runtime/ on the path.
+    """
+    try:
+        from _shared import load_registry
+        from runtime.provider_dispatch import credential_env_for_model
+
+        for cfg in (load_registry() or {}).values():
+            if cfg.get("id") != model:
+                continue
+            env = credential_env_for_model(cfg)
+            if env and os.environ.get(env, "").strip():
+                return os.environ[env]
+            break
+    except Exception:  # fail-open: fall through to the provider default
+        pass
+    return os.environ.get(default_env, "")
+
+
 def _route_for_model(model: str) -> ModelRoute:
     """Build a route for an EXACT model id, bypassing route()'s complexity
     heuristics entirely — for callers (e.g. eval_judge.py's judge model)
@@ -294,9 +326,9 @@ def _route_for_model(model: str) -> ModelRoute:
     model id's naming convention, same substring-based approach
     infer_provider() already uses elsewhere in this codebase for base_url
     strings."""
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    openai_key = os.environ.get("OPENAI_API_KEY", "")
-    groq_key = os.environ.get("GROQ_API_KEY", "")
+    anthropic_key = _credential_for(model, "ANTHROPIC_API_KEY")
+    openai_key = _credential_for(model, "OPENAI_API_KEY")
+    groq_key = _credential_for(model, "GROQ_API_KEY")
     lower = model.lower()
 
     if "claude" in lower:
