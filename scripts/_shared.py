@@ -66,6 +66,34 @@ def role_model(role: str, fallback: str) -> str:
     return (registry.get(role) or {}).get("id") or fallback
 
 
+def role_credential_env(role: str) -> Optional[str]:
+    """Env var the given registry role needs, or None if it needs no credential.
+
+    Provider-agnostic on purpose: it reads the MERGED registry, so it follows a
+    role wherever the tenant points it. Asking "is ANTHROPIC_API_KEY set?"
+    instead — which the KYC Sentinel CI originally did — is wrong twice over:
+    it breaks the moment a tenant repoints the role at Groq or a local model,
+    and it ignores a role's own `api_key_env` (that tenant's judge declares
+    `ANTHROPIC_API_KEY_JUDGE`, so the check was reading a variable the route
+    never uses).
+
+    Returns None when the registry is unreadable — callers should treat that
+    as "can't tell", not as "no credential needed".
+    """
+    registry = load_registry()
+    if not registry:
+        return None
+    cfg = registry.get(role)
+    if not cfg:
+        return None
+    try:
+        from runtime.provider_dispatch import credential_env_for_model
+
+        return credential_env_for_model(cfg)
+    except Exception:  # fail-open: no runtime/ on the path
+        return None
+
+
 def provider_models(provider: str) -> list[str]:
     """Sorted model ids the merged registry routes to a given provider —
     e.g. every `ollama` id, for a "are these pulled?" preflight check."""

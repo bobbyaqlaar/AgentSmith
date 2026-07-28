@@ -124,3 +124,51 @@ def test_routing_override_also_reaches_the_judge(
     )
     monkeypatch.chdir(tmp_path)
     assert _shared.judge_model() == "override-judge-model"
+
+
+# ── Judge credential resolution ──────────────────────────────────────────────
+
+
+def test_local_judge_needs_no_credential() -> None:
+    """The framework's own judge is falcon3:3b on Ollama — nothing to set."""
+    assert _shared.role_credential_env("judge") is None
+
+
+def test_credential_follows_the_role_not_a_hardcoded_provider(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Regression: KYC Sentinel's CI gated its eval steps on
+    `secrets.ANTHROPIC_API_KEY != ''`. That hardcodes a provider — repoint the
+    judge role at Groq and the condition is nonsense — and it ignored the
+    role's own `api_key_env`, so it read a variable the route never uses and
+    the gates would have stayed skipped even once the declared key was set."""
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "models.yaml").write_text(
+        "models:\n"
+        "  judge:\n"
+        "    id: llama-3.3-70b-versatile\n"
+        "    provider: groq\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    _shared._REGISTRY_CACHE.clear()
+    assert _shared.role_credential_env("judge") == "GROQ_API_KEY"
+
+
+def test_per_role_api_key_env_wins(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A role with its own account (judge/actor separation extended to
+    billing) must be checked against ITS variable, not the provider default."""
+    (tmp_path / ".git").mkdir()
+    (tmp_path / "models.yaml").write_text(
+        "models:\n"
+        "  judge:\n"
+        "    id: claude-opus-4-8\n"
+        "    provider: anthropic\n"
+        "    api_key_env: ANTHROPIC_API_KEY_JUDGE\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    _shared._REGISTRY_CACHE.clear()
+    assert _shared.role_credential_env("judge") == "ANTHROPIC_API_KEY_JUDGE"

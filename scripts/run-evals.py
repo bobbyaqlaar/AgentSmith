@@ -543,6 +543,35 @@ def run_scorecard(
     return 0 if passed else 1
 
 
+def _missing_judge_credential() -> str | None:
+    """Env var the judge route needs but doesn't have, else None.
+
+    Exists so CI can gate on "is the judge reachable?" WITHOUT naming a
+    provider. The YAML alternative — `if: secrets.ANTHROPIC_API_KEY != ''` —
+    is wrong two ways: it breaks silently when a tenant repoints the judge role
+    at Groq or a local model, and it ignores a role's own `api_key_env`. KYC
+    Sentinel hit exactly that: its judge declares
+    `api_key_env: ANTHROPIC_API_KEY_JUDGE`, so a workflow checking
+    ANTHROPIC_API_KEY was reading a variable that route never uses, and the
+    gates would have stayed skipped even once the declared key was set.
+
+    Returns None (don't skip) when the answer is unknowable — an explicit
+    AGENT_JUDGE_MODEL override whose provider we can't infer, or an unreadable
+    registry. Better to attempt the eval and fail loudly than to skip a gate on
+    a guess.
+    """
+    if os.environ.get("AGENT_JUDGE_MODEL", "").strip():
+        return None  # explicit override — provider unknown, don't second-guess it
+    try:
+        from _shared import role_credential_env
+    except Exception:  # fail-open: can't tell -> don't skip
+        return None
+    env_var = role_credential_env("judge")
+    if not env_var:
+        return None  # local provider, or registry unreadable
+    return None if os.environ.get(env_var, "").strip() else env_var
+
+
 def hallucination_flag_rate(rows: list[dict], flag_at: float = 0.5) -> float:
     scored = [r for r in rows if isinstance(r.get("hallucination"), (int, float))]
     if not scored:
@@ -622,6 +651,17 @@ if __name__ == "__main__":
             "Default: ADVERSARIAL_FAIL_ABOVE from .env/env, else 0.10."
         ),
     )
+    parser.add_argument(
+        "--skip-without-judge-credentials",
+        action="store_true",
+        help=(
+            "Exit 0 with a message when the judge route's API key env var is "
+            "unset, instead of failing. The variable is derived from the "
+            "`judge` role in models.yaml (honouring api_key_env), so this "
+            "works whatever provider the role points at. No-op for --suite "
+            "adversarial, which uses no judge model."
+        ),
+    )
     args = parser.parse_args()
     threshold = _resolve_fail_below(args.suite, args.fail_below)
     hallucination_threshold = _resolve_hallucination_fail_above(
@@ -630,6 +670,17 @@ if __name__ == "__main__":
     adversarial_threshold = _resolve_adversarial_fail_above(
         args.adversarial_fail_above
     )
+    if args.skip_without_judge_credentials and args.suite != "adversarial":
+        missing = _missing_judge_credential()
+        if missing:
+            print(
+                f"⏭️  Skipping {args.suite} eval: the judge route needs {missing}, "
+                f"which is not set.\n"
+                f"   Judge model: {_judge_model()}. Set {missing} to turn this "
+                f"suite into a real gate."
+            )
+            sys.exit(0)
+
     code = run_scorecard(
         fail_below=threshold,
         suite=args.suite,

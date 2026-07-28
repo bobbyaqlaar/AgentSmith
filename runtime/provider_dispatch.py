@@ -118,6 +118,50 @@ def parse_response(provider: str, data: dict) -> tuple[str, int, int]:
 _STREAMING_PROVIDERS = {"openai", "ollama", "groq", "anthropic"}
 
 
+_DEFAULT_API_KEY_ENV = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "groq": "GROQ_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "azure_openai": "AZURE_OPENAI_API_KEY",
+    # ollama is local and takes a literal "ollama" token — no credential.
+    "ollama": None,
+    # Cloud-native adapters authenticate through their SDK's credential chain
+    # (google-auth ADC, boto3, Huawei AK/SK), not a single API-key env var.
+    "vertex_ai": None,
+    "bedrock": None,
+    "huawei_modelarts": None,
+}
+
+
+def default_api_key_env(provider: str) -> Optional[str]:
+    """Env var holding this provider's API key, or None when it needs none.
+
+    One mapping, so "which credential does this role need?" is answerable
+    outside the gateway — CI preflights, health checks, an operator asking why
+    a route is skipped. It was previously only expressible as the string
+    literals inside `LLMGateway._resolve_endpoint`'s if/elif chain, so a
+    caller wanting the answer had to hardcode a provider name and guess.
+    Unknown providers fall back to OPENAI_API_KEY, matching that chain's
+    `else` branch (everything else is OpenAI-compatible).
+    """
+    return _DEFAULT_API_KEY_ENV.get(provider, "OPENAI_API_KEY")
+
+
+def credential_env_for_model(cfg: dict) -> Optional[str]:
+    """The env var a model config actually reads, honouring `api_key_env`.
+
+    A tenant can point one role at its own account — KYC Sentinel's judge uses
+    `api_key_env: ANTHROPIC_API_KEY_JUDGE` so a rate limit on the analyst's
+    account can't also take out its reviewer. Anything checking whether a role
+    is runnable has to respect that, or it checks the wrong variable and
+    reports a correctly-configured route as unavailable.
+    """
+    default_env = default_api_key_env(cfg.get("provider", "openai"))
+    if default_env is None:
+        return None
+    return cfg.get("api_key_env") or default_env
+
+
 def supports_streaming(provider: str) -> bool:
     """True when complete_stream can measure TTFT for this provider.
 
