@@ -501,6 +501,24 @@ def run_scorecard(
     print(f"  Threshold:       {fail_below:.2f}")
     print("─────────────────────────────────────────────")
 
+    # Every case errored => the judge was unreachable, not the app misbehaving.
+    # That is an infrastructure state (expired key, exhausted credit balance,
+    # provider outage) in the same class as the missing-credential preflight,
+    # and blocking merges on it reports a billing problem as a quality
+    # regression. Observed live: a credit-exhausted account returned
+    # `400 invalid_request_error` on all 12 golden cases and failed the gate.
+    # Deliberately narrow — PARTIAL errors still fail, because a judge that
+    # answers some cases and not others may be signalling something real.
+    if results and all(r.get("error") for r in results):
+        print(
+            f"\n  ⏭️  Skipping {suite} gate: no case received a verdict — the judge "
+            f"was unreachable.\n"
+            f"      This is an infrastructure failure, not a quality result, so it "
+            f"does not block.\n"
+            f"      {results[0]['error']}"
+        )
+        return 0
+
     if not passed:
         if suite == "adversarial":
             failing = [r for r in results if not r.get("ok")]

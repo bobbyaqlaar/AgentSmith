@@ -110,3 +110,51 @@ def test_load_dotenv_sets_fairness_threshold(tmp_path: Path, monkeypatch: pytest
     revals._load_dotenv(tmp_path)
     assert os.environ.get("FAIRNESS_FAIL_BELOW") == "0.72"
     assert revals._resolve_fail_below("fairness", None) == 0.72
+
+
+# ── Unreachable judge is infrastructure, not a quality result ─────────────────
+
+
+def _row(case_id, error):
+    """A result row shaped like _judge_case output, with per-case error state."""
+    return {
+        "case_id": case_id, "score": 0.0, "correctness": 0, "tool_accuracy": 0,
+        "latency_ms": 0, "quality_notes": "", "error": error,
+    }
+
+
+def _cases(n):
+    # golden requires >= 3 cases to gate at all; fewer skips before reaching
+    # the error-classification branch under test.
+    return [{"id": f"c{i}", "input": "x"} for i in range(n)]
+
+
+def test_all_cases_errored_does_not_block(monkeypatch, capsys) -> None:
+    """A credit-exhausted account returned 400 on all 12 golden cases and
+    failed the merge gate — reporting a billing state as a quality
+    regression. No verdict at all is an infrastructure failure."""
+    revals = _load_run_evals()
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(3))
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(
+        revals, "_judge_case",
+        lambda case, *a, **k: _row(case["id"], "HTTP 400 credit balance too low"),
+    )
+
+    assert revals.run_scorecard(fail_below=0.8, suite="golden") == 0
+    assert "judge was unreachable" in capsys.readouterr().out
+
+
+def test_partial_errors_still_block(monkeypatch, capsys) -> None:
+    """Deliberately narrow: a judge that answers some cases and not others
+    may be signalling something real, so that still fails."""
+    revals = _load_run_evals()
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(3))
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(
+        revals, "_judge_case",
+        lambda case, *a, **k: _row(case["id"], None if case["id"] == "c2" else "HTTP 400 boom"),
+    )
+
+    assert revals.run_scorecard(fail_below=0.8, suite="golden") == 1
+    assert "did not get a verdict" in capsys.readouterr().out
