@@ -243,3 +243,48 @@ def test_local_model_ids_route_to_ollama(monkeypatch, tmp_path) -> None:
         route = router._route_for_model(model)
         assert route.is_local, f"{model} should route locally, got {route.base_url}"
         assert route.api_key == "ollama"
+
+
+# ── Provider error bodies must reach the caller ──────────────────────────────
+
+
+def test_http_error_surfaces_the_provider_response_body(monkeypatch) -> None:
+    """`raise_for_status()` reports only the status line, so a 400 arrived as
+    "Client error '400 Bad Request'" with no hint at WHICH field was wrong.
+    KYC Sentinel's eval gate failed twelve times that way with nothing to act
+    on. Providers put the actionable part in the body — surface it."""
+    import httpx
+
+    class _ErrResp:
+        status_code = 400
+        text = (
+            '{"type":"error","error":{"type":"invalid_request_error",'
+            '"message":"max_tokens: must be less than or equal to 8192"},'
+            '"request_id":"req_abc"}'
+        )
+
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: _ErrResp())
+    monkeypatch.setenv("GROQ_API_KEY", "gsk-test")
+
+    with pytest.raises(RuntimeError) as exc:
+        cost_router.call("hi", force_model="llama-3.3-70b-versatile")
+
+    message = str(exc.value)
+    assert "HTTP 400" in message
+    assert "max_tokens: must be less than or equal to 8192" in message
+    assert "req_abc" in message
+
+
+def test_http_error_without_a_body_still_reports_the_status(monkeypatch) -> None:
+    """Response doubles and bodiless errors must not turn into an
+    AttributeError that masks the real status code."""
+    import httpx
+
+    class _BodilessResp:
+        status_code = 503
+
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: _BodilessResp())
+    monkeypatch.setenv("GROQ_API_KEY", "gsk-test")
+
+    with pytest.raises(RuntimeError, match="HTTP 503"):
+        cost_router.call("hi", force_model="llama-3.3-70b-versatile")

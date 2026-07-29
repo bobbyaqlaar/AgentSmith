@@ -460,7 +460,22 @@ def call(
                 wait = (2**attempt) * 5 + random.uniform(0, 3)
                 _time.sleep(wait)
                 continue
-            resp.raise_for_status()
+            # `status_code >= 400` rather than httpx's `resp.is_error`: the
+            # test doubles in scripts/test/ implement the minimal response
+            # surface (status_code / json / text), and depending on an httpx
+            # convenience property here would couple this path to the real
+            # client for no benefit.
+            if resp.status_code >= 400:
+                # raise_for_status() reports only the status line, so a 400
+                # arrived as "Client error '400 Bad Request'" with no hint at
+                # WHICH field was wrong — undebuggable without re-running by
+                # hand with the key. Providers put the actionable part in the
+                # body ({"error": {"message": "..."}}), so surface it. Bodies
+                # are error text, not request echoes: no key material in them
+                # (the key travels in a header), and truncation bounds a
+                # provider that returns an HTML error page.
+                detail = getattr(resp, "text", "") or "(no response body)"
+                raise RuntimeError(f"HTTP {resp.status_code} from {url}: {detail[:600]}")
             break
         data = resp.json()
 

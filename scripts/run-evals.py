@@ -506,11 +506,24 @@ def run_scorecard(
             failing = [r for r in results if not r.get("ok")]
         else:
             failing = [r for r in results if r["score"] < fail_below]
+        # A judge call that ERRORED and a rationale the judge genuinely scored
+        # 0.00 both land here as `score=0.00`, and an errored call has no
+        # quality_notes — so a broken judge printed twelve identical blank
+        # lines and read as "the app failed every case". Show the error.
+        errored = [r for r in failing if r.get("error")]
+        if errored:
+            print(
+                f"\n  ⚠️  {len(errored)} of {len(failing)} case(s) did not get a verdict — "
+                f"the judge call itself failed.\n"
+                f"      These are NOT quality failures; the score is 0.00 because no "
+                f"grade came back.\n"
+                f"      First error: {errored[0]['error']}"
+            )
+
         print(f"\n  Failing cases ({len(failing)}):")
         for r in failing:
-            print(
-                f"    • [{r['case_id']}] score={r['score']:.2f}: {r['quality_notes']}"
-            )
+            detail = r.get("error") or r["quality_notes"] or "(no notes returned)"
+            print(f"    • [{r['case_id']}] score={r['score']:.2f}: {detail}")
         if parity:
             bad_pairs = [pid for pid, v in parity.items() if v < fail_below]
             if bad_pairs:
