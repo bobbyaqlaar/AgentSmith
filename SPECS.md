@@ -1114,6 +1114,7 @@ AgentSmith/
 │   ├── _shared.py               # Consolidated scripts/ helpers (repo root, Phoenix REST, judge model)
 │   ├── verify_ttft.py           # live Ollama TTFT smoke (`TTFT_FAIL_ABOVE_MS`)
 │   ├── verify_sovereign_endpoint.py  # Falcon 3 / HF sovereign smoke
+│   ├── verify_judge_route.py    # judge resolves, has its key, reaches its declared provider, returns JSON
 │   ├── promote-learning.py
 │   ├── sync-ui-feedback.py
 │   ├── agent_logger.py
