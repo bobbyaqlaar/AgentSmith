@@ -162,6 +162,39 @@ def credential_env_for_model(cfg: dict) -> Optional[str]:
     return cfg.get("api_key_env") or default_env
 
 
+_EXHAUSTION_MARKERS = (
+    "credit balance is too low",
+    "insufficient_quota",
+    "rate limit",
+    "billing",
+    "payment required",
+    "429",
+    "overloaded",
+)
+
+
+def is_provider_exhausted(exc: Exception) -> bool:
+    """True when the provider is unavailable for this key/tier — billing, quota
+    or throttling, none of which resolve by retrying the same route.
+
+    Lives here rather than on the gateway because both LLM call paths need the
+    same answer and must not drift into two definitions of "exhausted".
+    `llm_gateway` acts on it by degrading to the next tier; `cost_router` (the
+    eval path) deliberately does NOT degrade — a substituted grader is not a
+    grader — and uses it only to say *why* it stopped, so a skipped gate names
+    a billing state instead of an opaque status code.
+
+    Matching is on message text, which is why both paths must surface the
+    provider's response body rather than `raise_for_status()`'s status line:
+    the body carries "credit balance is too low", and without it this returns
+    False for the one case it exists to catch. That exact bug has now been
+    fixed twice — once on the gateway's streaming path (found live against a
+    credit-exhausted key) and once in cost_router.
+    """
+    msg = str(exc).lower()
+    return any(k in msg for k in _EXHAUSTION_MARKERS)
+
+
 def supports_streaming(provider: str) -> bool:
     """True when complete_stream can measure TTFT for this provider.
 

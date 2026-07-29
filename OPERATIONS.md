@@ -1128,6 +1128,36 @@ role wherever a tenant points it — including a role-level `api_key_env`. Never
 gate an eval step on `if: secrets.ANTHROPIC_API_KEY != ''`: that hardcodes a
 provider, and it ignores a role that declares its own key variable.
 
+#### Why the judge never falls back to another model
+
+There are two provider-calling paths, and they behave differently on purpose:
+
+| | Workload path | Eval path |
+|---|---|---|
+| Module | `runtime/llm_gateway.py` | `scripts/cost_router.py` |
+| Callers | workers, activities, tenant agents | `eval_judge.py` only |
+| On provider exhaustion | walks the `degrade_to` chain | **fails — no fallback** |
+| Budget, prompt guard, moderation, redaction | yes | no |
+
+Both classify exhaustion identically (`provider_dispatch.is_provider_exhausted`);
+they differ only in what they do about it.
+
+A degraded *actor* produces worse output that a good judge still catches. A
+degraded *judge* writes confident verdicts into the same `score` field, against
+the same threshold, gating the same merges, and nothing downstream can tell.
+Scores are only comparable against the grader they were calibrated for. So the
+eval path reports exhaustion rather than substituting a model, and the gate
+skips with a cause.
+
+Two guards back this. Every result row carries `judged_by`, and a scorecard
+whose verdicts came from more than one model **fails** rather than averaging
+them. `scripts/test/test_exhaustion_classification.py` asserts `cost_router`
+never references `degrade_to`, so adding a fallback there fails a test that
+explains why before it silently changes what every stored score means.
+
+A `degrade_to` on a `judge` role is therefore inert. Do not add one expecting a
+fallback — KYC Sentinel's `models.yaml` carries a worked example of why.
+
 Provider errors are surfaced with the response body (truncated), not just the
 status line. This matters more than it sounds: a bare `HTTP 400` is
 indistinguishable between a malformed request, a dead model id, and an account

@@ -352,6 +352,10 @@ def _judge_case(
         "tool_accuracy": scored.get("tool_accuracy", 0),
         "score": float(scored.get("score", 0.0)),
         "quality_notes": scored.get("quality_notes", ""),
+        # Which grader produced THIS verdict. A run-level judge_model records
+        # only what the run was asked for; per-case provenance is what makes a
+        # substitution visible in the stored artifact.
+        "judged_by": scored.get("judged_by"),
         "error": scored.get("error"),
     }
     if "fairness" in scored:
@@ -482,6 +486,11 @@ def run_scorecard(
     if hallucination_rate is not None and hallucination_limit is not None:
         passed = passed and hallucination_rate <= hallucination_limit
 
+    # Graders that actually produced verdicts. Normally one; more than one
+    # means something substituted a model mid-run, which makes the averages
+    # below incomparable to any calibrated threshold (see the gate check).
+    judges_used = sorted({r["judged_by"] for r in results if r.get("judged_by")})
+
     print("")
     print("─────────────────────────────────────────────")
     print(f"  Overall score:   {avg_score:.3f}  {'✅ PASS' if passed else '❌ FAIL'}")
@@ -518,6 +527,24 @@ def run_scorecard(
             f"      {results[0]['error']}"
         )
         return 0
+
+    # A scorecard graded by two different models is not a scorecard. Scores are
+    # only comparable to a threshold calibrated for one specific grader, so an
+    # average mixing verdicts from several of them means nothing — and it would
+    # be reported to two decimal places either way. This path is unreachable
+    # today because cost_router never substitutes a model (see
+    # scripts/test/test_exhaustion_classification.py); it exists so that adding
+    # a fallback there fails loudly here instead of quietly changing what every
+    # stored score means.
+    if len(judges_used) > 1:
+        print(
+            f"\n  ❌ {suite} gate failed: verdicts came from more than one judge "
+            f"{judges_used}.\n"
+            f"      Scores are calibrated per grader, so a mixed scorecard cannot "
+            f"be compared\n"
+            f"      against a single threshold. Pin the judge role and re-run."
+        )
+        return 1
 
     if not passed:
         if suite == "adversarial":
@@ -569,7 +596,9 @@ def run_scorecard(
         "timestamp": ts,
         "suite": suite,
         "project": project,
+        # The grader this run ASKED for. `judge_models_used` is what answered.
         "judge_model": judge,
+        "judge_models_used": judges_used,
         "criteria": criteria.get("name", "default"),
         "total_cases": len(cases),
         "avg_score": avg_score,

@@ -115,11 +115,11 @@ def test_load_dotenv_sets_fairness_threshold(tmp_path: Path, monkeypatch: pytest
 # ── Unreachable judge is infrastructure, not a quality result ─────────────────
 
 
-def _row(case_id, error):
+def _row(case_id, error, judged_by="test-judge", score=0.0):
     """A result row shaped like _judge_case output, with per-case error state."""
     return {
-        "case_id": case_id, "score": 0.0, "correctness": 0, "tool_accuracy": 0,
-        "latency_ms": 0, "quality_notes": "", "error": error,
+        "case_id": case_id, "score": score, "correctness": 0, "tool_accuracy": 0,
+        "latency_ms": 0, "quality_notes": "", "judged_by": judged_by, "error": error,
     }
 
 
@@ -158,3 +158,53 @@ def test_partial_errors_still_block(monkeypatch, capsys) -> None:
 
     assert revals.run_scorecard(fail_below=0.8, suite="golden") == 1
     assert "did not get a verdict" in capsys.readouterr().out
+
+
+# ── Verdict provenance ────────────────────────────────────────────────────────
+
+
+def test_a_mixed_scorecard_blocks(monkeypatch, capsys) -> None:
+    """Scores are calibrated per grader, so averaging verdicts from two models
+    and comparing the result to one threshold is meaningless — and it would be
+    reported to three decimal places regardless.
+
+    Unreachable today: cost_router never substitutes a model. This is the guard
+    that makes adding a fallback there fail loudly rather than quietly change
+    what every stored score means.
+    """
+    revals = _load_run_evals()
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(3))
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(
+        revals, "_judge_case",
+        lambda case, *a, **k: _row(
+            case["id"], None,
+            judged_by="strong-judge" if case["id"] == "c0" else "degraded-judge",
+            score=1.0,
+        ),
+    )
+
+    # Scores are a clean 1.0 — high enough to pass the threshold outright, so
+    # only the provenance check can be what blocks this.
+    assert revals.run_scorecard(fail_below=0.8, suite="golden") == 1
+    out = capsys.readouterr().out
+    assert "more than one judge" in out
+    assert "degraded-judge" in out and "strong-judge" in out
+
+
+def test_a_single_judge_records_provenance(monkeypatch, tmp_path) -> None:
+    """The normal path still passes, and the artifact says who graded it."""
+    revals = _load_run_evals()
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(3))
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(
+        revals, "_judge_case",
+        lambda case, *a, **k: _row(case["id"], None, judged_by="only-judge", score=1.0),
+    )
+    results_file = tmp_path / "eval_results.json"
+    monkeypatch.setattr(revals, "_results_path", lambda suite: results_file)
+
+    assert revals.run_scorecard(fail_below=0.8, suite="golden") == 0
+    written = json.loads(results_file.read_text())
+    assert written["judge_models_used"] == ["only-judge"]
+    assert {r["judged_by"] for r in written["results"]} == {"only-judge"}

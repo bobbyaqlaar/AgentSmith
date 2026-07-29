@@ -446,20 +446,17 @@ class LLMGateway:
     def _is_provider_exhausted(exc: Exception) -> bool:
         """True when the provider itself is unavailable for this key/tier — no point
         retrying; degrade to the next tier instead.  Covers billing, quota, and
-        auth errors that will not resolve on their own."""
-        msg = str(exc).lower()
-        return any(
-            k in msg
-            for k in (
-                "credit balance is too low",
-                "insufficient_quota",
-                "rate limit",
-                "billing",
-                "payment required",
-                "429",
-                "overloaded",
-            )
-        )
+        auth errors that will not resolve on their own.
+
+        The markers now live in `runtime/provider_dispatch.py` so the eval path
+        (`scripts/cost_router.py`) classifies failures identically — it reports
+        exhaustion rather than degrading, but "is this exhaustion?" must have
+        one answer. Kept as a method because the degrade loop below and its
+        tests both call it.
+        """
+        from runtime.provider_dispatch import is_provider_exhausted
+
+        return is_provider_exhausted(exc)
 
     def _resolve_role(
         self, model_hint: str, budget: BudgetStatus

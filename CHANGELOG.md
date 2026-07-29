@@ -19,7 +19,53 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Changed — the eval judge never falls back to another model
+
+The two provider-calling paths now differ **explicitly** rather than by
+omission. `runtime/llm_gateway.py` (workers, activities, tenant agents) walks
+the `degrade_to` chain on provider exhaustion. `scripts/cost_router.py` (the
+eval judge, and nothing else) classifies exhaustion identically and then fails,
+reporting the cause.
+
+A degraded *actor* produces worse output that a good judge still catches. A
+degraded *judge* writes confident verdicts into the same `score` field, against
+the same threshold, gating the same merges, with nothing downstream able to
+tell. Scores are only comparable against the grader they were calibrated for.
+
+- **`is_provider_exhausted` moved to `runtime/provider_dispatch.py`** — already
+  the shared seam between the two paths, so "is this exhaustion?" has one
+  definition even though the two answers to "what now?" differ. The gateway
+  keeps its method as a delegating shim; no behaviour change there.
+- **Per-case verdict provenance.** Every result row carries `judged_by`, and
+  `eval_results.json` gains `judge_models_used` alongside `judge_model` (which
+  is now explicitly *requested*, not *used*). A scorecard whose verdicts came
+  from more than one model **fails** — averaging across graders and comparing
+  to one threshold is meaningless. Additive keys only; `delivery_evidence.py`
+  and the CI artifact uploads are unaffected.
+- **`cost_router` must not grow a ladder.** A test asserts it never references
+  `degrade_to`, so adding one fails with the rationale attached rather than
+  silently changing what every stored score means.
+
+### Fixed
+
+- **An advisory LLM call could fail a whole KYC application.** `agents/judge.py`
+  makes a critique call whose result is deliberately discarded — the verdict
+  comes from deterministic citation and parity checks — but an exception from
+  it propagated and failed the activity. A call whose answer nobody reads could
+  block onboarding. Now fail-open, with the outage logged.
+
+  This was hidden by the judge role's `degrade_to`, which on an outage quietly
+  substituted a weaker model to write a critique nobody reads. Removing the
+  degrade exposed it. Tests cover both directions: an unreachable judge does
+  not block, and a bad citation still flags when the judge is down.
+- **A false safety claim in KYC Sentinel's `models.yaml` and RFC-002.** Both
+  said `warn_if_judge_not_independent` would catch a degrade that collapsed
+  judge and analyst onto one model. It cannot — `agents/judge.py` passes the
+  ids *declared* in the merged registry, so it validates configuration and is
+  structurally blind to any runtime substitution.
+- **`README.md` called the gateway the "single choke point for provider
+  calls"** without qualification, where `SPECS.md` correctly scoped it to
+  production workers. The eval harness is the one deliberate exception.
 
 ## [1.1.1] — 2026-07-29
 

@@ -63,7 +63,7 @@ self-improvement, and CI/CD — automatically.
 | **OpenTelemetry & Observability** | OTel span contract → Arize Phoenix — one instance per machine or team, per-project and per-tenant namespacing, owner/cost/token attribution |
 | **Ops Portal** | Cross-tenant ops dashboard — run history, cost vs cap, DLQ triage, HMAC append-only audit log, RBAC / optional SSO |
 | **Workflow Orchestration** | Durable agents via **Temporal** (primary) or **Celery** — HITL pause/resume, recoverable steps, shared or dedicated worker pools |
-| **LLM Gateway** | Single choke point for provider calls — budget reservation, degrade ladder, circuit breaker, redaction, prompt guard, moderation hook |
+| **LLM Gateway** | Single choke point for **workload** provider calls — budget reservation, degrade ladder, circuit breaker, redaction, prompt guard, moderation hook. Workers and activities must not bypass it. The eval harness (`scripts/cost_router.py`) is the one path that does not go through it, by design — see OPERATIONS.md |
 | **Vector / RAG Memory** | Short-term conversation memory + vector store substrate (`embeddings.py` / `vector_store.py`; hash or sentence-transformers; optional pgvector) |
 | **Security Framework** | `run-security-checks.py` + `SEC-*` registry — OWASP LLM · NIST AI RMF · MITRE ATLAS · ISO/IEC 42001 evidence packs in CI (`strict: true`) |
 | **Regulations Compliance** | UAE / sovereign starter (`templates/uae-sovereign/`), PDPL pre-call scrub, fairness + adversarial eval suites, ISO thematic control map |

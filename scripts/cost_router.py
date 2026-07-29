@@ -39,6 +39,41 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _shared import role_model  # noqa: E402
 
+
+# Mirrors runtime.provider_dispatch._EXHAUSTION_MARKERS. Duplicated on purpose
+# and only reachable when that module is too old to ask: a tenant pins a
+# framework VERSION, so scripts/ can be newer than the runtime package it
+# imports. Adding the import to call()'s required-import tuple instead would
+# turn a version skew into "every LLM call raises ImportError" — the same shape
+# as the credential-lookup regression that broke KYC Sentinel's CI.
+# scripts/test/test_exhaustion_classification.py asserts the two never drift.
+_FALLBACK_EXHAUSTION_MARKERS = (
+    "credit balance is too low",
+    "insufficient_quota",
+    "rate limit",
+    "billing",
+    "payment required",
+    "429",
+    "overloaded",
+)
+
+
+def _exhausted(exc: Exception) -> bool:
+    """Is this a provider-exhaustion failure (billing / quota / throttling)?
+
+    Classification only — unlike the gateway, this path never degrades on the
+    answer. See the call site for why a substituted judge is worse than no
+    judge.
+    """
+    try:
+        from runtime.provider_dispatch import is_provider_exhausted
+
+        return is_provider_exhausted(exc)
+    except Exception:
+        msg = str(exc).lower()
+        return any(k in msg for k in _FALLBACK_EXHAUSTION_MARKERS)
+
+
 # ── Model config ──────────────────────────────────────────────────────────────
 
 
@@ -475,7 +510,25 @@ def call(
                 # (the key travels in a header), and truncation bounds a
                 # provider that returns an HTML error page.
                 detail = getattr(resp, "text", "") or "(no response body)"
-                raise RuntimeError(f"HTTP {resp.status_code} from {url}: {detail[:600]}")
+                err = RuntimeError(f"HTTP {resp.status_code} from {url}: {detail[:600]}")
+                # Classify, but do NOT degrade. runtime/llm_gateway.py walks the
+                # models.yaml degrade_to chain on exhaustion; this path
+                # deliberately does not, because its caller is the eval judge
+                # and a substituted grader is not a grader — a weaker model
+                # emits confident verdicts into the same `score` field, against
+                # the same threshold, gating the same merges, and nothing
+                # downstream can tell. Failing loudly is the safer default; the
+                # scorecard skips with a cause instead of scoring with a
+                # stand-in. (See OPERATIONS.md "When a gate blocks, and when it
+                # steps aside".)
+                if _exhausted(err):
+                    raise RuntimeError(
+                        f"Provider exhausted for model {route_result.model!r} — "
+                        f"billing, quota or throttling, which retrying the same "
+                        f"route will not clear. This path does not fall back to "
+                        f"another model. {err}"
+                    ) from err
+                raise err
             break
         data = resp.json()
 

@@ -87,6 +87,13 @@ def run_judge(prompt: str, judge_model: str) -> dict[str, Any]:
     Returns a dict with correctness/tool_accuracy/score/quality_notes, and
     an "error" key set if the judge call or parse failed. May include
     "fairness" when the prompt requested it.
+
+    Always sets `judged_by` to the model asked to produce the verdict, so a
+    stored scorecard says which grader produced each number rather than only
+    which one the run started with. A score is not portable across judges — the
+    threshold it is compared against is calibrated for one specific grader — so
+    "who graded this" belongs with the score, not in a single run-level field
+    that a substitution would silently falsify.
     """
     from cost_router import call as llm_call
 
@@ -105,6 +112,9 @@ def run_judge(prompt: str, judge_model: str) -> dict[str, Any]:
         )
     except Exception as exc:
         scored = {"correctness": 0, "tool_accuracy": 0, "score": 0.0, "error": str(exc)}
+    # After the parse: a judge that returns a `judged_by` of its own must not
+    # be able to misreport which model ran.
+    scored["judged_by"] = judge_model
     return scored
 
 
