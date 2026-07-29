@@ -1085,6 +1085,34 @@ ai-test-evals
 python3 scripts/run-evals.py --fail-below 0.80
 ```
 
+#### When a gate blocks, and when it steps aside
+
+A judge-backed gate can only block on a *quality* signal. Three situations are
+infrastructure problems wearing a failing score, and each exits 0 with a
+message rather than turning the build red:
+
+| Situation | Behaviour |
+|---|---|
+| The `judge` role needs a credential that isn't set | Skips, naming the exact env var. Requires `--skip-without-judge-credentials`; without it, the run proceeds and the calls fail. |
+| The suite has fewer cases than the minimum | Skips — too few cases to mean anything. |
+| **Every** case errored — no case got a verdict | Skips, printing the provider's error. |
+
+That last row is the important one and it is deliberately narrow. A judge that
+answers *some* cases and errors on others still fails the gate: partial errors
+can be a real signal (rate limits under a pathological prompt, a route that
+chokes on one input), so they are not swallowed.
+
+The env var is resolved from the merged registry, so it follows the `judge`
+role wherever a tenant points it — including a role-level `api_key_env`. Never
+gate an eval step on `if: secrets.ANTHROPIC_API_KEY != ''`: that hardcodes a
+provider, and it ignores a role that declares its own key variable.
+
+Provider errors are surfaced with the response body (truncated), not just the
+status line. This matters more than it sounds: a bare `HTTP 400` is
+indistinguishable between a malformed request, a dead model id, and an account
+out of credits — all three were guessed at before the body was printed, and the
+answer turned out to be the third.
+
 ### Reliability & compliance suites (fairness, hallucination, TTFT)
 
 Shipped with the reliability pack v1 (CHANGELOG.md 1.0.0). Same

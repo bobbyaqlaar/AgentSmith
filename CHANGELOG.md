@@ -19,7 +19,31 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+
+- **An unreachable judge no longer fails an eval gate.** When *every* case
+  errors, no verdict came back and there is no quality signal to gate on — the
+  same class as the missing-credential preflight — so the suite exits 0 with
+  the provider's message. Partial errors still fail: a judge that answers some
+  cases and not others may be signalling something real. This is a deliberate
+  change to gate semantics; both sides of the boundary are pinned by tests
+  (`scripts/test/test_fairness_evals.py`).
+- **Provider errors surface the response body**, truncated to 600 chars, instead
+  of `raise_for_status()`'s bare status line. `run-evals.py` also separates
+  "scored 0.00" from "never got a verdict" — an errored judge previously printed
+  a column of empty `quality_notes`, which read as *the application* failing
+  every case. Three wrong root-cause guesses came out of that ambiguity before
+  the body was printed and named the real one. Keys travel in headers, never
+  response bodies, so this does not widen credential exposure.
+- **Judge credential lookup honours the role's `api_key_env`** and is resolved
+  from the merged registry rather than a hardcoded provider, so it follows the
+  `judge` role wherever a tenant points it. New
+  `--skip-without-judge-credentials` moves the decision out of CI YAML, which
+  cannot look up a secret by a name computed at runtime.
+- **Credential lookup degrades against an older pinned runtime.** `scripts/` can
+  be newer than the `runtime` wheel a tenant pins; when
+  `credential_env_for_model` is absent, returning `None` meant "can't tell,
+  don't skip" and ran a full suite of failing judge calls.
 
 ## [1.1.0] — 2026-07-29
 

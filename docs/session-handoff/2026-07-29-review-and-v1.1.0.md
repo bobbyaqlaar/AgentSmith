@@ -93,3 +93,48 @@ next concrete step is infrastructure, not code: Cloud SQL + Temporal + Ollama +
 Phoenix for KYC Sentinel, and `ANTHROPIC_API_KEY_JUDGE` (which also switches on
 the three judge-backed eval gates). There is also ~$7–10/month of GCP still
 billing from oil-price-demo that should be reused or torn down.
+
+---
+
+## Addendum — the eval gates, after v1.1.0
+
+Four fixes landed after the tag (see CHANGELOG `[Unreleased]`), all from one
+thread: making KYC Sentinel's three judge-backed gates actually run.
+
+**Fixtures now pin this tenant's own output.** Each golden/fairness case is
+mapped to an applicant and run through the real `process_application` in fake
+mode, recording `actual_output` + `actual_output_source`. Before this, the
+suites graded the framework's *generic* pipeline output — the gates were
+nominally about KYC and were judging something else.
+`test/test_eval_fixtures_pinned.py` fails on an unpinned, unmapped, or drifted
+case; `make pin-evals` regenerates. Two real defects surfaced during pinning:
+`kyc_012` is a *pair* case (pinning one side scored 0.20), and the gender
+fairness pair had no applicant behind it at all — it existed only as prompt
+text and could never have run.
+
+**The remaining blocker is not code.** The judge account is out of credits
+(`"Your credit balance is too low"`). Fund `ANTHROPIC_API_KEY_JUDGE` or repoint
+the `judge` role, and the gates start grading. Full diagnosis in KYC Sentinel's
+`DEVLOG.md` 2026-07-29.
+
+**A gate-semantics change to be aware of.** All-cases-errored now exits 0 with
+the provider's message; partial errors still fail. Reversible, and pinned by
+tests on both sides of the boundary. It exists because `main` was red over a
+billing state rather than a regression — but if you'd rather a provider outage
+block merges, that is a one-line change in `run_scorecard`.
+
+**Lesson worth carrying:** three root-cause hypotheses were wrong in a row
+because `raise_for_status()` hides the response body. When a diagnosis stalls,
+fix the diagnosability before guessing again.
+
+### Still open (flagged in review, never actioned — not re-requested)
+
+1. Golden `--fail-below 0.80` is **uncalibrated** against the real judge. Local
+   Ollama judges proved actively unreliable here: qwen2.5 marked `kyc_012` down
+   for "identical outputs despite differing nationalities" — the exact
+   behaviour policy-007 requires.
+2. KYC has **no hallucination/adversarial fixtures of its own**; those gates
+   grade framework base fixtures while their CI step names claim F7/F3
+   specificity.
+3. `SEC-TOOL-001` verifies the mechanism, not the tenant allowlist.
+4. **12 of 23 `SEC-*` controls have no runner.**

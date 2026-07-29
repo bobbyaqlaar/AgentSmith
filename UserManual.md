@@ -821,7 +821,8 @@ carrying their own copies.
 |---|---|---|
 | `ai-test-evals` | — | Sync HITL feedback from Phoenix, then run eval scorecard. |
 | `ai-stack-promote` | `<id> <query> <output>` | Promote a production fix to the golden dataset and re-run evals. |
-| `python3 scripts/run-evals.py --suite adversarial` | — | Prompt-injection / jailbreak suite (`ADVERSARIAL_FAIL_ABOVE`). |
+| `python3 scripts/run-evals.py --suite adversarial` | — | Prompt-injection / jailbreak suite (`ADVERSARIAL_FAIL_ABOVE`). Deterministic — no judge model, so it gates on every PR with no credential. |
+| `python3 scripts/run-evals.py` | `--skip-without-judge-credentials` | Skip (exit 0) when the `judge` role's credential is absent, naming the variable. For CI steps that must not go red on an unconfigured judge. See OPERATIONS.md "When a gate blocks, and when it steps aside". |
 | `python3 scripts/run-security-checks.py` | `--mode ci --strict` | Multi-framework security harness (P12). |
 | `python3 scripts/verify_system.py --check-security` | — | Smoke subset of the security harness. |
 
