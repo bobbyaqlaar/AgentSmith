@@ -1166,7 +1166,12 @@ answer turned out to be the third.
 
 ### Reliability & compliance suites (fairness, hallucination, TTFT)
 
-Shipped with the reliability pack v1 (CHANGELOG.md 1.0.0). Same
+Shipped with the reliability pack v1 (CHANGELOG.md 1.0.0). Design + plan:
+[`docs/superpowers/specs/2026-07-10-reliability-pack-v1-design.md`](./docs/superpowers/specs/2026-07-10-reliability-pack-v1-design.md),
+[`docs/superpowers/plans/2026-07-10-reliability-pack-v1.md`](./docs/superpowers/plans/2026-07-10-reliability-pack-v1.md)
+— the rationale for the thresholds and the pair-parity design lives there, and
+it had no inbound link from anywhere, unlike its security-harness counterpart
+in SPECS. Same
 `run-evals.py` entry point as the golden suite — different fixtures,
 different thresholds, separate CI workflows:
 

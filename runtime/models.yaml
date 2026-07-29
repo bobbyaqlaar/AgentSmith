@@ -136,6 +136,48 @@ models:
   # author of the rationales the judge scores. It only becomes a real
   # independence problem if you start judging validator output specifically;
   # at that point add a fifth local model rather than reusing one of these.
+  # ── Judge ───────────────────────────────────────────────────────────────
+  # Grades eval cases and (for tenants that use it) critiques agent output.
+  #
+  # CHOOSING A JUDGE. Independence is the property that matters most: a judge
+  # sharing a training lineage with the model it grades is not independent in
+  # any useful sense, and models rate their own family's output higher.
+  # `judge_independence_warning` only catches IDENTICAL ids, so a Claude judge
+  # grading a Claude actor passes that check while exhibiting exactly the bias
+  # it exists to prevent. Prefer a different VENDOR, not just a different model.
+  #
+  # Three cross-vendor options, all OpenAI-compatible — no adapter needed, just
+  # swap this entry and export the key. Copy one into a tenant models.yaml:
+  #
+  #   judge:                        # Anthropic
+  #     id: claude-opus-4-8
+  #     provider: anthropic
+  #     api_key_env: ANTHROPIC_API_KEY_JUDGE   # own account, own quota
+  #     fail_below: {golden: 0.80, fairness: 0.80}
+  #
+  #   judge:                        # xAI
+  #     id: grok-4
+  #     provider: xai
+  #     api_key_env: XAI_API_KEY
+  #     fail_below: {golden: 0.80, fairness: 0.80}
+  #
+  #   judge:                        # Google AI Studio (NOT Vertex — that is
+  #     id: gemini-2.5-pro          # `provider: vertex_ai`, service-account
+  #     provider: google_ai         # OAuth, and an AI Studio key will not work
+  #     api_key_env: GEMINI_API_KEY # there)
+  #     fail_below: {golden: 0.80, fairness: 0.80}
+  #
+  # CALIBRATE `fail_below` PER JUDGE. 0.80 from one grader is not 0.80 from
+  # another — they differ in strictness and in how they read a rubric. The
+  # thresholds above are the framework default, NOT calibrated for any of
+  # these models. Declaring the number here rather than in CI keeps it moving
+  # with the judge it was measured against. Run the suite a few times on a
+  # known-good main and set it from what actually passes.
+  #
+  # NO degrade_to on a judge role. The eval path (scripts/cost_router.py) does
+  # not walk the chain at all, and where it can fire a substituted grader emits
+  # confident verdicts into the same score field against the same threshold.
+  # See OPERATIONS.md "Why the judge never falls back to another model".
   judge:
     id: falcon3:3b
     provider: ollama
@@ -144,7 +186,9 @@ models:
     cost_per_output_token: 0
     # Degrades to the smallest model, not to `validator` — validator is the
     # same falcon3:3b, so that rung would have been a no-op that looked like
-    # a fallback.
+    # a fallback. Kept for the LOCAL default only: falcon3:3b and smollm2 are
+    # peers, so this is an availability fallback between equals rather than a
+    # silent downgrade of the grader. A cloud judge should declare none.
     degrade_to: fast
 
   # Smallest local model — the last rung before the ladder halts.

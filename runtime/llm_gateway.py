@@ -118,7 +118,34 @@ def load_model_registry() -> dict:
     tenant_models_path = root / "models.yaml"
     if tenant_models_path.exists():
         for role, cfg in _load_yaml(tenant_models_path).get("models", {}).items():
-            registry[role] = {**registry.get(role, {}), **cfg}
+            base = registry.get(role, {})
+            # Same model id => the tenant is tweaking fields on the framework's
+            # route, so merge. DIFFERENT id => it is a different model, and
+            # nothing about the old one carries over. A shallow merge here used
+            # to leak the framework entry's fields onto a model they do not
+            # describe, silently and in three ways at once:
+            #
+            #   * `endpoint` — KYC Sentinel's judge (claude-opus-4-8, anthropic)
+            #     inherited the framework judge's "${OLLAMA_BASE_URL}/v1", so
+            #     the gateway posted Claude requests at the Ollama host. The
+            #     eval path escaped only because cost_router used to ignore
+            #     `endpoint` entirely.
+            #   * `cost_per_*_token` — inheriting a free local tier's zeros
+            #     makes a frontier model read as costless to budget reservation
+            #     and the spend cap.
+            #   * `degrade_to` — deleting the key from the tenant file did NOT
+            #     remove the behaviour, because the framework's value showed
+            #     through. A judge role explicitly given no fallback still
+            #     degraded, to whatever the framework's judge points at.
+            #
+            # Replacing is also what makes `degrade_to` removable at all: with
+            # a merge there is no way to express "no fallback" short of
+            # `degrade_to: null`, and a role that omits the key gets one anyway.
+            registry[role] = (
+                {**base, **cfg}
+                if base.get("id") == cfg.get("id")
+                else dict(cfg)
+            )
 
     tenant_yaml_path = root / ".agenticframework" / "tenant.yaml"
     if tenant_yaml_path.exists():
@@ -1200,6 +1227,20 @@ class LLMGateway:
             # every other "openai_compatible" provider in this codebase.
             api_key = LLMGateway._lookup_api_key(cfg, "GROQ_API_KEY")
             base_url = cfg.get("endpoint") or "https://api.groq.com/openai/v1"
+        elif provider == "xai":
+            # OpenAI-compatible; only host and key differ.
+            api_key = LLMGateway._lookup_api_key(cfg, "XAI_API_KEY")
+            base_url = cfg.get("endpoint") or "https://api.x.ai/v1"
+        elif provider == "google_ai":
+            # Google AI Studio's OpenAI-compatibility layer. Distinct from the
+            # `vertex_ai` adapter, which is the same models behind
+            # service-account OAuth — an AI Studio key will not authenticate
+            # there, and vice versa.
+            api_key = LLMGateway._lookup_api_key(cfg, "GEMINI_API_KEY")
+            base_url = (
+                cfg.get("endpoint")
+                or "https://generativelanguage.googleapis.com/v1beta/openai"
+            )
         else:
             api_key = LLMGateway._lookup_api_key(cfg, "OPENAI_API_KEY")
             base_url = cfg.get("endpoint") or "https://api.openai.com/v1"

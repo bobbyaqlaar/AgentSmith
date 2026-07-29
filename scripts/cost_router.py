@@ -353,14 +353,76 @@ def _credential_for(model: str, default_env: str) -> str:
     return os.environ.get(default_env, "")
 
 
+def _registry_route(model: str) -> Optional[ModelRoute]:
+    """Route built from the model's own models.yaml entry, or None if it has no
+    entry (or the registry can't be read).
+
+    This is the authoritative path. The substring heuristics below are a
+    fallback for ids the registry doesn't declare, and they cannot express a
+    provider they were not written for: an id matching none of their patterns
+    fell through to `_local_route`, so a Grok or Gemini judge was silently
+    routed to localhost Ollama rather than erroring. `grok-4` and
+    `gemini-2.5-pro` both did exactly that — and because provenance recorded
+    the REQUESTED id, the scorecard would have named a judge that never ran.
+
+    The heuristics were fragile for declared models too:
+    `llama-3.3-70b-versatile` routes to Groq only when GROQ_API_KEY happens to
+    be set in the process, and to localhost otherwise — a judge silently
+    swapped by an unset environment variable.
+    """
+    try:
+        from _shared import load_registry
+        from runtime.provider_dispatch import credential_env_for_model
+
+        for cfg in (load_registry() or {}).values():
+            if cfg.get("id") != model:
+                continue
+            provider = cfg.get("provider")
+            base_url = cfg.get("endpoint") or _PROVIDER_BASE_URL.get(provider)
+            if not base_url:
+                return None  # unknown provider with no endpoint — let the heuristics try
+            base_url = os.path.expandvars(base_url)
+            if provider == "ollama":
+                return _local_route(model=model)
+            env = credential_env_for_model(cfg)
+            return ModelRoute(
+                model=model,
+                base_url=base_url,
+                api_key=os.environ.get(env, "") if env else "",
+                tier="forced",
+            )
+    except Exception:  # fail-open: no runtime/ on the path, unreadable registry
+        return None
+    return None
+
+
+# Default hosts for registry providers that speak an OpenAI-compatible API (or
+# Anthropic's). Mirrors LLMGateway._resolve_endpoint so the workload path and
+# the eval path resolve one declared route the same way; a models.yaml
+# `endpoint` overrides either.
+_PROVIDER_BASE_URL = {
+    "anthropic": "https://api.anthropic.com/v1",
+    "openai": "https://api.openai.com/v1",
+    "groq": "https://api.groq.com/openai/v1",
+    "xai": "https://api.x.ai/v1",
+    "google_ai": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "ollama": "${OLLAMA_BASE_URL}",
+}
+
+
 def _route_for_model(model: str) -> ModelRoute:
     """Build a route for an EXACT model id, bypassing route()'s complexity
     heuristics entirely — for callers (e.g. eval_judge.py's judge model)
     that need a specific, caller-chosen model rather than "whichever tier
-    this prompt's length/keywords land on." Provider is inferred from the
-    model id's naming convention, same substring-based approach
-    infer_provider() already uses elsewhere in this codebase for base_url
-    strings."""
+    this prompt's length/keywords land on."
+
+    Registry first (`_registry_route`); the id-substring heuristics below only
+    run for models models.yaml does not declare.
+    """
+    declared = _registry_route(model)
+    if declared is not None:
+        return declared
+
     anthropic_key = _credential_for(model, "ANTHROPIC_API_KEY")
     openai_key = _credential_for(model, "OPENAI_API_KEY")
     groq_key = _credential_for(model, "GROQ_API_KEY")

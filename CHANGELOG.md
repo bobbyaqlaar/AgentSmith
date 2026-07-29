@@ -19,6 +19,59 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Added — the judge is configurable across three vendors
+
+`models.yaml` can now point the `judge` role at Anthropic, xAI or Google AI
+Studio by editing one entry. All three speak OpenAI-compatible APIs, so no
+adapter was needed — `xai` (`XAI_API_KEY`) and `google_ai` (`GEMINI_API_KEY`)
+join the provider/credential map, with default hosts on both call paths.
+
+The motivation is independence, not availability. `judge_independence_warning`
+only catches *identical* model ids, so a Claude judge grading a Claude actor
+passes the check while sharing a training lineage and RLHF profile — and models
+rate their own family's output higher. Cross-vendor judging removes the
+mechanism instead of mitigating it.
+
+- **`fail_below` can be declared beside the judge**, as a float or per-suite
+  mapping. A threshold is calibrated for one grader; with a swappable judge a
+  single global number silently compares each new judge against the last one's
+  calibration. Precedence: CLI → registry → env → 0.80.
+- **`scripts/verify_judge_route.py`** proves a judge resolves, has its
+  credential, reaches the host its provider implies, and returns parseable
+  JSON — before it is trusted to gate merges.
+- **Provenance records the resolved route**, not just the requested id
+  (`judged_by_route`, `judge_routes_used`). An id alone cannot reveal a
+  misroute.
+
+### Fixed — three silent misroutes
+
+- **`cost_router._route_for_model` ignored the registry**, substring-matching
+  the model id (`claude`/`gpt`/`llama`) and falling through to **localhost
+  Ollama** for anything else. `grok-4` and `gemini-2.5-pro` were both served by
+  a local model under their own names. It was fragile for declared models too:
+  `llama-3.3-70b-versatile` routed to Groq only when `GROQ_API_KEY` happened to
+  be set in the process, and to localhost otherwise. Now registry-first, with
+  the heuristics kept only for undeclared ids.
+- **The registry merge leaked fields between different models.**
+  `load_model_registry` shallow-merged a tenant role over the framework's, so a
+  tenant judge declaring a different `id` still inherited the framework entry's
+  `endpoint`, `cost_per_*_token` and `degrade_to`. Live consequences: KYC
+  Sentinel's `claude-opus-4-8` judge carried `endpoint: ${OLLAMA_BASE_URL}/v1`,
+  so the gateway posted Claude requests at the Ollama host; a frontier model
+  inherited a free tier's zero costs, reading as costless to budget
+  reservation; and removing `degrade_to` from a tenant file did **not** remove
+  the behaviour, because the framework's value showed through — the judge role
+  that release notes above describe as having no fallback still had one. A
+  tenant entry with a different `id` is now taken wholesale; same-id entries
+  still merge.
+- **An unparseable judge reply scored 0.0 instead of erroring.** `falcon3:3b` —
+  the framework's own default judge — returns an **empty string** to a
+  JSON-only scoring prompt (verified against a local Ollama with the model
+  pulled; `qwen2.5` answers the identical prompt correctly). With no `error`
+  set, the all-errored skip could not fire, so every case scored 0.00 with
+  blank notes and a working application read as failing its entire scorecard.
+  Now reported as a judge error with the reply preview.
+
 ### Changed — the eval judge never falls back to another model
 
 The two provider-calling paths now differ **explicitly** rather than by
@@ -66,6 +119,20 @@ tell. Scores are only comparable against the grader they were calibrated for.
 - **`README.md` called the gateway the "single choke point for provider
   calls"** without qualification, where `SPECS.md` correctly scoped it to
   production workers. The eval harness is the one deliberate exception.
+- **`PgVectorStore` bypassed the connection pool** — the last raw
+  `psycopg2.connect()` in the codebase, and the store `pg_pool.py`'s docstring
+  forgot to list. It opened a connection per `add()` **and** per `query()`, so
+  every RAG lookup paid a TCP + auth round-trip: exactly the cost `pg_pool`
+  was built to remove. It also leaked, since the call sites used
+  `with psycopg2.connect(...) as conn:` and psycopg2's connection context
+  manager wraps the *transaction*, leaving the socket open. Rewritten to
+  `try/finally` — a `with` on a pooled borrow never returns it and would
+  exhaust the pool instead. `runtime/test/test_pg_pool_coverage.py` fails on a
+  new raw connect, an unbalanced borrow, or a stale docstring list.
+- **`docs/superpowers/.../2026-07-10-reliability-pack-v1*.md` had no inbound
+  link** from anywhere, unlike its security-harness counterpart in SPECS. The
+  threshold and pair-parity rationale lives there; now referenced from
+  OPERATIONS' reliability-suite section.
 
 ## [1.1.1] — 2026-07-29
 

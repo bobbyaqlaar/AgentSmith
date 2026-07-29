@@ -110,6 +110,8 @@ _FALLBACK_API_KEY_ENV = {
     "groq": "GROQ_API_KEY",
     "openai": "OPENAI_API_KEY",
     "azure_openai": "AZURE_OPENAI_API_KEY",
+    "xai": "XAI_API_KEY",
+    "google_ai": "GEMINI_API_KEY",
     "ollama": None,
     "vertex_ai": None,
     "bedrock": None,

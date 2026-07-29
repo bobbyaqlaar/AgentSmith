@@ -123,6 +123,18 @@ _DEFAULT_API_KEY_ENV = {
     "groq": "GROQ_API_KEY",
     "openai": "OPENAI_API_KEY",
     "azure_openai": "AZURE_OPENAI_API_KEY",
+    # xAI and Google AI Studio both expose OpenAI-compatible chat/completions,
+    # so they need no adapter — only a host and a key variable. Added to give
+    # the `judge` role cross-vendor options: a Claude analyst graded by a Claude
+    # judge shares a training lineage and RLHF profile, and models rate their
+    # own family's output higher. `judge_independence_warning` only catches
+    # IDENTICAL ids, so same-vendor judging reads as independent when it isn't.
+    "xai": "XAI_API_KEY",
+    # Google AI Studio (generativelanguage), NOT Vertex AI: this is the
+    # api-key-in-a-header path. `vertex_ai` below is the same models behind
+    # service-account OAuth, and the two are not interchangeable — an AI Studio
+    # key cannot authenticate against Vertex.
+    "google_ai": "GEMINI_API_KEY",
     # ollama is local and takes a literal "ollama" token — no credential.
     "ollama": None,
     # Cloud-native adapters authenticate through their SDK's credential chain

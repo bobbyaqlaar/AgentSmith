@@ -129,15 +129,33 @@ class PgVectorStore:
         self._ensure_schema()
 
     def _connect(self) -> Any:
-        import psycopg2
+        # Pooled (runtime/pg_pool.py) — .close() releases to the pool, so the
+        # `finally: conn.close()` call sites below stay correct as-is. Same
+        # shape as dead_letter / idempotency / llm_gateway's budget store.
+        #
+        # This was the last raw `psycopg2.connect()` in the codebase, and the
+        # store pg_pool's docstring forgot to list. It opened a fresh
+        # connection per add() AND per query() — a TCP + auth round-trip on
+        # every RAG lookup, which is precisely the cost ReviewFindings C1
+        # removed everywhere else.
+        #
+        # It also leaked: the call sites used `with self._connect() as conn:`,
+        # and psycopg2's connection context manager wraps the TRANSACTION, not
+        # the connection — the socket stays open when the block exits. So they
+        # are rewritten to try/finally. Keeping `with` here would be worse than
+        # before, since an un-returned pooled connection exhausts the pool
+        # rather than just leaking one socket.
+        from runtime.pg_pool import connect as pg_connect
 
-        return psycopg2.connect(self.dsn)
+        return pg_connect(self.dsn)
 
     def _ensure_schema(self) -> None:
         import psycopg2
 
+        conn = None
         try:
-            with self._connect() as conn:
+            conn = self._connect()
+            with conn:
                 with conn.cursor() as cur:
                     cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
                     cur.execute(
@@ -156,6 +174,9 @@ class PgVectorStore:
                 "PgVectorStore needs Postgres with the pgvector extension. "
                 f"Install pgvector or use VECTOR_BACKEND=memory. Underlying: {exc}"
             ) from exc
+        finally:
+            if conn is not None:
+                conn.close()  # returns to the pool
 
     def add(
         self,
@@ -167,7 +188,8 @@ class PgVectorStore:
             raise ValueError("ids and texts must be the same length")
         metas = metadatas or [{} for _ in ids]
         vectors = self.embedder.embed(texts)
-        with self._connect() as conn:
+        conn = self._connect()
+        try:
             with conn.cursor() as cur:
                 for vid, text, meta, vec in zip(ids, texts, metas, vectors):
                     cur.execute(
@@ -182,13 +204,16 @@ class PgVectorStore:
                         (vid, text, json.dumps(meta), "[" + ",".join(str(x) for x in vec) + "]"),
                     )
             conn.commit()
+        finally:
+            conn.close()  # returns to the pool
 
     def query(self, text: str, k: int = 5) -> list[VectorHit]:
         if k < 1:
             return []
         q = self.embedder.embed([text])[0]
         q_literal = "[" + ",".join(str(x) for x in q) + "]"
-        with self._connect() as conn:
+        conn = self._connect()
+        try:
             with conn.cursor() as cur:
                 cur.execute(
                     """
@@ -201,6 +226,8 @@ class PgVectorStore:
                     (q_literal, q_literal, k),
                 )
                 rows = cur.fetchall()
+        finally:
+            conn.close()  # returns to the pool
         hits: list[VectorHit] = []
         for row in rows:
             meta = row[2] if isinstance(row[2], dict) else json.loads(row[2] or "{}")

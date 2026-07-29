@@ -356,6 +356,7 @@ def _judge_case(
         # only what the run was asked for; per-case provenance is what makes a
         # substitution visible in the stored artifact.
         "judged_by": scored.get("judged_by"),
+        "judged_by_route": scored.get("judged_by_route"),
         "error": scored.get("error"),
     }
     if "fairness" in scored:
@@ -490,6 +491,10 @@ def run_scorecard(
     # means something substituted a model mid-run, which makes the averages
     # below incomparable to any calibrated threshold (see the gate check).
     judges_used = sorted({r["judged_by"] for r in results if r.get("judged_by")})
+    # The host each verdict was actually served by. A judge id alone cannot
+    # show a misroute — an unrecognised id used to fall through to localhost
+    # Ollama while still being reported under its own name.
+    judge_routes = sorted({r["judged_by_route"] for r in results if r.get("judged_by_route")})
 
     print("")
     print("─────────────────────────────────────────────")
@@ -599,6 +604,7 @@ def run_scorecard(
         # The grader this run ASKED for. `judge_models_used` is what answered.
         "judge_model": judge,
         "judge_models_used": judges_used,
+        "judge_routes_used": judge_routes,
         "criteria": criteria.get("name", "default"),
         "total_cases": len(cases),
         "avg_score": avg_score,
@@ -681,14 +687,52 @@ def _resolve_hallucination_fail_above(cli_value: float | None) -> float:
     return float(raw)
 
 
+def _registry_fail_below(suite: str) -> Optional[float]:
+    """A `fail_below` declared on the judge role in models.yaml, if any.
+
+    Thresholds are calibrated per grader: 0.80 from one judge is not 0.80 from
+    another, because judges differ in strictness and in how they read a rubric.
+    Once the judge is configurable — Anthropic, xAI or Google, swapped by
+    editing one registry entry — a single global threshold silently compares
+    each new judge against a number calibrated for the previous one.
+
+    Declaring it beside the model keeps the two in step: change the judge and
+    its threshold moves with it. Per-suite via a mapping, since a fairness pair
+    parity bar and a golden correctness bar are not the same number:
+
+        judge:
+          id: grok-4
+          provider: xai
+          fail_below: {golden: 0.78, fairness: 0.85}   # or a bare float
+
+    Returns None when unset, so the env/CLI defaults still apply.
+    """
+    try:
+        from _shared import load_registry
+
+        cfg = (load_registry() or {}).get("judge") or {}
+        raw = cfg.get("fail_below")
+        if raw is None:
+            return None
+        if isinstance(raw, dict):
+            raw = raw.get(suite)
+        return float(raw) if raw is not None else None
+    except Exception:  # fail-open: no runtime/, unreadable registry, bad value
+        return None
+
+
 def _resolve_fail_below(suite: str, cli_value: float | None) -> float:
     """
     CLI --fail-below wins when provided.
+    Then a `fail_below` on the judge role in models.yaml (calibrated per judge).
     Fairness suite: FAIRNESS_FAIL_BELOW from env / .env (default 0.80).
     Golden suite: EVAL_FAIL_BELOW or 0.80.
     """
     if cli_value is not None:
         return cli_value
+    from_registry = _registry_fail_below(suite)
+    if from_registry is not None:
+        return from_registry
     if suite == "fairness":
         raw = os.environ.get("FAIRNESS_FAIL_BELOW", "0.80").strip() or "0.80"
         return float(raw)

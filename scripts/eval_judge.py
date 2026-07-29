@@ -88,14 +88,20 @@ def run_judge(prompt: str, judge_model: str) -> dict[str, Any]:
     an "error" key set if the judge call or parse failed. May include
     "fairness" when the prompt requested it.
 
-    Always sets `judged_by` to the model asked to produce the verdict, so a
-    stored scorecard says which grader produced each number rather than only
-    which one the run started with. A score is not portable across judges — the
-    threshold it is compared against is calibrated for one specific grader — so
-    "who graded this" belongs with the score, not in a single run-level field
-    that a substitution would silently falsify.
+    Always sets `judged_by` to the model that produced the verdict AND the host
+    it was reached at, so a stored scorecard says which grader produced each
+    number rather than only which one the run started with. A score is not
+    portable across judges — the threshold it is compared against is calibrated
+    for one specific grader — so "who graded this" belongs with the score, not
+    in a single run-level field a substitution would silently falsify.
+
+    The host matters as much as the id: routing used to substring-match the
+    model name and fall through to localhost Ollama for anything it did not
+    recognise, so `grok-4` was served by a local model while the id alone would
+    have reported `grok-4`. Recording the resolved route makes that visible
+    instead of plausible.
     """
-    from cost_router import call as llm_call
+    from cost_router import call as llm_call, _route_for_model
 
     try:
         raw = llm_call(
@@ -105,16 +111,43 @@ def run_judge(prompt: str, judge_model: str) -> dict[str, Any]:
             force_model=judge_model,
         )
         m = re.search(r"\{.*\}", raw, re.DOTALL)
-        scored = (
-            json.loads(m.group(0))
-            if m
-            else {"correctness": 0, "tool_accuracy": 0, "score": 0.0}
-        )
+        if m:
+            scored = json.loads(m.group(0))
+        else:
+            # No parseable verdict is a JUDGE failure, not a score of zero.
+            # This used to return a bare 0.0 with no `error` key, which is the
+            # difference between "the judge said nothing" and "the judge says
+            # your output is worthless" — and the second is what the scorecard
+            # reported. It also defeated the all-errored skip in run-evals.py,
+            # which keys off `error`, so an unusable judge failed the gate as a
+            # quality regression.
+            #
+            # Not hypothetical: falcon3:3b — the framework's own default judge —
+            # returns an EMPTY string to a JSON-only scoring prompt (verified
+            # against a local Ollama with the model pulled; qwen2.5 answers the
+            # identical prompt correctly). Out of the box, every case scored
+            # 0.00 with blank notes and the run looked like a total application
+            # failure.
+            preview = raw.strip()[:200] or "(empty response)"
+            scored = {
+                "correctness": 0,
+                "tool_accuracy": 0,
+                "score": 0.0,
+                "error": (
+                    f"judge {judge_model!r} returned no parseable JSON verdict: "
+                    f"{preview}"
+                ),
+            }
     except Exception as exc:
         scored = {"correctness": 0, "tool_accuracy": 0, "score": 0.0, "error": str(exc)}
     # After the parse: a judge that returns a `judged_by` of its own must not
     # be able to misreport which model ran.
     scored["judged_by"] = judge_model
+    try:
+        route = _route_for_model(judge_model)
+        scored["judged_by_route"] = route.base_url
+    except Exception:  # fail-open: provenance detail, never worth failing a verdict over
+        pass
     return scored
 
 

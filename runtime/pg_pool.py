@@ -1,7 +1,13 @@
 """
 runtime/pg_pool.py — process-wide Postgres connection pool shared by the
 runtime's Postgres-backed stores (`llm_gateway._PostgresBudgetBackend`,
-`idempotency._PostgresBackend`, `dead_letter.DeadLetterQueue`).
+`idempotency._PostgresBackend`, `dead_letter.DeadLetterQueue`,
+`vector_store.PgVectorStore`).
+
+Keep that list complete: it named three stores while there were four, and the
+missing one — PgVectorStore — was still opening a raw connection per operation
+long after this module existed. An enumeration that is allowed to go stale
+reads as "these are the Postgres stores", which is how the omission survived.
 
 Why this exists (ReviewFindings-2026-07-18 C1): each store used to open a
 fresh `psycopg2.connect()` per operation — budget try_reserve + add_spend
