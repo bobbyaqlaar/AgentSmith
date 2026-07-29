@@ -16,6 +16,16 @@
 #                                ci-*/cd-* templates reference as
 #                                ./.github/actions/<name>; copied into each
 #                                tenant repo by post-checkout/ai-tenant-init)
+#   install-ai-stack.sh         (the bootstrap script ITSELF, plus a .sha256)
+#
+# The installer is an asset because OPERATIONS.md documents fetching it from a
+# release URL and checksum-verifying it before running. It never was one: the
+# release shipped only the tarballs the installer downloads, so the documented
+# `curl .../releases/download/<tag>/install-ai-stack.sh | bash` 404'd at every
+# version, and the .sha256 the docs piped into `shasum --check` had never
+# existed. test_release_artifact_contract.py could not catch it — it verified
+# the artifacts the installer downloads, and the installer does not download
+# itself. The docs are now covered by a test too.
 #
 # Optionally GPG-signs each tarball if ORG_GPG_KEY_ID + ORG_GPG_PRIVATE_KEY
 # secrets are configured — same signing mechanism as
@@ -64,6 +74,13 @@ jobs:
           # (e.g. <script src="/static/widget.js">) instead of pointing at a
           # domain that was never actually provisioned.
           cp templates/in-app-widget/widget.js dist/widget.js
+          # The bootstrap script itself + its checksum. `shasum` writes
+          # "<hash>  <name>", and OPERATIONS.md's verification pipes this file
+          # straight into `shasum -a 256 --check`, which resolves that name
+          # relative to the CURRENT directory — so it has to be the bare
+          # filename, hence the subshell rather than `shasum dist/install-...`.
+          cp install-ai-stack.sh dist/install-ai-stack.sh
+          (cd dist && shasum -a 256 install-ai-stack.sh > install-ai-stack.sh.sha256)
           ls -la dist/
 
       - name: "Validate artifact structure"
@@ -106,7 +123,12 @@ jobs:
         env:
           ORG_GPG_KEY_ID: ${{ secrets.ORG_GPG_KEY_ID }}
         run: |
-          for f in dist/*.tar.gz; do
+          # install-ai-stack.sh is included deliberately: it is the one artifact
+          # users pipe straight into a shell, so signing the tarballs it fetches
+          # while leaving the fetcher unsigned protects the wrong end of the
+          # chain. The .sha256 is not signed — it is an integrity check against
+          # a corrupted download, not a trust anchor; the detached .sig is.
+          for f in dist/*.tar.gz dist/install-ai-stack.sh; do
             gpg --batch --yes --local-user "$ORG_GPG_KEY_ID" --detach-sign --output "$f.sig" "$f"
           done
           ls -la dist/

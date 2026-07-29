@@ -55,7 +55,7 @@ docker --version
 ### Install the Framework
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
+curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 ```
 
 The installer:
@@ -96,14 +96,19 @@ export AGENT_OWNER_NAME="Your Name"
 **Local mode** — 100% offline, no API costs. Requires Ollama.
 
 ```bash
-# Pull the three required models (one-time, ~15 GB total)
-ollama pull llama3
-ollama pull mistral
-ollama pull gemma2
+# Ask the model registry what this install actually routes to, and pull it.
+# Do NOT hardcode a model list — it comes from runtime/models.yaml, and inside
+# a tenant repo it picks up that tenant's overrides too.
+ollama pull $(ai-stack-required-models)     # one-time
 
 # Activate local mode
 ai-mode-local
 ```
+
+`ai-stack-check` verifies each required model is present and prints the exact
+`ollama pull` command for any that is missing. At the framework defaults the
+list is `qwen2.5 llama3.2:3b falcon3:3b smollm2` (~5 GB), but treat
+`ai-stack-required-models` as the answer rather than that snapshot.
 
 **Hybrid mode** — Frontier models for complex tasks, open-source for routine ones. Requires API keys.
 
@@ -227,9 +232,9 @@ ai-mode-local
 ```
 
 - All LLM calls → Ollama at `http://localhost:11434/v1`
-- Architect tasks → Mistral
-- Developer tasks → Llama3
-- Validator → pure Python logic
+- Routing is by **role**, not by hardcoded model name: `architect` →
+  `developer` → `validator` → `fast`, resolved from `models.yaml` (see
+  `ai-stack-required-models` for the ids your install uses)
 - Traces → Local Phoenix
 - Cost → zero
 
@@ -239,8 +244,11 @@ ai-mode-local
 ai-mode-hybrid
 ```
 
-- Architect tasks → Claude Sonnet 4.6 (complex design)
-- Developer tasks → routed by cost router: GPT-4o for complex code, Llama3-70b (Groq) for standard tasks, Gemma2 for formatting/docs
+- Same four roles, but pointed at cloud providers instead of Ollama. **The
+  shipped `runtime/models.yaml` is local-only** — its Groq and Vertex AI
+  entries are commented out with their verification notes, so hybrid mode does
+  nothing until you uncomment one or declare cloud routes in a tenant
+  `models.yaml`.
 - Fallback → automatic if network drops (detected via socket ping to `1.1.1.1`)
 - Traces → Local Phoenix (data never leaves your machine)
 
@@ -347,7 +355,7 @@ Data is persisted to SQLite (local) or PostgreSQL (team). No data is lost when t
 
 ### What Evals Do
 
-`ai-test-evals` runs your golden dataset cases through the active agent pipeline, scores each output using the LLM judge (default: Claude Sonnet 4.6), and reports a scorecard. In CI this gates merges; locally it gives you visibility into quality trends.
+`ai-test-evals` runs your golden dataset cases through the active agent pipeline, scores each output using the LLM judge (the `judge` role in `models.yaml` — see "Changing the Judge Model" below), and reports a scorecard. In CI this gates merges; locally it gives you visibility into quality trends.
 
 ### Run Locally
 
@@ -619,10 +627,14 @@ This creates a full audit trail: who ran the agent, what failed, who approved th
 
 Every prompt is analysed before it reaches an LLM:
 
-1. Token count via `tiktoken` — prompts over 8,000 tokens go to Claude regardless of complexity
-2. Semantic keyword scan — architecture, migration, race condition → GPT-4o or Claude
-3. Low complexity + formatting/docs → Gemma2 (cheapest)
-4. Default → Llama3-70b (balanced)
+1. Token count via `tiktoken` — prompts over 8,000 tokens go to the `architect` role regardless of complexity
+2. Semantic keyword scan — architecture, migration, race condition → `architect` / `developer`
+3. Low complexity + formatting/docs → `fast` (cheapest)
+4. Default → `validator` (balanced)
+
+Each step names a **role**, not a model. The id behind it comes from
+`models.yaml` (override a single tier with `AGENT_MODEL_ARCHITECT`,
+`AGENT_MODEL_COMPLEX`, `AGENT_MODEL_STANDARD`, `AGENT_MODEL_FAST`).
 
 ### Budget Thresholds
 
@@ -690,9 +702,7 @@ print(f'Pruned {len(isolated)} orphan nodes.')
 ### As Needed: Upgrade Local GPU Models
 
 ```bash
-ollama pull llama3
-ollama pull mistral
-ollama pull gemma2
+ollama pull $(ai-stack-required-models)   # re-pulls whatever models.yaml routes to
 ```
 
 ### As Needed: Scrub a Project
@@ -712,7 +722,7 @@ ai-stack-scrub /path/to/project
 ### As Needed: Upgrade the Framework
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
+curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 source ~/.zshrc
 
 # Re-apply to existing projects
@@ -740,8 +750,8 @@ ai-dashboard-start
 # Check which models are loaded
 curl -s http://localhost:11434/api/tags | python3 -m json.tool
 
-# Pull missing models
-ollama pull llama3
+# Pull missing models — ai-stack-check names the exact ones
+ollama pull $(ai-stack-required-models)
 ```
 
 ### Hooks Not Firing on an Existing Repo

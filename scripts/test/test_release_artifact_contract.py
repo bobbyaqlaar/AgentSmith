@@ -27,10 +27,15 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 RELEASE_YML = REPO / ".github" / "workflows" / "release.yml"
 INSTALLER = REPO / "install-ai-stack.sh"
+# Docs that hand a user a release URL to run or verify.
+DOC_FILES = ("README.md", "OPERATIONS.md", "UserManual.md")
 
 _DOWNLOAD_URL = re.compile(r"releases/latest/download/([\w.-]+)")
 _TAR_BUILD = re.compile(r"-czf\s+dist/([\w.-]+)")
 _COPY_BUILD = re.compile(r"cp\s+\S+\s+dist/([\w.-]+)")
+_SHASUM_BUILD = re.compile(r"shasum[^\n]*>\s*([\w.-]+)")
+# Any release-download URL in the docs, pinned or latest.
+_DOC_RELEASE_URL = re.compile(r"releases/(?:latest|download/[^/\s]+)/download/([\w.-]+)|releases/download/[^/\s]+/([\w.-]+)")
 
 
 def _requested_artifacts() -> set[str]:
@@ -39,7 +44,22 @@ def _requested_artifacts() -> set[str]:
 
 def _built_artifacts() -> set[str]:
     text = RELEASE_YML.read_text(encoding="utf-8")
-    return set(_TAR_BUILD.findall(text)) | set(_COPY_BUILD.findall(text))
+    return (
+        set(_TAR_BUILD.findall(text))
+        | set(_COPY_BUILD.findall(text))
+        | set(_SHASUM_BUILD.findall(text))
+    )
+
+
+def _doc_referenced_artifacts() -> dict[str, set[str]]:
+    """Release assets each doc tells a user to fetch."""
+    out: dict[str, set[str]] = {}
+    for name in DOC_FILES:
+        text = (REPO / name).read_text(encoding="utf-8")
+        found = {a or b for a, b in _DOC_RELEASE_URL.findall(text)}
+        if found:
+            out[name] = found
+    return out
 
 
 def test_every_downloaded_artifact_is_built() -> None:
@@ -47,6 +67,49 @@ def test_every_downloaded_artifact_is_built() -> None:
     assert not missing, (
         f"install-ai-stack.sh downloads artifacts release.yml never builds: "
         f"{sorted(missing)} — a fresh remote install would 404 on them"
+    )
+
+
+def test_the_installer_itself_is_a_release_asset() -> None:
+    """The bootstrap script has to ship as an asset, not just build others.
+
+    Regression: the release published only the tarballs install-ai-stack.sh
+    downloads, so `curl .../releases/download/<tag>/install-ai-stack.sh | bash`
+    — the first command in OPERATIONS.md — 404'd at every version that ever
+    existed. The pre-existing tests here could not catch it by construction:
+    they check artifacts the installer *downloads*, and it does not download
+    itself. Nothing surfaced it either, because `curl -fsSL … | bash` on a 404
+    exits 0 (curl writes to stderr, bash runs an empty script, the pipeline
+    reports bash's status), so a wrong URL looks like a clean install.
+    """
+    built = _built_artifacts()
+    assert "install-ai-stack.sh" in built, (
+        "release.yml never copies install-ai-stack.sh into dist/ — the "
+        "documented curl-bootstrap URL will 404"
+    )
+    assert "install-ai-stack.sh.sha256" in built, (
+        "no checksum published for the installer, but OPERATIONS.md documents "
+        "verifying one before executing it"
+    )
+
+
+def test_docs_only_reference_artifacts_the_release_builds() -> None:
+    """Closes the loop the installer-only check left open.
+
+    OPERATIONS.md documented fetching `install-ai-stack.sh` and its `.sha256`
+    from a release for an entire version cycle while neither was published.
+    A doc that hands someone a URL is as much a part of the release contract as
+    the installer is.
+    """
+    built = _built_artifacts()
+    bad = {
+        doc: sorted(refs - built)
+        for doc, refs in _doc_referenced_artifacts().items()
+        if refs - built
+    }
+    assert not bad, (
+        f"docs reference release assets that release.yml never builds: {bad} — "
+        f"built assets are {sorted(built)}"
     )
 
 

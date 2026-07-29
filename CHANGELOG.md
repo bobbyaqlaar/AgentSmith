@@ -19,7 +19,57 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
-### Fixed
+_Nothing yet._
+
+## [1.1.1] — 2026-07-29
+
+Install-path release. v1.1.0 published the artifacts the installer downloads
+but not the installer itself, so the documented bootstrap command never worked
+at any version; the local-model instructions had also drifted off the registry.
+No API changes — no span-attribute or hook-interface changes.
+
+### Fixed — the documented install path
+
+- **`install-ai-stack.sh` is now a release asset**, with a published
+  `.sha256` (and a GPG `.sig` when signing is configured). It never was one:
+  the release shipped only the tarballs the script fetches, so
+  `curl …/releases/download/<tag>/install-ai-stack.sh | bash` — the first
+  command in OPERATIONS.md — 404'd at **every** version, and the checksum the
+  docs piped into `shasum --check` had never existed. Nothing surfaced it
+  because `curl -fsSL … | bash` on a 404 **exits 0**: curl writes to stderr,
+  bash runs an empty script, and the pipeline reports bash's status, so a dead
+  URL looks like a clean install that silently did nothing.
+- **One install path, not two.** README/UserManual pointed at
+  `raw.githubusercontent.com/…/main/` (unversioned, unpinnable, no integrity
+  check) while OPERATIONS pointed at a release URL that 404'd. Everything now
+  uses `releases/latest/download/`, with the pinned + checksum-verified form
+  documented for team environments. The checksum step verifies *before*
+  executing rather than after.
+- **`ollama pull` instructions matched no model the framework routes to.**
+  UserManual told users to pull `llama3`, `mistral`, `gemma2` (~15 GB); the
+  registry needs `qwen2.5`, `llama3.2:3b`, `falcon3:3b`, `smollm2` — zero
+  overlap, so a correct first-time setup left local mode unable to make a
+  single call. `ai-stack-check` already reported the right models; only the
+  docs were wrong. They now use `ollama pull $(ai-stack-required-models)`,
+  which reads the merged registry, and routing is described by **role**
+  (`architect`/`developer`/`validator`/`fast`) rather than by model name, so
+  the same drift cannot recur.
+- **SPECS.md declared version 1.0.0** while claiming in the same sentence to
+  match `FRAMEWORK_VERSION` (1.1.0) — pinned now by
+  `scripts/test/test_version_consistency.py`, which also fails a version bump
+  that ships without release notes.
+
+### Guards
+
+- `test_release_artifact_contract.py` gained
+  `test_the_installer_itself_is_a_release_asset` and
+  `test_docs_only_reference_artifacts_the_release_builds`. The existing tests
+  could not have caught this: they verify artifacts the installer *downloads*,
+  and it does not download itself — so the docs are now part of the contract.
+- `test_version_consistency.py` (new) ties SPECS.md, `pyproject.toml` and
+  `FRAMEWORK_VERSION` together.
+
+### Fixed — evals (carried from 1.1.0)
 
 - **An unreachable judge no longer fails an eval gate.** When *every* case
   errors, no verdict came back and there is no quality signal to gate on — the

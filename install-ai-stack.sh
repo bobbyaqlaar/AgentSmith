@@ -7,7 +7,7 @@
 #  Supports macOS, Linux, and Windows (via WSL/Git Bash).
 #
 #  Usage:
-#    curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
+#    curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 #    # or, from a cloned repo:
 #    chmod +x install-ai-stack.sh && ./install-ai-stack.sh
 #
@@ -56,7 +56,7 @@ fi
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-FRAMEWORK_VERSION="1.1.0"
+FRAMEWORK_VERSION="1.1.1"
 # Overridable for forks/self-hosted mirrors: AI_STACK_FRAMEWORK_REPO=https://github.com/your-org/AgentSmith ./install-ai-stack.sh
 # The literal "<org>" previously here was not a placeholder convention this
 # script substituted anywhere — it was used verbatim as a URL component in

@@ -284,16 +284,37 @@ Set these in **Settings → Secrets and variables → Actions** for each tenant 
 ### Pinned / checksum-verified install (team environments)
 
 ```bash
-# Pinned version (recommended for team environments)
-curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh | bash
+# Pinned version (recommended for team environments).
+# Set VERSION to a published tag — see github.com/bobbyaqlaar/AgentSmith/releases
+VERSION=v1.1.1
+BASE=https://github.com/bobbyaqlaar/AgentSmith/releases/download/$VERSION
 
-# With checksum verification (supply-chain safety)
-curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh \
-  -o install-ai-stack.sh
-curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/download/v1.0.0/install-ai-stack.sh.sha256 \
-  | shasum -a 256 --check
+curl -fsSL "$BASE/install-ai-stack.sh" | bash
+```
+
+```bash
+# With checksum verification (supply-chain safety). Verify BEFORE executing —
+# the point is to not run the script until it matches.
+curl -fsSL "$BASE/install-ai-stack.sh"        -o install-ai-stack.sh
+curl -fsSL "$BASE/install-ai-stack.sh.sha256" -o install-ai-stack.sh.sha256
+shasum -a 256 --check install-ai-stack.sh.sha256   # must print "OK"
 bash install-ai-stack.sh
 ```
+
+If a release is GPG-signed (`ORG_GPG_KEY_ID` configured on the release
+workflow), `install-ai-stack.sh.sig` is published alongside it — verify that
+instead for a real trust anchor. The `.sha256` only detects a corrupted or
+truncated download; it is served by the same host as the script, so it proves
+nothing about origin.
+
+> **Substitute a real tag.** Every artifact above is published per-release, and
+> an unpublished version 404s. `curl -fsSL … | bash` on a 404 **exits 0**:
+> curl's error goes to stderr, bash receives an empty script and succeeds, and
+> the pipeline reports the exit status of `bash`. Verified. So a wrong tag looks
+> like a clean install that did nothing — which is how the version documented
+> here stayed dead through a whole release cycle. Use
+> `releases/latest/download/…` for "whatever is current" rather than a pin, and
+> check `ai-stack-status` afterwards rather than trusting the exit code.
 
 ### Machine install, mode, and standing infra
 
@@ -301,7 +322,7 @@ bash install-ai-stack.sh
 # Install (§0) — vendors scripts/hooks/templates to ~/.agent-framework,
 # sets git's global init.templateDir (developer mode; use --mode enterprise
 # to skip that — see Appendix A).
-curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
+curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 source ~/.zshrc
 
 # Identity — every span/log/audit entry attributes to this

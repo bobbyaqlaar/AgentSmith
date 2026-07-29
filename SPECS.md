@@ -14,8 +14,10 @@
 > [Product_Archive.md](./Product_Archive.md), remaining to-dos in
 > [FIXES_AND_CLEANUP.md](./FIXES_AND_CLEANUP.md).
 
-**Version:** 1.0.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` — the single version source)
-**Date:** 2026-07-11
+**Version:** 1.1.1 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
+`pyproject.toml` — pinned together by
+`scripts/test/test_version_consistency.py`)
+**Date:** 2026-07-29
 **Status:** Current — incorporates tenancy, production runtime, observability review, the reliability/compliance pack v1, and the security/correctness fix passes (history: `Product_Archive.md`; open items: `Product_Archive.md`)
 
 ---
@@ -136,8 +138,8 @@ extensions (e.g. richer fairness stats, portal streaming UI).
 │                                                                         │
 │  ┌───────────────────┐      ┌───────────────────────────────────────┐  │
 │  │  Local GPU (Ollama│      │  Cloud Frontier (Hybrid Mode)         │  │
-│  │  falcon3 / llama3 │  OR  │  Claude / GPT-4o / Groq / Vertex     │  │
-│  │  mistral / gemma2 │      │  + cost_router.py heuristics          │  │
+│  │  models.yaml roles│  OR  │  same roles, cloud routes             │  │
+│  │  architect .. fast│      │  + cost_router.py heuristics          │  │
 │  └───────────────────┘      └───────────────────────────────────────┘  │
 └──────────────────────────────────┬──────────────────────────────────────┘
                                    │ OTel contract + agent identity + tenant.id
@@ -641,8 +643,10 @@ For internal registries, the installer supports fetching from a private artifact
 
 ### Hybrid Cloud Mode
 
-- Architect: Claude 3.5 Sonnet (complex design tasks)
-- Developer: GPT-4o or Groq Llama3-70b (via `cost_router.py`)
+- Cloud routes for the same four roles (`architect` / `developer` / `validator`
+  / `fast`), declared in `models.yaml`. The shipped registry is local-only —
+  its Groq and Vertex AI entries are commented out, so hybrid mode is inert
+  until a cloud route is uncommented or a tenant declares its own.
 - Fallback: automatic on network drop (watchdog detects socket timeout)
 - **Trace data:** Stored at `AGENT_PHOENIX_ENDPOINT` (local or team server)
 - **Inference data:** Prompts and completions are transmitted to cloud provider APIs — they do not stay on the machine
@@ -902,7 +906,7 @@ Workers **never terminate** on a budget breach. Temporal activities retry with d
 |---|---|---|
 | Per commit | Log rotation (INFO/MINOR FIFO at 10,000 entries) | Automatic — post-commit hook |
 | Monthly | Knowledge Graph pruning (orphan CodebaseFile nodes) | `python3 scripts/local_knowledge_graph.py --stats` then prune via API |
-| As needed | Upgrade local GPU models | `ollama pull llama3 && ollama pull mistral && ollama pull gemma2` |
+| As needed | Upgrade local GPU models | `ollama pull $(ai-stack-required-models)` — reads the merged registry, never a hardcoded list |
 | On framework version bump | Upgrade vendored scripts in tenant repos | `ai-stack-upgrade --to <version>` |
 | On rule changes | Sync team via installer | `./install-ai-stack.sh && source ~/.zshrc` |
 

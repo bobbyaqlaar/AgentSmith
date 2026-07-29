@@ -119,8 +119,8 @@ deliberately *not* built and why) is **SPECS.md §4a**.
 ## Quick Start
 
 ```bash
-# 1. Install (once per machine)
-curl -fsSL https://raw.githubusercontent.com/bobbyaqlaar/AgentSmith/main/install-ai-stack.sh | bash
+# 1. Install (once per machine) — latest published release
+curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 source ~/.zshrc
 
 # 2. Identity + mode + dashboard
@@ -185,11 +185,13 @@ The operational guardrails AgentSmith enforces on every project it touches
 | Go | `go.mod` | `ci-go.yml` |
 | Generic | *(fallback)* | *(hooks only, no CI workflow)* |
 
-**Local offline** — everything on your machine via Ollama
-(falcon3/llama3/mistral/gemma2), zero API cost. **Hybrid cloud** — frontier
-models (Claude Sonnet 4.6 / GPT-4o) for complex tasks, open-source via
-Groq/Ollama for the rest, automatic local fallback when the network drops.
-Switch instantly: `ai-mode-local` / `ai-mode-hybrid`.
+**Local offline** — everything on your machine via Ollama, zero API cost; the
+shipped registry routes four roles (`architect` → `developer` → `validator` →
+`fast`) to local models, and `ai-stack-required-models` prints the exact ids.
+**Hybrid cloud** — the same roles pointed at frontier providers for complex
+tasks, with automatic local fallback when the network drops. Cloud routes ship
+commented out in `models.yaml`; uncomment one or declare your own to enable
+them. Switch modes: `ai-mode-local` / `ai-mode-hybrid`.
 
 In hybrid mode, prompts and completions go to cloud provider APIs; trace
 data always stays at your configured Phoenix endpoint (SPECS.md §8).

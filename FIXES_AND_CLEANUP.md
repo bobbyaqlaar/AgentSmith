@@ -15,7 +15,7 @@
 
 **v1.1.0 is released** — the first actually-published version (1.0.0 was
 documented but never tagged, so `install-ai-stack.sh`'s remote path 404'd and
-no tenant could pin). Framework suite 331 passing; KYC Sentinel 50 passing with
+no tenant could pin). Framework suite 346 passing; KYC Sentinel 56 passing with
 its strict security harness and adversarial eval gate green in CI.
 
 The **KYC Sentinel testbed tenant** (`../KYC_Sentinel`) is built, pushed,
