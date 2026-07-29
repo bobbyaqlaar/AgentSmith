@@ -19,6 +19,38 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Documentation — the configuration surface is now discoverable
+
+- **21 environment variables the code reads were documented nowhere**, five of
+  them security controls absent from every markdown file in the repo:
+  `TOOL_ALLOWLIST_STRICT`, `TOOL_ALLOWLIST_PATH`, `PROMPT_DENYLIST_PATH`,
+  `ENABLE_IP_REDACTION`, `EVAL_FAIL_BELOW`. KYC Sentinel's CI was already
+  setting the first of those. UserManual's "Runtime Flags" section grew from
+  four hook-related rows to grouped tables covering security controls, evals
+  and routing, providers and endpoints, and notifications — with defaults
+  verified against the source rather than assumed.
+
+  `TOOL_ALLOWLIST_STRICT` gets an explicit note that it fails **closed**: with
+  strict on and no allowlist loaded, every tool is denied. "Strict" normally
+  reads as "enforce what is listed", so the opposite expectation was the likely
+  one.
+- **Two shipped commands were missing from the canonical reference.**
+  `ai-stack-required-models` — the correct way to know which Ollama models to
+  pull, and what `ai-stack-check` uses internally — appeared only in the
+  CHANGELOG, while the manual was telling users to pull three models the
+  framework does not route to. `ai-onprem-deploy-scaffold` was in SPECS and
+  OPERATIONS but not the command tables. All 16 installer-defined commands are
+  now listed.
+- **Stale test counts removed rather than corrected.** The figure in
+  `FIXES_AND_CLEANUP.md` went stale three times in one working session; the
+  doc now points at `pytest -q` instead of quoting a number.
+
+New guards in `scripts/test/test_env_var_documentation.py`: an env var read by
+`runtime/` or `scripts/` must appear in some tracked `.md` (platform-provided
+variables exempted); the security knobs must be in UserManual specifically; the
+fail-closed note must survive; and every `ai-*` function the installer defines
+must appear in the command tables.
+
 ### Added — the judge is configurable across three vendors
 
 `models.yaml` can now point the `judge` role at Anthropic, xAI or Google AI

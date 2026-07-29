@@ -13,10 +13,16 @@
 
 ## Current state (2026-07-29)
 
-**v1.1.0 is released** — the first actually-published version (1.0.0 was
-documented but never tagged, so `install-ai-stack.sh`'s remote path 404'd and
-no tenant could pin). Framework suite 346 passing; KYC Sentinel 56 passing with
-its strict security harness and adversarial eval gate green in CI.
+**v1.1.1 is released.** v1.1.0 was the first actually-published version (1.0.0
+was documented but never tagged, so no tenant could pin); v1.1.1 fixed the
+install path itself — the bootstrap script and its `.sha256` had never been
+release assets, so the documented `curl … | bash` 404'd at every version, and
+silently, because that pipeline exits 0 on a 404.
+
+Both suites are green: `python3 -m pytest -q` here and in `../KYC_Sentinel`.
+No count is quoted — one was, and went stale three times in a single working
+session. KYC Sentinel's strict security harness and adversarial eval gate are
+green in CI; the three judge-backed gates skip until the judge has credit.
 
 The **KYC Sentinel testbed tenant** (`../KYC_Sentinel`) is built, pushed,
 CI-green and deployed as a GCP staging smoke job — full history in

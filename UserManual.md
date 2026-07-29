@@ -817,6 +817,7 @@ carrying their own copies.
 | `ai-stack-off` | Disable all hooks and templates. |
 | `ai-stack-check` | Full health check: Phoenix, Ollama or API keys, unresolved log entries. |
 | `ai-stack-status` | Print: mode, muted flag, network connectivity. |
+| `ai-stack-required-models` | Print the Ollama model ids the merged registry actually routes to, space-separated — `ollama pull $(ai-stack-required-models)`. Reads `models.yaml` from the current directory, so inside a tenant repo it reflects that tenant's overrides. Use this rather than a hardcoded list; `ai-stack-check` uses the same lookup. |
 
 ### Dashboard
 
@@ -842,6 +843,7 @@ carrying their own copies.
 |---|---|---|
 | `ai-stack-scrub` | `[directory]` | Interactive removal of runtime artefacts from a project directory — lists every exact path it will delete before prompting for confirmation. |
 | `ai-stack-upgrade` | `[--to VERSION]` | Copies vendored scripts from `~/.agent-framework/scripts` into the current tenant repo, bumps `.agenticframework/tenant.yaml`'s `framework.version`, commits the change. Fails loudly (and stops) if the commit itself fails, rather than reporting "Upgrade complete" regardless. |
+| `ai-onprem-deploy-scaffold` | `[target-dir]` | Copy the on-prem deploy template (Docker Compose or Helm, `templates/onprem-deploy/`) into a repo for in-border / air-gapped clusters. Full walkthrough: OPERATIONS.md. |
 | `ai-stack-uninstall` | — | Enterprise-safe machine-level removal: restores `git init.templateDir` to its pre-install value, removes the managed block from your shell rc, optionally removes `~/.agent-framework` and `~/.git_templates`. Prompts for confirmation at each destructive step. |
 
 ### Multi-Tenancy (see OPERATIONS.md for the full walkthrough)
@@ -859,6 +861,60 @@ carrying their own copies.
 | `SEMVER_LOOP_GUARD=true` | Prevents infinite loop in post-commit semver tagging |
 | `AI_BREAK_GLASS_TOKEN=<token>` | Required by `ai-stack-off` when the installed org policy sets `bypass_policy: break-glass` (enterprise pack, see OPERATIONS.md). Must be a real IT-issued, HMAC-signed token with an expiry — not just any non-empty string — validated against `BREAK_GLASS_HMAC_KEY` on the machine. |
 | `OPS_PORTAL_URL` / `AUDIT_LOG_WRITE_TOKEN` | When both are set, `ai-tenant-init` and `ai-tenant-promote` best-effort write signed events to the Ops Portal's audit log. If unset, or the write fails, the event is appended to `~/.agent-framework/local-audit-fallback.log` instead of being dropped. |
+
+#### Security controls
+
+These change what the guardrails enforce. Several were readable only from the
+source until now — including `TOOL_ALLOWLIST_STRICT`, which KYC Sentinel's CI
+already sets.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `PROMPT_GUARD` | `default` | `off` \| `warn` \| `default` \| `strict`. `default`/`strict` block; `warn` reports only. An unrecognised value falls back to `default` — a typo must never silently disable the guard. |
+| `PROMPT_DENYLIST_PATH` | `.agent-rfc/security/prompt_denylist.txt` | Extra injection patterns, one per line, on top of the built-ins. |
+| `TOOL_ALLOWLIST_STRICT` | off | `1` enforces the allowlist: a tool not on it raises `ToolNotAllowedError`. **Fail-closed** — with strict on and no allowlist loaded, *every* tool is denied rather than allowed. |
+| `TOOL_ALLOWLIST_PATH` | `.agent-rfc/security/tool_allowlist.yaml` | Where the allowlist is read from. Without strict it is advisory. |
+| `MODERATION_HOOK` | `optional` | `off` \| `optional` \| `required`. `required` fails the harness when the tenant declares no `moderation.hook`. |
+| `INPUT_GUARDRAIL` | `default` (`off` in development) | `off` \| `default` \| `custom` — PII scrubbing before any model call. Note it self-disables in `ENVIRONMENT=development`. |
+| `ENABLE_IP_REDACTION` | `false` | `true` also redacts IP addresses from exported traces. Off by default because IPs are often needed for debugging. |
+| `SECURITY_STRICT` | off | `1` is equivalent to `run-security-checks.py --strict`, for CI that sets env rather than args. |
+| `AGENTSMITH_TENANT_ROOT` | cwd | Which repo the security harness grades. Only for callers that cannot set the working directory — the harness resolves the tenant from cwd otherwise. |
+
+#### Evals and model routing
+
+| Variable | Default | Effect |
+|---|---|---|
+| `AGENT_JUDGE_MODEL` | the `judge` role | One-off judge override. Avoid exporting from a shell profile — it wins over every repo's declared judge, machine-wide. |
+| `EVAL_FAIL_BELOW` | `0.80` | Golden-suite threshold. Prefer `fail_below` on the judge role in `models.yaml`: thresholds are calibrated per grader, and declaring it there keeps the two in step. Precedence: CLI `--fail-below` → registry → this → default. |
+| `FAIRNESS_FAIL_BELOW` | `0.80` | Fairness suite, including pair parity. |
+| `HALLUCINATION_FAIL_ABOVE` | `0.05` | Max flagged-claim rate. |
+| `ADVERSARIAL_FAIL_ABOVE` | `0.10` | Max prompt-injection miss rate. |
+| `AGENT_MODEL_ARCHITECT` · `AGENT_MODEL_COMPLEX` · `AGENT_MODEL_STANDARD` · `AGENT_MODEL_FAST` · `AGENT_MODEL_LOCAL` | the matching registry role | Override one routing tier without touching `models.yaml`. `AGENT_MODEL_LOCAL` is the offline fallback and resolves to the `fast` role. |
+| `AGENT_DEFAULT_MODEL` | `unknown` | Model name recorded in agent log entries when a caller supplies none. Labelling only — it routes nothing. |
+| `AGENT_BURST_TOKEN_LIMIT` | `50000` | Circuit-breaker burst ceiling before token-velocity trips. |
+
+#### Providers and endpoints
+
+| Variable | Effect |
+|---|---|
+| `ANTHROPIC_API_KEY` · `OPENAI_API_KEY` · `GROQ_API_KEY` · `XAI_API_KEY` · `GEMINI_API_KEY` · `AZURE_OPENAI_API_KEY` | Provider credentials. A role may declare its own variable via `api_key_env` — e.g. a judge on a separate account, so a quota exhaustion on the actor cannot also take out its reviewer. |
+| `GITHUB_MODELS_TOKEN` | GitHub Models free tier for `gpt-*` ids instead of a billed `OPENAI_API_KEY`. In Actions the automatic `GITHUB_TOKEN` is used; this is the local-dev override (`export GITHUB_MODELS_TOKEN=$(gh auth token)`). |
+| `OLLAMA_BASE_URL` | Local Ollama host (default `http://localhost:11434`). |
+| `OLLAMA_API_KEY` | Only for an Ollama behind an authenticating proxy; the literal `ollama` otherwise. |
+| `OPENAI_BASE_URL` | Cloud host the network watchdog probes for reachability. |
+| `EMBEDDING_MODEL` | sentence-transformers model for the vector store (default `all-MiniLM-L6-v2`). |
+| `VECTOR_BACKEND` | `memory` (default) or `postgres` (needs pgvector + `DATABASE_URL`). |
+| `HF_TOKEN` / `HUGGING_FACE_HUB_TOKEN` / `HF_BASE_URL` | Hugging Face credentials and host for `verify_sovereign_endpoint.py` (UAE sovereign Falcon routes). `HF_TOKEN` wins. |
+| `HUAWEICLOUD_SDK_AK` / `HUAWEICLOUD_SDK_SK` | Huawei ModelArts credentials — that adapter authenticates by AK/SK, not an API key. |
+| `TENANT_WORKER_MODULE` | Import path to a tenant's workflow/activity module, so the shipped worker can be used without copying it into the tenant repo. |
+
+#### Desktop notifications
+
+| Variable | Default | Effect |
+|---|---|---|
+| `AGENT_NOTIFY_WEBHOOK` | unset | Slack / Teams / custom webhook for async delivery. Posted from a background thread — a notification never stalls an agent. |
+| `AGENT_NOTIFY_SOUND` | `Ping` | macOS sound name for `osascript` alerts. |
+| `AGENT_NOTIFY_ICON` | unset | Path to an icon for desktop notifications. |
 
 ---
 
