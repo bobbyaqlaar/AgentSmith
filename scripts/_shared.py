@@ -186,12 +186,39 @@ def _registry_judge_model() -> Optional[str]:
 
 
 def judge_model() -> str:
-    """Resolve the eval-judge model: AGENT_JUDGE_MODEL, else the `judge` role
-    in models.yaml, else DEFAULT_JUDGE_MODEL."""
+    """Resolve the eval-judge model: the `judge` role in models.yaml wins;
+    AGENT_JUDGE_MODEL applies only when no role declares one.
+
+    The registry is deliberately FIRST. AGENT_JUDGE_MODEL used to win, on the
+    theory that an env var is a convenient one-off override — but an env var is
+    ambient, and a line in a shell profile is permanent and invisible. A
+    developer profile carrying
+    `export AGENT_JUDGE_MODEL="claude-3-5-sonnet-20241022"` silently graded
+    every local eval with that model while CI, where the variable is unset,
+    used the declared `judge` role. Two graders, one threshold, no signal that
+    they differed — and the scores are not comparable across judges, which is
+    the whole reason `judge_models_used` provenance exists.
+
+    A config file that a shell profile can override is not a source of truth.
+    The variable is still honoured where nothing is declared (a scripts-only
+    install with no models.yaml), and an ignored value is logged rather than
+    dropped silently, so a deliberate override is not merely puzzling.
+    """
     env = os.environ.get("AGENT_JUDGE_MODEL", "").strip()
-    if env:
-        return env
-    return _registry_judge_model() or DEFAULT_JUDGE_MODEL
+    declared = _registry_judge_model()
+    if declared:
+        if env and env != declared:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "AGENT_JUDGE_MODEL=%r ignored — the `judge` role in models.yaml "
+                "declares %r, and the registry wins so a shell profile cannot "
+                "silently regrade a repo. Edit the judge role to change it.",
+                env,
+                declared,
+            )
+        return declared
+    return env or DEFAULT_JUDGE_MODEL
 
 
 def _repo_root() -> Path:

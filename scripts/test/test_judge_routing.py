@@ -267,3 +267,36 @@ def test_a_real_verdict_sets_no_error(monkeypatch) -> None:
     assert scored["score"] == 0.9
     assert not scored.get("error")
     assert scored["judged_by"] == "good-judge"
+
+
+def test_declared_api_key_env_falls_back_to_the_provider_default(tmp_path, monkeypatch) -> None:
+    """`api_key_env` is an opt-in override, not a hard requirement.
+
+    KYC Sentinel's judge declares ANTHROPIC_API_KEY_JUDGE so a quota exhaustion
+    on the actor's account cannot also take out its reviewer, and documents that
+    it falls back to ANTHROPIC_API_KEY when the dedicated one is unset. Reading
+    only the declared name sends an EMPTY auth header and 401s every call.
+    """
+    _tenant_registry(
+        tmp_path, monkeypatch,
+        "models:\n  judge:\n    id: claude-opus-4-8\n    provider: anthropic\n"
+        "    api_key_env: ANTHROPIC_API_KEY_JUDGE\n",
+    )
+    monkeypatch.delenv("ANTHROPIC_API_KEY_JUDGE", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "shared-account-key")
+
+    route = cost_router._route_for_model("claude-opus-4-8")
+    assert route.api_key == "shared-account-key", (
+        "an unset api_key_env must fall back, not produce an empty auth header"
+    )
+
+
+def test_the_dedicated_key_still_wins_when_populated(tmp_path, monkeypatch) -> None:
+    _tenant_registry(
+        tmp_path, monkeypatch,
+        "models:\n  judge:\n    id: claude-opus-4-8\n    provider: anthropic\n"
+        "    api_key_env: ANTHROPIC_API_KEY_JUDGE\n",
+    )
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "actor-key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY_JUDGE", "judge-key")
+    assert cost_router._route_for_model("claude-opus-4-8").api_key == "judge-key"

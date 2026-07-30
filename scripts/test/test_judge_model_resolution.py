@@ -77,16 +77,47 @@ def test_registry_is_readable_from_a_directly_invoked_script(tmp_path: Path) -> 
     assert out.stdout.strip() == "falcon3:3b", out.stderr[-400:]
 
 
-def test_env_var_wins_over_the_registry(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_JUDGE_MODEL", "qwen2.5")
-    assert _shared.judge_model() == "qwen2.5"
+def test_the_registry_wins_over_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Inverted deliberately. AGENT_JUDGE_MODEL used to win, and a developer
+    shell profile carrying `export AGENT_JUDGE_MODEL=claude-3-5-sonnet-20241022`
+    silently graded every local eval with that model while CI, where the
+    variable is unset, used the declared `judge` role. Two graders against one
+    threshold, with nothing reporting the difference — and scores are not
+    comparable across judges.
+
+    A config file a shell profile can override is not a source of truth.
+    """
+    monkeypatch.setenv("AGENT_JUDGE_MODEL", "some-other-model")
+    assert _shared.judge_model() == "falcon3:3b"
+
+
+def test_an_ignored_override_is_logged_not_swallowed(
+    monkeypatch: pytest.MonkeyPatch, caplog
+) -> None:
+    """Someone who exported it deliberately must find out why it did nothing."""
+    monkeypatch.setenv("AGENT_JUDGE_MODEL", "some-other-model")
+    with caplog.at_level("WARNING"):
+        _shared.judge_model()
+    assert "ignored" in caplog.text
+    assert "some-other-model" in caplog.text
+
+
+def test_the_env_var_still_applies_when_nothing_is_declared(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A scripts-only install with no models.yaml has no registry to defer to,
+    so the variable remains the way to name a judge there."""
+    monkeypatch.setattr(_shared, "_registry_judge_model", lambda: None)
+    monkeypatch.setenv("AGENT_JUDGE_MODEL", "env-chosen-judge")
+    assert _shared.judge_model() == "env-chosen-judge"
 
 
 def test_blank_env_var_is_treated_as_unset(monkeypatch: pytest.MonkeyPatch) -> None:
     """`export AGENT_JUDGE_MODEL=` used to resolve to the empty string and be
     passed to the judge as a model id."""
     monkeypatch.setenv("AGENT_JUDGE_MODEL", "   ")
-    assert _shared.judge_model() == "falcon3:3b"
+    monkeypatch.setattr(_shared, "_registry_judge_model", lambda: None)
+    assert _shared.judge_model() == _shared.DEFAULT_JUDGE_MODEL
 
 
 def test_falls_back_when_the_registry_cannot_be_read(

@@ -19,6 +19,25 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Changed — models.yaml wins over the environment for the judge
+
+`AGENT_JUDGE_MODEL` no longer overrides a declared `judge` role. It applies
+only where no role exists at all (a scripts-only install with no
+`models.yaml`), and a set-but-ignored value is logged with both model names
+rather than silently dropped.
+
+Found while calibrating a threshold: a developer shell profile carried
+`export AGENT_JUDGE_MODEL="claude-3-5-sonnet-20241022"`, so **every local eval
+was graded by that model while CI, where the variable is unset, used the
+declared role**. Two graders against one threshold with nothing reporting the
+difference — and scores are not comparable across judges, which is why
+`judge_models_used` provenance exists at all. A config file a shell profile can
+silently override is not a source of truth.
+
+The per-tier `AGENT_MODEL_*` overrides keep their existing precedence for now:
+none were set in the profile that caused this, and they change what runs
+visibly rather than changing what a gate measures. Worth revisiting.
+
 ### Documentation — the configuration surface is now discoverable
 
 - **21 environment variables the code reads were documented nowhere**, five of

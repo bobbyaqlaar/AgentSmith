@@ -231,7 +231,7 @@ Replace the context name with your stack's CI job name:
 | `ANTHROPIC_API_KEY`        | GitHub → Actions secrets            | Claude models (judge + architect)        |
 | `OPENAI_API_KEY`           | GitHub → Actions secrets            | GPT-4o (complex routing tier)            |
 | `AGENT_PHOENIX_ENDPOINT`   | GitHub → Actions secrets            | Team Phoenix URL                         |
-| `AGENT_JUDGE_MODEL`        | GitHub → Actions secrets (optional) | Defaults to `claude-3-5-sonnet-20241022` |
+| `AGENT_JUDGE_MODEL`        | Not needed — declare a `judge` role in `models.yaml` | Ignored when a role is declared; the registry wins |
 | `AGENT_OWNER_ID`           | GitHub → Actions secrets            | CI bot identity (e.g. `ci@example.com`)  |
 | `GROQ_API_KEY`             | GitHub → Actions secrets (optional) | Standard routing tier via Groq           |
 

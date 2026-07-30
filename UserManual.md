@@ -381,18 +381,31 @@ This does three things in sequence:
 The judge comes from the `judge` role in `models.yaml` — framework default
 `falcon3:3b` on local Ollama, deliberately a different model from `architect`
 so the grader is never the author of what it grades. To change it for good,
-edit that role (or declare your own in a tenant `models.yaml`), which keeps
-your CI evals and your runtime judge on the same model. To override a single
-run, no code change required — set the environment variable:
+edit that role, or declare your own in a tenant `models.yaml`:
 
-```bash
-export AGENT_JUDGE_MODEL="qwen2.5"             # local, larger
-export AGENT_JUDGE_MODEL="gpt-4o"              # cloud, needs OPENAI_API_KEY
-export AGENT_JUDGE_MODEL="llama-3.3-70b-versatile"   # Groq, needs GROQ_API_KEY
+```yaml
+models:
+  judge:
+    id: gemini-3-flash-preview
+    provider: google_ai          # or anthropic | xai | groq | openai | ollama
+    api_key_env: GEMINI_API_KEY
+    fail_below: {golden: 0.80, fairness: 0.80}   # calibrate per judge
 ```
 
-Avoid exporting it from your shell profile: it wins over every repo's declared
-`judge` role, machine-wide.
+**The registry wins over `AGENT_JUDGE_MODEL`.** The environment variable
+applies only where no `judge` role is declared at all — a scripts-only install
+with no `models.yaml`. If it is set and a role exists, it is ignored and a
+warning names both values.
+
+This precedence is deliberate and was inverted after a real failure: a shell
+profile carrying `export AGENT_JUDGE_MODEL="claude-3-5-sonnet-20241022"` graded
+every local eval with that model, while CI — where the variable is unset — used
+the declared role. Two graders against one threshold, with nothing reporting
+the difference, and scores are not comparable across judges. A config file that
+a shell profile can override is not a source of truth.
+
+To try a different judge for one run, edit the role, run, and revert — or use a
+scratch repo. There is deliberately no ambient override.
 
 ### Additional Suites (Reliability Pack)
 
@@ -884,7 +897,7 @@ already sets.
 
 | Variable | Default | Effect |
 |---|---|---|
-| `AGENT_JUDGE_MODEL` | the `judge` role | One-off judge override. Avoid exporting from a shell profile — it wins over every repo's declared judge, machine-wide. |
+| `AGENT_JUDGE_MODEL` | — | **Only applies when no `judge` role is declared.** The registry wins; a set-but-ignored value is logged with both models. Inverted after a shell profile silently regraded every local eval with a different model than CI used. |
 | `EVAL_FAIL_BELOW` | `0.80` | Golden-suite threshold. Prefer `fail_below` on the judge role in `models.yaml`: thresholds are calibrated per grader, and declaring it there keeps the two in step. Precedence: CLI `--fail-below` → registry → this → default. |
 | `FAIRNESS_FAIL_BELOW` | `0.80` | Fairness suite, including pair parity. |
 | `HALLUCINATION_FAIL_ABOVE` | `0.05` | Max flagged-claim rate. |

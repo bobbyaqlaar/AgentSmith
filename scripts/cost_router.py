@@ -384,11 +384,24 @@ def _registry_route(model: str) -> Optional[ModelRoute]:
             base_url = os.path.expandvars(base_url)
             if provider == "ollama":
                 return _local_route(model=model)
+            # Via _credential_for, NOT a bare os.environ lookup on the declared
+            # variable: a role's `api_key_env` is an opt-in override, and when
+            # it is unset the provider default still applies. KYC Sentinel's
+            # judge declares ANTHROPIC_API_KEY_JUDGE and documents exactly that
+            # ("opt-in, not a hard requirement"). Reading only the declared
+            # name sends an EMPTY auth header and 401s every call — the same
+            # failure _credential_for was written to fix, reintroduced here.
+            from runtime.provider_dispatch import default_api_key_env
+
             env = credential_env_for_model(cfg)
+            # The fallback is the PROVIDER default, not the declared name —
+            # passing the declared name makes it fall back to itself, which is
+            # still empty and still 401s.
+            fallback = default_api_key_env(provider) or ""
             return ModelRoute(
                 model=model,
                 base_url=base_url,
-                api_key=os.environ.get(env, "") if env else "",
+                api_key=_credential_for(model, fallback) if env else "",
                 tier="forced",
             )
     except Exception:  # fail-open: no runtime/ on the path, unreadable registry

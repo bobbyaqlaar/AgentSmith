@@ -622,7 +622,7 @@ For internal registries, the installer supports fetching from a private artifact
 | `OPENAI_API_KEY` | Required for hybrid mode | `sk-...` |
 | `ANTHROPIC_API_KEY` | Required for hybrid mode | `sk-ant-...` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Set by `ai-dashboard-start` | `http://localhost:6006/v1/traces` |
-| `AGENT_JUDGE_MODEL` | LLM judge; no code change required | *(unset)* — resolves to the `judge` role in `models.yaml` (framework default `falcon3:3b`); `scripts/_shared.py:DEFAULT_JUDGE_MODEL` is only the last-resort fallback when `runtime/` isn't importable |
+| `AGENT_JUDGE_MODEL` | Names a judge ONLY where no `judge` role is declared | *(unset)* — the `judge` role in `models.yaml` wins and an ignored value is logged (framework default `falcon3:3b`); `scripts/_shared.py:DEFAULT_JUDGE_MODEL` is the last-resort fallback when `runtime/` isn't importable |
 | `AGENT_OWNER_ID` | Real user identity | `bobby@example.com` |
 | `AGENT_OWNER_NAME` | Display name | `Bobby Rajagopal` |
 | `AGENT_PHOENIX_ENDPOINT` | Phoenix URL | `http://localhost:6006` |
@@ -1458,7 +1458,7 @@ In non-interactive environments (CI), the hook defaults to yes.
 | 5 | Notifications | Cross-platform via `plyer`; macOS additionally uses `osascript` |
 | 6 | Log levels & rotation | INFO/MINOR/MAJOR/CRITICAL; MAJOR+CRITICAL protected until HITL resolved; INFO+MINOR capped at 10,000 (FIFO) |
 | 7 | IDE config in public repos | Hook prompts for confirmation; auto-adds to `.gitignore` on yes; CI defaults to yes |
-| 8 | Judge model | The `judge` role in `models.yaml` (framework default `falcon3:3b` — deliberately not `architect`'s model, so the grader is never the author), resolved by `scripts/_shared.py:judge_model()` for run-evals/shadow-eval/verify_system alike — so a tenant declaring its own `judge` route gets its CI evals and its runtime judge on one model. Override for a single run via `AGENT_JUDGE_MODEL` — no code change |
+| 8 | Judge model | The `judge` role in `models.yaml` (framework default `falcon3:3b` — deliberately not `architect`'s model, so the grader is never the author), resolved by `scripts/_shared.py:judge_model()` for run-evals/shadow-eval/verify_system alike — so a tenant declaring its own `judge` route gets its CI evals and its runtime judge on one model. The registry takes precedence over `AGENT_JUDGE_MODEL`, which applies only where no role is declared — an ambient variable must not be able to regrade a repo |
 | 9 | Team Phoenix | Docker Compose included; auth required for team/production deployments |
 | 10 | Monorepo scope | Monorepo and multi-repo fully in scope; nested `.agent-rfc/` for sub-packages |
 | 11 | Agent identity | Full orchestrator + sub-agent hierarchy linked to `AGENT_OWNER_ID` |
