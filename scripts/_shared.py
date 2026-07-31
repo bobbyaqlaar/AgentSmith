@@ -292,6 +292,35 @@ def _save_sync_state(state: dict) -> None:
         json.dump(state, fh, indent=2)
 
 
+def _dotenv_value(raw: str) -> str:
+    """Parse one .env value: strip an unquoted inline comment, then quotes.
+
+    Inline comments were previously kept as part of the value, so
+    `OLLAMA_BASE_URL=http://localhost:11434   # intake route` set the URL to
+    everything including the comment. The request then went to
+    `http://localhost:11434   # intake route/chat/completions` and came back
+    `405 method not allowed` — a failure that reads like a broken endpoint
+    rather than a config parse bug. `KEY=value  # note` is a near-universal
+    convention, so this hit a normal, correct-looking .env.
+
+    Follows the usual dotenv rule: an inline comment must be preceded by
+    whitespace, so a bare `#` inside an unquoted value survives (passwords and
+    URL fragments), and a QUOTED value keeps everything between the quotes —
+    `PASS="a#b # c"` is `a#b # c`, not `a#b`.
+    """
+    raw = raw.strip()
+    if raw[:1] in ("'", '"'):
+        quote = raw[0]
+        end = raw.find(quote, 1)
+        if end != -1:
+            return raw[1:end]
+        return raw[1:]  # unterminated quote — take the rest
+    for i, ch in enumerate(raw):
+        if ch == "#" and (i == 0 or raw[i - 1] in " \t"):
+            return raw[:i].strip()
+    return raw
+
+
 def _load_dotenv(root: Optional[Path] = None) -> None:
     """Best-effort load of repo-root .env into os.environ (no overwrite).
     Previously copied in run-evals.py / verify_ttft.py /
@@ -306,7 +335,9 @@ def _load_dotenv(root: Optional[Path] = None) -> None:
                 continue
             key, _, val = line.partition("=")
             key = key.strip()
-            val = val.strip().strip("'").strip('"')
+            if key.startswith("export "):
+                key = key[len("export "):].strip()
+            val = _dotenv_value(val)
             if key and key not in os.environ:
                 os.environ[key] = val
     except Exception:  # fail-open: .env is optional convenience; never fatal

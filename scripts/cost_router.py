@@ -311,10 +311,24 @@ def _build_cloud_route(tier: str) -> ModelRoute:
         return _local_route(model=MODEL_FAST)
 
 
+def _ollama_base_url() -> str:
+    """Ollama's OpenAI-compatible base, tolerating OLLAMA_BASE_URL with or
+    without the `/v1` suffix.
+
+    runtime/llm_gateway.py reads the same variable as `${OLLAMA_BASE_URL}/v1`,
+    appending the suffix itself, so a tenant that sets the bare host — which is
+    what Ollama's own docs show — worked on the workload path and 404'd on the
+    eval path (`.../chat/completions` instead of `.../v1/chat/completions`).
+    One variable, two conventions, and only one of them documented.
+    """
+    base = (os.environ.get("OLLAMA_BASE_URL") or "http://localhost:11434").rstrip("/")
+    return base if base.endswith("/v1") else base + "/v1"
+
+
 def _local_route(model: Optional[str] = None) -> ModelRoute:
     return ModelRoute(
         model=model or MODEL_LOCAL,
-        base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
+        base_url=_ollama_base_url(),
         api_key="ollama",
         tier="local",
         is_local=True,
