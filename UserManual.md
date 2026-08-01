@@ -903,6 +903,7 @@ already sets.
 | `FAIRNESS_FAIL_BELOW` | `0.80` | Fairness suite, including pair parity. |
 | `HALLUCINATION_FAIL_ABOVE` | `0.05` | Max flagged-claim rate. |
 | `ADVERSARIAL_FAIL_ABOVE` | `0.10` | Max prompt-injection miss rate. |
+| `AGENT_MODEL_PROFILE` | *(unset)* | Selects which `profiles:` block in `models.yaml` binds the roles — `local`, `hybrid`, `openrouter`, or any profile you define. Wins over `AI_STACK_MODE`, which `ai-mode-local` / `ai-mode-hybrid` set. Falls back to `default_profile`. Ignored by a registry using the flat `models:` shape. |
 | `AGENT_MODEL_ARCHITECT` · `AGENT_MODEL_COMPLEX` · `AGENT_MODEL_STANDARD` · `AGENT_MODEL_FAST` · `AGENT_MODEL_LOCAL` | the matching registry role | Override one routing tier without touching `models.yaml`. `AGENT_MODEL_LOCAL` is the offline fallback and resolves to the `fast` role. |
 | `AGENT_DEFAULT_MODEL` | `unknown` | Model name recorded in agent log entries when a caller supplies none. Labelling only — it routes nothing. |
 | `AGENT_BURST_TOKEN_LIMIT` | `50000` | Circuit-breaker burst ceiling before token-velocity trips. |
@@ -911,7 +912,7 @@ already sets.
 
 | Variable | Effect |
 |---|---|
-| `ANTHROPIC_API_KEY` · `OPENAI_API_KEY` · `GROQ_API_KEY` · `XAI_API_KEY` · `GEMINI_API_KEY` · `AZURE_OPENAI_API_KEY` | Provider credentials. A role may declare its own variable via `api_key_env` — e.g. a judge on a separate account, so a quota exhaustion on the actor cannot also take out its reviewer. |
+| `ANTHROPIC_API_KEY` · `OPENAI_API_KEY` · `GROQ_API_KEY` · `XAI_API_KEY` · `GEMINI_API_KEY` · `OPENROUTER_API_KEY` · `AZURE_OPENAI_API_KEY` | Provider credentials. A role may declare its own variable via `api_key_env` — e.g. a judge on a separate account, so a quota exhaustion on the actor cannot also take out its reviewer. |
 | `GITHUB_MODELS_TOKEN` | GitHub Models free tier for `gpt-*` ids instead of a billed `OPENAI_API_KEY`. In Actions the automatic `GITHUB_TOKEN` is used; this is the local-dev override (`export GITHUB_MODELS_TOKEN=$(gh auth token)`). |
 | `OLLAMA_BASE_URL` | Local Ollama host (default `http://localhost:11434`). |
 | `OLLAMA_API_KEY` | Only for an Ollama behind an authenticating proxy; the literal `ollama` otherwise. |

@@ -2015,43 +2015,60 @@ gateway.complete(
 
 Per tenant repo (overrides) with framework defaults:
 
-The framework defaults are **local-only**: every role routes to Ollama, so no
-prompt leaves the machine and no call can be billed until a tenant opts into a
-cloud tier. Degrade chain: `architect → developer → validator → fast → halt`,
-strongest to smallest. `runtime/models.yaml` keeps the Groq and Vertex AI
-entries commented out with their verification notes for opting back in.
+`models.yaml` has **two blocks**, because "which models exist" and "which role
+uses which" are different questions:
+
+- **`catalog:`** — every model reference the framework can reach, local and
+  closed-weight alike. Presence costs nothing and routes nothing.
+- **`profiles:`** — role → catalog-alias bindings. A profile is a complete
+  routing set; switching profile switches every role at once.
+
+The flat `models:` shape remains supported and is what most tenant repos use;
+the loader flattens either into the same `{role: cfg}` map, so `llm_gateway`,
+`cost_router` and `scripts/_shared` consume one contract.
+
+The default profile is **local-only**: every role routes to Ollama, so no
+prompt leaves the machine and no call can be billed until a profile is
+selected. Degrade chain: `architect → developer → validator → fast → halt`,
+strongest to smallest.
+
+Profile selection: `AGENT_MODEL_PROFILE` (explicit) → `AI_STACK_MODE` (what
+`ai-mode-local` / `ai-mode-hybrid` export) → `default_profile`. Shipped
+profiles are `local`, `hybrid` and `openrouter`.
+
+**`api_format` is separate from `provider`.** The provider picks host,
+credential and adapter; the format picks the request/response envelope. They
+usually agree, so the field is optional — OpenRouter is the case that forces
+the distinction, fronting Claude, Gemini and Llama behind one
+OpenAI-compatible endpoint, so a Claude served that way speaks `openai_chat`
+rather than `anthropic_messages`.
 
 ```yaml
 # models.yaml — framework defaults (runtime/models.yaml)
-models:
-  architect:
-    id: qwen2.5
-    provider: ollama
-    endpoint: "${OLLAMA_BASE_URL}/v1"
-    cost_per_input_token: 0
-    cost_per_output_token: 0
-    degrade_to: developer
-  developer:
-    id: llama3.2:3b
-    provider: ollama
-    endpoint: "${OLLAMA_BASE_URL}/v1"
-    cost_per_input_token: 0
-    cost_per_output_token: 0
-    degrade_to: validator
-  validator:
-    id: falcon3:3b
-    provider: ollama
-    endpoint: "${OLLAMA_BASE_URL}/v1"
-    cost_per_input_token: 0
-    cost_per_output_token: 0
-    degrade_to: fast
-  fast:
-    id: smollm2
-    provider: ollama
-    endpoint: "${OLLAMA_BASE_URL}/v1"
-    cost_per_input_token: 0
-    cost_per_output_token: 0
-    degrade_to: null
+default_profile: local
+
+catalog:                          # model REFERENCES — present, not routed
+  qwen2.5:      {provider: ollama, endpoint: "${OLLAMA_BASE_URL}/v1", cost_per_input_token: 0, cost_per_output_token: 0}
+  "falcon3:3b": {provider: ollama, endpoint: "${OLLAMA_BASE_URL}/v1", cost_per_input_token: 0, cost_per_output_token: 0}
+  claude-sonnet-4-6: {provider: anthropic, cost_per_input_token: 0.000003, cost_per_output_token: 0.000015}
+  grok-4:            {provider: xai, cost_per_input_token: 0.000003, cost_per_output_token: 0.000015}
+  gemini-2.5-pro:    {provider: google_ai, cost_per_input_token: 0.00000125, cost_per_output_token: 0.00001}
+  openrouter-claude-sonnet:       # OpenRouter namespaces its ids, hence `id`
+    id: anthropic/claude-sonnet-4.5
+    provider: openrouter
+    api_format: openai_chat       # Claude, but in OpenAI shape
+    cost_per_input_token: 0.000003
+    cost_per_output_token: 0.000015
+
+profiles:                         # role BINDINGS
+  local:
+    architect: {use: qwen2.5, degrade_to: developer}
+    judge:     {use: "falcon3:3b", degrade_to: fast}
+  hybrid:
+    architect: {use: claude-sonnet-4-6, degrade_to: developer}
+    judge:     {use: grok-4, fail_below: {golden: 0.80, fairness: 0.80}}
+  openrouter:
+    architect: {use: openrouter-claude-sonnet, degrade_to: developer}
 ```
 
 Cloud tiers are a per-tenant opt-in — either a tenant `models.yaml` at the

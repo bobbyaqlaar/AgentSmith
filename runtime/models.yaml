@@ -1,242 +1,207 @@
 # runtime/models.yaml — Framework default model registry (§29).
 #
-# Tenant repos may override any entry by placing their own `models.yaml` at the
-# tenant repo root. Per-role overrides without a full registry copy can also be
-# set in `.agenticframework/tenant.yaml` under `gateway.routing_overrides`.
+# TWO BLOCKS, because "which models exist" and "which role uses which" are
+# different questions:
 #
-# `degrade_to` defines the downgrade ladder target for tier 2 (Downgrade).
+#   catalog:   every model REFERENCE the framework knows how to reach —
+#              local and closed-weight alike. Presence here costs nothing and
+#              routes nothing.
+#   profiles:  role → catalog alias bindings. A profile is a complete routing
+#              set; switching profile switches every role at once.
 #
-# Optional per-model overrides (fall back to the provider's default direct
-# API endpoint / standard env var when omitted):
-#   endpoint:     base URL — point at a proxy, region-pinned host, etc.
-#                 (supports ${VAR} expansion; required for provider: ollama)
-#   api_key_env:  name of the env var holding this model's API key — use
-#                 when a tenant has its own key under a different var name
+# The previous flat shape conflated the two, so a closed-weight model could
+# only be *present* by being *wired in*. Every cloud entry therefore lived
+# commented out: readable by a human, invisible to the code, and unusable
+# without editing YAML. They are now first-class entries that the default
+# profile simply does not bind.
 #
-# Note: endpoint/api_key_env above only cover "same request/response shape,
-# different host or key" cases (direct anthropic/openai/ollama/groq —
-# provider: groq defaults to https://api.groq.com/openai/v1 + GROQ_API_KEY,
-# same OpenAI-compatible request/response shape as openai/ollama).
+# SELECTING A PROFILE
+#   AGENT_MODEL_PROFILE=<name>   explicit, wins over everything
+#   AI_STACK_MODE=<name>         what `ai-mode-local` / `ai-mode-hybrid` export
+#   default_profile below        fallback
+# `ai-mode-hybrid` previously announced "Claude + cost routing" while changing
+# nothing about model selection — nothing in the registry path read the mode.
+# It now selects the `hybrid` profile.
 #
-# Cloud-native hosting has its own auth + envelope shape per provider,
-# handled by a CloudProviderAdapter in runtime/provider_dispatch.py
-# (set provider: to one of the values below to use it):
+# api_format vs provider — WHO hosts a model and WHAT SHAPE it speaks are
+# independent. `provider` picks the host, credential and (for cloud-native
+# providers) the adapter; `api_format` picks the request/response envelope.
+# They usually agree, so `api_format` is optional. OpenRouter is the case that
+# forces the distinction: it fronts Claude, Gemini and Llama behind ONE
+# OpenAI-compatible endpoint, so a Claude served that way speaks
+# `openai_chat`, not `anthropic_messages`.
+#   api_format: openai_chat         chat/completions (default for most)
+#   api_format: anthropic_messages  /v1/messages, system hoisted out
 #
-#   provider: vertex_ai          # GCP Vertex AI — OAuth2 service account
-#     project: my-gcp-project    # required
-#     region: us-central1        # optional, default shown — verified live (gemini-2.5-flash, 2026-06-29).
-#                                # GCC regions me-central1 (Doha) / me-central2 (Dammam) were tested
-#                                # live and do NOT currently serve gemini-2.5-flash (404 "Publisher
-#                                # model ... not found"); europe-west1/europe-west4/asia-south1 also
-#                                # confirmed working. Verify before overriding to a GCC region.
-#     publisher: google          # optional, default shown — Gemini, first-party on Vertex, no
-#                                # cross-vendor regional rollout lag. Set to "anthropic" for
-#                                # Claude-on-Vertex instead — supported but deprioritized as the
-#                                # default since its per-region availability depends on Anthropic's
-#                                # own Vertex rollout schedule, not just the Vertex region's GA status.
-#     url_template: "https://{region}-aiplatform.googleapis.com/v1/projects/{project}/..."
-#                                # optional — overrides the URL shape entirely (private VPC
-#                                # endpoint, proxy, regional variant); default is the public API
+# Per-entry fields (all optional unless noted):
+#   id             the provider's own name for the model. Defaults to the
+#                  catalog KEY, so only needed when they differ — the normal
+#                  case for OpenRouter's namespaced ids.
+#   endpoint       base URL; ${VAR} expanded. Required for provider: ollama.
+#   api_key_env    env var holding the key. Defaults per provider.
+#   cost_per_*     used by budget reservation and the spend cap. A wrong zero
+#                  makes a frontier model read as free.
 #
-#   provider: azure_openai       # Azure OpenAI — api-key + api-version, deployment in URL
-#     resource: my-azure-resource    # required
-#     deployment: gpt-4o-prod        # optional, defaults to `id`
-#     api_version: "2024-06-01"      # optional, default shown
-#     api_key_env: AZURE_OPENAI_API_KEY  # optional, default shown
-#     url_template: "https://{resource}.openai.azure.us/..."  # optional, e.g. Azure Gov cloud
+# Cloud-native providers (vertex_ai, azure_openai, bedrock, huawei_modelarts)
+# need their own auth and envelope, handled by a CloudProviderAdapter in
+# runtime/provider_dispatch.py. Their extra fields (project/region/publisher,
+# resource/deployment/api_version, url_template, path_template) are documented
+# in that module's adapter docstrings. Mock-tested: all four. Live-verified
+# against a real account: vertex_ai only (project agentsmith-500916,
+# 2026-06-29) — GCC regions me-central1 (Doha) / me-central2 (Dammam) were
+# tested and do NOT serve gemini-2.5-flash; us-central1, europe-west1,
+# europe-west4 and asia-south1 do. Verify before pinning a GCC region.
 #
-#   provider: bedrock            # AWS Bedrock — SigV4, standard boto3 credential chain
-#     region: us-east-1          # optional, default shown — broad model coverage. AWS's GCC
-#                                # region is me-central-1 (UAE/Dubai); me-south-1 (Bahrain) is the
-#                                # other Middle East option — NEITHER has been verified to have
-#                                # Bedrock or the model you need enabled (no AWS creds available to
-#                                # test; the equivalent GCP GCC-region assumption above turned out
-#                                # to be wrong when actually tested — don't assume this one is right
-#                                # either). Confirm via a live call before overriding to a GCC region.
-#     url_template: "https://vpce-xxxx.bedrock-runtime.{region}.vpce.amazonaws.com/model/{model_id}/invoke"
-#                                # optional, e.g. a VPC interface endpoint instead of the public host
-#
-#   provider: huawei_modelarts   # Huawei Cloud ModelArts — AK/SK signing (least-verified; see
-#     endpoint: xxxxx.<region>.modelarts-infer.com  # required, custom inference endpoint host.
-#                                # No confirmed Huawei Cloud GCC region code at time of writing —
-#                                # verify against Huawei's current region list before deploying.
-#     path_template: "/v2/infers/{model_id}/chat/completions"  # optional, default shown is /v1/...
-#                                # provider_dispatch.py's HuaweiModelArtsAdapter docstring)
-#
-# Mock-tested: all four (runtime/test/test_provider_dispatch_cloud.py).
-# Live-verified against a real cloud account: vertex_ai only (project
-# agentsmith-500916, 2026-06-29) — see the `vertex_gemini` entry below and
-# the region note in its comment. azure_openai/bedrock/huawei_modelarts
-# remain mock-tested only.
+# Tenants may still use the flat `models:` shape — both are supported and the
+# loader flattens either to the same {role: cfg} map.
 
-# ── LOCAL-ONLY DEFAULT REGISTRY ──────────────────────────────────────────────
-#
-# Every role below routes to Ollama. No prompt leaves the machine under the
-# framework defaults, and no call can be billed: every tier is zero-cost, so
-# the budget ladder never degrades across a trust boundary — it only ever
-# picks a smaller local model.
-#
-# Prerequisite — pull all four:
-#   ollama pull qwen2.5 && ollama pull llama3.2:3b \
-#     && ollama pull falcon3:3b && ollama pull smollm2
-#
-# Degrade chain: architect → developer → validator → fast → (halt).
-# Ordered strongest → smallest, so a breach or a provider error walks down to
-# a lighter local model rather than out to a cloud API.
-#
-# Cloud tiers are NOT deleted, just not wired in — the previously live-verified
-# Groq and Vertex AI entries are preserved commented-out at the bottom of this
-# file with their verification notes. Uncomment one and point a `degrade_to`
-# at it (or hint it by role name) to opt back in; that is a deliberate act,
-# not something a default can do behind your back. Per-tenant overrides work
-# the same as before: a tenant `models.yaml` at the tenant repo root, or
-# `gateway.routing_overrides` in `.agenticframework/tenant.yaml`.
+default_profile: local
 
-models:
-  architect:
-    id: qwen2.5
+# ── CATALOG — model references ───────────────────────────────────────────────
+catalog:
+
+  # ── Local (Ollama) — zero cost, nothing leaves the machine ────────────────
+  # Pull them all with: ollama pull $(ai-stack-required-models)
+  qwen2.5:
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
     cost_per_output_token: 0
-    degrade_to: developer
-
-  developer:
-    id: llama3.2:3b
+  "llama3.2:3b":
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
     cost_per_output_token: 0
-    degrade_to: validator
-
-  validator:
-    id: falcon3:3b
+  "falcon3:3b":
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
     cost_per_output_token: 0
-    degrade_to: fast
-
-  # Eval judge — the model that grades golden/fairness/hallucination cases in
-  # run-evals.py, shadow-eval.py and verify_system.py. Declared here so the
-  # judge id has ONE source: scripts/_shared.py:judge_model() reads this role
-  # rather than carrying its own constant, and a tenant that declares its own
-  # `judge` role (as KYC Sentinel does) automatically gets its CI evals and its
-  # runtime judge on the same model instead of two independent settings that
-  # drift. `AGENT_JUDGE_MODEL` still overrides, for a one-off run.
-  #
-  # Judge/actor independence: deliberately NOT qwen2.5, so the judge is never
-  # the model that wrote what it grades — architect output is the tier where
-  # self-grading does the most damage, and runtime.judging.
-  # judge_independence_warning exists to flag exactly that collision.
-  #
-  # It does share falcon3:3b with `validator`, which a four-model local
-  # registry can't avoid — every id here is already spoken for. That overlap
-  # is the mild one: validator is itself a checking role, not the primary
-  # author of the rationales the judge scores. It only becomes a real
-  # independence problem if you start judging validator output specifically;
-  # at that point add a fifth local model rather than reusing one of these.
-  # ── Judge ───────────────────────────────────────────────────────────────
-  # Grades eval cases and (for tenants that use it) critiques agent output.
-  #
-  # CHOOSING A JUDGE. Independence is the property that matters most: a judge
-  # sharing a training lineage with the model it grades is not independent in
-  # any useful sense, and models rate their own family's output higher.
-  # `judge_independence_warning` only catches IDENTICAL ids, so a Claude judge
-  # grading a Claude actor passes that check while exhibiting exactly the bias
-  # it exists to prevent. Prefer a different VENDOR, not just a different model.
-  #
-  # Three cross-vendor options, all OpenAI-compatible — no adapter needed, just
-  # swap this entry and export the key. Copy one into a tenant models.yaml:
-  #
-  #   judge:                        # Anthropic
-  #     id: claude-opus-4-8
-  #     provider: anthropic
-  #     api_key_env: ANTHROPIC_API_KEY_JUDGE   # own account, own quota
-  #     fail_below: {golden: 0.80, fairness: 0.80}
-  #
-  #   judge:                        # xAI
-  #     id: grok-4
-  #     provider: xai
-  #     api_key_env: XAI_API_KEY
-  #     fail_below: {golden: 0.80, fairness: 0.80}
-  #
-  #   judge:                        # Google AI Studio (NOT Vertex — that is
-  #     id: gemini-2.5-pro          # `provider: vertex_ai`, service-account
-  #     provider: google_ai         # OAuth, and an AI Studio key will not work
-  #     api_key_env: GEMINI_API_KEY # there)
-  #     fail_below: {golden: 0.80, fairness: 0.80}
-  #
-  # CALIBRATE `fail_below` PER JUDGE. 0.80 from one grader is not 0.80 from
-  # another — they differ in strictness and in how they read a rubric. The
-  # thresholds above are the framework default, NOT calibrated for any of
-  # these models. Declaring the number here rather than in CI keeps it moving
-  # with the judge it was measured against. Run the suite a few times on a
-  # known-good main and set it from what actually passes.
-  #
-  # NO degrade_to on a judge role. The eval path (scripts/cost_router.py) does
-  # not walk the chain at all, and where it can fire a substituted grader emits
-  # confident verdicts into the same score field against the same threshold.
-  # See OPERATIONS.md "Why the judge never falls back to another model".
-  judge:
-    id: falcon3:3b
+  smollm2:
     provider: ollama
     endpoint: "${OLLAMA_BASE_URL}/v1"
     cost_per_input_token: 0
     cost_per_output_token: 0
-    # Degrades to the smallest model, not to `validator` — validator is the
-    # same falcon3:3b, so that rung would have been a no-op that looked like
-    # a fallback. Kept for the LOCAL default only: falcon3:3b and smollm2 are
-    # peers, so this is an availability fallback between equals rather than a
-    # silent downgrade of the grader. A cloud judge should declare none.
-    degrade_to: fast
 
-  # Smallest local model — the last rung before the ladder halts.
-  fast:
-    id: smollm2
-    provider: ollama
-    endpoint: "${OLLAMA_BASE_URL}/v1"
-    cost_per_input_token: 0
-    cost_per_output_token: 0
-    degrade_to: null
+  # ── Anthropic (direct) ────────────────────────────────────────────────────
+  claude-opus-4-8:
+    provider: anthropic
+    cost_per_input_token: 0.000003
+    cost_per_output_token: 0.000015
+  claude-sonnet-4-6:
+    provider: anthropic
+    cost_per_input_token: 0.000003
+    cost_per_output_token: 0.000015
 
-# ── Opt-in cloud tiers (commented out — this registry is local-only) ──────────
+  # ── OpenAI (direct) ───────────────────────────────────────────────────────
+  gpt-4o:
+    provider: openai
+    cost_per_input_token: 0.0000025
+    cost_per_output_token: 0.00001
+
+  # ── Groq — cheap/fast OpenAI-compatible tier ──────────────────────────────
+  llama-3.3-70b-versatile:
+    provider: groq
+    cost_per_input_token: 0.00000059
+    cost_per_output_token: 0.00000079
+
+  # ── xAI ───────────────────────────────────────────────────────────────────
+  grok-4:
+    provider: xai
+    cost_per_input_token: 0.000003
+    cost_per_output_token: 0.000015
+
+  # ── Google AI Studio (api key). NOT vertex_ai, which is service-account
+  #    OAuth — an AI Studio key will not authenticate there, or vice versa.
+  gemini-2.5-pro:
+    provider: google_ai
+    cost_per_input_token: 0.00000125
+    cost_per_output_token: 0.00001
+  gemini-3-flash-preview:
+    provider: google_ai
+    cost_per_input_token: 0.0000003
+    cost_per_output_token: 0.0000025
+    # A THINKING model: a trivial prompt spent ~111 hidden reasoning tokens,
+    # so a small max_tokens returns empty content. Also a PREVIEW model — its
+    # behaviour can change without notice and move any threshold calibrated
+    # against it.
+
+  # ── OpenRouter — one OpenAI-compatible endpoint, many vendors ─────────────
+  # The reason `api_format` exists separately from `provider`: these ARE
+  # Claude and Gemini, but reached in OpenAI chat shape. Ids are namespaced,
+  # hence the explicit `id` on each entry.
+  openrouter-claude-sonnet:
+    id: anthropic/claude-sonnet-4.5
+    provider: openrouter
+    api_format: openai_chat
+    cost_per_input_token: 0.000003
+    cost_per_output_token: 0.000015
+  openrouter-gemini-pro:
+    id: google/gemini-2.5-pro
+    provider: openrouter
+    api_format: openai_chat
+    cost_per_input_token: 0.00000125
+    cost_per_output_token: 0.00001
+  openrouter-llama-70b:
+    id: meta-llama/llama-3.3-70b-instruct
+    provider: openrouter
+    api_format: openai_chat
+    cost_per_input_token: 0.00000059
+    cost_per_output_token: 0.00000079
+
+  # ── GCP Vertex AI (service-account OAuth) ─────────────────────────────────
+  vertex-gemini-flash:
+    id: gemini-2.5-flash
+    provider: vertex_ai
+    project: "${GCP_PROJECT_ID}"   # per-tenant; no project id is committed here
+    region: us-central1            # see the GCC-region note in the header
+    cost_per_input_token: 0.0000003
+    cost_per_output_token: 0.0000025
+
+# ── PROFILES — role bindings ─────────────────────────────────────────────────
 #
-# The `local_large` (qwen2.5) and `local_small` (llama3.2) roles that used to
-# sit here were dropped rather than commented: they are now duplicates of
-# architect and developer respectively, and two role names resolving to the
-# same model is how a registry starts lying about what ran.
-#
-# ── Groq (cheap/fast cloud tier) ─────────────────────────────────────────────
-# OpenAI-compatible API — handled by llm_gateway.py's `provider: groq` branch
-# (base_url https://api.groq.com/openai/v1, api_key_env defaults to
-# GROQ_API_KEY). Was the rung between validator and the local tier: a real
-# cloud model rather than dropping straight to local, falling through only if
-# GROQ_API_KEY was unset/invalid or Groq itself was exhausted. cost_per_*_token
-# are placeholders — confirm against Groq's current pricing page.
-#
-#   groq_fast:
-#     id: llama-3.3-70b-versatile
-#     provider: groq
-#     cost_per_input_token: 0.00000059
-#     cost_per_output_token: 0.00000079
-#     degrade_to: architect
-#
-# ── GCP Vertex AI ────────────────────────────────────────────────────────────
-# Live-verified: gemini-2.5-flash in us-central1 against a real GCP project
-# (2026-06-29) — request/response round-tripped correctly through
-# VertexAIAdapter. Requires GOOGLE_APPLICATION_CREDENTIALS (or another
-# google-auth-supported credential source) and the Vertex AI API enabled on
-# `project`. cost_per_*_token are placeholders — confirm against GCP's current
-# Vertex AI pricing page before relying on them for budget enforcement. Was
-# never in the degrade chain even when active; route to it explicitly via
-# model_hint="vertex_gemini" or a tenant's routing_overrides.
-#
-#   vertex_gemini:
-#     id: gemini-2.5-flash
-#     provider: vertex_ai
-#     project: "${GCP_PROJECT_ID}"   # set per-tenant; no project id is committed here
-#     region: us-central1            # GCC regions (me-central1/me-central2) confirmed NOT to serve this model
-#     cost_per_input_token: 0.0000003
-#     cost_per_output_token: 0.0000025
-#     degrade_to: null
+# A role may bind with a bare alias, or a mapping carrying per-role extras
+# (`degrade_to`, `fail_below`, `api_key_env`).
+profiles:
+
+  # DEFAULT. Every role local: no prompt leaves the machine, no call can be
+  # billed, and the degrade ladder only ever picks a SMALLER LOCAL model
+  # rather than walking out across a trust boundary.
+  local:
+    architect: {use: qwen2.5, degrade_to: developer}
+    developer: {use: "llama3.2:3b", degrade_to: validator}
+    validator: {use: "falcon3:3b", degrade_to: fast}
+    fast: {use: smollm2, degrade_to: null}
+    # Judge/actor independence: deliberately NOT qwen2.5, so the grader is
+    # never the model that wrote what it grades. It does share falcon3:3b with
+    # `validator`, which four local models cannot avoid — the mild overlap,
+    # since validator is itself a checking role rather than the primary author
+    # of the rationales the judge scores. Degrades to smollm2, a peer, not to
+    # `validator` (the same model — a rung that would look like a fallback and
+    # do nothing).
+    judge: {use: "falcon3:3b", degrade_to: fast}
+
+  # Frontier models for judgement, cheap cloud for volume, local as the floor.
+  # Requires ANTHROPIC_API_KEY and GROQ_API_KEY.
+  hybrid:
+    architect: {use: claude-sonnet-4-6, degrade_to: developer}
+    developer: {use: llama-3.3-70b-versatile, degrade_to: validator}
+    validator: {use: "falcon3:3b", degrade_to: fast}
+    fast: {use: smollm2, degrade_to: null}
+    # Cross-VENDOR judge. judge_independence_warning only catches IDENTICAL
+    # ids, so a Claude judge over a Claude architect passes that check while
+    # showing exactly the same-family bias it exists to prevent. NO degrade_to
+    # on a judge: the eval path does not walk the chain, and where it can fire
+    # a substituted grader writes confident verdicts into the same score field.
+    # CALIBRATE fail_below per judge — 0.80 from one grader is not 0.80 from
+    # another. These are framework defaults, not calibrated for this model.
+    judge: {use: grok-4, fail_below: {golden: 0.80, fairness: 0.80}}
+
+  # Everything through OpenRouter — one key, one endpoint, many vendors.
+  # Requires OPENROUTER_API_KEY.
+  openrouter:
+    architect: {use: openrouter-claude-sonnet, degrade_to: developer}
+    developer: {use: openrouter-llama-70b, degrade_to: validator}
+    validator: {use: "falcon3:3b", degrade_to: fast}
+    fast: {use: smollm2, degrade_to: null}
+    judge: {use: openrouter-gemini-pro, fail_below: {golden: 0.80, fairness: 0.80}}

@@ -52,6 +52,44 @@ def infer_provider(base_url: str) -> str:
     return "anthropic" if "anthropic" in base_url else "openai_compatible"
 
 
+# ── Wire format ───────────────────────────────────────────────────────────────
+#
+# WHO hosts a model and WHAT SHAPE it speaks are different questions, and
+# conflating them is what made OpenRouter awkward to express: it serves Claude,
+# Gemini and Llama behind ONE OpenAI-compatible endpoint, so `provider:
+# openrouter` says nothing about the envelope while `provider: anthropic`
+# implies both a host and the Messages API. A catalog entry can now declare
+# `api_format` explicitly; when it does not, the provider's usual format is
+# assumed, so every existing entry keeps working unchanged.
+API_FORMAT_OPENAI = "openai_chat"
+API_FORMAT_ANTHROPIC = "anthropic_messages"
+
+_PROVIDER_DEFAULT_FORMAT = {
+    "anthropic": API_FORMAT_ANTHROPIC,
+    "openai": API_FORMAT_OPENAI,
+    "groq": API_FORMAT_OPENAI,
+    "ollama": API_FORMAT_OPENAI,
+    "xai": API_FORMAT_OPENAI,
+    "google_ai": API_FORMAT_OPENAI,   # AI Studio's OpenAI-compatibility layer
+    "openrouter": API_FORMAT_OPENAI,
+    "azure_openai": API_FORMAT_OPENAI,
+}
+
+
+def resolve_api_format(cfg: dict) -> str:
+    """The wire format a catalog entry speaks.
+
+    An explicit `api_format` wins; otherwise it follows from the provider.
+    This is what lets one provider serve several vendors' models
+    (OpenRouter) and one vendor be reached through several formats
+    (Claude direct = Messages API, Claude via OpenRouter = OpenAI chat).
+    """
+    declared = (cfg.get("api_format") or "").strip()
+    if declared:
+        return declared
+    return _PROVIDER_DEFAULT_FORMAT.get(cfg.get("provider", "openai"), API_FORMAT_OPENAI)
+
+
 def build_request(
     provider: str,
     model_id: str,
@@ -59,14 +97,17 @@ def build_request(
     api_key: str,
     max_tokens: int,
     temperature: float = 0.2,
+    api_format: Optional[str] = None,
 ) -> tuple[str, dict, dict]:
     """Returns (url_path, headers, body) for the given provider.
 
-    provider="anthropic" uses the Messages API shape (system pulled out of
-    the messages list into its own top-level field); anything else is
-    treated as OpenAI-compatible (openai, groq, ollama, ...).
+    `api_format` selects the envelope explicitly. When omitted it is derived
+    from `provider`, preserving the original behaviour: "anthropic" uses the
+    Messages API shape (system pulled out of the messages list into its own
+    top-level field), anything else is treated as OpenAI-compatible.
     """
-    if provider == "anthropic":
+    fmt = api_format or _PROVIDER_DEFAULT_FORMAT.get(provider, API_FORMAT_OPENAI)
+    if fmt == API_FORMAT_ANTHROPIC:
         system = (
             "\n".join(m["content"] for m in messages if m["role"] == "system") or None
         )
@@ -95,9 +136,18 @@ def build_request(
     return "/chat/completions", headers, body
 
 
-def parse_response(provider: str, data: dict) -> tuple[str, int, int]:
-    """Returns (text, input_tokens, output_tokens)."""
-    if provider == "anthropic":
+def parse_response(
+    provider: str, data: dict, api_format: Optional[str] = None
+) -> tuple[str, int, int]:
+    """Returns (text, input_tokens, output_tokens).
+
+    Mirrors build_request: the response envelope must be parsed with the same
+    format it was requested in. Claude reached through OpenRouter answers in
+    OpenAI shape, not Anthropic shape, so keying this off the provider alone
+    would read the wrong fields.
+    """
+    fmt = api_format or _PROVIDER_DEFAULT_FORMAT.get(provider, API_FORMAT_OPENAI)
+    if fmt == API_FORMAT_ANTHROPIC:
         text = data["content"][0]["text"]
         usage = data.get("usage", {})
         return text, usage.get("input_tokens", 0), usage.get("output_tokens", 0)
@@ -115,7 +165,7 @@ def parse_response(provider: str, data: dict) -> tuple[str, int, int]:
 # a tenant routing its latency-critical call to Anthropic (the obvious
 # design) could not use the TTFT budget at all.
 
-_STREAMING_PROVIDERS = {"openai", "ollama", "groq", "anthropic"}
+_STREAMING_PROVIDERS = {"openai", "ollama", "groq", "anthropic", "xai", "google_ai", "openrouter"}
 
 
 _DEFAULT_API_KEY_ENV = {
@@ -130,6 +180,11 @@ _DEFAULT_API_KEY_ENV = {
     # own family's output higher. `judge_independence_warning` only catches
     # IDENTICAL ids, so same-vendor judging reads as independent when it isn't.
     "xai": "XAI_API_KEY",
+    # OpenRouter — one OpenAI-compatible endpoint fronting many vendors'
+    # models. Its ids are namespaced ("anthropic/claude-sonnet-4.5"), and a
+    # Claude served this way speaks OpenAI chat, not the Messages API, which
+    # is exactly why api_format is declared separately from provider.
+    "openrouter": "OPENROUTER_API_KEY",
     # Google AI Studio (generativelanguage), NOT Vertex AI: this is the
     # api-key-in-a-header path. `vertex_ai` below is the same models behind
     # service-account OAuth, and the two are not interchangeable — an AI Studio

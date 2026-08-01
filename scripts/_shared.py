@@ -107,6 +107,7 @@ def role_credential_env(role: str) -> Optional[str]:
 # runtime, which is the thing the vendoring boundary exists to avoid.
 _FALLBACK_API_KEY_ENV = {
     "anthropic": "ANTHROPIC_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
     "groq": "GROQ_API_KEY",
     "openai": "OPENAI_API_KEY",
     "azure_openai": "AZURE_OPENAI_API_KEY",

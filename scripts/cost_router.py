@@ -433,6 +433,7 @@ _PROVIDER_BASE_URL = {
     "groq": "https://api.groq.com/openai/v1",
     "xai": "https://api.x.ai/v1",
     "google_ai": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "openrouter": "https://openrouter.ai/api/v1",
     "ollama": "${OLLAMA_BASE_URL}",
 }
 

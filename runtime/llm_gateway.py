@@ -103,21 +103,93 @@ def _load_yaml(path: Path) -> dict:
         return {}
 
 
+def _active_profile_name(doc: dict) -> str:
+    """Which profile a catalog-style registry binds roles from.
+
+    AI_STACK_MODE is what `ai-mode-local` / `ai-mode-hybrid` already export, so
+    the shell switch that previously only printed a banner now actually selects
+    routes. An explicit AGENT_MODEL_PROFILE wins over it, for selecting a
+    profile without changing the machine's mode.
+    """
+    explicit = os.environ.get("AGENT_MODEL_PROFILE", "").strip()
+    if explicit:
+        return explicit
+    mode = os.environ.get("AI_STACK_MODE", "").strip()
+    profiles = doc.get("profiles") or {}
+    if mode and mode in profiles:
+        return mode
+    return str(doc.get("default_profile") or "local")
+
+
+def _roles_from_doc(doc: dict) -> dict:
+    """Flatten either registry shape into {role: cfg}.
+
+    Two shapes are supported on purpose:
+
+      models:   {role: {id, provider, ...}}        # flat — the original
+      catalog:  {alias: {id, provider, ...}}       # model REFERENCES
+      profiles: {name: {role: alias | {use: alias, ...}}}
+
+    Catalog+profiles separates two things the flat shape conflated: WHICH
+    models exist (including closed-weight ones you are not currently routing
+    to) and WHICH ROLE uses which. Under the flat shape a cloud model could
+    only be present by being wired in, so the framework default had every
+    closed-weight entry commented out — visible to a reader, invisible to the
+    code, and impossible to switch to without editing YAML.
+
+    Both shapes resolve to the SAME flat {role: cfg} dict, so llm_gateway,
+    cost_router and scripts/_shared all consume it unchanged. That is the
+    point of doing the resolution here rather than at each call site.
+    """
+    flat = {role: dict(cfg) for role, cfg in (doc.get("models") or {}).items()}
+
+    catalog = doc.get("catalog") or {}
+    profiles = doc.get("profiles") or {}
+    if not catalog and not profiles:
+        return flat
+
+    bindings = (profiles.get(_active_profile_name(doc)) or {}) if profiles else {}
+    for role, binding in bindings.items():
+        extras: dict = {}
+        if isinstance(binding, dict):
+            alias = binding.get("use") or binding.get("model")
+            extras = {k: v for k, v in binding.items() if k not in ("use", "model")}
+        else:
+            alias = binding
+        entry = catalog.get(alias)
+        if entry is None:
+            raise ValueError(
+                f"models.yaml: role {role!r} binds to {alias!r}, which is not in "
+                f"`catalog`. Known: {sorted(catalog)}"
+            )
+        # `id` defaults to the catalog KEY, so an entry only needs an explicit
+        # id when the provider's name for it differs from the alias — which is
+        # the normal case for OpenRouter ("anthropic/claude-sonnet-4.5").
+        cfg = {"id": alias, **entry, **extras}
+        flat[role] = cfg
+    return flat
+
+
 def load_model_registry() -> dict:
     """
     Load the model registry: framework defaults from runtime/models.yaml,
     overridden by a tenant repo's own models.yaml (if present), overridden
     again by `.agenticframework/tenant.yaml` -> gateway.routing_overrides
     (a per-role model id shorthand, §29).
+
+    Either file may use the flat `models:` shape or `catalog:` + `profiles:`;
+    both flatten to {role: cfg} before merging, so the two can be mixed (a
+    catalog-style framework default under a flat tenant override, which is
+    exactly the current KYC Sentinel arrangement).
     """
     registry: dict = {}
-    for role, cfg in _load_yaml(_FRAMEWORK_MODELS_YAML).get("models", {}).items():
+    for role, cfg in _roles_from_doc(_load_yaml(_FRAMEWORK_MODELS_YAML)).items():
         registry[role] = dict(cfg)
 
     root = _repo_root()
     tenant_models_path = root / "models.yaml"
     if tenant_models_path.exists():
-        for role, cfg in _load_yaml(tenant_models_path).get("models", {}).items():
+        for role, cfg in _roles_from_doc(_load_yaml(tenant_models_path)).items():
             base = registry.get(role, {})
             # Same model id => the tenant is tweaking fields on the framework's
             # route, so merge. DIFFERENT id => it is a different model, and
@@ -1241,6 +1313,14 @@ class LLMGateway:
                 cfg.get("endpoint")
                 or "https://generativelanguage.googleapis.com/v1beta/openai"
             )
+        elif provider == "openrouter":
+            # One OpenAI-compatible endpoint fronting many vendors. The model
+            # id carries the vendor ("anthropic/claude-sonnet-4.5"), and the
+            # envelope is OpenAI chat regardless of whose model it is — which
+            # is why api_format is declared per catalog entry rather than
+            # inferred from the vendor in the id.
+            api_key = LLMGateway._lookup_api_key(cfg, "OPENROUTER_API_KEY")
+            base_url = cfg.get("endpoint") or "https://openrouter.ai/api/v1"
         else:
             api_key = LLMGateway._lookup_api_key(cfg, "OPENAI_API_KEY")
             base_url = cfg.get("endpoint") or "https://api.openai.com/v1"

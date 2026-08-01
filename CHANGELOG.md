@@ -19,6 +19,46 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Added — models.yaml gains catalog + profiles, and OpenRouter
+
+`runtime/models.yaml` now has two blocks instead of one flat role map:
+
+- **`catalog:`** — every model reference the framework can reach, local and
+  closed-weight alike. Presence costs nothing and routes nothing.
+- **`profiles:`** — role → catalog-alias bindings. Shipped: `local` (default,
+  unchanged behaviour), `hybrid`, `openrouter`.
+
+The flat shape conflated two questions — which models exist, and which role
+uses which — so a closed-weight model could only be *present* by being *wired
+in*. Every cloud entry consequently lived commented out: readable by a human,
+invisible to the code, and unusable without editing YAML. They are now real
+entries the default profile simply does not bind.
+
+**`ai-mode-hybrid` finally does something.** It announced "Claude + cost
+routing" while nothing in the registry path read `AI_STACK_MODE`; model
+selection was unaffected. Profile selection is now
+`AGENT_MODEL_PROFILE` → `AI_STACK_MODE` → `default_profile`, and an
+`AI_STACK_MODE` naming no existing profile falls back rather than binding zero
+roles.
+
+**`api_format` is now declared separately from `provider`.** Who hosts a model
+and what shape it speaks are independent axes. OpenRouter forces the
+distinction — it fronts Claude, Gemini and Llama behind one OpenAI-compatible
+endpoint, so a Claude served that way speaks `openai_chat`, not
+`anthropic_messages`; keying the envelope off the vendor in the id would build
+the wrong request and then parse the wrong response fields. The field is
+optional and defaults from the provider, so every existing entry is unaffected.
+
+**OpenRouter is a first-class provider** (`OPENROUTER_API_KEY`,
+`https://openrouter.ai/api/v1`), on both the gateway and eval paths.
+
+Backwards compatible: **the flat `models:` shape still works** and is what KYC
+Sentinel uses. Both flatten to the same `{role: cfg}` map inside the loader, so
+`llm_gateway`, `cost_router` and `scripts/_shared` are unchanged — that seam is
+why this did not ripple. A profile binding to an unknown catalog alias raises
+rather than resolving to an empty config.
+
+
 ### Changed — models.yaml wins over the environment for the judge
 
 `AGENT_JUDGE_MODEL` no longer overrides a declared `judge` role. It applies
