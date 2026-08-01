@@ -48,8 +48,10 @@ from _shared import role_model  # noqa: E402
 # as the credential-lookup regression that broke KYC Sentinel's CI.
 # scripts/test/test_exhaustion_classification.py asserts the two never drift.
 _FALLBACK_EXHAUSTION_MARKERS = (
-    "credit balance is too low",
-    "insufficient_quota",
+    "credit balance is too low",     # Anthropic
+    "requires more credits",         # OpenRouter 402
+    "insufficient credits",          # OpenRouter / misc
+    "insufficient_quota",            # OpenAI
     "rate limit",
     "billing",
     "payment required",

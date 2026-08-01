@@ -230,8 +230,10 @@ def credential_env_for_model(cfg: dict) -> Optional[str]:
 
 
 _EXHAUSTION_MARKERS = (
-    "credit balance is too low",
-    "insufficient_quota",
+    "credit balance is too low",     # Anthropic
+    "requires more credits",         # OpenRouter 402
+    "insufficient credits",          # OpenRouter / misc
+    "insufficient_quota",            # OpenAI
     "rate limit",
     "billing",
     "payment required",

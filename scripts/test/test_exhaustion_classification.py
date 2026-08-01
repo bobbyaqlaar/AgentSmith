@@ -96,3 +96,28 @@ def test_cost_router_does_not_walk_the_degrade_chain() -> None:
         "cost_router.py now references degrade_to — the eval judge must not "
         "fall back to another model; see the rationale at the raise site"
     )
+
+
+def test_openrouter_credit_exhaustion_is_classified() -> None:
+    """OpenRouter returns 402 with its own wording, which matched none of the
+    original markers — so the analyst HARD-FAILED instead of degrading to the
+    cheaper tier, which is the exact situation the ladder exists for.
+
+    Caught by running KYC Sentinel's pipeline against live OpenRouter routes:
+    intake and research succeeded, the analyst hit 402, and nothing degraded.
+    """
+    exc = RuntimeError(
+        "LLM API error 402 (model='anthropic/claude-sonnet-4.5'): This request "
+        "requires more credits, or fewer max_tokens. You requested up to 1024 "
+        "tokens, but can only afford 402."
+    )
+    assert is_provider_exhausted(exc)
+    assert cost_router._exhausted(exc)
+
+
+def test_a_bare_status_number_is_not_a_diagnosis() -> None:
+    """Why "402" is NOT a marker: the real message contains "afford 402", so a
+    bare-number marker would match for the wrong reason — and would fire on any
+    unrelated text that happens to contain those digits."""
+    assert not is_provider_exhausted(RuntimeError("HTTP 402"))
+    assert not is_provider_exhausted(RuntimeError("processed 4029 records"))
