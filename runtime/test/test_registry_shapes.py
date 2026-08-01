@@ -166,3 +166,44 @@ def test_direct_anthropic_still_uses_the_messages_envelope() -> None:
     assert "x-api-key" in headers
     assert body["system"] == "s"
     assert all(m["role"] != "system" for m in body["messages"])
+
+
+# ── Empty completions ────────────────────────────────────────────────────────
+
+
+def test_null_content_parses_to_empty_string_not_none() -> None:
+    """OpenAI-compatible providers legitimately return `"content": null` — a
+    model that emitted only reasoning tokens, produced nothing before a stop,
+    or was cut off by a filter.
+
+    Returning None broke parse_response's own (text, int, int) contract, and
+    the None travelled several frames before anything dereferenced it: the PII
+    scrubber — a security control — died with
+    `TypeError: expected string or bytes-like object, got 'NoneType'`.
+    Found by running the KYC pipeline against live OpenRouter routes; no
+    fixture produced a null completion because the fake gateway never does.
+    """
+    text, tin, tout = parse_response(
+        "openrouter",
+        {"choices": [{"message": {"content": None}}],
+         "usage": {"prompt_tokens": 5, "completion_tokens": 0}},
+    )
+    assert text == ""
+    assert (tin, tout) == (5, 0)
+
+
+def test_anthropic_empty_content_block_parses_to_empty_string() -> None:
+    """Same failure mode on the Messages envelope: an empty `content` list
+    would have raised IndexError instead."""
+    assert parse_response("anthropic", {"content": []})[0] == ""
+    assert parse_response("anthropic", {"content": None})[0] == ""
+
+
+def test_pii_detection_tolerates_none() -> None:
+    """Defence in depth. An empty completion is a normal provider outcome, and
+    a guardrail is the worst place to discover it isn't a string."""
+    from runtime.input_guardrail import detect_pii
+
+    assert detect_pii(None) == {}
+    assert detect_pii("") == {}
+    assert detect_pii("card 4111 1111 1111 1111") == {"card": 1}

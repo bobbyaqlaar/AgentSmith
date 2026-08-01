@@ -148,11 +148,20 @@ def parse_response(
     """
     fmt = api_format or _PROVIDER_DEFAULT_FORMAT.get(provider, API_FORMAT_OPENAI)
     if fmt == API_FORMAT_ANTHROPIC:
-        text = data["content"][0]["text"]
+        blocks = data.get("content") or []
+        text = (blocks[0].get("text") if blocks else "") or ""
         usage = data.get("usage", {})
         return text, usage.get("input_tokens", 0), usage.get("output_tokens", 0)
 
-    text = data["choices"][0]["message"]["content"]
+    # `or ""`, not a bare index: OpenAI-compatible providers legitimately return
+    # `"content": null` — a model that emitted only reasoning tokens, produced
+    # nothing before a stop, or was cut off by a filter. Returning None broke
+    # this function's own (text, int, int) contract and the None then travelled
+    # until something dereferenced it: the PII scrubber, a security control,
+    # died with `TypeError: expected string or bytes-like object` several
+    # frames from the cause. An empty completion is a normal provider outcome
+    # and belongs to the caller to interpret, not a crash in a guardrail.
+    text = data["choices"][0]["message"].get("content") or ""
     usage = data.get("usage", {})
     return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
 

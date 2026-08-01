@@ -143,7 +143,7 @@ def detect_pii(text: str) -> dict[str, int]:
     Ignores INPUT_GUARDRAIL mode: "is there PII in this text" is a question
     about the text, not about whether prompts are currently being scrubbed.
     """
-    _, counts = _default_scrub(text)
+    _, counts = _default_scrub(text or "")
     return counts
 
 
