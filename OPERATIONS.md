@@ -107,6 +107,13 @@ export AGENT_OWNER_NAME="Your Name"
 export ANTHROPIC_API_KEY="sk-ant-..."
 export OPENAI_API_KEY="sk-..."
 export GROQ_API_KEY="gsk_..."           # optional: fast/cheap inference via Groq
+export OPENROUTER_API_KEY="sk-or-..."   # optional: ONE key fronting many vendors
+export XAI_API_KEY="xai-..."            # optional: Grok
+export GEMINI_API_KEY="AIza..."         # optional: Google AI Studio (NOT vertex_ai,
+                                        # which uses service-account OAuth instead)
+# Prefer a repo-root .env over a shell profile for these. A profile is
+# machine-wide and invisible: an AGENT_JUDGE_MODEL exported there silently
+# graded every local eval with a different model than CI used.
 
 # ── Observability ──────────────────────────────────────────────────────────────────
 export AGENT_PHOENIX_ENDPOINT="http://localhost:6006"  # change to team server URL if shared
@@ -801,7 +808,7 @@ non-streaming `complete()` is unchanged (total-call latency only). Live
 budget gate: §3's `verify_ttft.py` / `TTFT_LIVE=required`.
 
 *Provider support:* streaming works for the direct-API providers —
-`openai`, `groq`, `ollama`, and `anthropic`. The cloud-native adapters
+`openai`, `groq`, `ollama`, `anthropic`, `xai`, `google_ai`, and `openrouter`. The cloud-native adapters
 (`vertex_ai`, `azure_openai`, `bedrock`, `huawei_modelarts`) have no shared
 SSE surface, so `complete_stream()` **falls back to `complete()`** for them
 and returns `ttft_ms=None` — a `models.yaml` provider swap degrades the

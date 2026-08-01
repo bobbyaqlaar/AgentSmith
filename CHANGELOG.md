@@ -19,6 +19,27 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Fixed — two failures only a live run could produce
+
+Both found by running KYC Sentinel's pipeline against real OpenRouter routes;
+neither is reachable from any fixture, because the fake gateway produces
+neither condition.
+
+- **OpenRouter's 402 was not recognised as exhaustion.** Its wording — "This
+  request requires more credits, or fewer max_tokens" — matched no marker, so
+  the degrade ladder did not fire and the analyst hard-failed instead of
+  falling back to the cheaper tier: precisely the case the ladder exists for.
+  `"402"` is deliberately NOT a marker, because the real message contains
+  "afford 402" and a bare number would match for the wrong reason.
+- **A null completion crashed the PII scrubber.** OpenAI-compatible providers
+  legitimately return `"content": null` — a model that emitted only reasoning
+  tokens, stopped early, or was filtered. `parse_response` passed that `None`
+  along, breaking its own `(text, int, int)` contract, and it travelled several
+  frames before a *security control* dereferenced it and raised
+  `TypeError: expected string or bytes-like object`. Now coerced at the source,
+  with the Anthropic branch (empty `content` list → `IndexError`) hardened too
+  and `detect_pii` made None-tolerant as defence in depth.
+
 ### Added — models.yaml gains catalog + profiles, and OpenRouter
 
 `runtime/models.yaml` now has two blocks instead of one flat role map:
