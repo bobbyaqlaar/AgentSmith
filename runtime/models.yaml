@@ -216,25 +216,17 @@ profiles:
     developer: {use: llama-3.3-70b-versatile, degrade_to: validator}
     validator: {use: openrouter-hy3, degrade_to: fast}
     fast: {use: smollm2, degrade_to: null}
-    # ⚠️ NOT independent of the architect. Both roles are openai/gpt-oss —
-    # the same model family from the same vendor, differing only in size
-    # (20b actor, 120b judge). judge_independence_warning compares model IDS,
-    # so it stays SILENT here while the condition it exists to detect is
-    # present: models rate their own family's output higher, and a judge that
-    # shares a training lineage with the actor is not an independent reviewer
-    # in any useful sense. Scale is not independence.
-    #
-    # This is a deliberate configuration, recorded rather than corrected — but
-    # treat golden/fairness scores from this pairing as self-assessment, not
-    # as an external check. Any cross-vendor judge fixes it, including one
-    # still on OpenRouter (the PROVIDER being shared is harmless; the VENDOR
-    # and family being shared is not): openrouter-gemini-pro or
-    # openrouter-claude-sonnet need no additional credential, and
-    # gemini-3-flash-preview / grok-4 are available with their own keys.
+    # Cross-VENDOR judge: Google's Gemini grading OpenAI's gpt-oss. Sharing the
+    # PROVIDER with the architect is harmless — OpenRouter is a router, not a
+    # model — but sharing the VENDOR is not, and briefly both roles were
+    # openai/gpt-oss, differing only in size. judge_independence_warning
+    # compares model IDS, so it stayed silent through exactly the condition it
+    # exists to detect: models rate their own family's output higher, and a
+    # larger sibling is still a sibling. Scale is not independence.
     #
     # NO degrade_to on a judge: the eval path does not walk the chain, and
     # where it can fire a substituted grader writes confident verdicts into
     # the same score field. CALIBRATE fail_below per judge — 0.80 from one
     # grader is not 0.80 from another; this is the framework default, not a
-    # measured value for this model.
-    judge: {use: openrouter-gpt-oss-120b, fail_below: {golden: 0.80, fairness: 0.80}}
+    # measured value for gemini-2.5-pro.
+    judge: {use: openrouter-gemini-pro, fail_below: {golden: 0.80, fairness: 0.80}}
