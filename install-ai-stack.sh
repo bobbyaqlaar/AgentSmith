@@ -695,6 +695,27 @@ function ai-stack-off() {
 # Prints nothing on any failure (no python3, no runtime/, unreadable YAML); the
 # caller falls back to its own literal list, so a health check never becomes a
 # hard dependency on the runtime being installed.
+function ai-stack-judge-model() {
+  # Resolve the judge the way the code does, rather than echoing
+  # AGENT_JUDGE_MODEL. The registry now wins over that variable, so printing
+  # the raw value showed an empty judge on a machine where one is perfectly
+  # well configured — and before the precedence changed it showed a judge that
+  # silently overrode every repo's declared role. cwd-aware: inside a tenant
+  # repo this reports that tenant's judge.
+  local shared="$HOME/.agent-framework/scripts/_shared.py"
+  [ -f "$shared" ] || shared="${AGENTSMITH_DIR:-$HOME/.agent-framework}/scripts/_shared.py"
+  [ -f "$shared" ] || return 0
+  python3 -c "
+import sys
+sys.path.insert(0, '$(dirname "$shared")')
+try:
+    from _shared import judge_model
+    print(judge_model())
+except Exception:
+    pass
+" 2>/dev/null
+}
+
 function ai-stack-required-models() {
   local shared="$HOME/.agent-framework/scripts/_shared.py"
   [ -f "$shared" ] || shared="${AGENTSMITH_DIR:-$HOME/.agent-framework}/scripts/_shared.py"
@@ -809,7 +830,7 @@ function ai-stack-status() {
   echo "  Mode:      ${AI_STACK_MODE:-not set}"
   echo "  Hooks:     ${DISABLE_AI_STACK:-false} (muted=true means off)"
   echo "  Phoenix:   ${AGENT_PHOENIX_ENDPOINT}"
-  echo "  Judge:     ${AGENT_JUDGE_MODEL}"
+  echo "  Judge:     $(ai-stack-judge-model)   (from models.yaml, not the environment)"
   echo "  Owner:     ${AGENT_OWNER_ID:-not set}"
   if ping -c 1 -W 1 1.1.1.1 > /dev/null 2>&1; then
     echo "  Network:   🌐 ONLINE"

@@ -830,6 +830,7 @@ carrying their own copies.
 | `ai-stack-off` | Disable all hooks and templates. |
 | `ai-stack-check` | Full health check: Phoenix, Ollama or API keys, unresolved log entries. |
 | `ai-stack-status` | Print: mode, muted flag, network connectivity. |
+| `ai-stack-judge-model` | Print the judge model actually in effect, resolved from the merged registry — not the `AGENT_JUDGE_MODEL` variable, which the registry overrides. cwd-aware, so inside a tenant repo it reports that tenant's judge. |
 | `ai-stack-required-models` | Print the Ollama model ids the merged registry actually routes to, space-separated — `ollama pull $(ai-stack-required-models)`. Reads `models.yaml` from the current directory, so inside a tenant repo it reflects that tenant's overrides. Use this rather than a hardcoded list; `ai-stack-check` uses the same lookup. |
 
 ### Dashboard
