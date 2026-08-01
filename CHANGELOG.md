@@ -26,7 +26,9 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 - **`catalog:`** — every model reference the framework can reach, local and
   closed-weight alike. Presence costs nothing and routes nothing.
 - **`profiles:`** — role → catalog-alias bindings. Shipped: `local` (default,
-  unchanged behaviour), `hybrid`, `openrouter`.
+  unchanged behaviour) and `hybrid`, matching `ai-mode-local` /
+  `ai-mode-hybrid`. Catalog entries no profile binds remain available for a
+  tenant to bind.
 
 The flat shape conflated two questions — which models exist, and which role
 uses which — so a closed-weight model could only be *present* by being *wired

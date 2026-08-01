@@ -903,7 +903,7 @@ already sets.
 | `FAIRNESS_FAIL_BELOW` | `0.80` | Fairness suite, including pair parity. |
 | `HALLUCINATION_FAIL_ABOVE` | `0.05` | Max flagged-claim rate. |
 | `ADVERSARIAL_FAIL_ABOVE` | `0.10` | Max prompt-injection miss rate. |
-| `AGENT_MODEL_PROFILE` | *(unset)* | Selects which `profiles:` block in `models.yaml` binds the roles — `local`, `hybrid`, `openrouter`, or any profile you define. Wins over `AI_STACK_MODE`, which `ai-mode-local` / `ai-mode-hybrid` set. Falls back to `default_profile`. Ignored by a registry using the flat `models:` shape. |
+| `AGENT_MODEL_PROFILE` | *(unset)* | Selects which `profiles:` block in `models.yaml` binds the roles — `local`, `hybrid`, or any profile you define. Wins over `AI_STACK_MODE`, which `ai-mode-local` / `ai-mode-hybrid` set. Falls back to `default_profile`. Ignored by a registry using the flat `models:` shape. |
 | `AGENT_MODEL_ARCHITECT` · `AGENT_MODEL_COMPLEX` · `AGENT_MODEL_STANDARD` · `AGENT_MODEL_FAST` · `AGENT_MODEL_LOCAL` | the matching registry role | Override one routing tier without touching `models.yaml`. `AGENT_MODEL_LOCAL` is the offline fallback and resolves to the `fast` role. |
 | `AGENT_DEFAULT_MODEL` | `unknown` | Model name recorded in agent log entries when a caller supplies none. Labelling only — it routes nothing. |
 | `AGENT_BURST_TOKEN_LIMIT` | `50000` | Circuit-breaker burst ceiling before token-velocity trips. |

@@ -2034,7 +2034,10 @@ strongest to smallest.
 
 Profile selection: `AGENT_MODEL_PROFILE` (explicit) → `AI_STACK_MODE` (what
 `ai-mode-local` / `ai-mode-hybrid` export) → `default_profile`. Shipped
-profiles are `local`, `hybrid` and `openrouter`.
+profiles are exactly `local` and `hybrid`, matching the two mode commands — a
+profile the mode switch cannot select would be unreachable through the
+documented interface. Catalog entries no profile binds stay available for
+tenants to bind themselves.
 
 **`api_format` is separate from `provider`.** The provider picks host,
 credential and adapter; the format picks the request/response envelope. They

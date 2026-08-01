@@ -149,6 +149,29 @@ catalog:
     cost_per_input_token: 0.00000059
     cost_per_output_token: 0.00000079
 
+  # Open-weight models via OpenRouter. Ids VERIFIED against
+  # https://openrouter.ai/api/v1/models on 2026-08-02 — two of the three had
+  # no `:free` variant and are pinned to their real ids rather than to a
+  # suffix that 404s at call time.
+  openrouter-gpt-oss-120b:
+    id: openai/gpt-oss-120b        # NOTE: no `:free` variant exists
+    provider: openrouter
+    api_format: openai_chat
+    cost_per_input_token: 0.000000037    # $0.037 / M tokens
+    cost_per_output_token: 0.00000017    # $0.17  / M tokens
+  openrouter-gpt-oss-20b:
+    id: openai/gpt-oss-20b:free    # genuinely free tier — verified $0/$0
+    provider: openrouter
+    api_format: openai_chat
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+  openrouter-hy3:
+    id: tencent/hy3                # NOTE: no `:free` variant exists
+    provider: openrouter
+    api_format: openai_chat
+    cost_per_input_token: 0.000000132    # $0.132 / M tokens
+    cost_per_output_token: 0.000000528   # $0.528 / M tokens
+
   # ── GCP Vertex AI (service-account OAuth) ─────────────────────────────────
   vertex-gemini-flash:
     id: gemini-2.5-flash
@@ -181,27 +204,25 @@ profiles:
     # do nothing).
     judge: {use: "falcon3:3b", degrade_to: fast}
 
-  # Frontier models for judgement, cheap cloud for volume, local as the floor.
-  # Requires ANTHROPIC_API_KEY and GROQ_API_KEY.
+  # Roles bind across vendors; the ladder still bottoms out on a local model.
+  # Requires OPENROUTER_API_KEY, GROQ_API_KEY and XAI_API_KEY.
+  #
+  # Only `local` and `hybrid` exist, matching `ai-mode-local` / `ai-mode-hybrid`
+  # — a profile the mode switch cannot select would be unreachable through the
+  # documented interface. Unbound catalog entries (Claude, Gemini, the other
+  # OpenRouter models) stay available to any tenant that wants them.
   hybrid:
-    architect: {use: claude-sonnet-4-6, degrade_to: developer}
+    architect: {use: openrouter-gpt-oss-120b, degrade_to: developer}
     developer: {use: llama-3.3-70b-versatile, degrade_to: validator}
-    validator: {use: "falcon3:3b", degrade_to: fast}
+    validator: {use: openrouter-hy3, degrade_to: fast}
     fast: {use: smollm2, degrade_to: null}
     # Cross-VENDOR judge. judge_independence_warning only catches IDENTICAL
-    # ids, so a Claude judge over a Claude architect passes that check while
-    # showing exactly the same-family bias it exists to prevent. NO degrade_to
-    # on a judge: the eval path does not walk the chain, and where it can fire
-    # a substituted grader writes confident verdicts into the same score field.
-    # CALIBRATE fail_below per judge — 0.80 from one grader is not 0.80 from
-    # another. These are framework defaults, not calibrated for this model.
+    # ids, so a judge sharing a vendor with the architect passes that check
+    # while showing exactly the same-family bias it exists to prevent — and
+    # architect is on OpenRouter here, so the judge deliberately is not.
+    # NO degrade_to on a judge: the eval path does not walk the chain, and
+    # where it can fire a substituted grader writes confident verdicts into
+    # the same score field. CALIBRATE fail_below per judge — 0.80 from one
+    # grader is not 0.80 from another; this is the framework default, not a
+    # measured value for grok-4.
     judge: {use: grok-4, fail_below: {golden: 0.80, fairness: 0.80}}
-
-  # Everything through OpenRouter — one key, one endpoint, many vendors.
-  # Requires OPENROUTER_API_KEY.
-  openrouter:
-    architect: {use: openrouter-claude-sonnet, degrade_to: developer}
-    developer: {use: openrouter-llama-70b, degrade_to: validator}
-    validator: {use: "falcon3:3b", degrade_to: fast}
-    fast: {use: smollm2, degrade_to: null}
-    judge: {use: openrouter-gemini-pro, fail_below: {golden: 0.80, fairness: 0.80}}
