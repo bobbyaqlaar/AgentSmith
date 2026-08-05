@@ -1144,6 +1144,7 @@ AgentSmith/
 │   ├── trace_redactor.py
 │   ├── idempotency.py
 │   ├── dead_letter.py
+│   ├── temporal_client.py       # One Temporal connection: address default, TEMPORAL_TLS, bounded connect
 │   ├── temporal_replay.py       # Concrete Temporal replay_handler — signals a live, parked workflow
 │   ├── replay_webhook_server.py # Reference receiver for the Ops Portal's "Replay with edits" action
 │   ├── requirements-runtime.txt # Minimal runtime-only deps (vendored independently of scripts/)
