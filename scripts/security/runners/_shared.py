@@ -248,6 +248,13 @@ def failed(control: ControlSpec, message: str, **evidence: str) -> ControlResult
 # are opposite facts wearing one label.
 NOT_APPLICABLE = "not applicable"
 
+# A gap the registry DECLARES. Distinct from a control claiming `met` that
+# nothing verifies: one is a tracked deficiency, the other is the map saying
+# something untrue. Strict mode punishes the second, not the first — blocking
+# on acknowledged gaps makes --strict unusable and creates an incentive to
+# mislabel a gap as `met`, which is precisely the failure it exists to catch.
+DECLARED_GAP = "gap (declared)"
+
 
 def not_applicable(control: ControlSpec, message: str, **evidence: str) -> ControlResult:
     """The control is sound but has nothing to govern in THIS repo.
@@ -283,3 +290,34 @@ def security_fixture(
     if not cases:
         return None, failed(control, f"fixture {name} is empty — nothing probed")
     return cases, None
+
+
+def node_suite(
+    control: ControlSpec, ctx: dict[str, Any], rel_path: str, requires: tuple[str, ...] = ()
+) -> ControlResult:
+    """Delegate to a portal test written in TypeScript.
+
+    Three controls now verify portal behaviour this way (SSO revocation, the
+    audit log, the RBAC matrix) and the invocation is identical each time:
+    `node --experimental-strip-types <file>` from the portal directory.
+
+    `requires` names sibling source files that must exist. A test file present
+    while the implementation it exercises has been deleted would pass by
+    testing nothing, which is the failure mode a control is least able to
+    notice.
+    """
+    root = framework_root(ctx)
+    portal = root / "portal"
+    target = portal / rel_path
+    missing = [p.name for p in (target, *(portal / r for r in requires)) if not p.exists()]
+    if missing:
+        return failed(control, f"missing portal files: {', '.join(missing)}")
+    proc = subprocess.run(
+        ["node", "--experimental-strip-types", str(target)],
+        cwd=portal,
+        capture_output=True,
+        text=True,
+    )
+    return _subprocess_result(
+        control, proc, f"{rel_path} passed", f"{rel_path} failed"
+    )

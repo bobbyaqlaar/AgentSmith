@@ -17,6 +17,7 @@ if str(_ROOT) not in sys.path:
 
 from security.registry import load_control_registry
 from security.report import ControlResult, write_evidence_pack
+from security.runners._shared import DECLARED_GAP, NOT_APPLICABLE
 from security.runners import RUNNERS
 
 Mode = Literal["smoke", "ci", "full"]
@@ -67,13 +68,24 @@ def _tenant_security_dir(root: Path) -> Path:
 
 
 def _resolve_exit(results: list[ControlResult], strict: bool) -> int:
-    # Design: pass=green; warn=green unless strict; fail=red.
-    # skip (missing runner on Met/Partial) does not fail strict — only Gap
-    # controls are promoted to warn/fail before dispatch (see main loop).
+    """pass=green; fail=red; warn=green unless strict, with two exemptions.
+
+    Both exemptions exist because `warn` and `skip` each carried two opposite
+    meanings, and the harness could not tell them apart:
+
+      * a DECLARED gap is a tracked deficiency — it must be visible, but a repo
+        honest about its gaps has to be able to pass a strict run;
+      * `not applicable` means the control has nothing to govern HERE (the
+        framework holds no golden dataset of its own), not that it went
+        unchecked.
+
+    An undeclared gap — `met`/`partial` with no runner — is neither, and now
+    fails strict. That combination is the map claiming something untrue.
+    """
     for r in results:
         if r.status == "fail":
             return 1
-        if strict and r.status == "warn":
+        if strict and r.status == "warn" and not r.message.startswith(DECLARED_GAP):
             return 1
     return 0
 
@@ -120,23 +132,24 @@ def main(argv: list[str] | None = None) -> int:
     }
     for control in controls:
         if control.status == "gap":
-            gap_status = "fail" if strict else "warn"
+            # Declared and tracked. Visible in every report, but it does not
+            # block: a repo honest about its gaps must still be able to pass a
+            # strict run, or the only way to go green is to relabel them `met`.
             results.append(
-                ControlResult(
-                    control.id,
-                    gap_status,
-                    "gap — not yet implemented",
-                    {},
-                )
+                ControlResult(control.id, "warn", f"{DECLARED_GAP} — not yet implemented", {})
             )
             continue
         runner = RUNNERS.get(control.runner)
         if runner is None:
+            # UNDECLARED gap: the registry claims `met`/`partial` and nothing
+            # checks it. This used to be `skip`, which passed even --strict —
+            # how 14 of 23 controls reported green while never being examined.
             results.append(
                 ControlResult(
                     control.id,
-                    "skip",
-                    f"runner {control.runner} not implemented",
+                    "fail" if strict else "warn",
+                    f"declared {control.status!r} but runner {control.runner!r} is not "
+                    f"implemented — nothing verifies this control",
                     {},
                 )
             )

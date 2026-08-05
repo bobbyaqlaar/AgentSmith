@@ -56,18 +56,16 @@ def test_every_registered_runner_name_resolves() -> None:
     controls = load_control_registry(REGISTRY)
     # Reviewed and deliberately unbound — each has a rationale in
     # docs/security-framework-map.md "Still unverified".
-    known_unbound = {
-        "SEC-AUDIT-001", "SEC-RBAC-001", "SEC-DLQ-001",
-        "SEC-SOV-001", "SEC-RAG-001", "SEC-AGENCY-001",
-    }
-    dangling = sorted(
-        c.id for c in controls if c.runner not in RUNNERS and c.id not in known_unbound
+    # A control with no runner must DECLARE itself a gap. The exception list is
+    # gone: the registry's own `status` field now carries that fact, so there is
+    # no second list to drift. An undeclared gap fails --strict.
+    lying = sorted(
+        c.id for c in controls if c.runner not in RUNNERS and c.status != "gap"
     )
-    assert not dangling, (
-        f"controls naming a non-existent runner: {dangling}. These will `skip`, "
-        f"and skip passes --strict — the harness would report success without "
-        f"checking them. Implement the runner, or add the control to the "
-        f"documented exception list with a rationale."
+    assert not lying, (
+        f"controls claiming met/partial with no runner: {lying}. Nothing "
+        f"verifies them, so the map overstates coverage. Implement the runner "
+        f"or set status to 'gap'."
     )
 
 
@@ -125,3 +123,36 @@ def test_a_tenant_registry_adds_controls(tmp_path) -> None:
     added = next(c for c in load_control_registry(REGISTRY, extra)
                  if c.id == "SEC-TENANT-TEST-001")
     assert added.suite == "test/x.py"
+
+
+def test_an_undeclared_gap_fails_strict_but_a_declared_one_does_not() -> None:
+    """The distinction step 1 turns on.
+
+    `skip` and `warn` each carried two opposite meanings and the harness could
+    not tell them apart, so a control claiming `met` with no runner passed
+    `--strict` — how 14 of 23 controls reported green while never being
+    examined.
+
+    Strict now punishes the LIE, not the acknowledged gap. Blocking on declared
+    gaps would make --strict unusable and create an incentive to relabel a gap
+    as `met`, which is exactly the failure being fixed.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "rsc", REGISTRY.parents[2] / "scripts" / "run-security-checks.py"
+    )
+    rsc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rsc)
+    from security.report import ControlResult
+    from security.runners._shared import DECLARED_GAP, NOT_APPLICABLE
+
+    declared = ControlResult("SEC-X", "warn", f"{DECLARED_GAP} — not yet implemented", {})
+    undeclared = ControlResult("SEC-Y", "warn", "declared 'met' but runner missing", {})
+    n_a = ControlResult("SEC-Z", "skip", f"{NOT_APPLICABLE} — no dataset here", {})
+
+    assert rsc._resolve_exit([declared], strict=True) == 0, "a declared gap must not block"
+    assert rsc._resolve_exit([n_a], strict=True) == 0, "not-applicable must not block"
+    assert rsc._resolve_exit([undeclared], strict=True) == 1, "an undeclared gap must block"
+    # Non-strict stays permissive for all three.
+    assert rsc._resolve_exit([declared, undeclared, n_a], strict=False) == 0

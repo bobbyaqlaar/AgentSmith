@@ -29,6 +29,9 @@ from security.report import ControlResult
 from security.runners._shared import (
     eval_suite_gateable,
     failed,
+    node_suite,
+    passed,
+    tenant_security,
     pytest_suite,
     verify_system,
 )
@@ -81,6 +84,18 @@ def change_gates(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     return verify_system(control, ctx, "--check-hooks")
 
 
+# SEC-AUDIT-001 is deliberately NOT bound. portal/test/auditLog.test.ts lives in
+# the `test:db` script: it needs a TypeScript extension loader and a live
+# Postgres. Binding it would make the control fail whenever the database is
+# down — the availability-as-compliance confusion that already caught
+# SEC-DLQ-001 here. Needs an infra-free HMAC sign/verify test first.
+
+
+def rbac_matrix(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
+    """SEC-RBAC-001 — the portal's role/permission matrix."""
+    return node_suite(control, ctx, "test/authz.test.ts", requires=("lib/authz.ts",))
+
+
 # ── Eval gates: wired and gateable, without running a judge ──────────────────
 
 
@@ -116,6 +131,61 @@ def tenant_suite(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     if not control.suite:
         return failed(control, "tenant control declares no `suite` to run")
     return pytest_suite(control, ctx, control.suite, base=Path(ctx["tenant_root"]))
+
+
+def agency_manifest(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
+    """SEC-AGENCY-001 — the repo declares which actions need a human.
+
+    An artifact control: it verifies the manifest is present, parseable, and
+    ACTUALLY EDITED. The shipped template names `example_workflow` /
+    `high_impact_step`, and a repo carrying that verbatim has declared nothing
+    while appearing compliant — the same defect `risk_register` catches with
+    its `RISK-EXAMPLE-*` check, and the same one this framework's own pack had
+    before it was filled in.
+
+    Also requires at least one action with `needs_hitl: true`. A manifest where
+    nothing needs a human is not a governance record; it is an empty claim.
+    """
+    import yaml
+
+    path = tenant_security(ctx) / "agency_manifest.yaml"
+    if not path.exists():
+        return failed(control, f"no agency manifest at {path}")
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        return failed(control, f"agency manifest does not parse: {exc}")
+
+    actions = doc.get("actions") or []
+    if not actions:
+        return failed(control, "agency manifest declares no actions", path=str(path))
+
+    placeholders = [
+        a for a in actions
+        if a.get("workflow") == "example_workflow" or a.get("action") == "high_impact_step"
+    ]
+    if placeholders:
+        return failed(
+            control,
+            f"agency manifest still contains the shipped placeholder "
+            f"({len(placeholders)} entry/entries) — nothing has been declared",
+            path=str(path),
+        )
+
+    gated = [a for a in actions if a.get("needs_hitl") is True]
+    if not gated:
+        return failed(
+            control,
+            f"{len(actions)} action(s) declared, none needing human review — "
+            f"a manifest where nothing is gated records no governance",
+            path=str(path),
+        )
+    return passed(
+        control,
+        f"{len(actions)} action(s) declared, {len(gated)} gated on human review",
+        path=str(path),
+        gated=",".join(sorted(a.get("action", "?") for a in gated)[:3]),
+    )
 
 
 # ── Static: the gateway is the only provider path for workload calls ─────────

@@ -41,28 +41,33 @@ controls to four security/compliance frameworks, and how every tenant app
 
 ## Verification coverage
 
-A control is only as strong as what checks it. **17 of 23**
-controls now execute a runner; the rest are declared but unverified.
+**19 of 23** controls execute a runner. The remaining four are
+declared `gap`, so the map states what it verifies and nothing more.
 
-This mattered more than the count suggests: a control with no runner returned
-`skip`, and `_resolve_exit` treats `skip` as green **even under `--strict`**.
-The harness therefore exited 0 while 14 of 23 controls had never been examined —
-`SEC-HITL-001` (mandatory human review) among them, at a time when a live run
-showed that gate failing open on a sanctions hit.
+`--strict` now fails on an **undeclared gap** — a control claiming `met` or
+`partial` that no runner checks. Previously that produced `skip`, and skip
+counted as green even under strict, so the harness exited 0 while 14 of 23
+controls had never been examined. `SEC-HITL-001` — mandatory human review — was
+among them, at a time when a live run showed that gate failing open on a
+sanctions hit.
 
 Runners delegate rather than re-implement: `verify_system.py --check-*`, an
-existing test suite, or `run-evals.py`'s own fixture loading. A second
-implementation would be a control that can disagree with the tests, which is
-worse than none — it would eventually report Met while the behaviour regressed.
+existing pytest or portal test suite, or `run-evals.py`'s own fixture loading.
+A second implementation would be a control that can disagree with the tests,
+which is worse than none — it would eventually report Met while the behaviour
+regressed.
 
 Framework-owned suites run with tenant deployment and guardrail settings
 stripped (`_TENANT_RUNTIME_KEYS`). Inheriting them made three budget tests fail
 under `MODERATION_HOOK=required` and report as a compliance breach.
 
-Judge-backed eval controls (`SEC-EVAL-00{1,2,3}`) verify the gate is **wired and
-gateable** — fixtures present, enough cases, threshold resolvable — and do not
-call a judge. A control requiring a funded provider account would report Gap on
-an unpaid invoice, which is an availability check wearing a compliance label.
+Judge-backed eval controls verify the gate is **wired and gateable** — fixtures
+present, enough cases, threshold resolvable — and do not call a judge. A
+control requiring a funded provider account would report Gap on an unpaid
+invoice, which is an availability check wearing a compliance label. The same
+reasoning keeps `SEC-AUDIT-001`, `SEC-DLQ-001` and `SEC-SOV-001` unbound: each
+would otherwise fail whenever a database, a queue or a credential was
+unavailable.
 
 ### Tenant-declared controls
 
@@ -106,20 +111,24 @@ Only the second should ever fail a strict run.
 
 ### Still unverified
 
-| Control | Runner | Status |
+Four controls have no runner. Each is now declared **`gap`** rather than
+`met`/`partial`, so the map no longer claims something nothing checks.
+
+| Control | Runner | Why not bound |
 |---|---|---|
-| `SEC-AGENCY-001` | `agency_manifest` | not implemented |
-| `SEC-AUDIT-001` | `audit_hmac` | not implemented |
-| `SEC-DLQ-001` | `dlq_check` | not implemented |
-| `SEC-RAG-001` | `rag_poison` | not implemented |
-| `SEC-RBAC-001` | `rbac_matrix` | not implemented |
-| `SEC-SOV-001` | `sovereign_smoke` | not implemented |
+| `SEC-AUDIT-001` | `audit_hmac` | portal/test/auditLog.test.ts needs a TS loader and a live Postgres (npm run test:db); bindin |
+| `SEC-DLQ-001` | `dlq_check` | verify_system --check-dlq is a reachability probe; the dead-letter envelope is asserted by t |
+| `SEC-RAG-001` | `rag_poison` | no infra-free suite isolates RAG poisoning yet |
+| `SEC-SOV-001` | `sovereign_smoke` | verify_sovereign_endpoint.py is a live probe requiring HF credentials; a compliance control  |
 
-`SEC-DLQ-001` is deliberately unbound: `verify_system --check-dlq` is a
-reachability probe, and the dead-letter envelope is already
-`SEC-HITL-001`'s evidence — one suite reported as two green controls inflates
-the harness rather than strengthening it.
+A declared gap **warns** — visible in every report and evidence pack — but does
+not fail a strict run. A repo honest about its gaps must be able to pass, or
+the only route to green is relabelling them `met`, which is the failure this
+section exists to prevent.
 
+An **undeclared** gap — `met` or `partial` with no runner — now **fails**
+`--strict`. That combination is the map saying something untrue, and it is how
+14 of 23 controls reported green while never being examined.
 
 ## Unified control registry (cross-framework)
 

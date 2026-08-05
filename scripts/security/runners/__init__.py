@@ -42,4 +42,6 @@ RUNNERS: dict[str, Runner] = {
     "eval_hallucination": delegating.eval_hallucination,
     "gateway_static": delegating.gateway_static,
     "tenant_suite": delegating.tenant_suite,
+    "rbac_matrix": delegating.rbac_matrix,
+    "agency_manifest": delegating.agency_manifest,
 }

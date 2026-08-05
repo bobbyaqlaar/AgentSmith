@@ -19,6 +19,45 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Changed — `--strict` now fails on a control that claims more than it checks
+
+This is the change the whole phase was building toward, and it required the
+preceding ones to be safe.
+
+`skip` and `warn` each carried two opposite meanings, and the harness could not
+tell them apart. A control declaring `met` with no runner returned `skip`, and
+skip passed `--strict`; a control honestly declaring `gap` **failed** it. The
+dishonest state was the cheaper one.
+
+Now:
+
+| State | Outcome |
+|---|---|
+| declared `gap` | **warn** — visible everywhere, does not block |
+| `met`/`partial` with no runner | **fail** under `--strict` |
+| `not applicable — …` | pass — nothing to govern in this repo |
+
+Strict punishes the lie, not the acknowledged gap. Blocking on declared gaps
+would make `--strict` unusable and create an incentive to relabel a gap as
+`met` — the exact failure being fixed.
+
+`SEC-AUDIT-001`, `SEC-DLQ-001`, `SEC-SOV-001` and `SEC-RAG-001` are now declared
+`gap` with the reason recorded in the registry. Each would otherwise have to be
+bound to something that fails when a database, a queue or a credential is
+unavailable.
+
+Two more controls landed on the way: **`SEC-RBAC-001`** (the portal's
+role/permission matrix) and **`SEC-AGENCY-001`** (the agency manifest is
+present, edited, and gates at least one action on a human — the shipped
+placeholder is rejected, mirroring `risk_register`'s `RISK-EXAMPLE-*` check).
+Coverage: **19 of 23** verified, from 9 at the start of the phase.
+
+`node_suite()` in `_shared.py` now serves all three portal-test controls;
+`sso_revocation` was rewritten onto it after an earlier edit of mine left
+unreachable duplicated code behind a `return` — the tests still passed, which
+is exactly why that is worth saying. A dead-code check across every runner now
+confirms none remains.
+
 ### Added — tenants can declare their own controls
 
 A tenant may now ship `.agent-rfc/security/control_registry.json`, merged over

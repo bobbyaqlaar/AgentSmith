@@ -5,10 +5,19 @@
     "status": "partial",
     "owner": "shared",
     "frameworks": {
-      "owasp": ["LLM06"],
-      "nist": ["MAP 2.6", "MANAGE 2.4"],
-      "atlas": ["AML.T0043"],
-      "iso42001": [9]
+      "owasp": [
+        "LLM06"
+      ],
+      "nist": [
+        "MAP 2.6",
+        "MANAGE 2.4"
+      ],
+      "atlas": [
+        "AML.T0043"
+      ],
+      "iso42001": [
+        9
+      ]
     },
     "runner": "pii_precall",
     "check_type": "unit",
@@ -20,10 +29,18 @@
     "status": "met",
     "owner": "framework",
     "frameworks": {
-      "owasp": ["LLM06"],
-      "nist": ["MANAGE 2.4"],
-      "atlas": ["AML.T0043"],
-      "iso42001": [9]
+      "owasp": [
+        "LLM06"
+      ],
+      "nist": [
+        "MANAGE 2.4"
+      ],
+      "atlas": [
+        "AML.T0043"
+      ],
+      "iso42001": [
+        9
+      ]
     },
     "runner": "pii_postcall",
     "check_type": "unit",
@@ -35,10 +52,19 @@
     "status": "met",
     "owner": "framework",
     "frameworks": {
-      "owasp": ["LLM08"],
-      "nist": ["GOVERN 1.5", "MANAGE 4.1"],
-      "atlas": ["AML.T0048"],
-      "iso42001": [5]
+      "owasp": [
+        "LLM08"
+      ],
+      "nist": [
+        "GOVERN 1.5",
+        "MANAGE 4.1"
+      ],
+      "atlas": [
+        "AML.T0048"
+      ],
+      "iso42001": [
+        5
+      ]
     },
     "runner": "hitl_gate",
     "check_type": "integration",
@@ -47,17 +73,23 @@
   {
     "id": "SEC-AUDIT-001",
     "title": "HMAC audit log",
-    "status": "met",
+    "status": "gap",
     "owner": "framework",
     "frameworks": {
       "owasp": [],
-      "nist": ["GOVERN 1.2"],
-      "atlas": ["AML.T0025"],
-      "iso42001": [6]
+      "nist": [
+        "GOVERN 1.2"
+      ],
+      "atlas": [
+        "AML.T0025"
+      ],
+      "iso42001": [
+        6
+      ]
     },
     "runner": "audit_hmac",
     "check_type": "unit",
-    "mechanism": "HMAC append-only audit_log"
+    "mechanism": "HMAC append-only audit_log \u2014 UNVERIFIED: portal/test/auditLog.test.ts needs a TS loader and a live Postgres (npm run test:db); binding it would fail the control whenever the database is down"
   },
   {
     "id": "SEC-RBAC-001",
@@ -66,9 +98,15 @@
     "owner": "shared",
     "frameworks": {
       "owasp": [],
-      "nist": ["GOVERN 1.3"],
-      "atlas": ["AML.T0048"],
-      "iso42001": [1]
+      "nist": [
+        "GOVERN 1.3"
+      ],
+      "atlas": [
+        "AML.T0048"
+      ],
+      "iso42001": [
+        1
+      ]
     },
     "runner": "rbac_matrix",
     "check_type": "unit",
@@ -80,10 +118,16 @@
     "status": "met",
     "owner": "shared",
     "frameworks": {
-      "owasp": ["LLM09"],
-      "nist": ["MEASURE 2.6"],
+      "owasp": [
+        "LLM09"
+      ],
+      "nist": [
+        "MEASURE 2.6"
+      ],
       "atlas": [],
-      "iso42001": [7]
+      "iso42001": [
+        7
+      ]
     },
     "runner": "eval_golden",
     "check_type": "eval",
@@ -95,10 +139,16 @@
     "status": "partial",
     "owner": "shared",
     "frameworks": {
-      "owasp": ["LLM09"],
-      "nist": ["MEASURE 2.11"],
+      "owasp": [
+        "LLM09"
+      ],
+      "nist": [
+        "MEASURE 2.11"
+      ],
       "atlas": [],
-      "iso42001": [8]
+      "iso42001": [
+        8
+      ]
     },
     "runner": "eval_fairness",
     "check_type": "eval",
@@ -110,10 +160,18 @@
     "status": "met",
     "owner": "shared",
     "frameworks": {
-      "owasp": ["LLM09"],
-      "nist": ["MEASURE 2.6"],
-      "atlas": ["AML.T0024"],
-      "iso42001": [7]
+      "owasp": [
+        "LLM09"
+      ],
+      "nist": [
+        "MEASURE 2.6"
+      ],
+      "atlas": [
+        "AML.T0024"
+      ],
+      "iso42001": [
+        7
+      ]
     },
     "runner": "eval_hallucination",
     "check_type": "eval",
@@ -125,10 +183,18 @@
     "status": "met",
     "owner": "framework",
     "frameworks": {
-      "owasp": ["LLM04"],
-      "nist": ["MANAGE 2.4"],
-      "atlas": ["AML.T0034"],
-      "iso42001": [11]
+      "owasp": [
+        "LLM04"
+      ],
+      "nist": [
+        "MANAGE 2.4"
+      ],
+      "atlas": [
+        "AML.T0034"
+      ],
+      "iso42001": [
+        11
+      ]
     },
     "runner": "budget_caps",
     "check_type": "unit",
@@ -141,9 +207,13 @@
     "owner": "shared",
     "frameworks": {
       "owasp": [],
-      "nist": ["GOVERN 1.6"],
+      "nist": [
+        "GOVERN 1.6"
+      ],
       "atlas": [],
-      "iso42001": [10]
+      "iso42001": [
+        10
+      ]
     },
     "runner": "change_gates",
     "check_type": "static",
@@ -152,17 +222,23 @@
   {
     "id": "SEC-DLQ-001",
     "title": "Recoverable DLQ",
-    "status": "met",
+    "status": "gap",
     "owner": "framework",
     "frameworks": {
-      "owasp": ["LLM02"],
-      "nist": ["MANAGE 4.4"],
+      "owasp": [
+        "LLM02"
+      ],
+      "nist": [
+        "MANAGE 4.4"
+      ],
       "atlas": [],
-      "iso42001": [11]
+      "iso42001": [
+        11
+      ]
     },
     "runner": "dlq_check",
     "check_type": "integration",
-    "mechanism": "Recoverable step + DLQ"
+    "mechanism": "Recoverable step + DLQ \u2014 UNVERIFIED: verify_system --check-dlq is a reachability probe; the dead-letter envelope is asserted by test_hitl_gate.py, which is already SEC-HITL-001's evidence"
   },
   {
     "id": "SEC-SELF-001",
@@ -170,10 +246,16 @@
     "status": "partial",
     "owner": "shared",
     "frameworks": {
-      "owasp": ["LLM02"],
-      "nist": ["MANAGE 4.4"],
+      "owasp": [
+        "LLM02"
+      ],
+      "nist": [
+        "MANAGE 4.4"
+      ],
       "atlas": [],
-      "iso42001": [11]
+      "iso42001": [
+        11
+      ]
     },
     "runner": "self_correction",
     "check_type": "unit",
@@ -185,10 +267,18 @@
     "status": "partial",
     "owner": "shared",
     "frameworks": {
-      "owasp": ["LLM07"],
-      "nist": ["MAP 2.3"],
-      "atlas": ["AML.T0040"],
-      "iso42001": [4]
+      "owasp": [
+        "LLM07"
+      ],
+      "nist": [
+        "MAP 2.3"
+      ],
+      "atlas": [
+        "AML.T0040"
+      ],
+      "iso42001": [
+        4
+      ]
     },
     "runner": "gateway_static",
     "check_type": "static",
@@ -200,10 +290,18 @@
     "status": "met",
     "owner": "framework",
     "frameworks": {
-      "owasp": ["LLM01"],
-      "nist": ["MAP 2.6"],
-      "atlas": ["AML.T0051"],
-      "iso42001": [9]
+      "owasp": [
+        "LLM01"
+      ],
+      "nist": [
+        "MAP 2.6"
+      ],
+      "atlas": [
+        "AML.T0051"
+      ],
+      "iso42001": [
+        9
+      ]
     },
     "runner": "prompt_guard",
     "check_type": "unit",
@@ -215,10 +313,16 @@
     "status": "met",
     "owner": "shared",
     "frameworks": {
-      "owasp": ["LLM02"],
-      "nist": ["MEASURE 2.7"],
+      "owasp": [
+        "LLM02"
+      ],
+      "nist": [
+        "MEASURE 2.7"
+      ],
       "atlas": [],
-      "iso42001": [7]
+      "iso42001": [
+        7
+      ]
     },
     "runner": "structured_output",
     "check_type": "unit",
@@ -230,10 +334,18 @@
     "status": "met",
     "owner": "shared",
     "frameworks": {
-      "owasp": ["LLM07"],
-      "nist": ["GOVERN 1.3"],
-      "atlas": ["AML.T0040"],
-      "iso42001": [4]
+      "owasp": [
+        "LLM07"
+      ],
+      "nist": [
+        "GOVERN 1.3"
+      ],
+      "atlas": [
+        "AML.T0040"
+      ],
+      "iso42001": [
+        4
+      ]
     },
     "runner": "tool_allowlist",
     "check_type": "unit",
@@ -245,10 +357,18 @@
     "status": "met",
     "owner": "tenant",
     "frameworks": {
-      "owasp": ["LLM01"],
-      "nist": ["MAP 2.6"],
-      "atlas": ["AML.T0051"],
-      "iso42001": [9]
+      "owasp": [
+        "LLM01"
+      ],
+      "nist": [
+        "MAP 2.6"
+      ],
+      "atlas": [
+        "AML.T0051"
+      ],
+      "iso42001": [
+        9
+      ]
     },
     "runner": "moderation_hook",
     "check_type": "unit",
@@ -261,9 +381,15 @@
     "owner": "tenant",
     "frameworks": {
       "owasp": [],
-      "nist": ["MAP 1.5"],
-      "atlas": ["AML.T0000"],
-      "iso42001": [2]
+      "nist": [
+        "MAP 1.5"
+      ],
+      "atlas": [
+        "AML.T0000"
+      ],
+      "iso42001": [
+        2
+      ]
     },
     "runner": "risk_register",
     "check_type": "artifact",
@@ -275,10 +401,18 @@
     "status": "met",
     "owner": "shared",
     "frameworks": {
-      "owasp": ["LLM01"],
-      "nist": ["MEASURE 2.7"],
-      "atlas": ["AML.T0024"],
-      "iso42001": [7]
+      "owasp": [
+        "LLM01"
+      ],
+      "nist": [
+        "MEASURE 2.7"
+      ],
+      "atlas": [
+        "AML.T0024"
+      ],
+      "iso42001": [
+        7
+      ]
     },
     "runner": "adversarial_eval",
     "check_type": "eval",
@@ -291,9 +425,15 @@
     "owner": "framework",
     "frameworks": {
       "owasp": [],
-      "nist": ["GOVERN 1.3"],
-      "atlas": ["AML.T0048"],
-      "iso42001": [1]
+      "nist": [
+        "GOVERN 1.3"
+      ],
+      "atlas": [
+        "AML.T0048"
+      ],
+      "iso42001": [
+        1
+      ]
     },
     "runner": "sso_revocation",
     "check_type": "unit",
@@ -302,32 +442,46 @@
   {
     "id": "SEC-SOV-001",
     "title": "Sovereign residency",
-    "status": "partial",
+    "status": "gap",
     "owner": "tenant",
     "frameworks": {
-      "owasp": ["LLM05"],
-      "nist": ["MAP 2.3"],
+      "owasp": [
+        "LLM05"
+      ],
+      "nist": [
+        "MAP 2.3"
+      ],
       "atlas": [],
-      "iso42001": [4]
+      "iso42001": [
+        4
+      ]
     },
     "runner": "sovereign_smoke",
     "check_type": "live",
-    "mechanism": "templates/uae-sovereign/ + verify_sovereign_endpoint.py"
+    "mechanism": "templates/uae-sovereign/ + verify_sovereign_endpoint.py \u2014 UNVERIFIED: verify_sovereign_endpoint.py is a live probe requiring HF credentials; a compliance control must not depend on a funded account"
   },
   {
     "id": "SEC-RAG-001",
     "title": "RAG poison-doc defense",
-    "status": "partial",
+    "status": "gap",
     "owner": "tenant",
     "frameworks": {
-      "owasp": ["LLM03"],
-      "nist": ["MAP 2.6"],
-      "atlas": ["AML.T0010"],
-      "iso42001": [3]
+      "owasp": [
+        "LLM03"
+      ],
+      "nist": [
+        "MAP 2.6"
+      ],
+      "atlas": [
+        "AML.T0010"
+      ],
+      "iso42001": [
+        3
+      ]
     },
     "runner": "rag_poison",
     "check_type": "eval",
-    "mechanism": "RAG v1 + fixture promotion"
+    "mechanism": "RAG v1 + fixture promotion \u2014 UNVERIFIED: no infra-free suite isolates RAG poisoning yet"
   },
   {
     "id": "SEC-AGENCY-001",
@@ -335,10 +489,18 @@
     "status": "partial",
     "owner": "tenant",
     "frameworks": {
-      "owasp": ["LLM08"],
-      "nist": ["GOVERN 1.5"],
-      "atlas": ["AML.T0048"],
-      "iso42001": [5]
+      "owasp": [
+        "LLM08"
+      ],
+      "nist": [
+        "GOVERN 1.5"
+      ],
+      "atlas": [
+        "AML.T0048"
+      ],
+      "iso42001": [
+        5
+      ]
     },
     "runner": "agency_manifest",
     "check_type": "artifact",
