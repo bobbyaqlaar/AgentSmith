@@ -19,6 +19,50 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Added — the security harness verifies 17 of 23 controls, up from 9
+
+A control with no runner returned `skip`, and `_resolve_exit` treats `skip` as
+green **even under `--strict`**. The harness therefore exited 0 while **14 of
+23 controls had never been examined** — `SEC-HITL-001`, mandatory human review,
+among them, at a time when a live run showed that gate failing open on a
+sanctions hit. The evidence pack said "Met"; nothing had looked.
+
+Eight controls are now bound, all by delegating to verification that already
+exists rather than writing a second one — a duplicate check is a control that
+can disagree with the tests, and it would eventually report Met while the
+behaviour regressed:
+
+- `SEC-HITL-001`, `SEC-SELF-001`, `SEC-BUDGET-001` → existing test suites
+- `SEC-CHANGE-001` → `verify_system --check-hooks`
+- `SEC-EVAL-001/2/3` → `run-evals.py`'s own fixture loading and thresholds
+- `SEC-GW-001` → the static import check its map row always described but
+  nothing performed. A direct provider-SDK import bypasses budget reservation,
+  the degrade ladder, redaction, prompt guard and the moderation hook in one
+  step, and is invisible at runtime because the call simply succeeds.
+
+`scripts/security/runners/_shared.py` holds the three delegation seams
+(`verify_system`, `pytest_suite`, `load_run_evals`). Two of them were already
+inlined in a single runner each and would have been copied a dozen times;
+`pii_postcall` and `adversarial_eval` now use them, so this is a net reduction
+in check logic.
+
+**Framework suites run with tenant settings stripped.** The harness executes
+from the tenant's directory with its `.env` loaded and its CI modes exported,
+so framework suites inherited them — `MODERATION_HOOK=required` makes the
+gateway raise when no hook is declared, and three budget tests failed that way
+and reported as a compliance breach. `_TENANT_RUNTIME_KEYS` removes deployment
+and guardrail posture before delegating.
+
+**Eval controls do not call a judge.** They verify the gate is wired and
+gateable — fixtures present, enough cases, threshold resolvable. A control that
+needed a funded provider account would report Gap on an unpaid invoice, which
+is an availability check wearing a compliance label.
+
+Six controls remain deliberately unverified and are published as such in
+`docs/security-framework-map.md`, with two tests keeping that list honest: one
+fails on a control naming a non-existent runner outside the reviewed exception
+list, the other fails when the documented list drifts from reality.
+
 ### Fixed — two failures only a live run could produce
 
 Both found by running KYC Sentinel's pipeline against real OpenRouter routes;

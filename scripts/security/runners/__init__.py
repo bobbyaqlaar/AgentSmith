@@ -7,6 +7,7 @@ from security.registry import ControlSpec
 from security.report import ControlResult
 from security.runners import (
     adversarial_eval,
+    delegating,
     moderation_hook,
     noop,
     pii_postcall,
@@ -31,4 +32,13 @@ RUNNERS: dict[str, Runner] = {
     "adversarial_eval": adversarial_eval.run,
     "moderation_hook": moderation_hook.run,
     "sso_revocation": sso_revocation.run,
+    # Bindings to verification that already exists — see delegating.py.
+    "hitl_gate": delegating.hitl_gate,
+    "self_correction": delegating.self_correction,
+    "budget_caps": delegating.budget_caps,
+    "change_gates": delegating.change_gates,
+    "eval_golden": delegating.eval_golden,
+    "eval_fairness": delegating.eval_fairness,
+    "eval_hallucination": delegating.eval_hallucination,
+    "gateway_static": delegating.gateway_static,
 }

@@ -1,32 +1,16 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
 from pathlib import Path
 from typing import Any
 
 from security.registry import ControlSpec
 from security.report import ControlResult
-
-
-def _load_run_evals(root: Path):
-    path = root / "scripts" / "run-evals.py"
-    spec = importlib.util.spec_from_file_location("run_evals_harness", path)
-    mod = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    return mod
+from security.runners._shared import load_run_evals
 
 
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     root = Path(ctx["root"])
-    if str(root) not in sys.path:
-        sys.path.insert(0, str(root))
-    scripts = root / "scripts"
-    if str(scripts) not in sys.path:
-        sys.path.insert(0, str(scripts))
-
-    revals = _load_run_evals(root)
+    revals = load_run_evals(root)
     cases = revals._load_cases("adversarial")
     if len(cases) < 3:
         return ControlResult(
