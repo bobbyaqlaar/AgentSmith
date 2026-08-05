@@ -68,17 +68,33 @@ if _HAS_TEMPORAL:
         domain-specific payload shaping the generic version shouldn't
         assume.
         """
+        import inspect
+
         from runtime.dead_letter import DeadLetterQueue
 
+        # Validate the SHAPE before touching Postgres. A caller passing the
+        # legacy FLATTENED payload (`{**payload, "error": ...}`) to this generic
+        # activity is a contract error, and it should not need a database
+        # connection to surface — this path runs only when a gate has already
+        # failed, so a second, unrelated failure there costs a debugging
+        # session. The accepted names come from `enqueue`'s own signature
+        # rather than being restated here, so they cannot drift.
+        accepted = set(inspect.signature(DeadLetterQueue.enqueue).parameters) - {"self"}
+        unexpected = sorted(set(input) - accepted)
+        if unexpected:
+            raise ValueError(
+                f"dlq_enqueue_activity expects the dead_letter_envelope shape "
+                f"({', '.join(sorted(accepted))}); got unexpected key(s) "
+                f"{unexpected}. A tenant activity that expects the payload's "
+                f"fields inline should be named in dead_letter_activity_name "
+                f"instead of the generic dlq_enqueue_activity."
+            )
+
         dlq = DeadLetterQueue()
-        entry = dlq.enqueue(
-            payload=input["payload"],
-            error=input["error"],
-            tenant_id=input["tenant_id"],
-            reason=input.get("reason"),
-            workflow_id=input.get("workflow_id"),
-            gate_id=input.get("gate_id"),
-        )
+        # `enqueue` takes exactly the keys `dead_letter_envelope` produces, so
+        # unpacking keeps the field names in one module instead of restating
+        # them at every activity boundary.
+        entry = dlq.enqueue(**input)
         return {"task_id": entry.task_id}
 
 
@@ -191,8 +207,9 @@ class BaseAgentWorkflow:
         whose own dead-letter activity expects the payload's fields inline
         (see examples/oil-price-agent's `dead_letter_activity`). Passing
         `dead_letter_activity_name="dlq_enqueue_activity"` WITHOUT a
-        `tenant_id` raises a KeyError inside that activity, since the
-        flattened shape carries none of the three keys it reads.
+        `tenant_id` raises a ValueError inside that activity naming the
+        expected envelope keys, since the flattened shape carries none of
+        them.
         """
         if (gate_activity_name is None) == (gate_result is None):
             raise ValueError(
@@ -231,14 +248,16 @@ class BaseAgentWorkflow:
             if tenant_id is None:
                 dead_letter_input: Any = {**gate_input, "error": "hitl_timeout"}
             else:
-                dead_letter_input = {
-                    "payload": gate_input,
-                    "error": "hitl_timeout",
-                    "tenant_id": tenant_id,
-                    "reason": "hitl_timeout",
-                    "workflow_id": workflow.info().workflow_id,
-                    "gate_id": gate_id,
-                }
+                from runtime.dead_letter import dead_letter_envelope
+
+                dead_letter_input = dead_letter_envelope(
+                    payload=gate_input,
+                    error="hitl_timeout",
+                    tenant_id=tenant_id,
+                    reason="hitl_timeout",
+                    workflow_id=workflow.info().workflow_id,
+                    gate_id=gate_id,
+                )
             await workflow.execute_activity(
                 dead_letter_activity_name,
                 dead_letter_input,

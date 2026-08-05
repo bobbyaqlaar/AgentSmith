@@ -36,7 +36,7 @@ sys.path.insert(0, str(_runtime_root / "workflows"))  # base_workflow etc.
 # ─────────────────────────────────────────────────────────────────────────────
 
 try:
-    from temporalio.client import Client
+    from runtime.temporal_client import connect as connect_temporal, tls_enabled
     from temporalio.service import RPCError
 except ImportError:
     print(
@@ -66,10 +66,8 @@ async def main() -> None:
     if "--price-series" in sys.argv:
         idx = sys.argv.index("--price-series")
         price_series = [float(x) for x in sys.argv[idx + 1 :]]
-
-    use_tls = os.environ.get("TEMPORAL_TLS", "false").lower() == "true"
-    print(f"Connecting to Temporal at {TEMPORAL_ADDRESS} (tls={use_tls}) …")
-    client = await Client.connect(TEMPORAL_ADDRESS, tls=use_tls)
+    print(f"Connecting to Temporal at {TEMPORAL_ADDRESS} (tls={tls_enabled()}) …")
+    client = await connect_temporal()   # address + TEMPORAL_TLS + timeout, one place
 
     print(f"Starting workflow {WORKFLOW_ID} on queue {TASK_QUEUE} …")
     print(f"Price series: {price_series}")

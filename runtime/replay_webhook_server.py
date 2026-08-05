@@ -115,15 +115,15 @@ class ReplayWebhookHandler(BaseHTTPRequestHandler):
         from temporalio.client import Client  # type: ignore
 
         async def _connect():
-            # Bounded, not indefinite: without this, a Temporal server
-            # that's down/unreachable hangs this request for the OS TCP
-            # connect timeout (often 2+ minutes) before failing — long
-            # enough to look like the portal itself is stuck, not "the
-            # tenant's Temporal is unreachable."
-            return await asyncio.wait_for(
-                Client.connect(os.environ.get("TEMPORAL_ADDRESS", "localhost:7233")),
-                timeout=10.0,
-            )
+            # runtime/temporal_client.connect owns the address default, the
+            # TEMPORAL_TLS parsing and this bounded timeout. The timeout
+            # reasoning originated here — an unreachable server otherwise hangs
+            # for the OS TCP timeout, often 2+ minutes, and reads as "the
+            # portal is stuck" rather than "Temporal is down" — and the other
+            # six call sites never inherited it.
+            from runtime.temporal_client import connect
+
+            return await connect()
 
         client = asyncio.run(_connect())
         dlq = DeadLetterQueue(replay_handler=make_temporal_replay_handler(client))

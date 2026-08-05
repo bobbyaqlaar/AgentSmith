@@ -99,6 +99,42 @@ class DLQEntry:
     status: str = "pending"  # pending | replayed | discarded
 
 
+def dead_letter_envelope(
+    *,
+    payload: Any,
+    error: str,
+    tenant_id: str,
+    reason: Optional[str] = None,
+    workflow_id: Optional[str] = None,
+    gate_id: Optional[str] = None,
+) -> dict:
+    """The dict form of a DLQEntry, for crossing an activity boundary.
+
+    Temporal activities take JSON-serialisable arguments, so the envelope is
+    passed as a dict — and its field names were written out by hand at both
+    ends: the producer in `base_workflow.run_with_hitl_gate` built the dict,
+    the consumer in `base_workflow.dead_letter_activity` read it, and nothing
+    connected the two beyond both authors remembering the same six keys.
+
+    They did come apart. The HITL timeout path built a FLATTENED payload
+    (`{**gate_input, "error": ...}`) with no `payload` or `tenant_id` key at
+    all, and the consumer raised KeyError on a gate that had just timed out —
+    the failure path failing. Building the envelope here means the producer
+    cannot omit a field the consumer requires.
+
+    `enqueue()` takes these same names as keyword arguments, so
+    `dlq.enqueue(**envelope)` round-trips without restating them a third time.
+    """
+    return {
+        "payload": payload,
+        "error": error,
+        "tenant_id": tenant_id,
+        "reason": reason,
+        "workflow_id": workflow_id,
+        "gate_id": gate_id,
+    }
+
+
 class DeadLetterQueue:
     """
     Dead-letter queue for failed production activities.

@@ -16,7 +16,7 @@ import os
 import sys
 
 try:
-    from temporalio.client import Client
+    from runtime.temporal_client import connect as connect_temporal, tls_enabled
 except ImportError:
     print(
         "ERROR: temporalio not installed. Run: pip install temporalio", file=sys.stderr
@@ -29,10 +29,8 @@ WORKFLOW_ID = "oil-price-demo-run-1"
 
 async def main() -> None:
     approve = "--reject" not in sys.argv
-
-    use_tls = os.environ.get("TEMPORAL_TLS", "false").lower() == "true"
-    print(f"Connecting to Temporal at {TEMPORAL_ADDRESS} (tls={use_tls}) …")
-    client = await Client.connect(TEMPORAL_ADDRESS, tls=use_tls)
+    print(f"Connecting to Temporal at {TEMPORAL_ADDRESS} (tls={tls_enabled()}) …")
+    client = await connect_temporal()   # address + TEMPORAL_TLS + timeout, one place
 
     handle = client.get_workflow_handle(WORKFLOW_ID)
     await handle.signal("hitl_approved", approve)

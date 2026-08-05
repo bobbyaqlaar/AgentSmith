@@ -19,6 +19,46 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Fixed — a documented TLS switch that silently did nothing
+
+Found by a functional (not name-based) duplication review: seven call sites
+connected to Temporal, and they disagreed in three ways at once.
+
+- **`TEMPORAL_TLS` was read by three files out of seven** — the
+  `examples/oil-price-agent` scripts. `runtime/worker.py` and KYC Sentinel's
+  worker ignored it entirely, so a deployment against a TLS-terminating
+  Temporal Cloud endpoint connected **without TLS** and nothing reported it.
+- **Those three compared it against the literal `"true"`, while OPERATIONS.md
+  documents `TEMPORAL_TLS="1"`.** Following the documentation produced
+  `use_tls=False`. The switch did nothing everywhere it was read.
+- `runtime/worker.py` used `os.environ["TEMPORAL_ADDRESS"]`, so an unset
+  variable surfaced as a KeyError inside worker startup rather than a
+  connection error naming the host. Others defaulted to localhost.
+- Only `replay_webhook_server` bounded the connect; the rest could hang for the
+  OS TCP timeout, often 2+ minutes, reading as "the app is stuck" rather than
+  "Temporal is down".
+
+`runtime/temporal_client.connect()` now owns address resolution, TLS parsing
+(accepting `1`/`true`/`yes`/`on`) and a bounded timeout, and all seven sites use
+it. A test asserts no caller builds its own connection, so the per-file
+opinions cannot return. OPERATIONS.md's row now states what the code accepts.
+
+### Changed — the dead-letter envelope has one definition
+
+Its six field names were written out by hand at both ends — the producer in
+`run_with_hitl_gate`, the consumer in `dlq_enqueue_activity` — with nothing
+connecting them beyond both authors remembering the same keys. They came apart
+once already: the HITL timeout path built a flattened payload with no
+`payload` or `tenant_id`, and the consumer raised `KeyError` on a gate that had
+just timed out — the failure path failing.
+
+`dead_letter.dead_letter_envelope()` now builds it, and the consumer unpacks
+into `enqueue(**input)`, whose signature is the single list of accepted names.
+A caller passing the legacy flattened shape to the generic activity gets a
+`ValueError` naming the expected envelope instead of "unexpected keyword
+argument 'company'" — and it is raised **before** the Postgres connection, so a
+contract error no longer needs a database to surface.
+
 ### Changed — codebase-wide reuse review
 
 An AST scan for structurally identical function bodies across both repos found

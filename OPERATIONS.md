@@ -1726,7 +1726,7 @@ Browser → Streamlit (Cloud Run: YOUR_UI_SERVICE)
 | Variable | Default | Notes |
 |---|---|---|
 | `TEMPORAL_ADDRESS` | `localhost:7233` | Override to point at your live Temporal server |
-| `TEMPORAL_TLS` | `` (empty) | Set to `"1"` if Temporal server uses TLS |
+| `TEMPORAL_TLS` | `` (empty) | Enables TLS to the Temporal server. Accepts `1`, `true`, `yes` or `on` (case-insensitive); anything else leaves TLS **off**. Read by `runtime/temporal_client.connect`, which every worker and client script now uses — previously only the example scripts read it, and they compared against `"true"`, so the `"1"` documented here silently disabled TLS. |
 | `TENANT_ID` | *(required)* | Must match the tenant ID registered in the worker |
 | `PORT` | `8080` | Set automatically by Cloud Run |
 

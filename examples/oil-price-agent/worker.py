@@ -79,18 +79,17 @@ async def _run_worker_with_retry(tenant_id: str) -> None:
     the whole process (and take the health server down with it). The health
     server is a liveness probe for the process, not Temporal connectivity;
     this keeps that distinction real instead of accidental."""
-    from temporalio.client import Client
+    from runtime.temporal_client import connect as connect_temporal
     from temporalio.worker import Worker
 
     address = os.environ.get("TEMPORAL_ADDRESS", "localhost:7233")
     # TEMPORAL_TLS=true for cloud-hosted Temporal behind a TLS-terminating
     # ingress (e.g. Cloud Run, which only exposes 443 — there is no
     # plaintext gRPC port reachable from outside the container).
-    use_tls = os.environ.get("TEMPORAL_TLS", "false").lower() == "true"
     delay = 2.0
     while True:
         try:
-            client = await Client.connect(address, tls=use_tls)
+            client = await connect_temporal()   # address + TEMPORAL_TLS + timeout, one place
             break
         except Exception as exc:
             print(

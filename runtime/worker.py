@@ -83,7 +83,7 @@ def _start_temporal_worker(tenant_id: str) -> None:
 
     Reference pattern (what examples/oil-price-agent/worker.py implements
     concretely):
-      async with Client.connect(os.environ["TEMPORAL_ADDRESS"]) as client:
+      async with await connect_temporal() as client:
           worker = Worker(
               client,
               task_queue=f"agent-tasks-{tenant_id}",
