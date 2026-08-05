@@ -5,7 +5,6 @@ scripts/test/test_delivery_model.py — Delivery Model soft gate + evidence pack
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -17,12 +16,13 @@ SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 
+from _shared import load_script  # noqa: E402
+
+
 def _load(name: str, filename: str):
-    spec = importlib.util.spec_from_file_location(name, SCRIPTS / filename)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    """Thin shim over _shared.load_script — kept so the call sites below
+    read unchanged; the loader itself is no longer duplicated here."""
+    return load_script(filename[:-3])
 
 
 def test_org_policy_example_has_delivery_model_catalog() -> None:

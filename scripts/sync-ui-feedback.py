@@ -48,18 +48,11 @@ def _load_promote():
     every negative annotation raised ModuleNotFoundError inside the loop's
     try/except and was counted as an error instead of promoted. Found by
     scripts/test/test_promotion_loop.py (TestCoverageReview gap 4)."""
-    import importlib.util
-    from pathlib import Path
+    # _shared.load_script loads by path and caches — this had reimplemented
+    # both, including its own sys.modules bookkeeping.
+    from _shared import load_script
 
-    if "promote_learning" in sys.modules:
-        return sys.modules["promote_learning"].promote
-    path = Path(__file__).resolve().parent / "promote-learning.py"
-    spec = importlib.util.spec_from_file_location("promote_learning", path)
-    mod = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    sys.modules["promote_learning"] = mod
-    return mod.promote
+    return load_script("promote-learning").promote
 
 
 # ── Phoenix API client ────────────────────────────────────────────────────────

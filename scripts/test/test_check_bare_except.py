@@ -13,7 +13,6 @@ except clause with no handler body."
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 from pathlib import Path
 
@@ -22,12 +21,9 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 
 
 def _load_checker():
-    spec = importlib.util.spec_from_file_location(
-        "check_bare_except", SCRIPTS_DIR / "check_bare_except.py"
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    from _shared import load_script
+
+    return load_script("check_bare_except")
 
 
 checker = _load_checker()

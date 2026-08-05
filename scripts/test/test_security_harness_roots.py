@@ -17,7 +17,6 @@ somebody else's repo.
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 
 import pytest
@@ -26,15 +25,11 @@ REPO = Path(__file__).resolve().parents[2]
 
 
 def _harness():
-    """Load run-security-checks.py by path — its filename has dashes, so it is
-    not importable as a module the normal way."""
-    spec = importlib.util.spec_from_file_location(
-        "run_security_checks", REPO / "scripts" / "run-security-checks.py"
-    )
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    """Load run-security-checks.py — its filename has dashes, so it is not
+    importable normally. _shared.load_script is the one loader for that."""
+    from _shared import load_script
+
+    return load_script("run-security-checks")
 
 
 def test_tenant_root_follows_cwd_not_the_install(

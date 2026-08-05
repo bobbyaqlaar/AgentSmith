@@ -137,13 +137,9 @@ def test_an_undeclared_gap_fails_strict_but_a_declared_one_does_not() -> None:
     gaps would make --strict unusable and create an incentive to relabel a gap
     as `met`, which is exactly the failure being fixed.
     """
-    import importlib.util
+    from _shared import load_script
 
-    spec = importlib.util.spec_from_file_location(
-        "rsc", REGISTRY.parents[2] / "scripts" / "run-security-checks.py"
-    )
-    rsc = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(rsc)
+    rsc = load_script("run-security-checks")
     from security.report import ControlResult
     from security.runners._shared import DECLARED_GAP, NOT_APPLICABLE
 
@@ -156,3 +152,44 @@ def test_an_undeclared_gap_fails_strict_but_a_declared_one_does_not() -> None:
     assert rsc._resolve_exit([undeclared], strict=True) == 1, "an undeclared gap must block"
     # Non-strict stays permissive for all three.
     assert rsc._resolve_exit([declared, undeclared, n_a], strict=False) == 0
+
+
+# ── Reuse guard ──────────────────────────────────────────────────────────────
+
+
+def test_scripts_has_exactly_one_script_loader() -> None:
+    """`_shared.load_script` is the only place that loads a hyphen-named script.
+
+    Thirteen files hand-rolled the same importlib dance and three had
+    independently reinvented caching around it. Caching is not cosmetic here:
+    `run-evals.py` resolves the model registry and reads .env at import, and
+    the security harness loaded it once per eval control.
+
+    Matched by AST rather than text, so a file that merely NAMES the function —
+    this test does — is not counted. runtime/ is exempt by design: it is
+    vendored independently and must not import scripts/.
+    """
+    import ast
+    import subprocess
+
+    repo = REGISTRY.parents[2]
+    files = subprocess.run(
+        ["git", "-C", str(repo), "ls-files", "scripts/*.py"],
+        capture_output=True, text=True,
+    ).stdout.split()
+
+    offenders = []
+    for rel in files:
+        path = repo / rel
+        if not path.exists():
+            continue
+        for node in ast.walk(ast.parse(path.read_text(errors="ignore"))):
+            if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "spec_from_file_location":
+                offenders.append(rel)
+                break
+
+    assert offenders == ["scripts/_shared.py"], (
+        f"hand-rolled script loaders outside _shared: "
+        f"{[f for f in offenders if f != 'scripts/_shared.py']}. "
+        f"Use `from _shared import load_script`."
+    )

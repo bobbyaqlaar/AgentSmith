@@ -19,6 +19,41 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Changed — codebase-wide reuse review
+
+An AST scan for structurally identical function bodies across both repos found
+ten candidates. The dominant one: **thirteen files hand-rolled the same
+importlib dance** to load hyphen-named scripts (`run-evals.py`,
+`promote-learning.py`), and three had independently reinvented caching around
+it. `scripts/_shared.load_script()` is now the single loader; `scripts/` holds
+exactly one `spec_from_file_location`, in `_shared` itself.
+
+Caching matters beyond tidiness: `run-evals.py` does real work at import — it
+resolves the model registry and reads `.env` — and the security harness loaded
+it once per eval control, so it executed three times per run and made those
+controls sensitive to import order.
+
+Inside the shared modules themselves, `_phoenix_get` and `_phoenix_post`
+differed only in the httpx verb and whether the payload was `params` or `json`;
+both now wrap one `_phoenix_request`. No other duplication was found within
+either shared module.
+
+**Deliberately not consolidated**, recorded so the next review does not
+re-litigate them:
+
+- `runtime/prompt_guard._denylist_path` and
+  `runtime/tool_registry.default_allowlist_path` — identical shape, but they
+  are independent guardrails sharing no import. Sharing means inventing a
+  module for eight lines or coupling two things meant to stand alone.
+- `_repo_root` in `runtime/` and `scripts/` — the vendoring boundary. A tenant
+  can carry `runtime/` without `scripts/`.
+- The `_FALLBACK_*` maps mirroring `provider_dispatch` — version-skew shims
+  with drift tests.
+- `load_env` in the two on-prem template scripts — templates ship to tenants
+  and must stay self-contained.
+- `runtime/test/test_judging.py`'s loader — `runtime/` must not import
+  `scripts/`.
+
 ### Changed — `--strict` now fails on a control that claims more than it checks
 
 This is the change the whole phase was building toward, and it required the

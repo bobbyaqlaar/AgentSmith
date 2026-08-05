@@ -5,7 +5,6 @@ scripts/test/test_fairness_evals.py — fairness suite loading + judge prompt sh
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import sys
@@ -19,11 +18,11 @@ sys.path.insert(0, str(SCRIPTS))
 
 
 def _load_run_evals():
-    spec = importlib.util.spec_from_file_location("run_evals", SCRIPTS / "run-evals.py")
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    # One loader for hyphen-named scripts (_shared.load_script). Three
+    # eval test modules carried byte-identical copies of this.
+    from _shared import load_script
+
+    return load_script("run-evals")
 
 
 def test_fairness_base_fixture_has_paired_cases() -> None:

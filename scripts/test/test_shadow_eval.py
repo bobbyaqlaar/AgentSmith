@@ -8,7 +8,6 @@ implementation; this is the CI-safe regression layer on top of that.
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 from pathlib import Path
 
@@ -17,12 +16,9 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 
 
 def _load_shadow_eval():
-    spec = importlib.util.spec_from_file_location(
-        "shadow_eval", SCRIPTS_DIR / "shadow-eval.py"
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    from _shared import load_script
+
+    return load_script("shadow-eval")
 
 
 def test_sample_is_deterministic_across_runs():

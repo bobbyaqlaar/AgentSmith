@@ -13,6 +13,28 @@ from here would create a coupling that breaks that independence. The
 duplication between scripts/ and runtime/ is a real architectural
 boundary, not an oversight; only the duplication *within* scripts/ is
 consolidated here.
+
+What lives here, and what deliberately does not:
+
+  load_script      one loader for hyphen-named scripts. Thirteen files
+                   hand-rolled the same importlib dance; three had
+                   independently reinvented its caching.
+  load_registry    the merged model registry, cached per cwd.
+  judge_model      the eval judge, registry-first.
+  _phoenix_*       one request path; get/post are thin wrappers over it.
+  _load_dotenv     .env parsing, inline comments handled.
+
+Not here on purpose:
+
+  * runtime/prompt_guard._denylist_path and
+    runtime/tool_registry.default_allowlist_path are structurally identical
+    (env var → .agent-rfc/security/<file> → None), but they are runtime
+    modules, share no import, and are each usable standalone. Sharing them
+    would mean inventing a module for eight lines or coupling two guardrails
+    that are deliberately independent.
+  * The _FALLBACK_* maps below mirror runtime/provider_dispatch. That
+    duplication is a version-skew shim with its own drift tests, not an
+    oversight — see their comments.
 """
 
 from __future__ import annotations
@@ -345,30 +367,76 @@ def _load_dotenv(root: Optional[Path] = None) -> None:
         pass
 
 
+def _phoenix_request(
+    phoenix_endpoint: str, path: str, *, method: str = "get", **kwargs: Any
+) -> Any:
+    """One request path for the Phoenix REST API.
+
+    `_phoenix_get` and `_phoenix_post` differed only in the httpx verb and
+    whether the payload went as `params` or `json` — the URL construction,
+    timeout, status check and error wrapping were identical. Wrapping the error
+    with the failing PATH is the part worth keeping in one place: an httpx
+    exception alone says a request failed without saying which, and these calls
+    are made from three different sync scripts.
+    """
+    import httpx
+
+    url = f"{phoenix_endpoint.rstrip('/')}{path}"
+    try:
+        resp = getattr(httpx, method)(url, timeout=30.0, **kwargs)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:
+        raise RuntimeError(f"Phoenix API error [{path}]: {exc}") from exc
+
+
 def _phoenix_get(
     phoenix_endpoint: str, path: str, params: Optional[dict] = None
 ) -> Any:
-    """GET against a Phoenix REST endpoint. Raises RuntimeError with the
-    failing path in the message on any error — callers get a useful
-    message without each having to wrap this themselves."""
-    import httpx
-
-    url = f"{phoenix_endpoint.rstrip('/')}{path}"
-    try:
-        resp = httpx.get(url, params=params, timeout=30.0)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as exc:
-        raise RuntimeError(f"Phoenix API error [{path}]: {exc}") from exc
+    """GET against a Phoenix REST endpoint."""
+    return _phoenix_request(phoenix_endpoint, path, method="get", params=params)
 
 
 def _phoenix_post(phoenix_endpoint: str, path: str, body: dict) -> Any:
-    import httpx
+    """POST against a Phoenix REST endpoint."""
+    return _phoenix_request(phoenix_endpoint, path, method="post", json=body)
 
-    url = f"{phoenix_endpoint.rstrip('/')}{path}"
-    try:
-        resp = httpx.post(url, json=body, timeout=30.0)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as exc:
-        raise RuntimeError(f"Phoenix API error [{path}]: {exc}") from exc
+
+# ── Loading a hyphen-named script as a module ────────────────────────────────
+
+
+_SCRIPT_MODULE_CACHE: dict[str, Any] = {}
+
+
+def load_script(name: str, *, cache: bool = True) -> Any:
+    """Import `scripts/<name>.py` as a module.
+
+    Several scripts are named with hyphens (`run-evals.py`,
+    `promote-learning.py`), which are not importable identifiers, so every
+    caller hand-rolled the same four lines of importlib. Fourteen sites did:
+    eleven tests, two production scripts, and the security harness — including
+    two that had independently reinvented the caching below.
+
+    Cached by default. `run-evals.py` does real work at import (resolves the
+    model registry, reads .env) and the security harness loads it once per eval
+    control, so re-executing it three times per run was waste that also made
+    those controls sensitive to import order.
+
+    Pass `cache=False` where a test needs a genuinely fresh module.
+    """
+    if cache and name in _SCRIPT_MODULE_CACHE:
+        return _SCRIPT_MODULE_CACHE[name]
+    import importlib.util
+
+    path = Path(__file__).resolve().parent / f"{name}.py"
+    if not path.exists():
+        raise FileNotFoundError(f"no such script: {path}")
+    # Keep the hyphen-free module name callers already used ("run_evals"), so
+    # anything reaching into sys.modules by that name still finds it.
+    spec = importlib.util.spec_from_file_location(name.replace("-", "_"), path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    if cache:
+        _SCRIPT_MODULE_CACHE[name] = module
+    return module

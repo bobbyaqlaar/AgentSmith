@@ -17,7 +17,6 @@ copied into a dozen more.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import subprocess
@@ -141,20 +140,21 @@ def pytest_suite(
 def load_run_evals(root: Path):
     """Import `scripts/run-evals.py` as a module.
 
-    Its filename has a hyphen, so it cannot be imported normally. Reusing it
-    rather than re-reading fixture paths keeps the harness and the eval gate on
-    one definition of where fixtures live, which suite falls back to which base
-    file, and how a threshold resolves.
+    Delegates to `_shared.load_script`, the one loader for hyphen-named
+    scripts. Reusing run-evals rather than re-reading fixture paths keeps the
+    harness and the eval gate on one definition of where fixtures live, which
+    suite falls back to which base file, and how a threshold resolves.
+
+    The root arguments still matter: the harness may run from a tenant
+    directory, so `runtime.*` and `scripts/*` must be importable before
+    run-evals executes.
     """
     for extra in (str(root), str(root / "scripts")):
         if extra not in sys.path:
             sys.path.insert(0, extra)
-    path = root / "scripts" / "run-evals.py"
-    spec = importlib.util.spec_from_file_location("run_evals_harness", path)
-    mod = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    return mod
+    from _shared import load_script
+
+    return load_script("run-evals")
 
 
 def eval_suite_gateable(

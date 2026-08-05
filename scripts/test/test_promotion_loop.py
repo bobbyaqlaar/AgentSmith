@@ -15,7 +15,6 @@ No network: Phoenix accessors are stubbed on the loaded module.
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -26,19 +25,12 @@ SCRIPTS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SCRIPTS))
 
 
-def _load_dashed(module_name: str, filename: str):
-    if module_name in sys.modules:
-        return sys.modules[module_name]
-    spec = importlib.util.spec_from_file_location(module_name, SCRIPTS / filename)
-    mod = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    sys.modules[module_name] = mod
-    return mod
+# _shared.load_script is the same function, caching included.
+from _shared import load_script  # noqa: E402
 
 
-promote_learning = _load_dashed("promote_learning", "promote-learning.py")
-sync_ui_feedback = _load_dashed("sync_ui_feedback", "sync-ui-feedback.py")
+promote_learning = load_script("promote-learning")
+sync_ui_feedback = load_script("sync-ui-feedback")
 
 
 @pytest.fixture()

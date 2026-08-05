@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import sys
@@ -23,11 +22,10 @@ REQUIRED_HALLUCINATION_CASE_KEYS = (
 
 
 def _load_run_evals():
-    spec = importlib.util.spec_from_file_location("run_evals", SCRIPTS / "run-evals.py")
-    mod = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(mod)
-    return mod
+    # One loader for hyphen-named scripts (_shared.load_script).
+    from _shared import load_script
+
+    return load_script("run-evals")
 
 
 def test_hallucination_flag_rate_empty():

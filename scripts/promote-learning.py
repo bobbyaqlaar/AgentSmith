@@ -121,21 +121,12 @@ def promote(
             # run-evals.py has a dash in its filename — `from run_evals
             # import run_scorecard` can never resolve (same class of bug as
             # sync-ui-feedback.py's promote_learning import, found by
-            # test_promotion_loop.py). Load by file path instead.
-            import importlib.util
-            import sys as _sys
+            # test_promotion_loop.py). load_script loads it by path and
+            # caches, so the manual sys.modules bookkeeping this used to do
+            # is no longer needed.
+            from _shared import load_script
 
-            if "run_evals" in _sys.modules:
-                run_scorecard = _sys.modules["run_evals"].run_scorecard
-            else:
-                _spec = importlib.util.spec_from_file_location(
-                    "run_evals", Path(__file__).resolve().parent / "run-evals.py"
-                )
-                _mod = importlib.util.module_from_spec(_spec)
-                assert _spec.loader is not None
-                _spec.loader.exec_module(_mod)
-                _sys.modules["run_evals"] = _mod
-                run_scorecard = _mod.run_scorecard
+            run_scorecard = load_script("run-evals").run_scorecard
 
             exit_code = run_scorecard()
             if exit_code == 0:

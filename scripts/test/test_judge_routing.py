@@ -177,13 +177,9 @@ def test_same_id_still_merges(tmp_path, monkeypatch) -> None:
 
 
 def _run_evals():
-    import importlib.util
+    from _shared import load_script
 
-    spec = importlib.util.spec_from_file_location(
-        "run_evals_mod", REPO / "scripts" / "run-evals.py"
-    )
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    mod = load_script("run-evals")
     return mod
 
 
