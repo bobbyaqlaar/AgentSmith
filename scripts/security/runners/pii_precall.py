@@ -7,15 +7,16 @@ from typing import Any
 
 from security.registry import ControlSpec
 from security.report import ControlResult
+from security.runners._shared import framework_root
 
 
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
-    root = Path(ctx["root"])
-    runtime_root = root / "runtime"
-    if str(root) not in sys.path:
-        sys.path.insert(0, str(root))
-    if str(runtime_root) not in sys.path:
-        sys.path.insert(0, str(runtime_root))
+    # framework_root inserts the repo ROOT only. The previous version also
+    # inserted root/runtime, which would let `import input_guardrail` resolve
+    # flat — nothing does that (runtime modules import each other as
+    # `runtime.X`), and a bare runtime/ on sys.path can shadow same-named
+    # top-level modules. Vestigial from before the package rename.
+    root = framework_root(ctx)
 
     from runtime.input_guardrail import scrub_text
 

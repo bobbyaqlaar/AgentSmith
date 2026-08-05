@@ -12,10 +12,11 @@
 # empty allowlist denies every tool, which is the correct posture for a repo
 # that should be registering none.
 #
-# Note on SEC-TOOL-001 coverage: its runner
-# (scripts/security/runners/tool_allowlist.py) smoke-tests the ToolRegistry
-# allow/deny mechanism against the shipped template, not against this file. It
-# proves deny-by-default works; it does not inspect a tenant's allowlist
-# contents.
+# SEC-TOOL-001 now reads THIS file rather than the shipped template, and
+# checks it against the tools a repo actually registers (found statically, so
+# the harness never imports tenant code). An empty `tools` with nothing
+# registered — the framework's case — is a pass: correct posture, not a gap.
+# An empty list WITH registered tools is a failure, since strict mode would
+# deny every one of them.
 version: 1
 tools: []

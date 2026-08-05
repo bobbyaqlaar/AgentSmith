@@ -19,6 +19,50 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Changed — SEC-TOOL-001 checks the tenant's allowlist, not the mechanism
+
+It loaded `fixtures/security/templates/tool_allowlist.yaml` — the framework's
+own template — and registered two invented tools against it. That proves
+`ToolRegistry` denies an unlisted name, which is a framework unit test rather
+than a control: it passed identically whether the tenant had an allowlist, had
+an empty one, or registered a dozen tools none of which appeared on it. The
+framework's own allowlist file had even documented the limitation.
+
+It now reads the tenant's `.agent-rfc/security/tool_allowlist.yaml`, discovers
+the tool names the repo actually registers (statically — importing tenant
+modules would execute tenant code inside the harness, and a tenant whose
+imports need credentials would fail this control for unrelated reasons), and
+asserts each resolves as the allowlist says. It also requires **at least one
+registered tool to be denied**: an allowlist naming everything is
+indistinguishable from having none, and the deny path is the half that can
+regress unnoticed. Against KYC Sentinel this reports 4 governed tools with
+`wire_transfer` denied — the tool that repo deliberately keeps off its list.
+
+An empty allowlist with nothing registered is a **pass**, not a gap: it is the
+correct posture for a repo that registers no tools, which is the framework's
+own case.
+
+**`skip` now distinguishes two facts.** `not applicable — …` (the control is
+sound but has nothing to govern here) versus `runner … not implemented`
+(nothing checked it). Reporting both as `skip` is what let unverified controls
+read as green. The framework holds no golden dataset of its own, so
+`SEC-EVAL-001` is genuinely not applicable when it grades itself — falling back
+to the shipped base fixture would grade generic cases as if they were the
+repo's own, the defect that pinning `actual_output` was introduced to fix.
+
+### Changed — runner redundancy consolidated
+
+`_shared.py` gained `framework_root`, `tenant_security`, `passed`, `failed` and
+`not_applicable`. Five runners each carried their own
+`sys.path.insert(0, str(root))`; ten repeated `Path(ctx["root"])`; eleven built
+`ControlResult` by hand. `sso_revocation` drives `node` so it cannot use the
+python delegation helpers, but its CompletedProcess→ControlResult translation
+is identical and now shared.
+
+Removed a vestigial `sys.path.insert(root/"runtime")` in `pii_precall`: nothing
+imports runtime modules flat (they import each other as `runtime.X`), and a
+bare `runtime/` on `sys.path` can shadow same-named top-level modules.
+
 ### Added — the security harness verifies 17 of 23 controls, up from 9
 
 A control with no runner returned `skip`, and `_resolve_exit` treats `skip` as

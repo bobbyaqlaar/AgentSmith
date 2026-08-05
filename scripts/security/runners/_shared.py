@@ -32,13 +32,8 @@ def _subprocess_result(
     control: ControlSpec, proc: subprocess.CompletedProcess, ok_msg: str, fail_msg: str
 ) -> ControlResult:
     if proc.returncode != 0:
-        return ControlResult(
-            control_id=control.id,
-            status="fail",
-            message=fail_msg,
-            evidence={"stderr": (proc.stderr or proc.stdout)[:500]},
-        )
-    return ControlResult(control_id=control.id, status="pass", message=ok_msg, evidence={})
+        return failed(control, fail_msg, stderr=(proc.stderr or proc.stdout)[:500])
+    return passed(control, ok_msg)
 
 
 def verify_system(
@@ -160,6 +155,15 @@ def eval_suite_gateable(
     root = Path(ctx["root"])
     revals = load_run_evals(root)
     cases = revals._load_cases(suite)
+    if not cases and not revals._evals_path(suite).exists():
+        # No fixture file at all — this repo has no such dataset to gate.
+        # Falling back to the framework's shipped base would be worse than
+        # skipping: it would grade generic cases as if they were this repo's,
+        # which is the exact defect pinning `actual_output` was introduced to
+        # fix.
+        return not_applicable(
+            control, f"no {suite} dataset in this repo", suite=suite
+        )
     if len(cases) < minimum:
         return ControlResult(
             control_id=control.id,
@@ -173,4 +177,71 @@ def eval_suite_gateable(
         status="pass",
         message=f"{suite}: {len(cases)} cases, threshold {threshold:.2f}",
         evidence={"cases": str(len(cases)), "threshold": f"{threshold:.2f}"},
+    )
+
+
+# ── Context and result helpers ───────────────────────────────────────────────
+#
+# Every runner needs the framework root (usually to import `runtime.*`) and
+# builds ControlResults by hand. Five runners each carried their own
+# `sys.path.insert(0, str(root))`; ten repeated `Path(ctx["root"])`. Extracted
+# so a runner reads as the check it performs rather than its preamble.
+
+
+def framework_root(ctx: dict[str, Any]) -> Path:
+    """The framework checkout, with `runtime.*` importable.
+
+    Runners import guardrail modules to exercise them directly. The path insert
+    was duplicated in every runner that does, and omitting it fails only on the
+    machines where the framework is not already on sys.path — i.e. not the one
+    it was written on.
+    """
+    root = Path(ctx["root"])
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    return root
+
+
+def tenant_security(ctx: dict[str, Any]) -> Path:
+    """The TENANT's `.agent-rfc/security/` directory.
+
+    Distinct from the framework root on purpose: a control that grades the
+    framework's own shipped templates while claiming to grade the tenant is the
+    defect SEC-TOOL-001 had.
+    """
+    return Path(ctx["tenant_security"])
+
+
+def passed(control: ControlSpec, message: str, **evidence: str) -> ControlResult:
+    return ControlResult(
+        control_id=control.id, status="pass", message=message, evidence=evidence
+    )
+
+
+def failed(control: ControlSpec, message: str, **evidence: str) -> ControlResult:
+    return ControlResult(
+        control_id=control.id, status="fail", message=message, evidence=evidence
+    )
+
+
+# Prefix that marks a skip as a deliberate judgement rather than a gap. The
+# harness reports both as `skip`, and that ambiguity is what let 14 unverified
+# controls read as green: "nothing checked this" and "this does not apply here"
+# are opposite facts wearing one label.
+NOT_APPLICABLE = "not applicable"
+
+
+def not_applicable(control: ControlSpec, message: str, **evidence: str) -> ControlResult:
+    """The control is sound but has nothing to govern in THIS repo.
+
+    The framework ships eval fixtures for tenants and holds no golden dataset
+    of its own, so SEC-EVAL-001 has nothing to measure when the framework
+    grades itself. That is categorically different from a control whose runner
+    was never written, and only one of the two should survive a strict run.
+    """
+    return ControlResult(
+        control_id=control.id,
+        status="skip",
+        message=f"{NOT_APPLICABLE} — {message}",
+        evidence=evidence,
     )

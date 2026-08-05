@@ -14,18 +14,16 @@ reports "Met" while nothing is actually blocked in production
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
 from security.registry import ControlSpec
 from security.report import ControlResult
+from security.runners._shared import framework_root
 
 
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
-    root = Path(ctx["root"])
-    if str(root) not in sys.path:
-        sys.path.insert(0, str(root))
+    root = framework_root(ctx)
 
     from runtime.prompt_guard import is_enforcing, resolve_mode, scan_prompt
 

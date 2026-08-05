@@ -64,6 +64,21 @@ gateable** — fixtures present, enough cases, threshold resolvable — and do n
 call a judge. A control requiring a funded provider account would report Gap on
 an unpaid invoice, which is an availability check wearing a compliance label.
 
+### `skip` means two different things
+
+The harness reports both as `skip`, and that ambiguity is what let 14
+unverified controls read as green:
+
+- **`not applicable — …`** — the control is sound but has nothing to govern in
+  this repo. The framework ships eval fixtures *for tenants* and holds no
+  golden dataset of its own, so `SEC-EVAL-001` has nothing to measure when the
+  framework grades itself. Falling back to the shipped base fixture would be
+  worse than skipping: it would grade generic cases as if they were this
+  repo's, the exact defect pinning `actual_output` was introduced to fix.
+- **`runner … not implemented`** — nothing checked this. A gap.
+
+Only the second should ever fail a strict run.
+
 ### Still unverified
 
 | Control | Runner | Status |
@@ -102,7 +117,7 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | `SEC-GW-001` | LLM07 | MAP 2.3 | AML.T0040 | Theme 4 | **Partial** | Shared | `llm_gateway.py` choke point | Static: tenant activities import gateway, not raw provider |
 | `SEC-PROMPT-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Framework | `runtime/prompt_guard.py` heuristics + denylist; `PROMPT_GUARD=off\|warn\|default\|strict` (blocking by default) | Two-part: detection over the injection fixture corpus **and** enforcement — the runner reports `fail` on `off`, `warn` on the observe-first `warn` tier, `pass` only when the configured mode actually blocks |
 | `SEC-OUTPUT-001` | LLM02 | MEASURE 2.7 | — | Theme 7 | **Met** | Shared | `runtime/structured_output.py` `parse_llm_json` | Schema validation rejects malformed LLM JSON |
-| `SEC-TOOL-001` | LLM07 | GOVERN 1.3 | AML.T0040 | Theme 4 | **Met** | Shared | `runtime/tool_registry.py` + allowlist | Tool call without allowlist → hard fail |
+| `SEC-TOOL-001` | LLM07 | GOVERN 1.3 | AML.T0040 | Theme 4 | **Met** | Shared | `runtime/tool_registry.py` + the TENANT's allowlist | Every registered tool resolves as the tenant allowlist says, and at least one is denied |
 | `SEC-MOD-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Tenant | `runtime/moderation.py` + `MODERATION_HOOK`; classifier declared via `moderation.hook` in `tenant.yaml` (or `MODERATION_HOOK_PATH`) | Harness runner `scripts/security/runners/moderation_hook.py` — API smoke, plus under `required` it imports the tenant's declared classifier and verifies it returns a `ModerationResult` and does not block benign text. Unset hook fails strict CI |
 | `SEC-RISK-001` | — | MAP 1.5 | AML.T0000 | Theme 2 | **Org-owned** | Tenant | *Planned:* risk register template generator | Harness checks `.agent-rfc/security/risk_register.yaml` exists + schema |
 | `SEC-ADV-001` | LLM01 | MEASURE 2.7 | AML.T0024 | Theme 7 | **Met** | Shared | `run-evals.py --suite adversarial` + prompt_guard | Red-team fixtures in `--suite adversarial` |
@@ -125,7 +140,7 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | LLM04 Model DoS | `SEC-BUDGET-001` | Met | Budget + rate tests in CI |
 | LLM05 Supply chain | `SEC-SOV-001`, `SEC-CHANGE-001` | Partial | Model registry attestation + signed enterprise hooks |
 | LLM06 Sensitive disclosure | `SEC-PII-001`, `SEC-PII-002` | Partial→Met | Pre + post PII tests mandatory in `--mode ci` |
-| LLM07 Insecure plugin/tool design | `SEC-TOOL-001`, `SEC-GW-001` | Partial | Tool allowlist met; gateway-only static check still partial |
+| LLM07 Insecure plugin/tool design | `SEC-TOOL-001`, `SEC-GW-001` | Met | Tenant allowlist enforced against registered tools; gateway-only static check now runs |
 | LLM08 Excessive agency | `SEC-HITL-001`, `SEC-AGENCY-001` | Partial | Tenant manifest of gated actions; harness verifies wiring |
 | LLM09 Overreliance | `SEC-EVAL-001`, `SEC-EVAL-003` | Met | Golden + hallucination gates |
 | LLM10 Model theft | `SEC-GW-001`, `SEC-AUDIT-001` | Weak | Gateway key isolation; audit on config export (future) |

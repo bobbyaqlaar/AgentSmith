@@ -6,6 +6,7 @@ from typing import Any
 
 from security.registry import ControlSpec
 from security.report import ControlResult
+from security.runners._shared import _subprocess_result
 
 
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
@@ -46,17 +47,12 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
         capture_output=True,
         text=True,
     )
-    if proc.returncode != 0:
-        return ControlResult(
-            control_id=control.id,
-            status="fail",
-            message="ssoRevocation.test.ts failed",
-            evidence={"stderr": (proc.stderr or proc.stdout)[:500]},
-        )
-
-    return ControlResult(
-        control_id=control.id,
-        status="pass",
-        message="SSO_REVOCATION_MODE fail-open/fail-closed tests passed",
-        evidence={"test": str(test_file.relative_to(root))},
+    # Same CompletedProcess -> ControlResult mapping every shelling runner needs.
+    # This one drives `node`, so it cannot use verify_system/pytest_suite, but
+    # the translation is identical and worth sharing.
+    return _subprocess_result(
+        control,
+        proc,
+        "SSO_REVOCATION_MODE fail-open/fail-closed tests passed",
+        "ssoRevocation.test.ts failed",
     )
