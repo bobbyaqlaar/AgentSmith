@@ -41,4 +41,5 @@ RUNNERS: dict[str, Runner] = {
     "eval_fairness": delegating.eval_fairness,
     "eval_hallucination": delegating.eval_hallucination,
     "gateway_static": delegating.gateway_static,
+    "tenant_suite": delegating.tenant_suite,
 }

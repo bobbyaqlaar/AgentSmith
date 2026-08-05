@@ -18,6 +18,7 @@ copied into a dozen more.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import subprocess
 import sys
@@ -81,12 +82,17 @@ def pytest_suite(
     rel_path: str,
     env: Optional[dict[str, str]] = None,
     select: Optional[str] = None,
+    base: Optional[Path] = None,
 ) -> ControlResult:
     """Delegate to an existing test module.
 
     Where a suite already asserts exactly what a control claims, running it is
     strictly better than writing a second check: one behaviour, one assertion,
     and the control cannot quietly disagree with the tests.
+
+    `base` selects which repo the path is relative to — the framework checkout
+    by default, or the tenant root for a tenant-declared suite. One helper
+    serves both rather than a second subprocess path that could drift.
 
     Tenant deployment and guardrail settings are stripped first — see
     `_TENANT_RUNTIME_KEYS`. Without that, a framework suite runs under the
@@ -95,7 +101,7 @@ def pytest_suite(
     a caller pin back whatever the suite genuinely needs; `select` passes a
     `-k` expression.
     """
-    root = Path(ctx["root"])
+    root = base or Path(ctx["root"])
     target = root / rel_path
     if not target.exists():
         return ControlResult(
@@ -257,3 +263,23 @@ def not_applicable(control: ControlSpec, message: str, **evidence: str) -> Contr
         message=f"{NOT_APPLICABLE} — {message}",
         evidence=evidence,
     )
+
+
+def security_fixture(
+    control: ControlSpec, ctx: dict[str, Any], name: str
+) -> tuple[list | None, ControlResult | None]:
+    """Load `fixtures/security/<name>` — returns (cases, None) or (None, failure).
+
+    Two runners repeated the same eight lines: build the path, fail if absent,
+    parse. The absence branch matters more than the parse — a control whose
+    fixtures have gone missing must fail rather than iterate an empty list and
+    report success on zero cases, which is the quiet way a probe suite stops
+    proving anything.
+    """
+    path = framework_root(ctx) / "fixtures" / "security" / name
+    if not path.exists():
+        return None, failed(control, f"missing fixture: {path}")
+    cases = json.loads(path.read_text(encoding="utf-8"))
+    if not cases:
+        return None, failed(control, f"fixture {name} is empty — nothing probed")
+    return cases, None

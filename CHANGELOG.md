@@ -19,6 +19,39 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Added — tenants can declare their own controls
+
+A tenant may now ship `.agent-rfc/security/control_registry.json`, merged over
+the framework's exactly as `models.yaml` already merges. Motivated by a real
+gap: KYC Sentinel's evidence-mandated rating floor (a sanctions hit forces
+human review regardless of the model's rating) had tests, documentation and a
+demonstrated failure behind it, and the compliance surface still could not see
+it because there was nowhere to declare it.
+
+**Additive only.** Redefining a framework control id raises, because a registry
+the graded repo can edit is one where that repo can quietly downgrade
+`SEC-HITL-001` to `noop` and keep a green harness.
+
+The `tenant_suite` runner names a `suite:` in the tenant repo and delegates to
+the existing `pytest_suite` helper — which gained a `base` parameter so one
+implementation serves framework and tenant suites rather than a second
+subprocess path that could drift. KYC Sentinel now reports 18 controls passing.
+
+### Changed — further runner consolidation
+
+`security_fixture()` in `_shared.py` replaces eight duplicated lines in
+`pii_precall` and `prompt_guard`, and adds a check neither had: a fixture that
+loads but is **empty** now fails rather than iterating zero cases and reporting
+success — the quiet way a probe suite stops proving anything.
+
+Not converted: 36 hand-built `ControlResult(...)` calls that `passed()`/
+`failed()` could shorten. Their evidence values contain f-strings with braces,
+so a brace-matching rewrite is fragile, and `ast.unparse` discards the comments
+these runners depend on. The consolidation that carried risk of drift —
+`sys.path` setup, subprocess translation, run-evals loading, fixture loading —
+is done and adopted by all new code; rewriting correct constructor calls is
+churn.
+
 ### Fixed — the harness reported its verdict to nobody
 
 `run-security-checks.py` exited with a bare status code and printed nothing.

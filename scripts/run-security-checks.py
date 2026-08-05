@@ -89,7 +89,10 @@ def main(argv: list[str] | None = None) -> int:
     root = _install_root()
     strict = args.strict or os.environ.get("SECURITY_STRICT", "") == "1"
     registry_path = root / "fixtures" / "security" / "control_registry.json"
-    controls = load_control_registry(registry_path)
+    controls = load_control_registry(
+        registry_path,
+        _tenant_security_dir(_tenant_root()) / "control_registry.json",
+    )
 
     if args.mode == "smoke":
         allow = {"SEC-PII-001", "SEC-PII-002", "SEC-AUDIT-001"}

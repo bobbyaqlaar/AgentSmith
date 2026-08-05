@@ -26,7 +26,12 @@ from typing import Any
 
 from security.registry import ControlSpec
 from security.report import ControlResult
-from security.runners._shared import eval_suite_gateable, pytest_suite, verify_system
+from security.runners._shared import (
+    eval_suite_gateable,
+    failed,
+    pytest_suite,
+    verify_system,
+)
 
 
 # ── Delegating straight to an existing suite or health check ─────────────────
@@ -89,6 +94,28 @@ def eval_fairness(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
 
 def eval_hallucination(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     return eval_suite_gateable(control, ctx, "hallucination")
+
+
+# ── Tenant-declared controls ─────────────────────────────────────────────────
+
+
+def tenant_suite(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
+    """A control the TENANT declares, evidenced by a test suite in its own repo.
+
+    The framework registry cannot enumerate every domain control a tenant needs
+    — KYC Sentinel's evidence-mandated rating floor (a sanctions hit forces
+    human review whatever the model rated) is a real control with tests and
+    documentation that the compliance surface simply could not see.
+
+    Deliberately runs the tenant's own suite rather than importing a declared
+    callable: the tests already encode what the control claims, including its
+    negative cases, and a second assertion written here could drift from them.
+    Tenant registries are additive-only (see load_control_registry), so this
+    cannot be used to weaken a framework control.
+    """
+    if not control.suite:
+        return failed(control, "tenant control declares no `suite` to run")
+    return pytest_suite(control, ctx, control.suite, base=Path(ctx["tenant_root"]))
 
 
 # ── Static: the gateway is the only provider path for workload calls ─────────

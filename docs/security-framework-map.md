@@ -64,6 +64,31 @@ gateable** — fixtures present, enough cases, threshold resolvable — and do n
 call a judge. A control requiring a funded provider account would report Gap on
 an unpaid invoice, which is an availability check wearing a compliance label.
 
+### Tenant-declared controls
+
+The framework registry cannot enumerate every control a tenant needs. KYC
+Sentinel's evidence-mandated rating floor — a sanctions hit forces human review
+whatever the model rated — is a real control with tests and documentation that
+the compliance surface could not see, because there was nowhere to declare it.
+
+A tenant may add `.agent-rfc/security/control_registry.json`. It merges over
+the framework's, mirroring the `models.yaml` framework←tenant merge already in
+this codebase, and is **additive only**: redefining a framework control id
+raises. A registry the graded repo can edit is one where that repo can quietly
+downgrade `SEC-HITL-001` to `noop` and keep a green harness.
+
+Tenant controls use the `tenant_suite` runner and name a `suite:` — a test path
+in the tenant repo. Running the tenant's own tests is deliberate: they already
+encode what the control claims, including its negative cases, and a second
+assertion written in the harness could drift from them.
+
+```json
+[{ "id": "SEC-KYC-FLOOR-001",
+   "owner": "tenant", "runner": "tenant_suite",
+   "suite": "test/test_analyst_judge.py",
+   "mechanism": "agents/judge.py:check_rating_floor" }]
+```
+
 ### `skip` means two different things
 
 The harness reports both as `skip`, and that ambiguity is what let 14

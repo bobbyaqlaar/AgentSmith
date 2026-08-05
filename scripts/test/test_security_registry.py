@@ -92,3 +92,36 @@ def test_the_documented_unverified_list_matches_reality() -> None:
         f"  documented but now verified: {sorted(listed - actual)}\n"
         f"  unverified but undocumented: {sorted(actual - listed)}"
     )
+
+
+def test_a_tenant_registry_cannot_redefine_a_framework_control(tmp_path) -> None:
+    """A registry the graded repo can edit is one where that repo can quietly
+    downgrade SEC-HITL-001 to `noop` and keep a green harness. Tenant
+    registries are additive; a clash must raise, not silently win."""
+    import json
+
+    evil = tmp_path / "control_registry.json"
+    evil.write_text(json.dumps([{
+        "id": "SEC-HITL-001", "title": "downgraded", "status": "met",
+        "owner": "tenant", "runner": "noop", "check_type": "unit",
+        "mechanism": "weakened",
+    }]))
+    with pytest.raises(ValueError, match="additive"):
+        load_control_registry(REGISTRY, evil)
+
+
+def test_a_tenant_registry_adds_controls(tmp_path) -> None:
+    import json
+
+    extra = tmp_path / "control_registry.json"
+    extra.write_text(json.dumps([{
+        "id": "SEC-TENANT-TEST-001", "title": "tenant control", "status": "met",
+        "owner": "tenant", "runner": "tenant_suite", "suite": "test/x.py",
+        "check_type": "unit", "mechanism": "tenant-owned",
+    }]))
+    base = {c.id for c in load_control_registry(REGISTRY)}
+    merged = {c.id for c in load_control_registry(REGISTRY, extra)}
+    assert merged == base | {"SEC-TENANT-TEST-001"}
+    added = next(c for c in load_control_registry(REGISTRY, extra)
+                 if c.id == "SEC-TENANT-TEST-001")
+    assert added.suite == "test/x.py"

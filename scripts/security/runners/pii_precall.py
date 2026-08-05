@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 from typing import Any
 
 from security.registry import ControlSpec
 from security.report import ControlResult
-from security.runners._shared import framework_root
+from security.runners._shared import framework_root, security_fixture
 
 
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
@@ -20,16 +19,9 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
 
     from runtime.input_guardrail import scrub_text
 
-    cases_path = root / "fixtures" / "security" / "pii_probe_cases_base.json"
-    if not cases_path.exists():
-        return ControlResult(
-            control_id=control.id,
-            status="fail",
-            message=f"missing probe fixtures: {cases_path}",
-            evidence={},
-        )
-
-    cases = json.loads(cases_path.read_text(encoding="utf-8"))
+    cases, problem = security_fixture(control, ctx, "pii_probe_cases_base.json")
+    if problem is not None:
+        return problem
     failures: list[str] = []
     for case in cases:
         scrubbed, _counts = scrub_text(case["input"], mode="default")
