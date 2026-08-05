@@ -19,6 +19,31 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Fixed — the harness reported its verdict to nobody
+
+`run-security-checks.py` exited with a bare status code and printed nothing.
+CI showed `Process completed with exit code 1` and no indication of which
+control failed or why, so every diagnosis meant generating an evidence pack and
+re-running locally. It now prints a status summary and every fail/warn with its
+evidence. That change immediately surfaced a real failure on its first run.
+
+Two consequences of delegating controls to test suites, both found by CI rather
+than locally:
+
+- **The security job installed four packages.** Controls that delegate to the
+  repo's suites need what those suites import, so they failed on a missing dev
+  dependency and reported it as a compliance violation — the same
+  availability-as-compliance confusion this phase exists to remove. The job now
+  installs `requirements.txt`. A hollow job is not a light one.
+- **pytest exit 2 (collection error) is now distinguished from exit 1.** "The
+  check could not run" and "the check ran and failed" are different facts; both
+  fail, but the message names which.
+
+`workflow-templates/eval-security.yml` is kept byte-identical to
+`.github/workflows/eval-security.yml` — `test_workflow_template_wiring.py`
+enforces it, and caught this edit. Without that, the framework self-test and
+tenant CI would silently run different harnesses.
+
 ### Changed — SEC-TOOL-001 checks the tenant's allowlist, not the mechanism
 
 It loaded `fixtures/security/templates/tool_allowlist.yaml` — the framework's

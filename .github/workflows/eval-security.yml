@@ -17,7 +17,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install pytest pyyaml pydantic jsonschema
+      # Full requirements, not a minimal four. Controls now delegate to the
+      # repo's own test suites (SEC-HITL-001, SEC-BUDGET-001, SEC-SELF-001), so
+      # the job needs what those suites import. With the minimal set they fail
+      # on a missing dev dependency and report it as a compliance violation —
+      # a hollow job is not a light one.
+      - run: pip install -r requirements.txt
+      - run: pip install pytest pytest-asyncio pyyaml pydantic jsonschema
       - run: PYTHONPATH=scripts:. pytest scripts/test/test_security_*.py -q
       - run: python3 scripts/run-security-checks.py --mode ci ${{ inputs.strict && '--strict' || '' }}
       - run: python3 scripts/run-security-checks.py --mode smoke --evidence-pack ./security-evidence

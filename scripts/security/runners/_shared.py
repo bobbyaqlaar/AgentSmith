@@ -115,6 +115,18 @@ def pytest_suite(
         text=True,
         env={**clean, "ENVIRONMENT": "staging", **(env or {})},
     )
+    # pytest exit 2 = collection/usage error: the suite could not RUN (a
+    # missing dependency, an import error), which is categorically different
+    # from a suite that ran and failed. Reporting a missing dev package as a
+    # control violation is the same availability-as-compliance confusion this
+    # phase exists to remove — but it is still a gap, so it fails, with a
+    # message that names the cause.
+    if proc.returncode == 2:
+        return failed(
+            control,
+            f"{rel_path} could not run — check dependencies, not the control",
+            stderr=(proc.stderr or proc.stdout)[-500:],
+        )
     return _subprocess_result(
         control, proc, f"{rel_path} passed", f"{rel_path} failed"
     )

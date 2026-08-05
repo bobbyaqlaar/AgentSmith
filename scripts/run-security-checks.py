@@ -143,6 +143,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.evidence_pack:
         write_evidence_pack(args.evidence_pack, controls, results, args.framework)
 
+    # Report to stdout, always. This exited silently with a bare status code:
+    # CI showed `Process completed with exit code 1` and nothing else, so every
+    # diagnosis needed an evidence pack and a local re-run. A harness whose
+    # verdict is invisible makes its own failures expensive to act on.
+    by_status: dict[str, int] = {}
+    for r in results:
+        by_status[r.status] = by_status.get(r.status, 0) + 1
+    summary = "  ".join(f"{k}={v}" for k, v in sorted(by_status.items()))
+    print(f"security harness [{args.mode}{', strict' if strict else ''}]: {summary}")
+    for r in results:
+        if r.status in ("fail", "warn"):
+            print(f"  {r.status.upper():4} {r.control_id:18} {r.message}")
+            for key, value in (r.evidence or {}).items():
+                print(f"       {key}: {str(value)[:200]}")
+
     return _resolve_exit(results, strict)
 
 
