@@ -14,7 +14,7 @@
 > [Product_Archive.md](./Product_Archive.md), remaining to-dos in
 > [FIXES_AND_CLEANUP.md](./FIXES_AND_CLEANUP.md).
 
-**Version:** 1.1.1 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
+**Version:** 1.2.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
 `pyproject.toml` — pinned together by
 `scripts/test/test_version_consistency.py`)
 **Date:** 2026-07-29
@@ -1975,7 +1975,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 1.1.x | 3.11 | 0.2 | 4.0 | Default model registry is local-only; `local_large`/`local_small` roles removed |
+| 1.2.x | 3.11 | 0.2 | 4.0 | `AGENT_JUDGE_MODEL` no longer overrides a declared `judge` role; a tenant `models.yaml` entry with a different `id` REPLACES the framework entry rather than merging; `--strict` fails a control declaring `met`/`partial` with no runner |
 
 ### Examples as Forks
 

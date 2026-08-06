@@ -14,10 +14,37 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
+| 1.2.x | 3.11 | 0.2 | 4.0 | `AGENT_JUDGE_MODEL` no longer overrides a declared `judge` role; a tenant `models.yaml` entry with a different `id` REPLACES the framework entry rather than merging into it; `--strict` fails a control declaring `met`/`partial` with no runner |
 | 1.1.x | 3.11 | 0.2 | 4.0 | Default model registry is local-only; `local_large`/`local_small` roles removed |
 | 1.0.x | 3.11 | 0.2 | 4.0 | Initial public release (documented only — never tagged or published) |
 
 ## [Unreleased]
+
+_Nothing yet._
+
+## [1.2.0] — 2026-08-06
+
+Model registry, security harness, and a functional-duplication review.
+
+**Three behaviour changes a tenant can notice**, each a correction rather than a
+removal — every one is a case where the previous behaviour was silently wrong:
+
+1. `AGENT_JUDGE_MODEL` no longer overrides a declared `judge` role. A shell
+   profile exporting it graded every local eval with one model while CI used
+   another, and scores are not comparable across judges.
+2. A tenant `models.yaml` entry whose `id` differs now REPLACES the framework's
+   entry instead of merging into it. Merging leaked `endpoint`, `cost_per_*` and
+   `degrade_to` onto a model they did not describe — KYC Sentinel's Anthropic
+   judge inherited an Ollama endpoint, and a `degrade_to` deleted from the
+   tenant file kept firing because the framework's value showed through.
+3. `--strict` now fails a control declaring `met`/`partial` with no runner.
+   Previously that was `skip`, and skip passed strict — which is how 14 of 23
+   controls reported green while nothing had examined them.
+
+Also of note: a **documented TLS switch that did nothing**. `TEMPORAL_TLS` was
+read by three of seven connect sites, and those compared against `"true"` while
+the docs said `"1"` — so following the documentation disabled TLS, everywhere.
+
 
 ### Fixed — a documented TLS switch that silently did nothing
 

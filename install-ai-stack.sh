@@ -56,7 +56,7 @@ fi
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-FRAMEWORK_VERSION="1.1.1"
+FRAMEWORK_VERSION="1.2.0"
 # Overridable for forks/self-hosted mirrors: AI_STACK_FRAMEWORK_REPO=https://github.com/your-org/AgentSmith ./install-ai-stack.sh
 # The literal "<org>" previously here was not a placeholder convention this
 # script substituted anywhere — it was used verbatim as a URL component in
