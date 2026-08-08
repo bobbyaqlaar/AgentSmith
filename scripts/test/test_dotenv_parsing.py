@@ -109,3 +109,52 @@ def test_ollama_base_url_defaults_without_the_variable(monkeypatch) -> None:
 
     monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
     assert cost_router._ollama_base_url() == "http://localhost:11434/v1"
+
+
+# ── The on-prem bundle carries its own copy of this rule ──────────────────────
+
+
+def test_the_onprem_bundle_parses_values_identically() -> None:
+    """`templates/onprem-deploy/scripts/_env.parse_value` duplicates
+    `_dotenv_value` on purpose — that bundle is copied to a customer host,
+    often air-gapped, where `scripts/` does not exist, so it cannot import
+    this one.
+
+    A deliberate duplicate still needs a drift test, the same way the
+    `_FALLBACK_*` provider maps in `_shared` do. Without it the two rules can
+    diverge silently, and the symptom is a deployment where a commented .env
+    line produces a broken backend URL — which reads as a broken deployment,
+    not a parse bug. That is the exact failure the bundle copy was fixing.
+    """
+    import sys
+    from pathlib import Path
+
+    from _shared import _dotenv_value
+
+    # sys.path rather than a hand-rolled importlib loader: `_shared.load_script`
+    # only reaches scripts/, and the repo forbids a second loader (see
+    # test_security_registry.test_scripts_has_exactly_one_script_loader).
+    root = Path(__file__).resolve().parent.parent.parent
+    bundle = root / "templates" / "onprem-deploy" / "scripts"
+    if str(bundle) not in sys.path:
+        sys.path.insert(0, str(bundle))
+    import _env as module  # type: ignore  # noqa: E402
+
+    cases = [
+        "8080  # the app port",
+        "plain",
+        '"quoted value"',
+        "'single'",
+        '"a#b # c"',
+        "http://x/y#z",
+        "  spaced  ",
+        "#leading",
+        '"unterminated',
+        "",
+        "value\twith\ttabs  # note",
+    ]
+    for raw in cases:
+        assert module.parse_value(raw) == _dotenv_value(raw), (
+            f"on-prem bundle disagrees with _shared on {raw!r}: "
+            f"{module.parse_value(raw)!r} vs {_dotenv_value(raw)!r}"
+        )

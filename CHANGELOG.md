@@ -98,6 +98,31 @@ that name-based scanning had no way to surface.
   own builder on purpose — it exercises the real `_resolve_role`, which this one
   mocks.
 
+**Second pass** (the scan re-run after the first round of consolidation):
+
+- `scripts/_shared.fixtures_path(name, mkdir=False)` replaces nine hand-spelled
+  `_repo_root() / ".agent-rfc" / "fixtures" / …` constructions. `mkdir` is
+  opt-in so resolving a path to test for a fixture cannot create the directory
+  as a side effect.
+- `input_guardrail._default_scrub` built four near-identical redaction closures
+  differing only in a counter key and a replacement token — which let the two
+  drift apart, and `guardrail_counts` is evidence tenants record in their own
+  decision records. Now one `_redactor(label, replacement)`. `_sub_card` stays
+  separate: it only redacts on a passing Luhn check, so it must be able to
+  decline and must not count when it does.
+- `network_watchdog` had two copies of the same notify-or-fall-back-to-stderr
+  block; one `_notify(...)` now serves both.
+
+**Deliberately not consolidated**, each verified rather than assumed:
+`prompt_guard._denylist_path` / `tool_registry.default_allowlist_path` (sharing
+would couple two intentionally independent guardrails, or invent a module for
+seven lines — the decision `_shared` already records); `_repo_root` in
+`runtime/` vs `scripts/` (the architectural boundary that lets a tenant vendor
+`runtime/` alone); and `_shared._dotenv_value` vs the on-prem bundle's
+`parse_value` (the bundle ships to air-gapped hosts without `scripts/`). The
+last of these now has a drift test, following the precedent the `_FALLBACK_*`
+provider maps set.
+
 ### Evals
 
 - **`EVAL_RPM` paces judge calls** (`scripts/_shared.RateLimiter`,

@@ -44,7 +44,11 @@ REQUIRED_PACKAGES = [
 SOFT_PACKAGES = {"langgraph"}  # warn-only; not hard requirement
 
 
-from _shared import _repo_root, judge_model as _resolve_judge_model  # noqa: E402
+from _shared import (  # noqa: E402
+    _repo_root,
+    fixtures_path,
+    judge_model as _resolve_judge_model,
+)
 
 
 def _required_ollama_models() -> list[str]:
@@ -704,7 +708,7 @@ def check_kg() -> bool:
     stats = map_codebase.run_map()
     print(f"  ℹ️   map_codebase.py: {stats}")
 
-    kg_path = _repo_root() / ".agent-rfc" / "fixtures" / "knowledge_graph.json"
+    kg_path = fixtures_path("knowledge_graph.json")
     failures = 0
 
     if not _check("knowledge_graph.json written", kg_path.exists()):

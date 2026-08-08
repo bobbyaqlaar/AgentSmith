@@ -34,13 +34,11 @@ COST_PER_OUTPUT_TOKEN = float(os.environ.get("AGENT_COST_PER_OUTPUT_TOKEN", "0.0
 
 # ── State file ────────────────────────────────────────────────────────────────
 
-from _shared import _repo_root  # noqa: E402
+from _shared import fixtures_path  # noqa: E402
 
 
 def _cache_path() -> Path:
-    path = _repo_root() / ".agent-rfc" / "fixtures" / "token_velocity_cache.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
+    return fixtures_path("token_velocity_cache.json", mkdir=True)
 
 
 _EMPTY_STATE: dict = {

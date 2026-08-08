@@ -130,34 +130,40 @@ def stop_background_watcher() -> None:
 # ── Notifications ─────────────────────────────────────────────────────────────
 
 
-def _notify_offline() -> None:
+def _notify(title: str, body: str, urgency: str, fallback: str) -> None:
+    """Desktop notification, degrading to stderr.
+
+    The `except Exception` is the point: this runs on a network transition, so
+    the notifier itself may be exactly what is unavailable. A watchdog that
+    raised while reporting an outage would turn a degraded network into a dead
+    watchdog, which is when it is most needed.
+    """
     try:
         from notifier import send_notification
 
-        send_notification(
-            "📡 Network Offline",
-            "AgentSmith switched to LOCAL mode (Ollama).",
-            urgency="normal",
-        )
-    except Exception:
+        send_notification(title, body, urgency=urgency)
+    except Exception:  # fail-open: reporting must not depend on the thing being reported
         import sys
 
-        print("[network_watchdog] OFFLINE — falling back to Ollama", file=sys.stderr)
+        print(f"[network_watchdog] {fallback}", file=sys.stderr)
+
+
+def _notify_offline() -> None:
+    _notify(
+        "📡 Network Offline",
+        "AgentSmith switched to LOCAL mode (Ollama).",
+        "normal",
+        "OFFLINE — falling back to Ollama",
+    )
 
 
 def _notify_recovery() -> None:
-    try:
-        from notifier import send_notification
-
-        send_notification(
-            "✅ Network Restored",
-            "AgentSmith is back online — cloud models available.",
-            urgency="low",
-        )
-    except Exception:
-        import sys
-
-        print("[network_watchdog] ONLINE — cloud models available", file=sys.stderr)
+    _notify(
+        "✅ Network Restored",
+        "AgentSmith is back online — cloud models available.",
+        "low",
+        "ONLINE — cloud models available",
+    )
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────

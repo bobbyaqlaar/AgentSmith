@@ -26,15 +26,15 @@ from typing import Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-from _shared import _repo_root, _iso_now  # noqa: E402
+from _shared import _repo_root, _iso_now, fixtures_path  # noqa: E402
 
 
 def _golden_path() -> Path:
-    return _repo_root() / ".agent-rfc" / "fixtures" / "golden_evals.json"
+    return fixtures_path("golden_evals.json")
 
 
 def _criteria_path() -> Path:
-    return _repo_root() / ".agent-rfc" / "fixtures" / "custom_judge_criteria.json"
+    return fixtures_path("custom_judge_criteria.json")
 
 
 def _log_path() -> Path:

@@ -45,6 +45,7 @@ from _shared import (  # noqa: E402
     _load_dotenv,
     judge_model as _judge_model,
     rate_limiter_from_env,
+    fixtures_path,
 )
 
 
@@ -76,7 +77,7 @@ def _evals_path(suite: str = "golden") -> Path:
     if suite == "adversarial":
         return _repo_root() / ".agent-rfc" / "security" / "adversarial_evals.json"
     name = _EVALS_FILE.get(suite, _EVALS_FILE["golden"])
-    return _repo_root() / ".agent-rfc" / "fixtures" / name
+    return fixtures_path(name)
 
 
 def _criteria_path_for(suite: str = "golden") -> Path:
@@ -88,7 +89,7 @@ def _criteria_path_for(suite: str = "golden") -> Path:
         name = "hallucination_judge_criteria.json"
     else:
         name = "custom_judge_criteria.json"
-    return _repo_root() / ".agent-rfc" / "fixtures" / name
+    return fixtures_path(name)
 
 
 def _golden_path() -> Path:
@@ -101,7 +102,7 @@ def _criteria_path() -> Path:
 
 def _results_path(suite: str = "golden") -> Path:
     name = _RESULTS_FILE.get(suite, _RESULTS_FILE["golden"])
-    return _repo_root() / ".agent-rfc" / "fixtures" / name
+    return fixtures_path(name)
 
 
 def _adversarial_base_path() -> Path:

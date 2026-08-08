@@ -442,6 +442,28 @@ def load_script(name: str, *, cache: bool = True) -> Any:
     return module
 
 
+
+# ── Tenant fixture paths ──────────────────────────────────────────────────────
+
+
+def fixtures_path(name: str, *, mkdir: bool = False) -> Path:
+    """`<repo>/.agent-rfc/fixtures/<name>`.
+
+    Nine call sites spelled this out from `_repo_root()`, and two of them also
+    created the directory first. That is a layout the tenant scaffold owns, so
+    every copy is a place that has to be found if it ever moves — and the two
+    that called mkdir were the two whose absence was a crash rather than an
+    empty result, which is not a distinction worth rediscovering per script.
+
+    `mkdir` is opt-in: a reader resolving a path to check whether a fixture
+    exists must not bring the directory into being as a side effect.
+    """
+    path = _repo_root() / ".agent-rfc" / "fixtures" / name
+    if mkdir:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 # ── Request pacing ────────────────────────────────────────────────────────────
 
 

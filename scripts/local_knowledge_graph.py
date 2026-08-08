@@ -42,13 +42,11 @@ NodeType = Literal["CodebaseFile", "Guardrail", "ProductionIncident"]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-from _shared import _repo_root, _iso_now  # noqa: E402
+from _shared import _iso_now, fixtures_path  # noqa: E402
 
 
 def _graph_path() -> Path:
-    p = _repo_root() / ".agent-rfc" / "fixtures" / "knowledge_graph.json"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    return p
+    return fixtures_path("knowledge_graph.json", mkdir=True)
 
 
 # ── Core class ────────────────────────────────────────────────────────────────

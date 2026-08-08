@@ -93,32 +93,41 @@ def _default_scrub(text: str) -> tuple[str, dict[str, int]]:
     counts: dict[str, int] = {}
     out = text
 
-    def _sub_emirates_hyphen(m: re.Match[str]) -> str:
-        counts["emirates_id"] = counts.get("emirates_id", 0) + 1
-        return "[REDACTED_EMIRATES_ID]"
+    def _redactor(label: str, replacement: str):
+        """Count a hit under `label` and replace it.
 
-    def _sub_emirates_digits(m: re.Match[str]) -> str:
-        counts["emirates_id"] = counts.get("emirates_id", 0) + 1
-        return "[REDACTED_EMIRATES_ID]"
+        Four of these were written out separately and differed only in those
+        two strings — which meant the counter key and the redaction token could
+        drift apart, and `guardrail_counts` is evidence a tenant records in its
+        own decision record (every PDPL/GDPR decision-path app). Pairing them in
+        one place is what keeps a count of "email" from labelling something
+        redacted as a phone number.
+        """
 
-    def _sub_email(m: re.Match[str]) -> str:
-        counts["email"] = counts.get("email", 0) + 1
-        return "[REDACTED_EMAIL]"
+        def _sub(m: "re.Match[str]") -> str:
+            counts[label] = counts.get(label, 0) + 1
+            return replacement
 
-    def _sub_phone(m: re.Match[str]) -> str:
-        counts["phone"] = counts.get("phone", 0) + 1
-        return "[REDACTED_PHONE]"
+        return _sub
 
-    def _sub_card(m: re.Match[str]) -> str:
+    def _sub_card(m: "re.Match[str]") -> str:
+        # Not built by _redactor: a card candidate is only redacted if it
+        # passes Luhn, so this one can decline to substitute — and must not
+        # count when it does.
         if _luhn_valid(m.group(0)):
             counts["card"] = counts.get("card", 0) + 1
             return "[REDACTED_CARD]"
         return m.group(0)
 
-    out = _EMIRATES_ID_HYPHEN.sub(_sub_emirates_hyphen, out)
-    out = _EMIRATES_ID_DIGITS.sub(_sub_emirates_digits, out)
-    out = _EMAIL.sub(_sub_email, out)
-    out = _PHONE.sub(_sub_phone, out)
+    # Order matters: the hyphenated Emirates ID pattern runs before the
+    # bare-digit one so the more specific form is consumed first.
+    for pattern, label, replacement in (
+        (_EMIRATES_ID_HYPHEN, "emirates_id", "[REDACTED_EMIRATES_ID]"),
+        (_EMIRATES_ID_DIGITS, "emirates_id", "[REDACTED_EMIRATES_ID]"),
+        (_EMAIL, "email", "[REDACTED_EMAIL]"),
+        (_PHONE, "phone", "[REDACTED_PHONE]"),
+    ):
+        out = pattern.sub(_redactor(label, replacement), out)
     out = _CARD_CANDIDATE.sub(_sub_card, out)
     return out, counts
 
