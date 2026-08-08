@@ -161,3 +161,56 @@ def close_all() -> None:
             except Exception:  # fail-open: shutdown path; a dead pool is already closed
                 pass
         _pools.clear()
+
+
+# ── One-time schema bootstrap ─────────────────────────────────────────────────
+
+_MIGRATED: set[tuple[str, str]] = set()
+
+
+def ensure_schema(dsn: str, ddl: "str | list[str]", *, key: str) -> None:
+    """Run idempotent DDL once per (dsn, key) per process.
+
+    Three backends bootstrap their own table on construction — the DLQ, the
+    idempotency store and the gateway's budget ledger — and only the DLQ
+    remembered it had already done so. The other two re-ran CREATE TABLE IF NOT
+    EXISTS on every construction, and `LLMGateway(...)` is built per activity:
+    on Postgres that is two extra DDL round-trips before any real work, on the
+    hot path of every workflow step.
+
+    Cost is not the whole of it. DDL takes a brief table-level lock even when it
+    is a no-op, so a burst of workers each constructing a gateway at once
+    serialise on a statement that had nothing left to do — the failure shows up
+    as latency under concurrency, which is the hardest kind to attribute.
+
+    Keyed by (dsn, key) rather than dsn alone: one database legitimately holds
+    all three tables, and a per-DSN flag would let whichever backend ran first
+    suppress the others' migrations.
+
+    `ddl` may be one statement or a list of them, applied in order.
+
+    The cache is per PROCESS and deliberately not persisted — a fresh process
+    against a database that has been reset must still create its tables.
+    """
+    token = (dsn, key)
+    if token in _MIGRATED:
+        return
+    statements = [ddl] if isinstance(ddl, str) else list(ddl)
+    conn = connect(dsn)
+    try:
+        with conn, conn.cursor() as cur:
+            # A list rather than one semicolon-joined string: the DLQ's
+            # migration is CREATE TABLE followed by three ALTER ... ADD COLUMN
+            # IF NOT EXISTS, and relying on multi-statement execute() would
+            # make the bootstrap depend on driver behaviour that differs
+            # between psycopg2 and psycopg3.
+            for statement in statements:
+                cur.execute(statement)
+    finally:
+        conn.close()
+    _MIGRATED.add(token)
+
+
+def reset_migration_cache() -> None:
+    """Forget which schemas have been bootstrapped. For tests only."""
+    _MIGRATED.clear()

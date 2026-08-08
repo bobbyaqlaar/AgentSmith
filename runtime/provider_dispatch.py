@@ -136,6 +136,41 @@ def build_request(
     return "/chat/completions", headers, body
 
 
+def parse_openai_completion(data: dict) -> tuple[str, int, int]:
+    """(text, prompt_tokens, completion_tokens) from an OpenAI-shaped response.
+
+    `.get("content") or ""`, not a bare index: OpenAI-compatible providers
+    legitimately return `"content": null` — a model that emitted only reasoning
+    tokens, produced nothing before a stop, or was cut off by a filter.
+    Returning None breaks the (text, int, int) contract and the None then
+    travels until something dereferences it: the PII scrubber, a security
+    control, died with `TypeError: expected string or bytes-like object`
+    several frames from the cause. An empty completion is a normal provider
+    outcome and belongs to the caller to interpret, not a crash in a guardrail.
+
+    Shared with the cloud adapters. That hardening was applied to the
+    module-level parser while the Azure and Huawei adapters kept byte-identical
+    unhardened copies, so a null completion that had already been fixed once
+    still crashed on those two routes.
+    """
+    text = data["choices"][0]["message"].get("content") or ""
+    usage = data.get("usage", {})
+    return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+
+
+def parse_anthropic_completion(data: dict) -> tuple[str, int, int]:
+    """(text, input_tokens, output_tokens) from an Anthropic-shaped response.
+
+    An empty `content` array is this shape's equivalent of a null completion —
+    a stop before any block was emitted. Indexing it raises IndexError inside a
+    guardrail rather than returning nothing for the caller to interpret.
+    """
+    blocks = data.get("content") or []
+    text = (blocks[0].get("text") if blocks else "") or ""
+    usage = data.get("usage", {})
+    return text, usage.get("input_tokens", 0), usage.get("output_tokens", 0)
+
+
 def parse_response(
     provider: str, data: dict, api_format: Optional[str] = None
 ) -> tuple[str, int, int]:
@@ -148,22 +183,8 @@ def parse_response(
     """
     fmt = api_format or _PROVIDER_DEFAULT_FORMAT.get(provider, API_FORMAT_OPENAI)
     if fmt == API_FORMAT_ANTHROPIC:
-        blocks = data.get("content") or []
-        text = (blocks[0].get("text") if blocks else "") or ""
-        usage = data.get("usage", {})
-        return text, usage.get("input_tokens", 0), usage.get("output_tokens", 0)
-
-    # `or ""`, not a bare index: OpenAI-compatible providers legitimately return
-    # `"content": null` — a model that emitted only reasoning tokens, produced
-    # nothing before a stop, or was cut off by a filter. Returning None broke
-    # this function's own (text, int, int) contract and the None then travelled
-    # until something dereferenced it: the PII scrubber, a security control,
-    # died with `TypeError: expected string or bytes-like object` several
-    # frames from the cause. An empty completion is a normal provider outcome
-    # and belongs to the caller to interpret, not a crash in a guardrail.
-    text = data["choices"][0]["message"].get("content") or ""
-    usage = data.get("usage", {})
-    return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+        return parse_anthropic_completion(data)
+    return parse_openai_completion(data)
 
 
 # ── Streaming (TTFT path — llm_gateway.complete_stream) ───────────────────────
@@ -469,9 +490,7 @@ class VertexAIAdapter:
         if (
             "content" in data
         ):  # Anthropic-on-Vertex envelope mirrors the direct Messages API shape
-            text = data["content"][0]["text"]
-            usage = data.get("usage", {})
-            return text, usage.get("input_tokens", 0), usage.get("output_tokens", 0)
+            return parse_anthropic_completion(data)
         candidate = data["candidates"][0]
         text = candidate["content"]["parts"][0]["text"]
         usage = data.get("usageMetadata", {})
@@ -527,9 +546,7 @@ class AzureOpenAIAdapter:
         return url, headers, body
 
     def parse_response(self, data: dict) -> tuple[str, int, int]:
-        text = data["choices"][0]["message"]["content"]
-        usage = data.get("usage", {})
-        return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+        return parse_openai_completion(data)
 
 
 class BedrockAdapter:
@@ -608,9 +625,7 @@ class BedrockAdapter:
         return url, headers, body
 
     def parse_response(self, data: dict) -> tuple[str, int, int]:
-        text = data["content"][0]["text"]
-        usage = data.get("usage", {})
-        return text, usage.get("input_tokens", 0), usage.get("output_tokens", 0)
+        return parse_anthropic_completion(data)
 
 
 class HuaweiModelArtsAdapter:
@@ -697,9 +712,7 @@ class HuaweiModelArtsAdapter:
         return url, headers, body
 
     def parse_response(self, data: dict) -> tuple[str, int, int]:
-        text = data["choices"][0]["message"]["content"]
-        usage = data.get("usage", {})
-        return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+        return parse_openai_completion(data)
 
 
 _CLOUD_ADAPTERS: dict[str, CloudProviderAdapter] = {

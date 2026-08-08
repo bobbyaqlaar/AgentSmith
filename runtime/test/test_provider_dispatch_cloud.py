@@ -359,3 +359,72 @@ def test_huawei_modelarts():
         },
     )
     assert (text, in_tok, out_tok) == ("hi!", 5, 2)
+
+
+# ── An empty completion must not crash a guardrail, on ANY route ──────────────
+#
+# `parse_response` was hardened for `"content": null` after a null completion
+# travelled out of the gateway and killed the PII scrubber with a TypeError
+# several frames from the cause. The four cloud adapters each carried their own
+# byte-identical copy of the unhardened parse and were missed, so the same
+# response still crashed on Azure, Huawei, Bedrock and Vertex. They now share
+# one parser; these are the cases that would have caught the divergence.
+
+
+@pytest.mark.parametrize("provider", ["azure_openai", "huawei_modelarts"])
+def test_a_null_openai_style_completion_yields_empty_text(provider: str) -> None:
+    text, in_tok, out_tok = parse_cloud_response(
+        provider,
+        {
+            "choices": [{"message": {"content": None}}],
+            "usage": {"prompt_tokens": 7, "completion_tokens": 0},
+        },
+    )
+    assert (text, in_tok, out_tok) == ("", 7, 0)
+
+
+@pytest.mark.parametrize("provider", ["azure_openai", "huawei_modelarts"])
+def test_a_missing_content_key_yields_empty_text(provider: str) -> None:
+    """A stop before any content was emitted omits the key entirely."""
+    text, _, _ = parse_cloud_response(
+        provider, {"choices": [{"message": {}}], "usage": {}}
+    )
+    assert text == ""
+
+
+@pytest.mark.parametrize("provider", ["bedrock", "vertex_ai"])
+def test_an_empty_anthropic_style_content_array_yields_empty_text(provider: str) -> None:
+    """The Anthropic-shaped equivalent: `content: []`. Indexing it raised
+    IndexError inside the guardrail instead of returning nothing to interpret."""
+    text, in_tok, out_tok = parse_cloud_response(
+        provider, {"content": [], "usage": {"input_tokens": 4, "output_tokens": 0}}
+    )
+    assert (text, in_tok, out_tok) == ("", 4, 0)
+
+
+def test_every_cloud_adapter_delegates_to_a_shared_parser() -> None:
+    """No adapter may reintroduce its own copy.
+
+    Four identical hand-written parsers is how the hardening was applied once
+    and missed four times; matched on the AST so a comment cannot satisfy it.
+    """
+    import ast
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parent.parent / "provider_dispatch.py"
+    tree = ast.parse(src.read_text())
+    shared = {"parse_openai_completion", "parse_anthropic_completion"}
+
+    for cls in [n for n in tree.body if isinstance(n, ast.ClassDef)]:
+        for fn in [f for f in cls.body if isinstance(f, ast.FunctionDef)
+                   and f.name == "parse_response"]:
+            if cls.name == "CloudProviderAdapter":
+                continue                      # Protocol stub: body is `...`
+            called = {
+                n.func.id for n in ast.walk(fn)
+                if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+            }
+            assert called & shared, (
+                f"{cls.name}.parse_response does not call a shared parser; "
+                f"an inline copy will miss the next hardening fix"
+            )

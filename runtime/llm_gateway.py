@@ -378,24 +378,24 @@ class _RedisBudgetBackend(_BudgetBackend):
         return True
 
 
+_BUDGET_DDL = """
+    CREATE TABLE IF NOT EXISTS llm_gateway_budget (
+        tenant_id TEXT NOT NULL,
+        period TEXT NOT NULL,
+        spent_usd DOUBLE PRECISION NOT NULL DEFAULT 0,
+        PRIMARY KEY (tenant_id, period)
+    )
+"""
+
+
 class _PostgresBudgetBackend(_BudgetBackend):
     def __init__(self) -> None:
         self._dsn = os.environ["DATABASE_URL"]
-        conn = self._connect()
-        try:
-            with conn, conn.cursor() as cur:
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS llm_gateway_budget (
-                        tenant_id TEXT NOT NULL,
-                        period TEXT NOT NULL,
-                        spent_usd DOUBLE PRECISION NOT NULL DEFAULT 0,
-                        PRIMARY KEY (tenant_id, period)
-                    )
-                    """
-                )
-        finally:
-            conn.close()
+        # Once per DSN per process. A gateway is constructed per activity, so
+        # this was a DDL round-trip on the hot path of every workflow step.
+        from runtime.pg_pool import ensure_schema
+
+        ensure_schema(self._dsn, _BUDGET_DDL, key="llm_gateway_budget")
 
     def _connect(self):
         # Pooled since ReviewFindings-2026-07-18 C1: try_reserve + add_spend

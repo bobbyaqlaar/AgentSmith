@@ -135,6 +135,32 @@ def dead_letter_envelope(
     }
 
 
+_DLQ_DDL = [
+    """
+    CREATE TABLE IF NOT EXISTS dlq_entries (
+        task_id      TEXT PRIMARY KEY,
+        tenant_id    TEXT NOT NULL,
+        payload      JSONB NOT NULL,
+        error        TEXT NOT NULL,
+        reason       TEXT,
+        workflow_id  TEXT,
+        gate_id      TEXT,
+        status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'replayed', 'discarded')),
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+        replayed_at  TIMESTAMPTZ,
+        discarded_at TIMESTAMPTZ
+    )
+    """,
+    # CREATE TABLE IF NOT EXISTS above is a no-op against an already-existing
+    # table from before this column set — same gotcha as portal/db/schema.sql's
+    # budget_cap_usd (Product_Archive.md P2b) — ALTER is what actually applies
+    # these columns to a pre-existing dlq_entries.
+    "ALTER TABLE dlq_entries ADD COLUMN IF NOT EXISTS reason TEXT",
+    "ALTER TABLE dlq_entries ADD COLUMN IF NOT EXISTS workflow_id TEXT",
+    "ALTER TABLE dlq_entries ADD COLUMN IF NOT EXISTS gate_id TEXT",
+]
+
+
 class DeadLetterQueue:
     """
     Dead-letter queue for failed production activities.
@@ -142,63 +168,37 @@ class DeadLetterQueue:
     Cheap to instantiate per call (e.g. once per Temporal activity
     invocation, as base_workflow.py's dlq_enqueue_activity and
     examples/oil-price-agent's dead_letter_activity both do) — the
-    CREATE TABLE/ALTER TABLE migration below only actually runs once per
-    DSN per process (cached in _MIGRATED_DSNS), not on every construction.
-    Without that cache, every recoverable-step failure would run 4 DDL
-    round-trips (CREATE TABLE IF NOT EXISTS + 3x ALTER TABLE ADD COLUMN IF
-    NOT EXISTS) before the real INSERT — wasted latency, and DDL takes a
+    CREATE TABLE/ALTER TABLE migration runs once per DSN per process, not on
+    every construction. Without that, every recoverable-step failure would run
+    4 DDL round-trips (CREATE TABLE IF NOT EXISTS + 3x ALTER TABLE ADD COLUMN
+    IF NOT EXISTS) before the real INSERT — wasted latency, and DDL takes a
     brief table-level lock even when a no-op, so concurrent workers all
     constructing a fresh DeadLetterQueue at once would serialize on it.
-    """
 
-    _MIGRATED_DSNS: set = set()
+    The caching now lives in `pg_pool.ensure_schema`, shared with the
+    idempotency store and the gateway's budget ledger. Both of those were
+    re-running their own CREATE TABLE on every construction — and a gateway is
+    built per activity — because this class had kept the lesson to itself.
+    """
 
     def __init__(
         self, replay_handler: Optional[Callable[["DLQEntry"], None]] = None
     ) -> None:
         self._dsn = os.environ["DATABASE_URL"]
         self._replay_handler = replay_handler
-        if self._dsn not in DeadLetterQueue._MIGRATED_DSNS:
-            self._migrate()
-            DeadLetterQueue._MIGRATED_DSNS.add(self._dsn)
+        self._migrate()
 
     def _migrate(self) -> None:
-        conn = self._connect()
-        try:
-            with conn, conn.cursor() as cur:
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS dlq_entries (
-                        task_id      TEXT PRIMARY KEY,
-                        tenant_id    TEXT NOT NULL,
-                        payload      JSONB NOT NULL,
-                        error        TEXT NOT NULL,
-                        reason       TEXT,
-                        workflow_id  TEXT,
-                        gate_id      TEXT,
-                        status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'replayed', 'discarded')),
-                        created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        replayed_at  TIMESTAMPTZ,
-                        discarded_at TIMESTAMPTZ
-                    )
-                    """
-                )
-                # CREATE TABLE IF NOT EXISTS above is a no-op against an
-                # already-existing table from before this column set —
-                # same gotcha as portal/db/schema.sql's budget_cap_usd
-                # (Product_Archive.md P2b) — ALTER is what actually
-                # applies these columns to a pre-existing dlq_entries.
-                cur.execute(
-                    "ALTER TABLE dlq_entries ADD COLUMN IF NOT EXISTS reason TEXT"
-                )
-                cur.execute(
-                    "ALTER TABLE dlq_entries ADD COLUMN IF NOT EXISTS workflow_id TEXT"
-                )
-                cur.execute(
-                    "ALTER TABLE dlq_entries ADD COLUMN IF NOT EXISTS gate_id TEXT"
-                )
-        finally:
-            conn.close()
+        """Bootstrap `dlq_entries`, once per DSN per process.
+
+        The per-process caching lives in `pg_pool.ensure_schema` now, shared
+        with the idempotency store and the gateway's budget ledger — both of
+        which were re-running their own CREATE TABLE on every construction
+        because this class kept the lesson to itself.
+        """
+        from runtime.pg_pool import ensure_schema
+
+        ensure_schema(self._dsn, _DLQ_DDL, key="dlq_entries")
 
     def _connect(self):
         # Pooled (runtime/pg_pool.py) — .close() releases to the pool, so

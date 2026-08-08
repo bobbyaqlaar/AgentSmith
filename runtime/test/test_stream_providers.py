@@ -24,6 +24,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from runtime.llm_gateway import CompletionResult, LLMGateway  # noqa: E402
+from runtime.test._gateway_fixtures import fake_gateway  # noqa: E402
 from runtime.provider_dispatch import parse_stream_delta, supports_streaming  # noqa: E402
 
 
@@ -108,23 +109,17 @@ def test_parse_stream_delta_openai_compatible():
 
 
 def _gateway(provider: str, **cfg_over) -> LLMGateway:
-    gw = LLMGateway.__new__(LLMGateway)
-    gw.tenant_id = "t"
-    cfg = {"id": "test-model", "provider": provider}
-    cfg.update(cfg_over)
-    gw.models = {"analyst": cfg}
-    gw.budget_cap_usd = 10.0
-    gw._idempotency = None
-    gw.get_budget_status = MagicMock(
-        return_value={"ok": True, "remaining_usd": 10, "spent_usd": 0, "cap_usd": 10}
+    """Shared builder, pinned to the `analyst` role this module routes through.
+
+    `_coerce_messages` is stubbed here and not in the guardrail tests: these
+    assert on transport, so the message body is irrelevant, whereas those feed
+    real PII through and need the actual coercion to carry it to the scrubber.
+    """
+    return fake_gateway(
+        role="analyst",
+        model={"id": "test-model", "provider": provider, **cfg_over},
+        coerce_messages=[{"role": "user", "content": "hi"}],
     )
-    gw._resolve_role = MagicMock(return_value=("analyst", None))
-    gw._coerce_messages = MagicMock(return_value=[{"role": "user", "content": "hi"}])
-    gw._record_span_attributes = MagicMock()
-    gw._report_run_status = MagicMock()
-    gw._degrade_chain = MagicMock(return_value=["analyst"])
-    gw._is_free_tier = MagicMock(return_value=True)
-    return gw
 
 
 @pytest.mark.asyncio

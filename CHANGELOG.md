@@ -68,6 +68,36 @@ and bind only the second — not to relabel the control.
   so the passage survives review. A preceding sentence terminator is required, so
   ordinary prose ("the system: a description") is unaffected.
 
+### Reuse pass (functionality, not names)
+
+An AST scan comparing normalised function BODIES — identifiers, constants and
+docstrings erased — rather than names. Two of the four findings were live bugs
+that name-based scanning had no way to surface.
+
+- **All four cloud adapters carried their own unhardened response parser.**
+  `parse_response` was hardened for `"content": null` after a null completion
+  crashed the PII scrubber; the Azure, Huawei, Bedrock and Vertex adapters kept
+  byte-identical copies of the *unfixed* version, so the same response still
+  crashed on those routes. They now share `parse_openai_completion` /
+  `parse_anthropic_completion`, and a test fails if an adapter reintroduces an
+  inline copy.
+- **Schema bootstrap now runs once per (DSN, table) per process.** The DLQ
+  cached its migration; the idempotency store and the gateway's budget ledger
+  re-ran `CREATE TABLE IF NOT EXISTS` on every construction — and a gateway is
+  built per activity, so on Postgres that was two DDL round-trips on the hot
+  path of every workflow step. A no-op CREATE TABLE still takes a brief
+  table-level lock, so concurrent workers serialised on it. Shared as
+  `pg_pool.ensure_schema`; the DLQ's own `_MIGRATED_DSNS` is gone.
+- `templates/onprem-deploy/scripts/` had two identical `load_env` copies, both
+  keeping inline comments as part of the value — `APP_PORT=8080  # the app port`
+  produced a broken Traefik backend URL, and a commented percentage raised
+  ValueError inside `int()`. Consolidated into `_env.py` (staying inside the
+  bundle, which ships standalone) with `_shared`'s parsing rule.
+- Four test modules hand-built the same stubbed `LLMGateway`; consolidated into
+  `runtime/test/_gateway_fixtures.fake_gateway`. `test_degrade_ladder` keeps its
+  own builder on purpose — it exercises the real `_resolve_role`, which this one
+  mocks.
+
 ### Evals
 
 - **`EVAL_RPM` paces judge calls** (`scripts/_shared.RateLimiter`,

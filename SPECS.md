@@ -1179,6 +1179,7 @@ AgentSmith/
 │   ├── golden_evals_base.json
 │   ├── fairness_evals_base.json
 │   ├── hallucination_evals_base.json
+│   ├── rag_poison_base.json       # SEC-RAG-001: poisoned/benign document twins
 │   ├── *_judge_criteria_base.json
 │   └── security/                # P12: control_registry.json, adversarial/PII/injection cases,
 │                                #   atlas_technique_map.json, tenant .agent-rfc/security templates

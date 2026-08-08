@@ -14,21 +14,13 @@ import os
 import sys
 from pathlib import Path
 
+from _env import load_env  # sibling module; the bundle ships together
+
 import yaml
 
 HERE = Path(__file__).resolve().parent.parent
 
 
-def load_env(env_path: Path) -> dict:
-    env = dict(os.environ)
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            env.setdefault(k.strip(), v.strip())
-    return env
 
 
 def cluster(name: str, address: str, port: int) -> dict:

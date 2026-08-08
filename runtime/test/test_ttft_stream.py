@@ -9,6 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from runtime.llm_gateway import CompletionResult, LLMGateway  # noqa: E402
+from runtime.test._gateway_fixtures import fake_gateway  # noqa: E402
 
 
 class _FakeStreamResp:
@@ -88,29 +89,19 @@ async def test_complete_stream_sets_ttft_ms() -> None:
 
 
 def _stream_gateway(*, free_tier: bool) -> LLMGateway:
-    gw = LLMGateway.__new__(LLMGateway)
-    gw.tenant_id = "t"
-    gw.models = {
-        "developer": {
+    """Shared builder with a priced Ollama route — TTFT accounting needs
+    non-zero token costs, so the default all-zero model will not do."""
+    return fake_gateway(
+        model={
             "id": "test-model",
             "provider": "ollama",
             "endpoint": "http://127.0.0.1:11434/v1",
             "cost_per_input_token": 0.01,
             "cost_per_output_token": 0.02,
-        }
-    }
-    gw.budget_cap_usd = 10.0
-    gw._idempotency = None
-    gw.get_budget_status = MagicMock(
-        return_value={"ok": True, "remaining_usd": 10, "spent_usd": 0, "cap_usd": 10}
+        },
+        free_tier=free_tier,
+        coerce_messages=[{"role": "user", "content": "hi"}],
     )
-    gw._resolve_role = MagicMock(return_value=("developer", None))
-    gw._coerce_messages = MagicMock(return_value=[{"role": "user", "content": "hi"}])
-    gw._record_span_attributes = MagicMock()
-    gw._report_run_status = MagicMock()
-    gw._degrade_chain = MagicMock(return_value=["developer"])
-    gw._is_free_tier = MagicMock(return_value=free_tier)
-    return gw
 
 
 @pytest.mark.asyncio

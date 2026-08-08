@@ -91,3 +91,72 @@ def test_pool_docstring_lists_every_postgres_store() -> None:
             f"{filename} uses the pool but pg_pool.py's docstring does not "
             f"list {symbol} — keep the enumeration complete"
         )
+
+
+# ── Schema bootstrap runs once per (dsn, key) per process ─────────────────────
+#
+# Three backends bootstrap a table on construction and only the DLQ remembered
+# it had already done so. LLMGateway is built per activity, so on Postgres the
+# other two were a DDL round-trip on the hot path of every workflow step — and
+# a no-op CREATE TABLE still takes a brief table-level lock, so concurrent
+# workers serialised on it.
+
+
+def test_ensure_schema_runs_once_per_dsn_and_key(monkeypatch) -> None:
+    from runtime import pg_pool
+
+    pg_pool.reset_migration_cache()
+    executed: list[str] = []
+
+    class _Cur:
+        def execute(self, sql): executed.append(sql)
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    class _Conn:
+        def cursor(self): return _Cur()
+        def close(self): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    monkeypatch.setattr(pg_pool, "connect", lambda dsn: _Conn())
+
+    for _ in range(3):
+        pg_pool.ensure_schema("dsn-a", "CREATE TABLE t1", key="t1")
+    assert executed == ["CREATE TABLE t1"], "re-ran a migration it had already done"
+
+    # A different table in the SAME database must still migrate — keying on the
+    # DSN alone would let whichever backend ran first suppress the others.
+    pg_pool.ensure_schema("dsn-a", "CREATE TABLE t2", key="t2")
+    assert executed == ["CREATE TABLE t1", "CREATE TABLE t2"]
+
+    # And the same table in a different database.
+    pg_pool.ensure_schema("dsn-b", "CREATE TABLE t1", key="t1")
+    assert len(executed) == 3
+
+    pg_pool.reset_migration_cache()
+
+
+def test_ensure_schema_applies_a_statement_list_in_order(monkeypatch) -> None:
+    """The DLQ's migration is CREATE TABLE then three ALTER ... ADD COLUMN;
+    the ALTERs are what reach a table that predates the newer columns."""
+    from runtime import pg_pool
+
+    pg_pool.reset_migration_cache()
+    executed: list[str] = []
+
+    class _Cur:
+        def execute(self, sql): executed.append(sql)
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    class _Conn:
+        def cursor(self): return _Cur()
+        def close(self): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    monkeypatch.setattr(pg_pool, "connect", lambda dsn: _Conn())
+    pg_pool.ensure_schema("dsn", ["CREATE a", "ALTER b", "ALTER c"], key="k")
+    assert executed == ["CREATE a", "ALTER b", "ALTER c"]
+    pg_pool.reset_migration_cache()

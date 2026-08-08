@@ -79,23 +79,24 @@ class _RedisBackend:
         )
 
 
+_IDEMPOTENCY_DDL = """
+    CREATE TABLE IF NOT EXISTS idempotency_keys (
+        key        TEXT PRIMARY KEY,
+        value      JSONB NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL
+    )
+"""
+
+
 class _PostgresBackend:
     def __init__(self) -> None:
         self._dsn = os.environ["DATABASE_URL"]
-        conn = self._connect()
-        try:
-            with conn, conn.cursor() as cur:
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS idempotency_keys (
-                        key        TEXT PRIMARY KEY,
-                        value      JSONB NOT NULL,
-                        expires_at TIMESTAMPTZ NOT NULL
-                    )
-                    """
-                )
-        finally:
-            conn.close()
+        # Once per DSN per process. This ran on every construction, and
+        # LLMGateway builds an IdempotencyStore per instance — see
+        # pg_pool.ensure_schema for why a no-op CREATE TABLE still costs.
+        from runtime.pg_pool import ensure_schema
+
+        ensure_schema(self._dsn, _IDEMPOTENCY_DDL, key="idempotency_keys")
 
     def _connect(self):
         # Pooled (runtime/pg_pool.py) — .close() releases to the pool, so
