@@ -117,13 +117,14 @@ Small, specific, and deliberately not fixed in that release.
   so a tenant's green SEC-TOOL-001 says the enforcement works — not that the
   tenant's own `tool_allowlist.yaml` is sane. **Trigger:** an auditor reads the
   evidence pack as a statement about the tenant's tools.
-- **12 of 23 `SEC-*` controls have no runner** and report `skip`
-  (`hitl_gate`, `audit_hmac`, `rbac_matrix`, `eval_*`, `budget_caps`,
-  `change_gates`, `dlq_check`, `self_correction`, `gateway_static`,
-  `sovereign_smoke`, `rag_poison`, `agency_manifest`). `skip` does not fail
-  `--strict`, so an evidence pack can look complete while half of it is
-  unverified. The live status is in `docs/security-framework-map.md`.
-  **Trigger:** a control moves from "Partial" to a claim someone relies on.
+- ~~**12 of 23 `SEC-*` controls have no runner**~~ — **closed.** All are bound.
+  The last four (`audit_hmac`, `dlq_check`, `sovereign_smoke`, `rag_poison`)
+  were closed by separating the claim that needs infrastructure from the claim
+  that does not, rather than by relabelling anything: HMAC tamper-evidence is
+  provable offline and append-only enforcement is a database trigger, so the
+  latter became **`SEC-AUDIT-002`** and is the one remaining declared gap. An
+  undeclared gap — `met`/`partial` with no runner — fails `--strict`.
+  Live status: `docs/security-framework-map.md`.
 - **`agency_manifest` is authored but ungraded** — both the framework's and
   KYC's manifests are real content that nothing validates (see above).
 - **`.env.swp`** — an orphaned vim swap file at the repo root, gitignored. Left
