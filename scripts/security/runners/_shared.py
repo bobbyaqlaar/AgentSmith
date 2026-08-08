@@ -157,6 +157,49 @@ def load_run_evals(root: Path):
     return load_script("run-evals")
 
 
+def guard_suite(
+    control: ControlSpec,
+    ctx: dict[str, Any],
+    suite: str,
+    scorer: str,
+    minimum: int = 3,
+) -> ControlResult:
+    """Run a deterministic guard suite and gate on its miss CEILING.
+
+    Two controls work this way — adversarial prompt injection (SEC-ADV-001) and
+    RAG poisoning (SEC-RAG-001). Both score every case locally with
+    `runtime.prompt_guard`, both count misses rather than averaging quality, and
+    both fail above a threshold instead of below one. Written twice they would
+    have been two near-identical files free to drift on the one number that
+    matters; the differences are the suite name and the scorer, so those are
+    arguments.
+
+    Neither calls a judge, which is why they can gate on every commit while the
+    judge-backed eval controls only verify their gate is wired.
+    """
+    revals = load_run_evals(Path(ctx["root"]))
+    cases = revals._load_cases(suite)
+    if len(cases) < minimum:
+        return failed(control, f"need ≥{minimum} {suite} cases, found {len(cases)}")
+
+    results = [getattr(revals, scorer)(c) for c in cases]
+    miss = revals.miss_rate(results)
+    limit = revals._resolve_fail_above(suite, None)
+    if miss > limit:
+        return ControlResult(
+            control_id=control.id,
+            status="fail",
+            message=f"{suite} miss rate {miss:.3f} > {limit:.3f}",
+            evidence={"miss_rate": f"{miss:.3f}", "limit": f"{limit:.3f}"},
+        )
+    return ControlResult(
+        control_id=control.id,
+        status="pass",
+        message=f"{suite} miss rate {miss:.3f} ≤ {limit:.3f} ({len(cases)} cases)",
+        evidence={"miss_rate": f"{miss:.3f}", "cases": str(len(cases))},
+    )
+
+
 def eval_suite_gateable(
     control: ControlSpec, ctx: dict[str, Any], suite: str, minimum: int = 3
 ) -> ControlResult:

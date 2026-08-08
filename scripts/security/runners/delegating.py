@@ -29,10 +29,11 @@ from security.report import ControlResult
 from security.runners._shared import (
     eval_suite_gateable,
     failed,
+    guard_suite,
     node_suite,
     passed,
-    tenant_security,
     pytest_suite,
+    tenant_security,
     verify_system,
 )
 
@@ -70,10 +71,6 @@ def dlq_check(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     lands in Postgres is an integration concern and stays out.
     """
     return pytest_suite(control, ctx, "runtime/test/test_dead_letter.py")
-# The dead-letter ENVELOPE is asserted by runtime/test/test_hitl_gate.py, but
-# that suite is already SEC-HITL-001's evidence and one suite reported as two
-# green controls inflates the harness rather than strengthening it. Needs a
-# dedicated infra-free dead_letter suite first.
 
 
 def self_correction(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
@@ -101,16 +98,32 @@ def change_gates(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     return verify_system(control, ctx, "--check-hooks")
 
 
-# SEC-AUDIT-001 is deliberately NOT bound. portal/test/auditLog.test.ts lives in
-# the `test:db` script: it needs a TypeScript extension loader and a live
-# Postgres. Binding it would make the control fail whenever the database is
-# down — the availability-as-compliance confusion that already caught
-# SEC-DLQ-001 here. Needs an infra-free HMAC sign/verify test first.
-
-
 def rbac_matrix(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     """SEC-RBAC-001 — the portal's role/permission matrix."""
     return node_suite(control, ctx, "test/authz.test.ts", requires=("lib/authz.ts",))
+
+
+def rag_poison(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
+    """SEC-RAG-001 — poisoned retrieved context is quarantined before use.
+
+    Retrieval-borne injection is the same attack as a direct prompt injection
+    arriving by a different route: the text comes from the corpus, so guarding
+    only the user's turn leaves the whole RAG path open. An attacker who can add
+    a document writes the instruction once and it arrives inside trusted
+    context.
+
+    Scored by `runtime.prompt_guard.scan_documents` over
+    `fixtures/rag_poison_base.json`, which pairs every poisoned document with a
+    benign twin on the same subject. Both directions count toward one miss rate,
+    because a guard that quarantines everything defeats the attack and destroys
+    retrieval — and would otherwise score perfectly.
+
+    What this claims: poisoned context is DETECTED and dropped before assembly.
+    What it does not claim: that a model would have resisted the instruction had
+    the document reached it. Those are different properties and only the first
+    is deterministic, which is why this control gates on every commit.
+    """
+    return guard_suite(control, ctx, "rag_poison", "score_rag_poison_case")
 
 
 def audit_hmac(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:

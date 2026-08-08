@@ -484,7 +484,7 @@
   {
     "id": "SEC-RAG-001",
     "title": "RAG poison-doc defense",
-    "status": "gap",
+    "status": "met",
     "owner": "tenant",
     "frameworks": {
       "owasp": [
@@ -502,7 +502,7 @@
     },
     "runner": "rag_poison",
     "check_type": "eval",
-    "mechanism": "RAG v1 + fixture promotion \u2014 UNVERIFIED: no infra-free suite isolates RAG poisoning yet"
+    "mechanism": "RAG poisoning defence \u2014 runtime.prompt_guard.scan_documents quarantines poisoned retrieved context per-document (rejecting the whole retrieval on one bad chunk would hand an attacker a denial of service). Gated by `run-evals.py --suite rag_poison` over fixtures/rag_poison_base.json, which pairs every poisoned document with a benign twin on the same subject so a guard that quarantines everything cannot score perfectly. Miss ceiling RAG_POISON_FAIL_ABOVE (default 0.10). Deterministic and local \u2014 no judge, no credentials. CLAIMS detection of poisoned context before prompt assembly; does NOT claim a model would resist the instruction if the document reached it."
   },
   {
     "id": "SEC-AGENCY-001",

@@ -121,10 +121,17 @@ Only the second should ever fail a strict run.
 
 ### Still unverified
 
+One control has no runner. It is declared **`gap`** rather than `met`/`partial`,
+so the map does not claim something nothing checks.
+
+Four controls sat here previously. Three were closed not by finding a way to run
+the infrastructure they needed, but by noticing each was making two claims at
+once — one provable offline, one not — and separating them. `SEC-AUDIT-002` is
+what is left of that split, and it is genuinely a database property.
+
 | Control | Runner | Why not bound |
 |---|---|---|
 | `SEC-AUDIT-002` | `audit_append_only` | UPDATE/DELETE refusal is enforced by a database trigger (`db/schema.sql`); `portal/test/auditLog.test.ts` needs a live Postgres (`npm run test:db`). Split from `SEC-AUDIT-001` so the offline half could be proven without the online half being claimed. Verify at deploy. |
-| `SEC-RAG-001` | `rag_poison` | no infra-free suite isolates RAG poisoning yet |
 
 A declared gap **warns** — visible in every report and evidence pack — but does
 not fail a strict run. A repo honest about its gaps must be able to pass, or
@@ -163,7 +170,7 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | `SEC-ADV-001` | LLM01 | MEASURE 2.7 | AML.T0024 | Theme 7 | **Met** | Shared | `run-evals.py --suite adversarial` + prompt_guard | Red-team fixtures in `--suite adversarial` |
 | `SEC-SSO-001` | — | GOVERN 1.3 | AML.T0048 | Theme 1 | **Met** | Framework | `jti` revocation + `SSO_REVOCATION_MODE=fail-open\|fail-closed` | — |
 | `SEC-SOV-001` | LLM05 | MAP 2.3 | — | Theme 4 | **Met** | Tenant | `templates/uae-sovereign/` residency, checked as a declaration | `sovereign_residency` — resolves the template through `_roles_from_doc` and walks every role's ladder with `llm_gateway.degrade_chain`; fails a hosted provider, a self-hostable one with no declared endpoint, or a dangling degrade target. No credentials. |
-| `SEC-RAG-001` | LLM03 | MAP 2.6 | AML.T0010 | Theme 3 | **Partial** | Tenant | RAG v1 + fixture promotion | Ingest poison doc → retrieval does not surface in answer (tenant fixture) |
+| `SEC-RAG-001` | LLM03 | MAP 2.6 | AML.T0010 | Theme 3 | **Met** | Tenant | `prompt_guard.scan_documents` quarantines poisoned retrieved context per-document | `run-evals.py --suite rag_poison` over `fixtures/rag_poison_base.json` — poisoned/benign twins, miss ceiling `RAG_POISON_FAIL_ABOVE` (0.10). Detects poisoned context before prompt assembly; does not claim model resistance. |
 | `SEC-AGENCY-001` | LLM08 | GOVERN 1.5 | AML.T0048 | Theme 5 | **Partial** | Tenant | HITL + workflow `needs_hitl` flags | Tenant declares high-impact actions; harness verifies gate wired |
 
 ---

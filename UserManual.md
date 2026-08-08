@@ -416,6 +416,7 @@ detail, thresholds, and CI wiring: OPERATIONS.md §3):
 python3 scripts/run-evals.py --suite fairness        # paired cases + pair parity; FAIRNESS_FAIL_BELOW (default 0.80)
 python3 scripts/run-evals.py --suite hallucination   # hard-fail rate gate; HALLUCINATION_FAIL_ABOVE (default 0.05)
 python3 scripts/run-evals.py --suite adversarial     # prompt-injection / jailbreak; ADVERSARIAL_FAIL_ABOVE (default 0.10)
+python3 scripts/run-evals.py --suite rag_poison      # poisoned retrieved context; RAG_POISON_FAIL_ABOVE (default 0.10)
 python3 scripts/verify_ttft.py                       # live Ollama time-to-first-token budget; TTFT_FAIL_ABOVE_MS (default 2000)
 ```
 
@@ -847,6 +848,7 @@ carrying their own copies.
 | `ai-test-evals` | — | Sync HITL feedback from Phoenix, then run eval scorecard. |
 | `ai-stack-promote` | `<id> <query> <output>` | Promote a production fix to the golden dataset and re-run evals. |
 | `python3 scripts/run-evals.py --suite adversarial` | — | Prompt-injection / jailbreak suite (`ADVERSARIAL_FAIL_ABOVE`). Deterministic — no judge model, so it gates on every PR with no credential. |
+| `python3 scripts/run-evals.py --suite rag_poison` | — | RAG poisoning suite (`RAG_POISON_FAIL_ABOVE`). Scores `prompt_guard.scan_documents` over poisoned/benign document twins. Deterministic — no judge, no credential. Proves poisoned context is quarantined before prompt assembly; makes no claim about a model's own resistance. |
 | `python3 scripts/run-evals.py` | `--skip-without-judge-credentials` | Skip (exit 0) when the `judge` role's credential is absent, naming the variable. For CI steps that must not go red on an unconfigured judge. See OPERATIONS.md "When a gate blocks, and when it steps aside". |
 | `python3 scripts/run-security-checks.py` | `--mode ci --strict` | Multi-framework security harness (P12). |
 | `python3 scripts/verify_system.py --check-security` | — | Smoke subset of the security harness. |
@@ -903,6 +905,7 @@ already sets.
 | `FAIRNESS_FAIL_BELOW` | `0.80` | Fairness suite, including pair parity. |
 | `HALLUCINATION_FAIL_ABOVE` | `0.05` | Max flagged-claim rate. |
 | `ADVERSARIAL_FAIL_ABOVE` | `0.10` | Max prompt-injection miss rate. |
+| `RAG_POISON_FAIL_ABOVE` | `0.10` | Max miss rate for the RAG poisoning suite. Counts BOTH directions: a poisoned document that is not quarantined, and a benign one that is. A guard that quarantines everything stops the attack and destroys retrieval, so it must not be able to score perfectly. |
 | `EVAL_RPM` | *(unset)* | Paces judge calls to at most this many per minute. Unset means no pacing — the right default on a paid key, where pacing only costs wall-clock. Set it to the provider's documented free-tier limit when a suite would otherwise burst past the cap: `cost_router`'s 429 retry is *reactive* (4 attempts, after a refusal) and a 12-case suite exhausts it, at which point every case carries an error and the run reports "judge was unreachable" and returns **0**. An unpaced run against a free tier therefore does not fail — it never grades. |
 | `AGENT_MODEL_PROFILE` | *(unset)* | Selects which `profiles:` block in `models.yaml` binds the roles — `local`, `hybrid`, or any profile you define. Wins over `AI_STACK_MODE`, which `ai-mode-local` / `ai-mode-hybrid` set. Falls back to `default_profile`. Ignored by a registry using the flat `models:` shape. |
 | `AGENT_MODEL_ARCHITECT` · `AGENT_MODEL_COMPLEX` · `AGENT_MODEL_STANDARD` · `AGENT_MODEL_FAST` · `AGENT_MODEL_LOCAL` | the matching registry role | Override one routing tier without touching `models.yaml`. `AGENT_MODEL_LOCAL` is the offline fallback and resolves to the `fast` role. |

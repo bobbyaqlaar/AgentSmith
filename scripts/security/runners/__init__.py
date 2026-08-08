@@ -47,5 +47,6 @@ RUNNERS: dict[str, Runner] = {
     "tenant_suite": delegating.tenant_suite,
     "rbac_matrix": delegating.rbac_matrix,
     "audit_hmac": delegating.audit_hmac,
+    "rag_poison": delegating.rag_poison,
     "agency_manifest": delegating.agency_manifest,
 }
