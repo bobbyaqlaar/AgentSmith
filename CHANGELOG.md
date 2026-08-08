@@ -42,6 +42,17 @@ and bind only the second — not to relabel the control.
   gap — one green tick covering both would have reported the log as verified
   while the half that actually stops a deletion went unchecked.
 
+- **`SEC-SOV-001` is now met**, as a static residency check rather than a live
+  probe. `sovereign_residency` resolves `templates/uae-sovereign/models.yaml`
+  through `_roles_from_doc` (so it survives a migration to catalog+profiles) and
+  walks every role's degrade ladder with `llm_gateway.degrade_chain` — now
+  module-level, so the check and the runtime cannot disagree about where a
+  fallback goes. It fails a role routed to a hosted multi-tenant API, a
+  self-hostable provider with no declared endpoint, or a degrade target that is
+  not a declared role. This catches the leak a live probe structurally cannot:
+  the primary endpoint is the one that stays in-border, and residency escapes on
+  the fallback.
+
 ### Evals
 
 - **`EVAL_RPM` paces judge calls** (`scripts/_shared.RateLimiter`,

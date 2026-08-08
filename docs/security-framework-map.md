@@ -125,7 +125,6 @@ Only the second should ever fail a strict run.
 |---|---|---|
 | `SEC-AUDIT-002` | `audit_append_only` | UPDATE/DELETE refusal is enforced by a database trigger (`db/schema.sql`); `portal/test/auditLog.test.ts` needs a live Postgres (`npm run test:db`). Split from `SEC-AUDIT-001` so the offline half could be proven without the online half being claimed. Verify at deploy. |
 | `SEC-RAG-001` | `rag_poison` | no infra-free suite isolates RAG poisoning yet |
-| `SEC-SOV-001` | `sovereign_smoke` | `verify_sovereign_endpoint.py` is a live probe requiring HF credentials; a compliance control must not depend on a funded account |
 
 A declared gap **warns** — visible in every report and evidence pack — but does
 not fail a strict run. A repo honest about its gaps must be able to pass, or
@@ -163,7 +162,7 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | `SEC-RISK-001` | — | MAP 1.5 | AML.T0000 | Theme 2 | **Org-owned** | Tenant | *Planned:* risk register template generator | Harness checks `.agent-rfc/security/risk_register.yaml` exists + schema |
 | `SEC-ADV-001` | LLM01 | MEASURE 2.7 | AML.T0024 | Theme 7 | **Met** | Shared | `run-evals.py --suite adversarial` + prompt_guard | Red-team fixtures in `--suite adversarial` |
 | `SEC-SSO-001` | — | GOVERN 1.3 | AML.T0048 | Theme 1 | **Met** | Framework | `jti` revocation + `SSO_REVOCATION_MODE=fail-open\|fail-closed` | — |
-| `SEC-SOV-001` | LLM05 | MAP 2.3 | — | Theme 4 | **Partial** | Tenant | `templates/uae-sovereign/` + `verify_sovereign_endpoint.py` | Residency checklist + live endpoint smoke |
+| `SEC-SOV-001` | LLM05 | MAP 2.3 | — | Theme 4 | **Met** | Tenant | `templates/uae-sovereign/` residency, checked as a declaration | `sovereign_residency` — resolves the template through `_roles_from_doc` and walks every role's ladder with `llm_gateway.degrade_chain`; fails a hosted provider, a self-hostable one with no declared endpoint, or a dangling degrade target. No credentials. |
 | `SEC-RAG-001` | LLM03 | MAP 2.6 | AML.T0010 | Theme 3 | **Partial** | Tenant | RAG v1 + fixture promotion | Ingest poison doc → retrieval does not surface in answer (tenant fixture) |
 | `SEC-AGENCY-001` | LLM08 | GOVERN 1.5 | AML.T0048 | Theme 5 | **Partial** | Tenant | HITL + workflow `needs_hitl` flags | Tenant declares high-impact actions; harness verifies gate wired |
 

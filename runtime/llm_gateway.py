@@ -170,6 +170,32 @@ def _roles_from_doc(doc: dict) -> dict:
     return flat
 
 
+def degrade_chain(models: dict, model_hint: str) -> list[str]:
+    """[model_hint, ...downgrade targets...] following models.yaml degrade_to links.
+
+    Module-level rather than a gateway method because the ladder is also what
+    residency depends on: a role can be pinned to an in-border endpoint and
+    still leave the jurisdiction on its first overload, by degrading to
+    something that is not. The sovereign control (SEC-SOV-001) walks the chain
+    with THIS function so it cannot disagree with what the gateway will
+    actually do at runtime — a second implementation would be a residency
+    check that is correct about a ladder nobody climbs.
+
+    Cycles terminate: a role already seen ends the walk.
+    """
+    chain = [model_hint]
+    current = model_hint
+    seen = {model_hint}
+    while True:
+        nxt = models.get(current, {}).get("degrade_to")
+        if not nxt or nxt in seen:
+            break
+        chain.append(nxt)
+        seen.add(nxt)
+        current = nxt
+    return chain
+
+
 def load_model_registry() -> dict:
     """
     Load the model registry: framework defaults from runtime/models.yaml,
@@ -523,17 +549,7 @@ class LLMGateway:
 
     def _degrade_chain(self, model_hint: str) -> list[str]:
         """[model_hint, ...downgrade targets...] following models.yaml degrade_to links."""
-        chain = [model_hint]
-        current = model_hint
-        seen = {model_hint}
-        while True:
-            nxt = self.models.get(current, {}).get("degrade_to")
-            if not nxt or nxt in seen:
-                break
-            chain.append(nxt)
-            seen.add(nxt)
-            current = nxt
-        return chain
+        return degrade_chain(self.models, model_hint)
 
     @staticmethod
     def _is_free_tier(cfg: dict) -> bool:

@@ -14,6 +14,7 @@ from security.runners import (
     pii_precall,
     prompt_guard,
     risk_register,
+    sovereign_residency,
     sso_revocation,
     structured_output,
     tool_allowlist,
@@ -32,6 +33,7 @@ RUNNERS: dict[str, Runner] = {
     "adversarial_eval": adversarial_eval.run,
     "moderation_hook": moderation_hook.run,
     "sso_revocation": sso_revocation.run,
+    "sovereign_residency": sovereign_residency.run,
     # Bindings to verification that already exists — see delegating.py.
     "hitl_gate": delegating.hitl_gate,
     "dlq_check": delegating.dlq_check,

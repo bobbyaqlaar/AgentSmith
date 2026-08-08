@@ -463,7 +463,7 @@
   {
     "id": "SEC-SOV-001",
     "title": "Sovereign residency",
-    "status": "gap",
+    "status": "met",
     "owner": "tenant",
     "frameworks": {
       "owasp": [
@@ -477,9 +477,9 @@
         4
       ]
     },
-    "runner": "sovereign_smoke",
-    "check_type": "live",
-    "mechanism": "templates/uae-sovereign/ + verify_sovereign_endpoint.py \u2014 UNVERIFIED: verify_sovereign_endpoint.py is a live probe requiring HF credentials; a compliance control must not depend on a funded account"
+    "runner": "sovereign_residency",
+    "check_type": "unit",
+    "mechanism": "Data residency as a DECLARATION, not a reachability probe \u2014 scripts/security/runners/sovereign_residency.py resolves templates/uae-sovereign/models.yaml through llm_gateway._roles_from_doc (either registry shape) and walks every role's degrade ladder with llm_gateway.degrade_chain, the same function the gateway uses at runtime. Fails a role routed to a hosted multi-tenant API, a self-hostable provider with no declared endpoint (which resolves to the vendor default), or a degrade target that is not a declared role. Catches the leak a live probe cannot: the primary endpoint is in-border, the FALLBACK is where residency escapes. Needs no credentials."
   },
   {
     "id": "SEC-RAG-001",
