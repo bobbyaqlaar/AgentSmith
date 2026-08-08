@@ -20,7 +20,27 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Security controls — closing declared gaps without weakening the claims
+
+Each of these was declared `gap` because the only available evidence depended on
+infrastructure (a database, a queue, a funded account). The fix in every case is
+to separate the claim that needs infrastructure from the claim that does not,
+and bind only the second — not to relabel the control.
+
+- **`SEC-DLQ-001` is now met.** The dead-letter envelope contract moved out of
+  `runtime/test/test_hitl_gate.py` into `runtime/test/test_dead_letter.py`. It
+  had been proving two controls at once, which is why it stayed green while
+  `run_with_recoverable_step` still hand-built the envelope dict instead of
+  calling `dead_letter_envelope()` — now fixed, and guarded by an AST check on
+  both producers. No Postgres. Whether a row reaches the table is explicitly
+  *not* claimed.
+- **`SEC-AUDIT-001` is now met, and split.** HMAC signing/verification moved to
+  `portal/lib/auditSignature.ts`, so tamper-evidence can be proven without
+  importing the connection pool. `portal/lib/auditLog.ts` keeps persistence and
+  re-exports the crypto, so its importers are unchanged. Append-only enforcement
+  is a database trigger and became **`SEC-AUDIT-002`**, which remains a declared
+  gap — one green tick covering both would have reported the log as verified
+  while the half that actually stops a deletion went unchecked.
 
 ## [1.2.0] — 2026-08-06
 

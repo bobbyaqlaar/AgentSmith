@@ -49,10 +49,27 @@ def hitl_gate(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     return pytest_suite(control, ctx, "runtime/test/test_hitl_gate.py")
 
 
-# SEC-DLQ-001 is deliberately NOT bound here. `verify_system --check-dlq` is a
-# reachability probe ("DLQ reachable — DATABASE_URL"), so binding it would make
-# the control fail whenever Postgres is down — an availability check wearing a
-# compliance label, which is the confusion this whole phase exists to remove.
+def dlq_check(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
+    """SEC-DLQ-001 — the dead-letter envelope contract.
+
+    Bound to `test_dead_letter.py`, NOT to `verify_system --check-dlq`. That
+    flag is a reachability probe ("DLQ reachable — DATABASE_URL"), so binding
+    it would make the control fail whenever Postgres is down — an availability
+    check wearing a compliance label, which is the confusion this whole phase
+    exists to remove.
+
+    Nor is it bound to `test_hitl_gate.py`, which is SEC-HITL-001's evidence
+    and where these assertions used to live. A suite that proves two controls
+    proves neither independently: it would have gone green on the HITL gate
+    while the recoverable-step producer hand-rolled its own envelope, which is
+    exactly the state the move out of that module found.
+
+    What this proves without infrastructure: both producers build the envelope
+    through one builder, the builder's keys are what `enqueue` accepts, and the
+    generic activity rejects the legacy flattened shape by name. Whether a row
+    lands in Postgres is an integration concern and stays out.
+    """
+    return pytest_suite(control, ctx, "runtime/test/test_dead_letter.py")
 # The dead-letter ENVELOPE is asserted by runtime/test/test_hitl_gate.py, but
 # that suite is already SEC-HITL-001's evidence and one suite reported as two
 # green controls inflates the harness rather than strengthening it. Needs a
@@ -94,6 +111,25 @@ def change_gates(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
 def rbac_matrix(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     """SEC-RBAC-001 — the portal's role/permission matrix."""
     return node_suite(control, ctx, "test/authz.test.ts", requires=("lib/authz.ts",))
+
+
+def audit_hmac(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
+    """SEC-AUDIT-001 — audit-log tamper-evidence, without a database.
+
+    Bound to `test/auditSignature.test.ts`, not `test/auditLog.test.ts`. The
+    latter exits at import time without DATABASE_URL, so binding it would have
+    made the control fail whenever Postgres was down — which is why it was
+    declared a gap rather than wired to something that could not run.
+
+    This proves only the half that needs no infrastructure: a mutated event
+    stops verifying, key order in `details` does not change the signature, a
+    malformed signature is rejected rather than throwing, and a missing key
+    refuses instead of signing with a default. Append-only enforcement is a
+    database trigger and is claimed separately by SEC-AUDIT-002.
+    """
+    return node_suite(
+        control, ctx, "test/auditSignature.test.ts", requires=("lib/auditSignature.ts",)
+    )
 
 
 # ── Eval gates: wired and gateable, without running a judge ──────────────────

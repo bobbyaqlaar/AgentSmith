@@ -65,9 +65,19 @@ Judge-backed eval controls verify the gate is **wired and gateable** — fixture
 present, enough cases, threshold resolvable — and do not call a judge. A
 control requiring a funded provider account would report Gap on an unpaid
 invoice, which is an availability check wearing a compliance label. The same
-reasoning keeps `SEC-AUDIT-001`, `SEC-DLQ-001` and `SEC-SOV-001` unbound: each
-would otherwise fail whenever a database, a queue or a credential was
-unavailable.
+The same reasoning kept `SEC-AUDIT-001`, `SEC-DLQ-001` and `SEC-SOV-001`
+unbound: each would otherwise have failed whenever a database, a queue or a
+credential was unavailable.
+
+Three of those are now bound, by separating the claim that needs infrastructure
+from the claim that does not — rather than by weakening either. `SEC-DLQ-001`
+proves the dead-letter envelope contract (both producers build it through one
+builder; its keys are what `enqueue` accepts) and says nothing about a row
+reaching Postgres. `SEC-AUDIT-001` proves HMAC tamper-evidence and hands
+append-only enforcement — a database trigger — to `SEC-AUDIT-002`, which stays
+a declared gap because only a live database can demonstrate it. `SEC-SOV-001`
+proves residency is *declared* correctly across the whole degrade ladder, which
+a live probe of one endpoint could never show.
 
 ### Tenant-declared controls
 
@@ -111,15 +121,11 @@ Only the second should ever fail a strict run.
 
 ### Still unverified
 
-Four controls have no runner. Each is now declared **`gap`** rather than
-`met`/`partial`, so the map no longer claims something nothing checks.
-
 | Control | Runner | Why not bound |
 |---|---|---|
-| `SEC-AUDIT-001` | `audit_hmac` | portal/test/auditLog.test.ts needs a TS loader and a live Postgres (npm run test:db); bindin |
-| `SEC-DLQ-001` | `dlq_check` | verify_system --check-dlq is a reachability probe; the dead-letter envelope is asserted by t |
+| `SEC-AUDIT-002` | `audit_append_only` | UPDATE/DELETE refusal is enforced by a database trigger (`db/schema.sql`); `portal/test/auditLog.test.ts` needs a live Postgres (`npm run test:db`). Split from `SEC-AUDIT-001` so the offline half could be proven without the online half being claimed. Verify at deploy. |
 | `SEC-RAG-001` | `rag_poison` | no infra-free suite isolates RAG poisoning yet |
-| `SEC-SOV-001` | `sovereign_smoke` | verify_sovereign_endpoint.py is a live probe requiring HF credentials; a compliance control  |
+| `SEC-SOV-001` | `sovereign_smoke` | `verify_sovereign_endpoint.py` is a live probe requiring HF credentials; a compliance control must not depend on a funded account |
 
 A declared gap **warns** — visible in every report and evidence pack — but does
 not fail a strict run. A repo honest about its gaps must be able to pass, or
@@ -139,14 +145,15 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | `SEC-PII-001` | LLM06 | MAP 2.6 / MANAGE 2.4 | AML.T0043 | Theme 9 | **Partial→Met** | Shared | `runtime/input_guardrail.py` pre-call scrub | Inject Emirates ID/email/phone/card → assert redacted before `_invoke()` |
 | `SEC-PII-002` | LLM06 | MANAGE 2.4 | AML.T0043 | Theme 9 | **Met** | Framework | `runtime/trace_redactor.py` + CD `--check-redaction` | `verify_system.py --check-redaction` + unit tests |
 | `SEC-HITL-001` | LLM08 | GOVERN 1.5 / MANAGE 4.1 | AML.T0048 | Theme 5 | **Met** | Framework | `run_with_hitl_gate`, recoverable DLQ | Workflow fixture asserts pause signal + portal replay path |
-| `SEC-AUDIT-001` | — | GOVERN 1.2 | AML.T0025 | Theme 6 | **Met** | Framework | HMAC append-only `audit_log` | Portal test: append → verify signature → reject tamper |
+| `SEC-AUDIT-001` | — | GOVERN 1.2 | AML.T0025 | Theme 6 | **Met** | Framework | HMAC tamper-evidence over `audit_log` events (`portal/lib/auditSignature.ts`) | `portal/test/auditSignature.test.ts` — sign → mutate → reject; key order stable; malformed signature rejected; missing key refuses. No database. |
+| `SEC-AUDIT-002` | — | GOVERN 1.2 | AML.T0025 | Theme 6 | **Gap** | Framework | Append-only `audit_log` (UPDATE/DELETE triggers, `db/schema.sql`) | `portal/test/auditLog.test.ts` — needs a live Postgres; verified at deploy, not in CI |
 | `SEC-RBAC-001` | — | GOVERN 1.3 | AML.T0048 | Theme 1 | **Partial** | Shared | Portal OIDC + `authz.ts` RBAC | Role matrix tests: viewer cannot replay DLQ |
 | `SEC-EVAL-001` | LLM09 | MEASURE 2.6 | — | Theme 7 | **Met** | Shared | `run-evals.py` golden suite | Scorecard `--fail-below` in CI |
 | `SEC-EVAL-002` | LLM09 | MEASURE 2.11 | — | Theme 8 | **Partial** | Shared | Fairness suite + pair parity | `--suite fairness`; extend tenant pairs |
 | `SEC-EVAL-003` | LLM09 | MEASURE 2.6 | AML.T0024 | Theme 7 | **Met** | Shared | Hallucination rate gate | `--suite hallucination`; rate ≤ threshold |
 | `SEC-BUDGET-001` | LLM04 | MANAGE 2.4 | AML.T0034 | Theme 11 | **Met** | Framework | Budget caps, degrade ladder, circuit breaker | `test_llm_gateway_budget.py` + cap breach simulation |
 | `SEC-CHANGE-001` | — | GOVERN 1.6 | — | Theme 10 | **Met** | Shared | Eval gates, hooks, RFC enforcement | CI workflow presence + hook dry-run |
-| `SEC-DLQ-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Met** | Framework | Recoverable step + DLQ | `verify_system.py --check-dlq` |
+| `SEC-DLQ-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Met** | Framework | Recoverable step + DLQ; one `dead_letter_envelope()` builder for both producers | `runtime/test/test_dead_letter.py` — envelope keys match `enqueue`, both producers use the builder (AST-checked), flattened shape rejected by name. No Postgres. |
 | `SEC-SELF-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Partial** | Shared | Opt-in `run_with_self_correction` | Unit + workflow tests; not default path |
 | `SEC-GW-001` | LLM07 | MAP 2.3 | AML.T0040 | Theme 4 | **Partial** | Shared | `llm_gateway.py` choke point | Static: tenant activities import gateway, not raw provider |
 | `SEC-PROMPT-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Framework | `runtime/prompt_guard.py` heuristics + denylist; `PROMPT_GUARD=off\|warn\|default\|strict` (blocking by default) | Two-part: detection over the injection fixture corpus **and** enforcement — the runner reports `fail` on `off`, `warn` on the observe-first `warn` tier, `pass` only when the configured mode actually blocks |
@@ -362,8 +369,9 @@ Use with ISO pack. Automated items marked **auto**.
 - [x] **auto** PII pre-call scrub (`SEC-PII-001`) — probe cases pass
 - [x] **auto** Trace redaction (`SEC-PII-002`) — `--check-redaction` green
 - [ ] **auto** Eval gates (`SEC-EVAL-001/002/003`) — CI scorecards attached (existing eval workflows; harness runners still skip)
-- [ ] **auto** HITL/DLQ (`SEC-HITL-001`, `SEC-DLQ-001`) — drill logs (verify_system; harness runners still skip)
-- [ ] **auto** Audit integrity (`SEC-AUDIT-001`) — sample signed events (portal tests; harness runner still skip)
+- [x] **auto** HITL/DLQ (`SEC-HITL-001`, `SEC-DLQ-001`) — `test_hitl_gate.py` and `test_dead_letter.py`, one control each
+- [x] **auto** Audit integrity (`SEC-AUDIT-001`) — `portal/test/auditSignature.test.ts`
+- [ ] **manual** Audit append-only (`SEC-AUDIT-002`) — needs a live Postgres; deploy-time check
 - [x] **auto** Prompt guard / structured output / tool allowlist / adversarial / moderation / SSO (`SEC-PROMPT-001`, `SEC-OUTPUT-001`, `SEC-TOOL-001`, `SEC-ADV-001`, `SEC-MOD-001`, `SEC-SSO-001`)
 - [x] Framework risk register scaffold on file (`SEC-RISK-001` template)
 - [ ] Tenant agency manifest filled (`SEC-AGENCY-001`)

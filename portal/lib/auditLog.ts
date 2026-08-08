@@ -1,83 +1,19 @@
 // portal/lib/auditLog.ts — immutable, signed audit log (SPECS.md §30).
 //
-// Every event is HMAC-SHA256 signed over its own fields using
-// AUDIT_LOG_HMAC_KEY (a server-side secret, never sent to clients). The
-// `audit_log` table also has DB-level triggers blocking UPDATE/DELETE
-// (db/schema.sql) — the signature is the second layer, catching tampering
+// The persistence half. Signing and verification live in ./auditSignature so
+// they can be exercised without a database — see that file for why the seam is
+// there. Re-exported below so existing importers of this module are unchanged.
+//
+// The `audit_log` table has DB-level triggers blocking UPDATE/DELETE
+// (db/schema.sql); the HMAC signature is the second layer, catching tampering
 // even by someone with direct database access who disables the trigger.
 
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { getPool } from "./db";
+import { signEvent, verifySignature, type AuditEvent, type AuditEventType } from "./auditSignature";
 
-export type AuditEventType = "hook_bypass" | "hitl_promotion" | "config_change" | "tenant_created";
-
-export interface AuditEvent {
-  eventId: string;
-  timestamp: string;
-  eventType: AuditEventType;
-  actorId: string;
-  tenantId: string | null;
-  details: Record<string, unknown>;
-  signature: string;
-}
-
-function hmacKey(): string {
-  const key = process.env.AUDIT_LOG_HMAC_KEY;
-  if (!key) {
-    throw new Error(
-      "AUDIT_LOG_HMAC_KEY is not set — the audit log refuses to write or verify events without it " +
-        "(an unsigned audit log provides no tamper-detection, see SPECS.md §30)."
-    );
-  }
-  return key;
-}
-
-// Deterministic JSON serialisation with recursively sorted object keys.
-//
-// This matters because `details` round-trips through Postgres JSONB, which
-// does NOT preserve key insertion order — a value written as {a:1, b:2} can
-// come back as {b:2, a:1}. Plain JSON.stringify is key-order-sensitive, so
-// without this, re-signing a freshly-read (but completely untouched) row
-// would produce a different signature than the one computed at write time —
-// a false "tampering" positive on every legitimate multi-key `details`
-// object. Sorting keys recursively makes the signature stable regardless of
-// storage-layer reordering.
-function canonicalStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map(canonicalStringify).join(",")}]`;
-  }
-  const keys = Object.keys(value as Record<string, unknown>).sort();
-  const entries = keys.map((k) => `${JSON.stringify(k)}:${canonicalStringify((value as Record<string, unknown>)[k])}`);
-  return `{${entries.join(",")}}`;
-}
-
-// Canonical field order matters — both signing and verification must hash
-// the exact same byte sequence, or every signature mismatches.
-function canonicalPayload(e: Omit<AuditEvent, "signature">): string {
-  return canonicalStringify({
-    eventId: e.eventId,
-    timestamp: e.timestamp,
-    eventType: e.eventType,
-    actorId: e.actorId,
-    tenantId: e.tenantId,
-    details: e.details,
-  });
-}
-
-function sign(e: Omit<AuditEvent, "signature">): string {
-  return createHmac("sha256", hmacKey()).update(canonicalPayload(e)).digest("hex");
-}
-
-export function verifySignature(e: AuditEvent): boolean {
-  const expected = sign(e);
-  const a = Buffer.from(expected, "hex");
-  const b = Buffer.from(e.signature, "hex");
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
+export { signEvent, verifySignature };
+export type { AuditEvent, AuditEventType };
 
 export interface AppendAuditEventInput {
   eventType: AuditEventType;
@@ -95,7 +31,7 @@ export async function appendAuditEvent(input: AppendAuditEventInput): Promise<Au
     tenantId: input.tenantId ?? null,
     details: input.details ?? {},
   };
-  const signature = sign(unsigned);
+  const signature = signEvent(unsigned);
   const event: AuditEvent = { ...unsigned, signature };
 
   await getPool().query(

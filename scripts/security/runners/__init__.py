@@ -34,6 +34,7 @@ RUNNERS: dict[str, Runner] = {
     "sso_revocation": sso_revocation.run,
     # Bindings to verification that already exists — see delegating.py.
     "hitl_gate": delegating.hitl_gate,
+    "dlq_check": delegating.dlq_check,
     "self_correction": delegating.self_correction,
     "budget_caps": delegating.budget_caps,
     "change_gates": delegating.change_gates,
@@ -43,5 +44,6 @@ RUNNERS: dict[str, Runner] = {
     "gateway_static": delegating.gateway_static,
     "tenant_suite": delegating.tenant_suite,
     "rbac_matrix": delegating.rbac_matrix,
+    "audit_hmac": delegating.audit_hmac,
     "agency_manifest": delegating.agency_manifest,
 }

@@ -191,55 +191,7 @@ def test_timeout_without_tenant_id_keeps_the_legacy_flattened_shape(fake_workflo
         {"profile": "p", "error": "hitl_timeout"},
     )
 
-
-# ── The dead-letter envelope has one definition ──────────────────────────────
-
-
-def test_envelope_keys_match_what_enqueue_accepts() -> None:
-    """`dead_letter_envelope` produces exactly the keyword arguments
-    `DeadLetterQueue.enqueue` takes, so `enqueue(**envelope)` round-trips.
-
-    These were written out by hand at both ends — the producer in
-    run_with_hitl_gate, the consumer in dead_letter_activity — with nothing
-    connecting them beyond both authors remembering the same six keys. They
-    came apart: the HITL timeout path built a flattened payload with no
-    `payload` or `tenant_id` key, and the consumer raised KeyError on a gate
-    that had just timed out. The failure path failing.
-    """
-    import inspect
-
-    from runtime.dead_letter import DeadLetterQueue, dead_letter_envelope
-
-    envelope = dead_letter_envelope(
-        payload={"x": 1}, error="boom", tenant_id="t1",
-        reason="r", workflow_id="wf", gate_id="g",
-    )
-    accepted = set(inspect.signature(DeadLetterQueue.enqueue).parameters) - {"self"}
-    assert set(envelope) <= accepted, (
-        f"envelope produces keys enqueue cannot take: {set(envelope) - accepted}"
-    )
-
-
-def test_the_legacy_flattened_shape_is_rejected_by_name() -> None:
-    """A tenant passing the flattened shape to the GENERIC activity gets an
-    error about the envelope, not about its own business fields.
-
-    Bare `enqueue(**flattened)` says "unexpected keyword argument 'company'",
-    which sends the reader looking at their payload rather than at the
-    contract — and this only ever happens on a path where a gate has already
-    failed.
-    """
-    import asyncio
-
-    import runtime.workflows.base_workflow as bw
-
-    if not getattr(bw, "_HAS_TEMPORAL", False):
-        pytest.skip("dlq_enqueue_activity is only defined when temporalio is installed")
-
-    flattened = {"company": "acme", "region": "eu", "error": "hitl_timeout"}
-    with pytest.raises(ValueError) as caught:
-        asyncio.run(bw.dlq_enqueue_activity(flattened))
-    assert "dead_letter_envelope shape" in str(caught.value)
-    assert "company" in str(caught.value)      # names what it actually received
-    # And it surfaced without a database: this is a contract error, not an
-    # infrastructure one, and it fires on a path where a gate already failed.
+# The dead-letter envelope's own contract moved to test_dead_letter.py: it is
+# SEC-DLQ-001's evidence, and a control cannot be proven by another control's
+# suite. What stays here is the HITL gate's use of it — which envelope shape a
+# timeout emits — because that is the gate's behaviour, not the DLQ's.

@@ -399,16 +399,22 @@ class BaseAgentWorkflow:
                 error_text = str(exc)[:500]
 
             self._gate_fixes.pop(gate_id, None)
+            # Same builder the HITL timeout path uses. Written out by hand here
+            # until now, which is the duplication dead_letter_envelope exists to
+            # remove: two producers restating the same six keys is exactly how
+            # the HITL path drifted into a shape the consumer could not read.
+            from runtime.dead_letter import dead_letter_envelope
+
             await workflow.execute_activity(
                 dlq_enqueue_activity,
-                {
-                    "payload": current_payload,
-                    "error": error_text,
-                    "tenant_id": tenant_id,
-                    "reason": reason,
-                    "workflow_id": workflow_id,
-                    "gate_id": gate_id,
-                },
+                dead_letter_envelope(
+                    payload=current_payload,
+                    error=error_text,
+                    tenant_id=tenant_id,
+                    reason=reason,
+                    workflow_id=workflow_id,
+                    gate_id=gate_id,
+                ),
                 start_to_close_timeout=timedelta(minutes=5),
             )
 

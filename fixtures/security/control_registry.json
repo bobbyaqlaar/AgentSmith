@@ -73,7 +73,7 @@
   {
     "id": "SEC-AUDIT-001",
     "title": "HMAC audit log",
-    "status": "gap",
+    "status": "met",
     "owner": "framework",
     "frameworks": {
       "owasp": [],
@@ -89,7 +89,28 @@
     },
     "runner": "audit_hmac",
     "check_type": "unit",
-    "mechanism": "HMAC append-only audit_log \u2014 UNVERIFIED: portal/test/auditLog.test.ts needs a TS loader and a live Postgres (npm run test:db); binding it would fail the control whenever the database is down"
+    "mechanism": "HMAC audit-log tamper-evidence \u2014 portal/test/auditSignature.test.ts against portal/lib/auditSignature.ts: a mutated event stops verifying (actor, tenant, event type, timestamp, details), details key order does not affect the signature (Postgres JSONB reorders keys), a truncated or non-hex signature is rejected rather than throwing, and a missing AUDIT_LOG_HMAC_KEY refuses rather than signing with a default. Runs without a database. Append-only enforcement is SEC-AUDIT-002."
+  },
+  {
+    "id": "SEC-AUDIT-002",
+    "title": "Append-only audit log",
+    "status": "gap",
+    "owner": "framework",
+    "frameworks": {
+      "owasp": [],
+      "nist": [
+        "GOVERN 1.2"
+      ],
+      "atlas": [
+        "AML.T0025"
+      ],
+      "iso42001": [
+        6
+      ]
+    },
+    "runner": "audit_append_only",
+    "check_type": "live",
+    "mechanism": "UPDATE and DELETE on audit_log are refused by database triggers (db/schema.sql), asserted by portal/test/auditLog.test.ts \u2014 UNVERIFIED in CI: the trigger is a database guarantee and the suite needs a live Postgres (npm run test:db). This is deliberately a separate control from SEC-AUDIT-001 rather than folded into it: signature tamper-evidence is provable offline and append-only is not, and one green tick covering both would report the log as verified while the half that actually stops a deletion went unchecked. Verify at deploy time."
   },
   {
     "id": "SEC-RBAC-001",
@@ -222,7 +243,7 @@
   {
     "id": "SEC-DLQ-001",
     "title": "Recoverable DLQ",
-    "status": "gap",
+    "status": "met",
     "owner": "framework",
     "frameworks": {
       "owasp": [
@@ -237,8 +258,8 @@
       ]
     },
     "runner": "dlq_check",
-    "check_type": "integration",
-    "mechanism": "Recoverable step + DLQ \u2014 UNVERIFIED: verify_system --check-dlq is a reachability probe; the dead-letter envelope is asserted by test_hitl_gate.py, which is already SEC-HITL-001's evidence"
+    "check_type": "unit",
+    "mechanism": "Recoverable step + DLQ \u2014 the dead-letter envelope contract, asserted by runtime/test/test_dead_letter.py: both producers (run_with_hitl_gate, run_with_recoverable_step) build the envelope through dead_letter_envelope() rather than hand-rolling it, its keys are exactly what DeadLetterQueue.enqueue accepts, and dlq_enqueue_activity rejects the legacy flattened shape by name. Runs without Postgres. Whether a row actually lands in the table is integration scope and is NOT claimed here."
   },
   {
     "id": "SEC-SELF-001",
