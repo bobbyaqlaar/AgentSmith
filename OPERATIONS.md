@@ -278,8 +278,8 @@ Set these in **Settings → Secrets and variables → Actions** for each tenant 
 
 | Secret | Required for | Notes |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | CI eval judge, hybrid-mode tests | One of these two is required |
-| `OPENAI_API_KEY` | CI eval judge, hybrid-mode tests | One of these two is required |
+| whichever key the `judge` role declares | CI eval judge | **Not a fixed name.** It follows the `judge` role in the merged registry — `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, a role-level `api_key_env`, whatever that role points at. Run `--skip-without-judge-credentials` and the skip message names the exact variable. YAML cannot look up a secret by a name computed at runtime, so pass every plausible provider key through to the step and let the code decide — and **update that list when you repoint the judge**. A tenant that moved its judge to Gemini and left the list naming Anthropic/Groq/OpenAI had all three judged gates skip silently, reporting success, for every run. |
+| `ANTHROPIC_API_KEY` · `OPENAI_API_KEY` | Hybrid-mode tests | Required only if a hybrid profile routes an actor role to them |
 | `AGENT_PHOENIX_ENDPOINT` | Trace export from CI | Optional — CI passes without it |
 | `OPS_PORTAL_URL` | CD → portal history sync | Optional — sync skipped if absent |
 | `OPS_PORTAL_SYNC_TOKEN` | CD → portal history sync | Required if `OPS_PORTAL_URL` is set |
@@ -1134,6 +1134,52 @@ The env var is resolved from the merged registry, so it follows the `judge`
 role wherever a tenant points it — including a role-level `api_key_env`. Never
 gate an eval step on `if: secrets.ANTHROPIC_API_KEY != ''`: that hardcodes a
 provider, and it ignores a role that declares its own key variable.
+
+#### Budgeting judge calls against a provider cap
+
+Count the calls before wiring the gates: one per case, per judged suite, per
+run. A tenant with golden 12 + fairness 4 + hallucination 6 spends **22** judge
+calls on every run that fires all three.
+
+That number has to fit the judge account's cap, and the two kinds of cap fail
+identically from the outside:
+
+| Cap | Symptom | Remedy |
+|---|---|---|
+| Per-minute | A burst exhausts `cost_router`'s 4-attempt 429 retry partway through | `EVAL_RPM` — pace the calls |
+| Per-day | 429 arrives even at a low observed rate; the provider's message names a total | Fewer judged calls per run, or a paid tier. **Pacing cannot help.** |
+
+Read the provider's error rather than guessing: Gemini's free tier reports
+`generate_content_free_tier_requests, limit: 20`, and that is per day. A run
+pacing at ~3 requests/minute still hit it.
+
+When the total does not fit, split the suites across triggers rather than
+deleting cases or lowering a threshold — no gate is removed, each simply runs
+less often:
+
+```yaml
+on:
+  push: { branches: [main] }
+  schedule:
+    - cron: "30 8 * * 1,3,5"   # fairness
+    - cron: "30 8 * * 2,4"     # hallucination
+
+# then, per step:
+#   golden:        if: github.event_name != 'schedule'
+#   fairness:      if: github.event.schedule == '30 8 * * 1,3,5'
+#   hallucination: if: github.event.schedule == '30 8 * * 2,4'
+```
+
+`github.event.schedule` is the cron that fired, so one workflow carries several
+schedules without a second file duplicating checkout and install. Alternate the
+scheduled suites rather than running them together, so the heaviest day — a push
+plus the largest cron — still fits. Schedule them just after the cap resets so
+they draw on a fresh allowance.
+
+Two consequences worth stating to whoever owns the repo: a manual
+`workflow_dispatch` must run **one** suite (give it a `choice` input), or it
+rebuilds the oversized run you just split up; and at N calls per push-triggered
+suite, the cap sets how many graded pushes a day the account affords.
 
 #### Why the judge never falls back to another model
 

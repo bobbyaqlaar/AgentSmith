@@ -128,10 +128,19 @@ provider maps set.
 - **`EVAL_RPM` paces judge calls** (`scripts/_shared.RateLimiter`,
   `rate_limiter_from_env`). Unset means no pacing, so paid keys are unaffected.
   This is proactive pacing and does not replace `cost_router`'s reactive 429
-  retry: a free-tier key refuses a burst faster than the 4-attempt budget can
+  retry: a rate-limited key refuses a burst faster than the 4-attempt budget can
   absorb, every case then carries an error, and `run_scorecard` reports "judge
-  was unreachable" and returns 0. An unpaced run against a free tier therefore
-  never failed — it never graded, which is why it read as a stuck eval.
+  was unreachable" and returns 0. An unpaced run therefore never failed — it
+  never graded, which is why it read as a stuck eval.
+
+  **It fixes per-minute limits, not per-day ones.** A first run against Gemini's
+  free tier proved the distinction the hard way: pacing worked (12 cases over
+  ~4 minutes, ~3/min, far under any per-minute ceiling) and the run still hit
+  429, because that tier's binding constraint is
+  `generate_content_free_tier_requests, limit: 20` per *day*. The two failures
+  are indistinguishable from the symptom and distinguishable from the provider's
+  error text. For a daily cap the remedy is fewer judged cases per run — split
+  suites across triggers — or a paid tier.
 - Three eval test modules each defined an identical `_load_run_evals` wrapper
   around `_shared.load_script`; removed in favour of calling the shared loader.
 
