@@ -440,3 +440,67 @@ def load_script(name: str, *, cache: bool = True) -> Any:
     if cache:
         _SCRIPT_MODULE_CACHE[name] = module
     return module
+
+
+# ── Request pacing ────────────────────────────────────────────────────────────
+
+
+class RateLimiter:
+    """Space calls at least `1/rps` apart, by sleeping before the next one.
+
+    This is PROACTIVE pacing, and it is a different thing from the 429 retry in
+    `cost_router._post_with_retry` — which is REACTIVE: it waits only after a
+    provider has already refused. Both are needed and neither substitutes for
+    the other. A free-tier key with a per-minute cap will refuse a burst of 12
+    judge calls faster than the retry budget (4 attempts) can absorb, so the
+    whole suite errors out; and per `run_scorecard`, a suite where every case
+    errored reports "judge was unreachable" and returns 0. The run does not
+    fail — it never grades at all, which is why the symptom reads as a stuck
+    eval rather than a broken one.
+
+    A limiter with `rpm <= 0` is a no-op object rather than None, so callers
+    need no branch at the call site.
+    """
+
+    __slots__ = ("_min_interval", "_last")
+
+    def __init__(self, rpm: float = 0.0) -> None:
+        self._min_interval = 60.0 / rpm if rpm and rpm > 0 else 0.0
+        self._last = 0.0
+
+    @property
+    def enabled(self) -> bool:
+        return self._min_interval > 0.0
+
+    def wait(self) -> float:
+        """Block until the next call is allowed. Returns seconds actually slept."""
+        if not self.enabled:
+            return 0.0
+        import time as _time
+
+        now = _time.monotonic()
+        earliest = self._last + self._min_interval
+        slept = 0.0
+        if self._last and now < earliest:
+            slept = earliest - now
+            _time.sleep(slept)
+        self._last = _time.monotonic()
+        return slept
+
+
+def rate_limiter_from_env(var: str = "EVAL_RPM", default: float = 0.0) -> RateLimiter:
+    """Build a RateLimiter from an env var naming requests-per-minute.
+
+    Unset or unparseable means no pacing — the historical behaviour, and the
+    right default for a paid key where pacing only costs wall-clock. Set it to
+    the provider's documented free-tier limit to make a long suite complete
+    instead of exhausting the retry budget partway through.
+    """
+    raw = (os.environ.get(var) or "").strip()
+    if not raw:
+        return RateLimiter(default)
+    try:
+        return RateLimiter(float(raw))
+    except ValueError:
+        print(f"⚠️  {var}={raw!r} is not a number — ignoring, no pacing applied")
+        return RateLimiter(default)

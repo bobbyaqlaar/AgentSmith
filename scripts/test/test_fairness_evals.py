@@ -16,13 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-
-def _load_run_evals():
-    # One loader for hyphen-named scripts (_shared.load_script). Three
-    # eval test modules carried byte-identical copies of this.
-    from _shared import load_script
-
-    return load_script("run-evals")
+from _shared import load_script  # noqa: E402
 
 
 def test_fairness_base_fixture_has_paired_cases() -> None:
@@ -40,7 +34,7 @@ def test_fairness_base_fixture_has_paired_cases() -> None:
 
 
 def test_suite_fairness_resolves_fairness_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     fixtures = tmp_path / ".agent-rfc" / "fixtures"
     fixtures.mkdir(parents=True)
     (fixtures / "fairness_evals.json").write_text("[]")
@@ -68,7 +62,7 @@ def test_judge_prompt_includes_fairness_when_requested() -> None:
 
 
 def test_pair_parity_score_is_one_when_outcomes_match() -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     results = [
         {"case_id": "a", "pair_id": "p1", "fairness": 1, "score": 0.9},
         {"case_id": "b", "pair_id": "p1", "fairness": 1, "score": 0.9},
@@ -78,7 +72,7 @@ def test_pair_parity_score_is_one_when_outcomes_match() -> None:
 
 
 def test_pair_parity_score_is_zero_when_fairness_diverges() -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     results = [
         {"case_id": "a", "pair_id": "p1", "fairness": 1, "score": 0.9},
         {"case_id": "b", "pair_id": "p1", "fairness": 0, "score": 0.2},
@@ -88,7 +82,7 @@ def test_pair_parity_score_is_zero_when_fairness_diverges() -> None:
 
 
 def test_resolve_fail_below_fairness_uses_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.setenv("FAIRNESS_FAIL_BELOW", "0.75")
     assert revals._resolve_fail_below("fairness", None) == 0.75
     assert revals._resolve_fail_below("fairness", 0.9) == 0.9  # CLI wins
@@ -97,13 +91,13 @@ def test_resolve_fail_below_fairness_uses_env(monkeypatch: pytest.MonkeyPatch) -
 def test_resolve_fail_below_fairness_defaults_to_080(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.delenv("FAIRNESS_FAIL_BELOW", raising=False)
     assert revals._resolve_fail_below("fairness", None) == 0.80
 
 
 def test_load_dotenv_sets_fairness_threshold(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.delenv("FAIRNESS_FAIL_BELOW", raising=False)
     (tmp_path / ".env").write_text("FAIRNESS_FAIL_BELOW=0.72\n")
     revals._load_dotenv(tmp_path)
@@ -132,7 +126,7 @@ def test_all_cases_errored_does_not_block(monkeypatch, capsys) -> None:
     """A credit-exhausted account returned 400 on all 12 golden cases and
     failed the merge gate — reporting a billing state as a quality
     regression. No verdict at all is an infrastructure failure."""
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(3))
     monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
     monkeypatch.setattr(
@@ -147,7 +141,7 @@ def test_all_cases_errored_does_not_block(monkeypatch, capsys) -> None:
 def test_partial_errors_still_block(monkeypatch, capsys) -> None:
     """Deliberately narrow: a judge that answers some cases and not others
     may be signalling something real, so that still fails."""
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(3))
     monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
     monkeypatch.setattr(
@@ -171,7 +165,7 @@ def test_a_mixed_scorecard_blocks(monkeypatch, capsys) -> None:
     that makes adding a fallback there fail loudly rather than quietly change
     what every stored score means.
     """
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(3))
     monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
     monkeypatch.setattr(
@@ -193,7 +187,7 @@ def test_a_mixed_scorecard_blocks(monkeypatch, capsys) -> None:
 
 def test_a_single_judge_records_provenance(monkeypatch, tmp_path) -> None:
     """The normal path still passes, and the artifact says who graded it."""
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(3))
     monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
     monkeypatch.setattr(

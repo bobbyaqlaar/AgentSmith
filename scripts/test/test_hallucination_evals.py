@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 
+from _shared import load_script  # noqa: E402
+
 REQUIRED_HALLUCINATION_CASE_KEYS = (
     "id",
     "input",
@@ -21,20 +23,13 @@ REQUIRED_HALLUCINATION_CASE_KEYS = (
 )
 
 
-def _load_run_evals():
-    # One loader for hyphen-named scripts (_shared.load_script).
-    from _shared import load_script
-
-    return load_script("run-evals")
-
-
 def test_hallucination_flag_rate_empty():
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     assert revals.hallucination_flag_rate([]) == 0.0
 
 
 def test_hallucination_flag_rate_threshold():
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     rows = [
         {"hallucination": 0.0},
         {"hallucination": 0.6},  # flagged (>= 0.5)
@@ -46,19 +41,19 @@ def test_hallucination_flag_rate_threshold():
 
 
 def test_resolve_hallucination_fail_above_cli_wins(monkeypatch: pytest.MonkeyPatch):
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.setenv("HALLUCINATION_FAIL_ABOVE", "0.10")
     assert revals._resolve_hallucination_fail_above(0.02) == 0.02
 
 
 def test_resolve_hallucination_fail_above_env(monkeypatch: pytest.MonkeyPatch):
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.setenv("HALLUCINATION_FAIL_ABOVE", "0.08")
     assert revals._resolve_hallucination_fail_above(None) == 0.08
 
 
 def test_resolve_hallucination_fail_above_default(monkeypatch: pytest.MonkeyPatch):
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.delenv("HALLUCINATION_FAIL_ABOVE", raising=False)
     assert revals._resolve_hallucination_fail_above(None) == 0.05
 
@@ -90,7 +85,7 @@ def test_hallucination_base_fixture_has_grounded_cases() -> None:
 
 
 def test_hallucination_suite_paths_use_agent_rfc_fixtures() -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     fixtures = ROOT / ".agent-rfc" / "fixtures"
     assert revals._evals_path("hallucination") == fixtures / "hallucination_evals.json"
     assert (
@@ -104,7 +99,7 @@ def test_hallucination_suite_paths_use_agent_rfc_fixtures() -> None:
 
 
 def test_load_hallucination_cases_falls_back_to_base_fixture() -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     cases = revals._load_cases("hallucination")
     assert len(cases) == 4
     assert all(case["id"].startswith("halluc_") for case in cases)
@@ -114,7 +109,7 @@ def test_load_hallucination_cases_falls_back_to_base_fixture() -> None:
 def test_run_scorecard_fails_when_hallucination_rate_exceeds_gate(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     cases = [
         {"id": "h1", "input": "a", "actual_output": "a"},
         {"id": "h2", "input": "b", "actual_output": "b"},
@@ -162,7 +157,7 @@ def test_run_scorecard_fails_when_hallucination_rate_exceeds_gate(
 def test_load_dotenv_sets_hallucination_threshold(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.delenv("HALLUCINATION_FAIL_ABOVE", raising=False)
     (tmp_path / ".env").write_text("HALLUCINATION_FAIL_ABOVE=0.07\n")
     revals._load_dotenv(tmp_path)

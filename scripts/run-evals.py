@@ -40,7 +40,12 @@ from typing import Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-from _shared import _repo_root, _load_dotenv, judge_model as _judge_model  # noqa: E402
+from _shared import (  # noqa: E402
+    _repo_root,
+    _load_dotenv,
+    judge_model as _judge_model,
+    rate_limiter_from_env,
+)
 
 
 def _evals_path(suite: str = "golden") -> Path:
@@ -421,6 +426,16 @@ def run_scorecard(
         return 2
 
     results = []
+    # Judge calls are paced only if EVAL_RPM says so. A free-tier key with a
+    # per-minute cap refuses a burst faster than cost_router's 4-attempt retry
+    # budget can absorb, and a suite where every case errored returns 0 with
+    # "judge was unreachable" — so an unpaced run against a free tier does not
+    # fail, it silently never grades. Adversarial scoring is local and needs no
+    # pacing, so the limiter is only consulted on the judged path below.
+    limiter = rate_limiter_from_env()
+    if limiter.enabled:
+        print(f"   pacing judge calls at EVAL_RPM={os.environ['EVAL_RPM']}")
+
     for i, case in enumerate(cases, 1):
         print(
             f"   [{i}/{len(cases)}] {case.get('id', 'case')} ...", end=" ", flush=True
@@ -434,6 +449,7 @@ def run_scorecard(
                 f"score={r['score']:.2f}"
             )
             continue
+        limiter.wait()
         r = _judge_case(case, criteria, judge)
         results.append(r)
         status = "✅" if r["score"] >= fail_below else "❌"

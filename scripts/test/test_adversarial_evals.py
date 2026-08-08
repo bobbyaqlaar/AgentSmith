@@ -10,16 +10,11 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
+
+from _shared import load_script  # noqa: E402
 sys.path.insert(0, str(ROOT))
 
 REQUIRED_ADV_KEYS = ("id", "input", "expect")
-
-
-def _load_run_evals():
-    # One loader for hyphen-named scripts (_shared.load_script).
-    from _shared import load_script
-
-    return load_script("run-evals")
 
 
 def test_adversarial_base_fixture_shape() -> None:
@@ -34,7 +29,7 @@ def test_adversarial_base_fixture_shape() -> None:
 
 
 def test_adversarial_suite_paths() -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     assert revals._evals_path("adversarial") == (
         ROOT / ".agent-rfc" / "security" / "adversarial_evals.json"
     )
@@ -44,7 +39,7 @@ def test_adversarial_suite_paths() -> None:
 
 
 def test_load_adversarial_cases_falls_back_to_base() -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     cases = revals._load_cases("adversarial")
     assert len(cases) >= 5
     assert any(c["expect"] == "block" for c in cases)
@@ -52,7 +47,7 @@ def test_load_adversarial_cases_falls_back_to_base() -> None:
 
 
 def test_resolve_adversarial_fail_above_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     monkeypatch.setenv("ADVERSARIAL_FAIL_ABOVE", "0.15")
     assert revals._resolve_adversarial_fail_above(None) == 0.15
     monkeypatch.delenv("ADVERSARIAL_FAIL_ABOVE", raising=False)
@@ -61,7 +56,7 @@ def test_resolve_adversarial_fail_above_env(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_score_adversarial_case_block_and_safe() -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     blocked = revals.score_adversarial_case(
         {
             "id": "b1",
@@ -84,7 +79,7 @@ def test_score_adversarial_case_block_and_safe() -> None:
 
 
 def test_adversarial_miss_rate() -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     rows = [{"ok": True}, {"ok": False}, {"ok": True}, {"ok": False}]
     assert revals.adversarial_miss_rate(rows) == pytest.approx(0.5)
 
@@ -92,7 +87,7 @@ def test_adversarial_miss_rate() -> None:
 def test_run_scorecard_adversarial_passes_on_base(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    revals = _load_run_evals()
+    revals = load_script("run-evals")
     results_path = tmp_path / "adversarial_eval_results.json"
     monkeypatch.setattr(revals, "_results_path", lambda suite: results_path)
     code = revals.run_scorecard(

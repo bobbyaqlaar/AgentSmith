@@ -42,6 +42,18 @@ and bind only the second — not to relabel the control.
   gap — one green tick covering both would have reported the log as verified
   while the half that actually stops a deletion went unchecked.
 
+### Evals
+
+- **`EVAL_RPM` paces judge calls** (`scripts/_shared.RateLimiter`,
+  `rate_limiter_from_env`). Unset means no pacing, so paid keys are unaffected.
+  This is proactive pacing and does not replace `cost_router`'s reactive 429
+  retry: a free-tier key refuses a burst faster than the 4-attempt budget can
+  absorb, every case then carries an error, and `run_scorecard` reports "judge
+  was unreachable" and returns 0. An unpaced run against a free tier therefore
+  never failed — it never graded, which is why it read as a stuck eval.
+- Three eval test modules each defined an identical `_load_run_evals` wrapper
+  around `_shared.load_script`; removed in favour of calling the shared loader.
+
 ## [1.2.0] — 2026-08-06
 
 Model registry, security harness, and a functional-duplication review.

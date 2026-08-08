@@ -903,6 +903,7 @@ already sets.
 | `FAIRNESS_FAIL_BELOW` | `0.80` | Fairness suite, including pair parity. |
 | `HALLUCINATION_FAIL_ABOVE` | `0.05` | Max flagged-claim rate. |
 | `ADVERSARIAL_FAIL_ABOVE` | `0.10` | Max prompt-injection miss rate. |
+| `EVAL_RPM` | *(unset)* | Paces judge calls to at most this many per minute. Unset means no pacing — the right default on a paid key, where pacing only costs wall-clock. Set it to the provider's documented free-tier limit when a suite would otherwise burst past the cap: `cost_router`'s 429 retry is *reactive* (4 attempts, after a refusal) and a 12-case suite exhausts it, at which point every case carries an error and the run reports "judge was unreachable" and returns **0**. An unpaced run against a free tier therefore does not fail — it never grades. |
 | `AGENT_MODEL_PROFILE` | *(unset)* | Selects which `profiles:` block in `models.yaml` binds the roles — `local`, `hybrid`, or any profile you define. Wins over `AI_STACK_MODE`, which `ai-mode-local` / `ai-mode-hybrid` set. Falls back to `default_profile`. Ignored by a registry using the flat `models:` shape. |
 | `AGENT_MODEL_ARCHITECT` · `AGENT_MODEL_COMPLEX` · `AGENT_MODEL_STANDARD` · `AGENT_MODEL_FAST` · `AGENT_MODEL_LOCAL` | the matching registry role | Override one routing tier without touching `models.yaml`. `AGENT_MODEL_LOCAL` is the offline fallback and resolves to the `fast` role. |
 | `AGENT_DEFAULT_MODEL` | `unknown` | Model name recorded in agent log entries when a caller supplies none. Labelling only — it routes nothing. |
