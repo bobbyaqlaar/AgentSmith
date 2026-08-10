@@ -427,7 +427,7 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `cost_router.py` | Dev-mode routing: token count + keyword analysis → model selection. Not suitable for production. See §29 for production LLM Gateway. |
 | `network_watchdog.py` | Socket ping to `1.1.1.1:53`. Auto-switches active LLM endpoint. Background keepalive thread. |
 | `notifier.py` | Cross-platform desktop notifications via `plyer` + `osascript` (macOS). Background webhook thread (Slack / Teams / custom). |
-| `run-evals.py` | Loads tenant-local fixtures. Suites: `golden` (default), `fairness`, `hallucination`, `adversarial` (P12). `--fail-below` / `HALLUCINATION_FAIL_ABOVE`. Skips gracefully when <3 golden cases. |
+| `run-evals.py` | Loads tenant-local fixtures. Suites: `golden` (default), `fairness`, `hallucination`, `adversarial` (P12), `rag_poison`. `adversarial` and `rag_poison` are deterministic guard suites — scored locally by `runtime.prompt_guard`, no judge, so they gate on every commit without a credential; both fail above a miss CEILING (`ADVERSARIAL_FAIL_ABOVE` / `RAG_POISON_FAIL_ABOVE`) rather than below a score floor. `--fail-below` / `HALLUCINATION_FAIL_ABOVE`. Skips gracefully when <3 golden cases. |
 | `eval_judge.py` | Shared LLM-judge invocation (prompting + JSON parsing), factored out so `run-evals.py` and `shadow-eval.py` judge identically. |
 | `shadow-eval.py` | Async shadow-eval sampler: judges a 5% sample of already-served production traces from Phoenix post-hoc (§9). Never re-executes, never auto-promotes. |
 | `sync-portal-history.py` | Pushes `.agent-history.log` entries to the Ops Portal history-sync endpoint; skips already-synced entries. |
@@ -455,7 +455,7 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/llm_gateway.py` | Production LLM routing with per-model pricing, per-tenant budget enforcement, degrade ladder. `complete()` + `complete_stream()` (ttft_ms). |
 | `runtime/models.yaml` | Framework default model registry (§29); overridable per tenant. |
 | `runtime/provider_dispatch.py` | Shared provider request building/parsing for `llm_gateway.py` and `scripts/cost_router.py` (Vertex AI, Azure OpenAI, Bedrock, Huawei ModelArts, Groq, Ollama). |
-| `runtime/pg_pool.py` | Process-wide Postgres connection pool shared by the budget backend, idempotency store, and DLQ (`PG_POOL_MAX`, default 5). Pooled `.close()` releases, never tears down. |
+| `runtime/pg_pool.py` | Process-wide Postgres connection pool shared by the budget backend, idempotency store, and DLQ (`PG_POOL_MAX`, default 5). Pooled `.close()` releases, never tears down. `ensure_schema(dsn, ddl, key=…)` runs a backend's table bootstrap **once per (DSN, table) per process** — those three each created their own table on construction, and a gateway is built per activity, so on Postgres that was a DDL round-trip per workflow step plus the brief table lock a no-op `CREATE TABLE` still takes. |
 | `runtime/environment.py` | Canonical fail-closed `$ENVIRONMENT` resolver used framework-wide. |
 | `runtime/input_guardrail.py` | Pre-call PII scrub (PDPL / Emirates ID, email, phone, Luhn cards) — SEC-PII precall. |
 | `runtime/trace_redactor.py` | Environment-aware OTLP span scrubbing before export (§27), encrypted HITL blobs. |
@@ -463,7 +463,7 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/testing.py` | Shipped test doubles — `FakeGateway` (scripted responses, recorded calls, budget simulation, prompt assertions) and `RecordingGateway` (wraps a live gateway). Deliberately no more capable than the real gateway: it refuses to stream what the real one cannot. Override `_resolve_text(call)` for domain scripting. |
 | `runtime/judging.py` | Shared judge primitives (G7): `citations_grounded` (hallucination — every citation must resolve to a retrieved id), `pair_parity` / `parity_violation` (fairness), `judge_independence_warning` (E3 — a judge model must not be the model it grades). `run-evals.py` imports these, so the CI eval gate and a tenant's per-request check run the SAME logic. |
 | `runtime/tracing.py` | Span helpers for non-LLM steps (G8): `agent_span()` context manager for tenant pipeline steps, and `record_tool_call` (child span per tool call, emitted by `ToolRegistry.invoke`). No-ops without OpenTelemetry. |
-| `runtime/prompt_guard.py` | Pre-call prompt-injection heuristics (SEC-PROMPT-001). `PROMPT_GUARD=off\|warn\|default\|strict`, blocking by default; `warn` is the observe-first rollout tier (findings on `CompletionResult.prompt_guard_reasons`). `is_enforcing()` is the single definition of "blocking", shared with the harness runner. |
+| `runtime/prompt_guard.py` | Pre-call prompt-injection heuristics (SEC-PROMPT-001). `PROMPT_GUARD=off\|warn\|default\|strict`, blocking by default; `warn` is the observe-first rollout tier (findings on `CompletionResult.prompt_guard_reasons`). `is_enforcing()` is the single definition of "blocking", shared with the harness runner. `scan_documents(docs)` applies the same heuristics to RETRIEVED context and quarantines poisoned documents **individually** (SEC-RAG-001) — rejecting a whole retrieval because one chunk is poisoned lets an attacker plant a document matching every query and silence the assistant. Detection delegates to `scan_prompt`, so a rule added for direct injection covers retrieval automatically. |
 | `runtime/moderation.py` | Pluggable output moderation hook (SEC-MOD-001), `MODERATION_HOOK=off\|optional\|required`. |
 | `runtime/structured_output.py` | `parse_llm_json` — fenced/bare JSON extraction + Pydantic validation (SEC-OUTPUT-001). |
 | `runtime/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (§4a). |
@@ -1102,7 +1102,7 @@ AgentSmith/
 │   ├── cost_router.py
 │   ├── network_watchdog.py
 │   ├── notifier.py
-│   ├── run-evals.py             # golden | fairness | hallucination | adversarial suites
+│   ├── run-evals.py             # golden | fairness | hallucination | adversarial | rag_poison
 │   ├── run-security-checks.py   # SEC-* harness (P12): smoke|ci|full, --strict, --evidence-pack
 │   ├── security/                # Harness internals: registry.py, report.py, runners/, schemas/
 │   ├── eval_judge.py            # Shared LLM-judge path (run-evals + shadow-eval)
@@ -2372,7 +2372,7 @@ Design + plan (P12, shipped 2026-07-15):
 | `fixtures/security/control_registry.json` | Canonical SEC-* registry |
 | `.agent-rfc/security/` | Tenant risk register, agency manifest, tool allowlist, adversarial overlays |
 | `workflow-templates/eval-security.yml` | CI gate (`strict: true` in tenant Python template + framework self-test) |
-| `runtime/prompt_guard.py` | Prompt injection heuristics (`PROMPT_GUARD`) |
+| `runtime/prompt_guard.py` | Prompt injection heuristics (`PROMPT_GUARD`); retrieved-context scanning (`scan_documents`) |
 | `runtime/structured_output.py` | Pydantic JSON parse gate |
 | `runtime/tool_registry.py` | `@tool` + YAML allowlist |
 | `runtime/moderation.py` | Pluggable output moderator (`MODERATION_HOOK`) |
@@ -2381,7 +2381,7 @@ Design + plan (P12, shipped 2026-07-15):
 |---|---|---|
 | Human oversight | Met | HITL gates, DLQ Replay/Discard, opt-in `run_with_self_correction`, `hitl_promotion` audit events |
 | Transparency & logging | Met | Phoenix OTel traces (`ttft_ms` on stream); HMAC audit log (`GET /api/audit`) |
-| Performance evaluation | Met | `run-evals.py` golden / fairness / hallucination / adversarial; CD `--fail-below`; shadow-eval |
+| Performance evaluation | Met | `run-evals.py` golden / fairness / hallucination / adversarial / rag_poison; CD `--fail-below`; shadow-eval |
 | Change management | Met | Eval gates; enterprise RFC hooks; fixture PRs; security harness CI |
 | Incident & recovery | Met | Recoverable DLQ; self-correction then human; MAJOR/CRITICAL protection; budget degrade |
 | Continual improvement | Met | HITL → golden promotion; shadow suggested queue (no auto-promote) |

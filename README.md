@@ -67,7 +67,7 @@ self-improvement, and CI/CD — automatically.
 | **Vector / RAG Memory** | Short-term conversation memory + vector store substrate (`embeddings.py` / `vector_store.py`; hash or sentence-transformers; optional pgvector) |
 | **Security Framework** | `run-security-checks.py` + `SEC-*` registry — OWASP LLM · NIST AI RMF · MITRE ATLAS · ISO/IEC 42001 evidence packs in CI (`strict: true`) |
 | **Regulations Compliance** | UAE / sovereign starter (`templates/uae-sovereign/`), PDPL pre-call scrub, fairness + adversarial eval suites, ISO thematic control map |
-| **Evaluations** | Golden dataset + LLM-as-judge scorecard gating every PR; fairness, hallucination, adversarial, and TTFT suites |
+| **Evaluations** | Golden dataset + LLM-as-judge scorecard gating every PR; fairness, hallucination, adversarial, RAG-poisoning, and TTFT suites |
 | **Multi-Agent Orchestration** | Architect → Developer → Validator pipeline — local Ollama or cloud frontier models |
 | **Knowledge Graph** | AST-driven codebase graph, auto-updated on every commit and checkout — zero context drift |
 | **Self-Improvement** | Human-in-the-Loop promotion loop: production failures become test cases become guardrail rules |

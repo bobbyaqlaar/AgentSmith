@@ -228,7 +228,7 @@ Replace the context name with your stack's CI job name:
 
 | Secret                     | Where to set                        | Description                              |
 |----------------------------|-------------------------------------|------------------------------------------|
-| `ANTHROPIC_API_KEY`        | GitHub → Actions secrets            | Claude models (judge + architect)        |
+| provider keys per `models.yaml` | GitHub → Actions secrets        | One per route the active profile binds   |
 | `OPENAI_API_KEY`           | GitHub → Actions secrets            | GPT-4o (complex routing tier)            |
 | `AGENT_PHOENIX_ENDPOINT`   | GitHub → Actions secrets            | Team Phoenix URL                         |
 | `AGENT_JUDGE_MODEL`        | Not needed — declare a `judge` role in `models.yaml` | Ignored when a role is declared; the registry wins |

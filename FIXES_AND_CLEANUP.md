@@ -47,9 +47,16 @@ code blocker; deliberately deferred when the deploy pipeline was proven.
 
 1. Cloud SQL (`BUDGET_BACKEND=postgres`, `IDEMPOTENCY_BACKEND=postgres`),
    a Temporal server, Ollama for the sovereign `intake` route, and Phoenix.
-2. Real provider keys: `ANTHROPIC_API_KEY_JUDGE` (the judge route's declared
-   variable — setting it also turns on the three judge-backed eval gates),
-   `ANTHROPIC_API_KEY`, `GROQ_API_KEY`.
+2. Real provider keys: whichever variable the tenant's `judge` role declares —
+   `GEMINI_API_KEY` as of 2026-08-08, when the judge moved to
+   `gemini-3-flash-preview`; it is **not** a fixed name, so read it off the
+   merged registry rather than this list. Plus the actor routes' keys
+   (`GROQ_API_KEY`, `OPENROUTER_API_KEY`).
+
+   Setting the judge key no longer turns all three judge-backed gates on at
+   once: golden runs on every push, fairness and hallucination on alternating
+   crons, because the three together need 22 judge calls against a free tier
+   that allows 20 a day (KYC `DEVLOG.md` 2026-08-08).
 3. Swap `cd-staging.yml`'s Cloud Run **Job** for a `gcloud run deploy` of
    `worker.py` as a long-running service (`--no-cpu-throttling
    --min-instances=1`, OPERATIONS.md §4), pointed at the real

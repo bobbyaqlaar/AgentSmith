@@ -916,10 +916,12 @@ python3 scripts/verify_system.py --check-hooks
 # Knowledge Graph: rebuild via map_codebase.py and assert non-empty with known nodes (Pillar 2 / P10a)
 python3 scripts/verify_system.py --check-kg
 
-# Reliability pack suites (fairness / hallucination / adversarial — framework seed fixtures)
+# Reliability pack suites (framework seed fixtures). adversarial and rag_poison
+# are deterministic — no judge, no credential — so they gate unconditionally.
 python3 scripts/run-evals.py --suite fairness
 python3 scripts/run-evals.py --suite hallucination
 python3 scripts/run-evals.py --suite adversarial
+python3 scripts/run-evals.py --suite rag_poison
 
 # Security harness (same bar as Self-Test security job — strict)
 MODERATION_HOOK=optional python3 scripts/run-security-checks.py --mode ci --strict
