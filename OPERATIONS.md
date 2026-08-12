@@ -1183,6 +1183,20 @@ Two consequences worth stating to whoever owns the repo: a manual
 rebuilds the oversized run you just split up; and at N calls per push-triggered
 suite, the cap sets how many graded pushes a day the account affords.
 
+**Treat the split as temporary, and prefer a judge whose quota fits.** Splitting
+buys correctness at the price of latency: a suite on an alternating cron reports
+up to two days after the commit that broke it, and a gate that reports two days
+late is a weaker gate — long enough for the offending change to be built on. It
+is the right move against a cap you cannot change today, and the wrong permanent
+shape.
+
+Moving the judge is usually cheaper than living with the split. The cost is one
+recalibration run, because a threshold is only meaningful against the grader it
+was measured on — and a grader with room to run the suite several times gives
+you something the constrained one could not: a variance measurement, which is
+what tells you whether a threshold has real headroom or is one noisy verdict
+from a false failure.
+
 #### Why the judge never falls back to another model
 
 There are two provider-calling paths, and they behave differently on purpose:
