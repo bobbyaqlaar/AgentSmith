@@ -114,3 +114,52 @@ def test_the_judged_loop_is_not_paced_by_default(
     start = time.monotonic()
     assert revals.run_scorecard(fail_below=0.8, suite="golden") == 0
     assert time.monotonic() - start < 0.5
+
+
+# ── An unreachable judge must not READ as a quality failure ───────────────────
+
+
+def test_an_all_errored_run_says_no_verdict_rather_than_fail(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """The gate already exits 0 when no case got a verdict. The banner used to
+    print "❌ FAIL" a few lines above the message saying it does not block —
+    a direct contradiction, and a reader scanning CI output stops at the ❌.
+
+    Seen live on a rate-limited fairness run that had failed nothing.
+    """
+    revals = load_script("run-evals")
+    cases = [{"id": f"c{i}", "input": "x", "pair_id": "p1"} for i in range(4)]
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(revals, "_judge_case", lambda case, *a, **k: {
+        "case_id": case["id"], "score": 0.0, "correctness": 0, "tool_accuracy": 0,
+        "latency_ms": 0, "quality_notes": "", "judged_by": "j", "fairness": 1,
+        "pair_id": "p1", "error": "Provider exhausted for model 'x'",
+    })
+
+    assert revals.run_scorecard(fail_below=0.95, suite="fairness") == 0
+    out = capsys.readouterr().out
+    assert "NO VERDICT" in out
+    assert "❌ FAIL" not in out, "an infrastructure state must not read as a failed gate"
+    assert "was unreachable" in out
+
+
+def test_a_genuine_quality_failure_still_says_fail(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """The narrowing must not swallow a real one: verdicts that came back and
+    fell short still fail, and still say so."""
+    revals = load_script("run-evals")
+    cases = [{"id": f"c{i}", "input": "x", "pair_id": "p1"} for i in range(4)]
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(revals, "_judge_case", lambda case, *a, **k: {
+        "case_id": case["id"], "score": 0.10, "correctness": 0, "tool_accuracy": 1,
+        "latency_ms": 0, "quality_notes": "", "judged_by": "j", "fairness": 1,
+        "pair_id": "p1", "error": None,
+    })
+
+    assert revals.run_scorecard(fail_below=0.95, suite="fairness") == 1
+    out = capsys.readouterr().out
+    assert "❌ FAIL" in out and "NO VERDICT" not in out

@@ -20,6 +20,17 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Evals — an unreachable judge no longer reads as a failed gate
+
+- `run-evals.py` already exited 0 when no case received a verdict, treating it
+  as infrastructure rather than quality. The summary banner did not: it printed
+  `❌ FAIL` a few lines above the message saying the run does not block. A
+  reader scanning CI output stops at the ❌, so the report contradicted its own
+  exit code. Found on a rate-limited fairness run that had failed nothing. The
+  banner now reads `⏭️  NO VERDICT (judge unreachable)`, and a test asserts both
+  directions — an all-errored run must not print FAIL, and a genuine
+  below-threshold run still must.
+
 ### Operator guidance
 
 - **Judge-quota budgeting now says when *not* to split suites.** OPERATIONS

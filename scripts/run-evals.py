@@ -605,7 +605,18 @@ def run_scorecard(
 
     print("")
     print("─────────────────────────────────────────────")
-    print(f"  Overall score:   {avg_score:.3f}  {'✅ PASS' if passed else '❌ FAIL'}")
+    # An all-errored run is an infrastructure state, not a verdict — the gate
+    # below skips it and exits 0. Say so in the banner too: printing "❌ FAIL"
+    # and then "this does not block" a few lines later is a direct
+    # contradiction, and a reader scanning CI output stops at the ❌. Observed
+    # doing exactly that on a rate-limited fairness run that had not failed
+    # anything.
+    judge_unreachable = bool(results) and all(r.get("error") for r in results)
+    if judge_unreachable:
+        verdict = "⏭️  NO VERDICT (judge unreachable)"
+    else:
+        verdict = "✅ PASS" if passed else "❌ FAIL"
+    print(f"  Overall score:   {avg_score:.3f}  {verdict}")
     print(f"  Correctness:     {avg_correctness:.3f}")
     print(f"  Tool accuracy:   {avg_tool_acc:.3f}")
     if avg_fairness is not None:
@@ -631,7 +642,7 @@ def run_scorecard(
     # `400 invalid_request_error` on all 12 golden cases and failed the gate.
     # Deliberately narrow — PARTIAL errors still fail, because a judge that
     # answers some cases and not others may be signalling something real.
-    if results and all(r.get("error") for r in results):
+    if judge_unreachable:
         print(
             f"\n  ⏭️  Skipping {suite} gate: no case received a verdict — the judge "
             f"was unreachable.\n"
