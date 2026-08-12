@@ -48,10 +48,12 @@ code blocker; deliberately deferred when the deploy pipeline was proven.
 1. Cloud SQL (`BUDGET_BACKEND=postgres`, `IDEMPOTENCY_BACKEND=postgres`),
    a Temporal server, Ollama for the sovereign `intake` route, and Phoenix.
 2. Real provider keys: whichever variable the tenant's `judge` role declares —
-   `GEMINI_API_KEY` as of 2026-08-08, when the judge moved to
-   `gemini-3-flash-preview`; it is **not** a fixed name, so read it off the
-   merged registry rather than this list. Plus the actor routes' keys
-   (`GROQ_API_KEY`, `OPENROUTER_API_KEY`).
+   `GROQ_API_KEY` as of 2026-08-12, when the judge moved to
+   `llama-3.3-70b-versatile` on Groq. It is **not** a fixed name and has now
+   changed twice, so read it off the merged registry rather than this list.
+   Plus the actor routes' key, `OPENROUTER_API_KEY` (research and analyst).
+   No actor route uses Groq — that is deliberate, so exhausting an actor's
+   quota cannot also take out its reviewer.
 
    Setting the judge key no longer turns all three judge-backed gates on at
    once: golden runs on every push, fairness and hallucination on alternating

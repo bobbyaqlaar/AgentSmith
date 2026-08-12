@@ -20,6 +20,20 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Operator guidance
+
+- **Judge-quota budgeting now says when *not* to split suites.** OPERATIONS
+  presented splitting judged suites across triggers as the remedy for a provider
+  cap. It is the right move against a cap you cannot change today and the wrong
+  permanent shape: a suite on an alternating cron reports up to two days after
+  the commit that broke it. Moving the judge usually costs less — one
+  recalibration run — and a grader with room to repeat a suite yields a variance
+  measurement, which is what separates a threshold with real headroom from one a
+  single noisy verdict away from a false failure.
+- The eval-judge credential row and the testbed tenant spec no longer name a
+  fixed provider key. The variable follows the `judge` role, and the reference
+  tenant's has now changed twice — each time leaving a doc that named the old one.
+
 ### Security controls — closing declared gaps without weakening the claims
 
 Each of these was declared `gap` because the only available evidence depended on
