@@ -554,15 +554,33 @@ def run_scorecard(
             f"latency={r['latency_ms']}ms"
         )
 
-    avg_score = sum(r["score"] for r in results) / len(results)
-    avg_correctness = sum(r["correctness"] for r in results) / len(results)
-    avg_tool_acc = sum(r["tool_accuracy"] for r in results) / len(results)
-    avg_latency_ms = sum(r["latency_ms"] for r in results) / len(results)
-    fairness_vals = [r["fairness"] for r in results if "fairness" in r]
+    # Quality averages are computed over cases that actually GRADED.
+    #
+    # An errored call has no verdict. Scoring it 0.00 and averaging it into a
+    # number labelled "Overall score" reports an infrastructure failure as a
+    # quality result — and the two are not close. A rate-limited hallucination
+    # run read 0.167 while its flagged-claim rate, the gate that actually
+    # matters, sat at 0.000: five zeros from calls that never reached a judge,
+    # dragging down one case that scored 1.00.
+    #
+    # Excluding them is only safe alongside the quorum check below. On its own
+    # it would let a run that graded one case out of six report a clean 1.000,
+    # which is a worse failure than the one it fixes: a green gate that examined
+    # almost nothing.
+    graded = [r for r in results if not r.get("error")]
+    scored = graded or results          # avoid /0; unused when nothing graded
+    avg_score = sum(r["score"] for r in scored) / len(scored)
+    avg_correctness = sum(r["correctness"] for r in scored) / len(scored)
+    avg_tool_acc = sum(r["tool_accuracy"] for r in scored) / len(scored)
+    avg_latency_ms = sum(r["latency_ms"] for r in scored) / len(scored)
+    fairness_vals = [r["fairness"] for r in scored if "fairness" in r]
     avg_fairness = (
         sum(fairness_vals) / len(fairness_vals) if fairness_vals else None
     )
-    parity = _pair_parity(results) if suite == "fairness" else {}
+    # Graded-only: `pair_parity` already drops pairs with fewer than two scored
+    # members, so a pair whose twin errored is omitted rather than compared
+    # against a missing side.
+    parity = _pair_parity(graded) if suite == "fairness" else {}
     avg_parity = sum(parity.values()) / len(parity) if parity else None
     has_hallucination = suite == "hallucination" or any(
         isinstance(r.get("hallucination"), (int, float)) for r in results
@@ -611,12 +629,35 @@ def run_scorecard(
     # contradiction, and a reader scanning CI output stops at the ❌. Observed
     # doing exactly that on a rate-limited fairness run that had not failed
     # anything.
-    judge_unreachable = bool(results) and all(r.get("error") for r in results)
+    # A verdict needs a QUORUM of graded cases, not merely one.
+    #
+    # `min_cases` is already the bar for whether this suite can gate at all — a
+    # 2-case golden set is refused above because it cannot mean anything. The
+    # same reasoning applies after the fact: if only two of twelve reached a
+    # judge, the suite is no more able to gate than if it had two cases. Without
+    # this, excluding errored cases from the average would turn "the provider
+    # died five calls in" into a clean pass on whatever happened to answer.
+    #
+    # Reported as NO VERDICT and exit 0 — the same treatment as a judge that was
+    # unreachable for every case, because that is what it is: an infrastructure
+    # outcome, not a quality one. It does not block a merge, and it does not
+    # claim the suite passed.
+    judge_unreachable = bool(results) and len(graded) < min_cases
     if judge_unreachable:
-        verdict = "⏭️  NO VERDICT (judge unreachable)"
+        verdict = (
+            "⏭️  NO VERDICT (judge unreachable)" if not graded
+            else f"⏭️  NO VERDICT (only {len(graded)}/{len(results)} graded, "
+                 f"need {min_cases})"
+        )
     else:
         verdict = "✅ PASS" if passed else "❌ FAIL"
     print(f"  Overall score:   {avg_score:.3f}  {verdict}")
+    if len(graded) != len(results):
+        # Never let an average stand unqualified when it rests on a subset.
+        print(
+            f"  Graded:          {len(graded)} of {len(results)} "
+            f"({len(results) - len(graded)} errored — excluded from the averages)"
+        )
     print(f"  Correctness:     {avg_correctness:.3f}")
     print(f"  Tool accuracy:   {avg_tool_acc:.3f}")
     if avg_fairness is not None:
@@ -720,6 +761,8 @@ def run_scorecard(
     output = {
         "timestamp": ts,
         "suite": suite,
+        "cases_graded": len(graded),
+        "cases_total": len(results),
         "project": project,
         # The grader this run ASKED for. `judge_models_used` is what answered.
         "judge_model": judge,
