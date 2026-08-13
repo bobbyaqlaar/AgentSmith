@@ -1369,6 +1369,20 @@ asyncio.run(WorkflowEnvironment.start_local())  # downloads/starts the test serv
 
 ## 4 — Deploy via GitHub CI/CD
 
+> ⏸️ **GCP promotion is SUSPENDED as of 2026-08-12, until further notice.**
+> The automatic `push:` trigger is commented out in `cd-portal.yml` (framework)
+> and `cd-staging.yml` (KYC Sentinel). **Everything in this section is retained
+> and still correct** — it is the runbook for when promotion resumes, and
+> resuming is uncommenting four lines in each workflow.
+>
+> What still works meanwhile: `workflow_dispatch` is deliberately left enabled,
+> so a deliberate deploy is one click. What stops: nothing is promoted merely
+> because a commit landed on `main`.
+>
+> Nothing already deployed was torn down. The Cloud Run services and jobs stay
+> up serving whatever was last promoted — they simply stop being replaced, so
+> treat what is live as a **snapshot** rather than as head of `main`.
+
 ### Deploy pipeline and GCP checklist
 
 **Through GitHub CI/CD (cloud):**
