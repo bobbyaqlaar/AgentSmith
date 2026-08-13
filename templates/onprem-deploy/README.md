@@ -1,5 +1,17 @@
 # On-premise / air-gapped deployment template
 
+> **Deploying this to a server rather than your laptop?** See OPERATIONS.md
+> → "Deploying to a server that is not your dev machine" for the Linux / macOS
+> / Windows paths, including the Docker-only route that needs no bash or
+> python3 on the target.
+>
+> The one thing to know before you start: `proxy/**/*.rendered.*` and `.env`
+> are **gitignored**, so a `git clone` on the server has neither, and
+> `docker compose up` fails on a missing mount source. Either run `scripts/up.sh`
+> there (needs bash + python3) or render on your dev machine and copy the
+> rendered file across.
+
+
 Opt-in deployment artifact for tenants whose customers run the agent app on
 their own hardware instead of a managed cloud platform — see
 `OPERATIONS.md` "On-premise / air-gapped deployment". This directory is

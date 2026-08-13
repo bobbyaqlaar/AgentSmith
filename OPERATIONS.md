@@ -1575,6 +1575,215 @@ deploy/onprem/scripts/up.sh
 See "On-premise / air-gapped deployment" below for canary/shadow traffic routing, Kubernetes/Helm for
 high-compliance customers, and air-gapped image bundling.
 
+---
+
+### Deploying to a server that is not your dev machine
+
+Everything above assumes you are standing where the repo is. A real deployment
+is not: the artifacts are built on one machine and run on another. This section
+is the host-by-host version.
+
+#### What the server actually needs
+
+Less than you would guess — and knowing exactly what decides your Windows story:
+
+| Requirement | When it is needed |
+|---|---|
+| **Docker Engine + Compose v2** | Always. `docker compose version` must report v2.x — the old `docker-compose` v1 binary will not read these files. |
+| **bash + python3** | **Only if you run `scripts/up.sh` on the server.** It renders the proxy config from `.env` before bringing the stack up. |
+| Nothing else | No framework install, no Python packages, no Node. The app ships as an image. |
+
+That second row is the whole trick. `up.sh` exists to render
+`proxy/traefik/dynamic.rendered.yml` (or `proxy/envoy/envoy.rendered.yaml`) from
+your `.env`, and those rendered files are **gitignored** — so a fresh clone on
+the server has neither them nor `.env`, and a bare `docker compose up` fails on
+a missing mount source. Render them on a machine that has bash and python3, copy
+them across, and the server needs Docker and nothing more.
+
+#### Step 1 — get the artifacts onto the server (pick one)
+
+```bash
+# a) The server can reach your git host — simplest
+git clone <your-tenant-repo> /opt/kyc-sentinel
+cd /opt/kyc-sentinel/deploy/onprem
+
+# b) No git on the server — copy the scaffolded directory
+ai-onprem-deploy-scaffold                      # on your dev machine
+scp -r deploy/onprem you@server:/opt/app/
+
+# c) Air-gapped — no registry reachable from the server either
+scripts/bundle-airgapped.sh                    # dev machine, with internet
+scp onprem-bundle.tar.gz you@server:/opt/app/
+ssh you@server 'cd /opt/app && scripts/load-airgapped.sh'
+```
+
+#### Step 2 — configure, and decide where you render
+
+```bash
+cp .env.example .env
+# Set at minimum: APP_IMAGE_PROD, APP_PORT, PROXY_ENGINE, PROXY_LISTEN_PORT.
+# WITH_DB=true adds pgvector; leave it false if you already have Postgres.
+```
+
+`APP_IMAGE_PROD` must be a ref the **server** can pull — the CD workflow's
+`ghcr.io/<org>/<repo>:<sha>`, your own registry, or an image loaded from the
+air-gapped bundle. A tag that only exists in your laptop's Docker will fail on
+the server with a pull error that reads like a network problem.
+
+---
+
+#### Linux server — the normal target
+
+Install **Docker Engine**, not Docker Desktop: Desktop is a developer product,
+and on a headless server it brings a VM and a licence you do not want.
+
+```bash
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker "$USER"     # log out and back in for this to take
+docker compose version              # must print v2.x
+
+cd /opt/app/onprem
+cp .env.example .env && ${EDITOR:-vi} .env
+scripts/up.sh                       # bash + python3 are already here
+```
+
+Survive a reboot — compose's `restart: unless-stopped` covers crashes but not
+the machine coming back up:
+
+```bash
+sudo tee /etc/systemd/system/agentsmith-stack.service >/dev/null <<'UNIT'
+[Unit]
+Description=AgentSmith on-prem stack
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/app/onprem
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+User=youruser
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl enable --now agentsmith-stack
+```
+
+Use `ExecStart=docker compose up -d`, not `up.sh`, in the unit: at boot you want
+the last known-good rendered config brought up, not a re-render against an
+`.env` nobody has reviewed since.
+
+---
+
+#### macOS server
+
+Works, with one caveat worth saying out loud: **macOS is a developer host
+pretending to be a server.** No unattended reboot story without a logged-in
+session, and Docker Desktop needs a paid licence for larger organisations. Use
+it for a demo box or a small internal deployment, not for a production tenant.
+
+```bash
+brew install --cask docker        # Docker Desktop, then launch it once
+#   or, headless and licence-free:
+brew install colima docker docker-compose
+colima start --cpu 4 --memory 8
+
+cd /opt/app/onprem
+cp .env.example .env && ${EDITOR:-nano} .env
+scripts/up.sh                     # macOS ships bash 3.2 — up.sh is compatible
+```
+
+For restart-on-boot use a LaunchDaemon, and note it only fires once someone
+logs in unless the Mac is configured for auto-login — which is its own security
+conversation.
+
+---
+
+#### Windows server
+
+Two routes. The first is better if you can have it.
+
+**Route A — WSL2 (recommended).** You get a real Linux userland, so everything
+in the Linux section applies verbatim, including `up.sh`.
+
+```powershell
+wsl --install -d Ubuntu           # then reboot
+# Install Docker Desktop, enable Settings → Resources → WSL Integration
+```
+
+```bash
+# inside the WSL2 shell — this is now just the Linux path
+cd /opt/app/onprem && cp .env.example .env && scripts/up.sh
+```
+
+> ⚠️ **Keep the deployment directory inside the WSL2 filesystem** (`/opt/...`,
+> `~/...`), not on `/mnt/c/...`. Bind-mounting across the Windows boundary is
+> slow, and file permissions arrive wrong in a way that surfaces much later as a
+> container that cannot read its own config.
+
+**Route B — Docker only, no WSL2, PowerShell.** For a locked-down host where
+you cannot install a Linux distro. Render on your dev machine, ship the result,
+and the server never needs bash or python3.
+
+```bash
+# on your dev machine (Mac or Linux)
+cd deploy/onprem
+cp .env.example .env && $EDITOR .env
+python3 scripts/render-traefik-config.py     # or render-envoy-config.py
+```
+
+```powershell
+# copy the whole directory INCLUDING .env and proxy/**/*.rendered.* — the
+# rendered files are gitignored, so a git clone on the server will not have them
+scp -r deploy/onprem Administrator@server:C:/app/onprem
+
+cd C:\app\onprem
+docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
+docker compose ps
+```
+
+> ⚠️ **Line endings.** If the directory reaches the server through anything that
+> translates CRLF — a Windows git checkout with `core.autocrlf=true`, some SCP
+> clients — the shell scripts and the rendered YAML acquire `\r`, and the
+> failure is baffling: `bash\r: no such file or directory`, or a proxy that
+> starts and routes nothing. Set `git config --global core.autocrlf input` on
+> the server, or copy as a `.tar` and unpack there.
+
+Restart-on-boot: set Docker Desktop to start on login, and rely on compose's
+`restart: unless-stopped`. For a genuine unattended Windows server, run the
+stack under WSL2 (Route A) with a systemd unit — Route B has no good headless
+restart story, and pretending otherwise is how a "deployed" service is found
+down after a patch Tuesday.
+
+---
+
+#### Verify, on any host
+
+```bash
+docker compose ps                                   # every service Up/healthy
+curl -fsS http://localhost:${PROXY_LISTEN_PORT:-80}/healthz && echo OK
+docker compose logs --tail=50 proxy                 # routing actually loaded
+```
+
+Only `proxy` publishes a port — `${PROXY_LISTEN_PORT:-80}:80`. The app
+containers are deliberately unpublished and reachable only through it, so if
+`curl` against the app port directly fails, that is the design working.
+
+#### Updating a deployed server
+
+```bash
+# .env only (image tag, canary weight): re-render, reconcile
+scripts/up.sh                     # or on a Docker-only host: re-copy the
+                                  # rendered file, then `docker compose up -d`
+# new image, same config:
+docker compose pull && docker compose up -d
+```
+
+Both are safe to re-run; compose reconciles rather than recreating what has not
+changed.
+
 ### Promote staging → production (`ai-tenant-promote`)
 
 ```bash
