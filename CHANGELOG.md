@@ -45,7 +45,15 @@ Canonical copy — SPECS.md §28 mirrors the current row.
   blocks nor claims a pass.
 - Any partial run prints `Graded: N of M`, and the artifact records
   `cases_graded` / `cases_total`, so an average never stands unqualified when it
-  rests on a subset. This replaces the rule that blocked on *any* partial error;
+  rests on a subset.
+- **A judged case no longer reports a pass/fail of its own.** The per-case marker
+  compared each score to `fail_below` — a threshold that gates the suite
+  AVERAGE. Tightening golden to 0.95 exposed it: `kyc_005` sits at 0.90 and drew
+  a red ❌ on a run passing at 0.992. The marker now says what is actually
+  knowable per case — `·` graded, `⏭️ ` no verdict — and a case under the bar is
+  annotated as information (`below the 0.95 suite bar`) rather than dressed as a
+  failure. `adversarial` and `rag_poison` keep ✅/❌: there each case is scored
+  against its own expectation, so a per-case verdict is real. This replaces the rule that blocked on *any* partial error;
   that intent — do not swallow a real signal — is preserved by the quorum, since
   once enough cases grade the score decides and a genuine low score still fails.
 

@@ -163,3 +163,68 @@ def test_a_genuine_quality_failure_still_says_fail(
     assert revals.run_scorecard(fail_below=0.95, suite="fairness") == 1
     out = capsys.readouterr().out
     assert "❌ FAIL" in out and "NO VERDICT" not in out
+
+
+# ── A judged case has no pass/fail of its own ─────────────────────────────────
+
+
+def test_a_case_below_the_bar_is_not_marked_failed_on_a_passing_run(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """`fail_below` gates the suite AVERAGE, so a single case under it has not
+    failed anything. Printing ❌ beside it made a passing run look broken —
+    golden's kyc_005 sits at 0.90 and drew a red cross on a run that passed at
+    0.992. Same report-contradicts-verdict problem as the NO VERDICT banner.
+    """
+    revals = load_script("run-evals")
+    cases = [{"id": f"c{i}", "input": "x"} for i in range(4)]
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(
+        revals, "_judge_case",
+        lambda case, *a, **k: {**_row(case["id"]),
+                               "score": 0.90 if case["id"] == "c1" else 1.0},
+    )
+
+    assert revals.run_scorecard(fail_below=0.95, suite="golden") == 0
+    out = capsys.readouterr().out
+    assert "✅ PASS" in out, "0.975 average clears 0.95"
+    assert "❌" not in out, "no case failed; nothing should carry a red cross"
+    assert "below the 0.95 suite bar" in out, "the low case must still be visible"
+
+
+def test_an_errored_case_is_marked_no_verdict_not_failed(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """What IS knowable per case is whether it got a verdict at all."""
+    revals = load_script("run-evals")
+    cases = [{"id": f"c{i}", "input": "x"} for i in range(4)]
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(
+        revals, "_judge_case",
+        lambda case, *a, **k: {**_row(case["id"]),
+                               "error": "exhausted" if case["id"] == "c3" else None},
+    )
+
+    revals.run_scorecard(fail_below=0.95, suite="golden")
+    out = capsys.readouterr().out
+    assert "⏭️ " in out, "the errored case should read as no-verdict"
+    assert "❌" not in out
+
+
+def test_deterministic_suites_keep_their_real_per_case_verdict(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """adversarial and rag_poison score each case against its OWN expectation,
+    so ❌ there is a genuine per-case result and must survive this change."""
+    revals = load_script("run-evals")
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: [
+        {"id": "a1", "expect": "quarantine", "document": "benign", "pair_id": "p"},
+        {"id": "a2", "expect": "quarantine", "document": "benign", "pair_id": "p"},
+        {"id": "a3", "expect": "quarantine", "document": "benign", "pair_id": "p"},
+    ])
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+
+    revals.run_scorecard(fail_below=0.95, suite="rag_poison")
+    assert "❌" in capsys.readouterr().out, "a genuinely missed case must still show ❌"

@@ -542,7 +542,33 @@ def run_scorecard(
         limiter.wait()
         r = _judge_case(case, criteria, judge)
         results.append(r)
-        status = "✅" if r["score"] >= fail_below else "❌"
+        # A judged case has no pass/fail of its own to report.
+        #
+        # This printed "❌" whenever a case scored below `fail_below` — but that
+        # threshold gates the suite AVERAGE, not any individual case. Tightening
+        # golden to 0.95 made the mismatch visible: kyc_005 sits at 0.90 and drew
+        # a red cross on a run that passed at 0.992. A reader scanning the log
+        # stops at the ❌ and concludes something failed, which is the same
+        # report-contradicts-verdict problem the NO VERDICT banner fixed one
+        # level up.
+        #
+        # What IS knowable per case at this point is whether it got a verdict at
+        # all, so that is what the marker says. Being under the suite bar is
+        # still worth seeing, so it is annotated as the information it is rather
+        # than dressed as a failure — and when the suite genuinely fails, the
+        # "Failing cases" block below names the cases that dragged it down.
+        #
+        # `adversarial` and `rag_poison` keep ✅/❌ above: there each case is
+        # scored against its OWN expectation, so a per-case verdict is real.
+        if r.get("error"):
+            status = "⏭️ "
+        else:
+            status = "·"
+        below = (
+            f" (below the {fail_below:.2f} suite bar)"
+            if not r.get("error") and r["score"] < fail_below
+            else ""
+        )
         fair_bit = f" fairness={r['fairness']}" if "fairness" in r else ""
         hallucination_bit = (
             f" hallucination={float(r['hallucination']):.2f}"
@@ -550,7 +576,7 @@ def run_scorecard(
             else ""
         )
         print(
-            f"{status} score={r['score']:.2f}{fair_bit}{hallucination_bit} "
+            f"{status} score={r['score']:.2f}{below}{fair_bit}{hallucination_bit} "
             f"latency={r['latency_ms']}ms"
         )
 
