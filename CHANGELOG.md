@@ -31,6 +31,24 @@ Canonical copy — SPECS.md §28 mirrors the current row.
   directions — an all-errored run must not print FAIL, and a genuine
   below-threshold run still must.
 
+- **The same confusion survived one level down: errored cases were averaged in
+  as 0.00.** That only bites when *some* calls get through — a rate-limited
+  hallucination run read `Overall 0.167` while its flagged-claim rate, the gate
+  that actually matters, sat at 0.000. Five zeros from calls that never reached
+  a judge, dragging down one case that scored 1.00. Averages are now computed
+  over graded cases only.
+- **That is unsafe alone, so it ships with a quorum.** A verdict needs at least
+  `min_cases` graded — the same bar that decides whether a suite can gate at
+  all. Without it, a run that graded one case of six would report a clean 1.000
+  and go green having examined almost nothing, which is worse than the problem
+  being fixed. Short of quorum reports `NO VERDICT` and exits 0: it neither
+  blocks nor claims a pass.
+- Any partial run prints `Graded: N of M`, and the artifact records
+  `cases_graded` / `cases_total`, so an average never stands unqualified when it
+  rests on a subset. This replaces the rule that blocked on *any* partial error;
+  that intent — do not swallow a real signal — is preserved by the quorum, since
+  once enough cases grade the score decides and a genuine low score still fails.
+
 ### Operator guidance
 
 - **Judge-quota budgeting now says when *not* to split suites.** OPERATIONS
