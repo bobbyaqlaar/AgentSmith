@@ -58,7 +58,7 @@ self-improvement, and CI/CD — automatically.
 
 | Layer | What you get |
 |---|---|
-| **IDE Guardrails** | `.cursorrules`, `CLAUDE.md`, `.agents/skills/` — generated for Cursor, Claude Code, and Antigravity from one template on every checkout |
+| **IDE Guardrails** | `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `.agents/skills/` — generated for Cursor, Claude Code, Codex and Antigravity from one template on every checkout |
 | **Git Hooks** | Pre-commit safety checks, commit message linting, automatic semantic versioning, AST codebase mapping |
 | **OpenTelemetry & Observability** | OTel span contract → Arize Phoenix — one instance per machine or team, per-project and per-tenant namespacing, owner/cost/token attribution |
 | **Ops Portal** | Cross-tenant ops dashboard — run history, cost vs cap, DLQ triage, HMAC append-only audit log, RBAC / optional SSO |

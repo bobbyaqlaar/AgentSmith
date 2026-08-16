@@ -34,7 +34,7 @@ AgentSmith is a two-layer package that provisions the complete lifecycle environ
 
 Installed once (developer mode) or deployed as org bundle (enterprise mode), it sets up:
 
-- IDE rules and guardrails for Cursor, Claude Code, and Antigravity (`CLAUDE.md`, `.cursorrules`, `.agents/skills/`)
+- IDE rules and guardrails for Cursor, Claude Code, Codex and Antigravity (`CLAUDE.md`, `.cursorrules`, `AGENTS.md`, `.agents/skills/`)
 - Git lifecycle hooks (pre-commit, commit-msg, post-commit, post-checkout) — opt-in per repo (developer mode) or org-managed signed bundle (enterprise mode)
 - A universal observability platform (Arize Phoenix) with per-project and per-tenant namespacing
 - An evaluation framework with golden datasets and an LLM-as-judge; framework base cases are **bootstrap-only**; production quality gates use tenant-local datasets exclusively
@@ -191,7 +191,7 @@ names the contract that joins the two components:
 ```
 git init / checkout                       (tenant repo)
   └─ hooks/post-checkout ── reads templates/agent-rules.yaml (§13)
-       ├─ writes IDE configs (.cursorrules, CLAUDE.md, .agents/skills/)
+       ├─ writes IDE configs (.cursorrules, CLAUDE.md, AGENTS.md, .agents/skills/)
        ├─ copies workflow-templates/* + .github/actions/* into the repo (§17)
        └─ seeds golden dataset + Knowledge Graph (§9, §10)
 
@@ -443,7 +443,7 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `agent_logger.py` | JSON-Lines to stdout + `.agent-history.log`. Four levels: INFO/MINOR/MAJOR/CRITICAL. Calls `audit_token_velocity_circuit()`. All entries carry `owner_id`, `tenant.id` (if available), `agent.role`. |
 | `circuit_breaker.py` | Dual-tier burst/monthly guard. Dev-mode: raises `CircuitBreakerTripped`. Production: degrade ladder via LLM Gateway (see §11, §29). |
 | `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-history-sync`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / Product_Archive.md P10a), `--check-security` (P12 smoke path), `--check-delivery-model` (warn-only gate). |
-| `generate-ide-config.py` | Renders `.cursorrules` / `CLAUDE.md` / `.agents/skills/*/skill.md` from `templates/agent-rules.yaml` (single source, §13). Called by `post-checkout`. `--check-only` regenerates in memory and diffs against the committed files, exiting 1 on drift (Pillar 6/7 CI gate — Product_Archive.md P10c). |
+| `generate-ide-config.py` | Renders `.cursorrules` / `CLAUDE.md` / `AGENTS.md` (Codex) / `.agents/skills/*/skill.md` from `templates/agent-rules.yaml` (single source, §13). Called by `post-checkout`. `--check-only` regenerates in memory and diffs against the committed files, exiting 1 on drift (Pillar 6/7 CI gate — Product_Archive.md P10c). |
 
 ### 5.5 Production Runtime (runtime/)
 

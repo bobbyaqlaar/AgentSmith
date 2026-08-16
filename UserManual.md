@@ -150,7 +150,7 @@ git remote add origin https://github.com/org/my-project.git
 
 The `post-checkout` hook fires on `git init` and automatically:
 - Creates `.agent-rfc/` and `.agent-rfc/fixtures/`
-- Writes `.cursorrules`, `CLAUDE.md`, `.agents/skills/`
+- Writes `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `.agents/skills/`, and seeds `.agent-history.log`
 - Detects your stack (TypeScript/React, Python/FastAPI, Go, or Generic)
 - Writes the appropriate `.github/workflows/ci-*.yml`
 - Seeds the Knowledge Graph by scanning your codebase
@@ -213,7 +213,7 @@ Work normally in your IDE. The framework operates silently in the background:
 
 - **On every `git commit`**: pre-commit checks run, Knowledge Graph updates, semantic version tag applied
 - **On every `git checkout`**: Knowledge Graph re-indexed, IDE rules refreshed if missing
-- **In your IDE**: Cursor, Claude Code, and Antigravity all read your `.cursorrules` / `CLAUDE.md` / `.agents/skills/` automatically
+- **In your IDE**: Cursor, Claude Code, Codex and Antigravity read your `.cursorrules` / `CLAUDE.md` / `AGENTS.md` / `.agents/skills/` automatically
 
 ### End of Session
 
