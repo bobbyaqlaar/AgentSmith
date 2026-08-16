@@ -281,7 +281,20 @@ Operational lessons distilled from past phases; full incident context in
       cp scripts/generate-ide-config.py   ~/.agent-framework/scripts/
       cp hooks/post-checkout              ~/.git_templates/hooks/
 
-  Then verify against a throwaway `git init` rather than trusting the copy.
+  That targeted copy is the FAST path, and it is deliberately not the supported
+  one. Re-running the installer from the checkout is:
+
+      bash install-ai-stack.sh    # from the repo root
+
+  When `INSTALLER_DIR` resolves to a checkout it overwrites the global copies of
+  `scripts/`, `templates/agent-rules.yaml` and all four `hooks/*` — so it also
+  refreshes `workflow-templates/`, `github-actions/` and the on-prem template,
+  which the three `cp` lines above miss. It has no skip flags, so it re-runs the
+  whole install (pip, Ollama checks); use the `cp` shortcut when you have touched
+  only rules or hooks, and the installer when you have touched anything else.
+
+  Either way, verify against a throwaway `git init` rather than trusting the
+  copy — that is what turned this up.
 - **Cloud SQL from Cloud Run** — use the Auth Proxy
   (`--add-cloudsql-instances`, Unix-socket `DATABASE_URL`), never
   `sslmode=no-verify`; grant the Compute SA `roles/cloudsql.client` and

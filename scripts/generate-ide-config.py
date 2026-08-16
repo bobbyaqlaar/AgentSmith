@@ -88,7 +88,12 @@ def _render_cursorrules(rules: dict, stack: str, ctx: dict[str, str]) -> str:
 
     stack_def = (rules.get("stacks") or {}).get(stack)
     if stack_def:
-        lines.append(f"## 11. {stack.upper()} ADDENDUM")
+        # Numbered after the last pillar, not hardcoded. This said "11" from
+        # when there were ten pillars; adding four gave the file two sections
+        # numbered 11 — the addendum and Untrusted Content — which is exactly
+        # the kind of quiet inconsistency an agent reading the rules trips on.
+        addendum_no = len(rules.get("pillars", [])) + 1
+        lines.append(f"## {addendum_no}. {stack.upper()} ADDENDUM")
         for r in stack_def.get("additional_rules", []):
             lines.append(f"- {r}")
         lines.append("")
