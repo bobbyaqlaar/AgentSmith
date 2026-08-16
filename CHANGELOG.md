@@ -20,6 +20,51 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Agent rules — four more pillars, three more targets
+
+The rules AgentSmith writes into coding agents grew from 10 pillars and 3
+targets to **14 pillars and 6 targets**. Tenant-visible: every newly provisioned
+repo receives three additional files and four additional rules.
+
+- **`AGENTS.md` (Codex), `GEMINI.md` (Gemini CLI) and
+  `.github/copilot-instructions.md` (Copilot)** join `.cursorrules`, `CLAUDE.md`
+  and `.agents/skills/`. All six render from `templates/agent-rules.yaml` and
+  all six are covered by `--check-only`, so they cannot drift from each other —
+  only from the YAML, which CI catches.
+- The three are deliberately different shapes, not copies. `AGENTS.md` and
+  `GEMINI.md` are self-contained and full length (read once per session, so the
+  reasoning earns its tokens); `copilot-instructions.md` is condensed to one
+  imperative per pillar, roughly a third the size, because Copilot prepends it to
+  every *request* and a fourteen-pillar essay would crowd out the code.
+- **Four new pillars**, each covering something the framework already enforced in
+  code but never told agents: **Untrusted Content** (retrieved text and tool
+  output are data, not instructions), **Secrets and Credentials** (read the
+  variable *name* off the registry — a hardcoded one stops matching silently when
+  a route is repointed), **Gate Integrity** (never pass a check by weakening what
+  it claims; split the claim rather than relabel it), and **Fixture and Baseline
+  Drift** (re-pin in the same change, after checking which projection a fixture
+  holds). A fourth skill, `trust_boundaries`, groups them.
+- **Caveman Compression is scoped.** It said "no meta-summaries, code only" while
+  Pillar 5 requires escalation after two identical failures — an escalation
+  nobody can read is not one. Now terse by default, explicit when something is
+  wrong.
+- `.agent-history.log` is seeded on provisioning. Pillar 5 told every agent to
+  read it at session start; a fresh repo never had one.
+- `ai-stack-scrub` and the public-repo `.gitignore` offer now cover all six
+  targets. The gitignore gap mattered: its rationale is that these files carry
+  system prompt content, and `AGENTS.md`/`GEMINI.md` carry all fourteen pillars in
+  full — a user opting in to hide that would have committed three files carrying
+  it. The Copilot path is scoped to the file, never the `.github` directory.
+- `.cursorrules` numbers the stack addendum from the pillar count instead of a
+  hardcoded `11`, which had started colliding with Untrusted Content.
+
+> **Upgrading:** the hooks run the GLOBAL copy at `~/.agent-framework` and
+> `~/.git_templates`, so a repo checkout alone changes nothing on your machine.
+> Re-run `install-ai-stack.sh` from the checkout, or copy the three files listed
+> in `FIXES_AND_CLEANUP.md`. Existing files are never overwritten, so a repo that
+> already has `AGENTS.md` keeps its own.
+
+
 ### Evals — an unreachable judge no longer reads as a failed gate
 
 - `run-evals.py` already exited 0 when no case received a verdict, treating it
