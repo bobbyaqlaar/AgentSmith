@@ -184,7 +184,8 @@ potentially public), the hook will prompt:
 
 ```
 ⚠️  This repo appears to be public. Add IDE config files to .gitignore?
-    .cursorrules, CLAUDE.md, .agents/ contain system prompt content.
+    .cursorrules, CLAUDE.md, AGENTS.md, GEMINI.md,
+    .github/copilot-instructions.md and .agents/ contain system prompt content.
     Add to .gitignore? (y/n):
 ```
 
@@ -721,7 +722,7 @@ ollama pull $(ai-stack-required-models)   # re-pulls whatever models.yaml routes
 
 ### As Needed: Scrub a Project
 
-Removes `.cursorrules`, `CLAUDE.md`, `.agents/` from a project directory
+Removes `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md` and `.agents/` from a project directory
 (searched up to 3 levels deep). Useful before handing off a repo or
 cleaning up. `.agent-history.log` is **not** touched — it's left in place.
 

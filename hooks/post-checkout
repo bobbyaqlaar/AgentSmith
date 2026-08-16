@@ -228,7 +228,8 @@ fi
 if [ "$IS_PUBLIC" -eq 1 ] && [ -t 1 ]; then
   echo ""
   echo "⚠️  This repository appears to be public."
-  echo "   .cursorrules, CLAUDE.md, and .agents/ contain system prompt content."
+  echo "   .cursorrules, CLAUDE.md, AGENTS.md, GEMINI.md,"
+  echo "   .github/copilot-instructions.md and .agents/ contain system prompt content."
   read -r -p "   Add them to .gitignore? (y/n): " GITIGNORE_CHOICE
   if [[ "${GITIGNORE_CHOICE:-y}" =~ ^[Yy]$ ]]; then
     GITIGNORE="$REPO_ROOT/.gitignore"
@@ -237,6 +238,9 @@ if [ "$IS_PUBLIC" -eq 1 ] && [ -t 1 ]; then
       echo "# AgentSmith — IDE configs (system prompt content)"
       echo ".cursorrules"
       echo "CLAUDE.md"
+      echo "AGENTS.md"
+      echo "GEMINI.md"
+      echo ".github/copilot-instructions.md"
       echo ".agents/"
       echo ".agent-history.log"
     } >> "$GITIGNORE"
@@ -250,6 +254,9 @@ elif [ "$IS_PUBLIC" -eq 1 ]; then
     echo "# AgentSmith — IDE configs (system prompt content)"
     echo ".cursorrules"
     echo "CLAUDE.md"
+    echo "AGENTS.md"
+    echo "GEMINI.md"
+    echo ".github/copilot-instructions.md"
     echo ".agents/"
     echo ".agent-history.log"
   } >> "$GITIGNORE"

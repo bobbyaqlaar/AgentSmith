@@ -267,6 +267,21 @@ Operational lessons distilled from past phases; full incident context in
 - **`# fail-open:` convention + global-copy drift** — the pre-commit hook
   executes the GLOBAL `~/.agent-framework/scripts/check_bare_except.py`, not
   the repo copy; sync both when changing checker behaviour.
+- **The same drift bites the agent RULES, and it is easy to miss because the
+  repo tests all pass.** `git init` runs `~/.git_templates/hooks/post-checkout`,
+  which reads `~/.agent-framework/templates/agent-rules.yaml` and
+  `~/.agent-framework/scripts/generate-ide-config.py`. Edit the repo alone and a
+  freshly provisioned project still gets the OLD pillars — observed 2026-08-17,
+  where the repo had 14 pillars and 6 targets while a real `git init` produced 10
+  pillars and 3. Nothing failed; it just quietly provisioned the previous
+  version. After changing `templates/agent-rules.yaml`,
+  `scripts/generate-ide-config.py` or `hooks/*`:
+
+      cp templates/agent-rules.yaml       ~/.agent-framework/templates/
+      cp scripts/generate-ide-config.py   ~/.agent-framework/scripts/
+      cp hooks/post-checkout              ~/.git_templates/hooks/
+
+  Then verify against a throwaway `git init` rather than trusting the copy.
 - **Cloud SQL from Cloud Run** — use the Auth Proxy
   (`--add-cloudsql-instances`, Unix-socket `DATABASE_URL`), never
   `sslmode=no-verify`; grant the Compute SA `roles/cloudsql.client` and

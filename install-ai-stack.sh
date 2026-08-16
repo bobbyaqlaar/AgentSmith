@@ -1219,7 +1219,7 @@ function ai-stack-scrub() {
   # Find every match FIRST and show the exact paths before asking — a
   # confirmation that only names the top-level directory (e.g. "$HOME")
   # gives no idea that -maxdepth 3 reaches across every sibling project's
-  # .cursorrules/CLAUDE.md/.agents/ underneath it (Product_Archive.md
+  # .cursorrules/CLAUDE.md/AGENTS.md/GEMINI.md/.agents/ underneath it (Product_Archive.md
   # 4.11). Note: .agent-history.log was listed in the old warning text but
   # never actually matched/removed by any command below — that mismatch is
   # dropped here rather than carried forward or silently "fixed" by adding
@@ -1229,6 +1229,11 @@ function ai-stack-scrub() {
     {
       find "$target_dir" -maxdepth 3 -name ".cursorrules"
       find "$target_dir" -maxdepth 3 -name "CLAUDE.md"
+      find "$target_dir" -maxdepth 3 -name "AGENTS.md"
+      find "$target_dir" -maxdepth 3 -name "GEMINI.md"
+      # The FILE only, never the .github directory around it — that holds
+      # workflows this command has no business touching.
+      find "$target_dir" -maxdepth 4 -path "*/.github/copilot-instructions.md"
       find "$target_dir" -maxdepth 3 -type d -name ".agents"
     } 2>/dev/null
   )"

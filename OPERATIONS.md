@@ -433,7 +433,7 @@ checkout) — see README "Opt-in model".
 >
 > | What you get | How it arrives |
 > |---|---|
-> | `.agent-rfc/`, `.cursorrules`, `CLAUDE.md`, `.agents/skills/`, Knowledge Graph seed | `post-checkout` hook fires on `git init -b main` |
+> | `.agent-rfc/`, `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.agents/skills/`, Knowledge Graph seed | `post-checkout` hook fires on `git init -b main` |
 > | `.agenticframework/tenant.yaml`, `.github/workflows/` (ci-*, cd-*, eval-* reusable workflows), `.github/actions/` (composite actions the CD workflows call) | `ai-tenant-init <id> --stack <stack>` |
 > | `.env` | You create from the §0 tenant-app `.env` template |
 > | `runtime/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — accessed via `$AGENTSMITH_DIR/runtime` at run time |
@@ -487,7 +487,8 @@ mirrors exactly how you'd set up any real tenant app.
 # Run from: anywhere outside AgenticFramework/
 mkdir $REPO_DIR/oil-price-demo && cd $REPO_DIR/oil-price-demo
 git init -b main    # post-checkout hook fires: installs .agent-rfc/, .cursorrules,
-                    # CLAUDE.md, .agents/skills/, CI workflow templates,
+                    # CLAUDE.md, AGENTS.md, GEMINI.md,
+                    # .github/copilot-instructions.md, .agents/skills/, CI workflow templates,
                     # Knowledge Graph seed, .agenticframework/enabled marker
 ```
 
