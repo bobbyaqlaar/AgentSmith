@@ -1117,7 +1117,7 @@ python3 scripts/run-evals.py --fail-below 0.80
 
 #### When a gate blocks, and when it steps aside
 
-A judge-backed gate can only block on a *quality* signal. Three situations are
+A judge-backed gate can only block on a *quality* signal. Four situations are
 infrastructure problems wearing a failing score, and each exits 0 with a
 message rather than turning the build red:
 
@@ -1125,12 +1125,29 @@ message rather than turning the build red:
 |---|---|
 | The `judge` role needs a credential that isn't set | Skips, naming the exact env var. Requires `--skip-without-judge-credentials`; without it, the run proceeds and the calls fail. |
 | The suite has fewer cases than the minimum | Skips — too few cases to mean anything. |
-| **Every** case errored — no case got a verdict | Skips, printing the provider's error. |
+| **Every** case errored — no case got a verdict | `NO VERDICT (judge unreachable)`, printing the provider's error. |
+| **Some** cases errored and the rest would pass | `NO VERDICT (graded N/M — a pass needs every case)`. |
 
-That last row is the important one and it is deliberately narrow. A judge that
-answers *some* cases and errors on others still fails the gate: partial errors
-can be a real signal (rate limits under a pathological prompt, a route that
-chokes on one input), so they are not swallowed.
+**Errored cases are excluded from the averages.** A call that never returned has
+no verdict to average; scoring it 0.00 reports an infrastructure failure as a
+quality result. A rate-limited run once read `Overall 0.167` while its
+flagged-claim rate — the gate that actually matters — sat at 0.000: five zeros
+from calls that never reached a judge, dragging down one case that scored 1.00.
+Any partial run prints `Graded: N of M`, so an average never stands unqualified.
+
+**A pass requires every case to grade; a fail does not.** That asymmetry is
+deliberate. A green gate is a claim about the whole suite, so anything ungraded
+voids it — an earlier quorum of `min_cases` let a 12-case run report PASS on
+five graded, which is the overclaiming this rule exists to stop. But a *fail*
+stands on whatever graded: applied symmetrically, one flaky call alongside a
+real regression would silence the gate exactly when it matters most. Silence on
+a green run costs a re-run; silence on a red one ships the regression.
+
+**Per-case markers say whether a case got a verdict, not whether it passed.**
+`fail_below` gates the suite average, so an individual case has no pass/fail of
+its own — a case under the bar is annotated (`below the 0.95 suite bar`) rather
+than crossed out. `adversarial` and `rag_poison` keep ✅/❌ because there each
+case is scored against its own expectation.
 
 The env var is resolved from the merged registry, so it follows the `judge`
 role wherever a tenant points it — including a role-level `api_key_env`. Never
