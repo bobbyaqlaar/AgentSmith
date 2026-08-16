@@ -37,12 +37,15 @@ Canonical copy — SPECS.md §28 mirrors the current row.
   that actually matters, sat at 0.000. Five zeros from calls that never reached
   a judge, dragging down one case that scored 1.00. Averages are now computed
   over graded cases only.
-- **That is unsafe alone, so it ships with a quorum.** A verdict needs at least
-  `min_cases` graded — the same bar that decides whether a suite can gate at
-  all. Without it, a run that graded one case of six would report a clean 1.000
-  and go green having examined almost nothing, which is worse than the problem
-  being fixed. Short of quorum reports `NO VERDICT` and exits 0: it neither
-  blocks nor claims a pass.
+- **That is unsafe alone, so a pass now requires every case to grade.** The
+  first cut used `min_cases` as the quorum — 3 on a 12-case suite — and a live
+  run duly reported `PASS` having graded five of twelve. An average over a
+  fraction of the suite is not the suite's verdict. Short of a full set reports
+  `NO VERDICT` and exits 0: it neither blocks nor claims a pass.
+- **The rule is deliberately asymmetric.** A pass needs every case; a *fail*
+  stands on whatever graded. Applied symmetrically, one flaky call alongside a
+  real regression would silence the gate exactly when it matters most — silence
+  on a green run costs a re-run, silence on a red one ships the regression.
 - Any partial run prints `Graded: N of M`, and the artifact records
   `cases_graded` / `cases_total`, so an average never stands unqualified when it
   rests on a subset.

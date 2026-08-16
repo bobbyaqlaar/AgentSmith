@@ -655,25 +655,34 @@ def run_scorecard(
     # contradiction, and a reader scanning CI output stops at the ❌. Observed
     # doing exactly that on a rate-limited fairness run that had not failed
     # anything.
-    # A verdict needs a QUORUM of graded cases, not merely one.
+    # A merge gate PASSES only when every case graded.
     #
-    # `min_cases` is already the bar for whether this suite can gate at all — a
-    # 2-case golden set is refused above because it cannot mean anything. The
-    # same reasoning applies after the fact: if only two of twelve reached a
-    # judge, the suite is no more able to gate than if it had two cases. Without
-    # this, excluding errored cases from the average would turn "the provider
-    # died five calls in" into a clean pass on whatever happened to answer.
+    # The first version of this used `min_cases` as the quorum — the bar for
+    # whether a suite can gate at all. On a 12-case golden set that is 3, so a
+    # run could report PASS having graded five of twelve and errored the rest.
+    # Seen live. That is the same overclaiming this whole change set exists to
+    # remove: an average over a fraction of the suite, presented as the suite's
+    # verdict. Partial evidence is not a pass.
     #
-    # Reported as NO VERDICT and exit 0 — the same treatment as a judge that was
-    # unreachable for every case, because that is what it is: an infrastructure
-    # outcome, not a quality one. It does not block a merge, and it does not
-    # claim the suite passed.
-    judge_unreachable = bool(results) and len(graded) < min_cases
+    # Deliberately ASYMMETRIC, and the asymmetry is the point:
+    #
+    #   PASS  requires every case graded. A green gate is a claim about the
+    #         whole suite, so anything ungraded voids it.
+    #   FAIL  stands on whatever did grade. If three of four cases came back
+    #         below the bar, that is evidence of a problem, and a fourth call
+    #         erroring does not make it go away.
+    #
+    # Applied symmetrically, one flaky call alongside a real regression would
+    # take the gate quiet exactly when it matters most — the failure mode a
+    # merge gate can least afford. Silence on a green run costs a re-run;
+    # silence on a red one ships the regression.
+    incomplete = bool(results) and len(graded) < len(results)
+    judge_unreachable = not graded or (incomplete and passed)
     if judge_unreachable:
         verdict = (
             "⏭️  NO VERDICT (judge unreachable)" if not graded
-            else f"⏭️  NO VERDICT (only {len(graded)}/{len(results)} graded, "
-                 f"need {min_cases})"
+            else f"⏭️  NO VERDICT (graded {len(graded)}/{len(results)} — "
+                 f"a pass needs every case)"
         )
     else:
         verdict = "✅ PASS" if passed else "❌ FAIL"

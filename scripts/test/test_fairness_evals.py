@@ -138,66 +138,69 @@ def test_all_cases_errored_does_not_block(monkeypatch, capsys) -> None:
     assert "judge was unreachable" in capsys.readouterr().out
 
 
-def test_too_few_graded_cases_is_no_verdict_not_a_failure(monkeypatch, capsys) -> None:
-    """Errored calls are excluded from the averages, so a run that graded too
-    few cases must report NO VERDICT rather than a score.
+def test_a_partial_run_cannot_pass(monkeypatch, capsys) -> None:
+    """A merge gate PASSES only when every case graded.
 
-    This replaces an earlier rule that blocked on ANY partial error. That rule
-    scored an infrastructure outcome as a quality one: a rate-limited
-    hallucination run read 0.167 — five zeros from calls that never reached a
-    judge, dragging down one case that scored 1.00 — while its flagged-claim
-    rate, the gate that actually matters, sat at 0.000.
+    The first version of this rule used `min_cases` as the quorum — 3 on a
+    12-case suite — so a run could report PASS having graded five of twelve.
+    Seen live on a rate-limited golden run. An average over a fraction of the
+    suite is not the suite's verdict.
     """
-    revals = load_script("run-evals")
-    monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(3))
-    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
-    monkeypatch.setattr(
-        revals, "_judge_case",
-        lambda case, *a, **k: _row(case["id"], None if case["id"] == "c2" else "HTTP 400 boom"),
-    )
-
-    assert revals.run_scorecard(fail_below=0.8, suite="golden") == 0
-    out = capsys.readouterr().out
-    assert "NO VERDICT" in out
-    assert "1/3 graded" in out
-    assert "❌ FAIL" not in out, "an infrastructure outcome must not read as a failed gate"
-
-
-def test_a_partial_run_never_passes_on_a_handful_of_cases(monkeypatch, capsys) -> None:
-    """The dangerous half of excluding errors: without a quorum, one graded
-    case scoring 1.00 would report a clean 1.000 and go green having examined
-    almost nothing. That is worse than the problem it fixes."""
-    revals = load_script("run-evals")
-    monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(6))
-    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
-    monkeypatch.setattr(
-        revals, "_judge_case",
-        lambda case, *a, **k: _row(case["id"], None if case["id"] == "c0" else "exhausted",
-                                   score=1.0),
-    )
-
-    assert revals.run_scorecard(fail_below=0.95, suite="golden") == 0
-    out = capsys.readouterr().out
-    assert "NO VERDICT" in out and "1/6 graded" in out
-    assert "✅ PASS" not in out, "a one-case run must not report the suite as passing"
-
-
-def test_a_quorum_of_graded_cases_still_gates_on_quality(monkeypatch, capsys) -> None:
-    """The narrowing must not swallow a real failure. Once enough cases grade,
-    the score decides — and the errored ones are reported, not hidden."""
     revals = load_script("run-evals")
     monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(4))
     monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
     monkeypatch.setattr(
         revals, "_judge_case",
-        lambda case, *a, **k: _row(case["id"], "boom" if case["id"] == "c3" else None,
+        lambda case, *a, **k: _row(case["id"],
+                                   "exhausted" if case["id"] == "c3" else None,
+                                   score=1.0),
+    )
+
+    assert revals.run_scorecard(fail_below=0.8, suite="golden") == 0
+    out = capsys.readouterr().out
+    assert "NO VERDICT" in out
+    assert "graded 3/4" in out and "a pass needs every case" in out
+    assert "\u2705 PASS" not in out, "three of four graded must not report a pass"
+
+
+def test_a_partial_run_can_still_fail(monkeypatch, capsys) -> None:
+    """Deliberately asymmetric — a fail stands on whatever graded.
+
+    Applied symmetrically, one flaky call alongside a real regression would
+    silence the gate exactly when it matters most. Silence on a green run costs
+    a re-run; silence on a red one ships the regression.
+    """
+    revals = load_script("run-evals")
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(4))
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(
+        revals, "_judge_case",
+        lambda case, *a, **k: _row(case["id"],
+                                   "exhausted" if case["id"] == "c3" else None,
                                    score=0.10),
+    )
+
+    assert revals.run_scorecard(fail_below=0.8, suite="golden") == 1
+    out = capsys.readouterr().out
+    assert "\u274c FAIL" in out and "NO VERDICT" not in out
+    assert "Graded:          3 of 4" in out, "the partial basis must still be stated"
+
+
+def test_a_complete_run_gates_on_quality(monkeypatch, capsys) -> None:
+    """The narrowing must not swallow a real failure: with every case graded,
+    the score decides."""
+    revals = load_script("run-evals")
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: _cases(4))
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(
+        revals, "_judge_case",
+        lambda case, *a, **k: _row(case["id"], None, score=0.10),
     )
 
     assert revals.run_scorecard(fail_below=0.95, suite="golden") == 1
     out = capsys.readouterr().out
-    assert "❌ FAIL" in out
-    assert "Graded:          3 of 4" in out, "a partial average must say so"
+    assert "❌ FAIL" in out and "NO VERDICT" not in out
+    assert "Graded:" not in out, "a complete run needs no partial-basis caveat"
 
 
 def test_errored_cases_do_not_drag_the_average_down(monkeypatch, capsys) -> None:
