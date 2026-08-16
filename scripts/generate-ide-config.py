@@ -174,6 +174,66 @@ Emit OTel spans for every tool call, LLM invocation and file write to
 """
 
 
+def _render_copilot_instructions(rules: dict, stack: str, ctx: dict[str, str]) -> str:
+    """`.github/copilot-instructions.md` — repo-wide instructions for GitHub Copilot.
+
+    Deliberately the SHORT one. Copilot prepends this to requests rather than
+    reading it once at session start, so length is a recurring cost paid on every
+    completion, and a fourteen-pillar essay would crowd out the code the model is
+    supposed to be looking at. The pillars are compressed to their imperative —
+    the reasoning that makes AGENTS.md worth reading is exactly what does not
+    survive that budget.
+
+    That trade means Copilot gets the rules but not the arguments, so this file
+    points at AGENTS.md for anything a reader needs to weigh rather than obey.
+    """
+    lines = []
+    for p in rules.get("pillars", []):
+        # First sentence only: it carries the instruction, the rest carries the why.
+        first = " ".join(str(p["rule"]).split()).split(". ")[0].rstrip(".")
+        lines.append(f"- **{p['name']}**: {first}.")
+    stack_def = (rules.get("stacks") or {}).get(stack) or {}
+    stack_rules = "\n".join(f"- {r}" for r in stack_def.get("additional_rules", []))
+    return f"""<!-- Auto-generated from templates/agent-rules.yaml — do not edit directly. -->
+# Copilot instructions — {ctx["project_name"]}
+
+Follow these when suggesting or editing code in this repository. Full reasoning
+for each rule is in `AGENTS.md`; this file is the condensed form Copilot sees on
+every request.
+
+{chr(10).join(lines)}
+
+## {stack} specifics
+{stack_rules or "- (none for this stack)"}
+
+Tests: `{ctx["test_cmd"]}`
+"""
+
+
+def _render_gemini_md(rules: dict, stack: str, ctx: dict[str, str]) -> str:
+    """GEMINI.md — read by Gemini CLI at session start, like CLAUDE.md.
+
+    Full-length, same as AGENTS.md: this is loaded once per session rather than
+    per request, so the reasoning earns its tokens. Kept as its own renderer
+    rather than aliasing AGENTS.md because the session-start contract differs —
+    Gemini CLI resolves its tool names through this file, so the header says so
+    explicitly rather than leaving a Claude-shaped instruction to be guessed at.
+    """
+    body = _render_agents_md(rules, stack, ctx)
+    body = body.replace(
+        f'# AGENTS.md — {ctx["project_name"]}',
+        f'# GEMINI.md — {ctx["project_name"]}',
+        1,
+    )
+    return body.replace(
+        "These are the operating rules for any coding agent working in this repository.",
+        "These are the operating rules for any coding agent working in this repository.\n"
+        "Gemini CLI: tool names in these rules follow the Claude Code convention —\n"
+        "map them to your equivalents rather than skipping the rule.",
+        1,
+    )
+
+
 def _render_skill(skill: dict, rules: dict, ctx: dict[str, str]) -> str:
     pillar_by_id = {p["id"]: p for p in rules.get("pillars", [])}
     lines = [
@@ -299,6 +359,17 @@ def main() -> None:
         agents_md_path.write_text(_render_agents_md(rules, stack, ctx))
         print("✅ Written AGENTS.md (Codex / cross-tool) from agent-rules.yaml")
 
+    gemini_md_path = repo_root / "GEMINI.md"
+    if not gemini_md_path.exists():
+        gemini_md_path.write_text(_render_gemini_md(rules, stack, ctx))
+        print("✅ Written GEMINI.md (Gemini CLI) from agent-rules.yaml")
+
+    copilot_path = repo_root / ".github" / "copilot-instructions.md"
+    if not copilot_path.exists():
+        copilot_path.parent.mkdir(parents=True, exist_ok=True)
+        copilot_path.write_text(_render_copilot_instructions(rules, stack, ctx))
+        print("✅ Written .github/copilot-instructions.md from agent-rules.yaml")
+
     # Pillar 5 tells every agent to read this on session start. A fresh repo had
     # none, so the rule pointed at nothing — and a missing file reads as "no
     # history" rather than "not wired up yet".
@@ -335,6 +406,11 @@ def _check_drift(repo_root: Path, rules: dict, stack: str, ctx: dict[str, str]) 
         (repo_root / ".cursorrules", _render_cursorrules(rules, stack, ctx)),
         (repo_root / "CLAUDE.md", _render_claude_md(ctx)),
         (repo_root / "AGENTS.md", _render_agents_md(rules, stack, ctx)),
+        (repo_root / "GEMINI.md", _render_gemini_md(rules, stack, ctx)),
+        (
+            repo_root / ".github" / "copilot-instructions.md",
+            _render_copilot_instructions(rules, stack, ctx),
+        ),
     ]
     for skill in rules.get("skills", []):
         skill_path = repo_root / ".agents" / "skills" / skill["id"] / "skill.md"
