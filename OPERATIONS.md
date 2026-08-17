@@ -421,7 +421,7 @@ full rationale (why this is a separate file, not a Compose profile).
 
 A **tenant** is a customer application with its own independent repository,
 agents, eval suite, and deployment track (SPECS.md §23). New repos opt in
-automatically on `git init`; pre-existing/cloned repos opt in explicitly
+on the first `git checkout` of a fresh repo (git does not run the hook on `git init` itself); pre-existing/cloned repos opt in explicitly
 (`mkdir -p .agenticframework && touch .agenticframework/enabled`, then any
 checkout) — see README "Opt-in model".
 

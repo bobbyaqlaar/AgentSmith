@@ -148,7 +148,18 @@ git init
 git remote add origin https://github.com/org/my-project.git
 ```
 
-The `post-checkout` hook fires on `git init` and automatically:
+The `post-checkout` hook fires on `git checkout` and `git clone` — **not** on
+`git init`, because git does not run this hook for init. A brand-new project is
+provisioned by opting in once and checking out:
+
+```bash
+git init && git add -A && git commit -m "init"
+mkdir -p .agenticframework && touch .agenticframework/enabled
+git checkout .          # hook fires here
+```
+
+The hook prints these instructions itself when it declines to provision. Once
+opted in, it automatically:
 - Creates `.agent-rfc/` and `.agent-rfc/fixtures/`
 - Writes `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.agents/skills/`, and seeds `.agent-history.log`
 - Detects your stack (TypeScript/React, Python/FastAPI, Go, or Generic)

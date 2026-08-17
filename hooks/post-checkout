@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # AgentSmith: post-checkout
 # Provisions IDE rules, Antigravity skills, CI workflows, Knowledge Graph.
-# Fires on: git init, git checkout, git clone
+# Fires on: git checkout, git clone. NOT on `git init` — git does not run
+# post-checkout for init, so the no-HEAD branch below is reached via the
+# first checkout of a fresh repo, not at init time. A new project is
+# provisioned by opting in and running `git checkout .` (see the gate
+# message), or by `ai-tenant-init`.
 
 if [ "${DISABLE_AI_STACK:-false}" = "true" ]; then exit 0; fi
 
