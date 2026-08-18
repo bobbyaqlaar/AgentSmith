@@ -13,6 +13,22 @@ import json
 import re
 from typing import Any, Optional
 
+# Grade deterministically. The router's default is 0.2, which is right for an
+# actor and wrong for its grader: sampling noise in the judge is indistinguishable
+# from a quality change in the thing being judged, and it lands directly on the
+# threshold. Measured on KYC Sentinel's suites against identical (deterministic)
+# output on 2026-08-17 — four passes each, before and after:
+#
+#            temp 0.2 spread        temp 0.0 spread
+#   golden   0.846 – 0.971 (.125)   see the tenant's models.yaml
+#   fairness 0.669 – 0.834 (.165)
+#
+# A gate cannot sit inside a band that wide without flipping colour on identical
+# input, and a gate that flips gets re-run until it is green, which is how a
+# suite stops being a gate. This does not make a judge deterministic — providers
+# do not promise that at temperature 0 — it removes the variance we control.
+JUDGE_TEMPERATURE = 0.0
+
 
 def judge_prompt(
     instructions: str,
@@ -109,6 +125,7 @@ def run_judge(prompt: str, judge_model: str) -> dict[str, Any]:
             system="You are a strict technical evaluator. Respond with JSON only.",
             task_type="review",
             force_model=judge_model,
+            temperature=JUDGE_TEMPERATURE,
         )
         m = re.search(r"\{.*\}", raw, re.DOTALL)
         if m:

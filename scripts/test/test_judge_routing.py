@@ -224,6 +224,40 @@ def _fake_call(monkeypatch, reply: str) -> None:
     monkeypatch.setattr(cost_router, "call", lambda *a, **k: reply)
 
 
+def test_the_judge_grades_at_temperature_zero(monkeypatch) -> None:
+    """The router's default is 0.2, which is right for an actor and wrong for
+    its grader: sampling noise in the judge is indistinguishable from a quality
+    change in the thing being judged, and it lands on the threshold.
+
+    Measured on KYC Sentinel's suites on 2026-08-17, four passes each against
+    identical deterministic output — only the grader varied:
+
+        golden    0.846 – 0.971 (spread .125) at 0.2  →  spread .076 at 0.0
+        halluc.   0.883 – 0.945 (spread .062) at 0.2  →  spread .055 at 0.0
+
+    A gate cannot sit inside a band that wide without changing colour on
+    unchanged input, and a gate that flips gets re-run until it is green.
+
+    This asserts the argument is actually passed. The call site omitted it for
+    the framework's whole history and silently took the actor default, which is
+    exactly the kind of omission that leaves no trace in any output.
+    """
+    import cost_router
+    import eval_judge
+
+    seen: dict = {}
+
+    def _capture(*args, **kwargs):
+        seen.update(kwargs)
+        return '{"correctness": 1, "tool_accuracy": 1, "score": 1.0}'
+
+    monkeypatch.setattr(cost_router, "call", _capture)
+    eval_judge.run_judge("prompt", "some-judge")
+
+    assert "temperature" in seen, "the judge must not inherit the actor default"
+    assert seen["temperature"] == 0.0
+
+
 def test_an_empty_verdict_is_reported_as_a_judge_error(monkeypatch) -> None:
     """falcon3:3b — the framework's DEFAULT judge — returns an empty string to
     a JSON-only scoring prompt (verified against a local Ollama with the model
