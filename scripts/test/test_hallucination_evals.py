@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -78,10 +79,19 @@ def test_hallucination_base_fixture_has_grounded_cases() -> None:
     path = ROOT / "fixtures" / "hallucination_evals_base.json"
     assert path.exists(), "hallucination_evals_base.json must exist"
     cases = json.loads(path.read_text())
-    assert len(cases) == 4
     for case in cases:
         for key in REQUIRED_HALLUCINATION_CASE_KEYS:
             assert key in case
+    # Asserting a COUNT here just tripped every time a case was added, which
+    # trains you to bump the number rather than ask what changed. The properties
+    # that matter are that clean cases exist to measure false positives, and
+    # that at least one planted case exists to prove the suite can detect
+    # anything at all.
+    assert any(not c.get("expect_hallucination") for c in cases), "no clean cases"
+    assert any(c.get("expect_hallucination") for c in cases), (
+        "base fixture has no positive control — a suite of only-clean cases can "
+        "score a perfect flagged-claim rate while detecting nothing"
+    )
 
 
 def test_hallucination_suite_paths_use_agent_rfc_fixtures() -> None:
@@ -101,7 +111,7 @@ def test_hallucination_suite_paths_use_agent_rfc_fixtures() -> None:
 def test_load_hallucination_cases_falls_back_to_base_fixture() -> None:
     revals = load_script("run-evals")
     cases = revals._load_cases("hallucination")
-    assert len(cases) == 4
+    assert cases, "fallback returned nothing"
     assert all(case["id"].startswith("halluc_") for case in cases)
     assert all(case.get("score_hallucination") is True for case in cases)
 
@@ -245,3 +255,109 @@ def test_the_ghost_citation_case_is_still_catchable() -> None:
                 f"{case['id']}: retrieved_context cites {doc['id']}, which is not in the "
                 "corpus — context must come from retrieval, never from the agent's output"
             )
+
+
+# ── The suite needs a positive control, and must gate on it ──────────────────
+
+
+def _h_row(case_id, hallucination, expect=False):
+    row = {
+        "case_id": case_id, "score": 1.0, "correctness": 1, "tool_accuracy": 1,
+        "latency_ms": 0, "quality_notes": "", "judged_by": "j", "error": None,
+        "hallucination": hallucination,
+    }
+    if expect:
+        row["expect_hallucination"] = True
+    return row
+
+
+def test_a_planted_case_is_not_counted_as_a_false_positive() -> None:
+    """Flagging a planted hallucination is the CORRECT outcome. Counting it in
+    the flagged-claim rate would mean a positive control could never be added
+    without failing the gate it exists to strengthen — one planted case in six
+    scores 0.167 against a 0.05 ceiling."""
+    revals = load_script("run-evals")
+    rows = [_h_row("clean1", 0.0), _h_row("clean2", 0.0),
+            _h_row("ghost", 1.0, expect=True)]
+    assert revals.hallucination_flag_rate(rows) == 0.0
+
+
+def test_a_missed_planted_hallucination_fails_the_suite(monkeypatch, capsys) -> None:
+    """The point of the control: if the judge cannot spot a citation to a
+    document that was never retrieved, the suite's clean results carry no
+    information."""
+    revals = load_script("run-evals")
+    cases = [{"id": "clean", "input": "x", "score_hallucination": True},
+             {"id": "ghost", "input": "x", "score_hallucination": True,
+              "expect_hallucination": True},
+             {"id": "clean2", "input": "x", "score_hallucination": True}]
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(
+        revals, "_judge_case",
+        lambda case, *a, **k: _h_row(case["id"], 0.0,
+                                     expect=bool(case.get("expect_hallucination"))),
+    )
+
+    assert revals.run_scorecard(fail_below=0.5, suite="hallucination") == 1
+    out = capsys.readouterr().out
+    assert "Detection miss:" in out
+    assert "went undetected" in out
+
+
+def test_a_detected_planted_hallucination_passes(monkeypatch, capsys) -> None:
+    revals = load_script("run-evals")
+    cases = [{"id": "clean", "input": "x", "score_hallucination": True},
+             {"id": "ghost", "input": "x", "score_hallucination": True,
+              "expect_hallucination": True},
+             {"id": "clean2", "input": "x", "score_hallucination": True}]
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(
+        revals, "_judge_case",
+        lambda case, *a, **k: _h_row(
+            case["id"], 1.0 if case.get("expect_hallucination") else 0.0,
+            expect=bool(case.get("expect_hallucination"))),
+    )
+
+    assert revals.run_scorecard(fail_below=0.5, suite="hallucination") == 0
+    out = capsys.readouterr().out
+    assert "Detection miss:  0.000" in out
+    assert "Hallucination:   0.000" in out, "the planted flag is not a false positive"
+
+
+def test_a_suite_with_no_positive_control_says_so(monkeypatch, capsys) -> None:
+    """"Detected everything" and "was never asked to detect anything" must not
+    both render as a clean 0.000 — that is how a suite of only-clean cases reads
+    as proof it can catch something."""
+    revals = load_script("run-evals")
+    cases = [{"id": f"c{i}", "input": "x", "score_hallucination": True} for i in range(3)]
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(revals, "_judge_case",
+                        lambda case, *a, **k: _h_row(case["id"], 0.0))
+
+    revals.run_scorecard(fail_below=0.5, suite="hallucination")
+    assert "no positive control" in capsys.readouterr().out
+
+
+def test_the_tenant_suite_actually_has_a_positive_control() -> None:
+    """Guards the regression this whole change addresses: the suite shipped for
+    weeks measuring only false positives."""
+    import json
+    from pathlib import Path
+
+    fixture = (Path(__file__).resolve().parents[3] / "KYC_Sentinel"
+               / ".agent-rfc/fixtures/hallucination_evals.json")
+    if not fixture.exists():
+        return
+    cases = json.loads(fixture.read_text())
+    planted = [c for c in cases if c.get("expect_hallucination")]
+    assert planted, "hallucination suite has no case that SHOULD be flagged"
+    for c in planted:
+        ctx_ids = {d["id"] for d in c.get("retrieved_context") or []}
+        cited = set(re.findall(r"policy-\d+", c["actual_output"]))
+        assert cited - ctx_ids, (
+            f"{c['id']}: every cited policy is in retrieved_context, so there is "
+            "nothing ungrounded to detect — the control cannot fail"
+        )

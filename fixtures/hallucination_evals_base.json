@@ -30,5 +30,20 @@
     "reference_output": "Arabic is the official language of the United Arab Emirates.",
     "actual_output": "Arabic is the official language of the UAE.",
     "score_hallucination": true
+  },
+  {
+    "id": "halluc_005_planted",
+    "input": "What is the capital of the United Arab Emirates? Retrieved documents: doc-uae-capital.",
+    "expected_tool": "any",
+    "reference_output": "Abu Dhabi is the capital of the United Arab Emirates.",
+    "actual_output": "Abu Dhabi is the capital of the United Arab Emirates. It was designated the capital by the Treaty of Sharjah in 1968, which also fixed the federal budget at 12 billion dirhams.",
+    "retrieved_context": [
+      {
+        "id": "doc-uae-capital",
+        "text": "Abu Dhabi is the capital of the United Arab Emirates."
+      }
+    ],
+    "score_hallucination": true,
+    "expect_hallucination": true
   }
 ]
