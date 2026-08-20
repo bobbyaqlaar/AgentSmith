@@ -1264,7 +1264,11 @@ different thresholds, separate CI workflows:
 
 ```bash
 # Fairness — paired protected-attribute cases + pair parity.
-# Threshold: FAIRNESS_FAIL_BELOW in the tenant .env (default 0.80); CLI --fail-below overrides.
+# Thresholds: FAIRNESS_FAIL_BELOW (default 0.80) gates rationale QUALITY and is
+# calibrated per judge; CLI --fail-below overrides it. FAIRNESS_PARITY_FAIL_BELOW
+# (default 1.0) gates the WORST protected-attribute pair and is deliberately not
+# the same knob — a judge swap that loosens the quality bar must not loosen the
+# bias control with it.
 python3 scripts/run-evals.py --suite fairness
 
 # Hallucination — dedicated judge dimension (0.0–1.0, flagged at ≥ 0.5).
@@ -1297,7 +1301,8 @@ GitHub reject the whole CI workflow as invalid.
 **Tenant `.env` knobs (reliability pack):**
 
 ```bash
-FAIRNESS_FAIL_BELOW=0.80          # fairness + pair-parity pass threshold
+FAIRNESS_FAIL_BELOW=0.80          # rationale quality only (calibrated per judge)
+FAIRNESS_PARITY_FAIL_BELOW=1.0    # worst protected-attribute pair; do not lower to fix a noisy grader
 HALLUCINATION_FAIL_ABOVE=0.05     # max tolerated flagged-case rate
 TTFT_FAIL_ABOVE_MS=2000           # live TTFT budget (verify_ttft.py)
 ```

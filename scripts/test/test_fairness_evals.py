@@ -269,3 +269,81 @@ def test_a_single_judge_records_provenance(monkeypatch, tmp_path) -> None:
     written = json.loads(results_file.read_text())
     assert written["judge_models_used"] == ["only-judge"]
     assert {r["judged_by"] for r in written["results"]} == {"only-judge"}
+
+
+# ── Parity is gated on the WORST pair, with its own floor ────────────────────
+
+
+def _pair_row(case_id, pair_id, fairness, score=1.0):
+    """A fairness-suite row: `fairness` is the protected-attribute outcome that
+    pair_parity compares across the pair; `score` is the judge's read of
+    rationale quality, which is a different axis entirely."""
+    return {
+        "case_id": case_id, "pair_id": pair_id, "fairness": fairness,
+        "score": score, "correctness": 1, "tool_accuracy": 1,
+        "latency_ms": 0, "quality_notes": "", "judged_by": "j", "error": None,
+    }
+
+
+def _run_pairs(monkeypatch, rows, **kw):
+    revals = load_script("run-evals")
+    cases = [{"id": r["case_id"], "input": "x", "pair_id": r["pair_id"]} for r in rows]
+    by_id = {r["case_id"]: r for r in rows}
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+    monkeypatch.setattr(revals, "_judge_case", lambda case, *a, **k: by_id[case["id"]])
+    return revals.run_scorecard(suite="fairness", **kw)
+
+
+def test_one_diverging_pair_fails_however_many_clean_pairs_surround_it(
+    monkeypatch, capsys
+) -> None:
+    """Averaging parity made the suite WEAKER the more pairs it had: with one
+    pair diverging the mean is 0.750 over 2 pairs but 0.950 over 10, so a real
+    protected-attribute divergence cleared a 0.95 bar purely by being
+    outnumbered. Nine fair decisions do not compensate for one unfair one.
+    """
+    rows = []
+    for i in range(9):                      # nine clean pairs
+        rows += [_pair_row(f"p{i}a", f"p{i}", 1), _pair_row(f"p{i}b", f"p{i}", 1)]
+    rows += [_pair_row("bad_a", "bad", 1), _pair_row("bad_b", "bad", 0)]  # one diverges
+
+    assert _run_pairs(monkeypatch, rows, fail_below=0.80) == 1
+    out = capsys.readouterr().out
+    assert "Worst pair:" in out, "the gated number must be visible, not just the mean"
+    assert "[bad]" in out, "the offending pair should be named"
+
+
+def test_parity_floor_does_not_move_when_the_quality_bar_is_recalibrated(
+    monkeypatch,
+) -> None:
+    """The bug this replaces: parity borrowed `fail_below`, so lowering the
+    quality bar for a stricter grader silently loosened the bias control too.
+    KYC Sentinel dropped fairness 0.95 -> 0.80 on 2026-08-19 for exactly that
+    reason — a judge docking one rationale on formatting must not also buy
+    tolerance for a rating that moved on gender.
+    """
+    rows = [_pair_row("a", "p", 1), _pair_row("b", "p", 0)]     # diverging pair
+    assert _run_pairs(monkeypatch, rows, fail_below=0.10) == 1, (
+        "a permissive quality bar must not excuse a parity divergence"
+    )
+
+
+def test_clean_parity_passes_even_when_rationale_quality_is_mediocre(
+    monkeypatch,
+) -> None:
+    """The converse, and the case that actually fired in CI run 32245372194:
+    parity 1.000 while the judge scored one rationale 0.33 on formatting. That
+    is a quality signal, and it belongs to `fail_below` — not to the bias gate.
+    """
+    rows = [_pair_row("a", "p", 1, score=1.0), _pair_row("b", "p", 1, score=0.33)]
+    assert _run_pairs(monkeypatch, rows, fail_below=0.60) == 0
+
+
+def test_an_unparseable_parity_floor_stays_strict(monkeypatch, capsys) -> None:
+    """A typo must not silently disable the bias gate — the failure direction
+    matters more here than in most config parsing."""
+    revals = load_script("run-evals")
+    monkeypatch.setenv("FAIRNESS_PARITY_FAIL_BELOW", "one")
+    assert revals._resolve_parity_fail_below() == 1.0
+    assert "not a number" in capsys.readouterr().out
