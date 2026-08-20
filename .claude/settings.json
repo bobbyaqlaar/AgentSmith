@@ -2,14 +2,7 @@
   "commitCoAuthoredBy": false,
   "permissions": {
     "allow": [
-      "Bash(python3 -m pytest:*)",
-      "mcp__Claude_Browser__read_page",
-      "mcp__Claude_Browser__get_page_text",
-      "mcp__Claude_Browser__find",
-      "mcp__Claude_Browser__read_console_messages",
-      "mcp__Claude_Browser__read_network_requests",
-      "mcp__Claude_Preview__preview_console_logs",
-      "mcp__Claude_Preview__preview_screenshot"
+      "Bash(python3 -m pytest:*)"
     ]
   }
 }
