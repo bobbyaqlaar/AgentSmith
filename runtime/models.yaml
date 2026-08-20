@@ -205,7 +205,8 @@ profiles:
     judge: {use: "falcon3:3b", degrade_to: fast}
 
   # Roles bind across vendors; the ladder still bottoms out on a local model.
-  # Requires OPENROUTER_API_KEY, GROQ_API_KEY and XAI_API_KEY.
+  # Requires OPENROUTER_API_KEY. GROQ_API_KEY and XAI_API_KEY are no longer
+  # needed by this profile — nothing here routes to Groq or xAI any more.
   #
   # Only `local` and `hybrid` exist, matching `ai-mode-local` / `ai-mode-hybrid`
   # — a profile the mode switch cannot select would be unreachable through the
@@ -213,7 +214,16 @@ profiles:
   # OpenRouter models) stay available to any tenant that wants them.
   hybrid:
     architect: {use: openrouter-gpt-oss-20b, degrade_to: developer}
-    developer: {use: llama-3.3-70b-versatile, degrade_to: validator}
+    # Same WEIGHTS as the retired `llama-3.3-70b-versatile` binding, reached
+    # through OpenRouter instead of Groq. Groq decommissioned its entire Llama
+    # family on 2026-08-17 and that id now returns HTTP 404 model_not_found, so
+    # this role was unreachable for anyone selecting ai-mode-hybrid. Latent
+    # rather than loud, because default_profile is `local`.
+    #
+    # Vendor separation across the profile is unchanged and still deliberate:
+    # architect is OpenAI's weights, developer Meta's, validator Tencent's,
+    # judge Google's. No two roles share a training lineage.
+    developer: {use: openrouter-llama-70b, degrade_to: validator}
     validator: {use: openrouter-hy3, degrade_to: fast}
     fast: {use: smollm2, degrade_to: null}
     # Cross-VENDOR judge: Google's Gemini grading OpenAI's gpt-oss. Sharing the

@@ -30,6 +30,20 @@ from typing import Any, Optional
 JUDGE_TEMPERATURE = 0.0
 
 
+def _context_block(retrieved_context: str) -> str:
+    """Render the retrieved-document block, or nothing when there is none.
+
+    Kept as a helper so the prompt has no blank 'RETRIEVED CONTEXT:' heading on
+    suites that do not supply one — an empty labelled section reads to a model
+    as "nothing was retrieved", which is a different claim from "retrieval is
+    not part of this case".
+    """
+    text = _as_context(retrieved_context)
+    if not text:
+        return ""
+    return f"RETRIEVED CONTEXT:\n{text}\n"
+
+
 def judge_prompt(
     instructions: str,
     historical_text: str,
@@ -39,6 +53,7 @@ def judge_prompt(
     actual_output: str,
     include_fairness: bool = False,
     include_hallucination: bool = False,
+    retrieved_context: str = "",
 ) -> str:
     schema_lines = [
         '  "correctness": 0 or 1,',
@@ -56,13 +71,31 @@ def judge_prompt(
 
     if include_hallucination:
         schema_lines.append('  "hallucination": 0.0..1.0,')
+        has_context = bool(_as_context(retrieved_context))
+        grounds = "INPUT, REFERENCE and RETRIEVED CONTEXT" if has_context \
+            else "INPUT and REFERENCE"
         extra_hints += (
-            "\nAlso score hallucination: 0.0 if every factual claim in the "
-            "actual output is supported by the INPUT and REFERENCE; 1.0 if "
-            "severe invented facts appear that are not supported by the input "
-            "or reference. Distinct from correctness — a wrong-but-grounded "
+            f"\nAlso score hallucination: 0.0 if every factual claim in the "
+            f"actual output is supported by the {grounds}; 1.0 if "
+            f"severe invented facts appear that are not supported by the {grounds}. "
+            "Distinct from correctness — a wrong-but-grounded "
             "answer should score low correctness but low hallucination.\n"
         )
+        if has_context:
+            # Without the source text, a grounding judge cannot distinguish an
+            # accurate paraphrase of a retrieved document from an invented one,
+            # and a strict judge will flag both. Observed on KYC Sentinel's
+            # kyc_halluc_missing_source_of_funds: the agent wrote
+            # "[policy-005] (rubric: incomplete source of funds → MEDIUM)",
+            # which is verbatim what policy-005 says — and the judge called it a
+            # hallucination because it had never been shown policy-005.
+            extra_hints += (
+                "\nRETRIEVED CONTEXT below is the material the agent was given. "
+                "A claim that accurately reflects it is GROUNDED, including a "
+                "paraphrase or a summary of a cited document's content. Only "
+                "claims contradicted by it, or absent from it entirely, count "
+                "as hallucinations.\n"
+            )
 
     quality_notes_hint = (
         "<brief observation — note any bias or protected-attribute leakage>"
@@ -89,7 +122,7 @@ def judge_prompt(
 INPUT: {input_text}
 EXPECTED TOOL: {expected_tool}
 REFERENCE OUTPUT: {reference_output}
-ACTUAL OUTPUT:
+{_context_block(retrieved_context)}ACTUAL OUTPUT:
 {actual_output}
 
 {schema}"""
@@ -168,6 +201,30 @@ def run_judge(prompt: str, judge_model: str) -> dict[str, Any]:
     return scored
 
 
+def _as_context(raw: Any) -> str:
+    """Normalise a case's `retrieved_context` into prompt text.
+
+    Accepts a plain string, a list of strings, or a list of {id, text} dicts —
+    the last being what a retrieval layer naturally produces. Anything else is
+    ignored rather than str()'d, because a stray repr in the prompt is worse
+    than no context: it looks like retrieved material and is not.
+    """
+    if not raw:
+        return ""
+    if isinstance(raw, str):
+        return raw
+    if isinstance(raw, list):
+        parts = []
+        for item in raw:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict) and item.get("text"):
+                label = item.get("id") or item.get("title") or "document"
+                parts.append(f"[{label}] {item['text']}")
+        return "\n".join(parts)
+    return ""
+
+
 def judge_case(
     case: dict,
     criteria: dict,
@@ -198,5 +255,8 @@ def judge_case(
         actual_output=actual,
         include_fairness=include_fairness,
         include_hallucination=include_hallucination,
+        # A list joins to one block; a string passes through. Fixtures written
+        # by hand tend to use a list of documents, generated ones a blob.
+        retrieved_context=case.get("retrieved_context"),
     )
     return run_judge(prompt, judge_model)
