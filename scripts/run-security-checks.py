@@ -15,10 +15,12 @@ if str(_SCRIPTS) not in sys.path:
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from security.registry import load_control_registry
-from security.report import ControlResult, write_evidence_pack
-from security.runners._shared import DECLARED_GAP, NOT_APPLICABLE
-from security.runners import RUNNERS
+# These must follow the sys.path insertion above — the `security` package lives
+# under scripts/, which is not importable until that runs.
+from security.registry import load_control_registry  # noqa: E402
+from security.report import ControlResult, write_evidence_pack  # noqa: E402
+from security.runners._shared import DECLARED_GAP  # noqa: E402
+from security.runners import RUNNERS  # noqa: E402
 
 Mode = Literal["smoke", "ci", "full"]
 

@@ -35,6 +35,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
+from runtime.security_paths import security_artefact_path
+
 
 class PromptGuardBlockedError(RuntimeError):
     """Raised when PROMPT_GUARD=strict and scan_prompt blocks the input."""
@@ -135,13 +137,7 @@ def is_enforcing(mode: Optional[str] = None) -> bool:
 
 
 def _denylist_path() -> Optional[Path]:
-    env = os.environ.get("PROMPT_DENYLIST_PATH", "").strip()
-    if env:
-        return Path(env)
-    candidate = Path(".agent-rfc") / "security" / "prompt_denylist.txt"
-    if candidate.exists():
-        return candidate
-    return None
+    return security_artefact_path("PROMPT_DENYLIST_PATH", "prompt_denylist.txt")
 
 
 def _load_denylist() -> list[str]:

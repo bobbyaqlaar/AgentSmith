@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import Any
 
 from security.registry import ControlSpec
@@ -10,7 +9,7 @@ from security.runners._shared import framework_root
 
 
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
-    root = framework_root(ctx)
+    framework_root(ctx)   # sys.path side effect; return value unused
 
     from runtime import moderation as mod
 

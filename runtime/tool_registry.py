@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, get_args, get_origin, get_type_hints
 
+from runtime.security_paths import security_artefact_path
+
 import yaml
 
 _PYTHON_TO_JSON: dict[type, str] = {
@@ -92,13 +94,7 @@ def load_allowlist(path: Path) -> set[str]:
 
 
 def default_allowlist_path() -> Optional[Path]:
-    env = os.environ.get("TOOL_ALLOWLIST_PATH", "").strip()
-    if env:
-        return Path(env)
-    candidate = Path(".agent-rfc") / "security" / "tool_allowlist.yaml"
-    if candidate.exists():
-        return candidate
-    return None
+    return security_artefact_path("TOOL_ALLOWLIST_PATH", "tool_allowlist.yaml")
 
 
 class ToolRegistry:

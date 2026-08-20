@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from typing import Any
 
 from security.registry import ControlSpec
@@ -15,7 +13,7 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     # flat — nothing does that (runtime modules import each other as
     # `runtime.X`), and a bare runtime/ on sys.path can shadow same-named
     # top-level modules. Vestigial from before the package rename.
-    root = framework_root(ctx)
+    framework_root(ctx)   # sys.path side effect; return value unused
 
     from runtime.input_guardrail import scrub_text
 

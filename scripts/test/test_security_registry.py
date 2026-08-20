@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from security.registry import load_control_registry, ControlSpec
+from security.registry import load_control_registry
 
 
 REPO = Path(__file__).resolve().parents[2]

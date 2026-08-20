@@ -446,6 +446,32 @@ def load_script(name: str, *, cache: bool = True) -> Any:
 # ── Tenant fixture paths ──────────────────────────────────────────────────────
 
 
+# Suite → the fixture files it uses. Lives here rather than in run-evals.py
+# because run-evals is not the only reader: promote-learning.py resolved the
+# same two paths by hardcoding "golden_evals.json" and
+# "custom_judge_criteria.json", so renaming a fixture in the table would have
+# left it silently writing to the old name. One table, one place to change.
+EVALS_FILE = {
+    "golden": "golden_evals.json",
+    "fairness": "fairness_evals.json",
+    "hallucination": "hallucination_evals.json",
+    "rag_poison": "rag_poison_evals.json",
+}
+BASE_FIXTURE = {
+    "fairness": "fairness_evals_base.json",
+    "hallucination": "hallucination_evals_base.json",
+    "rag_poison": "rag_poison_base.json",
+}
+RESULTS_FILE = {
+    "golden": "eval_results.json",
+    "fairness": "fairness_eval_results.json",
+    "hallucination": "hallucination_eval_results.json",
+    "adversarial": "adversarial_eval_results.json",
+    "rag_poison": "rag_poison_eval_results.json",
+}
+GOLDEN_CRITERIA_FILE = "custom_judge_criteria.json"
+
+
 def fixtures_path(name: str, *, mkdir: bool = False) -> Path:
     """`<repo>/.agent-rfc/fixtures/<name>`.
 

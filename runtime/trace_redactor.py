@@ -31,6 +31,8 @@ import re
 from pathlib import Path
 from typing import Optional
 
+from runtime.environment import get_environment
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -44,8 +46,6 @@ try:
 except ImportError:
     _HAS_OTEL = False
     _OTelSpanProcessor = object  # type: ignore
-
-from runtime.environment import get_environment
 
 # The span attribute set by runtime/llm_gateway.py and the agent scripts on
 # every span — the authoritative per-span tenant identity.
@@ -78,7 +78,7 @@ _PAYLOAD_ATTRIBUTES = {"input.value", "output.value"}
 # The shared version strips ALL non-digit separators (this module's old
 # copy stripped only spaces/hyphens — identical on today's
 # _CARD_CANDIDATE matches, divergent the moment that regex widens).
-from runtime.luhn import luhn_valid as _luhn_valid
+from runtime.luhn import luhn_valid as _luhn_valid  # noqa: E402 — sited beside the comment explaining the sharing
 
 
 def _redact_credit_cards(text: str) -> str:

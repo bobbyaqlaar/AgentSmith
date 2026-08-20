@@ -37,7 +37,7 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-from runtime.moderation import (  # noqa: F401 — re-export for tenants
+from runtime.moderation import (  # noqa: F401,E402 — re-export block, deliberately after the logger
     ModerationBlockedError,
     ModerationHookRequiredError,
     ModerationResult,

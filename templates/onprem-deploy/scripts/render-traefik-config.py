@@ -10,7 +10,6 @@ Run by scripts/up.sh before `docker compose up`. Output is gitignored —
 regenerated every run, never edited by hand.
 """
 
-import os
 import sys
 from pathlib import Path
 

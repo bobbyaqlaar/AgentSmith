@@ -26,15 +26,25 @@ from typing import Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-from _shared import _repo_root, _iso_now, fixtures_path  # noqa: E402
+from _shared import (  # noqa: E402
+    _repo_root,
+    _iso_now,
+    fixtures_path,
+    EVALS_FILE,
+    GOLDEN_CRITERIA_FILE,
+)
 
 
+# Resolved through the shared tables rather than literal filenames: these two
+# used to hardcode "golden_evals.json" and "custom_judge_criteria.json", so a
+# rename in run-evals' table would have left this script writing to the old
+# name — silently, since it creates what it cannot find.
 def _golden_path() -> Path:
-    return fixtures_path("golden_evals.json")
+    return fixtures_path(EVALS_FILE["golden"])
 
 
 def _criteria_path() -> Path:
-    return fixtures_path("custom_judge_criteria.json")
+    return fixtures_path(GOLDEN_CRITERIA_FILE)
 
 
 def _log_path() -> Path:

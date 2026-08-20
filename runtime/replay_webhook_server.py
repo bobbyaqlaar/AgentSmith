@@ -112,7 +112,6 @@ class ReplayWebhookHandler(BaseHTTPRequestHandler):
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from runtime.dead_letter import DeadLetterQueue
         from runtime.temporal_replay import make_temporal_replay_handler
-        from temporalio.client import Client  # type: ignore
 
         async def _connect():
             # runtime/temporal_client.connect owns the address default, the

@@ -96,7 +96,7 @@ def test_promote_marks_matching_log_entry_resolved(repo):
         "case:log", "in", "out", rerun_evals=False
     )
     assert result["hitl_entries_resolved"] == 1
-    updated = [json.loads(l) for l in log.read_text().splitlines() if l]
+    updated = [json.loads(line) for line in log.read_text().splitlines() if line]
     assert updated[0]["hitl_resolved"] is True and "hitl_resolved_by" in updated[0]
     assert updated[1]["hitl_resolved"] is False
     assert updated[2]["hitl_resolved"] is False

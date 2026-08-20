@@ -22,9 +22,9 @@ import re
 from collections.abc import Callable
 from typing import Any, Optional
 
-logger = logging.getLogger(__name__)
-
 from runtime.environment import get_environment
+
+logger = logging.getLogger(__name__)
 
 # ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,7 +50,7 @@ _CARD_CANDIDATE = re.compile(r"(?:\d[ -]?){13,19}")
 
 # Shared with trace_redactor.py — one Luhn implementation for both the
 # pre-call guard and the post-call redactor (ReviewFindings-2026-07-18 B1).
-from runtime.luhn import luhn_valid as _luhn_valid
+from runtime.luhn import luhn_valid as _luhn_valid  # noqa: E402 — sited beside the comment explaining the sharing
 
 
 def reset_input_guardrail() -> None:

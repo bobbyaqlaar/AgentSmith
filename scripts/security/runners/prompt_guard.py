@@ -13,7 +13,6 @@ reports "Met" while nothing is actually blocked in production
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from security.registry import ControlSpec
@@ -22,7 +21,7 @@ from security.runners._shared import framework_root, security_fixture
 
 
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
-    root = framework_root(ctx)
+    framework_root(ctx)   # sys.path side effect; return value unused
 
     from runtime.prompt_guard import is_enforcing, resolve_mode, scan_prompt
 

@@ -10,7 +10,6 @@ Uses Envoy's native `weighted_clusters` (canary split) and
 filter needed, both are core HTTP connection manager route fields.
 """
 
-import os
 import sys
 from pathlib import Path
 

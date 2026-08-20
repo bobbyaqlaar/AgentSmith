@@ -46,6 +46,9 @@ from _shared import (  # noqa: E402
     judge_model as _judge_model,
     rate_limiter_from_env,
     fixtures_path,
+    EVALS_FILE,
+    BASE_FIXTURE,
+    RESULTS_FILE,
 )
 
 
@@ -53,30 +56,10 @@ from _shared import (  # noqa: E402
 # to seed from when the tenant has none. Tables rather than parallel if-chains:
 # adding a suite previously meant editing four of them and it was easy to add
 # three and miss the fourth.
-_EVALS_FILE = {
-    "golden": "golden_evals.json",
-    "fairness": "fairness_evals.json",
-    "hallucination": "hallucination_evals.json",
-    "rag_poison": "rag_poison_evals.json",
-}
-_BASE_FIXTURE = {
-    "fairness": "fairness_evals_base.json",
-    "hallucination": "hallucination_evals_base.json",
-    "rag_poison": "rag_poison_base.json",
-}
-_RESULTS_FILE = {
-    "golden": "eval_results.json",
-    "fairness": "fairness_eval_results.json",
-    "hallucination": "hallucination_eval_results.json",
-    "adversarial": "adversarial_eval_results.json",
-    "rag_poison": "rag_poison_eval_results.json",
-}
-
-
 def _evals_path(suite: str = "golden") -> Path:
     if suite == "adversarial":
         return _repo_root() / ".agent-rfc" / "security" / "adversarial_evals.json"
-    name = _EVALS_FILE.get(suite, _EVALS_FILE["golden"])
+    name = EVALS_FILE.get(suite, EVALS_FILE["golden"])
     return fixtures_path(name)
 
 
@@ -92,16 +75,8 @@ def _criteria_path_for(suite: str = "golden") -> Path:
     return fixtures_path(name)
 
 
-def _golden_path() -> Path:
-    return _evals_path("golden")
-
-
-def _criteria_path() -> Path:
-    return _criteria_path_for("golden")
-
-
 def _results_path(suite: str = "golden") -> Path:
-    name = _RESULTS_FILE.get(suite, _RESULTS_FILE["golden"])
+    name = RESULTS_FILE.get(suite, RESULTS_FILE["golden"])
     return fixtures_path(name)
 
 
@@ -124,7 +99,7 @@ def _load_cases(suite: str = "golden") -> list[dict]:
     if not path.exists():
         # Fall back to the framework base seed when the tenant has no file of
         # its own, so a fresh tenant gates on something rather than skipping.
-        base_name = _BASE_FIXTURE.get(suite)
+        base_name = BASE_FIXTURE.get(suite)
         if base_name:
             base = Path(__file__).resolve().parent.parent / "fixtures" / base_name
             if base.exists():
@@ -150,10 +125,6 @@ def _load_adversarial_cases() -> list[dict]:
                 if "id" in row:
                     by_id[row["id"]] = row
     return list(by_id.values())
-
-
-def _load_golden_cases() -> list[dict]:
-    return _load_cases("golden")
 
 
 def _load_criteria(suite: str = "golden") -> dict:

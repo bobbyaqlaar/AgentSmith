@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
@@ -16,7 +15,7 @@ class _SmokeModel(BaseModel):
 
 
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
-    root = framework_root(ctx)
+    framework_root(ctx)   # sys.path side effect; return value unused
 
     from runtime.structured_output import StructuredOutputError, parse_llm_json
 
