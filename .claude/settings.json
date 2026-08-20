@@ -15,8 +15,6 @@
       "Bash(git worktree list:*)",
       "Bash(git remote -v:*)",
       "Bash(python3 -m pytest:*)",
-      "Bash(python3 -m ruff check:*)",
-      "Bash(ruff check:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh repo view:*)",
@@ -36,11 +34,17 @@
       "Bash(date:*)",
       "Bash(ps:*)",
       "Bash(which:*)",
-      "Bash(awk:*)",
       "Bash(sort:*)",
       "Bash(uniq:*)",
       "Bash(diff:*)",
-      "Bash(cmp:*)"
+      "Bash(cmp:*)",
+      "mcp__Claude_Browser__read_page",
+      "mcp__Claude_Browser__get_page_text",
+      "mcp__Claude_Browser__find",
+      "mcp__Claude_Browser__read_console_messages",
+      "mcp__Claude_Browser__read_network_requests",
+      "mcp__Claude_Preview__preview_console_logs",
+      "mcp__Claude_Preview__preview_screenshot"
     ]
   }
 }
