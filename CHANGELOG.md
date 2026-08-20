@@ -20,6 +20,48 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Evals — the judge now grades deterministically, and the suites can prove they fire
+
+Tenant-visible: two optional case fields, one new env var, and thresholds that
+must be re-measured if you change judge. Nothing breaks on upgrade, but a suite
+that never had a positive control will now say so instead of reporting 0.000.
+
+- **Judge temperature pinned to 0** (`scripts/eval_judge.py`). The call site
+  never passed one, so it inherited `cost_router`'s actor default of 0.2 for the
+  framework's entire history. Sampling noise in a grader is indistinguishable
+  from a quality change in the thing graded, and it lands on the threshold.
+  Measured against identical deterministic output, four passes: golden spread
+  0.125 → 0.076, hallucination 0.062 → 0.055.
+
+- **`retrieved_context` on a case** — the documents the agent was given, as a
+  string, a list of strings, or `{id, text}` objects. A grounding judge without
+  the source cannot distinguish an accurate paraphrase from an invention and a
+  strict judge flags both.
+
+- **`expect_hallucination` on a case**, plus a detection-miss gate. Marks a
+  positive control: excluded from the flagged-claim rate, and a miss fails the
+  run outright. Previously a suite of only-clean cases could report a perfect
+  rate while being unable to detect anything — "detected everything" and "was
+  never asked to detect anything" both rendered as 0.000. The base fixture gains
+  `halluc_005_planted` so every tenant inherits one.
+
+- **`FAIRNESS_PARITY_FAIL_BELOW`** (default 1.0). Pair parity previously borrowed
+  `fail_below`, which is calibrated per judge and expected to move — so
+  recalibrating the quality bar for a stricter grader silently loosened the bias
+  control too. Parity is also now gated on the **worst pair, not the mean**:
+  averaging made the suite weaker the more pairs it had, since one diverging pair
+  reads 0.750 over 2 pairs but 0.950 over 10, clearing a 0.95 bar by being
+  outnumbered.
+
+- `runtime/security_paths.py` — `security_artefact_path()`, shared by
+  `prompt_guard` and `tool_registry`, which had each implemented the same env-
+  override-then-convention lookup.
+
+- **`.claude/settings.json` allowlists read-only inspection commands**, so a
+  fresh clone stops prompting for `git status`, `ruff check` and `grep`.
+  Deliberately excludes `git -C:*` — 104 of 178 such invocations mutate, 16 of
+  them `git push`.
+
 ### Agent rules — four more pillars, three more targets
 
 The rules AgentSmith writes into coding agents grew from 10 pillars and 3

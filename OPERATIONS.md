@@ -1272,8 +1272,10 @@ different thresholds, separate CI workflows:
 python3 scripts/run-evals.py --suite fairness
 
 # Hallucination — dedicated judge dimension (0.0–1.0, flagged at ≥ 0.5).
-# Hard fail when flagged rate exceeds HALLUCINATION_FAIL_ABOVE (default 0.05);
-# CLI --hallucination-fail-above overrides.
+# TWO failure modes, measured separately:
+#   Hallucination:  false-positive rate — clean cases the judge flagged. Hard
+#                   fail above HALLUCINATION_FAIL_ABOVE (default 0.05).
+#   Detection miss: planted cases the judge FAILED to flag. Any miss fails.
 python3 scripts/run-evals.py --suite hallucination
 
 # TTFT — live Ollama smoke: streams a tiny prompt (default model falcon3:1b)
@@ -1281,6 +1283,35 @@ python3 scripts/run-evals.py --suite hallucination
 # Exit codes: 0 within budget · 1 over budget · 2 Ollama unreachable/no first token.
 python3 scripts/verify_ttft.py
 ```
+
+**Two case fields worth knowing, both optional:**
+
+`retrieved_context` — the documents the agent was given, as a string, a list of
+strings, or a list of `{id, text}`. Supply it whenever a case's rationale cites
+a source. A grounding judge without the source cannot tell an accurate
+paraphrase of a retrieved document from an invented one, and a strict judge
+flags both: KYC Sentinel's agent wrote `[policy-005] (rubric: incomplete source
+of funds → MEDIUM)`, which is verbatim what policy-005 says, and was scored
+hallucination=0.50 because the judge had never been shown policy-005.
+
+`expect_hallucination: true` — marks a POSITIVE CONTROL, a case whose output
+deliberately contains a defect. Such a case is excluded from the flagged-claim
+rate (being flagged is the correct outcome) and counted by the detection-miss
+rate instead. Without one, a suite measures false positives and nothing else —
+it can report a perfect flagged rate while being unable to detect a
+hallucination at all, and "detected everything" is then indistinguishable from
+"was never asked to detect anything". `run-evals.py` prints `Detection miss:
+n/a — no positive control in this suite` rather than a reassuring 0.000.
+
+A positive control cannot be pinned from the pipeline — its output must contain
+a defect the pipeline correctly never produces — so exempt it from any
+regenerate-the-fixtures tooling, or the next run will overwrite the planted
+defect with clean output and leave a control that passes and tests nothing.
+
+**Judge temperature** is pinned at 0 (`scripts/eval_judge.py: JUDGE_TEMPERATURE`).
+The router default of 0.2 is right for an actor and wrong for its grader:
+sampling noise in the judge is indistinguishable from a quality change in the
+thing being judged, and it lands directly on the threshold.
 
 **Fixtures:** tenant-local `.agent-rfc/fixtures/fairness_evals.json` /
 `hallucination_evals.json` (+ matching `*_judge_criteria.json`). Seed
