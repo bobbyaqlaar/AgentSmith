@@ -466,3 +466,44 @@ def test_an_errored_control_still_carries_its_expectation(monkeypatch) -> None:
     assert row.get("expect_hallucination") is True, (
         "an errored positive control must still be identifiable as a control"
     )
+
+
+def test_judge_case_row_contract_identity_survives_a_failed_verdict(monkeypatch) -> None:
+    """_judge_case builds every result row for every judged suite, and until
+    2026-08-21 no test called it — nine tests stubbed it out and asserted the
+    REPORTING logic against hand-built rows instead. The stub helper set
+    `expect_hallucination` unconditionally while production set it only inside
+    `if "hallucination" in scored`, so the fixture encoded the intended contract
+    and the code violated it. Those tests could not have failed.
+
+    The rule this pins down: a row carries two kinds of field, and they behave
+    oppositely when the judge fails.
+
+      IDENTITY  who the case is and what was expected of it. Comes from the
+                case dict, must survive regardless of outcome — the suite still
+                needs to know a control was a control when it could not grade.
+      VERDICT   what the judge said. Absent or zero when there is no verdict,
+                which is what `error` is for.
+
+    Group an identity field with the verdict fields and it disappears exactly
+    when something went wrong, which is when it matters most.
+    """
+    revals = load_script("run-evals")
+    import eval_judge
+    monkeypatch.setattr(eval_judge, "judge_case",
+                        lambda *a, **k: {"error": "boom", "score": 0.0,
+                                         "correctness": 0, "tool_accuracy": 0})
+    case = {"id": "c1", "input": "some input text", "expected_tool": "search",
+            "pair_id": "p1", "protected_attribute": "nationality",
+            "attribute_value": "SD", "expect_hallucination": True,
+            "actual_output": "out", "score_hallucination": True}
+    row = revals._judge_case(case, {"score_fairness": True, "score_hallucination": True},
+                             "j", project_response="out")
+
+    assert row.get("error"), "precondition: the judge call must have failed"
+    for field in ("case_id", "expected_tool", "pair_id", "protected_attribute",
+                  "attribute_value", "expect_hallucination"):
+        assert field in row, f"identity field {field!r} lost when the verdict failed"
+    # And the converse: a verdict field must NOT be invented out of nothing.
+    assert "hallucination" not in row, "no verdict means no hallucination score"
+    assert "fairness" not in row, "no verdict means no fairness score"
