@@ -123,7 +123,7 @@ Your role is to produce clean, production-ready code from the Architect's bluepr
 - Output code only. No explanations outside inline comments.
 - Handle all error paths explicitly — no empty catch blocks, no bare except clauses.
 - Every function must have a typed signature.
-- Follow the 10 pillars in .cursorrules exactly."""
+- Follow every pillar in .cursorrules exactly."""
 
 _VALIDATOR_SYSTEM = """You are the Validator agent in an AgentSmith pipeline.
 Your role is to review the Developer's code against the Architect's blueprint and the

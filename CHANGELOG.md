@@ -73,7 +73,7 @@ that never had a positive control will now say so instead of reporting 0.000.
 ### Agent rules — four more pillars, three more targets
 
 The rules AgentSmith writes into coding agents grew from 10 pillars and 3
-targets to **14 pillars and 6 targets**. Tenant-visible: every newly provisioned
+targets to **15 pillars and 6 targets**. Tenant-visible: every newly provisioned
 repo receives three additional files and four additional rules.
 
 - **`AGENTS.md` (Codex), `GEMINI.md` (Gemini CLI) and
@@ -102,7 +102,7 @@ repo receives three additional files and four additional rules.
   read it at session start; a fresh repo never had one.
 - `ai-stack-scrub` and the public-repo `.gitignore` offer now cover all six
   targets. The gitignore gap mattered: its rationale is that these files carry
-  system prompt content, and `AGENTS.md`/`GEMINI.md` carry all fourteen pillars in
+  system prompt content, and `AGENTS.md`/`GEMINI.md` carry all fifteen pillars in
   full — a user opting in to hide that would have committed three files carrying
   it. The Copilot path is scoped to the file, never the `.github` directory.
 - `.cursorrules` numbers the stack addendum from the pillar count instead of a

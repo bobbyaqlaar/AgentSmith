@@ -140,6 +140,24 @@ pillars:
       result, and regenerating one against another's shape silently changes what the
       suite measures while looking like routine maintenance.
 
+  - id: 15
+    name: Ambiguous Signals
+    rule: >
+      One value must not mean two things. A rate of 0.0, an empty list, a None,
+      a skip — each is routinely used both for "measured, all good" and for
+      "never measured", and the two are opposite. Whenever you return or print a
+      result, ask what it reads as when the check did not run: if that is
+      indistinguishable from success, it is a false green waiting to happen.
+      Report the states separately and name them — "0.000", "NOT MEASURED" and
+      "no control declared" are three different facts. Silence is not a safe
+      default either: a missing line reads as "did not apply". This is the same
+      failure as Gate Integrity seen from the reporting side, and it recurs
+      because each instance looks local — a green suite and a passing test can
+      both sit on top of a contract that is quietly wrong, so a review hunting
+      duplication or dead code will not find it. When you fix one, grep for the
+      pattern; the sibling instance usually exists already, sometimes with the
+      fix documented in another module.
+
 # ── Stack addenda ─────────────────────────────────────────────────────────────
 
 stacks:
