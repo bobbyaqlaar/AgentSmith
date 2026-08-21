@@ -440,3 +440,29 @@ def test_the_flag_rate_helper_returns_none_rather_than_zero() -> None:
     assert revals.hallucination_flag_rate([]) is None
     assert revals.hallucination_flag_rate([_h_row("g", 1.0, expect=True)]) is None
     assert revals.hallucination_flag_rate([_h_row("c", 0.0)]) == 0.0
+
+
+def test_an_errored_control_still_carries_its_expectation(monkeypatch) -> None:
+    """The flag is a property of the CASE. It was previously copied onto the row
+    only inside `if "hallucination" in scored`, which an errored judge call never
+    satisfies — so the control vanished from the count exactly when it mattered,
+    and the report claimed the suite had no control at all.
+
+    Guards the row-building contract directly, because the report-level test can
+    be satisfied by a row that happens to grade.
+    """
+    revals = load_script("run-evals")
+    monkeypatch.setattr(revals, "_judge_case_scored", None, raising=False)
+    import eval_judge
+    monkeypatch.setattr(eval_judge, "judge_case",
+                        lambda *a, **k: {"error": "Provider exhausted", "score": 0.0,
+                                         "correctness": 0, "tool_accuracy": 0})
+    row = revals._judge_case(
+        {"id": "ghost", "input": "x", "expect_hallucination": True,
+         "actual_output": "out", "score_hallucination": True},
+        {"score_hallucination": True}, "some-judge", project_response="out",
+    )
+    assert row.get("error"), "precondition: this row must represent a failed judge call"
+    assert row.get("expect_hallucination") is True, (
+        "an errored positive control must still be identifiable as a control"
+    )

@@ -418,12 +418,17 @@ def _judge_case(
         row["fairness"] = scored.get("fairness", 0)
     if "hallucination" in scored:
         row["hallucination"] = scored.get("hallucination", 0.0)
-        # Carry the case's EXPECTATION onto the row. Without it the suite can
-        # only count flags, and every flag looks like a false positive — which
-        # means a positive control (a case that SHOULD be flagged) cannot be
-        # added without failing the very gate it strengthens.
-        if case.get("expect_hallucination"):
-            row["expect_hallucination"] = True
+    # The expectation is a property of the CASE, not of the verdict, so it is
+    # set unconditionally — OUTSIDE the block above. It lived inside it until
+    # 2026-08-21, which meant an errored positive control carried no flag, the
+    # declared-control count read zero, and the report said "no positive control
+    # in this suite" for a suite that had one. Third instance of pillar 15's
+    # defect in three days, this time inside the fix for the second.
+    #
+    # Without the flag the suite can also only count flags as false positives,
+    # so a control cannot be added without failing the gate it strengthens.
+    if case.get("expect_hallucination"):
+        row["expect_hallucination"] = True
     if case.get("pair_id"):
         row["pair_id"] = case["pair_id"]
         row["protected_attribute"] = case.get("protected_attribute")
