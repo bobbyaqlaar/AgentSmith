@@ -53,6 +53,14 @@ that never had a positive control will now say so instead of reporting 0.000.
   reads 0.750 over 2 pairs but 0.950 over 10, clearing a 0.95 bar by being
   outnumbered.
 
+- **Eval reports distinguish "nothing wrong" from "nothing measured".** Both the
+  false-positive rate and the detection-miss rate returned a clean-looking 0.000
+  when they had no data. Found live in CI run 32459919051: the planted case
+  errored and the report printed `n/a — no positive control in this suite` while
+  the control sat in the fixture. A test had asserted the wrong contract
+  (`flag_rate([]) == 0.0`), which is why a code review that hunted duplication
+  and dead code did not find it — nothing looked broken.
+
 - `runtime/security_paths.py` — `security_artefact_path()`, shared by
   `prompt_guard` and `tool_registry`, which had each implemented the same env-
   override-then-convention lookup.

@@ -1276,6 +1276,13 @@ python3 scripts/run-evals.py --suite fairness
 #   Hallucination:  false-positive rate — clean cases the judge flagged. Hard
 #                   fail above HALLUCINATION_FAIL_ABOVE (default 0.05).
 #   Detection miss: planted cases the judge FAILED to flag. Any miss fails.
+#
+# Each reports THREE states, not two, because "all clean" and "never measured"
+# must not print alike:
+#   0.000                 measured, nothing wrong
+#   NOT MEASURED          no clean case got a verdict — ceiling not checked
+#   NOT GRADED            a positive control exists but errored
+#   n/a — no positive control in this suite
 python3 scripts/run-evals.py --suite hallucination
 
 # TTFT — live Ollama smoke: streams a tiny prompt (default model falcon3:1b)

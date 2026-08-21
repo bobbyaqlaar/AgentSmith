@@ -715,6 +715,13 @@ def run_scorecard(
     if hallucination_rate is not None and hallucination_limit is not None:
         print(f"  Hallucination:   {hallucination_rate:.3f}  (false positives)")
         print(f"  Hallucination ≤: {hallucination_limit:.2f}")
+    elif has_hallucination:
+        # Silence here would be worse than the old misleading 0.000: the reader
+        # sees no line at all and assumes the check simply did not apply.
+        print(
+            "  Hallucination:   NOT MEASURED — no clean case received a verdict, "
+            "so the false-positive ceiling was not checked"
+        )
     if hallucination_miss is not None:
         mark = "" if hallucination_miss == 0.0 else "  ❌ a planted hallucination went undetected"
         print(f"  Detection miss:  {hallucination_miss:.3f}  (planted cases missed){mark}")
@@ -906,7 +913,7 @@ def _missing_judge_credential() -> str | None:
     return None if os.environ.get(env_var, "").strip() else env_var
 
 
-def hallucination_flag_rate(rows: list[dict], flag_at: float = 0.5) -> float:
+def hallucination_flag_rate(rows: list[dict], flag_at: float = 0.5) -> Optional[float]:
     """FALSE-POSITIVE rate: flagged cases among those expected to be clean.
 
     Cases marked `expect_hallucination` are excluded — being flagged is the
@@ -920,7 +927,13 @@ def hallucination_flag_rate(rows: list[dict], flag_at: float = 0.5) -> float:
         and not r.get("expect_hallucination")
     ]
     if not scored:
-        return 0.0
+        # None, not 0.0. Zero flagged out of zero measured is not a clean
+        # result, and printing 0.000 says the suite looked and found nothing
+        # wrong. Reachable: if every clean case errors and only planted ones
+        # grade, there is nothing left to compute a false-positive rate over.
+        # Same defect as the detection-miss report on 2026-08-21 — a sentinel
+        # doing double duty for "all good" and "never measured".
+        return None
     flagged = sum(1 for r in scored if float(r["hallucination"]) >= flag_at)
     return flagged / len(scored)
 

@@ -25,8 +25,16 @@ REQUIRED_HALLUCINATION_CASE_KEYS = (
 
 
 def test_hallucination_flag_rate_empty():
+    """No rows means nothing was measured, which is NOT a clean rate.
+
+    This test previously asserted 0.0 and so locked the defect in place: zero
+    flagged out of zero measured printed as "Hallucination: 0.000", the same
+    reading a genuinely clean suite produces. A passing test around a wrong
+    contract is why the code review that hunted duplication and dead code did
+    not find this — nothing looked broken.
+    """
     revals = load_script("run-evals")
-    assert revals.hallucination_flag_rate([]) == 0.0
+    assert revals.hallucination_flag_rate([]) is None
 
 
 def test_hallucination_flag_rate_threshold():
@@ -397,3 +405,38 @@ def test_an_errored_positive_control_is_not_reported_as_absent(monkeypatch, caps
     assert "no positive control in this suite" not in out, (
         "an ungraded control must not read as an absent one"
     )
+
+
+def test_a_flag_rate_over_nothing_is_not_reported_as_clean(monkeypatch, capsys) -> None:
+    """Zero flagged out of zero measured is not a clean result. Reachable when
+    every clean case errors and only planted ones grade — the false-positive
+    rate then has nothing to average over, and 0.000 would say the suite looked
+    and found nothing wrong."""
+    revals = load_script("run-evals")
+    cases = [{"id": "c1", "input": "x", "score_hallucination": True},
+             {"id": "c2", "input": "x", "score_hallucination": True},
+             {"id": "ghost", "input": "x", "score_hallucination": True,
+              "expect_hallucination": True}]
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+
+    def _judge(case, *a, **k):
+        planted = bool(case.get("expect_hallucination"))
+        row = _h_row(case["id"], 1.0 if planted else 0.0, expect=planted)
+        if not planted:                      # every CLEAN case fails to grade
+            row["error"] = "Provider exhausted"
+            row.pop("hallucination", None)
+        return row
+
+    monkeypatch.setattr(revals, "_judge_case", _judge)
+    revals.run_scorecard(fail_below=0.5, suite="hallucination")
+    out = capsys.readouterr().out
+    assert "NOT MEASURED" in out
+    assert "Hallucination:   0.000" not in out, "no data must not print as a clean rate"
+
+
+def test_the_flag_rate_helper_returns_none_rather_than_zero() -> None:
+    revals = load_script("run-evals")
+    assert revals.hallucination_flag_rate([]) is None
+    assert revals.hallucination_flag_rate([_h_row("g", 1.0, expect=True)]) is None
+    assert revals.hallucination_flag_rate([_h_row("c", 0.0)]) == 0.0
