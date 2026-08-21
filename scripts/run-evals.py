@@ -596,6 +596,15 @@ def run_scorecard(
     )
     hallucination_rate = hallucination_flag_rate(results) if has_hallucination else None
     hallucination_miss = hallucination_miss_rate(graded) if has_hallucination else None
+    # Counted over ALL results, not just graded ones. A control that errored is
+    # a different state from a suite that never had one, and hallucination_miss
+    # returns None for both — so on 2026-08-21 a run whose planted case errored
+    # printed "no positive control in this suite" while the control sat right
+    # there in the fixture. That is the same conflation the feature exists to
+    # prevent, one level up.
+    declared_controls = (
+        sum(1 for r in results if r.get("expect_hallucination")) if has_hallucination else 0
+    )
     hallucination_limit = (
         _resolve_hallucination_fail_above(hallucination_fail_above)
         if has_hallucination
@@ -709,6 +718,11 @@ def run_scorecard(
     if hallucination_miss is not None:
         mark = "" if hallucination_miss == 0.0 else "  ❌ a planted hallucination went undetected"
         print(f"  Detection miss:  {hallucination_miss:.3f}  (planted cases missed){mark}")
+    elif declared_controls:
+        print(
+            f"  Detection miss:  NOT GRADED — {declared_controls} positive control(s) "
+            "errored, so this run proves nothing about detection"
+        )
     elif has_hallucination:
         print("  Detection miss:  n/a — no positive control in this suite")
     if observed_miss is not None and guard_limit is not None:

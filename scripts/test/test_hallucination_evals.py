@@ -361,3 +361,39 @@ def test_the_tenant_suite_actually_has_a_positive_control() -> None:
             f"{c['id']}: every cited policy is in retrieved_context, so there is "
             "nothing ungrounded to detect — the control cannot fail"
         )
+
+
+def test_an_errored_positive_control_is_not_reported_as_absent(monkeypatch, capsys) -> None:
+    """Three states, three messages. Seen live in CI run 32459919051: the
+    planted case errored, hallucination_miss_rate returned None because it has
+    no verdict to score, and the report printed "no positive control in this
+    suite" — while the control sat right there in the fixture.
+
+    That is the same conflation this feature exists to prevent, one level up:
+    "nothing to detect" and "could not check" must not read alike.
+    """
+    revals = load_script("run-evals")
+    # Three cases minimum, or the suite skips before it reaches the branch
+    # under test — which is itself worth knowing when writing these.
+    cases = [{"id": "clean", "input": "x", "score_hallucination": True},
+             {"id": "clean2", "input": "x", "score_hallucination": True},
+             {"id": "ghost", "input": "x", "score_hallucination": True,
+              "expect_hallucination": True}]
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {})
+
+    def _judge(case, *a, **k):
+        planted = bool(case.get("expect_hallucination"))
+        row = _h_row(case["id"], 0.0, expect=planted)
+        if planted:                       # the control itself could not be graded
+            row["error"] = "Provider exhausted"
+        return row
+
+    monkeypatch.setattr(revals, "_judge_case", _judge)
+    revals.run_scorecard(fail_below=0.5, suite="hallucination")
+    out = capsys.readouterr().out
+    assert "NOT GRADED" in out
+    assert "positive control(s) errored" in out
+    assert "no positive control in this suite" not in out, (
+        "an ungraded control must not read as an absent one"
+    )
