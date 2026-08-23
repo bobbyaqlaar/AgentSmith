@@ -185,6 +185,13 @@ def guard_suite(
     results = [getattr(revals, scorer)(c) for c in cases]
     miss = revals.miss_rate(results)
     limit = revals._resolve_fail_above(suite, None)
+    if miss is None:
+        # miss_rate returns None when it scored nothing — "zero misses out of
+        # zero cases" is not a clean guard result. Guarded above by the
+        # len(cases) < minimum check, so unreachable today; handled anyway
+        # because the alternative is a TypeError inside a SECURITY control, and
+        # because a control that measured nothing must never report pass.
+        return failed(control, f"{suite} scored no cases — nothing was probed")
     if miss > limit:
         return ControlResult(
             control_id=control.id,
