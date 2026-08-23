@@ -53,6 +53,14 @@ that never had a positive control will now say so instead of reporting 0.000.
   reads 0.750 over 2 pairs but 0.950 over 10, clearing a 0.95 bar by being
   outnumbered.
 
+- **`eval_results.json` gains `verdict`, and `passed` may be `null`.** A run that
+  reported NO VERDICT used to return before writing the artifact, leaving the
+  PREVIOUS run's file on disk with nothing marking it stale — so a consumer read
+  an old verdict as current. The artifact is now written on both paths;
+  `verdict` is `pass` / `fail` / `no_verdict`, and `passed` is `null` when the
+  run made no claim either way. **Anything consuming this file should treat a
+  missing or null `passed` as "not a pass" rather than falsy-as-fail.**
+
 - **Eval reports distinguish "nothing wrong" from "nothing measured".** Both the
   false-positive rate and the detection-miss rate returned a clean-looking 0.000
   when they had no data. Found live in CI run 32459919051: the planted case
