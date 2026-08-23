@@ -275,7 +275,7 @@ def score_rag_poison_case(case: dict) -> dict:
     }
 
 
-def miss_rate(rows: list[dict]) -> float:
+def miss_rate(rows: list[dict]) -> Optional[float]:
     """Fraction of scored rows that did not meet their expectation.
 
     Shared by the adversarial and rag_poison suites: both are deterministic
@@ -283,7 +283,12 @@ def miss_rate(rows: list[dict]) -> float:
     floor. One definition means the two cannot drift into counting differently.
     """
     if not rows:
-        return 0.0
+        # None, not 0.0. Zero misses out of zero cases is not a clean guard
+        # result. Currently unreachable — a fixture short of min_cases skips
+        # before scoring — but this is the exact shape that produced three
+        # separate false-clean reports in the judged suites, and "unreachable
+        # today" is not a property a refactor preserves.
+        return None
     misses = sum(1 for r in rows if not r.get("ok"))
     return misses / len(rows)
 
@@ -782,6 +787,12 @@ def run_scorecard(
     else:
         print("  Correctness:     n/a — no case was graded")
         print("  Tool accuracy:   n/a — no case was graded")
+    if suite == "fairness" and avg_parity is None:
+        # The three fairness lines below are omitted when nothing graded, which
+        # leaves the bias-control section of the report simply absent. The
+        # NO VERDICT banner covers it, but absence is a weak signal for the one
+        # control an auditor came to see.
+        print("  Pair parity:     NOT MEASURED — no pair received a verdict")
     if avg_fairness is not None:
         print(f"  Fairness:        {avg_fairness:.3f}")
     if avg_parity is not None:
@@ -813,6 +824,9 @@ def run_scorecard(
         )
     elif has_hallucination:
         print("  Detection miss:  n/a — no positive control in this suite")
+    if is_guard_suite and observed_miss is None:
+        label = "RAG poison" if suite == "rag_poison" else "Adv"
+        print(f"  {label} miss rate:   NOT MEASURED — no case was scored; the gate fails closed")
     if observed_miss is not None and guard_limit is not None:
         label = "RAG poison" if suite == "rag_poison" else "Adv"
         print(f"  {label} miss rate:   {observed_miss:.3f}")
