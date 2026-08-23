@@ -14,7 +14,7 @@
 
 import { headers } from "next/headers";
 
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, getAccessFromHeaderValues, type Access } from "@/lib/authz";
+import { ROLE_HEADER, TENANT_SCOPE_HEADER, getAccessFromHeaderValues, type Access } from "./authz";
 
 /**
  * Server-side only, and only behind middleware.ts: these headers are trusted

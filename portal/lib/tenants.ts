@@ -1,11 +1,12 @@
 // portal/lib/tenants.ts — tenant registry (SPECS.md §23, §26).
 
 import { getPool } from "./db";
+import type { Isolation } from "./isolation";
 
 export interface Tenant {
   tenantId: string;
   name: string;
-  isolation: "shared" | "dedicated";
+  isolation: Isolation;
   phoenixBaseUrl: string | null;
   budgetCapUsd: number | null;
   // URL only — never the secret. replay_webhook_secret is read-only-by-

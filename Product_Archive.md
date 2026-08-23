@@ -7,6 +7,35 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — portal review passes 2-3 (2026-08-24)
+
+Two further passes over `portal/` after the first slice. Four findings; the loop
+closed when a fresh sweep for the established patterns returned nothing.
+
+| # | Finding | Fix |
+|---|---|---|
+| G | `lib/tenants.ts` restated `"shared" \| "dedicated"` inline instead of importing the `Isolation` type that `lib/isolation.ts` exists to provide | imports the type |
+| H | The `Role` catalog was written three times in one file — the union, plus the same triple comparison in two functions | `ROLES` const, type derived, one `isValidRole` guard |
+| I | `getAccessForBasicAuthUser` was exported, called nowhere, and was `verifyBasicAuthCredentials` MINUS the password check — dead code in the shape someone reaches for by mistake | removed |
+| J | `record.password !== password` — the same timing leak as the bearer tokens, on a USER PASSWORD, in code the first pass did not reach | `constantTimeEquals`, and the comparison now runs even for an unknown user so a missing account and a wrong password take the same path |
+
+**`lib/constantTime.ts`** is a third small module rather than a function inside
+`bearerAuth.ts`, for the same reason `currentAccess` is not in `authz.ts`:
+`bearerAuth` imports `next/server`, and `authz` must stay framework-free so
+`test/authz.test.ts` can run under bare node.
+
+**Build-config fix found by the same test.** `npm test` ran without
+`ts-extension-loader.mjs` while `npm run test:db` used it, so `lib/authz.ts`
+could not import ANY relative module — which is why it had none, and why adding
+one broke the suite twice (first via `next/headers`, then via the `@/` alias,
+then via an extensionless relative path). The loader is now on both scripts and
+the convention is documented in `constantTime.ts`.
+
+**Also checked, no findings:** no auth-mode chrome in the UI; every remaining
+`catch` that returns a default is correct (`phoenix.checkPhoenixHealth` → false
+means unreachable, `sessionToken` → null fails closed); no other hand-written
+membership test over a fixed set; one unused export in 91.
+
 ## Completed — portal DRY/safety slice (2026-08-23)
 
 Multi-pass review of `portal/` against the DRY, quality/safety and architecture

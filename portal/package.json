@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AgentSmith Ops Portal — cross-tenant operations dashboard (SPECS.md §15, §26)",
+  "description": "AgentSmith Ops Portal \u2014 cross-tenant operations dashboard (SPECS.md \u00a715, \u00a726)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "node --experimental-strip-types scripts/migrate.ts",
-    "test": "node --experimental-strip-types test/authz.test.ts && node --experimental-strip-types test/phoenix.test.ts && node --experimental-strip-types test/ssoRevocation.test.ts",
+    "test": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/authz.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/phoenix.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/ssoRevocation.test.ts",
     "test:db": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/auditLog.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/dlqCostWidget.test.ts"
   },
   "dependencies": {

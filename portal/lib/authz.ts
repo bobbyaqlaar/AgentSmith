@@ -9,7 +9,19 @@
 // before setting its own; route handlers and pages must never read them from
 // anywhere except getAccess() below.
 
-export type Role = "viewer" | "operator" | "admin";
+// One catalog, type derived from it, one guard — the shape lib/isolation.ts
+// uses. The list was previously written out three times in this file: the union
+// here, and the same triple comparison in two separate functions below. A
+// fourth role meant editing three places, and missing one produced a role that
+// type-checks and is then silently downgraded to viewer at the header boundary.
+import { constantTimeEquals } from "./constantTime";
+
+export const ROLES = ["viewer", "operator", "admin"] as const;
+export type Role = (typeof ROLES)[number];
+
+export function isValidRole(value: unknown): value is Role {
+  return typeof value === "string" && (ROLES as readonly string[]).includes(value);
+}
 
 export interface Access {
   role: Role;
@@ -35,7 +47,7 @@ interface SsoUserRecord extends UserRecord {
 }
 
 function parseRole(value: unknown): Role {
-  if (value === "viewer" || value === "operator" || value === "admin") return value;
+  if (isValidRole(value)) return value;
   throw new Error(`invalid role "${String(value)}" — must be viewer, operator, or admin`);
 }
 
@@ -82,15 +94,15 @@ export function getSsoUsers(): SsoUserRecord[] {
   }));
 }
 
-export function getAccessForBasicAuthUser(username: string): Access | null {
-  const record = getBasicAuthUsers().find((u) => u.username === username);
-  if (!record) return null;
-  return { role: record.role, tenantScope: record.tenants };
-}
-
 export function verifyBasicAuthCredentials(username: string, password: string): Access | null {
   const record = getBasicAuthUsers().find((u) => u.username === username);
-  if (!record || record.password !== password) return null;
+  // Constant-time: this is a user password, and `!==` short-circuits on the
+  // first differing byte. Compare unconditionally even when the username is
+  // unknown, so a missing user and a wrong password take the same path — a
+  // fast "no such user" is a username oracle.
+  const expected = record?.password ?? "";
+  const ok = constantTimeEquals(expected, password);
+  if (!record || !ok) return null;
   return { role: record.role, tenantScope: record.tenants };
 }
 
@@ -132,6 +144,6 @@ export function canAdmin(access: Access): boolean {
 // and pages running behind middleware.ts — never expose these header names
 // to client code.
 export function getAccessFromHeaderValues(roleHeader: string | null, scopeHeader: string | null): Access {
-  const role = roleHeader === "viewer" || roleHeader === "operator" || roleHeader === "admin" ? roleHeader : "viewer";
+  const role: Role = isValidRole(roleHeader) ? roleHeader : "viewer";
   return { role, tenantScope: decodeTenantScopeHeader(scopeHeader) };
 }

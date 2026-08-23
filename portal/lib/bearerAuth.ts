@@ -12,7 +12,7 @@
 // role-based helper where a future reader would not expect it.
 
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
+import { constantTimeEquals } from "./constantTime";
 
 export interface BearerGateConfig {
   /** Env var holding the expected token, e.g. "OPS_PORTAL_SYNC_TOKEN". */
@@ -49,23 +49,4 @@ export function requireBearer(
   }
 
   return null;
-}
-
-/**
- * Constant-time string comparison.
- *
- * `!==` on a secret leaks its length and, in principle, its prefix through
- * response timing. The window is small over HTTP and this is not the most
- * likely way in — but a correct comparison costs one function and removes the
- * question entirely, which is the better trade for an auth path.
- *
- * timingSafeEqual throws when the buffers differ in length, so the length check
- * comes first. That check is itself variable-time and unavoidably leaks length;
- * it is the content that matters here.
- */
-function constantTimeEquals(a: string, b: string): boolean {
-  const bufA = Buffer.from(a, "utf8");
-  const bufB = Buffer.from(b, "utf8");
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
 }
