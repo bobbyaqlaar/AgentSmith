@@ -395,6 +395,13 @@ def _judge_case(
                 project_response = f"PIPELINE_ERROR: {exc}"
 
     elapsed_ms = int((time.monotonic() - start) * 1000)
+    # Whether the response was GENERATED or read from the fixture. The timer
+    # above wraps only the block that produces project_response, and the judge
+    # call is deliberately outside it — so for a pinned case this measures a
+    # dict lookup, not the system. Reporting that as "Avg latency: 0ms" reads as
+    # an instant system rather than an un-run one (pillar 15), which is exactly
+    # the claim someone points at in a demo.
+    pipeline_ran = not bool(case.get("actual_output")) and project_response is not None
 
     scored = _shared_judge_case(case, criteria, judge_model, project_response)
 
@@ -410,6 +417,7 @@ def _judge_case(
         # Which grader produced THIS verdict. A run-level judge_model records
         # only what the run was asked for; per-case provenance is what makes a
         # substitution visible in the stored artifact.
+        "pipeline_ran": pipeline_ran,
         "judged_by": scored.get("judged_by"),
         "judged_by_route": scored.get("judged_by_route"),
         "error": scored.get("error"),
@@ -576,11 +584,22 @@ def run_scorecard(
     # which is a worse failure than the one it fixes: a green gate that examined
     # almost nothing.
     graded = [r for r in results if not r.get("error")]
-    scored = graded or results          # avoid /0; unused when nothing graded
+    # Falls back to `results` only to avoid dividing by zero. The comment here
+    # used to claim these averages were "unused when nothing graded" — they were
+    # not: Correctness and Tool accuracy printed them unconditionally, so an
+    # all-errored run displayed 0.000 for both, which reads as "the system got
+    # every case wrong" rather than "no case was graded". The averages below are
+    # therefore printed only when something actually graded.
+    scored = graded or results
     avg_score = sum(r["score"] for r in scored) / len(scored)
     avg_correctness = sum(r["correctness"] for r in scored) / len(scored)
     avg_tool_acc = sum(r["tool_accuracy"] for r in scored) / len(scored)
-    avg_latency_ms = sum(r["latency_ms"] for r in scored) / len(scored)
+    # Averaged over rows whose response was actually generated. A pinned suite
+    # has none, and then the number measures fixture lookups.
+    timed = [r for r in scored if r.get("pipeline_ran")]
+    avg_latency_ms = (
+        sum(r["latency_ms"] for r in timed) / len(timed) if timed else None
+    )
     fairness_vals = [r["fairness"] for r in scored if "fairness" in r]
     avg_fairness = (
         sum(fairness_vals) / len(fairness_vals) if fairness_vals else None
@@ -658,6 +677,59 @@ def run_scorecard(
     # Ollama while still being reported under its own name.
     judge_routes = sorted({r["judged_by_route"] for r in results if r.get("judged_by_route")})
 
+    def _write_results(verdict: str, passed_value: Optional[bool]) -> None:
+        """Persist the scorecard artifact and say where it went.
+
+        Called on BOTH exit paths. This used to run only after the verdict
+        branches, so an early return left the PREVIOUS run's file on disk
+        with nothing marking it stale — and anything reading that JSON
+        (promotion tooling, the portal, a dashboard) saw an old verdict
+        presented as current. `verdict` records which path wrote it, and
+        `passed` is None when the run made no claim either way.
+        """
+        output = {
+            "timestamp": ts,
+            "suite": suite,
+            "cases_graded": len(graded),
+            "cases_total": len(results),
+            "project": project,
+            # The grader this run ASKED for. `judge_models_used` is what answered.
+            "judge_model": judge,
+            "judge_models_used": judges_used,
+            "judge_routes_used": judge_routes,
+            "criteria": criteria.get("name", "default"),
+            "total_cases": len(cases),
+            "avg_score": avg_score,
+            "avg_correctness": avg_correctness,
+            "avg_tool_accuracy": avg_tool_acc,
+            "avg_fairness": avg_fairness,
+            "pair_parity": parity,
+            "avg_pair_parity": avg_parity,
+            "avg_latency_ms": avg_latency_ms,
+            "threshold": fail_below,
+            "passed": passed_value,
+            "verdict": verdict,
+            "results": results,
+        }
+        if hallucination_rate is not None:
+            output["hallucination_flag_rate"] = hallucination_rate
+        if observed_miss is not None:
+            # Key kept as `adversarial_miss_rate` for both guard suites: the
+            # promotion loop and the security runner already read it by that name,
+            # and `suite` in the same artifact says which suite produced it.
+            output["adversarial_miss_rate"] = observed_miss
+            output["adversarial_fail_above"] = guard_limit
+        results_path = _results_path(suite)
+        results_path.parent.mkdir(parents=True, exist_ok=True)
+        with results_path.open("w") as fh:
+            json.dump(output, fh, indent=2)
+        try:
+            rel = results_path.relative_to(_repo_root())
+        except ValueError:
+            rel = results_path
+        print(f"\n  Results saved → {rel}")
+
+
     print("")
     print("─────────────────────────────────────────────")
     # An all-errored run is an infrastructure state, not a verdict — the gate
@@ -704,8 +776,12 @@ def run_scorecard(
             f"  Graded:          {len(graded)} of {len(results)} "
             f"({len(results) - len(graded)} errored — excluded from the averages)"
         )
-    print(f"  Correctness:     {avg_correctness:.3f}")
-    print(f"  Tool accuracy:   {avg_tool_acc:.3f}")
+    if graded:
+        print(f"  Correctness:     {avg_correctness:.3f}")
+        print(f"  Tool accuracy:   {avg_tool_acc:.3f}")
+    else:
+        print("  Correctness:     n/a — no case was graded")
+        print("  Tool accuracy:   n/a — no case was graded")
     if avg_fairness is not None:
         print(f"  Fairness:        {avg_fairness:.3f}")
     if avg_parity is not None:
@@ -741,26 +817,49 @@ def run_scorecard(
         label = "RAG poison" if suite == "rag_poison" else "Adv"
         print(f"  {label} miss rate:   {observed_miss:.3f}")
         print(f"  {label} miss ≤:      {guard_limit:.2f}")
-    print(f"  Avg latency:     {avg_latency_ms:.0f}ms")
+    if avg_latency_ms is not None:
+        print(f"  Avg latency:     {avg_latency_ms:.0f}ms  (response generation)")
+    else:
+        print(
+            "  Avg latency:     n/a — responses came from pinned fixtures, "
+            "so nothing was timed"
+        )
     print(f"  Threshold:       {fail_below:.2f}")
     print("─────────────────────────────────────────────")
 
-    # Every case errored => the judge was unreachable, not the app misbehaving.
-    # That is an infrastructure state (expired key, exhausted credit balance,
-    # provider outage) in the same class as the missing-credential preflight,
-    # and blocking merges on it reports a billing problem as a quality
-    # regression. Observed live: a credit-exhausted account returned
+    # An ungraded run is an infrastructure state (expired key, exhausted credit
+    # balance, provider outage) in the same class as the missing-credential
+    # preflight, and blocking merges on it reports a billing problem as a
+    # quality regression. Observed live: a credit-exhausted account returned
     # `400 invalid_request_error` on all 12 golden cases and failed the gate.
-    # Deliberately narrow — PARTIAL errors still fail, because a judge that
-    # answers some cases and not others may be signalling something real.
+    #
+    # TWO shapes reach here, and the message used to describe only the first:
+    #   nothing graded          the judge was unreachable
+    #   partial + would-pass    the quorum rule voids a pass built on a subset
+    # The old text said "no case received a verdict" on both, directly
+    # contradicting the "Graded: 3 of 12" line printed just above it. It also
+    # printed results[0]["error"], which on the partial path is a row that
+    # graded fine — hence a trailing "None" where the cause should be.
     if judge_unreachable:
+        first_error = next((r["error"] for r in results if r.get("error")), None)
+        if graded:
+            reason = (
+                f"graded {len(graded)} of {len(results)} — a pass needs every case, "
+                f"so this run makes no claim either way"
+            )
+        else:
+            reason = "no case received a verdict — the judge was unreachable"
         print(
-            f"\n  ⏭️  Skipping {suite} gate: no case received a verdict — the judge "
-            f"was unreachable.\n"
+            f"\n  ⏭️  Skipping {suite} gate: {reason}.\n"
             f"      This is an infrastructure failure, not a quality result, so it "
-            f"does not block.\n"
-            f"      {results[0]['error']}"
+            f"does not block."
+            + (f"\n      First error: {first_error}" if first_error else "")
         )
+        # Write the artifact on this path too. Returning early left the previous
+        # run's file on disk with no indication it was stale, so anything reading
+        # eval_results.json — promotion tooling, the portal, a dashboard — saw an
+        # old verdict presented as current.
+        _write_results(verdict="no_verdict", passed_value=None)
         return 0
 
     # A scorecard graded by two different models is not a scorecard. Scores are
@@ -838,46 +937,6 @@ def run_scorecard(
                 f"{observed_miss:.3f} > {guard_limit:.3f}"
             )
 
-    output = {
-        "timestamp": ts,
-        "suite": suite,
-        "cases_graded": len(graded),
-        "cases_total": len(results),
-        "project": project,
-        # The grader this run ASKED for. `judge_models_used` is what answered.
-        "judge_model": judge,
-        "judge_models_used": judges_used,
-        "judge_routes_used": judge_routes,
-        "criteria": criteria.get("name", "default"),
-        "total_cases": len(cases),
-        "avg_score": avg_score,
-        "avg_correctness": avg_correctness,
-        "avg_tool_accuracy": avg_tool_acc,
-        "avg_fairness": avg_fairness,
-        "pair_parity": parity,
-        "avg_pair_parity": avg_parity,
-        "avg_latency_ms": avg_latency_ms,
-        "threshold": fail_below,
-        "passed": passed,
-        "results": results,
-    }
-    if hallucination_rate is not None:
-        output["hallucination_flag_rate"] = hallucination_rate
-    if observed_miss is not None:
-        # Key kept as `adversarial_miss_rate` for both guard suites: the
-        # promotion loop and the security runner already read it by that name,
-        # and `suite` in the same artifact says which suite produced it.
-        output["adversarial_miss_rate"] = observed_miss
-        output["adversarial_fail_above"] = guard_limit
-    results_path = _results_path(suite)
-    results_path.parent.mkdir(parents=True, exist_ok=True)
-    with results_path.open("w") as fh:
-        json.dump(output, fh, indent=2)
-    try:
-        rel = results_path.relative_to(_repo_root())
-    except ValueError:
-        rel = results_path
-    print(f"\n  Results saved → {rel}")
 
     try:
         from notifier import notify_eval_result
@@ -886,6 +945,7 @@ def run_scorecard(
     except Exception:  # fail-open: desktop notification must not affect pass/fail
         pass
 
+    _write_results(verdict=("pass" if passed else "fail"), passed_value=passed)
     return 0 if passed else 1
 
 

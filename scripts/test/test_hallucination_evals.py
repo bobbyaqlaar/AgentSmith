@@ -507,3 +507,62 @@ def test_judge_case_row_contract_identity_survives_a_failed_verdict(monkeypatch)
     # And the converse: a verdict field must NOT be invented out of nothing.
     assert "hallucination" not in row, "no verdict means no hallucination score"
     assert "fairness" not in row, "no verdict means no fairness score"
+
+
+def test_judge_case_row_contract_full_row(monkeypatch) -> None:
+    """Every field _judge_case is responsible for, pinned in one place.
+
+    Split by where the value comes from, because that is what decides its
+    behaviour when something fails:
+
+      from the CASE     case_id, input, expected_tool, pair_id and friends
+      from the JUDGE    correctness, tool_accuracy, score, quality_notes,
+                        judged_by, judged_by_route, error
+      measured HERE     latency_ms
+    """
+    revals = load_script("run-evals")
+    import eval_judge
+    verdict = {"correctness": 1, "tool_accuracy": 1, "score": 0.75,
+               "quality_notes": "adequate", "judged_by": "judge-x",
+               "judged_by_route": "groq/judge-x", "error": None,
+               "fairness": 1, "hallucination": 0.25}
+    monkeypatch.setattr(eval_judge, "judge_case", lambda *a, **k: verdict)
+
+    long_input = "x" * 500
+    row = revals._judge_case(
+        {"id": "c9", "input": long_input, "expected_tool": "search",
+         "actual_output": "out", "pair_id": "p", "score_hallucination": True},
+        {"score_fairness": True, "score_hallucination": True}, "judge-x",
+        project_response="out",
+    )
+
+    assert row["case_id"] == "c9"
+    assert row["expected_tool"] == "search"
+    # Truncated deliberately: a results artifact that embeds full prompts grows
+    # without bound and leaks case content into a file people paste around.
+    assert len(row["input"]) == 120, "input must stay truncated in the stored row"
+    assert row["correctness"] == 1 and row["tool_accuracy"] == 1
+    assert row["score"] == 0.75 and isinstance(row["score"], float)
+    assert row["quality_notes"] == "adequate"
+    assert row["fairness"] == 1
+    assert row["hallucination"] == 0.25
+    # Per-case provenance, not a run-level field: a judge substituted mid-run is
+    # only visible if each verdict records who produced it and where it was served.
+    assert row["judged_by"] == "judge-x"
+    assert row["judged_by_route"] == "groq/judge-x"
+    assert row["error"] is None
+    assert isinstance(row["latency_ms"], int)
+
+
+def test_a_missing_verdict_field_defaults_rather_than_raising(monkeypatch) -> None:
+    """A judge that answers with a partial object must not crash the run — the
+    suite's job is to report a bad verdict, not to die on one."""
+    revals = load_script("run-evals")
+    import eval_judge
+    monkeypatch.setattr(eval_judge, "judge_case", lambda *a, **k: {})
+    row = revals._judge_case(
+        {"id": "c", "input": "x", "actual_output": "o"}, {}, "j", project_response="o")
+    assert row["correctness"] == 0 and row["tool_accuracy"] == 0
+    assert row["score"] == 0.0
+    assert row["quality_notes"] == ""
+    assert row["judged_by"] is None
