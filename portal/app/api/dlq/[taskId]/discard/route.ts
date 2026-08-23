@@ -3,13 +3,12 @@
 // it never needs to resume a live workflow.
 
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { getDlqEntry, discardDlqEntry } from "@/lib/dlq";
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, canAccessTenant, canWrite, getAccessFromHeaderValues } from "@/lib/authz";
+import { canAccessTenant, canWrite } from "@/lib/authz";
+import { currentAccess } from "@/lib/currentAccess";
 
 export async function POST(_request: Request, { params }: { params: { taskId: string } }) {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
   if (!canWrite(access)) {
     return NextResponse.json({ error: "operator or admin role required to discard DLQ entries" }, { status: 403 });
   }

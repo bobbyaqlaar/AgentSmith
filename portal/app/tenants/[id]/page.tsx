@@ -1,21 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { getTenant } from "@/lib/tenants";
 import { getTenantCost } from "@/lib/cost";
 import { getUnresolvedIssues } from "@/lib/issues";
 import { tenantTraceUrl, checkPhoenixHealth, getRecentTraceStats } from "@/lib/phoenix";
 import { getSuggestedPromotions } from "@/lib/promotions";
 import { CostChart } from "@/components/CostChart";
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, canAccessTenant, getAccessFromHeaderValues } from "@/lib/authz";
+import { canAccessTenant } from "@/lib/authz";
+import { currentAccess } from "@/lib/currentAccess";
 import { Badge, toneForLevel } from "@/components/ui/Badge";
 import { MetricCard } from "@/components/ui/Card";
 
 export const dynamic = "force-dynamic";
 
 export default async function TenantDetailPage({ params }: { params: { id: string } }) {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
   // Treat out-of-scope tenants identically to nonexistent ones — a 403 page
   // would itself leak "this tenant id exists" to a viewer who shouldn't see it.
   if (!canAccessTenant(access, params.id)) notFound();
@@ -108,7 +107,12 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
 
       <section>
         <h3 className="text-lg font-medium mb-3">Suggested promotions (shadow eval)</h3>
-        {suggestedPromotions.length === 0 ? (
+        {suggestedPromotions === null ? (
+          <p className="text-black/60 dark:text-white/60">
+            Could not read shadow-eval results from Phoenix — this list is unavailable,
+            not empty.
+          </p>
+        ) : suggestedPromotions.length === 0 ? (
           <p className="text-black/60 dark:text-white/60">
             No shadow-eval failures in the last 24h — nothing suggested.
           </p>

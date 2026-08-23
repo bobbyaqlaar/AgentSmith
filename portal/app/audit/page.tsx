@@ -1,13 +1,12 @@
-import { headers } from "next/headers";
 import { listAuditEvents } from "@/lib/auditLog";
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, canAdmin, getAccessFromHeaderValues } from "@/lib/authz";
+import { canAdmin } from "@/lib/authz";
+import { currentAccess } from "@/lib/currentAccess";
 import { Badge } from "@/components/ui/Badge";
 
 export const dynamic = "force-dynamic";
 
 export default async function AuditLogPage() {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
 
   if (!canAdmin(access)) {
     return (

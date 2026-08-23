@@ -5,15 +5,13 @@
 // re-signing history — rotate carefully).
 
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { listAuditEvents, type AuditEventType } from "@/lib/auditLog";
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, canAccessTenant, canAdmin, getAccessFromHeaderValues } from "@/lib/authz";
+import { listAuditEvents, isValidAuditEventType } from "@/lib/auditLog";
+import { canAccessTenant, canAdmin } from "@/lib/authz";
+import { currentAccess } from "@/lib/currentAccess";
 
-const VALID_TYPES: AuditEventType[] = ["hook_bypass", "hitl_promotion", "config_change", "tenant_created"];
 
 export async function GET(request: Request) {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
   // Audit events span hook-bypass/config-change actions that aren't always
   // tenant-scoped (tenant_id is nullable) — only admins get to see the feed.
   if (!canAdmin(access)) {
@@ -26,9 +24,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: `forbidden: no access to tenant ${tenantId}` }, { status: 403 });
   }
   const eventTypeParam = url.searchParams.get("eventType");
-  const eventType = eventTypeParam && VALID_TYPES.includes(eventTypeParam as AuditEventType)
-    ? (eventTypeParam as AuditEventType)
-    : undefined;
+  // No cast: isValidAuditEventType is a type guard, so the true branch is
+  // already narrowed. The old `as AuditEventType` would have silently accepted
+  // a widened value if the guard ever stopped matching the catalog.
+  const eventType = isValidAuditEventType(eventTypeParam) ? eventTypeParam : undefined;
   const limit = Number(url.searchParams.get("limit")) || undefined;
 
   try {

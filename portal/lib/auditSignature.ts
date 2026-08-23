@@ -19,7 +19,23 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export type AuditEventType = "hook_bypass" | "hitl_promotion" | "config_change" | "tenant_created";
+// The event catalog, mirroring lib/isolation.ts: one runtime array, the type
+// derived from it, one guard. It was previously a bare type union here plus a
+// hand-kept VALID_TYPES array in BOTH audit routes — three places to edit to
+// add an event, and missing one gave a value that type-checks, is accepted by
+// /api/audit/append and rejected by /api/audit, or the reverse.
+export const AUDIT_EVENT_TYPES = [
+  "hook_bypass",
+  "hitl_promotion",
+  "config_change",
+  "tenant_created",
+] as const;
+
+export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];
+
+export function isValidAuditEventType(value: unknown): value is AuditEventType {
+  return typeof value === "string" && (AUDIT_EVENT_TYPES as readonly string[]).includes(value);
+}
 
 export interface AuditEvent {
   eventId: string;

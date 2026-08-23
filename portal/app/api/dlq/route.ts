@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { getDLQStatus } from "@/lib/dlq";
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, filterTenantIds, getAccessFromHeaderValues } from "@/lib/authz";
+import { filterTenantIds } from "@/lib/authz";
+import { currentAccess } from "@/lib/currentAccess";
 
 export async function GET() {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
 
   try {
     const status = await getDLQStatus();

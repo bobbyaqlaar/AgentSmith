@@ -14,6 +14,10 @@ import { signEvent, verifySignature, type AuditEvent, type AuditEventType } from
 
 export { signEvent, verifySignature };
 export type { AuditEvent, AuditEventType };
+// Re-exported alongside the type so a caller validating an event needs one
+// import, not two — the routes already import appendAuditEvent/listAuditEvents
+// from here.
+export { AUDIT_EVENT_TYPES, isValidAuditEventType } from "./auditSignature";
 
 export interface AppendAuditEventInput {
   eventType: AuditEventType;

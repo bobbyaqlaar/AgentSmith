@@ -7,6 +7,32 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — portal DRY/safety slice (2026-08-23)
+
+Multi-pass review of `portal/` against the DRY, quality/safety and architecture
+standards. Five findings, fixed as one slice. Evidence: portal 7 unit + 20 db
+tests green, `tsc --noEmit` clean, framework 508 passed. Net -9 lines across 21
+files despite two new modules.
+
+| # | Finding | Fix |
+|---|---|---|
+| E | `getSuggestedPromotions` returned `[]` on error; the UI rendered that as "No shadow-eval failures in the last 24h" — a health claim produced by a failed query | Returns `null` on failure; the page distinguishes unavailable from empty. `lib/phoenix.ts` three lines above already did this correctly |
+| C | All three machine routes compared bearer tokens with `!==` — not constant-time | `timingSafeEqual`, in one place. `lib/auditSignature.ts` already imported it |
+| A | The two-line access resolution was repeated 15× across 13 files, each importing two header constants to hand straight back | `currentAccess()` in a new `lib/currentAccess.ts`; `ROLE_HEADER`/`TENANT_SCOPE_HEADER` now referenced only by `middleware.ts` and `lib/authz.ts` |
+| B | The bearer gate was cloned 3×, varying only by env var and one noun | `requireBearer(request, { envVar, purpose })` in `lib/bearerAuth.ts` |
+| D | The audit event catalog existed 3× — a type union plus two hand-kept `VALID_TYPES` arrays | One `AUDIT_EVENT_TYPES` const, type derived, one guard — mirroring `lib/isolation.ts`, which already had the right shape |
+
+**Worth keeping:** `currentAccess()` was first added to `lib/authz.ts` and broke
+`test/authz.test.ts` immediately — that suite runs under bare Node with no Next
+runtime, and `next/headers` will not resolve there. The split into its own
+module is the better design and the test is what found it: access *rules* are
+pure logic and testable anywhere; request *binding* needs a framework.
+
+**Audit findings that passed:** every mutating route is gated — three by bearer
+token, four by `canWrite` plus tenant scope, `auth/logout` correctly ungated. No
+scope holes. Phoenix rendering already distinguished reachable / unreachable /
+not-checked. `sessionToken` fails closed on a bad JWT.
+
 ## Build complete (2026-06-23)
 
 All four originally-deferred items (P1b, P1c, P2, P4) plus the P0.5

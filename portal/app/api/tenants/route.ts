@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { listTenants, upsertTenant } from "@/lib/tenants";
 import { getAllTenantsCurrentSpend } from "@/lib/cost";
 import { getUnresolvedCountByTenant } from "@/lib/issues";
 import { getDLQStatus } from "@/lib/dlq";
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, canWrite, filterTenantIds, getAccessFromHeaderValues } from "@/lib/authz";
+import { canWrite, filterTenantIds } from "@/lib/authz";
+import { currentAccess } from "@/lib/currentAccess";
 import { ISOLATION_VALUES, isValidIsolation } from "@/lib/isolation";
 
 export async function GET() {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
 
   try {
     const [tenants, spend, issues, dlq] = await Promise.all([
@@ -37,8 +36,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
   if (!canWrite(access)) {
     return NextResponse.json({ error: "operator or admin role required" }, { status: 403 });
   }

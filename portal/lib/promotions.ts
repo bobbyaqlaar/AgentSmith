@@ -37,7 +37,13 @@ async function phoenixGet(phoenixBaseUrl: string, path: string, params: URLSearc
 export async function getSuggestedPromotions(
   phoenixBaseUrl: string,
   opts: { sinceHours?: number; project?: string } = {},
-): Promise<SuggestedPromotion[]> {
+): Promise<SuggestedPromotion[] | null> {
+  // Returns null when the query FAILED, [] when it genuinely found nothing.
+  // These are opposite facts and the page renders them differently: an empty
+  // list says "no shadow-eval failures in the last 24h", which is a health
+  // claim, and producing that from a Phoenix outage tells an operator the
+  // tenant is fine when nobody actually looked. `getRecentTraceStats` in
+  // lib/phoenix.ts already draws this distinction — same treatment here.
   const sinceHours = opts.sinceHours ?? 24;
   const project = opts.project ?? "default";
   try {
@@ -72,6 +78,6 @@ export async function getSuggestedPromotions(
     }
     return failures;
   } catch {
-    return [];
+    return null;
   }
 }

@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { getDLQStatus } from "@/lib/dlq";
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, filterTenantIds, getAccessFromHeaderValues } from "@/lib/authz";
+import { filterTenantIds } from "@/lib/authz";
+import { currentAccess } from "@/lib/currentAccess";
 import { MetricCard } from "@/components/ui/Card";
 
 export const dynamic = "force-dynamic";
 
 export default async function DLQPage() {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
 
   const dlq = await getDLQStatus();
   const visibleTenantIds = filterTenantIds(access, Object.keys(dlq.pendingByTenant));

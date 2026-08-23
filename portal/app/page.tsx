@@ -1,18 +1,17 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { listTenants } from "@/lib/tenants";
 import { getAllTenantsCurrentSpend } from "@/lib/cost";
 import { getUnresolvedCountByTenant } from "@/lib/issues";
 import { getDLQStatus } from "@/lib/dlq";
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, filterTenantIds, getAccessFromHeaderValues } from "@/lib/authz";
+import { filterTenantIds } from "@/lib/authz";
+import { currentAccess } from "@/lib/currentAccess";
 import { MetricCard } from "@/components/ui/Card";
 import { Badge, toneForRunStatus } from "@/components/ui/Badge";
 
 export const dynamic = "force-dynamic";
 
 export default async function TenantOverviewPage() {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
 
   const [allTenants, spend, issues, dlq] = await Promise.all([
     listTenants(),

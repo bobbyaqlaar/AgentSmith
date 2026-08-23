@@ -12,24 +12,16 @@
 // "failed"), both referencing the same runId.
 
 import { NextResponse } from "next/server";
+import { requireBearer } from "@/lib/bearerAuth";
 import { upsertAgentRun } from "@/lib/runStatus";
 import { getTenant, upsertTenant } from "@/lib/tenants";
 
 const VALID_STATUSES = ["running", "success", "degraded", "failed"];
 
 export async function POST(request: Request) {
-  const token = process.env.OPS_PORTAL_SYNC_TOKEN;
-  if (!token) {
-    return NextResponse.json(
-      { error: "OPS_PORTAL_SYNC_TOKEN is not configured on the portal — run ingestion is disabled." },
-      { status: 503 }
-    );
-  }
+  const denied = requireBearer(request, { envVar: "OPS_PORTAL_SYNC_TOKEN", purpose: "run ingestion" });
+  if (denied) return denied;
 
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${token}`) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
 
   const body = await request.json().catch(() => null);
   if (!body?.tenantId || !body?.runId || !body?.status) {

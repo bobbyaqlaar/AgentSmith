@@ -1,15 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { listDLQEntries } from "@/lib/dlq";
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, canAccessTenant, getAccessFromHeaderValues } from "@/lib/authz";
+import { canAccessTenant } from "@/lib/authz";
+import { currentAccess } from "@/lib/currentAccess";
 import { DlqEntryCard } from "@/components/DlqEntryCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function TenantDlqPage({ params }: { params: { tenantId: string } }) {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
   if (!canAccessTenant(access, params.tenantId)) notFound();
 
   const entries = await listDLQEntries(params.tenantId, "pending");

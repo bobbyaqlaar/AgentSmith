@@ -9,27 +9,18 @@
 // Body: { eventType, actorId, tenantId?, details? }
 
 import { NextResponse } from "next/server";
-import { appendAuditEvent, type AuditEventType } from "@/lib/auditLog";
+import { requireBearer } from "@/lib/bearerAuth";
+import { appendAuditEvent, AUDIT_EVENT_TYPES, isValidAuditEventType } from "@/lib/auditLog";
 
-const VALID_TYPES: AuditEventType[] = ["hook_bypass", "hitl_promotion", "config_change", "tenant_created"];
 
 export async function POST(request: Request) {
-  const token = process.env.AUDIT_LOG_WRITE_TOKEN;
-  if (!token) {
-    return NextResponse.json(
-      { error: "AUDIT_LOG_WRITE_TOKEN is not configured on the portal — audit ingestion is disabled." },
-      { status: 503 }
-    );
-  }
+  const denied = requireBearer(request, { envVar: "AUDIT_LOG_WRITE_TOKEN", purpose: "audit ingestion" });
+  if (denied) return denied;
 
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${token}`) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
 
   const body = await request.json().catch(() => null);
-  if (!body?.eventType || !VALID_TYPES.includes(body.eventType)) {
-    return NextResponse.json({ error: `eventType must be one of: ${VALID_TYPES.join(", ")}` }, { status: 400 });
+  if (!isValidAuditEventType(body?.eventType)) {
+    return NextResponse.json({ error: `eventType must be one of: ${AUDIT_EVENT_TYPES.join(", ")}` }, { status: 400 });
   }
   if (!body?.actorId) {
     return NextResponse.json({ error: "actorId is required" }, { status: 400 });

@@ -11,14 +11,13 @@
 // tenant app's embed snippet.
 
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { createWidgetToken, revokeWidgetTokensForTenant } from "@/lib/widgetTokens";
 import { getTenant } from "@/lib/tenants";
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, canAccessTenant, canAdmin, canWrite, getAccessFromHeaderValues } from "@/lib/authz";
+import { canAccessTenant, canAdmin, canWrite } from "@/lib/authz";
+import { currentAccess } from "@/lib/currentAccess";
 
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
   if (!canWrite(access)) {
     return NextResponse.json({ error: "operator or admin role required to mint widget tokens" }, { status: 403 });
   }
@@ -41,8 +40,7 @@ export async function POST(_request: Request, { params }: { params: { id: string
 // lib/widgetTokens.ts revokeWidgetTokensForTenant for why this is tenant-
 // scoped rather than taking a specific token).
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
-  const h = headers();
-  const access = getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  const access = currentAccess();
   if (!canAdmin(access)) {
     return NextResponse.json({ error: "admin role required to revoke widget tokens" }, { status: 403 });
   }
