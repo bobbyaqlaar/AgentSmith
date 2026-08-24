@@ -153,14 +153,17 @@ def test_shellenv_emits_evaluable_exports(capsys):
 
 def test_main_returns_two_on_a_bad_argument(tmp_path: Path, capsys):
     """argparse rejects an unknown --stack itself; this covers the ValueError
-    path for a caller that reaches init_tenant directly."""
-    from runtime.cli import _cmd_tenant_init
-    import argparse as _argparse
+    path for a caller reaching init_tenant with one anyway.
 
-    args = _argparse.Namespace(
-        tenant_id="acme", root=str(tmp_path), stack="cobol",
-        isolation="shared", force=False,
-    )
+    Built through the parser and then mutated, NOT hand-constructed as a
+    Namespace: a hand-built one duplicates the parser's argument list and
+    breaks the moment an argument is added — which it did, the first time one
+    was.
+    """
+    from runtime.cli import _cmd_tenant_init
+
+    args = build_parser().parse_args(["tenant", "init", "acme", "--root", str(tmp_path)])
+    args.stack = "cobol"
     assert _cmd_tenant_init(args) == 2
     assert "stack" in capsys.readouterr().err
 
@@ -175,3 +178,75 @@ def test_stacks_match_the_shipped_ci_templates():
         pytest.skip("no workflow-templates available")
     for stack in STACKS:
         assert (templates / f"ci-{stack}.yml").is_file(), f"no template for {stack}"
+
+
+# ── the framework-root guard ─────────────────────────────────────────────────
+
+
+def test_refuses_to_scaffold_into_the_framework_itself():
+    """Written after doing exactly this by accident: `tenant init` defaults
+    --root to cwd, and running it from the wrong terminal is a two-second
+    mistake. Twelve tests went red because the stray tenant.yaml declared a
+    security posture that outranked the environment they set."""
+    from runtime.cli import FrameworkRootError, init_tenant
+
+    framework = Path(__file__).resolve().parent.parent.parent
+    with pytest.raises(FrameworkRootError) as exc:
+        init_tenant("acme", framework)
+    assert "agentsmith-runtime" in str(exc.value)
+    assert "--allow-framework-root" in str(exc.value), "the error must name its own override"
+
+
+def test_force_does_not_bypass_the_guard(tmp_path: Path):
+    """`force` means "replace files I already own". Writing into the wrong
+    repository is a different question, and overloading one flag onto both is
+    how a guard gets disabled by someone solving an unrelated problem."""
+    from runtime.cli import FrameworkRootError, init_tenant
+
+    framework = Path(__file__).resolve().parent.parent.parent
+    with pytest.raises(FrameworkRootError):
+        init_tenant("acme", framework, force=True)
+
+
+def test_the_override_works_when_meant(tmp_path: Path):
+    from runtime.cli import init_tenant
+
+    (tmp_path / "install-ai-stack.sh").write_text("#!/bin/sh\n")
+    (tmp_path / "workflow-templates").mkdir()
+    written = init_tenant("acme", tmp_path, allow_framework_root=True)
+    assert ".agenticframework/tenant.yaml" in written
+
+
+def test_two_markers_are_required_not_one(tmp_path: Path):
+    """A single marker would refuse in a repo that merely vendored the
+    installer, and a guard that fires on legitimate work is one people learn to
+    bypass."""
+    from runtime.cli import init_tenant, looks_like_framework
+
+    (tmp_path / "install-ai-stack.sh").write_text("#!/bin/sh\n")
+    assert looks_like_framework(tmp_path) is None, "one marker must not be enough"
+    assert ".agenticframework/tenant.yaml" in init_tenant("acme", tmp_path)
+
+    (tmp_path / "workflow-templates").mkdir()
+    assert looks_like_framework(tmp_path) is not None, "two markers must trip it"
+
+
+def test_the_package_name_marker_reads_the_file_not_the_filename(tmp_path: Path):
+    """A tenant has a pyproject.toml too — it is the declared package name that
+    identifies the framework, and that string exists in exactly one project."""
+    from runtime.cli import looks_like_framework
+
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "some-tenant"\n')
+    (tmp_path / "workflow-templates").mkdir()
+    assert looks_like_framework(tmp_path) is None
+
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "agentsmith-runtime"\n')
+    assert looks_like_framework(tmp_path) is not None
+
+
+def test_cli_exit_code_is_distinct_for_a_refusal(capsys):
+    """3, not 1 or 2 — a script wrapping this can tell "wrong directory" from
+    "bad argument" without parsing the message."""
+    framework = Path(__file__).resolve().parent.parent.parent
+    assert main(["tenant", "init", "acme", "--root", str(framework)]) == 3
+    assert "refusing to scaffold here" in capsys.readouterr().err

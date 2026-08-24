@@ -124,6 +124,52 @@ def _templates_dir() -> Optional[Path]:
     return None
 
 
+class FrameworkRootError(RuntimeError):
+    """Refusing to scaffold a tenant into the framework's own checkout."""
+
+
+# Markers that identify the framework's own repository. `pyproject.toml`
+# declaring the package name is the definitive one — that string exists in
+# exactly one project. The others are corroborating: a tenant repo has no
+# reason to ship the installer or the workflow templates it is a consumer of.
+FRAMEWORK_MARKERS = (
+    ("pyproject.toml", 'name = "agentsmith-runtime"'),
+    ("install-ai-stack.sh", None),
+    ("workflow-templates", None),
+    ("templates/agent-rules.yaml", None),
+)
+
+
+def looks_like_framework(root: Path) -> Optional[str]:
+    """The marker that says this is the framework's checkout, or None.
+
+    Written after scaffolding a tenant into the framework repo by accident:
+    `tenant init` defaults --root to the working directory, and running it from
+    the wrong terminal is a two-second mistake. Twelve tests went red because
+    the stray `tenant.yaml` declared a security posture that then outranked the
+    environment those tests set — loud, but only because a precedence change
+    two days earlier happened to make it so. It should not depend on that.
+
+    Requires TWO markers, not one. A single check on `install-ai-stack.sh`
+    would refuse in a repo that merely vendored the installer, and a guard that
+    fires on legitimate work is one people learn to bypass.
+    """
+    found: list[str] = []
+    for name, needle in FRAMEWORK_MARKERS:
+        path = root / name
+        if not path.exists():
+            continue
+        if needle is None:
+            found.append(name)
+        else:
+            try:
+                if needle in path.read_text(encoding="utf-8"):
+                    found.append(f"{name} declares {needle!r}")
+            except OSError:
+                continue
+    return " and ".join(found) if len(found) >= 2 else None
+
+
 # A callee missing from this list makes GitHub reject the whole workflow as
 # invalid, not just the missing job — so they ship together with their caller.
 WORKFLOWS = (
@@ -144,12 +190,28 @@ def init_tenant(
     stack: str = "python-fastapi",
     isolation: str = "shared",
     force: bool = False,
+    allow_framework_root: bool = False,
 ) -> list[str]:
     """Scaffold a tenant. Returns the paths written, relative to `root`.
 
     Never overwrites without `force`: a tenant.yaml is edited by hand after
     generation, and silently replacing it would discard a declared posture.
+
+    Refuses to write into the framework's own checkout — see
+    `looks_like_framework`. `force` does NOT bypass that: it means "replace
+    files I already own", which is a different question from "write into the
+    wrong repository", and overloading one flag onto both is how a guard gets
+    disabled by someone solving an unrelated problem.
     """
+    marker = None if allow_framework_root else looks_like_framework(root)
+    if marker:
+        raise FrameworkRootError(
+            f"{root} looks like the AgentSmith framework itself ({marker}).\n"
+            f"A tenant scaffolded here would declare a security posture and a "
+            f"budget that the framework's own tests then run against.\n"
+            f"Run this in the tenant's repository, pass --root, or override "
+            f"with --allow-framework-root if you really mean it."
+        )
     if isolation not in ISOLATIONS:
         raise ValueError(f"isolation must be one of {ISOLATIONS}, got {isolation!r}")
     if stack not in STACKS:
@@ -197,8 +259,16 @@ def _cmd_tenant_init(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve() if args.root else Path.cwd()
     try:
         written = init_tenant(
-            args.tenant_id, root, stack=args.stack, isolation=args.isolation, force=args.force
+            args.tenant_id,
+            root,
+            stack=args.stack,
+            isolation=args.isolation,
+            force=args.force,
+            allow_framework_root=args.allow_framework_root,
         )
+    except FrameworkRootError as exc:
+        print(f"agentsmith: refusing to scaffold here.\n{exc}", file=sys.stderr)
+        return 3
     except ValueError as exc:
         print(f"agentsmith: {exc}", file=sys.stderr)
         return 2
@@ -263,6 +333,11 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--isolation", default="shared", choices=list(ISOLATIONS))
     init.add_argument("--root", default=None, help="target repo (default: cwd)")
     init.add_argument("--force", action="store_true", help="overwrite existing files")
+    init.add_argument(
+        "--allow-framework-root",
+        action="store_true",
+        help="scaffold even where the framework's own checkout is detected",
+    )
     init.set_defaults(func=_cmd_tenant_init)
 
     doctor = sub.add_parser("doctor", help="run verify_system checks")

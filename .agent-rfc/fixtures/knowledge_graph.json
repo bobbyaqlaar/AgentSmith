@@ -3204,6 +3204,8 @@
       "symbols": [
         "tenant_yaml",
         "_templates_dir",
+        "FrameworkRootError",
+        "looks_like_framework",
         "init_tenant",
         "_cmd_tenant_init",
         "_cmd_doctor",
@@ -3212,7 +3214,7 @@
         "build_parser",
         "main"
       ],
-      "last_modified": "2026-08-24T20:36:31Z",
+      "last_modified": "2026-08-24T20:46:22Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3231,9 +3233,15 @@
         "test_parser_covers_the_shell_functions_being_replaced",
         "test_shellenv_emits_evaluable_exports",
         "test_main_returns_two_on_a_bad_argument",
-        "test_stacks_match_the_shipped_ci_templates"
+        "test_stacks_match_the_shipped_ci_templates",
+        "test_refuses_to_scaffold_into_the_framework_itself",
+        "test_force_does_not_bypass_the_guard",
+        "test_the_override_works_when_meant",
+        "test_two_markers_are_required_not_one",
+        "test_the_package_name_marker_reads_the_file_not_the_filename",
+        "test_cli_exit_code_is_distinct_for_a_refusal"
       ],
-      "last_modified": "2026-08-24T20:30:42Z",
+      "last_modified": "2026-08-24T20:47:24Z",
       "id": "runtime/test/test_cli.py"
     }
   ],
