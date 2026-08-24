@@ -167,6 +167,23 @@ def record_cache(*, tenant_id: Optional[str], hit: bool) -> None:
     )
 
 
+def record_retry(
+    *, tenant_id: Optional[str], model: Optional[str], attempt: int, reason: str
+) -> None:
+    """One retried provider call.
+
+    `reason` is a COARSE class — "rate_limit", "timeout", "server_error" — not
+    the provider's message. A metric attribute carrying free text creates a
+    time series per distinct string and takes the backend down; the message
+    belongs on the span event, which carries it.
+    """
+    _record(
+        _instrument("counter", "agentsmith.llm.retries", unit="1"),
+        1,
+        {"tenant.id": tenant_id, "llm.model_name": model, "reason": reason},
+    )
+
+
 def record_retrieval(
     *, tenant_id: Optional[str], backend: str, hits: int, duration_ms: Optional[float] = None
 ) -> None:

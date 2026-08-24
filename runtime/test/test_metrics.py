@@ -150,3 +150,18 @@ def test_a_broken_instrument_never_raises(collected, monkeypatch):
     monkeypatch.setattr(m, "_instrument", lambda *a, **k: Exploding())
     m.record_llm_call(tenant_id="a", model="m", role="r", outcome="success", cost_usd=1.0)
     m.record_cache(tenant_id="a", hit=False)
+
+
+def test_a_retry_is_counted_with_a_bounded_reason(collected):
+    """The message goes on the span event; the counter gets a class. A metric
+    attribute carrying the provider's free text creates a time series per
+    distinct string and takes the backend down."""
+    m.record_retry(tenant_id="t-retry", model="m", attempt=2, reason="rate_limit")
+    m.record_retry(tenant_id="t-retry", model="m", attempt=3, reason="rate_limit")
+    m.record_retry(tenant_id="t-retry", model="m", attempt=2, reason="timeout")
+
+    points = _points(collected, "agentsmith.llm.retries", "t-retry")
+    by_reason = {p.attributes["reason"]: p.value for p in points}
+    assert by_reason == {"rate_limit": 2, "timeout": 1}
+    for point in points:
+        assert set(point.attributes) == {"tenant.id", "llm.model_name", "reason"}

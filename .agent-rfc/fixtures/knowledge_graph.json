@@ -381,13 +381,16 @@
         "complete_stream",
         "complete",
         "_coerce_messages",
+        "_retry_reason",
+        "_on_retry",
         "_is_retryable_provider_error",
         "_resolve_endpoint",
         "_lookup_api_key",
         "_invoke",
+        "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-24T21:15:23Z",
+      "last_modified": "2026-08-24T21:24:05Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -3283,11 +3286,12 @@
         "_record",
         "record_llm_call",
         "record_cache",
+        "record_retry",
         "record_retrieval",
         "configure_metrics",
         "_reset_cache"
       ],
-      "last_modified": "2026-08-24T21:13:20Z",
+      "last_modified": "2026-08-24T21:24:05Z",
       "id": "runtime/metrics.py"
     },
     {
@@ -3333,12 +3337,36 @@
         "test_retrieval_is_measured_too",
         "test_everything_no_ops_without_a_meter_provider",
         "test_a_broken_instrument_never_raises",
+        "test_a_retry_is_counted_with_a_bounded_reason",
         "Exploding",
         "add",
         "record"
       ],
-      "last_modified": "2026-08-24T21:18:03Z",
+      "last_modified": "2026-08-24T21:25:18Z",
       "id": "runtime/test/test_metrics.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "gateway",
+        "test_reason_is_a_class_not_a_message",
+        "_State",
+        "test_a_retry_adds_an_event_to_the_active_span",
+        "test_the_full_message_is_on_the_event_not_the_metric",
+        "test_the_hook_never_raises_without_a_span",
+        "test_the_hook_survives_an_outcome_with_no_exception",
+        "test_attempts_are_recorded_after_a_real_retry",
+        "test_a_call_that_did_not_retry_still_says_so",
+        "__init__",
+        "_FlakyClient",
+        "_Client",
+        "__aenter__",
+        "__aexit__",
+        "post"
+      ],
+      "last_modified": "2026-08-24T21:24:55Z",
+      "id": "runtime/test/test_retry_visibility.py"
     }
   ],
   "edges": [
@@ -3840,6 +3868,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_metrics.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_retry_visibility.py",
       "target": "runtime/__init__.py"
     }
   ]

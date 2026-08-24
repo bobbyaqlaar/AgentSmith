@@ -1527,6 +1527,67 @@ class LLMGateway:
         raise TypeError(f"prompt must be str or list[dict], got {type(prompt)}")
 
     @staticmethod
+    def _retry_reason(exc: BaseException) -> str:
+        """A COARSE class for the metric dimension.
+
+        Never the provider's message: a metric attribute carrying free text
+        creates a time series per distinct string. The message goes on the span
+        event, where cardinality does not matter.
+        """
+        text = str(exc).lower()
+        if "429" in text or "rate limit" in text:
+            return "rate_limit"
+        if "timeout" in text or "timed out" in text:
+            return "timeout"
+        if any(code in text for code in ("500", "502", "503", "504")):
+            return "server_error"
+        return "transient"
+
+    def _on_retry(self, model_id: str):
+        """A tenacity `before_sleep` hook that makes a retry visible.
+
+        The gateway has always retried transient failures with full-jitter
+        backoff, and NOTHING said an attempt had happened — so a call retried
+        three times looked simply slow. On a free tier where 429s are routine
+        that is the common case, not the rare one, and it points every
+        investigation at latency when the answer is quota.
+        """
+        def _hook(retry_state) -> None:
+            exc = retry_state.outcome.exception() if retry_state.outcome else None
+            reason = self._retry_reason(exc) if exc else "unknown"
+            try:
+                from opentelemetry import trace
+
+                span = trace.get_current_span()
+                if span is not None and span.is_recording():
+                    span.add_event(
+                        "llm.retry",
+                        {
+                            "attempt": retry_state.attempt_number,
+                            "reason": reason,
+                            "sleep_s": float(getattr(retry_state, "idle_for", 0.0) or 0.0),
+                            # The full message HERE, not on the metric.
+                            "error": str(exc)[:400] if exc else "",
+                            "llm.model_name": model_id,
+                        },
+                    )
+            except Exception:  # fail-open: telemetry never breaks a retry
+                pass
+            try:
+                from runtime.metrics import record_retry
+
+                record_retry(
+                    tenant_id=self.tenant_id,
+                    model=model_id,
+                    attempt=retry_state.attempt_number,
+                    reason=reason,
+                )
+            except Exception:
+                pass
+
+        return _hook
+
+    @staticmethod
     def _is_retryable_provider_error(exc: BaseException) -> bool:
         """Transient-only: connection/timeout issues, 429 (rate limit), and
         5xx (provider-side fault) — never 4xx other than 429, since a bad
@@ -1685,6 +1746,7 @@ class LLMGateway:
             stop=stop_after_attempt(3),
             wait=wait_exponential(multiplier=1, min=1, max=10),
             reraise=True,
+            before_sleep=self._on_retry(model_id),
         )
         async def _post_with_retry() -> dict:
             async with httpx.AsyncClient(timeout=120.0) as client:
@@ -1707,6 +1769,23 @@ class LLMGateway:
                 return resp.json()
 
         data = await _post_with_retry()
+
+        # How many attempts it actually took. Recorded even when it is 1, so
+        # "this call did not retry" is a fact on the span rather than the
+        # absence of one — the same reason an empty retrieval still emits a
+        # span.
+        try:
+            from opentelemetry import trace
+
+            attempts = int(
+                getattr(_post_with_retry, "statistics", {}).get("attempt_number", 1)
+            )
+            span = trace.get_current_span()
+            if span is not None and span.is_recording():
+                span.set_attribute("llm.gateway.attempts", attempts)
+        except Exception:  # fail-open
+            pass
+
         if is_cloud_provider(provider):
             return parse_cloud_response(provider, data)
         return parse_response(provider, data)

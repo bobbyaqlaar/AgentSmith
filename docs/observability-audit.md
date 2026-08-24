@@ -186,22 +186,27 @@ question asked of a RAG system.
 | Errors | ✅ `agent.tool.error` |
 | Allow/deny outcome | ✅ `agent.tool.allowed` |
 | Input / output | ❌ |
-| Retry attempts | ❌ |
+| Retry attempts | ✅ **fixed** |
 | Decision path | ⚠️ `llm.gateway.degrade_reason` only |
 
 `record_tool_call` is genuinely good on the security axis: recording the **allow/deny
 outcome** of an allowlist check is rare and it makes `SEC-TOOL-001` observable rather than
 merely asserted.
 
-### Recommendation — retries first
+### ✅ Fixed — retries are visible
 
-The gateway retries provider 429s with full-jitter backoff, and **nothing on the span says an
-attempt happened**. A call retried three times looks like a slow call. On free-tier judges
-where 429s are routine, that is actively misleading: you would tune latency when the problem
-is quota. Emit `llm.gateway.attempts` and a span event per retry with the provider's message.
+`llm.gateway.attempts` on every call — recorded as 1 when there was no retry, so "this call
+did not retry" is a fact rather than the absence of one. A `llm.retry` span **event** per
+attempt carries the attempt number, the sleep, and the provider's actual message; a
+`agentsmith.llm.retries` counter carries a COARSE reason (`rate_limit`, `timeout`,
+`server_error`, `transient`) because a metric attribute holding free text creates a time
+series per distinct string.
 
-Tool input/output is second. Redaction applies — route it through `trace_redactor` the same
-way prompts are, rather than adding an unscrubbed channel.
+Driven through tenacity itself in the test rather than a stand-in, so the wiring —
+`before_sleep`, the statistics dict, the attribute name — is what is verified.
+
+**Still open:** tool input/output. Redaction applies, so it should route through
+`trace_redactor` the same way prompts do rather than adding an unscrubbed channel.
 
 ---
 
@@ -322,7 +327,8 @@ You are OTel-native with Phoenix, and that is the right spine.
    populated, retrieval and embedding spans emitted.
 5. **Prompt hash** — cheap root-cause for degradation, no template engine required.
 6. **OTel Metrics** — counters and histograms for the rates and ratios.
-7. **Retry visibility** — `llm.gateway.attempts` plus a span event per retry.
+7. ~~Retry visibility~~ ✅ done — `llm.gateway.attempts`, a span event per retry carrying the
+   provider's message, and a counter with a bounded reason.
 
 ---
 
