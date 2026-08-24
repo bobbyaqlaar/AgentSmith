@@ -2857,7 +2857,7 @@
         "security_fixture",
         "node_suite"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T10:56:05Z",
       "id": "scripts/security/runners/_shared.py"
     },
     {
@@ -2977,7 +2977,7 @@
       "symbols": [
         "constantTimeEquals"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T11:00:19Z",
       "id": "portal/lib/constantTime.ts"
     },
     {
@@ -3028,6 +3028,13 @@
       ],
       "last_modified": "2026-08-24T10:38:05Z",
       "id": "scripts/test/test_kg_drift_gate.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-08-24T11:00:08Z",
+      "id": "portal/test/edgeSafety.test.ts"
     }
   ],
   "edges": [

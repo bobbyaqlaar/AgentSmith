@@ -532,6 +532,7 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/moderation.py` | Pluggable output moderation hook (SEC-MOD-001), `MODERATION_HOOK=off\|optional\|required`. |
 | `runtime/structured_output.py` | `parse_llm_json` — fenced/bare JSON extraction + Pydantic validation (SEC-OUTPUT-001). |
 | `runtime/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (§4a). |
+| `runtime/security_paths.py` | `security_artefact_path()` — the env-override-then-convention lookup `prompt_guard` and `tool_registry` had each implemented separately. |
 | `runtime/conversation_memory.py` | Short-term token-window message buffer (RAG substrate). |
 | `runtime/embeddings.py` / `runtime/vector_store.py` | Pluggable embedders (hash / sentence-transformers) + memory/pgvector store — long-term retrieval. |
 | `runtime/idempotency.py` | Idempotency key store and deduplication (Redis or Postgres). |
@@ -1210,6 +1211,7 @@ AgentSmith/
 │   ├── moderation.py            # Output moderation hook (SEC-MOD-001)
 │   ├── structured_output.py     # parse_llm_json + Pydantic (SEC-OUTPUT-001)
 │   ├── tool_registry.py         # @tool + YAML allowlist (SEC-TOOL-001)
+│   ├── security_paths.py        # security_artefact_path() — one lookup for the two above
 │   ├── self_correction.py       # Opt-in corrected-payload loop helper
 │   ├── conversation_memory.py   # Short-term memory (RAG substrate)
 │   ├── embeddings.py / vector_store.py

@@ -355,15 +355,31 @@ def node_suite(
     while the implementation it exercises has been deleted would pass by
     testing nothing, which is the failure mode a control is least able to
     notice.
+
+    THE LOADER IS NOT OPTIONAL. `lib/` modules import each other with
+    extensionless relative specifiers (`./constantTime`), which tsc resolves
+    and bare `--experimental-strip-types` does not. `package.json`'s `test` and
+    `test:db` scripts pass `--experimental-loader=./test/ts-extension-loader.mjs`
+    for exactly this; this runner is a THIRD invocation path and was missed
+    when the loader was added to the other two, so SEC-RBAC-001 went red on
+    `ERR_MODULE_NOT_FOUND` the moment `lib/authz.ts` gained its first relative
+    import. Same lesson as `return 2` for graceful skip: the fix landed at one
+    call site and not its siblings.
     """
     root = framework_root(ctx)
     portal = root / "portal"
     target = portal / rel_path
+    loader = portal / "test" / "ts-extension-loader.mjs"
     missing = [p.name for p in (target, *(portal / r for r in requires)) if not p.exists()]
     if missing:
         return failed(control, f"missing portal files: {', '.join(missing)}")
+    cmd = ["node", "--experimental-strip-types"]
+    if loader.exists():
+        # Relative so node resolves it against cwd=portal, matching package.json.
+        cmd.append("--experimental-loader=./test/ts-extension-loader.mjs")
+    cmd.append(str(target))
     proc = subprocess.run(
-        ["node", "--experimental-strip-types", str(target)],
+        cmd,
         cwd=portal,
         capture_output=True,
         text=True,
