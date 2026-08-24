@@ -30,6 +30,23 @@ function numberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/** The 32-hex trace id out of a W3C `traceparent`, or null.
+ *
+ *  Parsed rather than handed to an OTel SDK on purpose: the portal is not
+ *  instrumented, and correlating the row to the trace does not require it to
+ *  be. Shape is `00-<32 hex trace>-<16 hex span>-<2 hex flags>`; an all-zero
+ *  trace id is the invalid one the spec reserves, and is rejected so it cannot
+ *  be stored as though it were real. */
+function traceIdFromHeader(request: Request): string | null {
+  const header = request.headers.get("traceparent");
+  if (!header) return null;
+  const parts = header.split("-");
+  if (parts.length < 4 || parts[0] !== "00") return null;
+  const traceId = parts[1];
+  if (!/^[0-9a-f]{32}$/.test(traceId) || /^0+$/.test(traceId)) return null;
+  return traceId;
+}
+
 export async function POST(request: Request) {
   const denied = requireBearer(request, { envVar: "OPS_PORTAL_SYNC_TOKEN", purpose: "run ingestion" });
   if (denied) return denied;
@@ -53,7 +70,11 @@ export async function POST(request: Request) {
     tenantId: body.tenantId,
     workflowId: body.workflowId ?? null,
     status: body.status,
-    traceId: body.traceId ?? null,
+    // Body first, then the W3C traceparent header the worker now injects.
+    // agent_runs.trace_id was NULL for every run ever recorded — the gateway
+    // accepted a trace_id argument that none of its nine call sites passed —
+    // so the portal's "view trace" link had nothing to link to.
+    traceId: body.traceId ?? traceIdFromHeader(request) ?? null,
     errorSummary: body.errorSummary ?? null,
     inputTokens: numberOrNull(body.inputTokens),
     outputTokens: numberOrNull(body.outputTokens),

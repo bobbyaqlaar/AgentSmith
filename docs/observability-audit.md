@@ -235,8 +235,8 @@ TTFT and total duration. The idempotency cache already knows its hit/miss at
 
 ## 6. Distributed tracing
 
-**This is the largest structural gap.** There is **no context propagation in the codebase** —
-no `inject`, no `extract`, no `traceparent` anywhere.
+✅ **Partially fixed 2026-08-25.** It was the largest structural gap: no `inject`,
+no `extract`, no `traceparent` anywhere in the codebase.
 
 For the chain your architecture implies:
 
@@ -269,15 +269,26 @@ it drags every latency percentile computed from it toward zero.
 a step makes several tool calls and orphan roots would be noise. An LLM call is the opposite
 case: one per step, and the unit every dashboard is keyed on.
 
-### Recommendation — propagation is the cheapest high-value work left
+### ✅ Fixed — the request now survives the process hop
 
-1. `inject` trace context into the run-status POST headers; `extract` in the portal route.
-   Two small changes, and the portal stops being a separate trace.
-2. Span `vector_store.query` and the embedding call. Both are latency suspects and neither is
-   visible.
-3. Only then consider a collector fan-out (Phoenix for LLM semantics, Tempo/Jaeger for
-   infra-grade search). Propagation first — fan-out multiplies traces, and multiplying broken
-   traces does not help.
+1. **`traceparent` on the run-status POST.** `runtime/tracing.inject_context()` adds the W3C
+   header to the worker's call, and `/api/runs/ingest` parses it — by hand, deliberately: the
+   portal is not instrumented and correlating a row to a trace does not require it to be. An
+   all-zero trace id is the invalid one the spec reserves and is rejected rather than stored.
+2. **`agent_runs.trace_id` is populated.** It was NULL for every run ever recorded:
+   `_report_run_status` accepted a `trace_id` argument that not one of its nine call sites
+   passed, so the portal's trace link had nothing to link to. It defaults to the active trace.
+3. **The retrieval hop emits spans.** `vector_store.query` (both backends) and the
+   sentence-transformers `embed` were entirely invisible, so "the retriever was slow" and
+   "the model was slow" were the same picture. Spans carry hit **identities and scores**, not
+   just `result_count` — a count of 3 says nothing when the wrong three came back, which is
+   the most common question asked of a RAG system. Retrieved TEXT is deliberately excluded:
+   it is the likeliest place for PII to enter a span and the redactor runs later.
+
+**Still open:** the portal emits no spans of its own, so the trace ends at the ingest
+boundary rather than continuing through it — correlation, not a full downstream span tree.
+A collector fan-out (Phoenix for LLM semantics, Tempo/Jaeger for infra search) only makes
+sense after that.
 
 ---
 
@@ -303,7 +314,8 @@ You are OTel-native with Phoenix, and that is the right spine.
    a conformance test over emitted spans, and a tenant that installs tracing at all.
 2. ~~Fix the dead span guard~~ ✅ done — and the fallback that makes it matter.
 3. ~~Token capture~~ ✅ done, span and database, with "not measured" preserved.
-4. **Context propagation** — `inject` on the ingest POST; spans on vector store and embeddings.
+4. ~~Context propagation~~ ✅ done — `traceparent` injected and parsed, `trace_id`
+   populated, retrieval and embedding spans emitted.
 5. **Prompt hash** — cheap root-cause for degradation, no template engine required.
 6. **OTel Metrics** — counters and histograms for the rates and ratios.
 7. **Retry visibility** — `llm.gateway.attempts` plus a span event per retry.

@@ -695,6 +695,12 @@ class LLMGateway:
         try:
             import httpx
 
+            # traceparent, so the portal's work joins THIS trace instead of
+            # starting its own. Without it the worker and the portal were two
+            # unconnected traces and "follow the request across services"
+            # stopped at the process boundary.
+            from runtime.tracing import current_trace_id, inject_context
+
             httpx.post(
                 f"{ops_portal_url.rstrip('/')}/api/runs/ingest",
                 json={
@@ -702,7 +708,12 @@ class LLMGateway:
                     "runId": run_id,
                     "workflowId": workflow_id,
                     "status": status,
-                    "traceId": trace_id,
+                    # Defaults to the ACTIVE trace. This argument has existed
+                    # since the method was written and not one of its nine call
+                    # sites ever passed it, so agent_runs.trace_id was NULL for
+                    # every run ever recorded and the portal's trace link had
+                    # nothing to link to.
+                    "traceId": trace_id or current_trace_id(),
                     "errorSummary": error_summary,
                     # Omitted (null) rather than zeroed when the provider
                     # reported no usage. The ingest route and the column are
@@ -712,7 +723,7 @@ class LLMGateway:
                     "outputTokens": output_tokens,
                     "costUsd": cost_usd,
                 },
-                headers={"Authorization": f"Bearer {sync_token}"},
+                headers=inject_context({"Authorization": f"Bearer {sync_token}"}),
                 timeout=5.0,
             )
         except Exception as exc:

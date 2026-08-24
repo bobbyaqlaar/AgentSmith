@@ -54,6 +54,46 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return dot / (na * nb)
 
 
+def _retrieval_span(backend: str, k: int):
+    """A span around a retrieval, or a no-op when tracing is off.
+
+    The retrieval hop emitted NOTHING — not a span, not a duration. In the
+    chain this framework advertises (API → orchestrator → vector DB →
+    embedding → LLM → database) only the LLM hop was visible, so "the retriever
+    was slow" and "the model was slow" were the same picture.
+    """
+    from runtime.tracing import agent_span
+
+    return agent_span(f"retrieval.{backend}", kind="retrieval", k=k)
+
+
+def _record_hits(span, hits: list, *, corpus: Optional[int] = None) -> None:
+    """Chunk IDENTITIES and scores, not just a count.
+
+    `agent.tool.result_count` was the only thing the framework recorded about a
+    retrieval, and a count of 3 says nothing when the wrong three came back —
+    which is the single most common question asked of a RAG system. The ids and
+    the score range are what separate "the retriever failed" from "the model
+    ignored good context".
+
+    Text is deliberately NOT recorded: retrieved documents are the most likely
+    place for PII to enter a span, and trace_redactor runs after this.
+    """
+    try:
+        span.set_attribute("agent.retrieval.hit_count", len(hits))
+        if corpus is not None:
+            span.set_attribute("agent.retrieval.corpus_size", corpus)
+        if hits:
+            span.set_attribute(
+                "agent.retrieval.hit_ids", [str(h.id) for h in hits][:20]
+            )
+            scores = [float(h.score) for h in hits]
+            span.set_attribute("agent.retrieval.top_score", max(scores))
+            span.set_attribute("agent.retrieval.min_score", min(scores))
+    except Exception:  # fail-open: an attribute write must never break a query
+        pass
+
+
 class MemoryVectorStore:
     """In-memory vector index — default for CI and local without Postgres."""
 
@@ -89,20 +129,24 @@ class MemoryVectorStore:
                 self._vectors.append(vec)
 
     def query(self, text: str, k: int = 5) -> list[VectorHit]:
-        if not self._ids or k < 1:
-            return []
-        q = self.embedder.embed([text])[0]
-        scored = [
-            VectorHit(
-                id=self._ids[i],
-                text=self._texts[i],
-                score=_cosine(q, self._vectors[i]),
-                metadata=dict(self._metas[i]),
-            )
-            for i in range(len(self._ids))
-        ]
-        scored.sort(key=lambda h: h.score, reverse=True)
-        return scored[:k]
+        with _retrieval_span("memory", k) as span:
+            if not self._ids or k < 1:
+                _record_hits(span, [], corpus=len(self._ids))
+                return []
+            q = self.embedder.embed([text])[0]
+            scored = [
+                VectorHit(
+                    id=self._ids[i],
+                    text=self._texts[i],
+                    score=_cosine(q, self._vectors[i]),
+                    metadata=dict(self._metas[i]),
+                )
+                for i in range(len(self._ids))
+            ]
+            scored.sort(key=lambda h: h.score, reverse=True)
+            hits = scored[:k]
+            _record_hits(span, hits, corpus=len(self._ids))
+            return hits
 
 
 class PgVectorStore:
@@ -208,7 +252,12 @@ class PgVectorStore:
             conn.close()  # returns to the pool
 
     def query(self, text: str, k: int = 5) -> list[VectorHit]:
+        with _retrieval_span("pgvector", k) as span:
+            return self._query(text, k, span)
+
+    def _query(self, text: str, k: int, span) -> list[VectorHit]:
         if k < 1:
+            _record_hits(span, [])
             return []
         q = self.embedder.embed([text])[0]
         q_literal = "[" + ",".join(str(x) for x in q) + "]"
@@ -239,6 +288,7 @@ class PgVectorStore:
                     metadata=meta,
                 )
             )
+        _record_hits(span, hits)
         return hits
 
 

@@ -74,10 +74,27 @@ class SentenceTransformerEmbedder:
         self._model = SentenceTransformer(self.model_name)
 
     def embed(self, texts: list[str]) -> list[list[float]]:
-        self._load()
-        assert self._model is not None
-        vectors = self._model.encode(texts, normalize_embeddings=True)
-        return [list(map(float, row)) for row in vectors]
+        # The embedding hop emitted nothing, and it is the one most likely to
+        # be the latency this framework's users are hunting: a local
+        # sentence-transformers model can take longer than the LLM call it
+        # feeds. Instrumented on the REAL embedder only — HashEmbedder is
+        # arithmetic, and a span per call would be noise per SPECS' own
+        # "trace what can be slow" rule.
+        from runtime.tracing import agent_span
+
+        with agent_span(
+            "embedding.encode", kind="embedding", model=self.model_name, count=len(texts)
+        ) as span:
+            self._load()
+            assert self._model is not None
+            vectors = self._model.encode(texts, normalize_embeddings=True)
+            out = [list(map(float, row)) for row in vectors]
+            try:
+                if out:
+                    span.set_attribute("agent.embedding.dimensions", len(out[0]))
+            except Exception:  # fail-open
+                pass
+            return out
 
 
 def make_embedder() -> Embedder:

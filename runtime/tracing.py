@@ -298,3 +298,67 @@ def configure_tracing(
 
     trace.set_tracer_provider(provider)
     return trace.get_tracer_provider()
+
+
+# ── Context propagation (W3C trace-context) ──────────────────────────────────
+
+
+def current_trace_id() -> Optional[str]:
+    """The active trace as 32 lowercase hex characters, or None.
+
+    `agent_runs.trace_id` exists to correlate a database row with a trace, and
+    `_report_run_status` has accepted a `trace_id` argument since it was
+    written — which not one of its nine call sites ever passed. The column was
+    NULL for every run ever recorded, and the portal's trace link had nothing
+    to link to. This is what fills it.
+    """
+    try:
+        from opentelemetry import trace
+
+        ctx = trace.get_current_span().get_span_context()
+        if not ctx.is_valid:
+            return None
+        return format(ctx.trace_id, "032x")
+    except Exception:  # fail-open: correlation is never worth failing a call
+        return None
+
+
+def traceparent() -> Optional[str]:
+    """The active context as a W3C `traceparent` value, or None.
+
+    Built by hand rather than via the propagators API because that is one line
+    against an optional dependency's optional module, and this must degrade to
+    None rather than raise when opentelemetry is absent — which is the normal
+    case for a tenant that has not turned tracing on.
+
+        00-<32 hex trace id>-<16 hex span id>-<2 hex flags>
+    """
+    try:
+        from opentelemetry import trace
+
+        ctx = trace.get_current_span().get_span_context()
+        if not ctx.is_valid:
+            return None
+        return (
+            f"00-{ctx.trace_id:032x}-{ctx.span_id:016x}-{ctx.trace_flags:02x}"
+        )
+    except Exception:
+        return None
+
+
+def inject_context(headers: Optional[dict] = None) -> dict:
+    """Add `traceparent` to an outgoing request's headers.
+
+    Without this every hop starts its own trace: the worker's spans and the Ops
+    Portal's work were separate traces with no edge between them, so "follow
+    this request across services" — the entire point of distributed tracing —
+    stopped at the process boundary.
+
+    Returns the dict unchanged when there is nothing to propagate, so a caller
+    can wrap its headers unconditionally.
+    """
+    out = dict(headers or {})
+    parent = traceparent()
+    if parent:
+        out["traceparent"] = parent
+    return out

@@ -30,7 +30,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from runtime.tenancy import agent_context  # noqa: E402
 from runtime.tracing import (  # noqa: E402
-    AgentIdentityProcessor,
     agent_span,
     record_tool_call,
     resource_attributes,
@@ -41,20 +40,11 @@ REQUIRED_PER_SPAN = {"tenant.id", "agent.role"}
 
 
 @pytest.fixture(autouse=True)
-def _identity_processor(_exporter):
-    """Attach the processor to the session provider for these tests only.
-
-    The provider is session-scoped and shared (conftest.py), so this adds the
-    processor rather than building a second provider — installing another
-    global one is what silently disabled five tracing tests earlier today.
-    """
-    from opentelemetry import trace
-
-    provider = trace.get_tracer_provider()
-    processor = AgentIdentityProcessor()
-    provider.add_span_processor(processor)
-    yield
-    processor.shutdown()
+def _identity_processor(identity_processor):
+    """The shared fixture from conftest, made autouse for this module — every
+    test here asserts on stamped spans. It is opt-in elsewhere because most
+    modules assert on spans that should NOT be stamped."""
+    return identity_processor
 
 
 def _all_spans(exporter):

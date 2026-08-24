@@ -131,12 +131,15 @@
         "resource_attributes",
         "AgentIdentityProcessor",
         "configure_tracing",
+        "current_trace_id",
+        "traceparent",
+        "inject_context",
         "set_attribute",
         "record_exception",
         "is_recording",
         "on_start"
       ],
-      "last_modified": "2026-08-24T19:55:52Z",
+      "last_modified": "2026-08-24T20:57:41Z",
       "id": "runtime/tracing.py"
     },
     {
@@ -193,6 +196,8 @@
         "VectorHit",
         "VectorStore",
         "_cosine",
+        "_retrieval_span",
+        "_record_hits",
         "MemoryVectorStore",
         "PgVectorStore",
         "make_vector_store",
@@ -200,9 +205,10 @@
         "query",
         "__init__",
         "_connect",
-        "_ensure_schema"
+        "_ensure_schema",
+        "_query"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T20:58:51Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -380,7 +386,7 @@
         "_invoke",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-24T19:55:52Z",
+      "last_modified": "2026-08-24T20:57:56Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -419,7 +425,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T20:59:24Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -2901,7 +2907,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-24T12:47:19Z",
+      "last_modified": "2026-08-24T20:59:52Z",
       "id": "portal/app/api/runs/ingest/route.ts"
     },
     {
@@ -3063,9 +3069,10 @@
       "language": "python",
       "symbols": [
         "_exporter",
-        "spans"
+        "spans",
+        "identity_processor"
       ],
-      "last_modified": "2026-08-24T15:25:31Z",
+      "last_modified": "2026-08-24T21:01:05Z",
       "id": "runtime/test/conftest.py"
     },
     {
@@ -3120,7 +3127,7 @@
         "test_resource_carries_the_per_process_half",
         "test_owner_is_omitted_rather_than_guessed"
       ],
-      "last_modified": "2026-08-24T16:08:29Z",
+      "last_modified": "2026-08-24T21:02:02Z",
       "id": "runtime/test/test_pillar3_conformance.py"
     },
     {
@@ -3243,6 +3250,28 @@
       ],
       "last_modified": "2026-08-24T20:47:24Z",
       "id": "runtime/test/test_cli.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_traceparent_is_w3c_shaped_inside_a_span",
+        "test_traceparent_matches_the_span_it_was_taken_from",
+        "test_nothing_to_propagate_outside_a_span",
+        "test_inject_leaves_existing_headers_alone",
+        "test_inject_is_a_no_op_with_no_active_span",
+        "test_the_gateway_sends_traceparent_and_a_trace_id",
+        "store",
+        "test_a_retrieval_emits_a_span_at_all",
+        "test_the_span_records_hit_identities_not_just_a_count",
+        "test_retrieved_text_is_never_put_on_the_span",
+        "test_an_empty_retrieval_still_reports_that_it_ran",
+        "test_the_retrieval_span_inherits_identity_and_nests",
+        "_FakeHttpx",
+        "post"
+      ],
+      "last_modified": "2026-08-24T21:01:05Z",
+      "id": "runtime/test/test_context_propagation.py"
     }
   ],
   "edges": [
@@ -3324,6 +3353,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/prompt_guard.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/embeddings.py",
       "target": "runtime/__init__.py"
     },
     {
@@ -3688,6 +3722,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "runtime/test/conftest.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "runtime/test/test_gateway_span_usage.py",
       "target": "runtime/__init__.py"
     },
@@ -3714,6 +3753,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_cli.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_context_propagation.py",
       "target": "runtime/__init__.py"
     }
   ]

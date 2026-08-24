@@ -51,3 +51,22 @@ def spans(_exporter):
     """The session exporter, emptied. Each test asserts on its own spans."""
     _exporter.clear()
     return _exporter
+
+
+@pytest.fixture
+def identity_processor(_exporter):
+    """Attach AgentIdentityProcessor to the session provider for one test.
+
+    Shared rather than copied: two test modules need it, and a fixture cloned
+    into both is the shape that drifts. Not autouse — most tests assert on
+    spans that should NOT be stamped, and a processor that is always on would
+    make "an unbound span is unattributed" untestable.
+    """
+    from opentelemetry import trace
+
+    from runtime.tracing import AgentIdentityProcessor
+
+    processor = AgentIdentityProcessor()
+    trace.get_tracer_provider().add_span_processor(processor)
+    yield processor
+    processor.shutdown()
