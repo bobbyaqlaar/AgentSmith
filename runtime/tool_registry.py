@@ -212,6 +212,10 @@ class ToolRegistry:
                 duration_ms=(time.perf_counter() - start) * 1000,
                 error=type(exc).__name__,
                 tenant_id=self._tenant_id,
+                # Arguments on the FAILURE path too — a tool that raised is the
+                # case where knowing what it was given matters most, and the
+                # result does not exist to record.
+                args=args,
             )
             raise
         record_tool_call(
@@ -219,6 +223,8 @@ class ToolRegistry:
             allowed=True,
             duration_ms=(time.perf_counter() - start) * 1000,
             tenant_id=self._tenant_id,
+            args=args,
+            result=result,
         )
         return result
 

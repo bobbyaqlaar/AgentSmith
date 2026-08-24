@@ -83,6 +83,10 @@ security:
   input_guardrail: "default"        # off|default|custom       (INPUT_GUARDRAIL)
   tool_allowlist_strict: false      # deny-by-default tools    (TOOL_ALLOWLIST_STRICT)
   ip_redaction: false               # scrub IPs from spans     (ENABLE_IP_REDACTION)
+  # Tool arguments and results on the span. OFF by default: it is a new
+  # egress channel. When on, payloads go on the attribute names
+  # trace_redactor already scrubs, so the profile applies.
+  trace_tool_payloads: false        #                          (TRACE_TOOL_PAYLOADS)
 
 moderation:
   mode: "optional"                  # off|optional|required    (MODERATION_HOOK)

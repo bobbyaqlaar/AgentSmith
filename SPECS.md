@@ -703,6 +703,7 @@ For internal registries, the installer supports fetching from a private artifact
 | `MODERATION_HOOK` | Overrides `moderation.mode`. `off\|optional\|required` | `optional` |
 | `TOOL_ALLOWLIST_STRICT` | Overrides `security.tool_allowlist_strict` — deny-by-default tool calls | `false` |
 | `ENABLE_IP_REDACTION` | Overrides `security.ip_redaction` | `false` |
+| `TRACE_TOOL_PAYLOADS` | Overrides `security.trace_tool_payloads` — put tool arguments and results on the span. Off by default: a new egress channel. When on they use `input.value`/`output.value`, which `trace_redactor` already scrubs | `false` |
 | `AGENT_TENANT_ID` | Tenant this process serves. Second in `runtime/tenancy.py:resolve_tenant_id`'s order — after an explicit argument, before `.agenticframework/tenant.yaml`'s `tenant.id`. Set it on a **dedicated** worker pool; leave it unset on a shared pool, where the tenant varies per request and is passed explicitly. Unresolved raises rather than defaulting: this id partitions the budget ledger, the audit log and cross-tenant isolation | *(from tenant.yaml)* |
 | `AGENT_PROJECT_NAME` | `service.name` / `project.name` on the OTel Resource. Defaults to the repo directory name — the one identifier a repo-derived value is right for, since nothing partitions on it | *(repo name)* |
 | `AI_STACK_SLACK_WEBHOOK` | Optional Slack alert webhook | `https://hooks.slack.com/...` |
@@ -1062,6 +1063,9 @@ security:
   input_guardrail: "default"        # INPUT_GUARDRAIL
   tool_allowlist_strict: false      # TOOL_ALLOWLIST_STRICT
   ip_redaction: false               # ENABLE_IP_REDACTION
+  trace_tool_payloads: false        # TRACE_TOOL_PAYLOADS — tool args/results
+                                    # on the span, via the attribute names
+                                    # trace_redactor already scrubs
 
 moderation:
   mode: "optional"                  # MODERATION_HOOK

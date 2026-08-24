@@ -183,3 +183,76 @@ def test_get_environment_fail_closed_for_unset(monkeypatch):
 def test_get_environment_explicit_development(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "development")
     assert get_environment() == "development"
+
+
+# ── against a REAL span, which is where this was broken ──────────────────────
+
+
+def _isolated_provider(profile: str):
+    """A TracerProvider that is never registered globally.
+
+    Isolated for two reasons found the hard way: an OTel processor can be added
+    to a provider and never removed, so attaching a redactor to the shared one
+    scrubs every later test in the run; and `set_tracer_provider` is one-shot,
+    so a second global provider is silently ignored.
+    """
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(tr.TraceRedactor(profile=profile, tenant_id="acme"))
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    return provider, exporter
+
+
+def test_real_span_is_scrubbed_end_to_end():
+    """The test this module did not have, and the reason it mattered.
+
+    Every other test here drives `on_end` with a FakeSpan whose `_attributes`
+    is a plain dict. The SDK hands processors a ReadableSpan whose attributes
+    are `BoundedAttributes(immutable=True)`, and writing to those raises a bare
+    TypeError out of `span.end()` — so against a real span this processor
+    redacted NOTHING and made ending a span throw. Every test passed, because
+    the double accepted writes the real object refuses.
+
+    That is the first entry in this repo's lessons appendix, in the redaction
+    control: a test double must never be more capable than the real thing.
+    """
+    provider, exporter = _isolated_provider("staging")
+    secret = "sk-ant-abcdefghijklmnopqrstuvwxyz0123456789"
+
+    with provider.get_tracer("t").start_as_current_span("llm.call") as span:
+        span.set_attribute("input.value", f"key={secret} card=4111111111111111")
+        span.set_attribute("agent.tool.name", "payment_lookup")
+
+    attributes = dict(exporter.get_finished_spans()[0].attributes)
+    assert secret not in attributes["input.value"]
+    assert "4111111111111111" not in attributes["input.value"]
+    assert "[REDACTED" in attributes["input.value"]
+    # A non-payload attribute keeps its value.
+    assert attributes["agent.tool.name"] == "payment_lookup"
+
+
+def test_ending_a_span_with_the_redactor_installed_does_not_raise():
+    """The other half of the same bug, and the worse one operationally: the
+    TypeError propagated out of `span.end()`, so a worker with the redactor
+    installed — which `configure_tracing()` does by default — would have raised
+    on every span it closed."""
+    provider, _ = _isolated_provider("production")
+    with provider.get_tracer("t").start_as_current_span("llm.call") as span:
+        span.set_attribute("input.value", "x" * 200)
+    # Reaching here at all is the assertion.
+
+
+def test_development_profile_leaves_a_real_span_alone():
+    """The permissive profile must still be permissive against the real object,
+    not merely against the double."""
+    provider, exporter = _isolated_provider("development")
+    with provider.get_tracer("t").start_as_current_span("llm.call") as span:
+        span.set_attribute("input.value", "card=4111111111111111")
+
+    assert "4111111111111111" in dict(exporter.get_finished_spans()[0].attributes)["input.value"]

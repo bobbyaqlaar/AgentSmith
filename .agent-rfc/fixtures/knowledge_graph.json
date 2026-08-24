@@ -127,6 +127,8 @@
         "_NoopSpan",
         "agent_span",
         "_stamp",
+        "tool_payloads_enabled",
+        "_serialise_payload",
         "record_tool_call",
         "resource_attributes",
         "AgentIdentityProcessor",
@@ -139,7 +141,7 @@
         "is_recording",
         "on_start"
       ],
-      "last_modified": "2026-08-24T20:57:41Z",
+      "last_modified": "2026-08-24T21:39:09Z",
       "id": "runtime/tracing.py"
     },
     {
@@ -296,7 +298,7 @@
         "invoke",
         "decorator"
       ],
-      "last_modified": "2026-08-24T17:30:43Z",
+      "last_modified": "2026-08-24T21:39:27Z",
       "id": "runtime/tool_registry.py"
     },
     {
@@ -308,6 +310,7 @@
         "_load_extra_patterns",
         "HITLBlobStore",
         "_make_blob_ref",
+        "_writable_attributes",
         "TraceRedactor",
         "_sub",
         "__init__",
@@ -321,7 +324,7 @@
         "_scrub",
         "_truncate"
       ],
-      "last_modified": "2026-08-24T19:48:17Z",
+      "last_modified": "2026-08-24T21:49:52Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -2283,9 +2286,13 @@
         "test_get_environment_fail_closed_for_unrecognized_value",
         "test_get_environment_fail_closed_for_unset",
         "test_get_environment_explicit_development",
+        "_isolated_provider",
+        "test_real_span_is_scrubbed_end_to_end",
+        "test_ending_a_span_with_the_redactor_installed_does_not_raise",
+        "test_development_profile_leaves_a_real_span_alone",
         "__init__"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T21:50:15Z",
       "id": "runtime/test/test_trace_redactor.py"
     },
     {
@@ -3367,6 +3374,30 @@
       ],
       "last_modified": "2026-08-24T21:24:55Z",
       "id": "runtime/test/test_retry_visibility.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "payloads_on",
+        "_tool_span",
+        "test_payloads_are_off_unless_declared",
+        "test_the_env_var_and_the_declaration_both_enable_it",
+        "test_the_attribute_names_are_the_ones_the_redactor_scrubs",
+        "test_the_redactor_actually_scrubs_a_tool_payload",
+        "test_a_huge_payload_is_capped_before_the_redactor_sees_it",
+        "test_an_unserialisable_payload_is_omitted_not_stringified_as_an_error",
+        "test_non_json_objects_fall_back_to_str",
+        "test_the_registry_records_arguments_and_result",
+        "test_arguments_are_recorded_when_the_tool_raises",
+        "Hostile",
+        "Point",
+        "add",
+        "explode",
+        "__repr__"
+      ],
+      "last_modified": "2026-08-24T21:47:42Z",
+      "id": "runtime/test/test_tool_payloads.py"
     }
   ],
   "edges": [
@@ -3873,6 +3904,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_retry_visibility.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_tool_payloads.py",
       "target": "runtime/__init__.py"
     }
   ]

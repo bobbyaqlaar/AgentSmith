@@ -29,7 +29,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from runtime.environment import get_environment
 
@@ -236,6 +236,33 @@ def _make_blob_ref(trace_id: str, span_id: str, attr_key: str) -> str:
 # ── Span processor ────────────────────────────────────────────────────────────
 
 
+def _writable_attributes(span: Any) -> Optional[dict]:
+    """The span's attribute mapping, in a form that can be written to.
+
+    `span.end()` hands processors a ReadableSpan whose `_attributes` is a
+    `BoundedAttributes` constructed with `immutable=True`; assigning to it
+    raises a bare `TypeError`. This module has always mutated `_attributes`
+    directly — the documented workaround, since OTel offers no "rewrite before
+    export" hook — and against the real SDK that meant EVERY span raised out of
+    `end()` and NOTHING was ever redacted.
+
+    It was invisible because every test here drives `on_end` with a `FakeSpan`
+    whose `_attributes` is a plain dict, which accepts writes the real one
+    refuses. A test double more capable than the real thing, which is the first
+    entry in this repo's own lessons appendix.
+
+    `BoundedAttributes` wraps a plain dict it does not guard; writing through
+    it is one more layer of private access than the previous code, in exchange
+    for the control functioning at all. `test_real_span_is_scrubbed_end_to_end`
+    is the guard that this keeps working across an SDK upgrade.
+    """
+    attributes = getattr(span, "_attributes", None)
+    if attributes is None:
+        return None
+    inner = getattr(attributes, "_dict", None)
+    return inner if isinstance(inner, dict) else (attributes or None)
+
+
 class TraceRedactor(_OTelSpanProcessor):
     """
     SpanProcessor that scrubs sensitive data before export.
@@ -288,10 +315,12 @@ class TraceRedactor(_OTelSpanProcessor):
         pass  # No action on start — scrubbing happens once the span's final attributes are known.
 
     def on_end(self, span: "ReadableSpan") -> None:  # type: ignore[override]
+        # See _writable_attributes: a finished span's attributes are immutable
+        # in this SDK, and writing to them raised TypeError out of span.end().
         if self.profile == "none" or not _HAS_OTEL:
             return
 
-        attributes = getattr(span, "_attributes", None)
+        attributes = _writable_attributes(span)
         if not attributes:
             return
 

@@ -126,6 +126,68 @@ def _stamp(span: Any, name: str, tenant_id: Optional[str], kind: str, attrs: dic
         pass
 
 
+# The OpenInference/Phoenix payload attribute names, which trace_redactor
+# ALREADY scrubs — see its `_PAYLOAD_ATTRIBUTES`. Reused rather than inventing
+# `agent.tool.input`, so tool payloads inherit the whole pipeline for free:
+# pattern scrubbing in staging, truncation to 50 characters plus an encrypted
+# HITL blob in production. A new attribute name would have been a new,
+# unscrubbed channel — which is the one thing this must not be.
+TOOL_INPUT_ATTRIBUTE = "input.value"
+TOOL_OUTPUT_ATTRIBUTE = "output.value"
+
+# Serialisation ceiling, applied BEFORE the redactor sees anything. The
+# redactor truncates by profile, but a tool returning a megabyte of JSON should
+# never be turned into a megabyte string in the first place — that cost lands
+# on the call being traced.
+_PAYLOAD_CHARS = 4000
+
+
+def tool_payloads_enabled() -> bool:
+    """Whether tool arguments and results go on the span. OFF by default.
+
+    Opt-in because it is a new egress channel, not because it is unsafe: it
+    routes through `trace_redactor` exactly as prompts do. But a tenant should
+    say that it wants its tool arguments leaving the process, in the file where
+    the rest of its posture is declared, rather than discover it in Phoenix.
+    """
+    try:
+        from runtime.config import as_bool, resolve
+
+        return as_bool(
+            resolve(
+                "security.trace_tool_payloads",
+                env_var="TRACE_TOOL_PAYLOADS",
+                default=False,
+            )
+        )
+    except Exception:  # fail-closed: unreadable config records nothing
+        return False
+
+
+def _serialise_payload(value: Any) -> Optional[str]:
+    """A payload as text, capped, or None when it cannot be represented.
+
+    None rather than `str(exc)`: a serialisation failure must not put an
+    exception message where a caller will read it as the tool's actual input.
+    """
+    if value is None:
+        return None
+    try:
+        import json
+
+        text = value if isinstance(value, str) else json.dumps(value, default=str)
+    except Exception:
+        try:
+            text = str(value)
+        except Exception:
+            return None
+    if len(text) > _PAYLOAD_CHARS:
+        # Marked, not silently clipped — a reader must not take a truncated
+        # payload for the whole one.
+        return text[:_PAYLOAD_CHARS] + f"…[truncated at {_PAYLOAD_CHARS} chars]"
+    return text
+
+
 def record_tool_call(
     name: str,
     *,
@@ -133,6 +195,8 @@ def record_tool_call(
     duration_ms: float,
     error: Optional[str] = None,
     tenant_id: Optional[str] = None,
+    args: Any = None,
+    result: Any = None,
 ) -> None:
     """Emit a CHILD span for one tool invocation (`agent.tool.<name>`).
 
@@ -170,6 +234,17 @@ def record_tool_call(
                 span.set_attribute("tenant.id", tenant_id)
             if error:
                 span.set_attribute("agent.tool.error", error)
+
+            # Arguments and result, when the tenant has asked for them. These
+            # land on the names trace_redactor already scrubs, so the profile
+            # applies without this module knowing anything about redaction.
+            if tool_payloads_enabled():
+                payload_in = _serialise_payload(args)
+                if payload_in is not None:
+                    span.set_attribute(TOOL_INPUT_ATTRIBUTE, payload_in)
+                payload_out = _serialise_payload(result)
+                if payload_out is not None:
+                    span.set_attribute(TOOL_OUTPUT_ATTRIBUTE, payload_out)
     except Exception:  # fail-open: tracing must never break a tool call
         pass
 
