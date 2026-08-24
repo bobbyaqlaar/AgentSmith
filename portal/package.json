@@ -10,10 +10,14 @@
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs scripts/migrate.ts",
-    "test": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/authz.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/phoenix.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/ssoRevocation.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/edgeSafety.test.ts",
+    "test": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/authz.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/phoenix.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/ssoRevocation.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/edgeSafety.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/tracing.test.ts",
     "test:db": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/auditLog.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/dlqCostWidget.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/agentRuns.test.ts"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.221.0",
+    "@opentelemetry/resources": "^2.10.0",
+    "@opentelemetry/sdk-trace-node": "^2.10.0",
     "jose": "^6.2.3",
     "next": "^14.2.5",
     "openid-client": "^6.8.4",

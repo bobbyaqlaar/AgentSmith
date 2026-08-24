@@ -29,6 +29,7 @@ import { NextResponse } from "next/server";
 import { requireBearer } from "@/lib/bearerAuth";
 import { syncHistoryEntries, type SyncEntryInput } from "@/lib/issues";
 import { upsertTenant, getTenant } from "@/lib/tenants";
+import { portalSpan, withIdentity } from "@/lib/tracing";
 
 export async function POST(request: Request) {
   const denied = requireBearer(request, { envVar: "OPS_PORTAL_SYNC_TOKEN", purpose: "sync ingestion" });
@@ -62,6 +63,20 @@ export async function POST(request: Request) {
     await upsertTenant({ tenantId, name: existingTenant.name, budgetCapUsd, replayWebhookUrl, replayWebhookSecret });
   }
 
-  const written = await syncHistoryEntries(tenantId, entries);
+  // Both counts, because they are different numbers: syncHistoryEntries
+  // deduplicates by entryId before it writes, so received > written is a
+  // tenant pushing the same entry twice in one batch — visible here and
+  // nowhere else, since the upsert makes it harmless and silent.
+  const written = await withIdentity({ tenantId }, () =>
+    portalSpan(
+      "portal.sync.history",
+      { attributes: { "sync.entries_received": entries.length } },
+      async (span) => {
+        const count = await syncHistoryEntries(tenantId, entries);
+        span.setAttribute("sync.entries_written", count);
+        return count;
+      },
+    ),
+  );
   return NextResponse.json({ ok: true, written });
 }

@@ -2602,7 +2602,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T11:00:08Z",
+      "last_modified": "2026-08-24T22:30:34Z",
       "id": "portal/test/edgeSafety.test.ts"
     },
     {
@@ -2664,11 +2664,13 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
+        "operationOf",
+        "isPassthroughQuery",
         "getPool",
         "tableExists",
         "columnExists"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T22:28:39Z",
       "id": "portal/lib/db.ts"
     },
     {
@@ -2723,7 +2725,7 @@
         "RecentTraceStats",
         "getRecentTraceStats"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T22:26:11Z",
       "id": "portal/lib/phoenix.ts"
     },
     {
@@ -2918,7 +2920,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-24T20:59:52Z",
+      "last_modified": "2026-08-24T22:33:13Z",
       "id": "portal/app/api/runs/ingest/route.ts"
     },
     {
@@ -2927,7 +2929,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-23T19:43:39Z",
+      "last_modified": "2026-08-24T22:27:21Z",
       "id": "portal/app/api/sync/history/route.ts"
     },
     {
@@ -2936,7 +2938,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-08-24T22:27:06Z",
       "id": "portal/app/api/dlq/[taskId]/discard/route.ts"
     },
     {
@@ -2945,7 +2947,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-08-24T22:27:06Z",
       "id": "portal/app/api/dlq/[taskId]/replay/route.ts"
     },
     {
@@ -2963,7 +2965,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-08-24T22:27:31Z",
       "id": "portal/app/api/tenants/[id]/cost/route.ts"
     },
     {
@@ -2982,7 +2984,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-08-24T22:27:31Z",
       "id": "portal/app/api/tenants/[id]/issues/route.ts"
     },
     {
@@ -3030,7 +3032,7 @@
         "OPTIONS",
         "GET"
       ],
-      "last_modified": "2026-06-26T21:15:31Z",
+      "last_modified": "2026-08-24T22:27:06Z",
       "id": "portal/app/api/widget/status/route.ts"
     },
     {
@@ -3232,7 +3234,7 @@
         "build_parser",
         "main"
       ],
-      "last_modified": "2026-08-24T20:46:22Z",
+      "last_modified": "2026-08-24T21:51:58Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3398,6 +3400,69 @@
       ],
       "last_modified": "2026-08-24T21:47:42Z",
       "id": "runtime/test/test_tool_payloads.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-08-24T22:25:11Z",
+      "id": "portal/instrumentation.node.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "PORTAL_ROLE",
+        "SERVICE_NAME",
+        "resourceAttributes",
+        "PortalIdentityProcessor"
+      ],
+      "last_modified": "2026-08-24T22:30:17Z",
+      "id": "portal/lib/spanIdentity.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "TRACER_NAME",
+        "PortalIdentity",
+        "withIdentity",
+        "identityFromContext",
+        "identityAttributes",
+        "truncate",
+        "portalSpan",
+        "currentTraceId",
+        "resolveTracesEndpoint"
+      ],
+      "last_modified": "2026-08-24T22:23:54Z",
+      "id": "portal/lib/tracing.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "register"
+      ],
+      "last_modified": "2026-08-24T22:25:11Z",
+      "id": "portal/instrumentation.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-08-24T22:29:54Z",
+      "id": "portal/test/tracing.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "Environment",
+        "getEnvironment",
+        "ENVIRONMENT_ALIASES"
+      ],
+      "last_modified": "2026-08-24T22:29:54Z",
+      "id": "portal/lib/environment.ts"
     }
   ],
   "edges": [
@@ -3768,6 +3833,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "portal/lib/db.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "portal/lib/tenants.ts",
       "target": "portal/lib/db.ts"
     },
@@ -3780,6 +3850,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/bearerAuth.ts",
       "target": "portal/lib/constantTime.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/phoenix.ts",
+      "target": "portal/lib/tracing.ts"
     },
     {
       "edge_type": "IMPORTS",
@@ -3910,6 +3985,26 @@
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_tool_payloads.py",
       "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/instrumentation.node.ts",
+      "target": "portal/lib/spanIdentity.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/instrumentation.node.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/spanIdentity.ts",
+      "target": "portal/lib/environment.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/spanIdentity.ts",
+      "target": "portal/lib/tracing.ts"
     }
   ]
 }

@@ -20,6 +20,42 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Observability — the Ops Portal is in the trace instead of linking to one
+
+**Span attributes (portal only).** New spans named `portal.*`. Resource carries
+`service.name=agentsmith-ops-portal`, `project.name`, `environment` and
+`agent.role=ops-portal`; per-span identity is `tenant.id` and `portal.actor.role`. No
+worker-side span attribute changes — a dashboard keyed on `llm.*` or `agent.*` is unaffected.
+
+- **The trace crosses the process boundary.** `portal/instrumentation.ts` registers an OTel
+  provider, which also switches on Next.js's own request instrumentation and the W3C
+  propagator. The `traceparent` the worker already injects now makes the portal's request span
+  a **child** of the worker's LLM call, rather than a trace id copied into `agent_runs`. The
+  hand parser on `/api/runs/ingest` stays: it is the path that still works with tracing off.
+- **Every Postgres query is traced.** `portal/lib/db.ts` returns a pool whose `query` opens a
+  client span, so the twenty-eight existing call sites and every future one are covered
+  without opting in. `db.statement` is the parameterised text; bound values are never recorded
+  — a portal span has no redactor behind it, unlike the worker's. `pg`'s callback and Cursor
+  forms are detected and passed through untraced, since wrapping them would change what the
+  caller gets back.
+- **Outbound Phoenix calls are visible.** `checkPhoenixHealth` and the GraphQL queries carry
+  `server.address` and the HTTP status. An unreachable tenant Phoenix cost up to five seconds
+  of a page render and left no evidence but a card reading "unknown".
+- **Operator actions are attributable.** `portal.dlq.replay` / `portal.dlq.discard` record the
+  acting role and the entry. The replayed payload is deliberately not recorded.
+- **`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`** is read, and an `OTEL_EXPORTER_OTLP_ENDPOINT` that
+  already ends in `/v1/traces` — which is what `ai-dashboard-start` sets — is not suffixed a
+  second time. The JS exporter appends that path itself, so the framework's own convention
+  would have sent every portal span to `/v1/traces/v1/traces`.
+- **Off unless configured.** With no endpoint set, no provider is registered at all: not a
+  provider with no exporter, which would record spans and drop them.
+
+New dependencies in `portal/package.json`: `@opentelemetry/api`, `sdk-trace-node`,
+`exporter-trace-otlp-http`, `resources`. The SDK is loaded behind a `NEXT_RUNTIME` guard so it
+never reaches the Edge bundle `middleware.ts` compiles into; `portal/test/edgeSafety.test.ts`
+now fails if anything on that path imports it.
+
+
 ### Evals — the judge now grades deterministically, and the suites can prove they fire
 
 Tenant-visible: two optional case fields, one new env var, and thresholds that

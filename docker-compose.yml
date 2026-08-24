@@ -165,6 +165,18 @@ services:
       SSO_CLIENT_SECRET:      "${SSO_CLIENT_SECRET:-}"
       SSO_REDIRECT_URI:       "${SSO_REDIRECT_URI:-}"
       SSO_SESSION_SECRET:     "${SSO_SESSION_SECRET:-}"
+      # Tracing. Defaults to the Phoenix in this same stack, so a local run has
+      # the portal's spans in the same trace as the worker's without extra
+      # setup — the whole point of propagating `traceparent` is lost if one end
+      # has to be configured by hand. Set to empty to switch the portal's
+      # tracing off; unset there, no provider is registered at all.
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://phoenix:6006/v1/traces}"
+      # Same values the workers use, or the two sides label one deployment two
+      # ways. ENVIRONMENT fails closed to "production" when unset (see
+      # runtime/environment.py and its portal mirror).
+      ENVIRONMENT:            "${ENVIRONMENT:-development}"
+      AGENT_PROJECT_NAME:     "${AGENT_PROJECT_NAME:-}"
+      AGENT_OWNER_ID:         "${AGENT_OWNER_ID:-}"
     depends_on:
       db:
         condition: service_healthy

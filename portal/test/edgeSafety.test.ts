@@ -136,6 +136,34 @@ test("no module reachable from middleware.ts uses a Node-only builtin", () => {
   }
 });
 
+// The SDK arrives as a BARE specifier, which the walker above deliberately
+// does not follow — so the `node:` patterns never see the `node:async_hooks`
+// inside it. instrumentation.ts already guards this by importing the SDK
+// dynamically behind NEXT_RUNTIME; this is the check that notices if someone
+// reaches for a span in middleware.ts and pulls the whole SDK onto the Edge.
+//
+// lib/tracing.ts is NOT forbidden: it imports @opentelemetry/api only, which
+// is a no-op without a provider and runs on the Edge quite happily. Banning it
+// would be a rule against working code, which is how guards get deleted.
+const FORBIDDEN_ON_EDGE_PACKAGES = [
+  /from\s+["']@opentelemetry\/sdk-/,
+  /from\s+["']@opentelemetry\/exporter-/,
+  /from\s+["'].*instrumentation\.node["']/,
+];
+
+test("no module reachable from middleware.ts pulls in the OTel SDK", () => {
+  for (const file of edgeGraph()) {
+    const source = stripComments(readFileSync(file, "utf8"));
+    for (const pattern of FORBIDDEN_ON_EDGE_PACKAGES) {
+      assert.ok(
+        !pattern.test(source),
+        `${file.replace(`${PORTAL}/`, "")} matches ${pattern} — the OTel Node SDK ` +
+          `cannot load on the Edge runtime. Use lib/tracing.ts (API only) instead.`,
+      );
+    }
+  }
+});
+
 test("constantTimeEquals matches identical strings", () => {
   assert.equal(constantTimeEquals("hunter2", "hunter2"), true);
   assert.equal(constantTimeEquals("", ""), true);

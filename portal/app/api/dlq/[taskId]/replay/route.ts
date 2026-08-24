@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { getDlqEntry, replayDlqEntry, ReplayNotConfiguredError, ReplayWebhookError } from "@/lib/dlq";
 import { canAccessTenant, canWrite } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
+import { portalSpan, withIdentity } from "@/lib/tracing";
 
 export async function POST(request: Request, { params }: { params: { taskId: string } }) {
   const access = currentAccess();
@@ -35,7 +36,18 @@ export async function POST(request: Request, { params }: { params: { taskId: str
   }
 
   try {
-    await replayDlqEntry(entry.tenantId, entry.taskId, body.payload);
+    // A replay POSTs a human-edited payload to the tenant's own webhook — the
+    // portal's only outbound write, and the action an auditor asks about
+    // first. The span records WHO (role, never the person) and WHICH entry,
+    // and deliberately not the payload: it is operator-edited tenant data and
+    // no redactor stands between a portal span and the exporter.
+    await withIdentity({ tenantId: entry.tenantId, actorRole: access.role }, () =>
+      portalSpan(
+        "portal.dlq.replay",
+        { attributes: { "dlq.task_id": entry.taskId, "dlq.resumable": Boolean(entry.workflowId && entry.gateId) } },
+        () => replayDlqEntry(entry.tenantId, entry.taskId, body.payload),
+      ),
+    );
   } catch (err) {
     if (err instanceof ReplayNotConfiguredError) {
       return NextResponse.json({ error: err.message }, { status: 503 });

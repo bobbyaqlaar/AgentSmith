@@ -7,6 +7,27 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — the Ops Portal joins the trace (2026-08-25)
+
+The last open item from `docs/observability-audit.md`. The worker had been sending a
+W3C `traceparent` since the previous slice and the portal stored the trace id on the
+row — correlation, not tracing. The portal's own work appeared in no trace at all.
+
+| Finding | Fix |
+|---|---|
+| The trace ended at the process boundary: no provider was registered, so Next.js emitted nothing and never read the incoming `traceparent` | `portal/instrumentation.ts` registers a provider behind a `NEXT_RUNTIME` guard. Registering it is also what switches on Next's own request instrumentation and the W3C propagator, so the portal's request span becomes a CHILD of the worker's LLM call |
+| Twenty-eight `getPool().query(...)` call sites across nine modules, none traceable without each opting in | The pool itself opens the span (`lib/db.ts`). True by construction, as pillar 3's `AgentIdentityProcessor` is on the Python side — a helper each caller must remember is the shape the audit found being forgotten |
+| An unreachable tenant Phoenix cost up to 5s of a page render and left no evidence but a card reading "unknown" | `portal.phoenix.*` spans carry `server.address`, the HTTP status, and the error TYPE on the degrade path |
+| Identity bound one block too late — a live trace showed the SELECT that looks a tenant up and the INSERT that creates it exporting with **no `tenant.id`** | Bound at the first line that knows the tenant. Found by reading exported OTLP from a running build, not by reading the code |
+| The framework's own convention sets `OTEL_EXPORTER_OTLP_ENDPOINT` to a full `…/v1/traces` URL; the JS exporter appends that path itself | `resolveTracesEndpoint()` detects the suffix. Left alone, every portal span would have POSTed to `/v1/traces/v1/traces` and been dropped on a 404 that surfaces nowhere |
+| `lib/environment.ts` is a second copy of `runtime/environment.py`'s alias table — two services able to disagree about which environment they are in, and the redaction profile is chosen from that value | A drift test in `portal/test/tracing.test.ts` parses the Python table and compares. Same treatment `scripts/_shared.py`'s `_dotenv_value` mirror gets |
+
+**Deliberately not done:** payloads on portal spans. `runtime/trace_redactor.py` protects the
+worker's spans and nothing protects the portal's, so request bodies, bound query values and
+replayed DLQ payloads stay off. Parameterised SQL is recorded because it is code.
+
+---
+
 ## Completed — evidence, CI, observability, configuration (2026-08-24)
 
 Nineteen commits across AgentSmith and KYC Sentinel. Grouped by what they fixed,

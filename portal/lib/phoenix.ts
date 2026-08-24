@@ -4,6 +4,25 @@
 // GraphQL query shapes below (projects / Project.traceCount /
 // Project.traceCountByStatusTimeSeries) were validated directly against a
 // live Phoenix instance's schema, not guessed at.
+//
+// Every outbound call here is traced. These are the portal's slowest hop by a
+// wide margin — a tenant Phoenix that is merely unreachable costs the 3s or 5s
+// its AbortSignal allows, on a page render — and until now the only evidence
+// that had happened was a card rendering "unknown" with no explanation
+// anywhere. `server.address` is the host, not the full URL: enough to tell two
+// tenants' instances apart without putting a path on a span.
+
+import { SpanKind, portalSpan } from "./tracing";
+
+/** The host of a configured base URL, or "invalid" — never the raw string,
+ *  which may carry a path or credentials. */
+function hostOf(baseUrl: string): string {
+  try {
+    return new URL(baseUrl).host;
+  } catch {
+    return "invalid";
+  }
+}
 
 export function tenantTraceUrl(phoenixBaseUrl: string, opts: { environment?: string } = {}): string {
   const params = new URLSearchParams();
@@ -13,14 +32,25 @@ export function tenantTraceUrl(phoenixBaseUrl: string, opts: { environment?: str
 }
 
 export async function checkPhoenixHealth(phoenixBaseUrl: string): Promise<boolean> {
-  try {
-    const resp = await fetch(`${phoenixBaseUrl.replace(/\/$/, "")}/healthz`, {
-      signal: AbortSignal.timeout(3000),
-    });
-    return resp.ok;
-  } catch {
-    return false;
-  }
+  return portalSpan(
+    "portal.phoenix.health",
+    { kind: SpanKind.CLIENT, attributes: { "server.address": hostOf(phoenixBaseUrl) } },
+    async (span) => {
+      try {
+        const resp = await fetch(`${phoenixBaseUrl.replace(/\/$/, "")}/healthz`, {
+          signal: AbortSignal.timeout(3000),
+        });
+        span.setAttribute("http.response.status_code", resp.status);
+        return resp.ok;
+      } catch (err) {
+        // The catch stays: an unreachable Phoenix is a degraded card, not a
+        // failed page. But the span now says WHICH — a timeout and a refused
+        // connection both used to render as the same silent `false`.
+        span.setAttribute("error.type", err instanceof Error ? err.name : typeof err);
+        return false;
+      }
+    },
+  );
 }
 
 export interface RecentTraceStats {
@@ -29,17 +59,34 @@ export interface RecentTraceStats {
   errorRate: number | null;
 }
 
-async function graphqlQuery<T>(phoenixBaseUrl: string, query: string, variables: Record<string, unknown>): Promise<T> {
-  const resp = await fetch(`${phoenixBaseUrl.replace(/\/$/, "")}/graphql`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ query, variables }),
-    signal: AbortSignal.timeout(5000),
-  });
-  if (!resp.ok) throw new Error(`Phoenix GraphQL HTTP ${resp.status}`);
-  const json = await resp.json();
-  if (json.errors?.length) throw new Error(json.errors[0]?.message ?? "Phoenix GraphQL error");
-  return json.data as T;
+async function graphqlQuery<T>(
+  phoenixBaseUrl: string,
+  query: string,
+  variables: Record<string, unknown>,
+  operation: string,
+): Promise<T> {
+  return portalSpan(
+    "portal.phoenix.graphql",
+    {
+      kind: SpanKind.CLIENT,
+      // The operation NAME, not the query text and never the variables — a
+      // closed set of two, which keeps the attribute groupable.
+      attributes: { "server.address": hostOf(phoenixBaseUrl), "graphql.operation.name": operation },
+    },
+    async (span) => {
+      const resp = await fetch(`${phoenixBaseUrl.replace(/\/$/, "")}/graphql`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query, variables }),
+        signal: AbortSignal.timeout(5000),
+      });
+      span.setAttribute("http.response.status_code", resp.status);
+      if (!resp.ok) throw new Error(`Phoenix GraphQL HTTP ${resp.status}`);
+      const json = await resp.json();
+      if (json.errors?.length) throw new Error(json.errors[0]?.message ?? "Phoenix GraphQL error");
+      return json.data as T;
+    },
+  );
 }
 
 const PROJECTS_QUERY = `{ projects { edges { node { id } } } }`;
@@ -73,6 +120,7 @@ export async function getRecentTraceStats(
       phoenixBaseUrl,
       PROJECTS_QUERY,
       {},
+      "projects",
     );
     const projectId = projects.projects.edges[0]?.node.id;
     if (!projectId) return null;
@@ -81,11 +129,16 @@ export async function getRecentTraceStats(
     const start = new Date(end.getTime() - sinceHours * 60 * 60 * 1000);
     const data = await graphqlQuery<{
       node: { traceCountByStatusTimeSeries: { data: Array<{ okCount: number; errorCount: number; totalCount: number }> } } | null;
-    }>(phoenixBaseUrl, TRACE_STATS_QUERY, {
-      id: projectId,
-      timeRange: { start: start.toISOString(), end: end.toISOString() },
-      timeBinConfig: { scale: "HOUR" },
-    });
+    }>(
+      phoenixBaseUrl,
+      TRACE_STATS_QUERY,
+      {
+        id: projectId,
+        timeRange: { start: start.toISOString(), end: end.toISOString() },
+        timeBinConfig: { scale: "HOUR" },
+      },
+      "traceCountByStatus",
+    );
 
     const points = data.node?.traceCountByStatusTimeSeries.data ?? [];
     const traceCount = points.reduce((sum, p) => sum + p.totalCount, 0);

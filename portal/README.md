@@ -122,6 +122,33 @@ inside the route handler, not basic-auth/SSO.
 | Phoenix trace stats | Phoenix's own REST (health check) + GraphQL (`traceCountByStatusTimeSeries`) | Read live from each tenant's `phoenixBaseUrl`, not cached |
 | Audit log | `audit_log` | This portal — HMAC-signed, DB-trigger-enforced append-only |
 
+## Tracing
+
+Off unless `OTEL_EXPORTER_OTLP_ENDPOINT` (or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`)
+is set — see `.env.example`. With it set, `instrumentation.ts` registers an OTel
+provider, which also switches on Next.js's own request instrumentation and the
+W3C propagator. The practical effect: the `traceparent` a worker sends on
+`POST /api/runs/ingest` makes the portal's request span a **child** of the LLM
+call that triggered it, so `agent_runs.trace_id` stops being the only link
+between the two.
+
+| Span | What it covers |
+|---|---|
+| `portal.db.<OPERATION>` | Every `pg` query — the pool itself is traced (`lib/db.ts`), so no call site opts in |
+| `portal.phoenix.graphql` / `portal.phoenix.health` | Outbound calls to a tenant's Phoenix, the slowest hop the portal makes |
+| `portal.runs.ingest`, `portal.sync.history` | The machine-to-machine write paths |
+| `portal.dlq.replay`, `portal.dlq.discard` | Operator actions, with the acting RBAC role |
+
+Identity follows `runtime/tracing.py`'s split: `service.name`, `project.name`,
+`environment` and `agent.role=ops-portal` on the Resource; `tenant.id` and
+`portal.actor.role` stamped per span from the active context, and **absent**
+rather than defaulted when a request has no tenant.
+
+Portal spans deliberately carry no request bodies, no bound query values and no
+replayed payloads. The worker's spans pass through `runtime/trace_redactor.py`;
+nothing stands between a portal span and the collector, so nothing that could
+hold tenant data goes on one. Parameterised SQL is recorded because it is code.
+
 ## Honest gaps
 
 - **Workflow-engine queue depth** (Temporal/Celery task-queue backlog, as
@@ -148,3 +175,5 @@ inside the route handler, not basic-auth/SSO.
 - Recharts (cost chart)
 - `pg` (node-postgres) against the shared framework Postgres instance
 - `jose` (signed session JWTs), `openid-client` (SSO/OIDC)
+- OpenTelemetry (`sdk-trace-node` + OTLP/HTTP exporter), loaded only in the Node
+  runtime — `middleware.ts` compiles to the Edge runtime, which cannot load it

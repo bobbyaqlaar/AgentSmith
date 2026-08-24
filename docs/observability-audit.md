@@ -259,6 +259,10 @@ carries no trace context, so the portal's work is a *separate trace*. `agent_run
 a manual correlation column, not W3C propagation. `vector_store.query` and `embeddings` emit
 no spans at all.
 
+*(All four are now closed — see the two fixed sections below. The paragraph above is left as
+written because it is the finding, and a finding that is quietly edited into its own fix
+stops being evidence of anything.)*
+
 ### ✅ Partially fixed: an LLM call is no longer absent from the trace
 
 `_record_span_attributes` wrote onto `trace.get_current_span()` behind `if span is None:
@@ -281,9 +285,10 @@ case: one per step, and the unit every dashboard is keyed on.
 ### ✅ Fixed — the request now survives the process hop
 
 1. **`traceparent` on the run-status POST.** `runtime/tracing.inject_context()` adds the W3C
-   header to the worker's call, and `/api/runs/ingest` parses it — by hand, deliberately: the
-   portal is not instrumented and correlating a row to a trace does not require it to be. An
-   all-zero trace id is the invalid one the spec reserves and is rejected rather than stored.
+   header to the worker's call, and `/api/runs/ingest` parses it by hand. That hand parser is
+   kept now that the portal *is* instrumented, because it is the one path that still works
+   with tracing switched off. An all-zero trace id is the invalid one the spec reserves and is
+   rejected rather than stored.
 2. **`agent_runs.trace_id` is populated.** It was NULL for every run ever recorded:
    `_report_run_status` accepted a `trace_id` argument that not one of its nine call sites
    passed, so the portal's trace link had nothing to link to. It defaults to the active trace.
@@ -294,10 +299,56 @@ case: one per step, and the unit every dashboard is keyed on.
    the most common question asked of a RAG system. Retrieved TEXT is deliberately excluded:
    it is the likeliest place for PII to enter a span and the redactor runs later.
 
-**Still open:** the portal emits no spans of its own, so the trace ends at the ingest
-boundary rather than continuing through it — correlation, not a full downstream span tree.
-A collector fan-out (Phoenix for LLM semantics, Tempo/Jaeger for infra search) only makes
-sense after that.
+### ✅ Fixed — the portal is in the trace, not merely linked from it
+
+The last open item. `agent_runs.trace_id` let a portal row link *to* a trace; the portal's own
+work — three Postgres round-trips per ingest, an outbound Phoenix query that can hang for the
+full five seconds its `AbortSignal` allows — appeared in no trace at all, including the one it
+was serving.
+
+`portal/instrumentation.ts` registers a provider, and that single act does more than add the
+spans below: Next.js instruments its own request handling only when a provider is registered,
+and it calls `propagation.extract` on the incoming headers before the handler runs. So the
+worker's `traceparent` becomes the **parent** of the portal's request span rather than a
+string copied into a column.
+
+Verified against a running build rather than asserted — a worker's header in, the exported
+OTLP payload out:
+
+```
+POST /api/runs/ingest/route   trace=99887766…eeff  parent=1122334455667788   ← the worker's span
+  portal.runs.ingest          trace=99887766…eeff  tenant.id=span-proof-3
+  portal.db.SELECT            trace=99887766…eeff  tenant.id=span-proof-3
+  portal.db.INSERT            trace=99887766…eeff  tenant.id=span-proof-3
+```
+
+What that run changed: the first version bound the tenant one block too late, and the trace
+showed the SELECT that looks a tenant up and the INSERT that creates it exporting with **no
+`tenant.id`** — the two spans that are entirely about a tenant. Identity is now bound at the
+first line that knows one.
+
+- **Every query is traced, without a call site opting in.** `lib/db.ts` returns a pool whose
+  `query` opens a span, rather than a helper the twenty-eight existing call sites would each
+  have to remember. `db.statement` carries the *parameterised* text — code, not data — and the
+  values are never recorded: unlike the worker's spans, nothing redacts a portal span. The
+  callback and Cursor forms of `pg.query` return something other than a promise and are passed
+  straight through untraced, rather than silently changing what a caller gets back.
+- **Pillar 3 holds on the portal too**, split the same way: `service.name`, `project.name`,
+  `environment` and `agent.role: ops-portal` on the Resource; `tenant.id` and
+  `portal.actor.role` stamped per span by `PortalIdentityProcessor` from the active context.
+  `portal.actor.role` is the human's RBAC role and is deliberately *not* called `agent.role` —
+  an operator is not an agent, and one attribute meaning two things is pillar 15.
+- **An operator action is attributable.** `portal.dlq.replay` and `portal.dlq.discard` record
+  which role acted on which entry. The replayed payload is not recorded: it is operator-edited
+  tenant data on its way to a tenant's webhook.
+- **The endpoint trap.** This repo's own convention sets `OTEL_EXPORTER_OTLP_ENDPOINT` to a
+  full `…/v1/traces` URL — fine for the Python exporter, which is handed it directly. The JS
+  exporter appends `/v1/traces` to what it is given, so the same value everything else here
+  uses would have POSTed to `/v1/traces/v1/traces` and dropped every span on a 404 that
+  surfaces nowhere. `resolveTracesEndpoint()` detects the suffix instead of assuming it.
+
+**Still open:** a collector fan-out (Phoenix for LLM semantics, Tempo/Jaeger for infra search)
+is now possible but not configured — both sides currently export to one endpoint.
 
 ---
 

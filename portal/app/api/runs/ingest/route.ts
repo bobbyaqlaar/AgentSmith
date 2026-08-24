@@ -20,6 +20,7 @@ import { NextResponse } from "next/server";
 import { requireBearer } from "@/lib/bearerAuth";
 import { upsertAgentRun } from "@/lib/runStatus";
 import { getTenant, upsertTenant } from "@/lib/tenants";
+import { currentTraceId, portalSpan, withIdentity } from "@/lib/tracing";
 
 const VALID_STATUSES = ["running", "success", "degraded", "failed"];
 
@@ -32,11 +33,13 @@ function numberOrNull(value: unknown): number | null {
 
 /** The 32-hex trace id out of a W3C `traceparent`, or null.
  *
- *  Parsed rather than handed to an OTel SDK on purpose: the portal is not
- *  instrumented, and correlating the row to the trace does not require it to
- *  be. Shape is `00-<32 hex trace>-<16 hex span>-<2 hex flags>`; an all-zero
- *  trace id is the invalid one the spec reserves, and is rejected so it cannot
- *  be stored as though it were real. */
+ *  Kept as a hand parser even though the portal now runs an OTel SDK, because
+ *  it is the one path that works with tracing switched OFF: with no exporter
+ *  configured no provider is registered, `currentTraceId()` returns null, and
+ *  this header is still exactly what the worker sent. Shape is
+ *  `00-<32 hex trace>-<16 hex span>-<2 hex flags>`; an all-zero trace id is the
+ *  invalid one the spec reserves, and is rejected so it cannot be stored as
+ *  though it were real. */
 function traceIdFromHeader(request: Request): string | null {
   const header = request.headers.get("traceparent");
   if (!header) return null;
@@ -60,26 +63,55 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: `status must be one of: ${VALID_STATUSES.join(", ")}` }, { status: 400 });
   }
 
-  if (!(await getTenant(body.tenantId))) {
-    // Same auto-registration convenience as /api/sync/history.
-    await upsertTenant({ tenantId: body.tenantId, name: body.tenantId });
-  }
+  // Identity is bound at the FIRST line that knows the tenant, and wraps the
+  // auto-registration below rather than starting after it. Next's own request
+  // span has already opened by now and stays untenanted — nothing can fix that,
+  // the tenant arrives in the body — but everything from here down is stamped,
+  // including the pool's query spans, which have never heard of a tenant.
+  //
+  // Bound one block later in the first version of this, and a live trace showed
+  // exactly what that costs: the SELECT that checks for the tenant and the
+  // INSERT that creates it both exported with no tenant.id — the two spans that
+  // are entirely ABOUT a tenant.
+  return withIdentity({ tenantId: body.tenantId }, async () => {
+    if (!(await getTenant(body.tenantId))) {
+      // Same auto-registration convenience as /api/sync/history.
+      await upsertTenant({ tenantId: body.tenantId, name: body.tenantId });
+    }
 
-  await upsertAgentRun({
-    runId: body.runId,
-    tenantId: body.tenantId,
-    workflowId: body.workflowId ?? null,
-    status: body.status,
-    // Body first, then the W3C traceparent header the worker now injects.
-    // agent_runs.trace_id was NULL for every run ever recorded — the gateway
-    // accepted a trace_id argument that none of its nine call sites passed —
-    // so the portal's "view trace" link had nothing to link to.
-    traceId: body.traceId ?? traceIdFromHeader(request) ?? null,
-    errorSummary: body.errorSummary ?? null,
-    inputTokens: numberOrNull(body.inputTokens),
-    outputTokens: numberOrNull(body.outputTokens),
-    costUsd: numberOrNull(body.costUsd),
+    return portalSpan(
+      "portal.runs.ingest",
+      {
+        attributes: {
+          "run.id": body.runId,
+          "run.status": body.status,
+          ...(body.workflowId ? { "workflow.id": body.workflowId } : {}),
+        },
+      },
+      async () => {
+        await upsertAgentRun({
+          runId: body.runId,
+          tenantId: body.tenantId,
+          workflowId: body.workflowId ?? null,
+          status: body.status,
+          // Body, then the W3C traceparent header the worker injects, then the
+          // active trace — which IS the worker's trace, because Next extracted
+          // that same header into the context before this handler ran. The
+          // third is a fallback for a carrier this route does not parse by
+          // hand, not a second opinion: when both are present they agree.
+          // agent_runs.trace_id was NULL for every run ever recorded — the
+          // gateway accepted a trace_id argument that none of its nine call
+          // sites passed — so the portal's "view trace" link had nothing to
+          // link to.
+          traceId: body.traceId ?? traceIdFromHeader(request) ?? currentTraceId(),
+          errorSummary: body.errorSummary ?? null,
+          inputTokens: numberOrNull(body.inputTokens),
+          outputTokens: numberOrNull(body.outputTokens),
+          costUsd: numberOrNull(body.costUsd),
+        });
+
+        return NextResponse.json({ ok: true });
+      },
+    );
   });
-
-  return NextResponse.json({ ok: true });
 }

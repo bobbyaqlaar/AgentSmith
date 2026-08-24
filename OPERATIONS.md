@@ -2297,6 +2297,28 @@ read-only), `OPS_PORTAL_USER`, `OPS_PORTAL_PASSWORD`. The portal **refuses
 to serve traffic** without basic-auth credentials configured (or, with SSO
 enabled, without `SSO_SESSION_SECRET`) — there is no unauthenticated mode.
 
+**Tracing (optional):** point the portal at the same collector the workers use
+and its request handling, every Postgres query and every outbound Phoenix call
+join the worker's trace instead of starting a new one:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:6006/v1/traces"   # or a base URL — both work
+```
+
+Unset, nothing is registered and the portal behaves exactly as it did before it
+was instrumented. Set, the `traceparent` the worker already sends on
+`POST /api/runs/ingest` makes the portal's spans **children** of the LLM call
+that triggered them — so "the run took 9s" can be read down to which query or
+which Phoenix timeout. Set `ENVIRONMENT` and `AGENT_PROJECT_NAME` the same way
+you set them on the worker, or the two sides will label the same deployment
+differently.
+
+Portal spans carry `tenant.id`, `portal.actor.role` (the RBAC role of the human
+who acted, blank for machine-to-machine calls), and parameterised SQL. They do
+**not** carry request bodies, bound query values or replayed payloads:
+`runtime/trace_redactor.py` scrubs the worker's spans, and nothing stands
+between a portal span and the collector.
+
 **Multi-user RBAC (optional):** set `OPS_PORTAL_USERS` instead of/alongside
 `OPS_PORTAL_USER`/`PASSWORD` for per-user roles and tenant scoping:
 

@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { getDlqEntry, discardDlqEntry } from "@/lib/dlq";
 import { canAccessTenant, canWrite } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
+import { portalSpan, withIdentity } from "@/lib/tracing";
 
 export async function POST(_request: Request, { params }: { params: { taskId: string } }) {
   const access = currentAccess();
@@ -18,7 +19,13 @@ export async function POST(_request: Request, { params }: { params: { taskId: st
     return NextResponse.json({ error: `Unknown DLQ entry ${params.taskId}` }, { status: 404 });
   }
 
-  const discarded = await discardDlqEntry(params.taskId);
+  const discarded = await withIdentity({ tenantId: entry.tenantId, actorRole: access.role }, () =>
+    portalSpan(
+      "portal.dlq.discard",
+      { attributes: { "dlq.task_id": entry.taskId } },
+      () => discardDlqEntry(params.taskId),
+    ),
+  );
   if (!discarded) {
     return NextResponse.json({ error: `Entry ${params.taskId} is already ${entry.status}` }, { status: 409 });
   }

@@ -12,6 +12,7 @@
 import { NextResponse } from "next/server";
 import { resolveWidgetToken } from "@/lib/widgetTokens";
 import { getWidgetStatus } from "@/lib/runStatus";
+import { withIdentity } from "@/lib/tracing";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +32,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "invalid or revoked token" }, { status: 401, headers: CORS_HEADERS });
   }
 
-  const status = await getWidgetStatus(tenantId);
+  // Bound after the token resolves, which is the earliest point a tenant is
+  // known — the token IS the tenant scope here (see the SECURITY note above).
+  const status = await withIdentity({ tenantId }, () => getWidgetStatus(tenantId));
   return NextResponse.json(status, { headers: CORS_HEADERS });
 }
