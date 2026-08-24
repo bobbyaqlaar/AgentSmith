@@ -44,19 +44,42 @@ export interface UpsertAgentRunInput {
   status: "running" | "success" | "degraded" | "failed";
   traceId: string | null;
   errorSummary: string | null;
+  // null = the provider reported no usage (a streamed call has none in v1),
+  // which is a different fact from 0. Kept nullable end to end so a consumer
+  // summing spend can show a gap instead of a confident undercount.
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  costUsd?: number | null;
 }
 
 export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<void> {
   const finished = input.status !== "running";
   await getPool().query(
-    `INSERT INTO agent_runs (run_id, tenant_id, workflow_id, status, trace_id, error_summary, finished_at)
-     VALUES ($1, $2, $3, $4, $5, $6, ${finished ? "now()" : "NULL"})
+    `INSERT INTO agent_runs (run_id, tenant_id, workflow_id, status, trace_id, error_summary,
+                             input_tokens, output_tokens, cost_usd, finished_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, ${finished ? "now()" : "NULL"})
      ON CONFLICT (run_id) DO UPDATE SET
        status = EXCLUDED.status,
        trace_id = COALESCE(EXCLUDED.trace_id, agent_runs.trace_id),
        error_summary = EXCLUDED.error_summary,
+       -- COALESCE, like trace_id above: the gateway upserts once at run START
+       -- with no usage yet and again at the end with it. A bare EXCLUDED would
+       -- let a later 'running' heartbeat blank a figure already recorded.
+       input_tokens = COALESCE(EXCLUDED.input_tokens, agent_runs.input_tokens),
+       output_tokens = COALESCE(EXCLUDED.output_tokens, agent_runs.output_tokens),
+       cost_usd = COALESCE(EXCLUDED.cost_usd, agent_runs.cost_usd),
        finished_at = ${finished ? "now()" : "agent_runs.finished_at"}`,
-    [input.runId, input.tenantId, input.workflowId, input.status, input.traceId, input.errorSummary]
+    [
+      input.runId,
+      input.tenantId,
+      input.workflowId,
+      input.status,
+      input.traceId,
+      input.errorSummary,
+      input.inputTokens ?? null,
+      input.outputTokens ?? null,
+      input.costUsd ?? null,
+    ]
   );
 }
 

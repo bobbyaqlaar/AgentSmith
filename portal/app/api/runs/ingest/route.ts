@@ -5,7 +5,12 @@
 // "a production worker pushing operational data to the shared portal").
 //
 // Body shape:
-//   { tenantId, runId, workflowId?, status, traceId?, errorSummary? }
+//   { tenantId, runId, workflowId?, status, traceId?, errorSummary?,
+//     inputTokens?, outputTokens?, costUsd? }
+//
+// Usage fields are nullable and omitted rather than zeroed when the provider
+// reported none — a streamed call has no usage in v1, which is not the same
+// fact as a call that used zero tokens.
 //
 // Upserts by run_id — the gateway calls this once at run start
 // (status: "running") and again at run end (status: "success"/"degraded"/
@@ -17,6 +22,13 @@ import { upsertAgentRun } from "@/lib/runStatus";
 import { getTenant, upsertTenant } from "@/lib/tenants";
 
 const VALID_STATUSES = ["running", "success", "degraded", "failed"];
+
+/** Numbers only. A non-numeric body field becomes null — recorded as "not
+ *  reported" — rather than being coerced to 0, which would read as a real
+ *  measurement of zero. */
+function numberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
 
 export async function POST(request: Request) {
   const denied = requireBearer(request, { envVar: "OPS_PORTAL_SYNC_TOKEN", purpose: "run ingestion" });
@@ -43,6 +55,9 @@ export async function POST(request: Request) {
     status: body.status,
     traceId: body.traceId ?? null,
     errorSummary: body.errorSummary ?? null,
+    inputTokens: numberOrNull(body.inputTokens),
+    outputTokens: numberOrNull(body.outputTokens),
+    costUsd: numberOrNull(body.costUsd),
   });
 
   return NextResponse.json({ ok: true });

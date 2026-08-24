@@ -630,6 +630,10 @@ class LLMGateway:
         workflow_id: Optional[str] = None,
         trace_id: Optional[str] = None,
         error_summary: Optional[str] = None,
+        *,
+        input_tokens: Optional[int] = None,
+        output_tokens: Optional[int] = None,
+        cost_usd: Optional[float] = None,
     ) -> None:
         """Best-effort POST to the Ops Portal's run-status ingest endpoint —
         gated on OPS_PORTAL_URL being set, fails open (logs, never raises)
@@ -661,6 +665,13 @@ class LLMGateway:
                     "status": status,
                     "traceId": trace_id,
                     "errorSummary": error_summary,
+                    # Omitted (null) rather than zeroed when the provider
+                    # reported no usage. The ingest route and the column are
+                    # both nullable so "not reported" stays distinguishable
+                    # from "used nothing" all the way to the dashboard.
+                    "inputTokens": input_tokens,
+                    "outputTokens": output_tokens,
+                    "costUsd": cost_usd,
                 },
                 headers={"Authorization": f"Bearer {sync_token}"},
                 timeout=5.0,
@@ -683,24 +694,123 @@ class LLMGateway:
         workflow_id: Optional[str],
         cost_usd: float,
         ttft_ms: Optional[float] = None,
+        *,
+        input_tokens: Optional[int] = None,
+        output_tokens: Optional[int] = None,
+        cost_estimated: bool = False,
+        started_ns: Optional[int] = None,
     ) -> None:
+        """Record gateway facts: onto the active span, or onto one we create.
+
+        `is_recording()`, not `is None`. `get_current_span()` never returns
+        None — with no active span it returns a NonRecordingSpan whose
+        `set_attribute` is a silent no-op, so the old `if span is None: return`
+        guard never fired and every attribute below was dropped without a
+        signal on any call path not already inside an `agent_span`. That is the
+        whole of `tenant.id`, `llm.model_name`, cost and TTFT, silently absent.
+        `_record_guardrail_attributes` a few hundred lines down already had the
+        correct check; this is its sibling.
+
+        Fixing the guard alone would NOT have changed behaviour — a no-op write
+        and an early return drop the attributes equally. What changes it is the
+        fallback below: with no parent span, the gateway now emits its own,
+        so an LLM call is never simply missing from the trace.
+
+        `started_ns` is required for that fallback and only for it. Without a
+        start time the span would be created at report time and read as
+        instantaneous, which is worse than absent — it would corrupt every
+        latency percentile derived from it. No start time, no synthetic span.
+        """
         try:
             from opentelemetry import trace
 
             span = trace.get_current_span()
-            if span is None:
+            if span is not None and span.is_recording():
+                self._stamp_llm_span(
+                    span, role, model_id, degrade_tier, workflow_id, cost_usd,
+                    ttft_ms, input_tokens, output_tokens, cost_estimated,
+                )
                 return
+
+            # NOTHING RECORDING — emit our own span rather than dropping the call.
+            #
+            # `get_current_span()` never returns None; with no active span it
+            # returns a NonRecordingSpan whose set_attribute is a silent no-op.
+            # So the previous `if span is None: return` never fired and every
+            # attribute below went nowhere — not a crash, just an LLM call
+            # absent from the trace entirely whenever the tenant had not
+            # wrapped it in an `agent_span`. Model, cost, tokens and latency,
+            # gone, on the one operation an LLM app most needs to see.
+            #
+            # `record_tool_call` deliberately declines to do this, because a
+            # step makes several tool calls and lone roots would be noise. An
+            # LLM call is the opposite case: one per step, and the unit every
+            # dashboard is keyed on. A root span here is the standard shape
+            # every provider SDK instrumentation emits.
+            #
+            # start_time makes the duration real. Created at report time
+            # without it, the span would read as instantaneous and quietly
+            # corrupt every latency percentile computed from it.
+            if started_ns is None:
+                return
+            tracer = trace.get_tracer("agentsmith.runtime")
+            span = tracer.start_span(f"llm.{role}", start_time=started_ns)
+            try:
+                span.set_attribute("llm.gateway.span_source", "gateway")
+                self._stamp_llm_span(
+                    span, role, model_id, degrade_tier, workflow_id, cost_usd,
+                    ttft_ms, input_tokens, output_tokens, cost_estimated,
+                )
+            finally:
+                span.end()
+        except Exception:  # fail-open: tracing must never break the actual LLM call
+            pass
+
+    def _stamp_llm_span(
+        self,
+        span: Any,
+        role: str,
+        model_id: str,
+        degrade_tier: Optional[str],
+        workflow_id: Optional[str],
+        cost_usd: float,
+        ttft_ms: Optional[float],
+        input_tokens: Optional[int],
+        output_tokens: Optional[int],
+        cost_estimated: bool,
+    ) -> None:
+        """The attribute set, written to whichever span the caller resolved."""
+        try:
             span.set_attribute("tenant.id", self.tenant_id)
             span.set_attribute("llm.model_name", model_id)
             span.set_attribute("llm.gateway.tier", role)
             span.set_attribute("llm.gateway.cost_usd", cost_usd)
+            # An estimate and a measurement must not read alike. The stream
+            # path bills the try_reserve() figure derived from `max_tokens`,
+            # which is a ceiling, not what the call actually used.
+            span.set_attribute("llm.gateway.cost_estimated", cost_estimated)
+
+            # Usage is written ONLY when the provider reported it. A streamed
+            # call has no usage in v1, and the CompletionResult carries 0/0 for
+            # it — writing that 0 here would make "used no tokens" and "nobody
+            # counted" the same number on a dashboard that sums them, which is
+            # how a token budget silently undercounts every streamed call.
+            reported = input_tokens is not None and output_tokens is not None
+            span.set_attribute("llm.usage.reported", reported)
+            if reported:
+                span.set_attribute("llm.usage.input_tokens", int(input_tokens))
+                span.set_attribute("llm.usage.output_tokens", int(output_tokens))
+                span.set_attribute(
+                    "llm.usage.total_tokens", int(input_tokens) + int(output_tokens)
+                )
+
             if ttft_ms is not None:
                 span.set_attribute("llm.gateway.ttft_ms", ttft_ms)
             if degrade_tier:
                 span.set_attribute("llm.gateway.degrade_reason", degrade_tier)
             if workflow_id:
                 span.set_attribute("workflow.id", workflow_id)
-        except Exception:  # fail-open: tracing must never break the actual LLM call
+        except Exception:  # fail-open: an attribute write must never break the call
             pass
 
     # ── Completion ────────────────────────────────────────────────────────────
@@ -832,6 +942,10 @@ class LLMGateway:
             if workflow_id
             else f"{self.tenant_id}-{uuid.uuid4().hex[:12]}"
         )
+        # Wall-clock start, for the span the gateway emits when nothing else is
+        # recording. time_ns (not perf_counter_ns) because OTel start_time is an
+        # absolute epoch timestamp, not a monotonic reading.
+        started_ns = time.time_ns()
         self._report_run_status(run_id, "running", workflow_id=workflow_id)
 
         # Shared with _invoke() — this used to be a near-copy that omitted
@@ -951,10 +1065,25 @@ class LLMGateway:
             raise
 
         self._record_span_attributes(
-            role, model_id, degrade_tier, workflow_id, cost_usd, ttft_ms
+            role,
+            model_id,
+            degrade_tier,
+            workflow_id,
+            cost_usd,
+            ttft_ms,
+            # Stream v1 reports no usage, and cost is the try_reserve() ceiling
+            # rather than a measurement. Both facts travel with the span so a
+            # consumer is not left inferring them from a zero.
+            input_tokens=None,
+            output_tokens=None,
+            cost_estimated=True,
+            started_ns=started_ns,
         )
         self._report_run_status(
-            run_id, "degraded" if degrade_tier else "success", workflow_id=workflow_id
+            run_id,
+            "degraded" if degrade_tier else "success",
+            workflow_id=workflow_id,
+            cost_usd=cost_usd or None,
         )
 
         return CompletionResult(
@@ -1137,6 +1266,10 @@ class LLMGateway:
             if workflow_id
             else f"{self.tenant_id}-{uuid.uuid4().hex[:12]}"
         )
+        # Wall-clock start, for the span the gateway emits when nothing else is
+        # recording. time_ns (not perf_counter_ns) because OTel start_time is an
+        # absolute epoch timestamp, not a monotonic reading.
+        started_ns = time.time_ns()
         self._report_run_status(run_id, "running", workflow_id=workflow_id)
 
         # Try the chosen tier; on provider-level exhaustion (billing, quota,
@@ -1227,10 +1360,22 @@ class LLMGateway:
             raise
 
         self._record_span_attributes(
-            role, model_id, degrade_tier, workflow_id, cost_usd
+            role,
+            model_id,
+            degrade_tier,
+            workflow_id,
+            cost_usd,
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+            started_ns=started_ns,
         )
         self._report_run_status(
-            run_id, "degraded" if degrade_tier else "success", workflow_id=workflow_id
+            run_id,
+            "degraded" if degrade_tier else "success",
+            workflow_id=workflow_id,
+            input_tokens=in_tok,
+            output_tokens=out_tok,
+            cost_usd=cost_usd,
         )
 
         result = CompletionResult(

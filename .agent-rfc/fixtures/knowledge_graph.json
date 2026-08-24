@@ -367,6 +367,7 @@
         "_resolve_role",
         "_report_run_status",
         "_record_span_attributes",
+        "_stamp_llm_span",
         "complete_stream",
         "complete",
         "_coerce_messages",
@@ -376,7 +377,7 @@
         "_invoke",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T15:24:06Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -2020,8 +2021,6 @@
         "test_record_tool_call_noops_without_a_tracer",
         "test_agent_span_reraises_but_still_noops",
         "test_tool_registry_invoke_unchanged_without_tracer",
-        "_exporter",
-        "spans",
         "_attrs",
         "test_agent_span_records_attributes_and_duration",
         "test_agent_span_stamps_error_and_reraises",
@@ -2034,7 +2033,7 @@
         "wire_transfer",
         "solo"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T15:25:42Z",
       "id": "runtime/test/test_tracing.py"
     },
     {
@@ -2753,7 +2752,7 @@
         "upsertAgentRun",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T12:47:19Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -2898,7 +2897,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-23T19:43:39Z",
+      "last_modified": "2026-08-24T12:47:19Z",
       "id": "portal/app/api/runs/ingest/route.ts"
     },
     {
@@ -3052,6 +3051,40 @@
       ],
       "last_modified": "2026-08-24T12:15:36Z",
       "id": "scripts/test/test_ts_runner_invocations.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_exporter",
+        "spans"
+      ],
+      "last_modified": "2026-08-24T15:25:31Z",
+      "id": "runtime/test/conftest.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_only_span",
+        "gateway",
+        "test_usage_is_recorded_when_the_provider_reported_it",
+        "test_unreported_usage_is_absent_not_zero",
+        "test_a_partial_usage_report_counts_as_no_report",
+        "test_zero_tokens_is_recorded_as_a_real_measurement",
+        "test_no_parent_span_emits_the_gateway_s_own",
+        "test_without_a_start_time_no_synthetic_span_is_invented",
+        "test_attributes_land_on_the_enclosing_span"
+      ],
+      "last_modified": "2026-08-24T15:26:16Z",
+      "id": "runtime/test/test_gateway_span_usage.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-08-24T15:28:35Z",
+      "id": "portal/test/agentRuns.test.ts"
     }
   ],
   "edges": [
@@ -3459,6 +3492,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/oidc.ts",
       "target": "portal/lib/sessionToken.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_gateway_span_usage.py",
+      "target": "runtime/__init__.py"
     }
   ]
 }

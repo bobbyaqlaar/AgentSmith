@@ -61,32 +61,9 @@ def test_tool_registry_invoke_unchanged_without_tracer():
 # ── Real in-memory tracer ────────────────────────────────────────────────────
 
 
-@pytest.fixture(scope="module")
-def _exporter():
-    """One in-memory exporter for the module: OTel's global tracer provider
-    is one-shot, so it must be installed exactly once (a per-test provider
-    gets 'Overriding not allowed' and its exporter is never wired)."""
-    trace = pytest.importorskip("opentelemetry.trace")
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
-        InMemorySpanExporter,
-    )
-
-    exporter = InMemorySpanExporter()
-    provider = TracerProvider()
-    provider.add_span_processor(SimpleSpanProcessor(exporter))
-    trace.set_tracer_provider(provider)
-    # If another module already set a provider this run, fall back to it.
-    if trace.get_tracer_provider() is not provider:
-        pytest.skip("a different global TracerProvider is already installed")
-    return exporter
-
-
-@pytest.fixture()
-def spans(_exporter):
-    _exporter.clear()
-    return _exporter
+# `_exporter` and `spans` live in conftest.py — the global tracer provider is
+# one-shot, so installing it per module made whichever module lost the race
+# skip its span assertions silently.
 
 
 def _attrs(exporter, span_name):

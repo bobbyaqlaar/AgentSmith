@@ -139,8 +139,24 @@ CREATE TABLE IF NOT EXISTS agent_runs (
     started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     finished_at   TIMESTAMPTZ,
     trace_id      TEXT,
-    error_summary TEXT
+    error_summary TEXT,
+    -- Usage, NULLABLE on purpose. NULL means the provider reported none — a
+    -- streamed call has no usage in v1 — and 0 means it reported zero. A
+    -- NOT NULL DEFAULT 0 here would make a dashboard that SUMs these silently
+    -- undercount every streamed run instead of showing a gap.
+    input_tokens  INTEGER,
+    output_tokens INTEGER,
+    cost_usd      NUMERIC(12, 6)
 );
+
+-- agent_runs predates these three, and CREATE TABLE IF NOT EXISTS is a no-op
+-- against a database that already has the table — so a deployed portal would
+-- never gain the columns from the definition above. Same lesson as
+-- tenants.budget_cap_usd (Product_Archive P2b): the image bakes schema.sql at
+-- build time and db:migrate re-runs it, which silently no-ops new columns.
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS input_tokens  INTEGER;
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS output_tokens INTEGER;
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS cost_usd      NUMERIC(12, 6);
 
 CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_started
     ON agent_runs (tenant_id, started_at DESC);
