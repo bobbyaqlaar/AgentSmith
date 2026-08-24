@@ -119,7 +119,7 @@
         "_start_temporal_worker",
         "_start_celery_worker"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T17:05:56Z",
       "id": "runtime/worker.py"
     },
     {
@@ -139,7 +139,7 @@
         "is_recording",
         "on_start"
       ],
-      "last_modified": "2026-08-24T16:09:07Z",
+      "last_modified": "2026-08-24T17:04:32Z",
       "id": "runtime/tracing.py"
     },
     {
@@ -382,7 +382,7 @@
         "_invoke",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-24T16:10:06Z",
+      "last_modified": "2026-08-24T17:04:28Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -778,7 +778,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T17:05:04Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -3096,14 +3096,13 @@
       "language": "python",
       "symbols": [
         "TenantUnresolvedError",
-        "_repo_root",
         "tenant_id_from_config",
         "resolve_tenant_id",
         "agent_context",
         "current_identity",
         "current_tenant_id"
       ],
-      "last_modified": "2026-08-24T16:07:29Z",
+      "last_modified": "2026-08-24T17:05:56Z",
       "id": "runtime/tenancy.py"
     },
     {
@@ -3136,10 +3135,46 @@
         "test_a_config_without_an_id_is_not_declared",
         "test_context_binds_and_restores",
         "test_unset_fields_are_omitted_not_placeheld",
+        "test_the_legacy_tenant_id_env_var_is_still_accepted",
         "_write"
       ],
-      "last_modified": "2026-08-24T16:09:38Z",
+      "last_modified": "2026-08-24T17:07:44Z",
       "id": "runtime/test/test_tenancy.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "repo_root",
+        "_dotenv_value",
+        "load_env_file",
+        "tenant_config",
+        "config_get",
+        "resolve"
+      ],
+      "last_modified": "2026-08-24T17:03:59Z",
+      "id": "runtime/config.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "repo",
+        "test_loads_env_file",
+        "test_never_overwrites_the_environment",
+        "test_absent_env_file_is_not_an_error",
+        "test_parses_quotes_comments_and_export",
+        "test_dotted_lookup",
+        "test_precedence_explicit_then_env_then_declaration",
+        "test_the_regression_a_declared_cap_beats_the_code_default",
+        "test_falls_back_to_the_default_when_nothing_declares_it",
+        "test_no_default_means_raise_not_invent",
+        "test_a_malformed_override_raises_rather_than_falling_through",
+        "test_a_blank_override_is_not_an_override",
+        "_build"
+      ],
+      "last_modified": "2026-08-24T17:07:22Z",
+      "id": "runtime/test/test_config.py"
     }
   ],
   "edges": [
@@ -3162,6 +3197,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/authz.ts",
       "target": "portal/lib/constantTime.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/worker.py",
+      "target": "runtime/__init__.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -3560,12 +3600,22 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "runtime/tenancy.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "runtime/test/test_pillar3_conformance.py",
       "target": "runtime/__init__.py"
     },
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_tenancy.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_config.py",
       "target": "runtime/__init__.py"
     }
   ]

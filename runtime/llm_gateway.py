@@ -37,6 +37,7 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+from runtime.config import resolve  # noqa: E402
 from runtime.moderation import (  # noqa: F401,E402 — re-export block, deliberately after the logger
     ModerationBlockedError,
     ModerationHookRequiredError,
@@ -517,10 +518,19 @@ class LLMGateway:
 
         self.tenant_id = resolve_tenant_id(tenant_id)
         self.models = load_model_registry()
+        # `budget.monthly_usd_cap` has been declared in tenant.yaml since the
+        # scaffold shipped and was read by nothing: KYC declared $5 while this
+        # line enforced $150 whenever AGENT_MONTHLY_USD_CAP was unset — and it
+        # IS unset in production, because .env is not deployed to Cloud Run. A
+        # 30x gap between the policy on file and the one in force.
         self.budget_cap_usd = (
-            budget_cap_usd
-            if budget_cap_usd is not None
-            else float(os.environ.get("AGENT_MONTHLY_USD_CAP", "150.0"))
+            resolve(
+                "budget.monthly_usd_cap",
+                explicit=budget_cap_usd,
+                env_var="AGENT_MONTHLY_USD_CAP",
+                default=150.0,
+                cast=float,
+            )
         )
         self._budget = _make_budget_backend()
         self._idempotency = self._make_idempotency_store()

@@ -23,7 +23,6 @@ must never change program behavior or raise into a business path.
 
 from __future__ import annotations
 
-import os
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -188,20 +187,29 @@ def resource_attributes(project_name: Optional[str] = None) -> dict:
     """
     from runtime.environment import get_environment
 
-    project = (
-        project_name
-        or os.environ.get("AGENT_PROJECT_NAME", "").strip()
-        or _repo_root().name
-    )
+    from runtime.config import resolve
+
+    project = resolve(
+        "tenant.name",
+        explicit=project_name,
+        env_var="AGENT_PROJECT_NAME",
+        default=None,
+    ) or _repo_root().name
     attrs = {
         "service.name": project,
         "project.name": project,
         "environment": get_environment(),
     }
-    owner = os.environ.get("AGENT_OWNER_ID", "").strip()
+    # `tenant.owner` is declared in tenant.yaml and was read by nothing, while
+    # this attribute came from a shell profile — so on a dev machine every repo
+    # reported the same owner and in CI none did. Env still wins as the
+    # per-deploy override; the declaration is the default it falls back to.
+    from runtime.config import resolve
+
+    owner = resolve("tenant.owner", env_var="AGENT_OWNER_ID", default=None)
     if owner:
         # Omitted when unset rather than "unknown" — see current_identity().
-        attrs["agent.owner_id"] = owner
+        attrs["agent.owner_id"] = str(owner)
     return attrs
 
 

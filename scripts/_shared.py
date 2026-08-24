@@ -346,25 +346,15 @@ def _dotenv_value(raw: str) -> str:
 
 def _load_dotenv(root: Optional[Path] = None) -> None:
     """Best-effort load of repo-root .env into os.environ (no overwrite).
-    Previously copied in run-evals.py / verify_ttft.py /
-    verify_sovereign_endpoint.py (ReviewFindings-2026-07-18 B3)."""
-    path = (root or _repo_root()) / ".env"
-    if not path.exists():
-        return
-    try:
-        for line in path.read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            key = key.strip()
-            if key.startswith("export "):
-                key = key[len("export "):].strip()
-            val = _dotenv_value(val)
-            if key and key not in os.environ:
-                os.environ[key] = val
-    except Exception:  # fail-open: .env is optional convenience; never fatal
-        pass
+
+    Delegates to runtime.config.load_env_file. This used to be the ONLY loader
+    in the codebase, which is why the runtime never saw .env at all: scripts got
+    it, workers did not. Now both call the same function and the only difference
+    is who calls it.
+    """
+    from runtime.config import load_env_file
+
+    load_env_file(root)
 
 
 def _phoenix_request(

@@ -37,16 +37,28 @@ def main() -> None:
       - 'temporal' (default): start Temporal worker
       - 'celery':             start Celery worker
 
-    TENANT_ID must be set for production workers.
+    The tenant is resolved by runtime/tenancy.py: AGENT_TENANT_ID, the legacy
+    TENANT_ID, or `tenant.id` in .agenticframework/tenant.yaml. Unresolved is
+    fatal — a worker with no tenant would write to a shared ledger unattributed.
     """
-    backend = os.environ.get("WORKER_BACKEND", "temporal").lower()
-    tenant_id = os.environ.get("TENANT_ID", "")
+    # FIRST, before anything reads configuration. The runtime never loaded .env
+    # — only scripts/ did — so a worker started outside a shell that had already
+    # exported everything silently ran on defaults. Never overwrites, so a
+    # container's injected environment still wins.
+    from runtime.config import load_env_file
+    from runtime.tenancy import TenantUnresolvedError, resolve_tenant_id
 
-    if not tenant_id:
-        print(
-            "[worker] ERROR: TENANT_ID environment variable is required.",
-            file=sys.stderr,
-        )
+    load_env_file()
+
+    backend = os.environ.get("WORKER_BACKEND", "temporal").lower()
+
+    # Resolves AGENT_TENANT_ID, then the legacy TENANT_ID this line used to read
+    # directly, then tenant.yaml's declaration. Still fatal when unresolved —
+    # only the number of places it will look has changed.
+    try:
+        tenant_id = resolve_tenant_id()
+    except TenantUnresolvedError as exc:
+        print(f"[worker] ERROR: {exc}", file=sys.stderr)
         sys.exit(1)
 
     print(f"[worker] Starting {backend} worker for tenant={tenant_id}")

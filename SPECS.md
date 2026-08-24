@@ -533,7 +533,8 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/structured_output.py` | `parse_llm_json` — fenced/bare JSON extraction + Pydantic validation (SEC-OUTPUT-001). |
 | `runtime/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (§4a). |
 | `runtime/security_paths.py` | `security_artefact_path()` — the env-override-then-convention lookup `prompt_guard` and `tool_registry` had each implemented separately. |
-| `runtime/tenancy.py` | `resolve_tenant_id()` (explicit → `AGENT_TENANT_ID` → `tenant.yaml` → raise) and the `agent_context()` contextvars that `AgentIdentityProcessor` stamps onto every span. |
+| `runtime/tenancy.py` | `resolve_tenant_id()` (explicit → `AGENT_TENANT_ID`/`TENANT_ID` → `tenant.yaml` → raise) and the `agent_context()` contextvars that `AgentIdentityProcessor` stamps onto every span. |
+| `runtime/config.py` | `load_env_file()` — the runtime loaded no `.env` at all before this, only `scripts/` did — and `resolve()`, the single precedence: explicit → environment → `tenant.yaml` → documented default or raise. |
 | `runtime/conversation_memory.py` | Short-term token-window message buffer (RAG substrate). |
 | `runtime/embeddings.py` / `runtime/vector_store.py` | Pluggable embedders (hash / sentence-transformers) + memory/pgvector store — long-term retrieval. |
 | `runtime/idempotency.py` | Idempotency key store and deduplication (Redis or Postgres). |
@@ -1216,6 +1217,7 @@ AgentSmith/
 │   ├── tool_registry.py         # @tool + YAML allowlist (SEC-TOOL-001)
 │   ├── security_paths.py        # security_artefact_path() — one lookup for the two above
 │   ├── tenancy.py               # resolve_tenant_id() + the identity contextvars (pillar 3)
+│   ├── config.py                # load_env_file() + tenant.yaml resolution, one precedence
 │   ├── self_correction.py       # Opt-in corrected-payload loop helper
 │   ├── conversation_memory.py   # Short-term memory (RAG substrate)
 │   ├── embeddings.py / vector_store.py

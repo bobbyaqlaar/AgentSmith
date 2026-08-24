@@ -14,6 +14,7 @@ places will disagree" lesson with the disagreement not yet arrived.
 
     1. an explicit argument      a shared-pool worker serving tenant A's request
     2. AGENT_TENANT_ID           per-deployment; what a dedicated pool sets
+       or TENANT_ID              the older name, still live in the k8s ConfigMap
     3. tenant.yaml -> tenant.id  the declared default
     4. raise                     never a silent default
 
@@ -54,7 +55,16 @@ from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Iterator, Optional
 
+from runtime.config import config_get
+
 TENANT_ENV_VAR = "AGENT_TENANT_ID"
+
+# The name `runtime/worker.py` and the dedicated-tenant ConfigMap have always
+# used. Accepted, not renamed: it is live in a k8s manifest, and a rename would
+# strand any cluster running the previous chart with a worker that refuses to
+# start. AGENT_TENANT_ID wins where both are set — the prefixed name is the
+# convention every other framework variable follows.
+LEGACY_TENANT_ENV_VAR = "TENANT_ID"
 
 _tenant_id: ContextVar[Optional[str]] = ContextVar("agentsmith_tenant_id", default=None)
 _agent_role: ContextVar[Optional[str]] = ContextVar("agentsmith_agent_role", default=None)
@@ -65,36 +75,17 @@ class TenantUnresolvedError(RuntimeError):
     """No tenant could be resolved from argument, environment or tenant.yaml."""
 
 
-def _repo_root(start: Optional[Path] = None) -> Path:
-    cwd = start or Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".agenticframework").is_dir() or (parent / ".git").exists():
-            return parent
-    return cwd
-
-
 def tenant_id_from_config(root: Optional[Path] = None) -> Optional[str]:
     """`tenant.id` from `.agenticframework/tenant.yaml`, or None.
 
     None rather than a raise: absence is a normal state for a repo that has not
     been scaffolded, and the caller decides whether that is fatal.
     """
-    path = _repo_root(root) / ".agenticframework" / "tenant.yaml"
-    if not path.exists():
+    value = config_get("tenant.id", root)
+    if value is None:
         return None
-    try:
-        import yaml  # type: ignore
-
-        doc = yaml.safe_load(path.read_text()) or {}
-    except Exception:  # fail-open: an unreadable config is "not declared here"
-        return None
-    if not isinstance(doc, dict):
-        return None
-    tenant = doc.get("tenant")
-    if not isinstance(tenant, dict):
-        return None
-    value = tenant.get("id")
-    return str(value).strip() or None if value is not None else None
+    text = str(value).strip()
+    return text or None
 
 
 def resolve_tenant_id(
@@ -104,9 +95,10 @@ def resolve_tenant_id(
     if explicit and explicit.strip():
         return explicit.strip()
 
-    from_env = os.environ.get(TENANT_ENV_VAR, "").strip()
-    if from_env:
-        return from_env
+    for var in (TENANT_ENV_VAR, LEGACY_TENANT_ENV_VAR):
+        from_env = os.environ.get(var, "").strip()
+        if from_env:
+            return from_env
 
     from_config = tenant_id_from_config(root)
     if from_config:
@@ -114,7 +106,7 @@ def resolve_tenant_id(
 
     raise TenantUnresolvedError(
         "No tenant id. Pass one explicitly, set "
-        f"{TENANT_ENV_VAR}, or declare `tenant.id` in "
+        f"{TENANT_ENV_VAR} (or {LEGACY_TENANT_ENV_VAR}), or declare `tenant.id` in "
         ".agenticframework/tenant.yaml. Refusing to default: tenant.id "
         "partitions the budget ledger, the audit log and cross-tenant "
         "isolation, so an unattributed run would merge two tenants' records."

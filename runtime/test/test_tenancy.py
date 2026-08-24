@@ -101,3 +101,20 @@ def test_unset_fields_are_omitted_not_placeheld():
         identity = current_identity()
     assert identity == {"agent.role": "intake"}
     assert "tenant.id" not in identity
+
+
+def test_the_legacy_tenant_id_env_var_is_still_accepted(scaffold, monkeypatch):
+    """`TENANT_ID` is what runtime/worker.py read directly and what the
+    dedicated-tenant ConfigMap sets. Accepted rather than renamed: a rename
+    would strand any cluster on the previous chart with a worker that refuses
+    to start."""
+    from runtime.tenancy import LEGACY_TENANT_ENV_VAR
+
+    root = scaffold("from-config")
+    monkeypatch.setenv(LEGACY_TENANT_ENV_VAR, "from-legacy-env")
+    assert resolve_tenant_id(root=root) == "from-legacy-env"
+
+    # The prefixed name wins where both are set — it is the convention every
+    # other framework variable follows.
+    monkeypatch.setenv(TENANT_ENV_VAR, "from-new-env")
+    assert resolve_tenant_id(root=root) == "from-new-env"
