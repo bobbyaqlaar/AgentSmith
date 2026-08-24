@@ -257,7 +257,18 @@ def _resolve_local_import(
 # ── Main walker ───────────────────────────────────────────────────────────────
 
 
-def run_map(verbose: bool = False) -> dict:
+def run_map(verbose: bool = False, force: bool = False) -> dict:
+    """Walk the repo into the Knowledge Graph.
+
+    `force` re-parses every file instead of skipping those whose stored mtime
+    still matches. The incremental path is right for the post-commit hook, but
+    it can only ever repair a node whose FILE changed — a graph that is wrong
+    for any other reason (a hand edit, a bad merge, a truncated write) is
+    invisible to it and survives every subsequent run. One was committed and
+    pushed on 2026-08-24 with a node's symbols replaced by a test string; three
+    regenerations later it was still there, because middleware.ts had not been
+    touched. Callers that VERIFY the graph should force.
+    """
     try:
         from local_knowledge_graph import AgentKnowledgeGraph
     except ImportError:
@@ -292,7 +303,9 @@ def run_map(verbose: bool = False) -> dict:
         # and also skips the per-upsert graph save each node would trigger.
         # (mtime granularity is 1s ISO here — a same-second rewrite is caught
         # on the next run once the clock ticks; commits are slower than that.)
-        existing = kg._g.nodes[rel_path] if kg._g.has_node(rel_path) else None
+        existing = None if force else (
+            kg._g.nodes[rel_path] if kg._g.has_node(rel_path) else None
+        )
         if (
             existing is not None
             and existing.get("node_type") == "CodebaseFile"
@@ -365,6 +378,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Map codebase into Knowledge Graph")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Re-parse every file, ignoring the mtime skip (repairs a wrong graph)",
+    )
+    parser.add_argument(
         "-q",
         "--quiet",
         action="store_true",
@@ -372,6 +391,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    stats = run_map(verbose=args.verbose)
+    stats = run_map(verbose=args.verbose, force=args.force)
     if not args.quiet:
         print(json.dumps({"status": "ok", **stats}, indent=2))

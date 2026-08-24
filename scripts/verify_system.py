@@ -803,7 +803,11 @@ def check_kg() -> bool:
     # 703 lines behind the portal work and the gate had been green throughout.
     before = _kg_shape(kg_path)
 
-    stats = map_codebase.run_map()
+    # force=True: this check's regeneration is the reference the committed
+    # graph is measured against, so it must not inherit whatever the
+    # incremental path last left behind. Without it a graph corrupted by
+    # anything other than a file edit compares equal to itself forever.
+    stats = map_codebase.run_map(force=True)
     print(f"  ℹ️   map_codebase.py: {stats}")
 
     failures = 0

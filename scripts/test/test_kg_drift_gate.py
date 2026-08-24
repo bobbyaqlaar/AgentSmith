@@ -154,3 +154,30 @@ def test_an_empty_graph_has_a_shape_and_is_not_none(vs, tmp_path: Path) -> None:
     empty = tmp_path / "empty.json"
     empty.write_text(json.dumps({"nodes": [], "edges": []}))
     assert vs._kg_shape(empty) is not None
+
+
+def test_the_gate_forces_a_full_rebuild(monkeypatch) -> None:
+    """`check_kg`'s regeneration is the reference the committed graph is
+    measured against, so it must not inherit whatever the incremental path last
+    left behind.
+
+    The incremental skip can only repair a node whose FILE changed. A graph
+    wrong for any other reason — a hand edit, a bad merge, a truncated write —
+    is invisible to it and survives every run. One reached a public repo on
+    2026-08-24 with a node's symbols replaced by a test string, and three
+    regenerations left it untouched because middleware.ts had not been edited.
+    """
+    vs = load_script("verify_system")
+    import map_codebase
+
+    seen: dict = {}
+
+    def fake_run_map(*args, **kwargs):
+        seen.update(kwargs)
+        return {"upserted": 0}
+
+    monkeypatch.setattr(map_codebase, "run_map", fake_run_map)
+    monkeypatch.setattr(vs, "_kg_shape", lambda _p: "same")
+    vs.check_kg()
+
+    assert seen.get("force") is True, "check_kg must force a full re-parse"

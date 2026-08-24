@@ -7,7 +7,8 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
-        "DELIBERATELY_STALE"
+        "config",
+        "middleware"
       ],
       "last_modified": "2026-07-14T21:46:41Z",
       "id": "portal/middleware.ts"
@@ -62,6 +63,13 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "portal/lib/ssoRevocationMode.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-06-22T12:30:57Z",
+      "id": "portal/next-env.d.ts"
     },
     {
       "node_type": "CodebaseFile",
@@ -169,6 +177,17 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "tls_enabled",
+        "temporal_address",
+        "connect"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "runtime/temporal_client.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "VectorHit",
         "VectorStore",
         "_cosine",
@@ -237,6 +256,15 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "runtime/replay_webhook_server.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "security_artefact_path"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "runtime/security_paths.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -698,6 +726,15 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "main"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/verify_judge_route.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "_load_yaml",
         "org_policy_path",
         "tenant_yaml_path",
@@ -894,7 +931,7 @@
         "_resolve_local_import",
         "run_map"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T11:11:39Z",
       "id": "scripts/map_codebase.py"
     },
     {
@@ -960,7 +997,7 @@
         "_run",
         "_git_repo"
       ],
-      "last_modified": "2026-08-24T11:07:38Z",
+      "last_modified": "2026-08-24T11:11:39Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -988,6 +1025,16 @@
       ],
       "last_modified": "2026-08-20T20:42:06Z",
       "id": "templates/onprem-deploy/scripts/render-envoy-config.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "parse_value",
+        "load_env"
+      ],
+      "last_modified": "2026-08-08T20:32:46Z",
+      "id": "templates/onprem-deploy/scripts/_env.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1044,6 +1091,22 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "scripts/test/test_shadow_eval.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_requested_artifacts",
+        "_built_artifacts",
+        "_doc_referenced_artifacts",
+        "test_every_downloaded_artifact_is_built",
+        "test_the_installer_itself_is_a_release_asset",
+        "test_docs_only_reference_artifacts_the_release_builds",
+        "test_templates_tarball_carries_both_destinations",
+        "test_artifacts_extract_flat"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/test/test_release_artifact_contract.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1186,6 +1249,27 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_row",
+        "test_limiter_spaces_calls_by_the_configured_interval",
+        "test_the_first_call_is_not_delayed",
+        "test_a_non_positive_rate_is_a_no_op_object_not_none",
+        "test_unset_env_means_no_pacing",
+        "test_an_unparseable_rate_warns_and_does_not_pace",
+        "test_the_judged_loop_is_paced_when_eval_rpm_is_set",
+        "test_the_judged_loop_is_not_paced_by_default",
+        "test_an_all_errored_run_says_no_verdict_rather_than_fail",
+        "test_a_genuine_quality_failure_still_says_fail",
+        "test_a_case_below_the_bar_is_not_marked_failed_on_a_passing_run",
+        "test_an_errored_case_is_marked_no_verdict_not_failed",
+        "test_deterministic_suites_keep_their_real_per_case_verdict"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/test/test_eval_pacing.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "test_fairness_base_fixture_has_paired_cases",
         "test_suite_fairness_resolves_fairness_paths",
         "test_judge_prompt_includes_fairness_when_requested",
@@ -1302,6 +1386,20 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_installer_version",
+        "_pyproject_version",
+        "_specs_version",
+        "test_installer_and_package_agree",
+        "test_specs_header_matches_the_installer",
+        "test_changelog_has_an_entry_for_the_current_version"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/test/test_version_consistency.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "repo",
         "_commit",
         "_opt_in",
@@ -1321,6 +1419,22 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "scripts/test/test_hooks_behavior.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_fallback_markers_match_the_runtime_definition",
+        "test_the_error_that_started_this_is_classified",
+        "test_a_bare_status_line_is_not_classifiable",
+        "test_ordinary_failures_are_not_exhaustion",
+        "test_classifier_survives_an_older_runtime",
+        "test_cost_router_does_not_walk_the_degrade_chain",
+        "test_openrouter_credit_exhaustion_is_classified",
+        "test_a_bare_status_number_is_not_a_diagnosis"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/test/test_exhaustion_classification.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1355,6 +1469,69 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_scannable_files",
+        "_docstring_lines",
+        "_offending_lines",
+        "test_no_unresolved_model_ids_in_scripts_or_runtime",
+        "test_ci_templates_do_not_pin_a_judge_model",
+        "test_the_guard_actually_catches_a_hardcoded_id"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/test/test_no_hardcoded_model_ids.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "vs",
+        "write_graph",
+        "test_shape_ignores_mtime",
+        "test_shape_catches_a_new_symbol",
+        "test_shape_ignores_symbol_order",
+        "test_untracked_nodes_are_excluded",
+        "test_shape_is_none_when_git_cannot_answer",
+        "test_missing_or_unreadable_graph_is_none",
+        "test_an_empty_graph_has_a_shape_and_is_not_none",
+        "test_the_gate_forces_a_full_rebuild",
+        "_write",
+        "fake_run_map"
+      ],
+      "last_modified": "2026-08-24T11:12:09Z",
+      "id": "scripts/test/test_kg_drift_gate.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_tenant_registry",
+        "test_declared_judge_reaches_its_own_provider",
+        "test_a_models_yaml_endpoint_overrides_the_provider_default",
+        "test_per_role_api_key_env_is_honoured",
+        "test_an_undeclared_model_still_falls_back_to_the_heuristics",
+        "test_a_tenant_judge_does_not_inherit_the_framework_endpoint",
+        "test_a_tenant_judge_does_not_inherit_free_tier_costs",
+        "test_omitting_degrade_to_actually_removes_it",
+        "test_same_id_still_merges",
+        "_run_evals",
+        "test_threshold_can_be_declared_beside_the_judge",
+        "test_threshold_can_differ_per_suite",
+        "test_cli_still_wins_over_the_registry",
+        "_fake_call",
+        "test_the_judge_grades_at_temperature_zero",
+        "test_an_empty_verdict_is_reported_as_a_judge_error",
+        "test_prose_without_json_is_also_an_error",
+        "test_a_real_verdict_sets_no_error",
+        "test_declared_api_key_env_falls_back_to_the_provider_default",
+        "test_the_dedicated_key_still_wins_when_populated",
+        "_capture"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/test/test_judge_routing.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "test_adversarial_base_fixture_shape",
         "test_adversarial_suite_paths",
         "test_load_adversarial_cases_falls_back_to_base",
@@ -1365,6 +1542,22 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "scripts/test/test_adversarial_evals.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_value_parsing",
+        "test_the_exact_line_that_broke_the_judge",
+        "os_environ_value",
+        "test_export_prefix_is_tolerated",
+        "test_existing_environment_still_wins",
+        "test_ollama_base_url_tolerates_both_conventions",
+        "test_ollama_base_url_defaults_without_the_variable",
+        "test_the_onprem_bundle_parses_values_identically"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/test/test_dotenv_parsing.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1417,6 +1610,40 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "scripts/test/test_knowledge_graph.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_source_files",
+        "_documented_text",
+        "test_every_env_var_the_code_reads_is_documented",
+        "test_security_knobs_are_in_the_canonical_reference",
+        "test_fail_closed_behaviour_is_stated_not_just_the_variable",
+        "test_every_shipped_command_is_in_the_canonical_reference"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/test/test_env_var_documentation.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_ollama",
+        "test_the_shipped_sovereign_template_passes",
+        "test_a_hosted_provider_fails",
+        "test_a_role_that_degrades_out_of_country_fails",
+        "test_a_self_hostable_provider_without_an_endpoint_fails",
+        "test_a_dangling_degrade_target_fails",
+        "test_an_unrecognised_provider_fails_closed",
+        "test_a_missing_provider_key_fails_closed",
+        "test_an_in_border_chain_passes",
+        "test_a_cyclic_ladder_terminates",
+        "test_a_checkout_without_the_template_is_not_applicable",
+        "test_the_runner_walks_the_same_chain_as_the_gateway"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/test/test_sovereign_residency.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1501,10 +1728,53 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "hitl_gate",
+        "dlq_check",
+        "self_correction",
+        "budget_caps",
+        "change_gates",
+        "rbac_matrix",
+        "rag_poison",
+        "audit_hmac",
+        "eval_golden",
+        "eval_fairness",
+        "eval_hallucination",
+        "tenant_suite",
+        "agency_manifest",
+        "gateway_static"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/security/runners/delegating.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "run"
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "scripts/security/runners/sso_revocation.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_subprocess_result",
+        "verify_system",
+        "pytest_suite",
+        "load_run_evals",
+        "guard_suite",
+        "eval_suite_gateable",
+        "framework_root",
+        "tenant_security",
+        "passed",
+        "failed",
+        "not_applicable",
+        "security_fixture",
+        "node_suite"
+      ],
+      "last_modified": "2026-08-24T10:56:05Z",
+      "id": "scripts/security/runners/_shared.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1532,6 +1802,17 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "scripts/security/runners/pii_precall.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_endpoint_is_declared",
+        "_violations",
+        "run"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "scripts/security/runners/sovereign_residency.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1633,6 +1914,27 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "test_flat_shape_is_unchanged",
+        "test_profile_binds_roles_to_catalog_entries",
+        "test_id_defaults_to_the_catalog_key_but_an_explicit_id_wins",
+        "test_profile_selection_precedence",
+        "test_an_unknown_mode_falls_back_rather_than_resolving_nothing",
+        "test_a_binding_to_a_missing_catalog_entry_fails_loudly",
+        "test_api_format_defaults_from_provider",
+        "test_explicit_api_format_overrides_the_provider_default",
+        "test_claude_via_openrouter_uses_the_openai_envelope",
+        "test_direct_anthropic_still_uses_the_messages_envelope",
+        "test_null_content_parses_to_empty_string_not_none",
+        "test_anthropic_empty_content_block_parses_to_empty_string",
+        "test_pii_detection_tolerates_none"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "runtime/test/test_registry_shapes.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "test_valid_cards_pass",
         "test_invalid_candidates_fail",
         "test_guard_and_redactor_share_one_implementation",
@@ -1661,6 +1963,22 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "runtime/test/test_llm_gateway_budget.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_a_poisoned_document_is_quarantined",
+        "test_a_benign_document_passes_through",
+        "test_only_the_poisoned_document_is_dropped",
+        "test_an_inline_role_marker_is_caught",
+        "test_ordinary_prose_mentioning_system_is_not_quarantined",
+        "test_it_accepts_vector_hits_mappings_and_strings",
+        "test_detection_is_the_same_engine_as_direct_prompts",
+        "test_it_quarantines_a_poisoned_document_retrieved_from_a_real_store"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "runtime/test/test_rag_poison_guard.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1718,6 +2036,28 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "runtime/test/test_tracing.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_sources",
+        "_strip_comments",
+        "test_no_store_opens_a_raw_connection",
+        "test_pooled_connections_are_released_not_context_managed",
+        "test_pool_docstring_lists_every_postgres_store",
+        "test_ensure_schema_runs_once_per_dsn_and_key",
+        "test_ensure_schema_applies_a_statement_list_in_order",
+        "_Cur",
+        "_Conn",
+        "execute",
+        "__enter__",
+        "__exit__",
+        "cursor",
+        "close"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "runtime/test/test_pg_pool_coverage.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1906,6 +2246,15 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "fake_gateway"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "runtime/test/_gateway_fixtures.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "FakeSpanContext",
         "FakeSpan",
         "_redactor",
@@ -1985,6 +2334,19 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "test_every_documented_spelling_enables_tls",
+        "test_anything_else_leaves_tls_off",
+        "test_tls_defaults_off_when_unset",
+        "test_a_missing_address_falls_back_rather_than_raising",
+        "test_no_caller_builds_its_own_temporal_connection"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "runtime/test/test_temporal_client.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "_FakeStreamResp",
         "test_complete_stream_sets_ttft_ms",
         "_stream_gateway",
@@ -2032,6 +2394,18 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "runtime/test/test_testing_doubles.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_envelope_keys_match_what_enqueue_accepts",
+        "test_the_legacy_flattened_shape_is_rejected_by_name",
+        "test_every_producer_builds_the_envelope_through_the_builder",
+        "test_envelope_defaults_the_optional_fields_rather_than_omitting_them"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "runtime/test/test_dead_letter.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -2186,6 +2560,13 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
+      "last_modified": "2026-08-08T19:49:37Z",
+      "id": "portal/test/auditSignature.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
       "last_modified": "2026-07-14T21:46:41Z",
       "id": "portal/test/ssoRevocation.test.ts"
     },
@@ -2195,6 +2576,13 @@
       "symbols": [],
       "last_modified": "2026-07-11T07:39:22Z",
       "id": "portal/test/auditLog.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-08-24T11:00:08Z",
+      "id": "portal/test/edgeSafety.test.ts"
     },
     {
       "node_type": "CodebaseFile",
@@ -2279,6 +2667,36 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
+        "ISOLATION_VALUES",
+        "Isolation",
+        "isValidIsolation"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "portal/lib/isolation.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "constantTimeEquals"
+      ],
+      "last_modified": "2026-08-24T11:00:19Z",
+      "id": "portal/lib/constantTime.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "BearerGateConfig",
+        "requireBearer"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "portal/lib/bearerAuth.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
         "tenantTraceUrl",
         "checkPhoenixHealth",
         "RecentTraceStats",
@@ -2298,6 +2716,20 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "portal/lib/cost.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "AUDIT_EVENT_TYPES",
+        "AuditEventType",
+        "isValidAuditEventType",
+        "AuditEvent",
+        "signEvent",
+        "verifySignature"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "portal/lib/auditSignature.ts"
     },
     {
       "node_type": "CodebaseFile",
@@ -2363,6 +2795,15 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
+        "currentAccess"
+      ],
+      "last_modified": "2026-08-23T21:05:28Z",
+      "id": "portal/lib/currentAccess.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
         "secureCookies",
         "OidcSettings",
         "getOidcSettings",
@@ -2373,17 +2814,6 @@
       ],
       "last_modified": "2026-08-23T21:05:28Z",
       "id": "portal/lib/oidc.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "ISOLATION_VALUES",
-        "Isolation",
-        "isValidIsolation"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "portal/lib/isolation.ts"
     },
     {
       "node_type": "CodebaseFile",
@@ -2608,435 +3038,8 @@
       "title": "Delivery Model \u2014 promote evidence pack",
       "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/fixtures/delivery_evidence.md",
       "pillar": null,
-      "created_at": "2026-07-28T20:34:13Z",
+      "created_at": "2026-08-24T11:10:44Z",
       "id": "rfc:fixtures/delivery_evidence.md"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_requested_artifacts",
-        "_built_artifacts",
-        "_doc_referenced_artifacts",
-        "test_every_downloaded_artifact_is_built",
-        "test_the_installer_itself_is_a_release_asset",
-        "test_docs_only_reference_artifacts_the_release_builds",
-        "test_templates_tarball_carries_both_destinations",
-        "test_artifacts_extract_flat"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/test/test_release_artifact_contract.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_scannable_files",
-        "_docstring_lines",
-        "_offending_lines",
-        "test_no_unresolved_model_ids_in_scripts_or_runtime",
-        "test_ci_templates_do_not_pin_a_judge_model",
-        "test_the_guard_actually_catches_a_hardcoded_id"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/test/test_no_hardcoded_model_ids.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "tls_enabled",
-        "temporal_address",
-        "connect"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "runtime/temporal_client.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "security_artefact_path"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "runtime/security_paths.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "main"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/verify_judge_route.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "parse_value",
-        "load_env"
-      ],
-      "last_modified": "2026-08-08T20:32:46Z",
-      "id": "templates/onprem-deploy/scripts/_env.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_row",
-        "test_limiter_spaces_calls_by_the_configured_interval",
-        "test_the_first_call_is_not_delayed",
-        "test_a_non_positive_rate_is_a_no_op_object_not_none",
-        "test_unset_env_means_no_pacing",
-        "test_an_unparseable_rate_warns_and_does_not_pace",
-        "test_the_judged_loop_is_paced_when_eval_rpm_is_set",
-        "test_the_judged_loop_is_not_paced_by_default",
-        "test_an_all_errored_run_says_no_verdict_rather_than_fail",
-        "test_a_genuine_quality_failure_still_says_fail",
-        "test_a_case_below_the_bar_is_not_marked_failed_on_a_passing_run",
-        "test_an_errored_case_is_marked_no_verdict_not_failed",
-        "test_deterministic_suites_keep_their_real_per_case_verdict"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/test/test_eval_pacing.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_installer_version",
-        "_pyproject_version",
-        "_specs_version",
-        "test_installer_and_package_agree",
-        "test_specs_header_matches_the_installer",
-        "test_changelog_has_an_entry_for_the_current_version"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/test/test_version_consistency.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_fallback_markers_match_the_runtime_definition",
-        "test_the_error_that_started_this_is_classified",
-        "test_a_bare_status_line_is_not_classifiable",
-        "test_ordinary_failures_are_not_exhaustion",
-        "test_classifier_survives_an_older_runtime",
-        "test_cost_router_does_not_walk_the_degrade_chain",
-        "test_openrouter_credit_exhaustion_is_classified",
-        "test_a_bare_status_number_is_not_a_diagnosis"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/test/test_exhaustion_classification.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_tenant_registry",
-        "test_declared_judge_reaches_its_own_provider",
-        "test_a_models_yaml_endpoint_overrides_the_provider_default",
-        "test_per_role_api_key_env_is_honoured",
-        "test_an_undeclared_model_still_falls_back_to_the_heuristics",
-        "test_a_tenant_judge_does_not_inherit_the_framework_endpoint",
-        "test_a_tenant_judge_does_not_inherit_free_tier_costs",
-        "test_omitting_degrade_to_actually_removes_it",
-        "test_same_id_still_merges",
-        "_run_evals",
-        "test_threshold_can_be_declared_beside_the_judge",
-        "test_threshold_can_differ_per_suite",
-        "test_cli_still_wins_over_the_registry",
-        "_fake_call",
-        "test_the_judge_grades_at_temperature_zero",
-        "test_an_empty_verdict_is_reported_as_a_judge_error",
-        "test_prose_without_json_is_also_an_error",
-        "test_a_real_verdict_sets_no_error",
-        "test_declared_api_key_env_falls_back_to_the_provider_default",
-        "test_the_dedicated_key_still_wins_when_populated",
-        "_capture"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/test/test_judge_routing.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_value_parsing",
-        "test_the_exact_line_that_broke_the_judge",
-        "os_environ_value",
-        "test_export_prefix_is_tolerated",
-        "test_existing_environment_still_wins",
-        "test_ollama_base_url_tolerates_both_conventions",
-        "test_ollama_base_url_defaults_without_the_variable",
-        "test_the_onprem_bundle_parses_values_identically"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/test/test_dotenv_parsing.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_source_files",
-        "_documented_text",
-        "test_every_env_var_the_code_reads_is_documented",
-        "test_security_knobs_are_in_the_canonical_reference",
-        "test_fail_closed_behaviour_is_stated_not_just_the_variable",
-        "test_every_shipped_command_is_in_the_canonical_reference"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/test/test_env_var_documentation.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_ollama",
-        "test_the_shipped_sovereign_template_passes",
-        "test_a_hosted_provider_fails",
-        "test_a_role_that_degrades_out_of_country_fails",
-        "test_a_self_hostable_provider_without_an_endpoint_fails",
-        "test_a_dangling_degrade_target_fails",
-        "test_an_unrecognised_provider_fails_closed",
-        "test_a_missing_provider_key_fails_closed",
-        "test_an_in_border_chain_passes",
-        "test_a_cyclic_ladder_terminates",
-        "test_a_checkout_without_the_template_is_not_applicable",
-        "test_the_runner_walks_the_same_chain_as_the_gateway"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/test/test_sovereign_residency.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "hitl_gate",
-        "dlq_check",
-        "self_correction",
-        "budget_caps",
-        "change_gates",
-        "rbac_matrix",
-        "rag_poison",
-        "audit_hmac",
-        "eval_golden",
-        "eval_fairness",
-        "eval_hallucination",
-        "tenant_suite",
-        "agency_manifest",
-        "gateway_static"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/security/runners/delegating.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_subprocess_result",
-        "verify_system",
-        "pytest_suite",
-        "load_run_evals",
-        "guard_suite",
-        "eval_suite_gateable",
-        "framework_root",
-        "tenant_security",
-        "passed",
-        "failed",
-        "not_applicable",
-        "security_fixture",
-        "node_suite"
-      ],
-      "last_modified": "2026-08-24T10:56:05Z",
-      "id": "scripts/security/runners/_shared.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_endpoint_is_declared",
-        "_violations",
-        "run"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "scripts/security/runners/sovereign_residency.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_flat_shape_is_unchanged",
-        "test_profile_binds_roles_to_catalog_entries",
-        "test_id_defaults_to_the_catalog_key_but_an_explicit_id_wins",
-        "test_profile_selection_precedence",
-        "test_an_unknown_mode_falls_back_rather_than_resolving_nothing",
-        "test_a_binding_to_a_missing_catalog_entry_fails_loudly",
-        "test_api_format_defaults_from_provider",
-        "test_explicit_api_format_overrides_the_provider_default",
-        "test_claude_via_openrouter_uses_the_openai_envelope",
-        "test_direct_anthropic_still_uses_the_messages_envelope",
-        "test_null_content_parses_to_empty_string_not_none",
-        "test_anthropic_empty_content_block_parses_to_empty_string",
-        "test_pii_detection_tolerates_none"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "runtime/test/test_registry_shapes.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_a_poisoned_document_is_quarantined",
-        "test_a_benign_document_passes_through",
-        "test_only_the_poisoned_document_is_dropped",
-        "test_an_inline_role_marker_is_caught",
-        "test_ordinary_prose_mentioning_system_is_not_quarantined",
-        "test_it_accepts_vector_hits_mappings_and_strings",
-        "test_detection_is_the_same_engine_as_direct_prompts",
-        "test_it_quarantines_a_poisoned_document_retrieved_from_a_real_store"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "runtime/test/test_rag_poison_guard.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_sources",
-        "_strip_comments",
-        "test_no_store_opens_a_raw_connection",
-        "test_pooled_connections_are_released_not_context_managed",
-        "test_pool_docstring_lists_every_postgres_store",
-        "test_ensure_schema_runs_once_per_dsn_and_key",
-        "test_ensure_schema_applies_a_statement_list_in_order",
-        "_Cur",
-        "_Conn",
-        "execute",
-        "__enter__",
-        "__exit__",
-        "cursor",
-        "close"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "runtime/test/test_pg_pool_coverage.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "fake_gateway"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "runtime/test/_gateway_fixtures.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_every_documented_spelling_enables_tls",
-        "test_anything_else_leaves_tls_off",
-        "test_tls_defaults_off_when_unset",
-        "test_a_missing_address_falls_back_rather_than_raising",
-        "test_no_caller_builds_its_own_temporal_connection"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "runtime/test/test_temporal_client.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "test_envelope_keys_match_what_enqueue_accepts",
-        "test_the_legacy_flattened_shape_is_rejected_by_name",
-        "test_every_producer_builds_the_envelope_through_the_builder",
-        "test_envelope_defaults_the_optional_fields_rather_than_omitting_them"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "runtime/test/test_dead_letter.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-08-08T19:49:37Z",
-      "id": "portal/test/auditSignature.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "constantTimeEquals"
-      ],
-      "last_modified": "2026-08-24T11:00:19Z",
-      "id": "portal/lib/constantTime.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "BearerGateConfig",
-        "requireBearer"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "portal/lib/bearerAuth.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "AUDIT_EVENT_TYPES",
-        "AuditEventType",
-        "isValidAuditEventType",
-        "AuditEvent",
-        "signEvent",
-        "verifySignature"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "portal/lib/auditSignature.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "currentAccess"
-      ],
-      "last_modified": "2026-08-23T21:05:28Z",
-      "id": "portal/lib/currentAccess.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "vs",
-        "write_graph",
-        "test_shape_ignores_mtime",
-        "test_shape_catches_a_new_symbol",
-        "test_shape_ignores_symbol_order",
-        "test_untracked_nodes_are_excluded",
-        "test_shape_is_none_when_git_cannot_answer",
-        "test_missing_or_unreadable_graph_is_none",
-        "test_an_empty_graph_has_a_shape_and_is_not_none",
-        "_write"
-      ],
-      "last_modified": "2026-08-24T11:07:38Z",
-      "id": "scripts/test/test_kg_drift_gate.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-08-24T11:00:08Z",
-      "id": "portal/test/edgeSafety.test.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
-      "last_modified": "2026-06-22T12:30:57Z",
-      "id": "portal/next-env.d.ts"
     }
   ],
   "edges": [
@@ -3147,6 +3150,21 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_exhaustion_classification.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_judge_routing.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_sovereign_residency.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/security/runners/structured_output.py",
       "target": "runtime/__init__.py"
     },
@@ -3172,6 +3190,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/sovereign_residency.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "examples/oil-price-agent/worker.py",
       "target": "runtime/__init__.py"
     },
@@ -3187,6 +3210,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "runtime/test/test_registry_shapes.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "runtime/test/test_luhn_parity.py",
       "target": "runtime/__init__.py"
     },
@@ -3197,12 +3225,22 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "runtime/test/test_rag_poison_guard.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "runtime/test/test_pg_pool.py",
       "target": "runtime/__init__.py"
     },
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_tracing.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_pg_pool_coverage.py",
       "target": "runtime/__init__.py"
     },
     {
@@ -3247,6 +3285,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "runtime/test/_gateway_fixtures.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "runtime/test/test_trace_redactor.py",
       "target": "runtime/__init__.py"
     },
@@ -3267,6 +3310,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "runtime/test/test_temporal_client.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "runtime/test/test_ttft_stream.py",
       "target": "runtime/__init__.py"
     },
@@ -3278,6 +3326,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_testing_doubles.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_dead_letter.py",
       "target": "runtime/__init__.py"
     },
     {
@@ -3332,6 +3385,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "portal/lib/bearerAuth.ts",
+      "target": "portal/lib/constantTime.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "portal/lib/cost.ts",
       "target": "portal/lib/db.ts"
     },
@@ -3382,68 +3440,13 @@
     },
     {
       "edge_type": "IMPORTS",
-      "source": "portal/lib/oidc.ts",
-      "target": "portal/lib/sessionToken.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/test/test_exhaustion_classification.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/test/test_judge_routing.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/test/test_sovereign_residency.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "scripts/security/runners/sovereign_residency.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_registry_shapes.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_rag_poison_guard.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_pg_pool_coverage.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/_gateway_fixtures.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_temporal_client.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "runtime/test/test_dead_letter.py",
-      "target": "runtime/__init__.py"
-    },
-    {
-      "edge_type": "IMPORTS",
-      "source": "portal/lib/bearerAuth.ts",
-      "target": "portal/lib/constantTime.ts"
-    },
-    {
-      "edge_type": "IMPORTS",
       "source": "portal/lib/currentAccess.ts",
       "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/oidc.ts",
+      "target": "portal/lib/sessionToken.ts"
     }
   ]
 }
