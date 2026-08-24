@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import uuid
 from typing import Any, Literal, Optional
@@ -52,6 +53,37 @@ def _project_name() -> str:
 # ── Core logger ───────────────────────────────────────────────────────────────
 
 
+def _git_config(key: str) -> Optional[str]:
+    """`git config user.email`, or None. The dev-session fallback."""
+    try:
+        out = subprocess.run(
+            ["git", "config", "--get", key], capture_output=True, text=True, timeout=5
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    value = out.stdout.strip()
+    return value or None
+
+
+def _owner(dotted: str, env_var: str, git_key: str) -> str:
+    """Who is running this: the tenant's declaration, an explicit override, or git.
+
+    The git fallback is what lets `AGENT_OWNER_ID` leave the shell profile. The
+    installer used to export it there, which looks like a per-deploy override
+    and is actually AMBIENT: it applied to every repo on the machine and, under
+    the standard precedence, silently outranked whatever each tenant declared as
+    its owner. One developer with one address never notices; a second person or
+    a second tenant does.
+
+    Outside a tenant — the dev-session tooling this logger mostly serves — git
+    already knows the answer and needs no configuration at all.
+    """
+    from runtime.config import resolve
+
+    declared = resolve(dotted, env_var=env_var, default=None)
+    return str(declared) if declared else (_git_config(git_key) or "unknown")
+
+
 class AgentLogger:
     """
     Structured logger for agent sessions.
@@ -76,8 +108,8 @@ class AgentLogger:
         self.orchestrator = orchestrator
         self.session_id = session_id or str(uuid.uuid4())
         self.model = model or os.environ.get("AGENT_DEFAULT_MODEL", "unknown")
-        self.owner_id = os.environ.get("AGENT_OWNER_ID", "unknown")
-        self.owner_name = os.environ.get("AGENT_OWNER_NAME", "unknown")
+        self.owner_id = _owner("tenant.owner", "AGENT_OWNER_ID", "user.email")
+        self.owner_name = _owner("tenant.owner_name", "AGENT_OWNER_NAME", "user.name")
         self.project = _project_name()
         self.tenant_id = _tenant_id()
         self._log_path = _repo_root() / ".agent-history.log"

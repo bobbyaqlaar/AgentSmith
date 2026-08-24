@@ -1415,35 +1415,30 @@ fi
 
 header "Step 8: Configuring Identity"
 
-IDENTITY_SET=0
-
-# Check if already set in shell profile
-if grep -q "AGENT_OWNER_ID" "$SHELL_RC" 2>/dev/null; then
-  info "AGENT_OWNER_ID already configured in $SHELL_RC"
-  IDENTITY_SET=1
-fi
-
-if [ "$IDENTITY_SET" -eq 0 ] && [ -t 1 ]; then
-  echo ""
-  echo "All traces, logs, and HITL records are attributed to you as the owner."
-  echo "This is set once and applies to all projects on this machine."
-  echo ""
-  read -r -p "  Your email (AGENT_OWNER_ID): " OWNER_EMAIL
-  read -r -p "  Your name  (AGENT_OWNER_NAME): " OWNER_NAME
-
-  if [ -n "$OWNER_EMAIL" ] && [ -n "$OWNER_NAME" ]; then
-    cat >> "$SHELL_RC" << IDENTITY_EOF
-
-# AgentSmith — Owner identity
-export AGENT_OWNER_ID="${OWNER_EMAIL}"
-export AGENT_OWNER_NAME="${OWNER_NAME}"
-IDENTITY_EOF
-    success "Identity saved: $OWNER_NAME <$OWNER_EMAIL>"
-  else
-    warn "Identity not set — add AGENT_OWNER_ID and AGENT_OWNER_NAME to $SHELL_RC manually"
-  fi
-else
-  info "Running non-interactively — set AGENT_OWNER_ID and AGENT_OWNER_NAME in $SHELL_RC"
+# Owner identity is NO LONGER written to the shell profile, and no longer
+# prompted for.
+#
+# It used to be, and "applies to all projects on this machine" was the selling
+# point — which is exactly the problem. An exported variable looks like a
+# deliberate per-deploy override and outranks a tenant's declared `tenant.owner`
+# under the standard precedence, so every repo on the machine reported the
+# installer's answer whatever each tenant declared. One developer with one
+# address never notices; a second person, or a second tenant, does. And CI has
+# no shell profile at all, so the same code attributed nothing there.
+#
+# Resolution order now (scripts/agent_logger.py:_owner):
+#
+#   .agenticframework/tenant.yaml `tenant.owner`
+#     → AGENT_OWNER_ID
+#       → git config user.email
+#
+# Inside a tenant the declaration wins; outside one, git already knows and needs
+# no configuration at all. AGENT_OWNER_ID still works as a deliberate override —
+# a container, a CI job — it is simply not ambient any more.
+if grep -q "^export AGENT_OWNER_ID" "$SHELL_RC" 2>/dev/null; then
+  warn "AGENT_OWNER_ID is exported in $SHELL_RC — it now silently outranks every"
+  warn "  tenant's declared tenant.owner on this machine. Safe to delete that line;"
+  warn "  identity resolves from tenant.yaml, then git config user.email."
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1507,9 +1502,10 @@ echo ""
 echo "  1. Reload your shell:"
 echo "     source $SHELL_RC"
 echo ""
-echo "  2. Set your identity (if not prompted above):"
-echo "     export AGENT_OWNER_ID=\"you@example.com\""
-echo "     export AGENT_OWNER_NAME=\"Your Name\""
+echo "  2. Owner identity resolves automatically:"
+echo "     inside a tenant  — .agenticframework/tenant.yaml  tenant.owner"
+echo "     anywhere else    — git config user.email"
+echo "     override         — export AGENT_OWNER_ID=\"you@example.com\""
 echo ""
 echo "  3. Choose a mode and start the dashboard:"
 echo "     ai-mode-local      # offline (Ollama)"

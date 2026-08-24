@@ -691,8 +691,8 @@ For internal registries, the installer supports fetching from a private artifact
 | `ANTHROPIC_API_KEY` | Required for hybrid mode | `sk-ant-...` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Set by `ai-dashboard-start` | `http://localhost:6006/v1/traces` |
 | `AGENT_JUDGE_MODEL` | Names a judge ONLY where no `judge` role is declared | *(unset)* — the `judge` role in `models.yaml` wins and an ignored value is logged (framework default `falcon3:3b`); `scripts/_shared.py:DEFAULT_JUDGE_MODEL` is the last-resort fallback when `runtime/` isn't importable |
-| `AGENT_OWNER_ID` | Real user identity | `bobby@example.com` |
-| `AGENT_OWNER_NAME` | Display name | `Bobby Rajagopal` |
+| `AGENT_OWNER_ID` | Real user identity. **No longer exported to the shell profile** — ambient there, it outranked every tenant's declared `tenant.owner` and was absent in CI entirely. Resolution: `tenant.owner` → this → `git config user.email` | *(from tenant.yaml, then git)* |
+| `AGENT_OWNER_NAME` | Display name. Override for `tenant.owner_name`; falls back to `git config user.name` | *(from tenant.yaml, then git)* |
 | `AGENT_PHOENIX_ENDPOINT` | Phoenix URL | `http://localhost:6006` |
 | `AGENT_MONTHLY_USD_CAP` | Dev session monthly budget. Also the production `LLMGateway`'s fallback budget cap (`runtime/llm_gateway.py:LLMGateway.__init__`) when a tenant doesn't pass an explicit `budget_cap_usd` — same env var, same default, both layers | `150.0` |
 | `PROMPT_GUARD` | Overrides `security.prompt_guard` in tenant.yaml. `off\|warn\|default\|strict` | `default` |
@@ -1123,7 +1123,7 @@ Every OTel span must carry all of the following:
 | `ai_stack_mode` | `$AI_STACK_MODE` | `local`, `hybrid` |
 | `agent.name` | Node function | `Architect` |
 | `agent.role` | Node declaration | `orchestrator`, `subagent` |
-| `agent.owner_id` | `$AGENT_OWNER_ID` | `bobby@example.com` |
+| `agent.owner_id` | `tenant.owner`, else `$AGENT_OWNER_ID`, else `git config user.email` | `bobby@example.com` |
 | `llm.model_name` | Model factory | `claude-3-5-sonnet-20241022` |
 | `input.value` | Prompt (redacted per environment) | *(see §27)* |
 | `output.value` | Completion (redacted per environment) | *(see §27)* |
