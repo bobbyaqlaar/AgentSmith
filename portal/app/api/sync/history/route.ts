@@ -30,6 +30,7 @@ import { requireBearer } from "@/lib/bearerAuth";
 import { syncHistoryEntries, type SyncEntryInput } from "@/lib/issues";
 import { upsertTenant, getTenant } from "@/lib/tenants";
 import { portalSpan, withIdentity } from "@/lib/tracing";
+import { isSafeHttpUrl } from "@/lib/safeUrl";
 
 export async function POST(request: Request) {
   const denied = requireBearer(request, { envVar: "OPS_PORTAL_SYNC_TOKEN", purpose: "sync ingestion" });
@@ -45,6 +46,12 @@ export async function POST(request: Request) {
   const entries: SyncEntryInput[] = body.entries;
   const budgetCapUsd: number | null =
     typeof body.budgetCapUsd === "number" && Number.isFinite(body.budgetCapUsd) ? body.budgetCapUsd : null;
+  // Same scheme check as POST /api/tenants — this is the OTHER writer of the
+  // URL the portal later POSTs a replayed payload to, and a validation that
+  // lands at one of two writers is not a validation.
+  if (body.replayWebhookUrl !== undefined && body.replayWebhookUrl !== null && !isSafeHttpUrl(body.replayWebhookUrl)) {
+    return NextResponse.json({ error: "replayWebhookUrl must be an http(s) URL" }, { status: 400 });
+  }
   const replayWebhookUrl: string | null = typeof body.replayWebhookUrl === "string" ? body.replayWebhookUrl : null;
   const replayWebhookSecret: string | null =
     typeof body.replayWebhookSecret === "string" ? body.replayWebhookSecret : null;

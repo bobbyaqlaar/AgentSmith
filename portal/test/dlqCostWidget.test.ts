@@ -77,16 +77,25 @@ await test("getDLQStatus reports not-wired before any worker has migrated", asyn
   const status = await getDLQStatus();
   assert.equal(status.wired, false);
   assert.deepEqual(status.pendingByTenant, {});
-  assert.deepEqual(await listDLQEntries(tenantA), []);
+  // NULL, not []. An empty array from this call is what made the tenant DLQ
+  // page say "No pending DLQ entries for this tenant" about a database no
+  // worker has ever touched.
+  assert.equal(await listDLQEntries(tenantA), null);
   assert.equal(await getDlqEntry("nope"), null);
 });
 
-await test("getTenantCost degrades to zeros (cap still from tenants) without budget table", async () => {
+await test("getTenantCost says UNMEASURED, not zero, without the budget table", async () => {
+  // The old name for this test — "degrades to zeros" — was the defect stated
+  // as a feature. $0.00 and "the gateway has never run" are opposite facts and
+  // both rendered as $0.00 on the dashboard.
   const cost = await getTenantCost(tenantA);
-  assert.equal(cost.spentUsd, 0);
+  assert.equal(cost.wired, false);
+  // The cap is still real: it comes from `tenants`, which this portal owns.
   assert.equal(cost.cap, 100);
   assert.deepEqual(cost.history, []);
-  assert.deepEqual(await getAllTenantsCurrentSpend(), {});
+  const spend = await getAllTenantsCurrentSpend();
+  assert.equal(spend.wired, false);
+  assert.deepEqual(spend.byTenant, {});
 });
 
 // ── Create the python-owned tables (same DDL as their owners) ────────────────
@@ -124,6 +133,7 @@ await test("getTenantCost picks the current period and returns ascending history
     [tenantA, currentPeriod]
   );
   const cost = await getTenantCost(tenantA);
+  assert.equal(cost.wired, true);
   assert.equal(cost.spentUsd, 12.25);
   assert.equal(cost.cap, 100);
   assert.deepEqual(
@@ -138,8 +148,9 @@ await test("getAllTenantsCurrentSpend only counts the current period", async () 
     [tenantB, currentPeriod]
   );
   const spend = await getAllTenantsCurrentSpend();
-  assert.equal(spend[tenantA], 12.25);
-  assert.equal(spend[tenantB], 1.5);
+  assert.equal(spend.wired, true);
+  assert.equal(spend.byTenant[tenantA], 12.25);
+  assert.equal(spend.byTenant[tenantB], 1.5);
 });
 
 // ── DLQ triage ───────────────────────────────────────────────────────────────
@@ -160,6 +171,7 @@ await test("wired status counts only pending entries per tenant", async () => {
 
 await test("listDLQEntries is tenant-scoped; getDlqEntry derives tenant from task alone", async () => {
   const entries = await listDLQEntries(tenantA);
+  assert.ok(entries, "wired table must return a list, not the not-wired null");
   assert.deepEqual(entries.map((e) => e.taskId).sort(), ["task-1", "task-2"]);
   const entry = await getDlqEntry("task-3");
   assert.equal(entry?.tenantId, tenantB); // never client-supplied

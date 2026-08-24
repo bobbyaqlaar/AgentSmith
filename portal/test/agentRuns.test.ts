@@ -17,7 +17,7 @@
 //        test/agentRuns.test.ts
 
 import assert from "node:assert/strict";
-import { upsertAgentRun } from "../lib/runStatus.ts";
+import { getWidgetStatus, upsertAgentRun } from "../lib/runStatus.ts";
 import { upsertTenant } from "../lib/tenants.ts";
 import { getPool } from "../lib/db.ts";
 
@@ -116,6 +116,52 @@ await test("a later write without usage does not blank what was recorded", async
 
 await getPool().query(`DELETE FROM agent_runs WHERE tenant_id = $1`, [TENANT]);
 await getPool().query(`DELETE FROM tenants WHERE tenant_id = $1`, [TENANT]);
+
+// ── What the In-App Widget is told ──────────────────────────────────────────
+//
+// getWidgetStatus had no test at all, and it is the only producer of the value
+// a tenant's own users see, embedded in that tenant's own product.
+
+const QUIET = `test-quiet-${Date.now()}`;
+await upsertTenant({ tenantId: QUIET, name: QUIET });
+
+await test("a tenant with nothing recorded is UNKNOWN, not success", async () => {
+  // No agent_runs row, no history entry: the pipeline has never run, or the
+  // worker has never reached this portal. That used to render as a green dot.
+  const status = await getWidgetStatus(QUIET);
+  assert.equal(status.status, "unknown");
+  assert.equal(status.lastEventAt, null);
+});
+
+await test("a benign history entry is still success — that one IS a measurement", async () => {
+  await getPool().query(
+    `INSERT INTO agent_history_entries (tenant_id, entry_id, level, event, timestamp, hitl_resolved, raw)
+     VALUES ($1, 'e-1', 'INFO', 'deploy ok', now(), FALSE, '{}'::jsonb)`,
+    [QUIET]
+  );
+  const status = await getWidgetStatus(QUIET);
+  assert.equal(status.status, "success");
+});
+
+await test("an unresolved CRITICAL entry outranks it", async () => {
+  await getPool().query(
+    `INSERT INTO agent_history_entries (tenant_id, entry_id, level, event, timestamp, hitl_resolved, raw)
+     VALUES ($1, 'e-2', 'CRITICAL', 'gateway down', now() + interval '1 second', FALSE, '{}'::jsonb)`,
+    [QUIET]
+  );
+  const status = await getWidgetStatus(QUIET);
+  assert.equal(status.status, "failed");
+  assert.equal(status.errorSummary, "gateway down");
+});
+
+await test("an open agent_runs row wins over the history fallback", async () => {
+  await upsertAgentRun({ ...base, tenantId: QUIET, runId: `${QUIET}-open`, status: "running" });
+  const status = await getWidgetStatus(QUIET);
+  assert.equal(status.status, "running");
+});
+
+// Closed once, at the very end. It used to sit mid-file, so any test added
+// after it died on "Cannot use a pool after calling end on the pool".
 await getPool().end();
 
 console.log(`\n${passed} passed`);

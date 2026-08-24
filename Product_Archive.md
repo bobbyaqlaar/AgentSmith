@@ -7,6 +7,32 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — four review passes over the Ops Portal (2026-08-25)
+
+Every lever in `docs/review-levers.md`, over `portal/` as a whole rather than
+over the tracing diff that preceded it. Thirteen findings across four passes;
+passes 2, 3 and 4 each found something the earlier ones had read past.
+
+| Pass | Finding | Fix |
+|---|---|---|
+| 1 | `SSO_REVOCATION_MODE=fail-closed` allowed every session through a revocation-store outage. `/api/auth/session-status` caught its DB error and answered `200 {revoked:false}`; the middleware read that as a healthy session. SEC-SSO-001 declared **met**, its test green (it stubs `fetchStatus`), the harness's snippet check satisfied | Route answers **503**; `interpretStatusResponse` is shared by middleware and tests and refuses any body without a boolean verdict. Tests assert the response, not the stub |
+| 1 | `POST /api/tenants` gated on role only — an operator scoped to one tenant could UPSERT another's row, including the replay webhook secret | `canAccessTenant` + named fields instead of `upsertTenant(body)` |
+| 1 | Open redirect: `redirect_to.startsWith("/")` accepts `//evil.example` | `safeRedirectPath`, applied at both the set and the follow |
+| 1 | `phoenix_base_url` / `replay_webhook_url` unvalidated — fetched at four call sites, one rendered as an `<a href>`. The scheme check already existed in `sync-portal-history.py`, on the client side | `isSafeHttpUrl` at both write boundaries and at the render |
+| 1 | Cost showed `$0.00` for "the gateway has never run"; `/dlq/<tenant>` showed "no pending entries" for an unwired queue; the DLQ card showed "resolved" for a replay the DB never recorded | `wired` on cost (as the DLQ already had), `null` from `listDLQEntries`, and two distinct outcomes on the card |
+| 2 | The In-App Widget showed green **Success** for a tenant that had never run anything. `unknown` was in the union and in `widget.js`'s colour map; nothing produced it | Empty history reports `unknown`. `getWidgetStatus` had no test at all — it has four now |
+| 3 | `lib/promotions.ts` held a second Phoenix client with no span — the slowest of the three outbound calls, invisible after the portal was instrumented | One `phoenixFetch` for all three |
+| 3 | `middleware.ts`'s single-user basic-auth path compared its password with `===` — the default configuration, months after the multi-user path was made constant-time | `constantTimeEquals`, both comparisons evaluated before the branch |
+| 4 | Three TS catalogs are also `CHECK` constraints in `db/schema.sql`, with nothing connecting them; the run-status one had a fourth copy in the ingest route | One `AGENT_RUN_STATUSES`; `test/catalogs.test.ts` parses the schema and compares |
+
+**On the guards.** Each new sweep was run against the defect that motivated it
+and confirmed to fail. That caught one of my own: the first RBAC sweep checked
+whole FILES, so deleting the scope check from `POST /api/tenants` again left it
+green — the GET handler in the same file satisfied the rule. It checks handlers
+now.
+
+---
+
 ## Completed — the Ops Portal joins the trace (2026-08-25)
 
 The last open item from `docs/observability-audit.md`. The worker had been sending a

@@ -1943,7 +1943,7 @@ The Ops Portal aggregates metrics by `tenant.id` attribute. Raw span content (pr
 Every authenticated request resolves to an `Access { role, tenantScope }`
 (`portal/lib/authz.ts`) before any tenant data is read:
 
-| Role | Can view | Can write (`POST /api/tenants`, mint widget tokens) | Can revoke widget tokens | Can view audit log |
+| Role | Can view | Can write (`POST /api/tenants`, mint widget tokens) — **within the caller's tenant scope**, checked per handler | Can revoke widget tokens | Can view audit log |
 |---|---|---|---|---|
 | `viewer` | Tenants in `tenantScope` only | No | No | No |
 | `operator` | Tenants in `tenantScope` only | Yes | No | No |
@@ -2450,6 +2450,10 @@ When enterprise pack is enabled:
   the middleware cannot reach `session-status` (SEC-SSO-001). Regulated
   deployments that prefer availability loss over missed revocation should
   enable fail-closed; the default remains fail-open for backwards compatibility.
+  `GET /api/auth/session-status` therefore answers **503**, not a 2xx, when the
+  revocation store is unreachable: "I could not check" and "not revoked" are
+  different answers, and while the route returned the second for both, the
+  fail-closed mode could not fire for the outage it exists to cover.
 
 ### Dedicated Worker Pool
 

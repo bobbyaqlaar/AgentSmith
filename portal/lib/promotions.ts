@@ -4,6 +4,8 @@
 // via `ai-stack-promote` — this is a queue for a human to act on, not an
 // auto-promotion path (SPECS.md §9).
 
+import { phoenixFetch } from "./phoenix";
+
 export interface SuggestedPromotion {
   spanId: string;
   traceId: string | null;
@@ -20,8 +22,14 @@ interface PhoenixSpan {
 
 async function phoenixGet(phoenixBaseUrl: string, path: string, params: URLSearchParams): Promise<any> {
   const qs = params.toString();
-  const resp = await fetch(`${phoenixBaseUrl.replace(/\/$/, "")}${path}${qs ? `?${qs}` : ""}`, {
-    signal: AbortSignal.timeout(5000),
+  // Through lib/phoenix's shared client, so this hop is traced like the other
+  // two. It had its own fetch — same trailing-slash strip, same 5s timeout,
+  // no span — and stayed invisible when the portal was instrumented, on the
+  // same page render as the calls that were not.
+  const resp = await phoenixFetch(phoenixBaseUrl, `${path}${qs ? `?${qs}` : ""}`, {
+    spanName: "portal.phoenix.rest",
+    timeoutMs: 5000,
+    attributes: { "http.route": path },
   });
   if (!resp.ok) throw new Error(`Phoenix REST HTTP ${resp.status}`);
   return resp.json();

@@ -18,10 +18,13 @@ import {
   getAccessForSsoEmail,
   verifyBasicAuthCredentials,
 } from "./lib/authz";
+import { constantTimeEquals } from "./lib/constantTime";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "./lib/sessionToken";
 import {
   checkSessionRevocation,
+  interpretStatusResponse,
   resolveRevocationMode,
+  type ProbeResult,
 } from "./lib/ssoRevocationMode";
 
 // /api/sync/* is machine-to-machine (tenant CD workflows) and authenticates
@@ -73,13 +76,17 @@ function withAccessHeaders(headers: Headers, role: string, tenantScope: "*" | st
 async function probeSessionStatus(
   request: NextRequest,
   jti: string
-): Promise<{ ok: boolean; revoked?: boolean }> {
+): Promise<ProbeResult> {
   const url = new URL("/api/auth/session-status", request.nextUrl.origin);
   url.searchParams.set("jti", jti);
   const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
-  if (!res.ok) return { ok: false };
-  const data = (await res.json()) as { revoked?: boolean };
-  return { ok: true, revoked: data.revoked === true };
+  // The response is READ by interpretStatusResponse rather than here, so the
+  // rule for "what counts as an answer" has one home and the tests exercise
+  // the same one middleware runs. This function used to decide it inline with
+  // `data.revoked === true`, which turns any body without a verdict — the
+  // shape the route returned on a database error — into "not revoked".
+  const body = await res.json().catch(() => null);
+  return interpretStatusResponse(res.status, body);
 }
 
 /** SSO session check. `unavailable` means session-status probe failed under fail-closed. */
@@ -172,7 +179,16 @@ export async function middleware(request: NextRequest) {
     // admin/"*" — same behavior as before RBAC existed. OPS_PORTAL_USERS
     // (multi-user, per-user role + tenant scope) takes precedence when set.
     if (!process.env.OPS_PORTAL_USERS) {
-      if (reqUser === user && reqPass === pass) {
+      // Constant-time, and both comparisons run before the branch so neither
+      // short-circuits the other. `===` on a password leaks it byte by byte
+      // through response timing; the multi-user path was fixed for exactly
+      // that (lib/authz.verifyBasicAuthCredentials) and this one — the DEFAULT
+      // configuration, the one SPECS.md §15 calls the team-deployment
+      // minimum — kept the plain compare. A fix at one call site and not its
+      // sibling, again.
+      const userOk = constantTimeEquals(user ?? "", reqUser);
+      const passOk = constantTimeEquals(pass ?? "", reqPass);
+      if (userOk && passOk) {
         const headers = withAccessHeaders(stripForgedAccessHeaders(request), "admin", "*");
         return NextResponse.next({ request: { headers } });
       }

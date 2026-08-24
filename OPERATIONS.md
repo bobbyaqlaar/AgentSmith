@@ -2463,7 +2463,9 @@ best-effort `POST /api/runs/ingest` on call start/end) when an open or recent
 run exists for the tenant, so `running` is a real, reachable status — not
 just `success` / `degraded` / `failed`. Falls back to the most recent synced
 `.agent-history.log` entry when no `agent_runs` row exists (e.g. a tenant
-whose gateway predates this, or `OPS_PORTAL_URL` unset).
+whose gateway predates this, or `OPS_PORTAL_URL` unset) — and reports
+`unknown` when there is neither, rather than the `success` it used to report
+for a tenant that has never run anything.
 
 Tenant detail pages additionally show a 24h trace count and error rate
 pulled live from the tenant's own Phoenix instance via GraphQL

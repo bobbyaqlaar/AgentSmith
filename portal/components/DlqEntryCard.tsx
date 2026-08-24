@@ -14,7 +14,13 @@ export function DlqEntryCard({ entry }: { entry: DLQEntry }) {
   const [text, setText] = useState(() => JSON.stringify(entry.payload, null, 2));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
-  const [resolved, setResolved] = useState(false);
+  // Two outcomes, not one. `discarded` is a state this portal WROTE — the row
+  // says "discarded" now. `sent` means the tenant's webhook accepted the
+  // payload; lib/dlq.ts deliberately does not mark the row replayed, because
+  // only the tenant's receiver knows whether the workflow actually resumed.
+  // Collapsing both into "resolved" made the card claim a state the database
+  // did not have, and a refresh brought the entry back as pending.
+  const [outcome, setOutcome] = useState<"sent" | "discarded" | null>(null);
 
   const parseError = (() => {
     try {
@@ -40,10 +46,10 @@ export function DlqEntryCard({ entry }: { entry: DLQEntry }) {
       setMessage({
         kind: "ok",
         text: data.resumable
-          ? "Replayed — live workflow resumed with this payload."
+          ? "Sent — the tenant's receiver accepted the payload and can resume the parked workflow."
           : "Sent to the tenant's webhook, but this entry has no live workflow to resume (it's from a terminal dead-letter, not a parked one) — what happens next is up to the tenant's own receiver.",
       });
-      setResolved(true);
+      setOutcome("sent");
     } catch (e) {
       setMessage({ kind: "error", text: e instanceof Error ? e.message : "Replay failed" });
     } finally {
@@ -58,7 +64,7 @@ export function DlqEntryCard({ entry }: { entry: DLQEntry }) {
       const resp = await fetch(`/api/dlq/${entry.taskId}/discard`, { method: "POST" });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error ?? `HTTP ${resp.status}`);
-      setResolved(true);
+      setOutcome("discarded");
     } catch (e) {
       setMessage({ kind: "error", text: e instanceof Error ? e.message : "Discard failed" });
     } finally {
@@ -66,10 +72,19 @@ export function DlqEntryCard({ entry }: { entry: DLQEntry }) {
     }
   }
 
-  if (resolved) {
+  if (outcome === "discarded") {
     return (
       <div className="border border-black/10 dark:border-white/10 rounded-lg p-4 text-sm text-black/50 dark:text-white/50">
-        {entry.taskId} — resolved.
+        {entry.taskId} — discarded.
+      </div>
+    );
+  }
+
+  if (outcome === "sent") {
+    return (
+      <div className="border border-black/10 dark:border-white/10 rounded-lg p-4 text-sm text-black/50 dark:text-white/50">
+        {entry.taskId} — sent to the tenant&apos;s receiver. It stays <strong>pending</strong> here
+        until that receiver confirms the replay, so it will reappear on refresh if it has not.
       </div>
     );
   }

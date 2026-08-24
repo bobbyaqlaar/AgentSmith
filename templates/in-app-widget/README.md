@@ -32,6 +32,11 @@ fallback path genuinely can't produce `running`) when no `agent_runs` row
 exists yet for the tenant, e.g. a worker that predates this feature or
 never had `OPS_PORTAL_URL` configured.
 
+A tenant with **neither** an `agent_runs` row nor a history entry reports
+`unknown` — grey, "Unknown" — not `success`. Nothing has been measured, and
+a green dot in a tenant's own product for a pipeline that has never run is a
+claim the portal cannot support.
+
 ## Display
 
 - Status badge: Operational (green) / Degraded (amber) / Failed (red)

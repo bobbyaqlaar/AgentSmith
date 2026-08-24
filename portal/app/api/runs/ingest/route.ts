@@ -18,11 +18,9 @@
 
 import { NextResponse } from "next/server";
 import { requireBearer } from "@/lib/bearerAuth";
-import { upsertAgentRun } from "@/lib/runStatus";
+import { AGENT_RUN_STATUSES, upsertAgentRun } from "@/lib/runStatus";
 import { getTenant, upsertTenant } from "@/lib/tenants";
 import { currentTraceId, portalSpan, withIdentity } from "@/lib/tracing";
-
-const VALID_STATUSES = ["running", "success", "degraded", "failed"];
 
 /** Numbers only. A non-numeric body field becomes null — recorded as "not
  *  reported" — rather than being coerced to 0, which would read as a real
@@ -59,8 +57,11 @@ export async function POST(request: Request) {
   if (!body?.tenantId || !body?.runId || !body?.status) {
     return NextResponse.json({ error: "tenantId, runId, and status are required" }, { status: 400 });
   }
-  if (!VALID_STATUSES.includes(body.status)) {
-    return NextResponse.json({ error: `status must be one of: ${VALID_STATUSES.join(", ")}` }, { status: 400 });
+  if (!(AGENT_RUN_STATUSES as readonly string[]).includes(body.status)) {
+    return NextResponse.json(
+      { error: `status must be one of: ${AGENT_RUN_STATUSES.join(", ")}` },
+      { status: 400 },
+    );
   }
 
   // Identity is bound at the FIRST line that knows the tenant, and wraps the

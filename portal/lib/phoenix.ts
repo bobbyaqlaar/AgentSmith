@@ -24,6 +24,42 @@ function hostOf(baseUrl: string): string {
   }
 }
 
+/**
+ * One traced request to a tenant's Phoenix.
+ *
+ * Shared with lib/promotions.ts, which had its own copy: its own trailing-slash
+ * strip, its own AbortSignal, and — the part that mattered — NO span, so the
+ * shadow-eval read stayed invisible when this module was instrumented. Three
+ * outbound calls, two of them traced, is the shape this repo keeps finding: a
+ * fix applied at one call site and not its identical neighbour.
+ */
+export async function phoenixFetch(
+  baseUrl: string,
+  path: string,
+  opts: {
+    spanName: string;
+    timeoutMs: number;
+    init?: RequestInit;
+    attributes?: Record<string, string | number | boolean>;
+  },
+): Promise<Response> {
+  return portalSpan(
+    opts.spanName,
+    {
+      kind: SpanKind.CLIENT,
+      attributes: { "server.address": hostOf(baseUrl), ...(opts.attributes ?? {}) },
+    },
+    async (span) => {
+      const resp = await fetch(`${baseUrl.replace(/\/+$/, "")}${path}`, {
+        ...opts.init,
+        signal: AbortSignal.timeout(opts.timeoutMs),
+      });
+      span.setAttribute("http.response.status_code", resp.status);
+      return resp;
+    },
+  );
+}
+
 export function tenantTraceUrl(phoenixBaseUrl: string, opts: { environment?: string } = {}): string {
   const params = new URLSearchParams();
   if (opts.environment) params.set("filter", `environment = "${opts.environment}"`);
@@ -32,25 +68,19 @@ export function tenantTraceUrl(phoenixBaseUrl: string, opts: { environment?: str
 }
 
 export async function checkPhoenixHealth(phoenixBaseUrl: string): Promise<boolean> {
-  return portalSpan(
-    "portal.phoenix.health",
-    { kind: SpanKind.CLIENT, attributes: { "server.address": hostOf(phoenixBaseUrl) } },
-    async (span) => {
-      try {
-        const resp = await fetch(`${phoenixBaseUrl.replace(/\/$/, "")}/healthz`, {
-          signal: AbortSignal.timeout(3000),
-        });
-        span.setAttribute("http.response.status_code", resp.status);
-        return resp.ok;
-      } catch (err) {
-        // The catch stays: an unreachable Phoenix is a degraded card, not a
-        // failed page. But the span now says WHICH — a timeout and a refused
-        // connection both used to render as the same silent `false`.
-        span.setAttribute("error.type", err instanceof Error ? err.name : typeof err);
-        return false;
-      }
-    },
-  );
+  try {
+    const resp = await phoenixFetch(phoenixBaseUrl, "/healthz", {
+      spanName: "portal.phoenix.health",
+      timeoutMs: 3000,
+    });
+    return resp.ok;
+  } catch {
+    // An unreachable Phoenix is a degraded card, not a failed page. The span
+    // opened above still records the failure and its type — a timeout and a
+    // refused connection both used to render as the same silent `false` with
+    // nothing anywhere to tell them apart.
+    return false;
+  }
 }
 
 export interface RecentTraceStats {
@@ -65,28 +95,22 @@ async function graphqlQuery<T>(
   variables: Record<string, unknown>,
   operation: string,
 ): Promise<T> {
-  return portalSpan(
-    "portal.phoenix.graphql",
-    {
-      kind: SpanKind.CLIENT,
-      // The operation NAME, not the query text and never the variables — a
-      // closed set of two, which keeps the attribute groupable.
-      attributes: { "server.address": hostOf(phoenixBaseUrl), "graphql.operation.name": operation },
+  const resp = await phoenixFetch(phoenixBaseUrl, "/graphql", {
+    spanName: "portal.phoenix.graphql",
+    timeoutMs: 5000,
+    // The operation NAME, not the query text and never the variables — a
+    // closed set of two, which keeps the attribute groupable.
+    attributes: { "graphql.operation.name": operation },
+    init: {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ query, variables }),
     },
-    async (span) => {
-      const resp = await fetch(`${phoenixBaseUrl.replace(/\/$/, "")}/graphql`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ query, variables }),
-        signal: AbortSignal.timeout(5000),
-      });
-      span.setAttribute("http.response.status_code", resp.status);
-      if (!resp.ok) throw new Error(`Phoenix GraphQL HTTP ${resp.status}`);
-      const json = await resp.json();
-      if (json.errors?.length) throw new Error(json.errors[0]?.message ?? "Phoenix GraphQL error");
-      return json.data as T;
-    },
-  );
+  });
+  if (!resp.ok) throw new Error(`Phoenix GraphQL HTTP ${resp.status}`);
+  const json = await resp.json();
+  if (json.errors?.length) throw new Error(json.errors[0]?.message ?? "Phoenix GraphQL error");
+  return json.data as T;
 }
 
 const PROJECTS_QUERY = `{ projects { edges { node { id } } } }`;

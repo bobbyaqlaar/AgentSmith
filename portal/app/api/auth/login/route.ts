@@ -3,6 +3,7 @@
 
 import { NextResponse } from "next/server";
 import { getOidcSettings, buildAuthorizationUrl, secureCookies } from "@/lib/oidc";
+import { safeRedirectPath } from "@/lib/safeUrl";
 
 export const dynamic = "force-dynamic"; // fresh state/PKCE verifier every request — must never be statically cached
 
@@ -27,8 +28,12 @@ export async function GET(request: Request) {
   res.cookies.set("oidc_state", state, cookieOpts);
   res.cookies.set("oidc_verifier", codeVerifier, cookieOpts);
 
-  const redirectTo = new URL(request.url).searchParams.get("redirect_to");
-  if (redirectTo && redirectTo.startsWith("/")) {
+  // Checked HERE as well as at the point of use, so a destination that would
+  // leave the origin never reaches the cookie in the first place. See
+  // lib/safeRedirectPath: the old `startsWith("/")` accepted `//evil.example`.
+  const requestUrl = new URL(request.url);
+  const redirectTo = safeRedirectPath(requestUrl.searchParams.get("redirect_to"), requestUrl.origin);
+  if (redirectTo) {
     res.cookies.set("oidc_redirect_to", redirectTo, cookieOpts);
   }
 

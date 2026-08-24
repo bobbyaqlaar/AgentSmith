@@ -9,7 +9,10 @@
 // table, or OPS_PORTAL_URL was never configured on the worker side):
 //   - an unresolved CRITICAL entry as the latest activity -> "failed"
 //   - an unresolved MAJOR entry as the latest activity    -> "degraded"
-//   - anything else (or no entries at all)                -> "success"
+//   - any other entry as the latest activity              -> "success"
+//   - NO entries at all, and no agent_runs row            -> "unknown"
+// That last line used to say "success" too, which is how a tenant whose
+// pipeline had never run once showed a green dot in its own product.
 // The fallback path still can't derive "running" — that gap only closes
 // once a real agent_runs row exists.
 //
@@ -27,7 +30,20 @@ import { getPool } from "./db";
 import { getTenant } from "./tenants";
 import { tenantTraceUrl } from "./phoenix";
 
-export type RunStatus = "running" | "success" | "degraded" | "failed" | "unknown";
+/** The statuses a worker can REPORT, and the exact set `agent_runs.status`
+ *  CHECKs in db/schema.sql. One catalog, the type derived from it — the shape
+ *  lib/isolation.ts and lib/authz.ts's ROLES already use. It was written out
+ *  three times: this union, `VALID_STATUSES` in the ingest route, and the SQL
+ *  constraint. Adding one to the union alone gives a value that type-checks,
+ *  is rejected by the route; adding it to both gives one Postgres rejects with
+ *  a 500 at the moment a real run reports it. */
+export const AGENT_RUN_STATUSES = ["running", "success", "degraded", "failed"] as const;
+
+export type AgentRunStatus = (typeof AGENT_RUN_STATUSES)[number];
+
+/** What the widget is told. `unknown` is portal-side only — nothing writes it
+ *  to the database, it means "nothing has been recorded for this tenant". */
+export type RunStatus = AgentRunStatus | "unknown";
 
 export interface WidgetStatus {
   tenantId: string;
@@ -41,7 +57,7 @@ export interface UpsertAgentRunInput {
   runId: string;
   tenantId: string;
   workflowId: string | null;
-  status: "running" | "success" | "degraded" | "failed";
+  status: AgentRunStatus;
   traceId: string | null;
   errorSummary: string | null;
   // null = the provider reported no usage (a streamed call has none in v1),
@@ -85,7 +101,7 @@ export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<void> 
 
 interface AgentRunRow {
   run_id: string;
-  status: "running" | "success" | "degraded" | "failed";
+  status: AgentRunStatus;
   started_at: string;
   finished_at: string | null;
   trace_id: string | null;
@@ -149,7 +165,17 @@ async function getStatusFromHistoryLog(tenantId: string) {
   );
 
   const latest = rows[0];
-  let status: RunStatus = "success";
+  // NOTHING RECORDED IS NOT SUCCESS. A tenant with no agent_runs rows and no
+  // history entries — a pipeline that has never run, or a worker that has
+  // never reached this portal — used to report "success", and the In-App
+  // Widget embedded in that tenant's own product showed a green dot to their
+  // users. `unknown` was already in this union and already had a grey label
+  // and colour in templates/in-app-widget/widget.js; the only thing missing
+  // was anything that produced it.
+  //
+  // "success" is still the answer when entries EXIST and the latest is benign.
+  // That is a measurement. An empty table is not.
+  let status: RunStatus = latest ? "success" : "unknown";
   let errorSummary: string | null = null;
 
   if (latest && !latest.hitl_resolved) {

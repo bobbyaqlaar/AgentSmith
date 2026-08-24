@@ -5,6 +5,19 @@
 // lib/sessionRevocation.ts. Not itself gated by middleware.ts's auth check
 // (this route only answers "is this opaque jti revoked", which reveals
 // nothing about a tenant or identity on its own).
+//
+// WHERE THE FAIL-OPEN / FAIL-CLOSED DECISION LIVES: not here. This route
+// reports what it knows, and `SSO_REVOCATION_MODE` decides what to do about
+// not knowing (lib/ssoRevocationMode.ts, applied in middleware.ts).
+//
+// It used to catch a database error and answer `200 {revoked: false}` — "the
+// session is fine" — which is a different fact from "I could not check".
+// SEC-SSO-001's fail-closed mode reads a NON-OK response as unavailable, so a
+// 200 meant the one failure fail-closed exists for, the revocation store being
+// unreachable, still let every session through. The control was declared met,
+// its test passed (it stubs the transport), and the snippet check found every
+// string it looked for. Answering 503 is what makes the mode mean something;
+// fail-open, still the default, treats it exactly as before.
 
 import { NextResponse } from "next/server";
 import { isSessionRevoked } from "@/lib/sessionRevocation";
@@ -18,10 +31,11 @@ export async function GET(request: Request) {
     const revoked = await isSessionRevoked(jti);
     return NextResponse.json({ revoked });
   } catch (err) {
-    // Fail open: an unreachable DB here must not lock out every SSO user —
-    // same "never block on this check's own availability" philosophy as
-    // _ai_audit_log_event in install-ai-stack.sh. The 8h token TTL already
-    // bounds how long a missed revocation can matter.
-    return NextResponse.json({ revoked: false, error: String(err) }, { status: 200 });
+    // 503, and `revoked: null` — absent, not false. A caller that ignores the
+    // status code still cannot read this as "not revoked".
+    return NextResponse.json(
+      { revoked: null, error: `revocation store unreachable: ${String(err)}` },
+      { status: 503 },
+    );
   }
 }

@@ -19,7 +19,7 @@
 // the specific team running that tenant's worker, never a shared,
 // cross-tenant endpoint.
 
-import { createHmac } from "crypto";
+import { createHmac } from "node:crypto";
 import { getPool, tableExists, columnExists } from "./db";
 import { getReplayWebhookConfig } from "./tenants";
 
@@ -59,8 +59,18 @@ async function hasReasonColumns(): Promise<boolean> {
   return columnExists("dlq_entries", "reason");
 }
 
-export async function listDLQEntries(tenantId: string, status: string = "pending"): Promise<DLQEntry[]> {
-  if (!(await tableExists("dlq_entries"))) return [];
+/**
+ * Pending entries for a tenant, or NULL when the table does not exist yet.
+ *
+ * Null rather than `[]` for the reason getDLQStatus already carries `wired`,
+ * and the reason getSuggestedPromotions in lib/promotions.ts returns null: the
+ * tenant DLQ page rendered "No pending DLQ entries for this tenant" — a health
+ * claim — from a database that has never had a worker connect to it. The index
+ * page one click earlier said "Not wired" correctly. Same fact, two answers,
+ * and the reassuring one was on the page an operator actually reads.
+ */
+export async function listDLQEntries(tenantId: string, status: string = "pending"): Promise<DLQEntry[] | null> {
+  if (!(await tableExists("dlq_entries"))) return null;
   const hasReason = await hasReasonColumns();
   const { rows } = await getPool().query(
     hasReason
@@ -154,6 +164,11 @@ export async function replayDlqEntry(tenantId: string, taskId: string, editedPay
  * never needs to resume a live workflow, just mark the entry resolved.
  */
 export async function discardDlqEntry(taskId: string): Promise<boolean> {
+  // Its siblings all check first. Unreachable today — the routes look the
+  // entry up before calling this, and that lookup returns null on an absent
+  // table — but "unreachable because of what another module happens to do
+  // first" is not a property this module can rely on.
+  if (!(await tableExists("dlq_entries"))) return false;
   const { rowCount } = await getPool().query(
     `UPDATE dlq_entries SET status = 'discarded', discarded_at = now() WHERE task_id = $1 AND status = 'pending'`,
     [taskId]

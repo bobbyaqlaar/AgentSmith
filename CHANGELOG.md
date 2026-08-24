@@ -20,6 +20,82 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Ops Portal — four review passes
+
+Four passes over `portal/` against every lever in `docs/review-levers.md`, not
+over a diff. Thirteen findings; the first two are the ones that mattered.
+
+**Security**
+
+- **`SSO_REVOCATION_MODE=fail-closed` never fired for the outage it exists for.**
+  `GET /api/auth/session-status` caught a database error and answered
+  `200 {revoked: false}` — "the session is fine" — so the middleware read an
+  unreachable revocation store as a healthy session and let it through. The
+  control was declared **met**, its test passed (it stubs the transport), and
+  the harness's snippet check found every string it looked for. The route now
+  answers **503**, and `interpretStatusResponse` refuses to read any body
+  without a boolean verdict as "not revoked". Fail-open, still the default,
+  behaves exactly as before.
+- **`POST /api/tenants` checked the role and not the tenant scope.** Every other
+  mutating route checks both. Since the write is an UPSERT, an operator scoped
+  to one tenant could rewrite another's row — name, isolation, budget cap, and
+  the replay webhook URL and secret the portal HMAC-signs with. Now scope-checked,
+  with named fields instead of the raw request body.
+- **Open redirect in the SSO login flow.** `redirect_to.startsWith("/")` accepts
+  `//evil.example`, which resolves to a different origin — an off-site redirect
+  immediately after a successful login. Replaced by `safeRedirectPath`, applied
+  where the cookie is set *and* where it is followed.
+- **The default basic-auth path compared its password with `===`.** The
+  multi-user path was made constant-time; the single-user fallback in
+  `middleware.ts` — the configuration SPECS.md §15 calls the team-deployment
+  minimum — was not.
+- **Operator-supplied URLs are validated as `http(s)`** before being stored,
+  fetched server-side (four call sites) or rendered as an `<a href>`. The rule
+  already existed in `scripts/sync-portal-history.py`, on the client side of the
+  boundary.
+
+**Signals that claimed more than they measured**
+
+- The In-App Widget showed **green "Success" for a tenant that had never run
+  anything**. `getWidgetStatus` defaulted an empty history to `success`;
+  `unknown` was already in the union and already had a grey label in
+  `widget.js`, with nothing producing it. Tenant-visible change: those tenants
+  now read `unknown`.
+- **Cost rendered `$0.00` when the gateway's budget table did not exist** — no
+  worker has ever run, shown as a measured zero, beside a DLQ column that got
+  this right on the same page. `getTenantCost`/`getAllTenantsCurrentSpend` now
+  carry `wired`, as the DLQ already did.
+- **`/dlq/<tenant>` rendered "No pending DLQ entries"** from a database no
+  worker had ever connected to, while the index page one click earlier said
+  "Not wired" correctly.
+- **The DLQ card said "resolved" after a replay** the database never recorded —
+  `replayDlqEntry` deliberately leaves the row pending until the tenant's
+  receiver confirms, so a refresh brought the entry back.
+- The suggested-promotions list said "no failures in the last 24h" for a tenant
+  with **no Phoenix endpoint registered**.
+
+**Structure**
+
+- `lib/promotions.ts` had a **second Phoenix client** — its own trailing-slash
+  strip, its own timeout, and no span, so it stayed invisible when the portal
+  was instrumented. One `phoenixFetch` now serves all three outbound calls.
+- **Three catalogs were also `CHECK` constraints in `db/schema.sql`** with
+  nothing connecting them, and the run-status one had a fourth copy in the
+  ingest route. Adding a value in TypeScript type-checks, passes review, and
+  fails in Postgres when a real request writes it.
+
+**New guards, each proven to fail on the defect that motivated it**
+
+`test/authz.test.ts` sweeps every API handler that resolves an operator's
+Access and requires a tenant-scope check — **per handler**, because the
+first version checked whole files and passed with the hole reintroduced.
+It also greps the auth path for credential comparisons using `===`.
+`test/catalogs.test.ts` pins each TypeScript catalog against the SQL
+constraint. `test/safeUrl.test.ts` covers both URL guards.
+`test/ssoRevocation.test.ts` gained tests over what the route actually
+answers rather than over a stub. `getWidgetStatus` had no test at all.
+
+
 ### Observability — the Ops Portal is in the trace instead of linking to one
 
 **Span attributes (portal only).** New spans named `portal.*`. Resource carries

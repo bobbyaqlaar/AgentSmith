@@ -10,7 +10,7 @@
         "config",
         "middleware"
       ],
-      "last_modified": "2026-07-14T21:46:41Z",
+      "last_modified": "2026-08-24T23:22:18Z",
       "id": "portal/middleware.ts"
     },
     {
@@ -56,9 +56,11 @@
         "RevocationMode",
         "RevocationDecision",
         "resolveRevocationMode",
+        "ProbeResult",
+        "interpretStatusResponse",
         "checkSessionRevocation"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T23:06:55Z",
       "id": "portal/lib/ssoRevocationMode.ts"
     },
     {
@@ -2553,21 +2555,21 @@
         "dynamic",
         "TenantOverviewPage"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-08-24T23:09:10Z",
       "id": "portal/app/page.tsx"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T12:09:10Z",
+      "last_modified": "2026-08-24T23:13:40Z",
       "id": "portal/test/dlqCostWidget.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T12:09:10Z",
+      "last_modified": "2026-08-24T23:22:06Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -2588,7 +2590,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-07-14T21:46:41Z",
+      "last_modified": "2026-08-24T23:10:50Z",
       "id": "portal/test/ssoRevocation.test.ts"
     },
     {
@@ -2620,7 +2622,7 @@
       "symbols": [
         "DlqEntryCard"
       ],
-      "last_modified": "2026-07-11T07:39:22Z",
+      "last_modified": "2026-08-24T23:09:46Z",
       "id": "portal/components/DlqEntryCard.tsx"
     },
     {
@@ -2657,7 +2659,7 @@
         "replayDlqEntry",
         "discardDlqEntry"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T23:08:44Z",
       "id": "portal/lib/dlq.ts"
     },
     {
@@ -2720,12 +2722,13 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
+        "phoenixFetch",
         "tenantTraceUrl",
         "checkPhoenixHealth",
         "RecentTraceStats",
         "getRecentTraceStats"
       ],
-      "last_modified": "2026-08-24T22:41:52Z",
+      "last_modified": "2026-08-24T23:20:34Z",
       "id": "portal/lib/phoenix.ts"
     },
     {
@@ -2734,10 +2737,11 @@
       "symbols": [
         "CostByPeriod",
         "TenantCost",
+        "CurrentSpend",
         "getTenantCost",
         "getAllTenantsCurrentSpend"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T23:08:31Z",
       "id": "portal/lib/cost.ts"
     },
     {
@@ -2751,7 +2755,7 @@
         "signEvent",
         "verifySignature"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T23:27:07Z",
       "id": "portal/lib/auditSignature.ts"
     },
     {
@@ -2770,13 +2774,15 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
+        "AGENT_RUN_STATUSES",
+        "AgentRunStatus",
         "RunStatus",
         "WidgetStatus",
         "UpsertAgentRunInput",
         "upsertAgentRun",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-08-24T12:47:19Z",
+      "last_modified": "2026-08-24T23:26:24Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -2844,7 +2850,7 @@
         "SuggestedPromotion",
         "getSuggestedPromotions"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T23:20:34Z",
       "id": "portal/lib/promotions.ts"
     },
     {
@@ -2893,7 +2899,7 @@
         "GET",
         "POST"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-08-24T23:16:37Z",
       "id": "portal/app/api/tenants/route.ts"
     },
     {
@@ -2920,7 +2926,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-24T22:41:52Z",
+      "last_modified": "2026-08-24T23:26:24Z",
       "id": "portal/app/api/runs/ingest/route.ts"
     },
     {
@@ -2929,7 +2935,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-24T22:41:52Z",
+      "last_modified": "2026-08-24T23:08:02Z",
       "id": "portal/app/api/sync/history/route.ts"
     },
     {
@@ -2993,7 +2999,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-07-11T07:39:22Z",
+      "last_modified": "2026-08-24T23:06:29Z",
       "id": "portal/app/api/auth/session-status/route.ts"
     },
     {
@@ -3012,7 +3018,7 @@
         "dynamic",
         "GET"
       ],
-      "last_modified": "2026-06-26T21:15:31Z",
+      "last_modified": "2026-08-24T23:07:30Z",
       "id": "portal/app/api/auth/callback/route.ts"
     },
     {
@@ -3022,7 +3028,7 @@
         "dynamic",
         "GET"
       ],
-      "last_modified": "2026-06-26T21:15:31Z",
+      "last_modified": "2026-08-24T23:07:30Z",
       "id": "portal/app/api/auth/login/route.ts"
     },
     {
@@ -3042,7 +3048,7 @@
         "dynamic",
         "TenantDlqPage"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-08-24T23:09:26Z",
       "id": "portal/app/dlq/[tenantId]/page.tsx"
     },
     {
@@ -3052,7 +3058,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-08-24T23:21:04Z",
       "id": "portal/app/tenants/[id]/page.tsx"
     },
     {
@@ -3109,7 +3115,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T15:28:35Z",
+      "last_modified": "2026-08-24T23:19:16Z",
       "id": "portal/test/agentRuns.test.ts"
     },
     {
@@ -3461,6 +3467,30 @@
       ],
       "last_modified": "2026-08-24T22:41:52Z",
       "id": "portal/lib/environment.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-08-24T23:13:00Z",
+      "id": "portal/test/safeUrl.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-08-24T23:26:51Z",
+      "id": "portal/test/catalogs.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "safeRedirectPath",
+        "isSafeHttpUrl"
+      ],
+      "last_modified": "2026-08-24T23:07:17Z",
+      "id": "portal/lib/safeUrl.ts"
     }
   ],
   "edges": [
@@ -3478,6 +3508,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/middleware.ts",
       "target": "portal/lib/ssoRevocationMode.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/middleware.ts",
+      "target": "portal/lib/constantTime.ts"
     },
     {
       "edge_type": "IMPORTS",
@@ -3913,6 +3948,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/oidc.ts",
       "target": "portal/lib/sessionToken.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/promotions.ts",
+      "target": "portal/lib/phoenix.ts"
     },
     {
       "edge_type": "IMPORTS",

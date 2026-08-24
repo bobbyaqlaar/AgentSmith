@@ -51,7 +51,7 @@ dev` — see `OPERATIONS.md` Part B/E and `install-ai-stack.sh`'s
 | Page | Shows |
 |---|---|
 | `/` — Tenant list | Every tenant in scope, current-month spend, unresolved MAJOR/CRITICAL count, DLQ pending count |
-| `/tenants/[id]` — Tenant detail | Cost-over-time chart + budget cap %, real run status (`running`/`success`/`degraded`/`failed`, aggregated across a workflow's calls — see `lib/runStatus.ts`), Phoenix reachability + trace count/error rate (last 24h), unresolved issues list |
+| `/tenants/[id]` — Tenant detail | Cost-over-time chart + budget cap %, real run status (`running`/`success`/`degraded`/`failed`, or `unknown` when nothing has been recorded at all, aggregated across a workflow's calls — see `lib/runStatus.ts`), Phoenix reachability + trace count/error rate (last 24h), unresolved issues list |
 | `/dlq` — DLQ overview | Pending-entry count per tenant in scope |
 | `/dlq/[tenantId]` — DLQ triage | Every pending entry for one tenant: error text, structured `reason` badge, editable JSON payload, **Replay** (signs the edit and POSTs to that tenant's own `replay_webhook_url`) and **Discard** |
 | `/audit` — Audit log | Every signed admin/system event, with live tamper-detection (`verified: false` on a mismatch) |
@@ -61,7 +61,7 @@ dev` — see `OPERATIONS.md` Part B/E and `install-ai-stack.sh`'s
 | Endpoint | Method | Auth | Purpose |
 |---|---|---|---|
 | `/api/tenants` | GET | Dashboard (any role) | List tenants in scope, with spend/issues/DLQ counts |
-| `/api/tenants` | POST | Dashboard (operator/admin) | Register/update a tenant: `{ tenantId, name, isolation?, phoenixBaseUrl?, budgetCapUsd?, replayWebhookUrl?, replayWebhookSecret? }` |
+| `/api/tenants` | POST | Dashboard (operator/admin, **and the tenant must be in the caller's scope**) | Register/update a tenant: `{ tenantId, name, isolation?, phoenixBaseUrl?, budgetCapUsd?, replayWebhookUrl?, replayWebhookSecret? }`. Both URL fields must be `http(s)`; unknown fields are ignored rather than forwarded to the database |
 | `/api/tenants/:id/cost` | GET | Dashboard | Monthly spend history + budget cap for one tenant |
 | `/api/tenants/:id/issues` | GET | Dashboard | Unresolved MAJOR/CRITICAL `.agent-history.log` entries |
 | `/api/tenants/:id/widget-token` | POST | Dashboard (operator/admin) | Mint a read-only widget token — plaintext returned once |
@@ -150,6 +150,22 @@ nothing stands between a portal span and the collector, so nothing that could
 hold tenant data goes on one. Parameterised SQL is recorded because it is code.
 
 ## Honest gaps
+
+- **The widget token travels in a query string.** `GET /api/widget/status?token=…`
+  is called from a tenant's own page, so the token lands in access logs and in
+  any `Referer` a redirect might carry. Moving it to a header means a CORS
+  preflight and a breaking change for every embed already in the wild, so it
+  stays for now — mint per-tenant tokens, and revoke via
+  `DELETE /api/tenants/:id/widget-token` if one leaks. The token grants
+  read-only status for one tenant and nothing else.
+
+- **The portal fetches URLs its operators supply.** `phoenix_base_url` and
+  `replay_webhook_url` are validated as `http(s)` and nothing more: the intended
+  deployments are `http://phoenix:6006` and `http://localhost:6006`, so a
+  private-address blocklist would reject the product's own defaults. What bounds
+  it is who may write those fields — an operator or admin, and only for tenants
+  inside their own scope (`POST /api/tenants`). Treat portal operator as a
+  trusted role with outbound network reach from the portal's host.
 
 - **Workflow-engine queue depth** (Temporal/Celery task-queue backlog, as
   opposed to DLQ depth) is not surfaced anywhere in the portal — there's no

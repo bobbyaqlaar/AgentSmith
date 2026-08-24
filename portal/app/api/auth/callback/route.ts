@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { cookies as nextCookies } from "next/headers";
 import { getOidcSettings, handleCallback, createSessionToken, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS, secureCookies } from "@/lib/oidc";
+import { safeRedirectPath } from "@/lib/safeUrl";
 
 export const dynamic = "force-dynamic"; // depends on query params (code/state) and request cookies — never cache
 
@@ -23,7 +24,11 @@ export async function GET(request: Request) {
   const cookieStore = await nextCookies();
   const expectedState = cookieStore.get("oidc_state")?.value;
   const codeVerifier = cookieStore.get("oidc_verifier")?.value;
-  const redirectTo = cookieStore.get("oidc_redirect_to")?.value || "/";
+  // Re-validated at the point of use, not only where the cookie was set: this
+  // value arrives from the browser, and a guard that runs only on the way in
+  // trusts whatever else can write a cookie on this origin.
+  const redirectTo =
+    safeRedirectPath(cookieStore.get("oidc_redirect_to")?.value, url.origin) ?? "/";
 
   if (!expectedState || !codeVerifier) {
     return NextResponse.json({ error: "Missing OIDC state/verifier cookies — login flow expired or was tampered with." }, { status: 400 });

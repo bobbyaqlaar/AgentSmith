@@ -22,7 +22,9 @@ export default async function TenantOverviewPage() {
   const visibleIds = new Set(filterTenantIds(access, allTenants.map((t) => t.tenantId)));
   const tenants = allTenants.filter((t) => visibleIds.has(t.tenantId));
 
-  const totalSpend = tenants.reduce((sum, t) => sum + (spend[t.tenantId] ?? 0), 0);
+  const totalSpend = spend.wired
+    ? tenants.reduce((sum, t) => sum + (spend.byTenant[t.tenantId] ?? 0), 0)
+    : null;
   const totalIssues = tenants.reduce((sum, t) => sum + (issues[t.tenantId] ?? 0), 0);
   const totalDlq = dlq.wired ? tenants.reduce((sum, t) => sum + (dlq.pendingByTenant[t.tenantId] ?? 0), 0) : null;
 
@@ -30,15 +32,22 @@ export default async function TenantOverviewPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-medium">Tenants</h2>
-        {!dlq.wired && (
-          <span className="text-sm text-amber-700 dark:text-amber-400">
-            DLQ not wired — no worker has constructed a DeadLetterQueue against this database yet
-          </span>
-        )}
+        <div className="flex flex-col items-end gap-0.5 text-sm text-amber-700 dark:text-amber-400">
+          {!dlq.wired && (
+            <span>DLQ not wired — no worker has constructed a DeadLetterQueue against this database yet</span>
+          )}
+          {/* The same sentence the DLQ has always had, for the column that used
+              to render "$0.00" instead: the gateway creates its budget table on
+              first use, so an absent one means nothing has run — not that
+              nothing was spent. */}
+          {!spend.wired && (
+            <span>Spend not wired — no gateway has recorded a call against this database yet</span>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MetricCard label="Spend this month" value={`$${totalSpend.toFixed(2)}`} />
+        <MetricCard label="Spend this month" value={totalSpend === null ? "—" : `$${totalSpend.toFixed(2)}`} />
         <MetricCard
           label="Unresolved issues"
           value={totalIssues}
@@ -76,7 +85,9 @@ export default async function TenantOverviewPage() {
                     <span className="ml-2 text-black/40 dark:text-white/40">({t.tenantId})</span>
                   </td>
                   <td className="py-2.5 px-4 text-black/70 dark:text-white/70">{t.isolation}</td>
-                  <td className="py-2.5 px-4">${(spend[t.tenantId] ?? 0).toFixed(2)}</td>
+                  <td className="py-2.5 px-4">
+                    {spend.wired ? `$${(spend.byTenant[t.tenantId] ?? 0).toFixed(2)}` : "—"}
+                  </td>
                   <td className="py-2.5 px-4">
                     {issues[t.tenantId] ? (
                       <Badge tone="danger">{issues[t.tenantId]}</Badge>

@@ -7,6 +7,7 @@ import { tenantTraceUrl, checkPhoenixHealth, getRecentTraceStats } from "@/lib/p
 import { getSuggestedPromotions } from "@/lib/promotions";
 import { CostChart } from "@/components/CostChart";
 import { canAccessTenant } from "@/lib/authz";
+import { isSafeHttpUrl } from "@/lib/safeUrl";
 import { currentAccess } from "@/lib/currentAccess";
 import { Badge, toneForLevel } from "@/components/ui/Badge";
 import { MetricCard } from "@/components/ui/Card";
@@ -27,7 +28,10 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
     getUnresolvedIssues(tenant.tenantId),
     tenant.phoenixBaseUrl ? checkPhoenixHealth(tenant.phoenixBaseUrl) : Promise.resolve(null),
     tenant.phoenixBaseUrl ? getRecentTraceStats(tenant.phoenixBaseUrl, { sinceHours: 24 }) : Promise.resolve(null),
-    tenant.phoenixBaseUrl ? getSuggestedPromotions(tenant.phoenixBaseUrl, { sinceHours: 24 }) : Promise.resolve([]),
+    // null, like the two Phoenix reads above it — NOT []. An empty list renders
+    // "No shadow-eval failures in the last 24h", which is a health claim, and
+    // a tenant with no Phoenix endpoint registered has had nothing looked at.
+    tenant.phoenixBaseUrl ? getSuggestedPromotions(tenant.phoenixBaseUrl, { sinceHours: 24 }) : Promise.resolve(null),
   ]);
 
   return (
@@ -46,9 +50,16 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
         {tenant.phoenixBaseUrl ? (
           <p className="text-sm mt-1">
             Phoenix:{" "}
-            <a className="text-blue-700 dark:text-blue-400 hover:underline" href={tenantTraceUrl(tenant.phoenixBaseUrl, { environment: "production" })}>
-              {tenant.phoenixBaseUrl}
-            </a>{" "}
+            {/* Rows written before POST /api/tenants validated this can still
+                hold any scheme, and React renders `javascript:` in an href
+                without complaint. Shown as text when it is not an http(s) URL. */}
+            {isSafeHttpUrl(tenant.phoenixBaseUrl) ? (
+              <a className="text-blue-700 dark:text-blue-400 hover:underline" href={tenantTraceUrl(tenant.phoenixBaseUrl, { environment: "production" })}>
+                {tenant.phoenixBaseUrl}
+              </a>
+            ) : (
+              <span className="font-mono text-black/60 dark:text-white/60">{tenant.phoenixBaseUrl}</span>
+            )}{" "}
             {phoenixUp === false && <Badge tone="danger">unreachable</Badge>}
             {phoenixUp === true && <Badge tone="success">reachable</Badge>}
           </p>
@@ -71,7 +82,10 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <MetricCard label="Spend this month" value={`$${cost.spentUsd.toFixed(2)}`} />
+        <MetricCard
+          label="Spend this month"
+          value={cost.wired ? `$${cost.spentUsd.toFixed(2)}` : "—"}
+        />
         <MetricCard
           label="Budget cap"
           value={cost.cap !== null ? `$${cost.cap.toFixed(2)}` : "—"}
@@ -84,8 +98,17 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
       </div>
 
       <section>
-        <h3 className="text-lg font-medium mb-3">Cost — last {cost.history.length} month(s)</h3>
-        <CostChart history={cost.history} />
+        <h3 className="text-lg font-medium mb-3">
+          {cost.wired ? `Cost — last ${cost.history.length} month(s)` : "Cost"}
+        </h3>
+        {cost.wired ? (
+          <CostChart history={cost.history} />
+        ) : (
+          <p className="text-amber-700 dark:text-amber-400 text-sm">
+            Not wired — no gateway has recorded a call against this database yet. This is
+            unmeasured, not zero.
+          </p>
+        )}
       </section>
 
       <section>
@@ -109,8 +132,9 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
         <h3 className="text-lg font-medium mb-3">Suggested promotions (shadow eval)</h3>
         {suggestedPromotions === null ? (
           <p className="text-black/60 dark:text-white/60">
-            Could not read shadow-eval results from Phoenix — this list is unavailable,
-            not empty.
+            {tenant.phoenixBaseUrl
+              ? "Could not read shadow-eval results from Phoenix — this list is unavailable, not empty."
+              : "No Phoenix endpoint registered for this tenant, so nothing has been read — this list is unavailable, not empty."}
           </p>
         ) : suggestedPromotions.length === 0 ? (
           <p className="text-black/60 dark:text-white/60">
