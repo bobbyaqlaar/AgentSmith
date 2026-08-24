@@ -27,11 +27,13 @@ import asyncio
 import os
 from typing import Any, Optional
 
-# Accepted truthy spellings. "1" is what OPERATIONS.md documents; "true" is
-# what the example scripts checked for. Both work now rather than one silently
-# losing — a flag that turns a security control on must not depend on which
-# spelling the reader happened to copy.
-_TRUTHY = {"1", "true", "yes", "on"}
+# Accepted truthy spellings live in runtime/config.as_bool. This module had its
+# own `_TRUTHY = {"1", "true", "yes", "on"}` and config.py grew an identical set
+# under a different name — two catalogs of the same fact, which is how one of
+# them ends up accepting a spelling the other rejects. The reasoning is worth
+# keeping: "1" is what OPERATIONS.md documents, "true" is what the example
+# scripts checked for, and a flag that turns a security control ON must not
+# depend on which spelling the reader happened to copy.
 
 DEFAULT_ADDRESS = "localhost:7233"
 DEFAULT_CONNECT_TIMEOUT = 10.0
@@ -39,8 +41,9 @@ DEFAULT_CONNECT_TIMEOUT = 10.0
 
 def tls_enabled(env: Optional[dict] = None) -> bool:
     """Whether TEMPORAL_TLS asks for TLS, accepting every documented spelling."""
-    raw = (env or os.environ).get("TEMPORAL_TLS", "")
-    return raw.strip().lower() in _TRUTHY
+    from runtime.config import as_bool
+
+    return as_bool((env or os.environ).get("TEMPORAL_TLS", ""))
 
 
 def temporal_address(env: Optional[dict] = None) -> str:

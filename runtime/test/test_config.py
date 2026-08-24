@@ -379,3 +379,19 @@ def test_one_root_finder_and_a_tenant_beats_its_parent_repo(tmp_path: Path):
         os.chdir(cwd)
     assert len(answers) == 1, f"root finders disagree: {answers}"
     assert answers.pop() == tenant
+
+
+def test_one_truthy_catalog_across_the_runtime():
+    """`runtime/temporal_client` carried its own `_TRUTHY = {"1","true","yes","on"}`
+    and `config.as_bool` grew an identical set under a different name. Two
+    catalogs of one fact is how one of them ends up accepting a spelling the
+    other rejects — and this one gates TLS."""
+    from runtime.config import as_bool
+    from runtime.temporal_client import tls_enabled
+
+    for spelling in ("1", "true", "TRUE", "yes", "on"):
+        assert as_bool(spelling) is True
+        assert tls_enabled({"TEMPORAL_TLS": spelling}) is True
+    for spelling in ("0", "", "no", "off", "maybe"):
+        assert as_bool(spelling) is False
+        assert tls_enabled({"TEMPORAL_TLS": spelling}) is False
