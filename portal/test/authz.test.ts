@@ -2,9 +2,16 @@
 // (Product_Archive.md Part 3: "there is no test anywhere that asserts
 // tenant A's session/token/gateway instance cannot read tenant B's data").
 //
-// Run: node --experimental-strip-types test/authz.test.ts (from portal/),
-// same runner pattern as package.json's db:migrate script. Plain
-// node:assert, no framework dependency — mirrors
+// Run (from portal/):
+//   node --experimental-strip-types \
+//     --experimental-loader=./test/ts-extension-loader.mjs \
+//     test/authz.test.ts
+//
+// THE LOADER IS REQUIRED. lib/ modules import each other with
+// extensionless relative specifiers, which bare type-stripping cannot
+// resolve. Every invocation in this repo passes it — see
+// scripts/test/test_ts_runner_invocations.py, which enforces that.
+// Plain node:assert, no framework dependency — mirrors
 // templates/in-app-widget/test/widget.test.mjs.
 
 import assert from "node:assert/strict";

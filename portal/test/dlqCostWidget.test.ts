@@ -10,7 +10,9 @@
 // would have.
 //
 // Run: DATABASE_URL=postgresql://test:test@localhost:5432/test \
-//      node --experimental-strip-types test/dlqCostWidget.test.ts
+//      node --experimental-strip-types \
+//        --experimental-loader=./test/ts-extension-loader.mjs \
+//        test/dlqCostWidget.test.ts
 
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";

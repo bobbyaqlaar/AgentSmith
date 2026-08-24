@@ -7,7 +7,9 @@
 //
 // Run: DATABASE_URL=postgresql://test:test@localhost:5432/test \
 //      AUDIT_LOG_HMAC_KEY=test-key \
-//      node --experimental-strip-types test/auditLog.test.ts
+//      node --experimental-strip-types \
+//        --experimental-loader=./test/ts-extension-loader.mjs \
+//        test/auditLog.test.ts
 
 import assert from "node:assert/strict";
 import { appendAuditEvent, listAuditEvents, verifySignature, type AuditEvent } from "../lib/auditLog.ts";

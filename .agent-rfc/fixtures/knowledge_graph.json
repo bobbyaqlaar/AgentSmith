@@ -2539,14 +2539,14 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-07-20T21:04:04Z",
+      "last_modified": "2026-08-24T12:09:10Z",
       "id": "portal/test/dlqCostWidget.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-07-11T07:39:22Z",
+      "last_modified": "2026-08-24T12:09:10Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -2574,7 +2574,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-07-11T07:39:22Z",
+      "last_modified": "2026-08-24T12:09:10Z",
       "id": "portal/test/auditLog.test.ts"
     },
     {
@@ -3040,6 +3040,18 @@
       "pillar": null,
       "created_at": "2026-08-24T11:10:44Z",
       "id": "rfc:fixtures/delivery_evidence.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_tracked_files",
+        "_invocations",
+        "test_the_sweep_finds_the_known_invocations",
+        "test_every_runner_invocation_passes_the_loader"
+      ],
+      "last_modified": "2026-08-24T12:10:45Z",
+      "id": "scripts/test/test_ts_runner_invocations.py"
     }
   ],
   "edges": [

@@ -268,6 +268,60 @@ The distribution is `agentsmith-runtime` but imports as the generic top-level
 Operational lessons distilled from past phases; full incident context in
 `Product_Archive.md` and `CHANGELOG.md`.
 
+- **Review the branch, not the diff — and run the CI job list before pushing.**
+  On 2026-08-24 three review passes over `scripts/` reported clean, and the push
+  found `main` had been red for three commits: the portal could not build
+  (`node:crypto` reached the Edge bundle via `middleware → authz → constantTime`),
+  `SEC-RBAC-001` failed on a missing loader, and SPECS.md was missing
+  `runtime/security_paths.py`. None were in the reviewed diff; all three were in
+  what the branch was about to ship.
+
+  Two habits would have caught all of them, and both are cheap:
+
+  1. **Scope the review by what CI checks, not by what you edited.**
+     `.github/workflows/self-test.yml` is the repo's definitive statement of
+     "done". Every one of the three failures is a job in it, and all three
+     reproduce locally in about ninety seconds. Read it as a checklist BEFORE
+     pushing, not as a debugging aid after.
+  2. **When a fix lands at "both" call sites, grep for the third.** The archive
+     entry recording the loader fix said it was "now on both scripts" — one
+     `git grep experimental-strip-types` printed twelve lines with the missed
+     Python call site four lines below the fixed one. This is the same lesson as
+     `return 2` for graceful skip, which is already in this list. It recurs
+     because the fix always *looks* complete from inside the file you fixed.
+
+  Note which pillar the miss maps to: pillar 15 (Ambiguous Signals) was applied
+  hard and found real defects; pillar 2's five-step check — *what does this
+  affect, are there downstream consumers* — covers four of the five misses and
+  was not run at all. Working one pillar is not working the list.
+
+  Guards added rather than resolutions: `scripts/test/test_ts_runner_invocations.py`
+  fails when any invocation of `node --experimental-strip-types` omits the
+  loader, and `portal/test/edgeSafety.test.ts` fails when anything reachable
+  from `middleware.ts` imports a Node-only builtin — that one is only visible to
+  `next build`, since `tsc --noEmit` and `npm test` both pass on it.
+
+- **A verification step must not regenerate the thing it verifies.**
+  `verify_system.py --check-kg` called `map_codebase.run_map()` and then
+  asserted the graph was non-empty and held known nodes — every assertion about
+  the file it had just written, so it could only fail if the mapper broke. The
+  committed graph was 703 lines stale with the gate green throughout.
+
+  Two things fell out of fixing it, both worth keeping:
+  - **Compare shape, not bytes.** `actions/checkout` stamps working-tree mtimes
+    at checkout time, and the mapper walks the FILESYSTEM, so a committed graph
+    also carries build output (`portal/next-env.d.ts`) and Guardrail nodes with
+    ABSOLUTE paths. Comparing all of it red-built every CI run, which is worse
+    than the weak gate — a gate that always fails gets deleted. Compare only
+    git-tracked, reproducible content.
+  - **An incremental cache cannot repair what it never re-reads.** `run_map`
+    skips files whose stored mtime matches, so a graph wrong for any reason
+    other than a file edit — a hand edit, a bad merge, a truncated write —
+    survives every subsequent run. A corrupted graph reached a public repo this
+    way. `run_map(force=True)` / `map_codebase.py --force` exists now, and any
+    caller that VERIFIES the graph forces; the post-commit hook keeps the fast
+    path.
+
 - **A test double must never be more capable than the real thing.** KYC
   Sentinel's original fake gateway aliased `complete_stream` to `complete`,
   hiding a production crash on the analyst's own route. `runtime/testing.py`'s
