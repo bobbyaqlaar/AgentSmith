@@ -3045,12 +3045,12 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "_tracked_files",
+        "_candidate_files",
         "_invocations",
         "test_the_sweep_finds_the_known_invocations",
         "test_every_runner_invocation_passes_the_loader"
       ],
-      "last_modified": "2026-08-24T12:10:45Z",
+      "last_modified": "2026-08-24T12:15:36Z",
       "id": "scripts/test/test_ts_runner_invocations.py"
     }
   ],

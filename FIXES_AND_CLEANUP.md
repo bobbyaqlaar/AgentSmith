@@ -295,6 +295,14 @@ Operational lessons distilled from past phases; full incident context in
   affect, are there downstream consumers* — covers four of the five misses and
   was not run at all. Working one pillar is not working the list.
 
+  **A local run is only equivalent to CI if the git state matches.** The guard
+  written for lesson 2 above passed locally and failed on the first push,
+  because it swept `git ls-files` — and it was itself still untracked, so it
+  never examined itself. Anything that derives its input from git sees a
+  different repo before and after the commit. Sweeps should use
+  `git ls-files --cached --others --exclude-standard`, which is the set that is
+  about to be committed rather than the set already committed.
+
   Guards added rather than resolutions: `scripts/test/test_ts_runner_invocations.py`
   fails when any invocation of `node --experimental-strip-types` omits the
   loader, and `portal/test/edgeSafety.test.ts` fails when anything reachable

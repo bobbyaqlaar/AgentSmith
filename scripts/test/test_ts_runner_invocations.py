@@ -27,9 +27,22 @@ RUNNER = "--experimental-strip-types"
 LOADER = "--experimental-loader"
 
 
-def _tracked_files() -> list[Path]:
+def _candidate_files() -> list[Path]:
+    """Tracked files PLUS untracked-but-not-ignored ones.
+
+    `git ls-files` alone lists only what is committed, which made this sweep's
+    coverage depend on git state: a new call site — or this very file — was
+    invisible until it was committed, so the check passed locally and failed in
+    CI on the same working tree. `--others --exclude-standard` adds the files
+    that are about to be committed, which is exactly the set a pre-push check
+    should be looking at.
+    """
     out = subprocess.run(
-        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     return [ROOT / line for line in out.stdout.split() if line]
 
@@ -50,7 +63,15 @@ PROXIMITY_LINES = 12
 # The loader itself, whose header explains the flag it exists to complement. It
 # cannot pass itself. The only exemption, named explicitly rather than as a
 # pattern — a wildcard here is how a real call site slips out of scope.
-EXEMPT = {"portal/test/ts-extension-loader.mjs"}
+EXEMPT = {
+    "portal/test/ts-extension-loader.mjs",
+    # This file. Its docstring necessarily quotes the flag it polices, and the
+    # sweep cannot tell prose from a call site — it flagged itself the moment it
+    # became tracked. Exempting the checker is narrower than teaching the sweep
+    # to parse comments, which is the thing that produced false positives in the
+    # portal's edge-safety scan twice in one afternoon.
+    "scripts/test/test_ts_runner_invocations.py",
+}
 
 
 def _invocations() -> list[tuple[str, str]]:
@@ -66,7 +87,7 @@ def _invocations() -> list[tuple[str, str]]:
         if RUNNER in script:
             found.append((f"portal/package.json scripts.{name}", script))
 
-    for path in _tracked_files():
+    for path in _candidate_files():
         if path.suffix not in {".py", ".sh", ".mjs"} or not path.is_file():
             continue
         if str(path.relative_to(ROOT)) in EXEMPT:
