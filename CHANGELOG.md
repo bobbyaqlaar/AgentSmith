@@ -20,6 +20,32 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Ops Portal — pass 5
+
+- **A late `running` heartbeat un-finished a completed run.** The gateway's
+  start/end pushes to `/api/runs/ingest` are best-effort HTTP, so a retried or
+  reordered START can land after the END. `status = EXCLUDED.status` had no
+  guard while every neighbouring column had one, each commented with the reason.
+  Verified against Postgres: the row went back to `running` with `finished_at`
+  still set, and the In-App Widget reported a finished run as running — for
+  good. In a multi-call workflow that row also **masked a genuine `failed`**,
+  because `collapseRunGroup` compared `TERMINAL_SEVERITY[status]` directly and
+  `3 > undefined` is false. Both guarded; the severity lookup is total now.
+- **The audit log labelled an ambiguity as a verdict.** A signature mismatch
+  showed as **tampered**, while the same page's prose (and `OPERATIONS.md`, two
+  lines apart from a line saying the opposite) explains it is also what a key
+  rotation looks like. It reads **unverified** now — what the portal actually
+  knows. On an audit log, the difference is an incident.
+- **The env-var documentation gate never covered the portal.** Its file glob
+  listed `portal/*.py`; the portal is TypeScript, so it matched nothing and 21
+  variables — every SSO setting, the audit HMAC key, the OTLP endpoints — sat
+  outside every gate in the repo. Extended, with a check that the sweep resolves
+  files. `OPS_PORTAL_USERS`, `OPS_PORTAL_SSO_USERS` and `AGENT_PHOENIX_ENDPOINT`
+  were missing from `portal/.env.example` — the file the setup steps say to copy.
+- **`SEC-SSO-001` was the only Met control in `docs/security-framework-map.md`
+  with no harness check listed**, though one runs. Both portal controls' entries
+  now say what is proved and what is not.
+
 ### Ops Portal — four review passes
 
 Four passes over `portal/` against every lever in `docs/review-levers.md`, not

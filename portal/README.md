@@ -54,7 +54,7 @@ dev` — see `OPERATIONS.md` Part B/E and `install-ai-stack.sh`'s
 | `/tenants/[id]` — Tenant detail | Cost-over-time chart + budget cap %, real run status (`running`/`success`/`degraded`/`failed`, or `unknown` when nothing has been recorded at all, aggregated across a workflow's calls — see `lib/runStatus.ts`), Phoenix reachability + trace count/error rate (last 24h), unresolved issues list |
 | `/dlq` — DLQ overview | Pending-entry count per tenant in scope |
 | `/dlq/[tenantId]` — DLQ triage | Every pending entry for one tenant: error text, structured `reason` badge, editable JSON payload, **Replay** (signs the edit and POSTs to that tenant's own `replay_webhook_url`) and **Discard** |
-| `/audit` — Audit log | Every signed admin/system event, with live tamper-detection (`verified: false` on a mismatch) |
+| `/audit` — Audit log | Every signed admin/system event, re-verified on read. A mismatch shows as **unverified** — altered, or signed before a key rotation; the portal reports the mismatch, not a cause |
 
 ## API
 

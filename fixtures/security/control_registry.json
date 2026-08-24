@@ -131,7 +131,7 @@
     },
     "runner": "rbac_matrix",
     "check_type": "unit",
-    "mechanism": "Portal OIDC + authz.ts RBAC"
+    "mechanism": "Portal OIDC plus authz.ts: middleware resolves an identity into a role and a tenant scope and forwards both as headers it strips from the incoming request first. Every handler that reads that Access must gate on BOTH \u2014 the role for the verb, the scope for the tenant \u2014 and portal/test/authz.test.ts sweeps the API tree per handler to check it, after POST /api/tenants was found gating on the role alone. A second sweep refuses `===` on a credential in the auth path. Status stays PARTIAL deliberately: the sweeps read source and the matrix tests exercise pure functions; neither drives a real request through middleware."
   },
   {
     "id": "SEC-EVAL-001",
@@ -458,7 +458,7 @@
     },
     "runner": "sso_revocation",
     "check_type": "unit",
-    "mechanism": "jti revocation + SSO_REVOCATION_MODE=fail-open|fail-closed"
+    "mechanism": "Session JWTs carry a `jti`; POST /api/auth/logout records it in `revoked_sessions` and middleware.ts checks it through GET /api/auth/session-status before trusting an otherwise-valid cookie. `SSO_REVOCATION_MODE` decides what happens when that check cannot be made: fail-open (default, legacy) allows, fail-closed returns 503. The route answers 503 \u2014 not a 2xx \u2014 when the revocation store is unreachable, because 'I could not check' and 'not revoked' are different answers; `interpretStatusResponse` refuses to read any body without a boolean verdict as the second. Asserted by portal/test/ssoRevocation.test.ts over the route's response, not only over a stubbed transport. What this does NOT claim: that a revoked session is rejected within any bound under fail-open \u2014 the 8h token TTL is the only limit there."
   },
   {
     "id": "SEC-SOV-001",

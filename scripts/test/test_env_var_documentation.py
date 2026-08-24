@@ -13,6 +13,13 @@ The check is deliberately loose about WHERE: any tracked .md counts, so a
 variable documented in a design note or a template README is fine. It only
 fails on variables documented nowhere at all.
 
+IT COVERS THE PORTAL TOO, since 2026-08-25. `_source_files` had listed
+`portal/*.py` from the beginning — the intent was always there — and the portal
+contains no Python at all, so eighteen TypeScript-side variables (every SSO
+setting, the audit HMAC key, the OTLP endpoints) were outside every gate this
+repo has. A glob that reaches for a directory written in another language is
+not coverage.
+
 Adding a variable is therefore a two-line change: read it, and say what it does
 in UserManual.md's "Runtime Flags" section.
 """
@@ -29,6 +36,13 @@ _READ = re.compile(
     r'os\.environ(?:\.get)?[\(\[]\s*["\']([A-Z][A-Z0-9_]{3,})["\']'
     r'|os\.getenv\(\s*["\']([A-Z][A-Z0-9_]{3,})["\']'
 )
+
+# The TypeScript half. `process.env.NAME` is the common form; `env.NAME` is the
+# one the portal uses wherever a function takes an env object so it can be
+# tested (lib/environment.ts, lib/ssoRevocationMode.ts, lib/spanIdentity.ts).
+# `process.env[someVar]` — lib/bearerAuth's parameterised gate — cannot be
+# resolved statically and is covered by the variables its CALLERS name.
+_READ_TS = re.compile(r'(?:process\.env|\benv)\.([A-Z][A-Z0-9_]{3,})\b')
 
 # Variables set BY the platform rather than read as configuration — documenting
 # them would be documenting someone else's contract.
@@ -52,6 +66,9 @@ _EXEMPT = {
     "VIRTUAL_ENV",
     "PYTHONPATH",
     "TMPDIR",
+    # Set by the framework the portal runs on, not read as configuration.
+    "NEXT_RUNTIME",
+    "NODE_ENV",
 }
 
 
@@ -64,11 +81,54 @@ def _source_files() -> list[Path]:
     return [REPO / p for p in out if "/test" not in p and "/test_" not in p]
 
 
+def _portal_source_files() -> list[Path]:
+    out = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files", "portal/*.ts", "portal/*.tsx",
+         "portal/lib/*.ts", "portal/app/**/*.ts", "portal/app/**/*.tsx",
+         "portal/components/**/*.tsx", "portal/scripts/*.ts"],
+        capture_output=True, text=True,
+    ).stdout.split()
+    return [REPO / p for p in out if "/test/" not in p]
+
+
 def _documented_text() -> str:
     out = subprocess.run(
         ["git", "-C", str(REPO), "ls-files", "*.md"], capture_output=True, text=True
     ).stdout.split()
     return "".join((REPO / p).read_text(errors="ignore") for p in out if (REPO / p).exists())
+
+
+def test_the_portal_sweep_actually_finds_portal_files() -> None:
+    """A sweep that resolves to nothing passes over nothing.
+
+    The reason this test exists is that the Python sweep it sits beside already
+    globbed `portal/*.py` and matched zero files for months without anyone
+    noticing — the failure mode is silence, not an error.
+    """
+    files = _portal_source_files()
+    assert len(files) >= 20, f"expected the portal's TypeScript sources, found {len(files)}"
+    names = {p.name for p in files}
+    assert "middleware.ts" in names, "middleware.ts missing — the glob is wrong, not the repo"
+
+
+def test_every_portal_env_var_is_documented() -> None:
+    docs = _documented_text()
+    undocumented: dict[str, str] = {}
+    for path in _portal_source_files():
+        if not path.exists():
+            continue
+        for match in _READ_TS.finditer(path.read_text(errors="ignore")):
+            name = match.group(1)
+            if name in _EXEMPT or name in docs:
+                continue
+            undocumented.setdefault(name, str(path.relative_to(REPO)))
+
+    assert not undocumented, (
+        "environment variables the PORTAL reads but documented in no .md file:\n"
+        + "\n".join(f"  {k:28} {v}" for k, v in sorted(undocumented.items()))
+        + "\n\nAdd them to portal/README.md or OPERATIONS.md's Ops Portal section, "
+          "and to portal/.env.example — the file the setup steps tell you to copy."
+    )
 
 
 def test_every_env_var_the_code_reads_is_documented() -> None:

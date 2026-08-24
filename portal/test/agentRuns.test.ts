@@ -114,8 +114,71 @@ await test("a later write without usage does not blank what was recorded", async
   assert.equal(Number(r.cost_usd), 0.5);
 });
 
+// ── TENANT's teardown. Anything below this point must bring its own tenant:
+//    a test appended here that reuses TENANT fails on a foreign key, which is
+//    a confusing way to learn about a cleanup twenty lines up.
 await getPool().query(`DELETE FROM agent_runs WHERE tenant_id = $1`, [TENANT]);
 await getPool().query(`DELETE FROM tenants WHERE tenant_id = $1`, [TENANT]);
+
+// ── Out-of-order heartbeats ─────────────────────────────────────────────────
+//
+// Their own tenant. TENANT's rows are torn down mid-file (just above), which
+// is a boundary an appended test cannot see — the same shape as the
+// `getPool().end()` that used to sit there and killed anything added after it.
+// A test that owns its fixture does not care where the teardown is.
+
+const REORDER = `test-reorder-${Date.now()}`;
+await upsertTenant({ tenantId: REORDER, name: REORDER });
+const reorderBase = { ...base, tenantId: REORDER };
+
+await test("a late 'running' heartbeat does not un-finish a completed run", async () => {
+  // The gateway's start/end POSTs are best-effort HTTP; a retried or reordered
+  // START can land after the END. Without the guard the row went back to
+  // 'running' with finished_at still set, and the widget reported a finished
+  // run as running — permanently.
+  const runId = `${REORDER}-a`;
+  await upsertAgentRun({ ...reorderBase, runId, status: "running" });
+  await upsertAgentRun({ ...reorderBase, runId, status: "success" });
+  await upsertAgentRun({ ...reorderBase, runId, status: "running" });
+
+  const { rows } = await getPool().query(
+    `SELECT status, finished_at FROM agent_runs WHERE run_id = $1`,
+    [runId]
+  );
+  assert.equal(rows[0].status, "success", "a late start heartbeat overwrote the terminal status");
+  assert.notEqual(rows[0].finished_at, null);
+});
+
+await test("a genuine retry BEFORE the run finishes still updates", async () => {
+  // The guard keys on finished_at, not on the status alone — a second
+  // 'running' for a run still in flight must not be ignored, or a fix for
+  // reordering becomes a rule against heartbeats.
+  const runId = `${REORDER}-b`;
+  await upsertAgentRun({ ...reorderBase, runId, status: "running" });
+  await upsertAgentRun({ ...reorderBase, runId, status: "running", errorSummary: "retrying" });
+  const { rows } = await getPool().query(
+    `SELECT status, error_summary, finished_at FROM agent_runs WHERE run_id = $1`,
+    [runId]
+  );
+  assert.equal(rows[0].status, "running");
+  assert.equal(rows[0].error_summary, "retrying");
+  assert.equal(rows[0].finished_at, null);
+});
+
+await test("a contradictory row cannot hide a failed sibling", async () => {
+  // Defence in depth for rows written before the guard existed: status
+  // 'running' with finished_at set is a state the database can still hold, and
+  // collapseRunGroup used to let it win every severity comparison.
+  const wf = `${REORDER}-wf`;
+  await getPool().query(
+    `INSERT INTO agent_runs (run_id, tenant_id, workflow_id, status, started_at, finished_at)
+     VALUES ($1, $2, $3, 'running', now() + interval '1 second', now()),
+            ($4, $2, $3, 'failed',  now() + interval '1 second', now())`,
+    [`${wf}-a`, REORDER, wf, `${wf}-b`]
+  );
+  const status = await getWidgetStatus(REORDER);
+  assert.equal(status.status, "failed", "the contradictory row masked a real failure");
+});
 
 // ── What the In-App Widget is told ──────────────────────────────────────────
 //

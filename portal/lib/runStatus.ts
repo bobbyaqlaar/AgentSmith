@@ -75,7 +75,21 @@ export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<void> 
                              input_tokens, output_tokens, cost_usd, finished_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, ${finished ? "now()" : "NULL"})
      ON CONFLICT (run_id) DO UPDATE SET
-       status = EXCLUDED.status,
+       -- A late 'running' must not un-finish a run. The gateway's two POSTs
+       -- are best-effort HTTP: a retried or reordered START can arrive after
+       -- the END, and a bare EXCLUDED.status put the row back to 'running'
+       -- with finished_at still set. Verified against Postgres: the widget
+       -- then reported a completed run as running, permanently, and in a
+       -- multi-call group that row masked a genuine 'failed'.
+       --
+       -- Every neighbouring column already had this guard, each with a comment
+       -- saying a later heartbeat must not blank what was recorded. Status was
+       -- the one column that did not get it.
+       status = CASE
+                  WHEN EXCLUDED.status = 'running' AND agent_runs.finished_at IS NOT NULL
+                    THEN agent_runs.status
+                  ELSE EXCLUDED.status
+                END,
        trace_id = COALESCE(EXCLUDED.trace_id, agent_runs.trace_id),
        error_summary = EXCLUDED.error_summary,
        -- COALESCE, like trace_id above: the gateway upserts once at run START
@@ -109,6 +123,19 @@ interface AgentRunRow {
 }
 
 const TERMINAL_SEVERITY: Record<string, number> = { failed: 3, degraded: 2, success: 1 };
+
+/** Severity of a status, and 0 for anything not terminal.
+ *
+ *  Total on purpose. The reduce below compared `TERMINAL_SEVERITY[r.status]`
+ *  directly, so a row whose status is not in that map — 'running' on a row that
+ *  also has finished_at, which the upsert above used to produce — yielded
+ *  `undefined`, and `3 > undefined` is false. The accumulator won every
+ *  comparison, so one contradictory row hid a real 'failed' from the whole
+ *  group. Rows in that state can still exist from before the upsert was fixed,
+ *  and a collapse that depends on the writer being correct is not a collapse. */
+function severity(status: string): number {
+  return TERMINAL_SEVERITY[status] ?? 0;
+}
 
 // Returns every agent_runs row that belongs to the same logical run as the
 // tenant's most recently started call — same workflow_id when one was
@@ -150,7 +177,7 @@ function collapseRunGroup(rows: AgentRunRow[]) {
   if (openRow) {
     return { status: openRow.status, lastEventAt: openRow.started_at, errorSummary: openRow.error_summary };
   }
-  const worst = rows.reduce((acc, r) => (TERMINAL_SEVERITY[r.status] > TERMINAL_SEVERITY[acc.status] ? r : acc));
+  const worst = rows.reduce((acc, r) => (severity(r.status) > severity(acc.status) ? r : acc));
   return { status: worst.status, lastEventAt: worst.finished_at ?? worst.started_at, errorSummary: worst.error_summary };
 }
 

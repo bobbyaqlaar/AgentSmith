@@ -211,7 +211,8 @@ OPS_PORTAL_SYNC_TOKEN=<random-secret>    # generate: openssl rand -hex 32
 #   Not needed in ~/.zshrc. Generate: openssl rand -hex 32
 # AUDIT_LOG_HMAC_KEY — HMAC-SHA256 key used to sign every audit event at write
 #   time (portal/lib/auditLog.ts). At read time the portal re-signs and compares;
-#   a mismatch means the row was tampered with. Second layer after the DB triggers
+#   a mismatch means the row is UNVERIFIED — either altered, or signed under a
+#   different key (see the rotation warning below). Second layer after the DB triggers
 #   that block UPDATE/DELETE on audit_log. SERVER-SIDE ONLY — never export to
 #   ~/.zshrc or tenant apps. ROTATION WARNING: old events stay signed with the old
 #   key and will fail re-verification after a rotation. Generate: openssl rand -hex 32
@@ -2369,8 +2370,10 @@ curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" "http://localhost:3000/api/audit
 
 Every event is HMAC-signed and the table has DB-level `UPDATE`/`DELETE`
 triggers — `GET /api/audit` recomputes each signature on read and flags
-`verified: false` on any row altered outside the app (even by someone who
-disabled the trigger). `GET /api/audit` requires the `admin` role. Wired
+`verified: false` on any row whose signature no longer matches: one altered
+outside the app (even by someone who disabled the trigger), or one signed
+before an `AUDIT_LOG_HMAC_KEY` rotation. The portal reports the mismatch and
+not a cause; the dashboard labels it **unverified** for that reason. `GET /api/audit` requires the `admin` role. Wired
 call sites: `ai-tenant-init` → `tenant_created`, `ai-tenant-promote` →
 `hitl_promotion`, `ai-stack-off` under an enterprise policy →
 `hook_bypass`. Set `OPS_PORTAL_URL` and `AUDIT_LOG_WRITE_TOKEN` in the

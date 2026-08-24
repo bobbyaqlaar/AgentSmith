@@ -7,6 +7,26 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — Ops Portal review pass 5 (2026-08-25)
+
+Five findings. The first was reproduced against a live Postgres before anything
+was changed.
+
+| Finding | Fix |
+|---|---|
+| A retried or reordered `running` POST to `/api/runs/ingest` overwrote a terminal status: the row read `running` with `finished_at` set, and the In-App Widget showed a completed run as running, permanently. `status = EXCLUDED.status` was the one column in that upsert with no guard — its neighbours each carry a comment saying a later heartbeat must not blank what was recorded | `CASE WHEN EXCLUDED.status = 'running' AND agent_runs.finished_at IS NOT NULL THEN agent_runs.status`, plus a test that an in-flight retry still updates, so the fix is not a rule against heartbeats |
+| The same row masked a real `failed` in a multi-call group: `collapseRunGroup` indexed `TERMINAL_SEVERITY` directly, and `3 > undefined` is false, so the accumulator won every comparison | A total `severity()`; defence in depth for rows already written in that state |
+| The audit dashboard labelled a signature mismatch **tampered** — one of its two causes asserted as fact, on the surface where that accusation starts an incident. `OPERATIONS.md` said "a mismatch means the row was tampered with" on one line and explained the key-rotation case on another | **unverified** everywhere, with both causes named once |
+| `scripts/test/test_env_var_documentation.py` globbed `portal/*.py` — the intent was there from the start, and the portal has no Python, so 21 TypeScript-side variables were outside every gate | Gate extended to the portal's TS, with a test that the sweep resolves files (the failure mode was silence). Three variables added to `portal/.env.example` |
+| `SEC-SSO-001` was the only **Met** row in `docs/security-framework-map.md` with an empty Harness check, despite `sso_revocation` running one. Both portal controls carried slogan-length `mechanism` text where five other controls carry full paragraphs | Both rewritten to name the evidence and its limits |
+
+**Reported, not actioned:** seventeen other controls still carry 23–65 character
+`mechanism` strings against the 477–665 of the five written to standard. Bringing
+them up is a framework-wide pass, not a portal one, and the field is internal —
+`docs/security-framework-map.md` is what an auditor reads.
+
+---
+
 ## Completed — four review passes over the Ops Portal (2026-08-25)
 
 Every lever in `docs/review-levers.md`, over `portal/` as a whole rather than

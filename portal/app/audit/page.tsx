@@ -26,8 +26,10 @@ export default async function AuditLogPage() {
       <div>
         <h2 className="text-xl font-medium">Audit log</h2>
         <p className="text-sm text-black/60 dark:text-white/60 mt-1">
-          Immutable, HMAC-signed. <code className="text-black/80 dark:text-white/80">verified: false</code> below
-          means a row's signature no longer matches its content — tampering, or a key rotation without re-signing.
+          Immutable, HMAC-signed. <code className="text-black/80 dark:text-white/80">unverified</code> below
+          means a row&apos;s signature no longer matches its content. Two things cause that: the row was
+          altered after it was written, or <code className="text-black/80 dark:text-white/80">AUDIT_LOG_HMAC_KEY</code> was
+          rotated without re-signing history. Check which before treating it as the first.
         </p>
       </div>
 
@@ -55,7 +57,13 @@ export default async function AuditLogPage() {
                   <td className="py-2.5 px-4">{e.actorId}</td>
                   <td className="py-2.5 px-4 text-black/70 dark:text-white/70">{e.tenantId ?? "—"}</td>
                   <td className="py-2.5 px-4">
-                    {e.verified ? <Badge tone="success">verified</Badge> : <Badge tone="danger">tampered</Badge>}
+                    {/* "unverified", not "tampered". The signature not matching
+                        has two causes — a mutated row, or AUDIT_LOG_HMAC_KEY
+                        rotated without re-signing history — and the prose above
+                        says so. The badge asserted the first as fact, which on
+                        an audit log is an incident-triggering accusation the
+                        portal cannot actually make. */}
+                    {e.verified ? <Badge tone="success">verified</Badge> : <Badge tone="danger">unverified</Badge>}
                   </td>
                 </tr>
               ))}

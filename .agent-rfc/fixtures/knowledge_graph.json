@@ -1637,13 +1637,16 @@
       "language": "python",
       "symbols": [
         "_source_files",
+        "_portal_source_files",
         "_documented_text",
+        "test_the_portal_sweep_actually_finds_portal_files",
+        "test_every_portal_env_var_is_documented",
         "test_every_env_var_the_code_reads_is_documented",
         "test_security_knobs_are_in_the_canonical_reference",
         "test_fail_closed_behaviour_is_stated_not_just_the_variable",
         "test_every_shipped_command_is_in_the_canonical_reference"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T23:38:55Z",
       "id": "scripts/test/test_env_var_documentation.py"
     },
     {
@@ -2782,7 +2785,7 @@
         "upsertAgentRun",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-08-24T23:26:24Z",
+      "last_modified": "2026-08-24T23:38:15Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -2879,7 +2882,7 @@
         "dynamic",
         "AuditLogPage"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-08-24T23:42:03Z",
       "id": "portal/app/audit/page.tsx"
     },
     {
@@ -3115,7 +3118,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T23:19:16Z",
+      "last_modified": "2026-08-24T23:38:01Z",
       "id": "portal/test/agentRuns.test.ts"
     },
     {
@@ -3465,7 +3468,7 @@
         "getEnvironment",
         "ENVIRONMENT_ALIASES"
       ],
-      "last_modified": "2026-08-24T22:41:52Z",
+      "last_modified": "2026-08-24T23:39:05Z",
       "id": "portal/lib/environment.ts"
     },
     {
