@@ -337,3 +337,45 @@ def test_overrides_nest_and_restore(repo):
             assert resolve("security.prompt_guard", default="", root=root) == "off"
         assert resolve("security.prompt_guard", default="", root=root) == "warn"
     assert resolve("security.prompt_guard", default="", root=root) == "strict"
+
+
+def test_one_root_finder_and_a_tenant_beats_its_parent_repo(tmp_path: Path):
+    """There were FIVE implementations of "find the repo root" in three
+    disagreeing variants — some accepting `.agenticframework` as a marker, some
+    only `.git`. A tenant nested inside a parent git repo resolved to the parent
+    under one and to the tenant under the other, so tenant.yaml and models.yaml
+    could load from different directories in a single process.
+
+    The structural duplicate sweep in pass 3 missed all five: their bodies are
+    under its four-statement threshold. A sweep's blind spot is a finding too.
+    """
+    import os
+
+    from runtime.config import repo_root
+
+    outer = tmp_path / "outer"
+    (outer / ".git").mkdir(parents=True)
+    tenant = outer / "tenant"
+    (tenant / ".agenticframework").mkdir(parents=True)
+
+    assert repo_root(tenant) == tenant, "the tenant wins over the repo containing it"
+    assert repo_root(outer) == outer
+
+    # And every module now asks the same function.
+    from runtime import llm_gateway, moderation, tracing
+    from _shared import _repo_root as shared_root  # noqa: E402
+
+    cwd = Path.cwd()
+    try:
+        os.chdir(tenant)
+        answers = {
+            llm_gateway._repo_root(),
+            moderation._repo_root(),
+            tracing._repo_root(),
+            shared_root(),
+            repo_root(),
+        }
+    finally:
+        os.chdir(cwd)
+    assert len(answers) == 1, f"root finders disagree: {answers}"
+    assert answers.pop() == tenant

@@ -245,12 +245,21 @@ def judge_model() -> str:
 
 
 def _repo_root() -> Path:
-    """Walk up from cwd until .git is found; fall back to cwd."""
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".git").exists():
-            return parent
-    return cwd
+    """Delegates to runtime.config.repo_root.
+
+    FIVE implementations of this existed, in three disagreeing variants: some
+    treated `.git` as the only root marker, some accepted `.agenticframework`
+    too. A tenant nested inside a parent git repo therefore resolved to the
+    PARENT under one and to the tenant under the other, so `tenant.yaml` and
+    `models.yaml` could be loaded from different directories in one process.
+
+    `.agenticframework` is now a marker alongside `.git`, so a tenant directory
+    wins over the repo containing it — which is what every caller here means by
+    "root".
+    """
+    from runtime.config import repo_root
+
+    return repo_root()
 
 
 def _iso_now() -> str:

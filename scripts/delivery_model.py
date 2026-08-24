@@ -8,6 +8,7 @@ Never hard-fails CI — returns ok_for_ci=True with status ok|warn|skip.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,21 @@ def _load_yaml(path: Path) -> dict[str, Any]:
         import yaml
     except ImportError:  # pragma: no cover
         return {}
-    data = yaml.safe_load(path.read_text()) or {}
+    try:
+        data = yaml.safe_load(path.read_text())
+    except Exception as exc:
+        # A malformed org policy used to become {}, which
+        # check_tenant_against_policy reads as "no delivery_model declared" and
+        # reports as `skip` — a soft gate passing because the policy it was
+        # meant to enforce could not be parsed. Indistinguishable, from the
+        # outside, from an org that has not written one.
+        print(
+            f"delivery_model: {path} could NOT be parsed ({exc}) — the delivery "
+            f"gate is reporting `skip` because of that, not because no policy "
+            f"exists.",
+            file=sys.stderr,
+        )
+        return {}
     return data if isinstance(data, dict) else {}
 
 

@@ -58,10 +58,13 @@ applies and `--set-secrets` reaches it exactly as before.
 
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator, Optional
+
+logger = logging.getLogger(__name__)
 
 _UNSET = object()
 
@@ -172,7 +175,20 @@ def tenant_config(root: Optional[Path] = None, *, refresh: bool = False) -> dict
 
             parsed = yaml.safe_load(path.read_text())
             doc = parsed if isinstance(parsed, dict) else {}
-        except Exception:  # fail-open: an unreadable config declares nothing
+        except Exception as exc:
+            # LOUD. Fail-open is right — a worker must not refuse to start over
+            # a stray tab — but everything this file declares vanishes at once:
+            # the budget cap reverts to the framework's default, the security
+            # posture to its defaults, the owner to git. Every one of those is a
+            # control, and they would all revert together, silently, from a typo.
+            # `tenant.id` is the only key that announces itself, by raising.
+            logger.error(
+                "tenant.yaml at %s could NOT be parsed (%s) — EVERY declaration "
+                "in it is being ignored: budget cap, security posture, owner, "
+                "task queue. Framework defaults are in force instead.",
+                path,
+                exc,
+            )
             doc = {}
     _CACHE[base] = doc
     return doc

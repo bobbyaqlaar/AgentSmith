@@ -94,11 +94,17 @@ class ModerationHookImportError(RuntimeError):
 
 
 def _repo_root() -> Path:
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / ".agenticframework").exists() or (parent / ".git").exists():
-            return parent
-    return cwd
+    """Delegates to runtime.config.repo_root — see there for why the marker is
+    `.agenticframework` OR `.git`, not `.git` alone.
+
+    There were FIVE of these in three disagreeing variants. A tenant nested
+    inside a parent git repo resolved to the parent under the `.git`-only ones
+    and to the tenant under the others, so `tenant.yaml` and `models.yaml` were
+    loaded from different directories in the same process.
+    """
+    from runtime.config import repo_root
+
+    return repo_root()
 
 
 def declared_hook_path() -> Optional[str]:
