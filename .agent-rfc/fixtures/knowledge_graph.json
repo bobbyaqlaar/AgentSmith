@@ -119,7 +119,7 @@
         "_start_temporal_worker",
         "_start_celery_worker"
       ],
-      "last_modified": "2026-08-24T17:05:56Z",
+      "last_modified": "2026-08-24T19:11:28Z",
       "id": "runtime/worker.py"
     },
     {
@@ -3152,37 +3152,46 @@
         "repo_root",
         "_dotenv_value",
         "load_env_file",
+        "shadowed_env",
         "tenant_config",
         "config_get",
+        "env_overrides",
+        "_cast",
         "resolve"
       ],
-      "last_modified": "2026-08-24T17:29:49Z",
+      "last_modified": "2026-08-24T19:09:52Z",
       "id": "runtime/config.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_isolate_module_state",
         "repo",
         "test_loads_env_file",
-        "test_never_overwrites_the_environment",
+        "test_the_mirror_never_overwrites_the_environment",
         "test_absent_env_file_is_not_an_error",
         "test_parses_quotes_comments_and_export",
         "test_dotted_lookup",
-        "test_precedence_explicit_then_env_then_declaration",
+        "test_dotenv_outranks_the_ambient_shell",
+        "test_a_declaration_outranks_the_ambient_shell",
+        "test_an_ignored_ambient_value_is_reported_not_swallowed",
+        "test_explicit_still_beats_everything",
+        "test_an_undeclared_key_still_comes_from_the_environment",
+        "test_env_overrides_restores_ambient_precedence",
         "test_the_regression_a_declared_cap_beats_the_code_default",
         "test_falls_back_to_the_default_when_nothing_declares_it",
         "test_no_default_means_raise_not_invent",
-        "test_a_malformed_override_raises_rather_than_falling_through",
+        "test_a_malformed_value_raises_rather_than_falling_through",
         "test_a_blank_override_is_not_an_override",
         "test_posture_is_readable_from_the_declaration",
-        "test_env_still_overrides_the_posture",
+        "test_a_declared_posture_is_not_overridden_by_an_ambient_export",
         "test_a_declared_false_flag_is_honoured_not_treated_as_absent",
         "test_yaml_bare_off_would_have_been_a_boolean",
         "test_as_bool_reads_both_channels",
         "_build"
       ],
-      "last_modified": "2026-08-24T17:32:15Z",
+      "last_modified": "2026-08-24T19:11:04Z",
       "id": "runtime/test/test_config.py"
     }
   ],

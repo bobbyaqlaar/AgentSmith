@@ -20,14 +20,40 @@ production the declared cap became the default: a 30x breach resting on
 somebody remembering `--set-env-vars`. A declared-but-unenforced control is
 worse than an absent one, because it reads as a control in an audit.
 
-PRECEDENCE, everywhere:
+PRECEDENCE, and why it is not simply "environment wins".
 
-    explicit argument  >  environment  >  tenant.yaml  >  documented default
+    1. explicit argument          a caller that already knows
+    2. .env                       a file the tenant controls, gitignored
+    3. tenant.yaml                the declared policy, committed and reviewed
+    4. ambient os.environ         ONLY when nothing above declares the key,
+                                  or the key is named in `env_overrides`
+    5. documented default, or raise
 
-Environment above the file on purpose. The file is the declared policy under
-review; the environment is the per-deploy override that lets an operator raise
-a cap or repoint a queue without a redeploy. Where a key has no safe default —
-`tenant.id` — the last step raises instead (see `tenancy.py`).
+The distinction that matters is between a value the operator DECLARED for this
+deployment and one that merely happens to be exported in the shell that
+launched the process. Both arrive as `os.environ` and are technically
+indistinguishable — so the framework decides by asking whether any file
+declares the key.
+
+This was learned the hard way. `install-ai-stack.sh` exported AGENT_OWNER_ID
+into ~/.zshrc, advertised as "set once, applies to all projects on this
+machine". Under an environment-wins rule that one line silently outranked every
+tenant's declared `tenant.owner`, on every repo, forever — and CI, which has no
+shell profile, got nothing at all. An ambient channel wearing a deliberate
+one's clothes.
+
+So a declaration wins over the ambient environment, and the ambient value is
+not discarded silently: `shadowed_env()` reports every key where one was
+ignored, and `configure_tracing` / the worker log it once at startup. Silently
+ignoring an operator's variable is its own trap.
+
+Where a deployment genuinely must override a declared key — raising a cap
+without a redeploy — it says so, in the file, where it can be reviewed:
+
+    env_overrides: [AGENT_MONTHLY_USD_CAP]
+
+Secrets are unaffected. An API key has no declaration anywhere, so rule 4
+applies and `--set-secrets` reaches it exactly as before.
 """
 
 from __future__ import annotations
@@ -72,37 +98,56 @@ def _dotenv_value(raw: str) -> str:
     return val.split(" #", 1)[0].strip()
 
 
+_ENV_FILE: dict[str, str] = {}
+_SHADOWED: dict[str, str] = {}
+
+
 def load_env_file(root: Optional[Path] = None) -> int:
-    """Load repo-root `.env` into `os.environ`. Returns how many keys were set.
+    """Parse repo-root `.env`. Returns how many keys it declared.
 
-    NEVER OVERWRITES. A value already in the environment came from the deploy
-    platform or the operator's shell and outranks a file in the checkout — so
-    calling this in production, where `.env` is usually absent anyway, cannot
-    change what a container was configured with.
+    Values are kept HERE, not merged blindly into `os.environ`, because once
+    merged there is no way to tell a key the tenant put in `.env` from one that
+    leaked in from a login shell — and those two deserve opposite treatment.
 
-    Call it once, early, before anything reads configuration. Deliberately not
-    an import side effect: a module that reconfigures the process just by being
-    imported is the kind of surprise that makes an incident hard to read.
+    They are also mirrored into `os.environ` for third-party libraries that read
+    it directly (httpx proxies, the OTLP exporter, psycopg), but only where the
+    variable is not already set: the mirror must not change what a container was
+    configured with. `resolve()` reads the dict, so the mirror's precedence does
+    not affect the framework's own resolution.
     """
     path = repo_root(root) / ".env"
     if not path.exists():
         return 0
-    loaded = 0
     try:
-        for line in path.read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, raw = line.partition("=")
-            key = key.strip()
-            if key.startswith("export "):
-                key = key[len("export "):].strip()
-            if key and key not in os.environ:
-                os.environ[key] = _dotenv_value(raw)
-                loaded += 1
+        lines = path.read_text().splitlines()
     except OSError:  # fail-open: .env is optional convenience, never fatal
-        return loaded
-    return loaded
+        return 0
+
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, raw = line.partition("=")
+        key = key.strip()
+        if key.startswith("export "):
+            key = key[len("export "):].strip()
+        if not key:
+            continue
+        value = _dotenv_value(raw)
+        _ENV_FILE[key] = value
+        if key not in os.environ:
+            os.environ[key] = value
+    return len(_ENV_FILE)
+
+
+def shadowed_env() -> dict[str, str]:
+    """Keys where an ambient environment value was ignored in favour of a file.
+
+    Read this at startup and log it. An operator who exports something and sees
+    no effect, with nothing said, will conclude the framework is broken — and
+    they will be half right.
+    """
+    return dict(_SHADOWED)
 
 
 _CACHE: dict[Path, dict] = {}
@@ -144,6 +189,32 @@ def config_get(dotted: str, root: Optional[Path] = None) -> Any:
     return node
 
 
+def env_overrides(root: Optional[Path] = None) -> set[str]:
+    """Env vars this tenant permits to outrank its own declarations.
+
+    Declared in the file so the exception is as reviewable as the rule:
+
+        env_overrides: [AGENT_MONTHLY_USD_CAP]
+    """
+    declared = config_get("env_overrides", root)
+    if isinstance(declared, str):
+        return {declared.strip()}
+    if isinstance(declared, (list, tuple, set)):
+        return {str(x).strip() for x in declared if str(x).strip()}
+    return set()
+
+
+def _cast(value: Any, cast: Any, source: str, dotted: str) -> Any:
+    if cast is None:
+        return value
+    try:
+        return cast(value)
+    except (TypeError, ValueError) as exc:
+        # Loud. A malformed value must not fall through to a lower-precedence
+        # source, or whoever set it is silently ignored.
+        raise ValueError(f"{dotted}: {value!r} from {source} is not valid") from exc
+
+
 def resolve(
     dotted: str,
     *,
@@ -159,21 +230,33 @@ def resolve(
     than inventing one. Use it for anything an auditor would read as a control.
     """
     if explicit is not None:
-        return cast(explicit) if cast else explicit
+        return _cast(explicit, cast, "the caller", dotted)
 
-    if env_var:
-        raw = os.environ.get(env_var, "").strip()
-        if raw:
-            try:
-                return cast(raw) if cast else raw
-            except (TypeError, ValueError) as exc:
-                # Loud: a malformed override must not fall through to the
-                # declared value, or the operator's intent is silently ignored.
-                raise ValueError(f"{env_var}={raw!r} is not valid for {dotted}") from exc
+    ambient = os.environ.get(env_var, "").strip() if env_var else ""
 
+    # An override the tenant has explicitly permitted outranks its own file.
+    if env_var and ambient and env_var in env_overrides(root):
+        return _cast(ambient, cast, f"{env_var} (permitted override)", dotted)
+
+    # 2. .env — a file the tenant controls. Outranks the ambient shell, which
+    #    is the whole point: an accidental export must not beat a declaration.
+    if env_var and env_var in _ENV_FILE and _ENV_FILE[env_var].strip():
+        if ambient and ambient != _ENV_FILE[env_var]:
+            _SHADOWED[env_var] = ambient
+        return _cast(_ENV_FILE[env_var], cast, f"{env_var} in .env", dotted)
+
+    # 3. tenant.yaml — the declared policy.
     declared = config_get(dotted, root)
     if declared is not None:
-        return cast(declared) if cast else declared
+        if ambient:
+            _SHADOWED[env_var] = ambient  # type: ignore[index]
+        return _cast(declared, cast, f"{dotted} in tenant.yaml", dotted)
+
+    # 4. Ambient environment — reached only when NO file declares this key,
+    #    which is the normal and correct path for secrets and for anything a
+    #    platform injects with --set-env-vars.
+    if ambient:
+        return _cast(ambient, cast, env_var or "the environment", dotted)
 
     if default is _UNSET:
         raise LookupError(

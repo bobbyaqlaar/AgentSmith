@@ -29,6 +29,20 @@ from runtime.config import (  # noqa: E402
 )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_module_state():
+    """`_ENV_FILE` and `_SHADOWED` are process-lifetime by design — a worker
+    loads .env once — so tests must clear them or one case's .env leaks into the
+    next and the precedence under test is not the one being exercised."""
+    import runtime.config as cfg
+
+    cfg._ENV_FILE.clear()
+    cfg._SHADOWED.clear()
+    yield
+    cfg._ENV_FILE.clear()
+    cfg._SHADOWED.clear()
+
+
 @pytest.fixture
 def repo(tmp_path: Path):
     """A scaffolded repo root: .agenticframework/tenant.yaml plus optional .env."""
@@ -59,16 +73,18 @@ def test_loads_env_file(repo, monkeypatch):
     assert os.environ["FOO_ONE"] == "alpha"
 
 
-def test_never_overwrites_the_environment(repo, monkeypatch):
-    """A value already set came from the deploy platform or the operator's
-    shell and outranks a file in the checkout — so calling this in production
-    cannot change what a container was configured with."""
+def test_the_mirror_never_overwrites_the_environment(repo, monkeypatch):
+    """`.env` is mirrored into os.environ for third-party libraries that read it
+    directly, and that mirror must not change what a container was configured
+    with. `resolve()` reads the parsed dict instead, so the mirror's precedence
+    is not the framework's precedence — see the next test."""
     root = repo(dotenv="FOO_SET=from-file\n")
     monkeypatch.setenv("FOO_SET", "from-environment")
     import os
 
-    assert load_env_file(root) == 0
+    load_env_file(root)
     assert os.environ["FOO_SET"] == "from-environment"
+
 
 
 def test_absent_env_file_is_not_an_error(repo):
@@ -100,16 +116,64 @@ def test_dotted_lookup(repo):
 # ── precedence ───────────────────────────────────────────────────────────────
 
 
-def test_precedence_explicit_then_env_then_declaration(repo, monkeypatch):
-    root = repo({"budget": {"monthly_usd_cap": 5}})
-    monkeypatch.setenv("CAP_VAR", "50")
+def test_dotenv_outranks_the_ambient_shell(repo, monkeypatch):
+    """The requirement this module exists for. A value the tenant put in .env
+    must win over one that merely happens to be exported in the shell that
+    launched the process — the two are indistinguishable in os.environ, which
+    is why provenance is tracked rather than inferred."""
+    root = repo({}, dotenv="CAP_VAR=7\n")
+    monkeypatch.setenv("CAP_VAR", "999")
+    load_env_file(root)
+    assert resolve("budget.monthly_usd_cap", env_var="CAP_VAR",
+                   default=150.0, cast=float, root=root) == 7.0
+
+
+def test_a_declaration_outranks_the_ambient_shell(repo, monkeypatch):
+    """AGENT_OWNER_ID in ~/.zshrc used to beat every tenant's declared
+    tenant.owner on the machine. It no longer does."""
+    root = repo({"tenant": {"owner": "declared@example.com"}})
+    monkeypatch.setenv("AGENT_OWNER_ID", "ambient@example.com")
+    assert resolve("tenant.owner", env_var="AGENT_OWNER_ID",
+                   default=None, root=root) == "declared@example.com"
+
+
+def test_an_ignored_ambient_value_is_reported_not_swallowed(repo, monkeypatch):
+    """Silently ignoring an operator's variable is its own trap: they export
+    something, see no effect, and conclude the framework is broken."""
+    from runtime.config import shadowed_env
+
+    root = repo({"tenant": {"owner": "declared@example.com"}})
+    monkeypatch.setenv("AGENT_OWNER_ID", "ambient@example.com")
+    resolve("tenant.owner", env_var="AGENT_OWNER_ID", default=None, root=root)
+    assert shadowed_env().get("AGENT_OWNER_ID") == "ambient@example.com"
+
+
+def test_explicit_still_beats_everything(repo, monkeypatch):
+    root = repo({"budget": {"monthly_usd_cap": 5}}, dotenv="CAP_VAR=7\n")
+    monkeypatch.setenv("CAP_VAR", "999")
+    load_env_file(root)
     assert resolve("budget.monthly_usd_cap", explicit=1, env_var="CAP_VAR",
-                   default=150.0, cast=float, root=root) == 1
-    assert resolve("budget.monthly_usd_cap", env_var="CAP_VAR",
-                   default=150.0, cast=float, root=root) == 50.0
-    monkeypatch.delenv("CAP_VAR")
-    assert resolve("budget.monthly_usd_cap", env_var="CAP_VAR",
-                   default=150.0, cast=float, root=root) == 5.0
+                   default=150.0, cast=float, root=root) == 1.0
+
+
+def test_an_undeclared_key_still_comes_from_the_environment(repo, monkeypatch):
+    """Secrets. An API key is declared in no file, so the ambient environment is
+    its only source and --set-secrets must keep reaching it."""
+    root = repo({})
+    monkeypatch.setenv("SOME_API_KEY", "sk-live-xyz")
+    assert resolve("secrets.some_api_key", env_var="SOME_API_KEY",
+                   default=None, root=root) == "sk-live-xyz"
+
+
+def test_env_overrides_restores_ambient_precedence(repo, monkeypatch):
+    """The declared exception. Raising a cap without a redeploy is legitimate —
+    it just has to be said in the file, where it can be reviewed."""
+    root = repo({"budget": {"monthly_usd_cap": 5},
+                 "env_overrides": ["AGENT_MONTHLY_USD_CAP"]})
+    monkeypatch.setenv("AGENT_MONTHLY_USD_CAP", "500")
+    assert resolve("budget.monthly_usd_cap", env_var="AGENT_MONTHLY_USD_CAP",
+                   default=150.0, cast=float, root=root) == 500.0
+
 
 
 def test_the_regression_a_declared_cap_beats_the_code_default(repo, monkeypatch):
@@ -139,15 +203,17 @@ def test_no_default_means_raise_not_invent(repo, monkeypatch):
     assert "tenant.yaml" in str(exc.value)
 
 
-def test_a_malformed_override_raises_rather_than_falling_through(repo, monkeypatch):
-    """Falling back to the declared value here would silently ignore what the
-    operator actually asked for."""
-    root = repo({"budget": {"monthly_usd_cap": 5}})
+def test_a_malformed_value_raises_rather_than_falling_through(repo, monkeypatch):
+    """Falling back to a lower-precedence source would silently ignore whoever
+    set the bad value."""
+    root = repo({"budget": {"monthly_usd_cap": 5},
+                 "env_overrides": ["CAP_VAR"]})
     monkeypatch.setenv("CAP_VAR", "not-a-number")
     with pytest.raises(ValueError) as exc:
         resolve("budget.monthly_usd_cap", env_var="CAP_VAR", default=150.0,
                 cast=float, root=root)
     assert "CAP_VAR" in str(exc.value)
+
 
 
 def test_a_blank_override_is_not_an_override(repo, monkeypatch):
@@ -180,11 +246,14 @@ def test_posture_is_readable_from_the_declaration(
     assert resolve(dotted, env_var=env_var, default="", root=root) == expected
 
 
-def test_env_still_overrides_the_posture(repo, monkeypatch):
-    root = repo({"security": {"prompt_guard": "off"}})
-    monkeypatch.setenv("PROMPT_GUARD", "strict")
+def test_a_declared_posture_is_not_overridden_by_an_ambient_export(repo, monkeypatch):
+    """The posture a tenant declares is the posture it runs. An exported
+    PROMPT_GUARD from someone's shell profile must not quietly relax it."""
+    root = repo({"security": {"prompt_guard": "strict"}})
+    monkeypatch.setenv("PROMPT_GUARD", "off")
     assert resolve("security.prompt_guard", env_var="PROMPT_GUARD",
                    default="", root=root) == "strict"
+
 
 
 def test_a_declared_false_flag_is_honoured_not_treated_as_absent(repo, monkeypatch):
