@@ -161,3 +161,47 @@ def test_shared_root_matches_runtime_root(tmp_path) -> None:
             assert shared_root() == runtime_root(), f"disagree at {where}"
         finally:
             os.chdir(cwd)
+
+
+DOTENV_CASES = [
+    "plain",
+    "  spaced  ",
+    '"quoted value"',
+    "'single'",
+    "bare # comment",
+    "http://h:1#frag",          # a fragment is not a comment
+    '"quoted # hash"',          # quotes keep everything between them
+    "no-comment#nospace",
+    "",
+    '"unbalanced',              # the case where the two used to differ
+    "value # a # b",
+    "tabbed\t# note",
+    "# leading",
+    "KEY=has=equals",
+]
+
+
+def test_dotenv_parsers_agree() -> None:
+    """`runtime.config._dotenv_value` deliberately mirrors
+    `scripts/_shared._dotenv_value` — neither module can import the other.
+    `runtime/` ships as a pip package that must not depend on machine-installed
+    scripts, and scripts run standalone before anything puts runtime on
+    sys.path; importing across that boundary the other way broke CI on every
+    standalone script.
+
+    The mirror is why this test exists: the second implementation was written
+    without checking whether one already existed, and the two disagreed on an
+    unterminated quote within a day.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, str(ROOT))
+    _sys.path.insert(0, str(ROOT / "scripts"))
+    from _shared import _dotenv_value as scripts_parse
+    from runtime.config import _dotenv_value as runtime_parse
+
+    for case in DOTENV_CASES:
+        assert runtime_parse(case) == scripts_parse(case), (
+            f"parsers disagree on {case!r}: "
+            f"runtime={runtime_parse(case)!r} scripts={scripts_parse(case)!r}"
+        )

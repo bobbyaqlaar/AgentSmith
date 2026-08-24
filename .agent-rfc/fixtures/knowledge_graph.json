@@ -3052,9 +3052,10 @@
         "_invocations",
         "test_the_sweep_finds_the_known_invocations",
         "test_every_runner_invocation_passes_the_loader",
-        "test_shared_root_matches_runtime_root"
+        "test_shared_root_matches_runtime_root",
+        "test_dotenv_parsers_agree"
       ],
-      "last_modified": "2026-08-24T20:08:30Z",
+      "last_modified": "2026-08-24T20:15:01Z",
       "id": "scripts/test/test_ts_runner_invocations.py"
     },
     {
@@ -3157,7 +3158,7 @@
         "_cast",
         "resolve"
       ],
-      "last_modified": "2026-08-24T19:58:27Z",
+      "last_modified": "2026-08-24T20:14:46Z",
       "id": "runtime/config.py"
     },
     {

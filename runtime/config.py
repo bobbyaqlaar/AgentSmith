@@ -94,12 +94,39 @@ def repo_root(start: Optional[Path] = None) -> Path:
 
 
 def _dotenv_value(raw: str) -> str:
-    """Strip quotes and a trailing inline comment, matching scripts/_shared."""
-    val = raw.strip()
-    if val[:1] in {'"', "'"} and val[-1:] == val[:1] and len(val) > 1:
-        return val[1:-1]
-    # Only an unquoted value can carry an inline comment.
-    return val.split(" #", 1)[0].strip()
+    """Parse one `.env` value: quotes, then an unquoted inline comment.
+
+    A DELIBERATE mirror of `scripts/_shared._dotenv_value`, pinned by
+    `test_dotenv_parsers_agree`. Neither module can import the other: `runtime/`
+    ships as a pip package that must not depend on machine-installed scripts,
+    and `scripts/` run standalone before anything puts `runtime/` on sys.path —
+    importing across that boundary in the other direction is what broke CI on
+    every standalone script two commits ago.
+
+    This started as a cruder re-implementation written without checking whether
+    one already existed, and the two disagreed on an unterminated quote within a
+    day. The logic below is `_shared`'s, which is the considered one:
+
+      * `#` only starts a comment at a word boundary, so `http://h:1#frag`
+        keeps its fragment while `KEY=v  # note` does not keep the note. That
+        distinction cost a `405 method not allowed` that read like a broken
+        endpoint rather than a config parse bug.
+      * a QUOTED value keeps everything between the quotes, so
+        `PASS="a#b # c"` is `a#b # c`.
+      * an unterminated quote takes the rest of the line rather than the quote
+        character itself.
+    """
+    raw = raw.strip()
+    if raw[:1] in ("'", '"'):
+        quote = raw[0]
+        end = raw.find(quote, 1)
+        if end != -1:
+            return raw[1:end]
+        return raw[1:]  # unterminated quote — take the rest
+    for i, ch in enumerate(raw):
+        if ch == "#" and (i == 0 or raw[i - 1] in " \t"):
+            return raw[:i].strip()
+    return raw.strip()
 
 
 _ENV_FILE: dict[str, str] = {}
