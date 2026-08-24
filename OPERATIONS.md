@@ -99,9 +99,12 @@ These must be set before running `install-ai-stack.sh` or any `ai-*` commands. A
 export REPO_DIR="$HOME/repos"            # root directory for all your repos; adjust if different
 export AGENTSMITH_DIR="$REPO_DIR/AgenticFramework"  # AgentSmith framework root
 
-# ── Identity — required; every span, log entry, and audit event attributes to this ──
-export AGENT_OWNER_ID="you@example.com"
-export AGENT_OWNER_NAME="Your Name"
+# ── Identity — DO NOT set here ─────────────────────────────────────────────────────
+# Resolves from .agenticframework/tenant.yaml `tenant.owner`, then
+# AGENT_OWNER_ID, then `git config user.email`. Exported in a shell profile it
+# is AMBIENT: it outranks every tenant's declaration on this machine and is
+# absent in CI entirely. Set it per-deployment (a container, a CI job), or not
+# at all.
 
 # ── LLM providers — add whichever you use (at least one required for hybrid mode) ───
 export ANTHROPIC_API_KEY="sk-ant-..."
@@ -332,9 +335,9 @@ nothing about origin.
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 source ~/.zshrc
 
-# Identity — every span/log/audit entry attributes to this
-export AGENT_OWNER_ID="you@example.com"
-export AGENT_OWNER_NAME="Your Name"
+# Identity — nothing to export. Resolves from tenant.yaml `tenant.owner`,
+# then AGENT_OWNER_ID, then `git config user.email`. In a shell profile it is
+# ambient: it outranks every tenant on the machine and is absent in CI.
 
 # Mode — pick one (switch anytime)
 ai-mode-local     # 100% offline, Ollama, zero cost

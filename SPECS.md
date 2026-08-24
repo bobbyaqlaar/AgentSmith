@@ -732,7 +732,7 @@ For internal registries, the installer supports fetching from a private artifact
 - Checkpointer: Postgres (Temporal) or Redis; **`MemorySaver` is prohibited in production**
 - Scheduling: per-tenant cron defined in tenant repo config
 - HITL pause: workflow signal + Phoenix annotation poll with timeout; DLQ on expiry
-- Worker isolation: shared pool with `tenant_id` partition; dedicated pool when `tenant.isolation: dedicated`
+- Worker isolation: shared pool with `tenant_id` partition. `tenant.isolation: dedicated` is a **marker, not a control** -- no code reads it; it tells an operator to apply `runtime/k8s/dedicated-tenant/`. The topology is provisioned out of band.
 - LLM routing: all calls via LLM Gateway (`runtime/llm_gateway.py`) — not `cost_router.py`
 
 ### Mode Switching Logic
@@ -1052,17 +1052,35 @@ tenant:
 framework:
   version: "1.0.0"               # pinned AgentSmith version
   mode: enterprise               # developer | enterprise
-environments:
-  development:
-    phoenix_namespace: acme-dev
-  staging:
-    phoenix_namespace: acme-staging
-    eval_fail_below: 0.75
-  production:
-    phoenix_namespace: acme-prod
-    eval_fail_below: 0.80
-    redaction_profile: production
+# Security posture — every line is read; each env var overrides its line.
+# Quoted on purpose: YAML 1.1 parses a bare `off` as the boolean false.
+security:
+  prompt_guard: "default"           # PROMPT_GUARD
+  input_guardrail: "default"        # INPUT_GUARDRAIL
+  tool_allowlist_strict: false      # TOOL_ALLOWLIST_STRICT
+  ip_redaction: false               # ENABLE_IP_REDACTION
+
+moderation:
+  mode: "optional"                  # MODERATION_HOOK
+
+budget:
+  monthly_usd_cap: 150              # AGENT_MONTHLY_USD_CAP
+
+workflow:
+  engine: temporal                  # WORKER_BACKEND
+  task_queue: acme                  # TASK_QUEUE
 ```
+
+The `environments:` block this example used to show -- `phoenix_namespace`,
+`eval_fail_below` and `redaction_profile` per environment -- was removed from
+the scaffold on 2026-08-24 because nothing read any of it, and two of the three
+were actively misleading. `redaction_profile` reads as a security control and is
+not one: the active profile comes from `$ENVIRONMENT` via
+`runtime/environment.py`, which is fail-closed to `production`, and it stays out
+of this file deliberately so that a checked-in `development` cannot disable
+redaction. `eval_fail_below` belongs on the judge binding in `models.yaml`,
+because a threshold is calibrated against one grader and has to move when that
+grader is rebound.
 
 ### Machine-Level vs Per-Repo Data
 

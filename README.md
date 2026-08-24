@@ -123,8 +123,8 @@ deliberately *not* built and why) is **SPECS.md §4a**.
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 source ~/.zshrc
 
-# 2. Identity + mode + dashboard
-export AGENT_OWNER_ID="you@example.com" AGENT_OWNER_NAME="Your Name"
+# 2. Mode + dashboard  (identity needs no export: it resolves from
+#    tenant.yaml `tenant.owner`, else `git config user.email`)
 ai-mode-local          # or ai-mode-hybrid (cloud APIs)
 ai-dashboard-start     # → http://localhost:6006
 

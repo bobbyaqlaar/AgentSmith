@@ -83,13 +83,28 @@ ai-stack-status
 
 ### Set Your Identity
 
-Every agent run, trace, and log entry is tied to you as the owner. Set this once:
+Every agent run, trace, and log entry is tied to you as the owner. You do not
+have to configure this.
 
-```bash
-# Add to ~/.zshrc (the installer will prompt for these if not set)
-export AGENT_OWNER_ID="you@example.com"
-export AGENT_OWNER_NAME="Your Name"
+Resolution order, most specific first:
+
 ```
+.agenticframework/tenant.yaml  ->  tenant.owner      the tenant's declaration
+  AGENT_OWNER_ID                                     a deliberate override
+    git config user.email                            outside any tenant
+```
+
+Inside a tenant the declaration wins; anywhere else git already knows.
+
+**Do not export it in `~/.zshrc`.** The installer used to, and "set once,
+applies to every project on this machine" is exactly the problem: an ambient
+export outranked every tenant's declared `tenant.owner`, on every repo, while
+CI -- which has no shell profile -- got nothing at all. A declaration now wins
+over the environment, and an ignored export is reported at worker startup
+rather than silently dropped.
+
+`AGENT_OWNER_ID` still works as a deliberate per-deployment override -- a
+container, a CI job -- where no file declares the key.
 
 ### Choose Execution Mode
 
@@ -590,11 +605,17 @@ What a developer needs day-to-day:
 
 ### Setting Up Your Identity
 
-```bash
-# Add to ~/.zshrc
-export AGENT_OWNER_ID="you@example.com"
-export AGENT_OWNER_NAME="Your Name"
+Nothing to set up. Identity resolves from the tenant's declaration, then a
+deliberate override, then git:
+
 ```
+.agenticframework/tenant.yaml  ->  tenant.owner
+  AGENT_OWNER_ID
+    git config user.email
+```
+
+Do not export it in `~/.zshrc` -- ambient there, it outranks every tenant on
+the machine and is absent in CI. See "Identity" earlier in this manual.
 
 These are inherited by all agent scripts, log entries, and OTel spans automatically.
 
