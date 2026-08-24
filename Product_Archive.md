@@ -7,6 +7,103 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — evidence, CI, observability, configuration (2026-08-24)
+
+Nineteen commits across AgentSmith and KYC Sentinel. Grouped by what they fixed,
+because the thread running through all of them is the same: a claim that nothing
+verified.
+
+### Evidence and evals
+
+| Finding | Fix |
+|---|---|
+| `delivery_evidence.py` marked a scorecard `present` on file existence alone — and run-evals writes its artifact on both exit paths, so a starved run counted as delivered evidence beside an `avg_score` computed over no cases | New `inconclusive` status; summary counted per status rather than by subtraction; rows carry run age, graded fraction and which judge answered |
+| `hallucination_miss_rate` was computed, printed, and never persisted — the one result that gates the suite existed only in stdout | Written to the artifact, with `null` distinguished from "no control declared" |
+| The pack reported `avg_pair_parity` — the metric the fairness gate had *stopped* using | Reports the worst pair the gate compares, labelling the mean as a mean |
+| A scorecard graded by a model other than the one requested read as evidence | `inconclusive`, with the substitution named — this is how a set of `sim`-graded dry-run fixtures looked delivered |
+
+### CI — `main` could not build
+
+Self-Test had been red for three commits, all from the portal review slice, each
+hidden from the checks that ran locally.
+
+- **`node:crypto` reached the Edge bundle** via `middleware → authz → constantTime`.
+  `tsc --noEmit` and `npm test` both pass on that file; only `next build` fails.
+  Rewritten Web-standard, and `test/edgeSafety.test.ts` now walks middleware's
+  import graph so the next one is caught by the suite.
+- **`SEC-RBAC-001`** ran the type-stripping runner without the extension loader —
+  a third invocation path missed when the loader was added to the other two.
+  `test_ts_runner_invocations.py` is that grep, run every time.
+- **SPECS.md tree drift** on `runtime/security_paths.py`.
+
+### Observability — pillar 3 was a claim with no runner
+
+`agent.role` was never written by the production runtime at all; it existed only
+in the two demo scripts. `tenant.id` was a kwarg applied under `if tenant_id:`.
+
+Split by how the attributes actually vary: `service.name`, `project.name`,
+`environment`, `agent.owner_id` onto the OTel Resource; `tenant.id`, `agent.role`,
+`run.id` into contextvars stamped by `AgentIdentityProcessor.on_start`. A Resource
+attribute would have been wrong for `agent.role` — KYC's worker registers six
+activities on one task queue, so it would stamp five confident lies.
+
+The gateway also emits its own `llm.<role>` span when nothing else is recording,
+with a real `start_time`: previously an LLM call outside an `agent_span` vanished
+from the trace entirely. And **KYC installed no TracerProvider at all**, so every
+`agent_span()` in the framework's own testbed was a no-op — `configure_tracing()`
+is now one call that cannot be half-done.
+
+Full gap register, including what is still open: [`docs/observability-audit.md`](./docs/observability-audit.md).
+
+### Configuration — declared policy that nothing enforced
+
+`tenant.yaml` had shipped `tenant.id`, `budget.monthly_usd_cap`,
+`workflow.task_queue`, `workflow.engine` and `tenant.owner` since the scaffold,
+and only `moderation.hook` was ever read. KYC declared a **$5** cap while the
+gateway enforced **$150** whenever `AGENT_MONTHLY_USD_CAP` was unset — which it
+is in production, because `.env` is not deployed to Cloud Run and the runtime
+loaded no config file of its own.
+
+`runtime/config.py` is now the single precedence, and it is not "environment
+wins":
+
+    explicit / override  >  .env  >  tenant.yaml  >  ambient os.environ  >  default | raise
+
+The distinction is between a value an operator **declared** for a deployment and
+one that merely happens to be exported in the launching shell. Both arrive as
+`os.environ`, so provenance is tracked rather than inferred. An ignored ambient
+value is reported by `shadowed_env()`, never swallowed; `env_overrides:` in
+`tenant.yaml` is the reviewable exception; `config.override()` is the deliberate
+in-process channel.
+
+Owner identity left `~/.zshrc` entirely — ambient there, it outranked every
+tenant's `tenant.owner` on the machine and was absent in CI.
+
+### Review passes 1–7
+
+Run against [`docs/review-levers.md`](./docs/review-levers.md) — the five standing
+groups plus a sixth for signal integrity, and items added to the existing groups.
+Every addition cites the defect an earlier pass missed.
+
+| Pass | Findings |
+|---|---|
+| 1 | Two budget keys — the portal displayed none while $5 was enforced; `workflow.engine` dead; strict precedence needed `config.override()` |
+| 2 | Four exports nothing imports; a test over the security registry that would pass on an empty load |
+| 3 | Six places across four docs still teaching `export AGENT_OWNER_ID` — the thing the framework now ignores. Three found only by re-sweeping after fixing the first three |
+| 4 | Malformed redaction patterns silently reducing scrubbing; an unparseable file *passing* the bare-except guard; a malformed `models.yaml` silently replacing a tenant's routing |
+| 5 | Five root finders in three disagreeing variants — a nested tenant resolved `tenant.yaml` and `models.yaml` to different directories; three more silent empties, one of which pass 4 saw and waved through |
+| 6 | One truthy catalog duplicated across `temporal_client` and `config` — it gates Temporal TLS |
+| 7 | This entry: nineteen commits with no archive record |
+
+Nine of the eleven code findings came from levers added during the session, not
+from the original five groups. The levers that came back clean are recorded in
+the pass commits, because a clean sweep is evidence too.
+
+**Evidence:** 584 framework tests + 3 skipped, 81 KYC tests, `ruff` clean,
+security harness `ci --strict` pass=22 fail=0, SPECS tree and Knowledge Graph
+gates green, portal `tsc` clean with 20 tests and a compiling build. Both repos
+green on GitHub Actions.
+
 ## Completed — portal review passes 2-3 (2026-08-24)
 
 Two further passes over `portal/` after the first slice. Four findings; the loop
