@@ -285,3 +285,55 @@ def test_as_bool_reads_both_channels(monkeypatch):
     assert as_bool(True) is True and as_bool(False) is False       # yaml
     assert as_bool("1") and as_bool("true") and as_bool("YES")     # env
     assert not as_bool("0") and not as_bool("") and not as_bool("maybe")
+
+
+def test_the_enforced_budget_key_is_the_one_the_portal_reports(repo):
+    """One concept, one key. `gateway.budget_cap_usd` fed the Ops Portal's
+    display while `budget.monthly_usd_cap` fed the gateway's enforcement, so a
+    tenant declaring the enforced key showed NO cap on the dashboard while a
+    cap was in force. The old key is accepted as a fallback, not a rival."""
+    import importlib.util
+    import sys as _sys
+
+    path = Path(__file__).resolve().parent.parent.parent / "scripts" / "sync-portal-history.py"
+    _sys.path.insert(0, str(path.parent))
+    spec = importlib.util.spec_from_file_location("syncph", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    assert mod._budget_cap_usd({"budget": {"monthly_usd_cap": 5}}) == 5.0
+    assert mod._budget_cap_usd({"gateway": {"budget_cap_usd": 9}}) == 9.0, "legacy still works"
+    assert mod._budget_cap_usd(
+        {"budget": {"monthly_usd_cap": 5}, "gateway": {"budget_cap_usd": 9}}
+    ) == 5.0, "the enforced key wins when both are present"
+    assert mod._budget_cap_usd({}) is None
+
+
+def test_override_is_the_deliberate_channel_the_strict_rule_leaves_room_for(repo, monkeypatch):
+    """The strict rule cannot tell an operator's one-off `PROMPT_GUARD=off`
+    from a line that leaked in from a login shell — both are just os.environ.
+    So it treats a declared key as declared, and genuine deliberate overrides
+    need a channel that is visible in the code doing it and scoped to a block."""
+    from runtime.config import override
+
+    root = repo({"security": {"prompt_guard": "strict"}})
+    monkeypatch.setenv("PROMPT_GUARD", "off")
+
+    assert resolve("security.prompt_guard", env_var="PROMPT_GUARD",
+                   default="", root=root) == "strict"
+    with override(**{"security.prompt_guard": "off"}):
+        assert resolve("security.prompt_guard", env_var="PROMPT_GUARD",
+                       default="", root=root) == "off"
+    assert resolve("security.prompt_guard", env_var="PROMPT_GUARD",
+                   default="", root=root) == "strict", "restored on exit"
+
+
+def test_overrides_nest_and_restore(repo):
+    from runtime.config import override
+
+    root = repo({"security": {"prompt_guard": "strict"}})
+    with override(**{"security.prompt_guard": "warn"}):
+        with override(**{"security.prompt_guard": "off"}):
+            assert resolve("security.prompt_guard", default="", root=root) == "off"
+        assert resolve("security.prompt_guard", default="", root=root) == "warn"
+    assert resolve("security.prompt_guard", default="", root=root) == "strict"

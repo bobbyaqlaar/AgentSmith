@@ -119,7 +119,7 @@
         "_start_temporal_worker",
         "_start_celery_worker"
       ],
-      "last_modified": "2026-08-24T19:11:28Z",
+      "last_modified": "2026-08-24T19:15:00Z",
       "id": "runtime/worker.py"
     },
     {
@@ -854,7 +854,7 @@
         "_entry_id",
         "sync"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T19:15:00Z",
       "id": "scripts/sync-portal-history.py"
     },
     {
@@ -3155,11 +3155,12 @@
         "shadowed_env",
         "tenant_config",
         "config_get",
+        "override",
         "env_overrides",
         "_cast",
         "resolve"
       ],
-      "last_modified": "2026-08-24T19:09:52Z",
+      "last_modified": "2026-08-24T19:17:13Z",
       "id": "runtime/config.py"
     },
     {
@@ -3189,9 +3190,12 @@
         "test_a_declared_false_flag_is_honoured_not_treated_as_absent",
         "test_yaml_bare_off_would_have_been_a_boolean",
         "test_as_bool_reads_both_channels",
+        "test_the_enforced_budget_key_is_the_one_the_portal_reports",
+        "test_override_is_the_deliberate_channel_the_strict_rule_leaves_room_for",
+        "test_overrides_nest_and_restore",
         "_build"
       ],
-      "last_modified": "2026-08-24T19:11:04Z",
+      "last_modified": "2026-08-24T19:18:01Z",
       "id": "runtime/test/test_config.py"
     }
   ],

@@ -67,7 +67,17 @@ def _budget_cap_usd(tenant_yaml_data: dict) -> Optional[float]:
     or the key is missing — never raises, since this is a nice-to-have
     display value, not something that should break the sync."""
     try:
-        value = (tenant_yaml_data.get("gateway") or {}).get("budget_cap_usd")
+        # `budget.monthly_usd_cap` FIRST — that is the key LLMGateway actually
+        # enforces. This function read only `gateway.budget_cap_usd`, so a
+        # tenant declaring the enforced key (KYC declares $5) pushed no cap at
+        # all to the portal: the dashboard showed nothing while $5 was in
+        # force. Two keys for one concept, disagreeing exactly as the appendix
+        # warns. The old key is still accepted so a tenant using it keeps
+        # working, but it is the fallback, not the source.
+        budget = tenant_yaml_data.get("budget") or {}
+        value = budget.get("monthly_usd_cap")
+        if value is None:
+            value = (tenant_yaml_data.get("gateway") or {}).get("budget_cap_usd")
         return float(value) if value is not None else None
     except Exception:
         return None

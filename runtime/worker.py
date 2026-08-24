@@ -50,7 +50,14 @@ def main() -> None:
 
     load_env_file()
 
-    backend = os.environ.get("WORKER_BACKEND", "temporal").lower()
+    # `workflow.engine` was declared in tenant.yaml and read by nothing while
+    # this line took the same fact from an environment variable — the same
+    # split that left budget.monthly_usd_cap unenforced.
+    from runtime.config import resolve
+
+    backend = str(
+        resolve("workflow.engine", env_var="WORKER_BACKEND", default="temporal")
+    ).lower()
 
     # Resolves AGENT_TENANT_ID, then the legacy TENANT_ID this line used to read
     # directly, then tenant.yaml's declaration. Still fatal when unresolved —

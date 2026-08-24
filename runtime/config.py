@@ -59,8 +59,9 @@ applies and `--set-secrets` reaches it exactly as before.
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
 
 _UNSET = object()
 
@@ -189,6 +190,39 @@ def config_get(dotted: str, root: Optional[Path] = None) -> Any:
     return node
 
 
+_OVERRIDES: dict[str, Any] = {}
+
+
+@contextmanager
+def override(**settings: Any) -> Iterator[None]:
+    """Deliberate, in-process, scoped override. Precedence 1, same as an
+    explicit argument.
+
+    The strict rule below cannot distinguish an operator's `PROMPT_GUARD=off`
+    for one debug run from a line that leaked in from a login shell — both are
+    just `os.environ`. So it treats a declared key as declared, which is right
+    for the ambient case and leaves genuine deliberate overrides with nowhere
+    to go. This is that channel: visible in the code that does it, scoped to a
+    block, and impossible to leave lying around in a shell profile.
+
+        with override(**{"security.prompt_guard": "off"}):
+            ...
+
+    Keys are dotted config paths, so `override(security__prompt_guard=...)`
+    is not a thing — pass a dict.
+    """
+    previous = {k: _OVERRIDES.get(k, _UNSET) for k in settings}
+    _OVERRIDES.update(settings)
+    try:
+        yield
+    finally:
+        for key, was in previous.items():
+            if was is _UNSET:
+                _OVERRIDES.pop(key, None)
+            else:
+                _OVERRIDES[key] = was
+
+
 def env_overrides(root: Optional[Path] = None) -> set[str]:
     """Env vars this tenant permits to outrank its own declarations.
 
@@ -231,6 +265,9 @@ def resolve(
     """
     if explicit is not None:
         return _cast(explicit, cast, "the caller", dotted)
+
+    if dotted in _OVERRIDES:
+        return _cast(_OVERRIDES[dotted], cast, "an in-process override", dotted)
 
     ambient = os.environ.get(env_var, "").strip() if env_var else ""
 
