@@ -208,7 +208,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-08-24T20:58:51Z",
+      "last_modified": "2026-08-24T21:15:23Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -376,6 +376,7 @@
         "_resolve_role",
         "_report_run_status",
         "_record_span_attributes",
+        "_emit_call_metrics",
         "_stamp_llm_span",
         "complete_stream",
         "complete",
@@ -386,7 +387,7 @@
         "_invoke",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-24T20:57:56Z",
+      "last_modified": "2026-08-24T21:15:23Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -3272,6 +3273,72 @@
       ],
       "last_modified": "2026-08-24T21:01:05Z",
       "id": "runtime/test/test_context_propagation.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_meter",
+        "_instrument",
+        "_record",
+        "record_llm_call",
+        "record_cache",
+        "record_retrieval",
+        "configure_metrics",
+        "_reset_cache"
+      ],
+      "last_modified": "2026-08-24T21:13:20Z",
+      "id": "runtime/metrics.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_text_of",
+        "system_prompt",
+        "system_fingerprint",
+        "prompt_attributes"
+      ],
+      "last_modified": "2026-08-24T21:12:42Z",
+      "id": "runtime/prompt_identity.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_the_digest_is_of_the_system_turn",
+        "test_the_digest_is_stable_across_different_user_turns",
+        "test_the_digest_changes_when_the_system_prompt_is_edited",
+        "test_no_system_turn_is_none_not_the_hash_of_nothing",
+        "test_multipart_content_hashes_the_same_as_the_plain_string",
+        "test_several_system_turns_are_one_prompt",
+        "test_attributes_never_carry_the_prompt_text",
+        "test_absent_facts_are_absent_keys",
+        "test_the_gateway_puts_the_digest_on_the_span"
+      ],
+      "last_modified": "2026-08-24T21:16:03Z",
+      "id": "runtime/test/test_prompt_identity.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_reader",
+        "collected",
+        "_points",
+        "test_a_call_increments_a_counter_with_an_outcome",
+        "test_the_cache_ratio_is_computable_at_all",
+        "test_unreported_tokens_are_not_recorded_as_zero",
+        "test_attributes_stay_low_cardinality",
+        "test_retrieval_is_measured_too",
+        "test_everything_no_ops_without_a_meter_provider",
+        "test_a_broken_instrument_never_raises",
+        "Exploding",
+        "add",
+        "record"
+      ],
+      "last_modified": "2026-08-24T21:18:03Z",
+      "id": "runtime/test/test_metrics.py"
     }
   ],
   "edges": [
@@ -3758,6 +3825,21 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_context_propagation.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/metrics.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_prompt_identity.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_metrics.py",
       "target": "runtime/__init__.py"
     }
   ]

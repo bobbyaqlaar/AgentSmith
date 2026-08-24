@@ -67,7 +67,9 @@ def _retrieval_span(backend: str, k: int):
     return agent_span(f"retrieval.{backend}", kind="retrieval", k=k)
 
 
-def _record_hits(span, hits: list, *, corpus: Optional[int] = None) -> None:
+def _record_hits(
+    span, hits: list, *, corpus: Optional[int] = None, backend: str = "memory"
+) -> None:
     """Chunk IDENTITIES and scores, not just a count.
 
     `agent.tool.result_count` was the only thing the framework recorded about a
@@ -79,6 +81,15 @@ def _record_hits(span, hits: list, *, corpus: Optional[int] = None) -> None:
     Text is deliberately NOT recorded: retrieved documents are the most likely
     place for PII to enter a span, and trace_redactor runs after this.
     """
+    try:
+        from runtime.metrics import record_retrieval
+        from runtime.tenancy import current_tenant_id
+
+        record_retrieval(
+            tenant_id=current_tenant_id(), backend=backend, hits=len(hits)
+        )
+    except Exception:  # fail-open: a metric must never break a query
+        pass
     try:
         span.set_attribute("agent.retrieval.hit_count", len(hits))
         if corpus is not None:
@@ -131,7 +142,7 @@ class MemoryVectorStore:
     def query(self, text: str, k: int = 5) -> list[VectorHit]:
         with _retrieval_span("memory", k) as span:
             if not self._ids or k < 1:
-                _record_hits(span, [], corpus=len(self._ids))
+                _record_hits(span, [], corpus=len(self._ids), backend="memory")
                 return []
             q = self.embedder.embed([text])[0]
             scored = [
@@ -145,7 +156,7 @@ class MemoryVectorStore:
             ]
             scored.sort(key=lambda h: h.score, reverse=True)
             hits = scored[:k]
-            _record_hits(span, hits, corpus=len(self._ids))
+            _record_hits(span, hits, corpus=len(self._ids), backend="memory")
             return hits
 
 
@@ -257,7 +268,7 @@ class PgVectorStore:
 
     def _query(self, text: str, k: int, span) -> list[VectorHit]:
         if k < 1:
-            _record_hits(span, [])
+            _record_hits(span, [], backend="pgvector")
             return []
         q = self.embedder.embed([text])[0]
         q_literal = "[" + ",".join(str(x) for x in q) + "]"
@@ -288,7 +299,7 @@ class PgVectorStore:
                     metadata=meta,
                 )
             )
-        _record_hits(span, hits)
+        _record_hits(span, hits, backend="pgvector")
         return hits
 
 

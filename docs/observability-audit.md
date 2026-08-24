@@ -220,16 +220,20 @@ way prompts are, rather than adding an unscrubbed channel.
 TTFT on the non-stream path is unmeasurable without a synthetic first token and is already
 documented as such — that one is honest.
 
-### Recommendation — the missing instrument is metrics
+### ✅ Fixed — a meter alongside the tracer
 
-**There are no OTel Metrics anywhere in this codebase.** Everything is spans. Computing rates
-and ratios by scanning spans is expensive, sampling-sensitive, and degrades as volume grows —
-and error rate, cache hit ratio and p95 TTFT are exactly the numbers you want on a dashboard
-refreshing every fifteen seconds.
+`runtime/metrics.py`. Counters for calls, cache hit/miss and cost; histograms for duration,
+TTFT and token counts. Both, not either: spans answer "what happened in this request", and
+they are the wrong instrument for "what fraction of requests failed" — that answer is
+sampled, expensive to scan, and gets worse as traffic grows. `outcome` is a dimension on the
+call counter, so the error rate is a division rather than a scan.
 
-Add a meter alongside the tracer: counters for calls / errors / cache hits, a histogram for
-TTFT and total duration. The idempotency cache already knows its hit/miss at
-`llm_gateway.py` — it just logs it. That is one counter away from being a real ratio.
+The cache hit ratio was the clearest case: the gateway already knew whether it hit and only
+logged it, so no backend could compute the ratio at all.
+
+`configure_metrics()` is separate from `configure_tracing()` on purpose — a deployment can
+reasonably want metrics to Prometheus and traces to Phoenix, and coupling them would force
+both or neither.
 
 ---
 

@@ -749,6 +749,8 @@ class LLMGateway:
         output_tokens: Optional[int] = None,
         cost_estimated: bool = False,
         started_ns: Optional[int] = None,
+        messages: Any = None,
+        prompt_template_id: Optional[str] = None,
     ) -> None:
         """Record gateway facts: onto the active span, or onto one we create.
 
@@ -779,6 +781,11 @@ class LLMGateway:
                 self._stamp_llm_span(
                     span, role, model_id, degrade_tier, workflow_id, cost_usd,
                     ttft_ms, input_tokens, output_tokens, cost_estimated,
+                    messages, prompt_template_id,
+                )
+                self._emit_call_metrics(
+                    role, model_id, degrade_tier, cost_usd, ttft_ms,
+                    input_tokens, output_tokens,
                 )
                 return
 
@@ -810,11 +817,46 @@ class LLMGateway:
                 self._stamp_llm_span(
                     span, role, model_id, degrade_tier, workflow_id, cost_usd,
                     ttft_ms, input_tokens, output_tokens, cost_estimated,
+                    messages, prompt_template_id,
+                )
+                self._emit_call_metrics(
+                    role, model_id, degrade_tier, cost_usd, ttft_ms,
+                    input_tokens, output_tokens,
                 )
             finally:
                 span.end()
         except Exception:  # fail-open: tracing must never break the actual LLM call
             pass
+
+    def _emit_call_metrics(
+        self,
+        role: str,
+        model_id: str,
+        degrade_tier: Optional[str],
+        cost_usd: float,
+        ttft_ms: Optional[float],
+        input_tokens: Optional[int],
+        output_tokens: Optional[int],
+    ) -> None:
+        """Counters and histograms alongside the span.
+
+        Spans answer "what happened in this request"; they are the wrong
+        instrument for "what fraction of requests failed", which is sampled,
+        expensive to scan and grows with traffic. Both, not either.
+        """
+        from runtime.metrics import record_llm_call
+
+        record_llm_call(
+            tenant_id=self.tenant_id,
+            model=model_id,
+            role=role,
+            outcome="degraded" if degrade_tier else "success",
+            ttft_ms=ttft_ms,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=cost_usd,
+            degraded=bool(degrade_tier),
+        )
 
     def _stamp_llm_span(
         self,
@@ -828,6 +870,8 @@ class LLMGateway:
         input_tokens: Optional[int],
         output_tokens: Optional[int],
         cost_estimated: bool,
+        messages: Any = None,
+        prompt_template_id: Optional[str] = None,
     ) -> None:
         """The attribute set, written to whichever span the caller resolved."""
         try:
@@ -840,11 +884,25 @@ class LLMGateway:
             # which is a ceiling, not what the call actually used.
             span.set_attribute("llm.gateway.cost_estimated", cost_estimated)
 
-            # Usage is written ONLY when the provider reported it. A streamed
-            # call has no usage in v1, and the CompletionResult carries 0/0 for
-            # it — writing that 0 here would make "used no tokens" and "nobody
-            # counted" the same number on a dashboard that sums them, which is
-            # how a token budget silently undercounts every streamed call.
+            # WHICH PROMPT produced this. The framework recorded the model, the
+            # cost, the latency and the verdict, and nothing about what was sent —
+            # so "answers got worse last Tuesday" had no column to join against.
+            # A digest of the system turn changes when, and only when, a human
+            # edits it; the text itself is deliberately not recorded (see
+            # runtime/prompt_identity).
+            if messages is not None:
+                from runtime.prompt_identity import prompt_attributes
+
+                for key, value in prompt_attributes(
+                    messages, template_id=prompt_template_id
+                ).items():
+                    span.set_attribute(key, value)
+
+            # Usage is written ONLY when the provider reported it. A streamed call
+            # has no usage in v1, and the CompletionResult carries 0/0 for it —
+            # writing that 0 here would make "used no tokens" and "nobody counted"
+            # the same number on a dashboard that sums them, which is how a token
+            # budget silently undercounts every streamed call.
             reported = input_tokens is not None and output_tokens is not None
             span.set_attribute("llm.usage.reported", reported)
             if reported:
@@ -1128,6 +1186,7 @@ class LLMGateway:
             output_tokens=None,
             cost_estimated=True,
             started_ns=started_ns,
+            messages=messages,
         )
         self._report_run_status(
             run_id,
@@ -1167,6 +1226,9 @@ class LLMGateway:
             try:
                 cached = self._idempotency.get(idempotency_key)
                 if cached is not None:
+                    from runtime.metrics import record_cache
+
+                    record_cache(tenant_id=self.tenant_id, hit=True)
                     logger.info(
                         "idempotency cache hit tenant=%s key=%s",
                         self.tenant_id,
@@ -1177,6 +1239,9 @@ class LLMGateway:
                     # registered/stricter hook cannot be bypassed by idempotency.
                     apply_output_moderation(cached_result.text, raise_on_block=True)
                     return cached_result
+                from runtime.metrics import record_cache
+
+                record_cache(tenant_id=self.tenant_id, hit=False)
                 logger.debug(
                     "idempotency cache miss tenant=%s key=%s",
                     self.tenant_id,
@@ -1418,6 +1483,7 @@ class LLMGateway:
             input_tokens=in_tok,
             output_tokens=out_tok,
             started_ns=started_ns,
+            messages=messages,
         )
         self._report_run_status(
             run_id,

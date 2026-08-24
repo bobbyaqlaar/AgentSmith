@@ -535,6 +535,8 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/security_paths.py` | `security_artefact_path()` — the env-override-then-convention lookup `prompt_guard` and `tool_registry` had each implemented separately. |
 | `runtime/tenancy.py` | `resolve_tenant_id()` (explicit → `AGENT_TENANT_ID`/`TENANT_ID` → `tenant.yaml` → raise) and the `agent_context()` contextvars that `AgentIdentityProcessor` stamps onto every span. |
 | `runtime/cli.py` | The `agentsmith` console script (`[project.scripts]`). `tenant init` owns the scaffold that used to be a zsh heredoc in `~/.zshrc`; `doctor` delegates to `verify_system`; `shellenv` emits the exports a child process cannot set on its parent. The shell functions now delegate here. |
+| `runtime/metrics.py` | OTel counters and histograms. Spans are the wrong instrument for a rate: sampled, expensive to scan, worse as traffic grows. Carries the cache hit ratio, which was previously only logged. |
+| `runtime/prompt_identity.py` | `prompt.system.sha256` — a digest of the system turn, which changes when a human edits the instructions and not when the input changes. The join column for "answers degraded on Tuesday", available without a template engine. |
 | `runtime/config.py` | `load_env_file()` — the runtime loaded no `.env` at all before this, only `scripts/` did — and `resolve()`, the single precedence: explicit → environment → `tenant.yaml` → documented default or raise. |
 | `runtime/conversation_memory.py` | Short-term token-window message buffer (RAG substrate). |
 | `runtime/embeddings.py` / `runtime/vector_store.py` | Pluggable embedders (hash / sentence-transformers) + memory/pgvector store — long-term retrieval. |
@@ -1243,6 +1245,8 @@ AgentSmith/
 │   ├── tenancy.py               # resolve_tenant_id() + the identity contextvars (pillar 3)
 │   ├── config.py                # load_env_file() + tenant.yaml resolution, one precedence
 │   ├── cli.py                   # `agentsmith` console script — tenant init, doctor, shellenv
+│   ├── metrics.py               # OTel counters/histograms — rates spans cannot answer
+│   ├── prompt_identity.py       # prompt.system.sha256 — the join column for degradation
 │   ├── self_correction.py       # Opt-in corrected-payload loop helper
 │   ├── conversation_memory.py   # Short-term memory (RAG substrate)
 │   ├── embeddings.py / vector_store.py
