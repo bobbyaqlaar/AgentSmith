@@ -19,7 +19,7 @@ import { constantTimeEquals } from "./constantTime";
 export const ROLES = ["viewer", "operator", "admin"] as const;
 export type Role = (typeof ROLES)[number];
 
-export function isValidRole(value: unknown): value is Role {
+function isValidRole(value: unknown): value is Role {
   return typeof value === "string" && (ROLES as readonly string[]).includes(value);
 }
 
@@ -60,7 +60,7 @@ function parseTenants(value: unknown): "*" | string[] {
 // OPS_PORTAL_USERS: JSON array of {username, password, role, tenants}.
 // Falls back to the single legacy OPS_PORTAL_USER/OPS_PORTAL_PASSWORD pair
 // (granted "admin" + "*" for backward compatibility with pre-RBAC configs).
-export function getBasicAuthUsers(): BasicAuthUserRecord[] {
+function getBasicAuthUsers(): BasicAuthUserRecord[] {
   const raw = process.env.OPS_PORTAL_USERS;
   if (raw) {
     const parsed = JSON.parse(raw);
@@ -82,7 +82,7 @@ export function getBasicAuthUsers(): BasicAuthUserRecord[] {
 // email claim returned by the IdP. An authenticated-but-unlisted SSO identity
 // gets the most restrictive possible access (viewer, empty scope) rather
 // than being rejected outright — see getAccessForSsoEmail().
-export function getSsoUsers(): SsoUserRecord[] {
+function getSsoUsers(): SsoUserRecord[] {
   const raw = process.env.OPS_PORTAL_SSO_USERS;
   if (!raw) return [];
   const parsed = JSON.parse(raw);

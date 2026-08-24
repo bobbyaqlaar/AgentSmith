@@ -59,7 +59,7 @@ export function getOidcSettings(): OidcSettings | null {
 
 let configCache: { issuer: string; config: client.Configuration } | null = null;
 
-export async function getOidcClientConfig(settings: OidcSettings): Promise<client.Configuration> {
+async function getOidcClientConfig(settings: OidcSettings): Promise<client.Configuration> {
   if (configCache && configCache.issuer === settings.issuer) return configCache.config;
 
   // openid-client refuses plain-HTTP issuers by default (correct for

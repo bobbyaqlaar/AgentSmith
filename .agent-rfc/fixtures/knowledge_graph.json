@@ -19,12 +19,9 @@
       "symbols": [
         "ROLES",
         "Role",
-        "isValidRole",
         "Access",
         "ROLE_HEADER",
         "TENANT_SCOPE_HEADER",
-        "getBasicAuthUsers",
-        "getSsoUsers",
         "verifyBasicAuthCredentials",
         "getAccessForSsoEmail",
         "encodeTenantScopeHeader",
@@ -35,7 +32,7 @@
         "canAdmin",
         "getAccessFromHeaderValues"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T19:29:58Z",
       "id": "portal/lib/authz.ts"
     },
     {
@@ -1205,7 +1202,7 @@
         "test_an_undeclared_gap_fails_strict_but_a_declared_one_does_not",
         "test_scripts_has_exactly_one_script_loader"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T19:32:18Z",
       "id": "scripts/test/test_security_registry.py"
     },
     {
@@ -2814,12 +2811,11 @@
         "secureCookies",
         "OidcSettings",
         "getOidcSettings",
-        "getOidcClientConfig",
         "buildAuthorizationUrl",
         "OidcIdentity",
         "handleCallback"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T19:29:58Z",
       "id": "portal/lib/oidc.ts"
     },
     {

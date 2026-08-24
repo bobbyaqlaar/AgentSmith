@@ -23,6 +23,12 @@ def test_load_control_registry_returns_sec_pii_001() -> None:
 
 def test_every_control_has_framework_tags() -> None:
     controls = load_control_registry(REGISTRY)
+    # Guard the guard. Every assertion below is inside the loop, so an empty
+    # registry — a moved file, a parse that failed open — would make this pass
+    # having examined no control at all, while reporting that all of them carry
+    # framework tags. The magnitude, not just non-emptiness: a registry that
+    # loaded one control is as wrong as one that loaded none.
+    assert len(controls) >= 20, f"registry loaded only {len(controls)} controls"
     for c in controls:
         assert c.frameworks.owasp or c.frameworks.nist or c.frameworks.atlas or c.frameworks.iso42001
 
