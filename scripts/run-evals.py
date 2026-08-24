@@ -449,6 +449,38 @@ def _judge_case(
     return row
 
 
+# ── CI visibility ─────────────────────────────────────────────────────────────
+
+
+def _github_warning(title: str, message: str) -> None:
+    """Surface an ungraded gate on the GitHub run page without failing it.
+
+    A NO VERDICT run deliberately exits 0 — an expired key or an exhausted
+    quota is an infrastructure state, and blocking merges on it reports a
+    billing problem as a quality regression. But exit 0 plus a green check is
+    also how a gate stops grading and nobody notices: on a 20/day free tier,
+    the second push of a day starves every judged suite, and the run looks
+    exactly like one where all three passed.
+
+    So: never red, never silent. An annotation appears on the run page and a
+    line lands in the job summary, which is where someone scanning a green
+    build would actually see it. No-ops off CI.
+    """
+    if not os.environ.get("GITHUB_ACTIONS"):
+        return
+    # Annotations are single-line; the workflow-command encoding for a newline
+    # is %0A. Left un-escaped, everything after the first newline is dropped.
+    one_line = message.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+    print(f"::warning title={title}::{one_line}")
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        try:
+            with open(summary, "a", encoding="utf-8") as fh:
+                fh.write(f"### ⚠️ {title}\n\n{message}\n\n")
+        except OSError:  # fail-open: visibility is not worth failing a run over
+            pass
+
+
 # ── Scorecard ─────────────────────────────────────────────────────────────────
 
 
@@ -716,8 +748,18 @@ def run_scorecard(
             "verdict": verdict,
             "results": results,
         }
-        if hallucination_rate is not None:
+        if has_hallucination:
+            # Written whatever the values are, `null` included — the printed
+            # report already distinguishes three states here (a rate, "NOT
+            # GRADED" with controls declared, "no positive control") and the
+            # artifact has to carry the same three or a consumer cannot tell
+            # them apart. Omitting a key reads as "did not apply", which is the
+            # 2026-08-21 defect one level down: the detection-miss result was
+            # printed and never persisted, so the evidence pack could not
+            # report the one claim that gates this suite.
             output["hallucination_flag_rate"] = hallucination_rate
+            output["hallucination_miss_rate"] = hallucination_miss
+            output["hallucination_controls_declared"] = declared_controls
         if observed_miss is not None:
             # Key kept as `adversarial_miss_rate` for both guard suites: the
             # promotion loop and the security runner already read it by that name,
@@ -874,6 +916,21 @@ def run_scorecard(
         # eval_results.json — promotion tooling, the portal, a dashboard — saw an
         # old verdict presented as current.
         _write_results(verdict="no_verdict", passed_value=None)
+        # Reaching here means the judge was ATTEMPTED: --skip-without-judge-
+        # credentials returns long before this when no credential is set. So
+        # this is never the benign "tenant has no judge yet" case — it is a gate
+        # that was asked to grade and could not.
+        _github_warning(
+            f"{suite} gate did not grade — the check is green but proves nothing",
+            f"{reason}.\n\n"
+            f"This did not fail the build, by design: an unreachable judge is an "
+            f"infrastructure state, not a quality result. It also means this "
+            f"commit carries **no {suite} evidence**.\n\n"
+            + (f"First error: `{first_error}`\n\n" if first_error else "")
+            + "On a free-tier judge the usual cause is the daily request quota, "
+            "which pacing (`EVAL_RPM`) cannot stretch — it limits calls per "
+            "minute, not per day.",
+        )
         return 0
 
     # A scorecard graded by two different models is not a scorecard. Scores are

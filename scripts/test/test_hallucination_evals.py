@@ -566,3 +566,48 @@ def test_a_missing_verdict_field_defaults_rather_than_raising(monkeypatch) -> No
     assert row["score"] == 0.0
     assert row["quality_notes"] == ""
     assert row["judged_by"] is None
+
+
+def test_a_starved_run_annotates_the_github_run_page(tmp_path, monkeypatch, capsys) -> None:
+    """Exit 0 plus a green check is how a gate stops grading unnoticed.
+
+    The no-verdict path must stay exit 0 — an unreachable judge is an
+    infrastructure state — but it must not also be invisible.
+    """
+    revals = load_script("run-evals")
+    # ≥3 cases, or the suite skips before it ever reaches the judge.
+    cases = [
+        {"id": f"h{n}", "input": "a", "actual_output": "a"} for n in range(1, 4)
+    ]
+
+    def erroring_judge(case: dict, criteria: dict, judge: str) -> dict:
+        return {
+            "case_id": case["id"], "input": case["input"], "expected_tool": "any",
+            "latency_ms": 0, "correctness": 0, "tool_accuracy": 0, "score": 0.0,
+            "quality_notes": "", "error": "429 RESOURCE_EXHAUSTED",
+        }
+
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(revals, "_load_criteria", lambda suite: {"name": "Hallucination"})
+    monkeypatch.setattr(revals, "_judge_case", erroring_judge)
+    monkeypatch.setattr(revals, "_results_path", lambda suite: tmp_path / "r.json")
+
+    assert revals.run_scorecard(fail_below=0.8, suite="hallucination") == 0
+
+    out = capsys.readouterr().out
+    assert "::warning title=" in out
+    assert "proves nothing" in out
+    # Single-line: everything after a raw newline is dropped by the runner.
+    annotation = next(ln for ln in out.splitlines() if ln.startswith("::warning"))
+    assert "%0A" in annotation
+    assert "no hallucination evidence" in summary.read_text()
+
+
+def test_no_annotation_outside_github_actions(tmp_path, monkeypatch, capsys) -> None:
+    revals = load_script("run-evals")
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    revals._github_warning("t", "m")
+    assert "::warning" not in capsys.readouterr().out

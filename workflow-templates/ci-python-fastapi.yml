@@ -139,6 +139,25 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: false
 
+  # ── Judged suites: check your judge's DAILY quota before leaving all three
+  # on every push. They are independent jobs here because most judges can
+  # afford that; a free tier often cannot.
+  #
+  #   golden 12 + fairness 4 + hallucination 6 = 22 judge calls per run
+  #
+  # Google AI Studio's free tier allows 20 requests per day, per project, per
+  # model, so a tenant on it exceeds the day's budget on the FIRST run and
+  # starves every run after. The failure is silent by design: an unreachable
+  # judge is an infrastructure state, so run-evals reports NO VERDICT and exits
+  # 0, and the check goes green having graded nothing.
+  #
+  # Two things make that survivable. run-evals emits a GitHub warning
+  # annotation and a job-summary block whenever a gate was asked to grade and
+  # could not, so an ungraded gate is visible on a green run. And if your quota
+  # cannot cover a full cycle, move the two cheaper suites onto alternating
+  # `schedule:` crons and keep golden on push — see KYC Sentinel's ci.yml for a
+  # worked example. Pacing (EVAL_RPM) does NOT help here: it limits calls per
+  # minute, not per day.
   eval-scorecard:
     name: "Eval scorecard"
     uses: ./.github/workflows/eval-scorecard.yml

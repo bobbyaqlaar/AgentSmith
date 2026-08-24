@@ -48,9 +48,11 @@ code blocker; deliberately deferred when the deploy pipeline was proven.
 1. Cloud SQL (`BUDGET_BACKEND=postgres`, `IDEMPOTENCY_BACKEND=postgres`),
    a Temporal server, Ollama for the sovereign `intake` route, and Phoenix.
 2. Real provider keys: whichever variable the tenant's `judge` role declares —
-   `GROQ_API_KEY` as of 2026-08-12, when the judge moved to
-   `llama-3.3-70b-versatile` on Groq. It is **not** a fixed name and has now
-   changed twice, so read it off the merged registry rather than this list.
+   `GEMINI_API_KEY` as of 2026-08-19, when the judge moved back to
+   `gemini-3-flash-preview` after Groq decommissioned the whole Llama family
+   and `llama-3.3-70b-versatile` began 404ing on every call. It is **not** a
+   fixed name and has now changed three times, so read it off the merged
+   registry rather than this list — this line itself was four days stale.
    Plus the actor routes' key, `OPENROUTER_API_KEY` (research and analyst).
    No actor route uses Groq — that is deliberate, so exhausting an actor's
    quota cannot also take out its reviewer.
@@ -59,6 +61,19 @@ code blocker; deliberately deferred when the deploy pipeline was proven.
    once: golden runs on every push, fairness and hallucination on alternating
    crons, because the three together need 22 judge calls against a free tier
    that allows 20 a day (KYC `DEVLOG.md` 2026-08-08).
+
+   **This contradicts the judge binding's own note** in KYC `models.yaml`, which
+   says the quota constraint "no longer binds" after a full 22-call cycle
+   completed on 2026-08-19, and tells you not to restore the split without
+   re-measuring. Re-measured 2026-08-23: the limit is real and hard —
+
+       429 RESOURCE_EXHAUSTED
+       quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier
+       quotaValue: 20   model: gemini-3-flash
+
+   so the split stands. The daily budget resets at midnight America/Los_Angeles,
+   which is the only thing that clears it; probing says nothing about how much of
+   the day's 20 remain, only that the per-minute window is open.
 3. Swap `cd-staging.yml`'s Cloud Run **Job** for a `gcloud run deploy` of
    `worker.py` as a long-running service (`--no-cpu-throttling
    --min-instances=1`, OPERATIONS.md §4), pointed at the real
@@ -136,6 +151,23 @@ Small, specific, and deliberately not fixed in that release.
   Live status: `docs/security-framework-map.md`.
 - **`agency_manifest` is authored but ungraded** — both the framework's and
   KYC's manifests are real content that nothing validates (see above).
+- **A tenant that removes its controls removes the gate with them.** Both
+  detection gates are conditional on the control existing: the fairness parity
+  floor applies only `if min_parity is not None`, and the hallucination
+  detection-miss floor only `if hallucination_miss is not None`. Delete the
+  `pair_id`s from a fairness fixture, or the planted case from a hallucination
+  one, and the suite still passes on `avg_score` alone having measured no bias
+  and no detection. Both report the absence honestly — "NOT MEASURED", "no
+  positive control in this suite" — so this is a reporting-is-right,
+  gate-is-silent split, not a false green.
+
+  The framework's own fixtures are guarded by tests (`test_fairness_evals.py`
+  asserts pairs exist, `test_hallucination_evals.py` asserts a positive control
+  does), so this is reachable only through a tenant override. Left alone
+  deliberately: making it hard-fail would red-build every tenant whose fixture
+  predates the control, which is a release decision, not a fix.
+  **Trigger:** a tenant's fairness or hallucination gate is green and someone
+  asks what it measured. Found in the 2026-08-24 review pass.
 - **`.env.swp`** — an orphaned vim swap file at the repo root, gitignored. Left
   in place because it may hold unsaved `.env` edits; delete once you're sure.
 - **`scripts/verify_ttft.py:21`** — unused `from pathlib import Path`, flagged

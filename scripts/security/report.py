@@ -44,7 +44,14 @@ def _filter_controls(
 
 def _status_for(control: ControlSpec, by_id: dict[str, ControlResult]) -> str:
     r = by_id.get(control.id)
-    return r.status if r else "skip"
+    # "not run", never "skip". `skip` in this vocabulary means the control has
+    # nothing to govern HERE — a deliberate not-applicable, which _resolve_exit
+    # treats as green. A control with no result at all went UNEXAMINED, and
+    # rendering the two identically is the conflation that let 14 of 23
+    # controls report clean while nothing checked them. Unreachable today
+    # (main appends one result per control), which is not a property a
+    # refactor preserves.
+    return r.status if r else "not run"
 
 
 def _message_for(control: ControlSpec, by_id: dict[str, ControlResult]) -> str:
@@ -78,9 +85,20 @@ def _render_table(
 def _render_security_report_md(
     controls: list[ControlSpec],
     by_id: dict[str, ControlResult],
+    mode: str | None = None,
 ) -> str:
     lines = [
         "# Security harness report",
+        "",
+        # Stated even when it is the full run, so its absence is never the
+        # thing a reader has to notice.
+        f"Mode: `{mode or 'unrecorded'}`"
+        + (
+            "  — **a smoke run examines three controls; the rest were not "
+            "attempted, not passed.**"
+            if mode == "smoke"
+            else ""
+        ),
         "",
         "| Control ID | Title | Registry | Owner | Result | Message |",
         "|---|---|---|---|---|---|",
@@ -111,12 +129,22 @@ def write_evidence_pack(
     controls: list[ControlSpec],
     results: list[ControlResult],
     framework: str | None = None,
+    mode: str | None = None,
 ) -> None:
+    """Write the auditor-facing pack.
+
+    `mode` is recorded because `smoke` narrows the registry to three controls
+    before anything runs. Without it the pack is indistinguishable from a full
+    run that happens to have three controls — every one green, and no line
+    saying the other twenty were never attempted. An absent control reads as an
+    absent risk.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     by_id = _results_by_id(results)
     scoped = _filter_controls(controls, framework)
 
     payload = {
+        "mode": mode,
         "framework_filter": framework,
         "controls": [asdict(r) for r in results],
         "registry": [
@@ -142,7 +170,7 @@ def write_evidence_pack(
     )
 
     (out_dir / "security_report.md").write_text(
-        _render_security_report_md(scoped, by_id),
+        _render_security_report_md(scoped, by_id, mode),
         encoding="utf-8",
     )
 

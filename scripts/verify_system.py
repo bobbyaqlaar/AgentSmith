@@ -29,6 +29,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 REQUIRED_PACKAGES = [
     "phoenix",  # arize-phoenix
@@ -690,6 +691,44 @@ def check_history_sync() -> bool:
     return failures == 0
 
 
+def _kg_shape(kg_path: Path) -> Optional[str]:
+    """The graph's meaning, with the parts that legitimately churn removed.
+
+    Compared instead of raw bytes for two reasons:
+
+    * `last_modified` is a file mtime. `actions/checkout` stamps the working
+      tree at checkout time, so on CI every node's mtime differs from the
+      committed graph's and a byte compare would report drift on every run —
+      a gate that always fails is as useless as one that never does.
+    * Node and edge order is an artifact of a directory walk, not of content.
+
+    What remains — which files exist, their language, their symbols, and the
+    import edges between them — is exactly what goes stale when someone edits
+    code and does not regenerate.
+    """
+    if not kg_path.exists():
+        return None
+    try:
+        data = json.loads(kg_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+    nodes = sorted(
+        (
+            n.get("id"),
+            n.get("node_type"),
+            n.get("language"),
+            tuple(sorted(n.get("symbols") or [])),
+        )
+        for n in data.get("nodes", [])
+    )
+    raw_edges = data.get("edges", data.get("links", []))
+    edges = sorted(
+        (e.get("source"), e.get("target"), e.get("edge_type") or e.get("type"))
+        for e in raw_edges
+    )
+    return json.dumps({"nodes": nodes, "edges": edges}, sort_keys=True, default=str)
+
+
 def check_kg() -> bool:
     """
     CI validation for the Knowledge Graph (Product_Archive.md P10a, Pillar 2).
@@ -705,10 +744,17 @@ def check_kg() -> bool:
     print("  Knowledge Graph Check (self-test.yml)")
     print("═══════════════════════════════════════════════════\n")
 
+    kg_path = fixtures_path("knowledge_graph.json")
+    # Captured BEFORE run_map() overwrites it. Without this the check only ever
+    # proved the mapper runs: it regenerated the graph and then asserted things
+    # about the graph it had just written, so a committed file stale by two
+    # releases passed every time. Observed 2026-08-24 — the committed graph was
+    # 703 lines behind the portal work and the gate had been green throughout.
+    before = _kg_shape(kg_path)
+
     stats = map_codebase.run_map()
     print(f"  ℹ️   map_codebase.py: {stats}")
 
-    kg_path = fixtures_path("knowledge_graph.json")
     failures = 0
 
     if not _check("knowledge_graph.json written", kg_path.exists()):
@@ -728,6 +774,25 @@ def check_kg() -> bool:
 
     if not _check("Knowledge Graph is non-empty", len(nodes) > 0):
         failures += 1
+
+    # The drift check the name promised — on SHAPE, not bytes. See _kg_shape:
+    # a byte compare would fail every CI run, because actions/checkout stamps
+    # working-tree mtimes at checkout time and every `last_modified` in a
+    # freshly built graph would differ from the committed one.
+    if before is not None and before != _kg_shape(kg_path):
+        # run_map() above has ALREADY rewritten the file, so the working tree
+        # is now correct and a second run of this check goes green. Say so, or
+        # "just run it again" looks like a flaky gate instead of a reminder
+        # that the fix is still uncommitted.
+        _check(
+            "knowledge_graph.json was stale — it has just been regenerated in "
+            "place; COMMIT .agent-rfc/fixtures/knowledge_graph.json. "
+            "(Re-running this check will now pass without the commit.)",
+            False,
+        )
+        failures += 1
+    else:
+        _check("knowledge_graph.json is up to date with the code", True)
 
     known_files = {
         "scripts/map_codebase.py",

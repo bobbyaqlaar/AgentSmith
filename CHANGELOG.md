@@ -78,6 +78,131 @@ that never had a positive control will now say so instead of reporting 0.000.
   Deliberately excludes `git -C:*` — 104 of 178 such invocations mutate, 16 of
   them `git push`.
 
+### `verify_system.py --check-kg` now checks for drift
+
+It called `map_codebase.run_map()` — which rewrites `knowledge_graph.json` —
+and then asserted the resulting graph was non-empty and held a few known
+nodes. Every assertion was about the file it had just written, so the check
+could only fail if the mapper itself broke. A committed graph stale by two
+releases passed it every time; found because the graph in this repo was 703
+lines behind the portal work while the gate had been green throughout.
+
+- The graph is now captured **before** the rebuild and compared after.
+- The comparison is on **shape** — file ids, language, symbols, import edges —
+  not bytes. `actions/checkout` stamps working-tree mtimes at checkout time, so
+  every `last_modified` in a CI-built graph differs from the committed one and
+  a byte compare would red-build every run. Verified against a full-tree
+  `touch`: 159 files re-parsed, check still green.
+- A stale graph now says it has just been regenerated in place and asks for the
+  commit, because re-running the check passes without one — otherwise a
+  reminder reads as a flaky gate.
+
+`_kg_shape` returns `None` for a missing or unparseable graph rather than an
+empty shape, so "no graph" cannot compare equal to a graph with no nodes.
+
+### Evals in CI — an ungraded gate is no longer a silent green
+
+- **A NO VERDICT run now annotates the GitHub run page.** The no-verdict path
+  keeps its exit 0 — an expired key or an exhausted quota is an infrastructure
+  state, and blocking merges on it reports a billing problem as a quality
+  regression. But exit 0 plus a green check is also exactly how a gate stops
+  grading and nobody notices. `run-evals.py` emits a `::warning` annotation and
+  a `GITHUB_STEP_SUMMARY` block naming the suite, why it made no claim, and the
+  first judge error. Never red, never silent. No-ops off CI, so local runs are
+  unchanged.
+
+  Reaching that path always means the judge was *attempted* —
+  `--skip-without-judge-credentials` returns long before it when no credential
+  is set — so this never fires for the benign "tenant has no judge yet" case.
+
+- **`ci-python-fastapi.yml` states the judged suites' daily cost.** The template
+  runs golden, fairness and hallucination as independent jobs on every push:
+  22 judge calls. That is fine on a paid judge and impossible on a free tier
+  allowing 20 requests per day, where a tenant starves on the first run and
+  every run afterwards goes green having graded nothing. The template now says
+  so, points at the alternating-cron shape for tenants who need it, and records
+  that pacing cannot help — `EVAL_RPM` limits calls per minute, not per day.
+  Synced to `~/.agent-framework/workflow-templates/` so freshly provisioned
+  repos get it.
+
+### Delivery evidence pack — the consumer the verdict contract asked for
+
+Tenant-visible: `delivery_evidence.json` gains a fourth status and its `summary`
+object is now keyed per status. The pack is still soft evidence and still exits
+0; what changed is that it no longer reports a measurement that never happened
+as a delivered artifact.
+
+- **New status `inconclusive`.** The entry above added `verdict` and a nullable
+  `passed` and asked every consumer to treat a null `passed` as "not a pass".
+  `delivery_evidence.py` was that consumer and was not updated: it marked a
+  scorecard `present` on file existence alone. Since run-evals now writes its
+  artifact on BOTH exit paths, a starved run leaves a real file behind — so
+  "graded and passed" and "graded nothing" counted identically, with an
+  `avg_score` computed over no cases printed beside them. `present` now means
+  the run made a claim (`pass` or `fail` — evidence that says no is still
+  evidence); `inconclusive` means it did not.
+
+- **`summary` is counted per status, not by subtraction.** It derived `notes` as
+  "everything that is not present or missing", so any status it did not know
+  about was silently absorbed into that bucket. It is now
+  `{present, inconclusive, missing, note}` and an unrecognised status raises.
+
+- **The hallucination suite has a row.** The pack covered two of the three
+  judged suites, so the grounding gate — whose detection half is the claim an
+  auditor would most want evidenced — produced no line at all, and a missing
+  line reads as "did not apply". Its row carries the flagged-claim rate and
+  reports detection in the same three states the eval report already used:
+  a rate, `NOT GRADED` when controls were declared but none graded, and
+  `NO POSITIVE CONTROL` when none was declared.
+
+- **`hallucination_miss_rate` and `hallucination_controls_declared` are now
+  persisted** in the scorecard artifact. They were computed and printed and
+  never written, so the one result that gates the suite existed only in stdout
+  and nothing downstream could read it. `hallucination_flag_rate` is likewise
+  written as `null` rather than omitted when it measured nothing — an absent
+  key is indistinguishable from a suite the metric does not apply to.
+
+- **Fairness reports the worst pair, not only the mean.** The gate moved to the
+  worst pair for a stated reason — averaging makes the suite weaker the more
+  pairs it has — but the pack still showed `avg_pair_parity` alone, the
+  superseded metric. It now leads with the worst pair and labels the mean as a
+  mean.
+
+- **Scorecard rows carry provenance:** when the run happened and how long ago,
+  how many cases graded of how many, and which judge answered. The pack stamped
+  only its own generation time, so a months-old fixture and a fresh one
+  rendered identically — which is exactly how a set of dry-run failure
+  simulations came to be written up as a tenant's delivery evidence.
+
+- **A scorecard graded by a model other than the one requested is
+  `inconclusive`.** `eval_judge.py` stamps `judged_by` with the id it was
+  handed, so in a real run these agree by construction and a mismatch means the
+  artifact did not come off the standard path at all. run-evals already fails a
+  scorecard graded by more than one model; it cannot catch a single substituted
+  grader, because one is not more than one.
+
+- **`tenant_yaml` checks the keys, not the file.** It reported `present` for any
+  tenant.yaml and then printed "Set delivery.platform + delivery.data_access_pattern"
+  whether or not they were set — one cell serving as both a confirmation and an
+  outstanding instruction. It now reads the two `delivery.*` keys, and the file
+  paths and YAML loader come from `delivery_model.py` rather than being restated.
+
+### Security harness — the evidence pack says which run produced it
+
+- **`security_report.json`/`.md` record the `--mode`.** `smoke` narrows the
+  registry to three controls *before* anything runs, so its pack was
+  indistinguishable from a full run that happens to hold three controls — every
+  one green, and no line saying the other twenty were never attempted. An absent
+  control reads as an absent risk. The Markdown states the mode even on a full
+  run, so its absence is never the thing a reader has to notice.
+
+- **A control with no result reads `not run`, not `skip`.** `skip` in this
+  vocabulary means the control has nothing to govern here — a deliberate
+  not-applicable that `_resolve_exit` treats as green. Falling back to it for a
+  control nothing produced a result for is the same conflation that let 14 of 23
+  controls report clean while nothing checked them. Unreachable today, which is
+  not a property a refactor preserves.
+
 ### Agent rules — four more pillars, three more targets
 
 The rules AgentSmith writes into coding agents grew from 10 pillars and 3

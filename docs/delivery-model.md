@@ -94,6 +94,24 @@ Writes:
 
 Hand these to reviewers with ISO/UAE packs — not a slide deck of intended controls.
 
+### Reading the statuses
+
+| Status | Means |
+|---|---|
+| `present` | The artifact exists and the run that wrote it made a claim — `pass` **or** `fail`. A failing scorecard is evidence, not a gap. |
+| `inconclusive` | The artifact exists and the run made **no** claim: `verdict: no_verdict`, a null `passed`, or verdicts from a grader other than the one the tenant's registry requests. **Not a pass.** |
+| `missing` | No artifact, or one that will not parse. |
+| `note` | A pointer to how that evidence is produced. Never a result. |
+
+`inconclusive` is the one to read carefully. `run-evals.py` writes its scorecard
+on both exit paths, so a run whose judge never answered still leaves a file
+behind — one carrying an `avg_score` averaged over however few cases graded.
+Presence of the file is not evidence that anything was measured; the status is.
+
+Each scorecard row also carries when the run happened and how long ago, how many
+cases graded of how many, and which judge actually answered. A pack generated
+today from fixtures written months ago says so.
+
 ---
 
 ## Need → gate → artifact

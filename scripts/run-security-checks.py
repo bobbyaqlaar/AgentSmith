@@ -159,7 +159,9 @@ def main(argv: list[str] | None = None) -> int:
         results.append(runner(control, ctx))
 
     if args.evidence_pack:
-        write_evidence_pack(args.evidence_pack, controls, results, args.framework)
+        write_evidence_pack(
+            args.evidence_pack, controls, results, args.framework, args.mode
+        )
 
     # Report to stdout, always. This exited silently with a bare status code:
     # CI showed `Process completed with exit code 1` and nothing else, so every

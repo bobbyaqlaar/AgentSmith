@@ -16,6 +16,10 @@ EXPECTED_MD = [
 ]
 
 
+def _registry_controls() -> list[ControlSpec]:
+    return load_control_registry(REPO / "fixtures" / "security" / "control_registry.json")
+
+
 def _sample_results(controls: list[ControlSpec]) -> list[ControlResult]:
     return [
         ControlResult(
@@ -94,3 +98,35 @@ def test_framework_filter_limits_markdown(tmp_path: Path) -> None:
     assert "SEC-PII-001" in owasp
     # Filtered pack still writes all report files; owasp report focuses tagged controls.
     assert "SEC-PII-001" in (out / "security_report.md").read_text(encoding="utf-8")
+
+
+def test_pack_records_the_mode_it_was_produced_in(tmp_path: Path) -> None:
+    """A smoke run narrows the registry to three controls before anything runs.
+
+    Without the mode the pack is indistinguishable from a full run that happens
+    to have three controls — every one green, nothing saying the other twenty
+    were never attempted.
+    """
+    import json
+
+    out = tmp_path / "pack"
+    controls = _registry_controls()[:3]
+    write_evidence_pack(out, controls, _sample_results(controls), mode="smoke")
+
+    payload = json.loads((out / "security_report.json").read_text(encoding="utf-8"))
+    assert payload["mode"] == "smoke"
+    md = (out / "security_report.md").read_text(encoding="utf-8")
+    assert "Mode: `smoke`" in md
+    assert "not attempted, not passed" in md
+
+
+def test_a_control_with_no_result_reads_as_not_run_not_skip(tmp_path: Path) -> None:
+    """`skip` means not-applicable, which _resolve_exit treats as green.
+
+    A control nothing produced a result for went UNEXAMINED — the distinction
+    that let 14 of 23 controls report clean while nothing checked them.
+    """
+    from security.report import _status_for
+
+    controls = _registry_controls()
+    assert _status_for(controls[0], {}) == "not run"
