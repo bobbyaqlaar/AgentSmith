@@ -136,7 +136,7 @@
         "is_recording",
         "on_start"
       ],
-      "last_modified": "2026-08-24T17:04:32Z",
+      "last_modified": "2026-08-24T19:55:52Z",
       "id": "runtime/tracing.py"
     },
     {
@@ -183,7 +183,7 @@
         "temporal_address",
         "connect"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T20:01:19Z",
       "id": "runtime/temporal_client.py"
     },
     {
@@ -241,7 +241,7 @@
         "apply_output_moderation",
         "__init__"
       ],
-      "last_modified": "2026-08-24T17:29:40Z",
+      "last_modified": "2026-08-24T19:55:52Z",
       "id": "runtime/moderation.py"
     },
     {
@@ -380,7 +380,7 @@
         "_invoke",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-24T19:48:17Z",
+      "last_modified": "2026-08-24T19:55:52Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -746,7 +746,7 @@
         "tenant_yaml_path",
         "check_tenant_against_policy"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T19:58:27Z",
       "id": "scripts/delivery_model.py"
     },
     {
@@ -778,7 +778,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-08-24T17:05:04Z",
+      "last_modified": "2026-08-24T20:08:17Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -3051,9 +3051,10 @@
         "_candidate_files",
         "_invocations",
         "test_the_sweep_finds_the_known_invocations",
-        "test_every_runner_invocation_passes_the_loader"
+        "test_every_runner_invocation_passes_the_loader",
+        "test_shared_root_matches_runtime_root"
       ],
-      "last_modified": "2026-08-24T12:15:36Z",
+      "last_modified": "2026-08-24T20:08:30Z",
       "id": "scripts/test/test_ts_runner_invocations.py"
     },
     {
@@ -3156,7 +3157,7 @@
         "_cast",
         "resolve"
       ],
-      "last_modified": "2026-08-24T19:17:13Z",
+      "last_modified": "2026-08-24T19:58:27Z",
       "id": "runtime/config.py"
     },
     {
@@ -3189,9 +3190,11 @@
         "test_the_enforced_budget_key_is_the_one_the_portal_reports",
         "test_override_is_the_deliberate_channel_the_strict_rule_leaves_room_for",
         "test_overrides_nest_and_restore",
+        "test_one_root_finder_and_a_tenant_beats_its_parent_repo",
+        "test_one_truthy_catalog_across_the_runtime",
         "_build"
       ],
-      "last_modified": "2026-08-24T19:18:01Z",
+      "last_modified": "2026-08-24T20:02:11Z",
       "id": "runtime/test/test_config.py"
     }
   ],
@@ -3229,6 +3232,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/input_guardrail.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/temporal_client.py",
       "target": "runtime/__init__.py"
     },
     {
@@ -3620,6 +3628,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/oidc.ts",
       "target": "portal/lib/sessionToken.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_ts_runner_invocations.py",
+      "target": "runtime/__init__.py"
     },
     {
       "edge_type": "IMPORTS",

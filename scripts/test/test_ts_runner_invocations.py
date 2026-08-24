@@ -127,3 +127,37 @@ def test_every_runner_invocation_passes_the_loader() -> None:
         "extensionless relative import in portal/lib will fail there only:\n"
         + "\n".join(f"  {where}" for where, _ in missing)
     )
+
+
+def test_shared_root_matches_runtime_root(tmp_path) -> None:
+    """`scripts/_shared._repo_root` deliberately mirrors
+    `runtime.config.repo_root` rather than importing it: scripts/ is
+    machine-installed and runtime/ is a pip package, they are not guaranteed
+    co-located, and these scripts run standalone before anything has put the
+    install root on sys.path.
+
+    Importing it instead passed the entire local suite — pytest puts the repo
+    root on the path — and failed in CI on the first standalone invocation with
+    ModuleNotFoundError. So: mirrored, and pinned here, the same arrangement as
+    _FALLBACK_EXHAUSTION_MARKERS.
+    """
+    import os
+    import sys as _sys
+
+    _sys.path.insert(0, str(ROOT))
+    _sys.path.insert(0, str(ROOT / "scripts"))
+    from _shared import _repo_root as shared_root
+    from runtime.config import repo_root as runtime_root
+
+    outer = tmp_path / "outer"
+    (outer / ".git").mkdir(parents=True)
+    tenant = outer / "tenant"
+    (tenant / ".agenticframework").mkdir(parents=True)
+
+    cwd = Path.cwd()
+    for where in (outer, tenant, tmp_path):
+        try:
+            os.chdir(where)
+            assert shared_root() == runtime_root(), f"disagree at {where}"
+        finally:
+            os.chdir(cwd)

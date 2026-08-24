@@ -245,21 +245,29 @@ def judge_model() -> str:
 
 
 def _repo_root() -> Path:
-    """Delegates to runtime.config.repo_root.
+    """Nearest ancestor holding `.agenticframework/` or `.git/`; else cwd.
 
-    FIVE implementations of this existed, in three disagreeing variants: some
-    treated `.git` as the only root marker, some accepted `.agenticframework`
-    too. A tenant nested inside a parent git repo therefore resolved to the
-    PARENT under one and to the tenant under the other, so `tenant.yaml` and
-    `models.yaml` could be loaded from different directories in one process.
+    A DELIBERATE mirror of runtime.config.repo_root, not an oversight — the same
+    arrangement as `_FALLBACK_EXHAUSTION_MARKERS` below, and for the same reason.
+    `scripts/` is machine-installed (~/.agent-framework/scripts) while `runtime/`
+    is a pip package; they are not guaranteed to be co-located, and these scripts
+    run standalone, before anything has put the install root on sys.path. An
+    earlier attempt to import runtime here passed the whole local suite — pytest
+    puts the repo root on the path — and failed in CI with
+    `ModuleNotFoundError: No module named 'runtime'` on the first standalone
+    script invocation.
 
-    `.agenticframework` is now a marker alongside `.git`, so a tenant directory
-    wins over the repo containing it — which is what every caller here means by
-    "root".
+    `test_shared_root_matches_runtime_root` asserts the two stay identical.
+
+    The marker is `.agenticframework` OR `.git`, not `.git` alone: a tenant
+    directory must win over a parent repo containing it, or tenant.yaml and
+    models.yaml resolve to different directories in one process.
     """
-    from runtime.config import repo_root
-
-    return repo_root()
+    cwd = Path.cwd()
+    for parent in [cwd, *cwd.parents]:
+        if (parent / ".agenticframework").is_dir() or (parent / ".git").exists():
+            return parent
+    return cwd
 
 
 def _iso_now() -> str:
