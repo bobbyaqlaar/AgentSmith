@@ -503,8 +503,19 @@ class LLMGateway:
         )
     """
 
-    def __init__(self, tenant_id: str, budget_cap_usd: Optional[float] = None) -> None:
-        self.tenant_id = tenant_id
+    def __init__(
+        self, tenant_id: Optional[str] = None, budget_cap_usd: Optional[float] = None
+    ) -> None:
+        # Optional now: `.agenticframework/tenant.yaml` has declared `tenant.id`
+        # since the scaffold shipped and nothing read it — this very method
+        # loads that file for `gateway.routing_overrides` and walked past the
+        # id — so every caller supplied its own. KYC Sentinel carried the same
+        # string in two places as a result. resolve_tenant_id() reads the
+        # declaration, and RAISES rather than defaulting: this id partitions
+        # the budget ledger below, the audit log and cross-tenant isolation.
+        from runtime.tenancy import resolve_tenant_id
+
+        self.tenant_id = resolve_tenant_id(tenant_id)
         self.models = load_model_registry()
         self.budget_cap_usd = (
             budget_cap_usd

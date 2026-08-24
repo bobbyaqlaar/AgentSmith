@@ -11,7 +11,8 @@ This is a gap register, not a design doc. Every ❌ is a claim the framework doe
 
 > *Every span must carry: `agent.name`, `agent.role`, `agent.owner_id`, `tenant.id`, `llm.model_name`, `project.name`, `environment`.*
 
-**This is not enforced, and half of it is not implemented in the runtime at all.**
+✅ **Fixed 2026-08-24.** It was not enforced, and half of it was not implemented in
+the runtime at all. The table below is the audited state; what replaced it follows.
 
 | Attribute | Production runtime | Demo scripts | Enforced? |
 |---|---|---|---|
@@ -37,25 +38,61 @@ callers supply them. `runtime/test/test_tracing.py` asserts `tenant.id == "acme"
 passed* — that tests the helper, not the pillar. Pillar 3 is in the same position the `SEC-*`
 controls were in before their runners were bound: a documented claim with nothing checking it.
 
-### Recommendation — make it structural, not disciplinary
+### ✅ Fixed — made structural, not disciplinary
 
-Split the attributes by how they vary:
+The attributes are split by how they actually vary:
 
-- **Static per process** (`agent.role` where a worker serves one role, `project.name`,
-  `service.name`, `environment`, `agent.owner_id`) → the OTel **Resource**. Set once at
-  provider construction; every span inherits it and no call site can omit it.
-- **Dynamic per request** (`tenant.id`, `run_id`, and `agent.role` where one worker serves
-  several) → a **contextvar** stamped by an `on_start` SpanProcessor.
+- **Per-process → OTel `Resource`** (`runtime/tracing.py:resource_attributes`):
+  `service.name`, `project.name`, `environment`, `agent.owner_id`. Fixed at provider
+  construction; every span inherits them and no call site can omit one.
+- **Per-step → contextvars + `AgentIdentityProcessor.on_start`**
+  (`runtime/tenancy.py`): `tenant.id`, `agent.role`, `run.id`. Bound once at the
+  activity boundary; every span started inside — including the gateway's and
+  `ToolRegistry`'s — is stamped without anyone passing a kwarg.
 
-Then an unattributed span is structurally impossible rather than a rule forty call sites must
-remember. Add a test that runs a representative workflow and asserts **no emitted span** is
-missing the required set — that is the runner pillar 3 currently lacks.
+`agent.role` **cannot** be a Resource attribute here, and that is the finding rather
+than a detail. KYC's worker registers six activities on one task queue, and the
+framework's reference worker three; a Resource would stamp every span with one role,
+making five of six confident lies. An absent attribute is a gap you can see in a
+query — a wrong one is aggregated with real data.
 
-**Open question before implementing:** is `agent.role` per-process or per-step in your
-deployment? A worker serving a single role makes it a Resource attribute; a worker
-multiplexing roles makes it context. The answer changes the design.
+`tenant.id` cannot be one either, for a subtler reason: KYC is `isolation: dedicated`
+so it *is* constant per process there, but the framework default is a shared pool
+partitioned by tenant (SPECS.md §23). A Resource attribute would be correct for the
+tenant it was built against and silently wrong for every other — which is the
+failure mode this framework has already had once, when the security harness graded
+its own pack.
 
----
+**Resolution.** `tenant.yaml` had declared `tenant.id` since the scaffold shipped and
+nothing read it — `llm_gateway.py` opens that exact file for
+`gateway.routing_overrides` and walked past the id. So callers supplied their own, and
+KYC Sentinel ended up with the value in **four** places: two in `agents/gateway.py`,
+one as a `getattr` fallback in `pipeline.py`, one in `agents/tools.py`.
+`runtime/tenancy.py:resolve_tenant_id()` reads the declaration — explicit argument →
+`AGENT_TENANT_ID` → `tenant.yaml` → **raise**. All four copies are deleted.
+
+The refusal is deliberate. `tenant.id` partitions the budget ledger, the audit log and
+cross-tenant isolation; an unresolved tenant quietly becoming `unknown` would merge two
+tenants' spend and two tenants' audit trail and look fine doing it.
+
+**Not derived from the repo name**, though it was considered and would have worked
+here: KYC is single-tenant so its tenant equals its repo. On the shared-pool default
+one repo serves many tenants, so a repo-derived id would collapse them; production
+containers have no `.git` and no `GITHUB_REPOSITORY`, so it would resolve in CI and
+fall back exactly where the audit trail matters; and it would make a compliance
+identifier mutable by renaming a directory. The repo name *is* the right default for
+`project.name`, where nothing partitions on it — that is where it now lives.
+
+**The runner.** `runtime/test/test_pillar3_conformance.py` asserts the property over
+**emitted spans**, not over the helper that emits them. That distinction is what let
+the old assertion pass while the contract was broken: it checked `tenant.id == "acme"`
+on a call that had just passed `tenant_id="acme"`.
+
+**And the tenant now has tracing at all.** KYC installed no `TracerProvider`, so every
+`agent_span()` in the framework's own E2E testbed was a no-op and no span had ever
+reached Phoenix from it. `configure_tracing()` is one call that assembles Resource,
+identity processor, redactor and exporter; `worker.py` calls it. A documented
+three-step recipe had produced zero correct setups.
 
 ## 2. User request logging
 
@@ -262,9 +299,8 @@ You are OTel-native with Phoenix, and that is the right spine.
 
 ## Priority
 
-1. **Enforce pillar 3** via Resource + `on_start` processor, with a test asserting no span is
-   missing the required set. Everything else is unreliable until identity is. *(Blocked on the
-   per-process vs per-step question above.)*
+1. ~~Enforce pillar 3~~ ✅ done — Resource + `on_start` processor, `resolve_tenant_id()`,
+   a conformance test over emitted spans, and a tenant that installs tracing at all.
 2. ~~Fix the dead span guard~~ ✅ done — and the fallback that makes it matter.
 3. ~~Token capture~~ ✅ done, span and database, with "not measured" preserved.
 4. **Context propagation** — `inject` on the ingest POST; spans on vector store and embeddings.

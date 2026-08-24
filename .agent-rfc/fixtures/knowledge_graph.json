@@ -126,15 +126,20 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_repo_root",
         "_NoopSpan",
         "agent_span",
         "_stamp",
         "record_tool_call",
+        "resource_attributes",
+        "AgentIdentityProcessor",
+        "configure_tracing",
         "set_attribute",
         "record_exception",
-        "is_recording"
+        "is_recording",
+        "on_start"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T16:09:07Z",
       "id": "runtime/tracing.py"
     },
     {
@@ -377,7 +382,7 @@
         "_invoke",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-24T15:24:06Z",
+      "last_modified": "2026-08-24T16:10:06Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -3085,6 +3090,56 @@
       "symbols": [],
       "last_modified": "2026-08-24T15:28:35Z",
       "id": "portal/test/agentRuns.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "TenantUnresolvedError",
+        "_repo_root",
+        "tenant_id_from_config",
+        "resolve_tenant_id",
+        "agent_context",
+        "current_identity",
+        "current_tenant_id"
+      ],
+      "last_modified": "2026-08-24T16:07:29Z",
+      "id": "runtime/tenancy.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_identity_processor",
+        "_all_spans",
+        "test_every_span_in_a_bound_context_carries_identity",
+        "test_identity_is_not_threaded_by_hand",
+        "test_one_worker_many_roles_keeps_them_distinct",
+        "test_context_does_not_leak_between_activities",
+        "test_an_unbound_span_is_unattributed_not_mislabelled",
+        "test_resource_carries_the_per_process_half",
+        "test_owner_is_omitted_rather_than_guessed"
+      ],
+      "last_modified": "2026-08-24T16:08:29Z",
+      "id": "runtime/test/test_pillar3_conformance.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "scaffold",
+        "_no_ambient_tenant",
+        "test_reads_the_declaration_nothing_had_read",
+        "test_precedence_explicit_over_env_over_config",
+        "test_unresolved_raises_rather_than_defaulting",
+        "test_blank_values_do_not_count_as_resolved",
+        "test_a_config_without_an_id_is_not_declared",
+        "test_context_binds_and_restores",
+        "test_unset_fields_are_omitted_not_placeheld",
+        "_write"
+      ],
+      "last_modified": "2026-08-24T16:09:38Z",
+      "id": "runtime/test/test_tenancy.py"
     }
   ],
   "edges": [
@@ -3107,6 +3162,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/authz.ts",
       "target": "portal/lib/constantTime.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/tracing.py",
+      "target": "runtime/__init__.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -3496,6 +3556,16 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_gateway_span_usage.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_pillar3_conformance.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_tenancy.py",
       "target": "runtime/__init__.py"
     }
   ]

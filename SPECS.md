@@ -533,6 +533,7 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/structured_output.py` | `parse_llm_json` — fenced/bare JSON extraction + Pydantic validation (SEC-OUTPUT-001). |
 | `runtime/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (§4a). |
 | `runtime/security_paths.py` | `security_artefact_path()` — the env-override-then-convention lookup `prompt_guard` and `tool_registry` had each implemented separately. |
+| `runtime/tenancy.py` | `resolve_tenant_id()` (explicit → `AGENT_TENANT_ID` → `tenant.yaml` → raise) and the `agent_context()` contextvars that `AgentIdentityProcessor` stamps onto every span. |
 | `runtime/conversation_memory.py` | Short-term token-window message buffer (RAG substrate). |
 | `runtime/embeddings.py` / `runtime/vector_store.py` | Pluggable embedders (hash / sentence-transformers) + memory/pgvector store — long-term retrieval. |
 | `runtime/idempotency.py` | Idempotency key store and deduplication (Redis or Postgres). |
@@ -693,6 +694,8 @@ For internal registries, the installer supports fetching from a private artifact
 | `AGENT_OWNER_NAME` | Display name | `Bobby Rajagopal` |
 | `AGENT_PHOENIX_ENDPOINT` | Phoenix URL | `http://localhost:6006` |
 | `AGENT_MONTHLY_USD_CAP` | Dev session monthly budget. Also the production `LLMGateway`'s fallback budget cap (`runtime/llm_gateway.py:LLMGateway.__init__`) when a tenant doesn't pass an explicit `budget_cap_usd` — same env var, same default, both layers | `150.0` |
+| `AGENT_TENANT_ID` | Tenant this process serves. Second in `runtime/tenancy.py:resolve_tenant_id`'s order — after an explicit argument, before `.agenticframework/tenant.yaml`'s `tenant.id`. Set it on a **dedicated** worker pool; leave it unset on a shared pool, where the tenant varies per request and is passed explicitly. Unresolved raises rather than defaulting: this id partitions the budget ledger, the audit log and cross-tenant isolation | *(from tenant.yaml)* |
+| `AGENT_PROJECT_NAME` | `service.name` / `project.name` on the OTel Resource. Defaults to the repo directory name — the one identifier a repo-derived value is right for, since nothing partitions on it | *(repo name)* |
 | `AI_STACK_SLACK_WEBHOOK` | Optional Slack alert webhook | `https://hooks.slack.com/...` |
 | `AGENT_NOTIFY_WEBHOOK` | Generic notification webhook | `https://...` |
 
@@ -1212,6 +1215,7 @@ AgentSmith/
 │   ├── structured_output.py     # parse_llm_json + Pydantic (SEC-OUTPUT-001)
 │   ├── tool_registry.py         # @tool + YAML allowlist (SEC-TOOL-001)
 │   ├── security_paths.py        # security_artefact_path() — one lookup for the two above
+│   ├── tenancy.py               # resolve_tenant_id() + the identity contextvars (pillar 3)
 │   ├── self_correction.py       # Opt-in corrected-payload loop helper
 │   ├── conversation_memory.py   # Short-term memory (RAG substrate)
 │   ├── embeddings.py / vector_store.py

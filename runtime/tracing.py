@@ -23,13 +23,23 @@ must never change program behavior or raise into a business path.
 
 from __future__ import annotations
 
+import os
 import time
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Iterator, Optional
 
 # Attribute namespace for agent-step spans, kept distinct from the gateway's
 # `llm.gateway.*` so a Phoenix filter can separate tool/step work from LLM work.
 _NS = "agent"
+
+
+def _repo_root() -> Path:
+    cwd = Path.cwd()
+    for parent in [cwd, *cwd.parents]:
+        if (parent / ".git").exists():
+            return parent
+    return cwd
 
 
 class _NoopSpan:
@@ -157,3 +167,120 @@ def record_tool_call(
                 span.set_attribute("agent.tool.error", error)
     except Exception:  # fail-open: tracing must never break a tool call
         pass
+
+
+# ── Identity: Resource + on_start stamping (pillar 3) ────────────────────────
+
+
+def resource_attributes(project_name: Optional[str] = None) -> dict:
+    """The PER-PROCESS half of pillar 3 — fixed for the life of the worker.
+
+    These four cannot vary between two spans from the same process, so they
+    belong on the OTel Resource where every span inherits them and no call site
+    can forget one. `agent.role` and `tenant.id` are deliberately absent: this
+    architecture runs many roles in one worker (KYC registers six activities on
+    one task queue), and the shared-pool default serves many tenants from one
+    process, so either as a Resource attribute would be a confident lie on most
+    spans rather than a missing one.
+
+    `project.name` is the one place a repo-derived default is right: it names
+    the codebase, nothing partitions on it, and being wrong is cosmetic.
+    """
+    from runtime.environment import get_environment
+
+    project = (
+        project_name
+        or os.environ.get("AGENT_PROJECT_NAME", "").strip()
+        or _repo_root().name
+    )
+    attrs = {
+        "service.name": project,
+        "project.name": project,
+        "environment": get_environment(),
+    }
+    owner = os.environ.get("AGENT_OWNER_ID", "").strip()
+    if owner:
+        # Omitted when unset rather than "unknown" — see current_identity().
+        attrs["agent.owner_id"] = owner
+    return attrs
+
+
+try:
+    from opentelemetry.sdk.trace import SpanProcessor as _OTelSpanProcessor
+except ImportError:  # tracing is optional
+    _OTelSpanProcessor = object  # type: ignore
+
+
+class AgentIdentityProcessor(_OTelSpanProcessor):
+    """Stamps the PER-STEP half of pillar 3 onto every span, at start.
+
+    Subclasses the SDK's SpanProcessor rather than duck-typing it. A plain
+    class with on_start/on_end/shutdown/force_flush looks complete and is not:
+    the SDK also calls a private `_on_ending`, so a duck-typed processor raises
+    AttributeError on the FIRST span it sees. Same choice trace_redactor.py
+    made, and for the same reason.
+
+    `on_start` rather than `on_end`: an exporter may sample or drop on the
+    attributes, and a span that gains its tenant only at the end has already
+    been routed without it.
+
+    This is what makes "every span carries tenant.id" true by construction
+    instead of by discipline. It was previously a kwarg on `agent_span()`
+    applied under `if tenant_id:` — so a caller who omitted it produced an
+    unattributed span, silently, and most callers did.
+    """
+
+    def on_start(self, span: Any, parent_context: Any = None) -> None:
+        try:
+            from runtime.tenancy import current_identity
+
+            for key, value in current_identity().items():
+                span.set_attribute(key, value)
+        except Exception:  # fail-open: identity must never break a span
+            pass
+
+    # on_end / shutdown / force_flush come from the base class — this
+    # processor only ever writes at start.
+
+
+def configure_tracing(
+    *,
+    project_name: Optional[str] = None,
+    exporter: Any = None,
+    redact: bool = True,
+) -> Any:
+    """Install a TracerProvider wired the way pillar 3 requires. Returns it.
+
+    Exists because assembling this by hand is three steps that must all be
+    remembered, and the evidence says they are not: KYC Sentinel — the tenant
+    built to exercise every layer of this framework — installs NO provider at
+    all, so every `agent_span()` in it is a no-op and no span has ever reached
+    Phoenix from it. A documented three-step recipe produced zero correct
+    setups; a function is harder to half-do.
+
+    Idempotent-ish: OTel's global provider is one-shot, so a second call is
+    ignored by the SDK. Returns whatever provider is active either way.
+    """
+    try:
+        from opentelemetry import trace
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+    except ImportError:  # fail-open: tracing is optional, the app is not
+        return None
+
+    provider = TracerProvider(resource=Resource.create(resource_attributes(project_name)))
+    provider.add_span_processor(AgentIdentityProcessor())
+
+    if redact:
+        # Ordering matters: identity stamps at start, redaction rewrites at end.
+        from runtime.trace_redactor import TraceRedactor
+
+        provider.add_span_processor(TraceRedactor())
+
+    if exporter is not None:
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+        provider.add_span_processor(BatchSpanProcessor(exporter))
+
+    trace.set_tracer_provider(provider)
+    return trace.get_tracer_provider()
