@@ -6,7 +6,9 @@ had just written, so it only ever proved the mapper runs. A committed graph 703
 lines behind the code passed it every time (observed 2026-08-24).
 
 The gate compares SHAPE — which files exist, their language, their symbols, and
-the import edges — because the raw bytes carry mtimes that churn legitimately.
+the import edges — because the raw bytes carry mtimes that churn legitimately,
+and it counts only GIT-TRACKED files because the mapper walks the filesystem and
+picks up build output that CI never has.
 """
 
 from __future__ import annotations
@@ -27,9 +29,20 @@ MTIME_A = "2020-01-01T00:00:00Z"
 MTIME_B = "2026-08-24T09:15:00Z"
 
 
+TRACKED = {"scripts/a.py", "scripts/b.py"}
+
+
 @pytest.fixture
-def vs():
-    return load_script("verify_system")
+def vs(monkeypatch):
+    """`_git_tracked_files` is stubbed so these fixtures' synthetic paths count.
+
+    Without the stub every node would be filtered out as untracked and every
+    shape would compare equal — the tests would pass having examined nothing,
+    which is the defect the module exists to prevent.
+    """
+    module = load_script("verify_system")
+    monkeypatch.setattr(module, "_git_tracked_files", lambda: set(TRACKED))
+    return module
 
 
 @pytest.fixture
@@ -85,6 +98,43 @@ def test_shape_catches_a_new_symbol(vs, write_graph) -> None:
 def test_shape_ignores_symbol_order(vs, write_graph) -> None:
     """Order is an artifact of the parse, not of content."""
     assert vs._kg_shape(write_graph(["f", "g"])) == vs._kg_shape(write_graph(["g", "f"]))
+
+
+def test_untracked_nodes_are_excluded(vs, write_graph, monkeypatch) -> None:
+    """The mapper walks the filesystem, so a graph built on a machine that has
+    run `next build` carries portal/next-env.d.ts and a Guardrail node sourced
+    from a gitignored, generated file — with an ABSOLUTE path in it. Comparing
+    those failed on every CI run, which is a worse gate than the weak one it
+    replaced, because the fix is to delete it."""
+    graph_with_extra = json.loads(write_graph(["f"]).read_text())
+    graph_with_extra["nodes"].append(
+        {
+            "id": "portal/next-env.d.ts",
+            "node_type": "CodebaseFile",
+            "language": "typescript",
+            "symbols": ["Generated"],
+            "last_modified": MTIME_B,
+        }
+    )
+    graph_with_extra["nodes"].append(
+        {
+            "id": "rfc:fixtures/delivery_evidence.md",
+            "node_type": "Guardrail",
+            "source_file": "/Users/someone/checkout/.agent-rfc/fixtures/delivery_evidence.md",
+        }
+    )
+    polluted = write_graph(["f"])
+    polluted.write_text(json.dumps(graph_with_extra))
+
+    assert vs._kg_shape(polluted) == vs._kg_shape(write_graph(["f"]))
+
+
+def test_shape_is_none_when_git_cannot_answer(vs, write_graph, monkeypatch) -> None:
+    """None makes the caller skip the comparison rather than guess. Treating
+    "git unavailable" as "nothing is tracked" would compare two empty shapes
+    and call the graph up to date having examined no nodes."""
+    monkeypatch.setattr(vs, "_git_tracked_files", lambda: None)
+    assert vs._kg_shape(write_graph(["f"])) is None
 
 
 def test_missing_or_unreadable_graph_is_none(vs, tmp_path: Path) -> None:

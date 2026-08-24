@@ -67,13 +67,6 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-06-22T12:30:57Z",
-      "id": "portal/next-env.d.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [],
       "last_modified": "2026-06-26T21:15:31Z",
       "id": "portal/tailwind.config.ts"
     },
@@ -585,7 +578,6 @@
       "symbols": [
         "_graph_path",
         "AgentKnowledgeGraph",
-        "_probe",
         "__init__",
         "_load",
         "save",
@@ -601,7 +593,7 @@
         "stats",
         "as_json"
       ],
-      "last_modified": "2026-08-24T10:40:12Z",
+      "last_modified": "2026-08-24T11:07:12Z",
       "id": "scripts/local_knowledge_graph.py"
     },
     {
@@ -961,13 +953,14 @@
         "check_hooks",
         "check_history_sync",
         "_kg_shape",
+        "_git_tracked_files",
         "check_kg",
         "check_onprem_deploy",
         "check_delivery_model",
         "_run",
         "_git_repo"
       ],
-      "last_modified": "2026-08-24T10:40:12Z",
+      "last_modified": "2026-08-24T11:07:38Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -3022,11 +3015,13 @@
         "test_shape_ignores_mtime",
         "test_shape_catches_a_new_symbol",
         "test_shape_ignores_symbol_order",
+        "test_untracked_nodes_are_excluded",
+        "test_shape_is_none_when_git_cannot_answer",
         "test_missing_or_unreadable_graph_is_none",
         "test_an_empty_graph_has_a_shape_and_is_not_none",
         "_write"
       ],
-      "last_modified": "2026-08-24T10:38:05Z",
+      "last_modified": "2026-08-24T11:07:38Z",
       "id": "scripts/test/test_kg_drift_gate.py"
     },
     {
@@ -3035,6 +3030,13 @@
       "symbols": [],
       "last_modified": "2026-08-24T11:00:08Z",
       "id": "portal/test/edgeSafety.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-06-22T12:30:57Z",
+      "id": "portal/next-env.d.ts"
     }
   ],
   "edges": [

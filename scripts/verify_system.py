@@ -705,6 +705,12 @@ def _kg_shape(kg_path: Path) -> Optional[str]:
     What remains — which files exist, their language, their symbols, and the
     import edges between them — is exactly what goes stale when someone edits
     code and does not regenerate.
+
+    KNOWN LIMIT: map_codebase skips files whose stored mtime still matches, at
+    1-second granularity, so an edit made within the same second as the last
+    regeneration is not re-parsed and this check passes. Irrelevant in CI —
+    actions/checkout stamps every file fresh, so nothing is ever skipped — and
+    self-correcting locally on the next run once the clock ticks.
     """
     if not kg_path.exists():
         return None
@@ -712,21 +718,66 @@ def _kg_shape(kg_path: Path) -> Optional[str]:
         data = json.loads(kg_path.read_text())
     except (OSError, json.JSONDecodeError):
         return None
+
+    tracked = _git_tracked_files()
+    if tracked is None:
+        return None
+
+    # GIT-TRACKED CodebaseFile NODES ONLY, and no Guardrail nodes. The mapper
+    # walks the filesystem, so the graph legitimately differs between machines
+    # and CI is the one that differs most:
+    #
+    #   portal/next-env.d.ts   written by `next build`, gitignored. Present on
+    #                          any machine that has built the portal, absent on
+    #                          a fresh runner — the `purged: 1` in CI.
+    #   rfc:fixtures/…         Guardrail nodes are sourced from .agent-rfc docs,
+    #                          some of which are GENERATED and gitignored
+    #                          (delivery_evidence.md). Worse, they store an
+    #                          ABSOLUTE source_file path, which cannot match
+    #                          across machines at all.
+    #
+    # Comparing those made the gate fail on every CI run — a false-positive
+    # gate, which is worse than the weak one it replaced, because the fix is to
+    # delete it. What is left is exactly what goes stale when someone edits
+    # committed code without regenerating.
     nodes = sorted(
         (
             n.get("id"),
-            n.get("node_type"),
             n.get("language"),
             tuple(sorted(n.get("symbols") or [])),
         )
         for n in data.get("nodes", [])
+        if n.get("node_type") == "CodebaseFile" and n.get("id") in tracked
     )
     raw_edges = data.get("edges", data.get("links", []))
     edges = sorted(
         (e.get("source"), e.get("target"), e.get("edge_type") or e.get("type"))
         for e in raw_edges
+        if e.get("source") in tracked and e.get("target") in tracked
     )
     return json.dumps({"nodes": nodes, "edges": edges}, sort_keys=True, default=str)
+
+
+def _git_tracked_files() -> Optional[set[str]]:
+    """Repo-relative paths git knows about, or None if git cannot answer.
+
+    None makes the caller skip the drift comparison rather than guess. Treating
+    "git unavailable" as "nothing is tracked" would compare two empty shapes
+    and report the graph up to date having examined no nodes at all.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "ls-files"],
+            cwd=_repo_root(),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    return set(proc.stdout.split())
 
 
 def check_kg() -> bool:
