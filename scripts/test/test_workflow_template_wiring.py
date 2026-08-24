@@ -7,7 +7,7 @@ than a cleanup: GitHub resolves `uses: ./.github/workflows/<name>` inside the
 CALLING repo, so a reusable workflow the framework calls in its own self-test
 must also exist as a file in every tenant that calls it. Nothing enforced the
 copies staying in step, and nothing enforced the copies shipping at all — a
-callee missing from install-ai-stack.sh's provisioning list makes GitHub reject
+callee missing from runtime/cli.py's WORKFLOWS list makes GitHub reject
 the whole tenant CI workflow as invalid, which is how eval-security.yml went
 out broken for every Python/FastAPI tenant.
 """
@@ -31,11 +31,21 @@ def _referenced_callees() -> set[str]:
     return names
 
 
-def _provisioned_workflows() -> str:
-    """The `for wf in ...` list in ai-tenant-init's workflow-copy loop."""
-    text = INSTALLER.read_text(encoding="utf-8")
-    start = text.index('for wf in "ci-${stack}.yml"')
-    return text[start : text.index("; do", start)]
+def _provisioned_workflows() -> set[str]:
+    """The list `agentsmith tenant init` actually copies.
+
+    This used to scrape the `for wf in ...` loop out of install-ai-stack.sh.
+    That loop is gone: the scaffold moved into runtime/cli.py, where it is a
+    value a test can import rather than shell text a test has to parse. Reading
+    the real list also means this can no longer pass because a regex matched
+    something that is no longer executed.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, str(REPO))
+    from runtime.cli import WORKFLOWS, STACKS
+
+    return set(WORKFLOWS) | {f"ci-{stack}.yml" for stack in STACKS}
 
 
 def test_every_referenced_callee_exists_as_a_template() -> None:
@@ -50,7 +60,7 @@ def test_every_referenced_callee_is_provisioned_into_tenants() -> None:
     missing = {n for n in _referenced_callees() if n not in provisioned}
     assert not missing, (
         f"referenced by a ci-*.yml template but never copied into tenant repos "
-        f"by ai-tenant-init: {missing}"
+        f"by `agentsmith tenant init` (runtime/cli.py WORKFLOWS): {missing}"
     )
 
 

@@ -50,6 +50,13 @@ dependencies = [
     "pydantic>=2.0,<3.0",
 ]
 
+[project.scripts]
+# The framework's entry point. Everything a user does went through fifteen zsh
+# functions written into ~/.zshrc — undrifting them, testing them, or running
+# them on Windows or in a container was impossible. A console script is none of
+# those things. See runtime/cli.py for the migration path.
+agentsmith = "runtime.cli:main"
+
 [project.optional-dependencies]
 # Backends are optional so a tenant that only needs the gateway + guardrails
 # doesn't pull psycopg2/boto3/temporalio. Matches how the runtime imports

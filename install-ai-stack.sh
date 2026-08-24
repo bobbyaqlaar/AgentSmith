@@ -963,178 +963,20 @@ function _ai_audit_log_event() {
 }
 
 function ai-tenant-init() {
-  local tenant_id="${1:-}"
-  local stack="python-fastapi"
-  local isolation="shared"
-  [ $# -gt 0 ] && shift
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --stack)     stack="${2:-python-fastapi}"; shift 2 ;;
-      --isolation) isolation="${2:-shared}"; shift 2 ;;
-      *) shift ;;
-    esac
-  done
-
-  if [ -z "$tenant_id" ]; then
-    echo "❌ Usage: ai-tenant-init <id> [--stack STACK] [--isolation shared|dedicated]"
-    echo "   STACK options: python-fastapi (default), go, ts-react"
-    return 1
-  fi
-  if [ "$isolation" != "shared" ] && [ "$isolation" != "dedicated" ]; then
-    echo "❌ --isolation must be 'shared' (default) or 'dedicated'"
-    return 1
-  fi
-  # tenant_id is interpolated into a sed replacement string below with no
-  # escaping — an id containing '/', '&', or other sed-significant
-  # characters would corrupt the substitution (Product_Archive.md 4.12).
-  # Same pattern Kubernetes namespace naming already requires, so this also
-  # keeps shared- and dedicated-isolation tenant ids consistent.
-  if ! [[ "$tenant_id" =~ ^[a-z0-9-]+$ ]]; then
-    echo "❌ <id> must match ^[a-z0-9-]+$ : got '$tenant_id'"
-    return 1
-  fi
-
-  if [ ! -d ".git" ]; then
-    echo "❌ Not a git repository — run inside the tenant repo root"
-    return 1
-  fi
-
-  local tmpl_dir="$HOME/.agent-framework/workflow-templates"
-  local ci_template="$tmpl_dir/ci-${stack}.yml"
-  if [ ! -f "$ci_template" ]; then
-    echo "❌ Unknown stack '$stack' — no template at $ci_template"
-    return 1
-  fi
-
-  echo "🏗  Scaffolding tenant '$tenant_id' (stack: $stack)..."
-
-  mkdir -p ".agenticframework"
-  if [ -f ".agenticframework/tenant.yaml" ]; then
-    echo "⚠️  .agenticframework/tenant.yaml already exists — leaving untouched"
+  # DELEGATES to the CLI. This was ~130 lines of shell that also lived in the
+  # installer, so editing the repo left every machine writing the previous
+  # scaffold — observed twice in one day. The logic is now in runtime/cli.py
+  # where a test can reach it, and this stays only so muscle memory keeps
+  # working. Prefer `agentsmith tenant init` directly.
+  if command -v agentsmith >/dev/null 2>&1; then
+    agentsmith tenant init "$@"
+  elif python3 -c "import runtime.cli" >/dev/null 2>&1; then
+    python3 -m runtime.cli tenant init "$@"
   else
-    cat > ".agenticframework/tenant.yaml" << TENANT_EOF
-tenant:
-  id: ${tenant_id}
-  name: ${tenant_id}
-  isolation: ${isolation}
-
-framework:
-  version: "${FRAMEWORK_VERSION}"
-  mode: developer
-
-# Security posture. Every line here is READ — by runtime/prompt_guard.py,
-# input_guardrail.py, moderation.py, tool_registry.py and trace_redactor.py —
-# and each is overridden by the environment variable named beside it. Values
-# shown are the framework defaults, so this block changes nothing until edited.
-#
-# Modes are QUOTED on purpose: YAML 1.1 parses a bare `off` as the boolean
-# false, which would silently mean something else entirely.
-security:
-  prompt_guard: "default"           # off|warn|default|strict  (PROMPT_GUARD)
-  input_guardrail: "default"        # off|default|custom       (INPUT_GUARDRAIL)
-  tool_allowlist_strict: false      # deny-by-default tools    (TOOL_ALLOWLIST_STRICT)
-  ip_redaction: false               # scrub IPs from spans     (ENABLE_IP_REDACTION)
-
-moderation:
-  mode: "optional"                  # off|optional|required    (MODERATION_HOOK)
-  # hook: mypackage.moderation:classify_output
-
-budget:
-  monthly_usd_cap: 150              # AGENT_MONTHLY_USD_CAP overrides
-
-workflow:
-  engine: temporal
-  task_queue: ${tenant_id}          # TASK_QUEUE overrides
-
-# REMOVED, not forgotten: an `environments:` block declaring phoenix_namespace,
-# eval_fail_below and redaction_profile per environment. Nothing read any of the
-# three, and two of them were actively misleading.
-#
-#   redaction_profile   reads as a security control and was not one. The active
-#                       profile comes from $ENVIRONMENT via runtime/environment.py,
-#                       which is fail-closed to `production`. It stays out of this
-#                       file deliberately: a checked-in `development` would
-#                       disable redaction anywhere the env var went missing.
-#   eval_fail_below     thresholds are calibrated against ONE judge and live on
-#                       that judge's binding in models.yaml, so rebinding the
-#                       judge moves its numbers with it. A copy here would be a
-#                       second source that silently grades a new model against
-#                       the old one's calibration.
-TENANT_EOF
-    echo "✅ Wrote .agenticframework/tenant.yaml"
-  fi
-
-  mkdir -p ".github/workflows"
-  local wrote_any=0
-  # eval-fairness/eval-hallucination/eval-ttft-live are referenced by every
-  # ci-<stack>.yml as `uses: ./.github/workflows/<name>` — a missing callee
-  # makes GitHub reject the whole CI workflow as invalid, so they ship
-  # together with the caller.
-  # eval-security.yml belongs to that same "callee ships with the caller" rule:
-  # ci-python-fastapi.yml does `uses: ./.github/workflows/eval-security.yml`,
-  # and it was missing from this list — so every Python/FastAPI tenant was
-  # provisioned with a CI workflow GitHub rejects outright as invalid.
-  for wf in "ci-${stack}.yml" "cd-staging.yml" "cd-production.yml" "eval-scorecard.yml" \
-            "eval-fairness.yml" "eval-hallucination.yml" "eval-ttft-live.yml" \
-            "eval-security.yml"; do
-    local src="$tmpl_dir/$wf"
-    local dest=".github/workflows/$wf"
-    if [ ! -f "$src" ]; then
-      echo "⚠️  Template missing, skipping: $src"
-      continue
-    fi
-    if [ -f "$dest" ]; then
-      echo "⚠️  $dest already exists — leaving untouched"
-      continue
-    fi
-    sed "s/{{TENANT_ID}}/${tenant_id}/g" "$src" > "$dest"
-    echo "✅ Wrote $dest"
-    wrote_any=1
-  done
-
-  # Composite actions the cd-* workflows call as `uses: ./.github/actions/<name>`
-  # — resolved inside THIS repo, so they must exist here, not just in the
-  # framework repo (vendored to ~/.agent-framework/github-actions/ by the installer).
-  local actions_src="$HOME/.agent-framework/github-actions"
-  if [ -d "$actions_src" ] && [ "$(ls -A "$actions_src" 2>/dev/null)" ]; then
-    mkdir -p ".github/actions"
-    local action_dir action_name
-    for action_dir in "$actions_src"/*/; do
-      [ -d "$action_dir" ] || continue
-      action_name="$(basename "$action_dir")"
-      if [ -d ".github/actions/$action_name" ]; then
-        echo "⚠️  .github/actions/$action_name already exists — leaving untouched"
-        continue
-      fi
-      cp -r "$action_dir" ".github/actions/$action_name"
-      echo "✅ Wrote .github/actions/$action_name"
-    done
-  else
-    echo "⚠️  ~/.agent-framework/github-actions/ missing — cd-staging/cd-production reference ./.github/actions/* and will fail; re-run install-ai-stack.sh"
-  fi
-
-  _ai_audit_log_event "tenant_created" "${AGENT_OWNER_ID:-unknown}" "$tenant_id" \
-    "{\"stack\":\"${stack}\",\"isolation\":\"${isolation}\"}"
-
-  echo ""
-  echo "🎯 Tenant '$tenant_id' scaffolded (isolation: ${isolation})."
-  echo "   Next: configure GitHub Environments 'staging' and 'production'"
-  echo "   with required reviewers and per-environment secrets (see SPECS.md §17, §24)."
-  if _ai_repo_opts_out_of_shared_infra; then
-    echo ""
-    echo "   .agenticframework/no-shared-infra is set — this tenant won't be nudged"
-    echo "   toward the machine-wide shared Ops Portal. Point OPS_PORTAL_URL/AGENT_PHOENIX_ENDPOINT"
-    echo "   at a dedicated instance of your own for this tenant's CD secrets."
-  else
-    echo "   Set OPS_PORTAL_URL + OPS_PORTAL_SYNC_TOKEN as GitHub Environment secrets to"
-    echo "   sync this tenant's history to the shared Ops Portal automatically (OPERATIONS.md §5)."
-  fi
-  if [ "$isolation" = "dedicated" ]; then
-    echo ""
-    echo "   Dedicated isolation: provision this tenant's own worker pool with:"
-    echo "   runtime/k8s/dedicated-tenant/render.sh ${tenant_id} <your-worker-image> --apply"
-    echo "   (see runtime/k8s/dedicated-tenant/README.md — separate namespace,"
-    echo "   separate budget-store Secret, separate Phoenix project per SPECS.md §30)"
+    echo "❌ agentsmith CLI not found. Install the runtime package:" >&2
+    echo "     pip install agentsmith-runtime" >&2
+    echo "   or run from a checkout with AGENTSMITH_DIR on PYTHONPATH." >&2
+    return 1
   fi
 }
 

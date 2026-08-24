@@ -1062,7 +1062,7 @@
         "test_every_referenced_callee_is_provisioned_into_tenants",
         "test_reusable_security_workflow_matches_its_tenant_template"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T20:35:55Z",
       "id": "scripts/test/test_workflow_template_wiring.py"
     },
     {
@@ -3197,6 +3197,44 @@
       ],
       "last_modified": "2026-08-24T20:02:11Z",
       "id": "runtime/test/test_config.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "tenant_yaml",
+        "_templates_dir",
+        "init_tenant",
+        "_cmd_tenant_init",
+        "_cmd_doctor",
+        "_cmd_shellenv",
+        "_cmd_version",
+        "build_parser",
+        "main"
+      ],
+      "last_modified": "2026-08-24T20:36:31Z",
+      "id": "runtime/cli.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_scaffold_parses_and_carries_the_declared_id",
+        "test_every_scaffolded_key_is_one_the_runtime_reads",
+        "test_modes_are_strings_not_booleans",
+        "test_env_overrides_ships_commented_out",
+        "test_isolation_round_trips",
+        "test_init_writes_the_config",
+        "test_init_never_overwrites_without_force",
+        "test_ci_callees_ship_with_their_caller",
+        "test_unknown_stack_and_isolation_are_refused",
+        "test_parser_covers_the_shell_functions_being_replaced",
+        "test_shellenv_emits_evaluable_exports",
+        "test_main_returns_two_on_a_bad_argument",
+        "test_stacks_match_the_shipped_ci_templates"
+      ],
+      "last_modified": "2026-08-24T20:30:42Z",
+      "id": "runtime/test/test_cli.py"
     }
   ],
   "edges": [
@@ -3318,6 +3356,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/verify_system.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_workflow_template_wiring.py",
       "target": "runtime/__init__.py"
     },
     {
@@ -3658,6 +3701,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_config.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_cli.py",
       "target": "runtime/__init__.py"
     }
   ]
