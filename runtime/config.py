@@ -38,6 +38,21 @@ from typing import Any, Optional
 
 _UNSET = object()
 
+_TRUE = {"1", "true", "yes", "on"}
+
+
+def as_bool(value: Any) -> bool:
+    """Coerce a flag from either channel.
+
+    YAML gives a real bool; the environment gives a string. Unrecognised text
+    is False rather than truthy — `TOOL_ALLOWLIST_STRICT=maybe` must not turn a
+    deny-by-default guard on by accident, nor off: False is this flag's
+    documented default in every case it is used for.
+    """
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in _TRUE
+
 
 def repo_root(start: Optional[Path] = None) -> Path:
     """Nearest ancestor holding `.agenticframework/` or `.git/`."""

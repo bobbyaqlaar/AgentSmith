@@ -695,6 +695,11 @@ For internal registries, the installer supports fetching from a private artifact
 | `AGENT_OWNER_NAME` | Display name | `Bobby Rajagopal` |
 | `AGENT_PHOENIX_ENDPOINT` | Phoenix URL | `http://localhost:6006` |
 | `AGENT_MONTHLY_USD_CAP` | Dev session monthly budget. Also the production `LLMGateway`'s fallback budget cap (`runtime/llm_gateway.py:LLMGateway.__init__`) when a tenant doesn't pass an explicit `budget_cap_usd` — same env var, same default, both layers | `150.0` |
+| `PROMPT_GUARD` | Overrides `security.prompt_guard` in tenant.yaml. `off\|warn\|default\|strict` | `default` |
+| `INPUT_GUARDRAIL` | Overrides `security.input_guardrail`. `off\|default\|custom` | `default` (`off` in development) |
+| `MODERATION_HOOK` | Overrides `moderation.mode`. `off\|optional\|required` | `optional` |
+| `TOOL_ALLOWLIST_STRICT` | Overrides `security.tool_allowlist_strict` — deny-by-default tool calls | `false` |
+| `ENABLE_IP_REDACTION` | Overrides `security.ip_redaction` | `false` |
 | `AGENT_TENANT_ID` | Tenant this process serves. Second in `runtime/tenancy.py:resolve_tenant_id`'s order — after an explicit argument, before `.agenticframework/tenant.yaml`'s `tenant.id`. Set it on a **dedicated** worker pool; leave it unset on a shared pool, where the tenant varies per request and is passed explicitly. Unresolved raises rather than defaulting: this id partitions the budget ledger, the audit log and cross-tenant isolation | *(from tenant.yaml)* |
 | `AGENT_PROJECT_NAME` | `service.name` / `project.name` on the OTel Resource. Defaults to the repo directory name — the one identifier a repo-derived value is right for, since nothing partitions on it | *(repo name)* |
 | `AI_STACK_SLACK_WEBHOOK` | Optional Slack alert webhook | `https://hooks.slack.com/...` |

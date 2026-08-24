@@ -181,7 +181,11 @@ def _ensure_declared_moderator() -> None:
 
 
 def resolve_mode() -> str:
-    raw = os.environ.get("MODERATION_HOOK", "").strip().lower()
+    from runtime.config import resolve
+
+    raw = str(
+        resolve("moderation.mode", env_var="MODERATION_HOOK", default="")
+    ).strip().lower()
     if raw in {"off", "optional", "required"}:
         return raw
     return "optional"

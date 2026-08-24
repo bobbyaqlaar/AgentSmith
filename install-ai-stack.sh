@@ -1022,16 +1022,44 @@ framework:
   version: "${FRAMEWORK_VERSION}"
   mode: developer
 
-environments:
-  development:
-    phoenix_namespace: ${tenant_id}-dev
-  staging:
-    phoenix_namespace: ${tenant_id}-staging
-    eval_fail_below: 0.75
-  production:
-    phoenix_namespace: ${tenant_id}-prod
-    eval_fail_below: 0.80
-    redaction_profile: production
+# Security posture. Every line here is READ — by runtime/prompt_guard.py,
+# input_guardrail.py, moderation.py, tool_registry.py and trace_redactor.py —
+# and each is overridden by the environment variable named beside it. Values
+# shown are the framework defaults, so this block changes nothing until edited.
+#
+# Modes are QUOTED on purpose: YAML 1.1 parses a bare `off` as the boolean
+# false, which would silently mean something else entirely.
+security:
+  prompt_guard: "default"           # off|warn|default|strict  (PROMPT_GUARD)
+  input_guardrail: "default"        # off|default|custom       (INPUT_GUARDRAIL)
+  tool_allowlist_strict: false      # deny-by-default tools    (TOOL_ALLOWLIST_STRICT)
+  ip_redaction: false               # scrub IPs from spans     (ENABLE_IP_REDACTION)
+
+moderation:
+  mode: "optional"                  # off|optional|required    (MODERATION_HOOK)
+  # hook: mypackage.moderation:classify_output
+
+budget:
+  monthly_usd_cap: 150              # AGENT_MONTHLY_USD_CAP overrides
+
+workflow:
+  engine: temporal
+  task_queue: ${tenant_id}          # TASK_QUEUE overrides
+
+# REMOVED, not forgotten: an `environments:` block declaring phoenix_namespace,
+# eval_fail_below and redaction_profile per environment. Nothing read any of the
+# three, and two of them were actively misleading.
+#
+#   redaction_profile   reads as a security control and was not one. The active
+#                       profile comes from $ENVIRONMENT via runtime/environment.py,
+#                       which is fail-closed to `production`. It stays out of this
+#                       file deliberately: a checked-in `development` would
+#                       disable redaction anywhere the env var went missing.
+#   eval_fail_below     thresholds are calibrated against ONE judge and live on
+#                       that judge's binding in models.yaml, so rebinding the
+#                       judge moves its numbers with it. A copy here would be a
+#                       second source that silently grades a new model against
+#                       the old one's calibration.
 TENANT_EOF
     echo "✅ Wrote .agenticframework/tenant.yaml"
   fi

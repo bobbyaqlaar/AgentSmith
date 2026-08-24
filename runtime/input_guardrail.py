@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import copy
 import logging
-import os
 import re
 from collections.abc import Callable
 from typing import Any, Optional
@@ -66,7 +65,11 @@ def register_input_guardrail(fn: ScrubFn) -> None:
 
 
 def resolve_mode() -> str:
-    raw = os.environ.get("INPUT_GUARDRAIL", "").strip().lower()
+    from runtime.config import resolve
+
+    raw = str(
+        resolve("security.input_guardrail", env_var="INPUT_GUARDRAIL", default="")
+    ).strip().lower()
     if raw in {"off", "default", "custom"}:
         return raw
     if get_environment() == "development":

@@ -7,7 +7,6 @@ Deny-by-default when strict=True and an allowlist is loaded.
 from __future__ import annotations
 
 import inspect
-import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -97,6 +96,17 @@ def default_allowlist_path() -> Optional[Path]:
     return security_artefact_path("TOOL_ALLOWLIST_PATH", "tool_allowlist.yaml")
 
 
+def _resolved_tenant_or_none() -> Optional[str]:
+    """The tenant, or None. Never fatal — a tool registry with no tenant still
+    works; its spans are simply attributed by the identity processor instead."""
+    try:
+        from runtime.tenancy import resolve_tenant_id
+
+        return resolve_tenant_id()
+    except Exception:
+        return None
+
+
 class ToolRegistry:
     def __init__(
         self,
@@ -109,16 +119,32 @@ class ToolRegistry:
         # filtering a shared Phoenix instance to one tenant showed that
         # tenant's steps and LLM calls but none of its tool calls — the
         # "every tool call streamed to Phoenix, attributed" claim held for
-        # the span and failed for the attribution. Falls back to TENANT_ID so
-        # a tenant that never touches this constructor still gets it.
-        self._tenant_id = tenant_id or os.environ.get("TENANT_ID", "").strip() or None
+        # the span and failed for the attribution.
+        #
+        # Largely vestigial now: AgentIdentityProcessor stamps tenant.id onto
+        # every span from the bound context, so a registry constructed without
+        # one is still attributed. Kept as an override, resolved rather than
+        # read from a single hardcoded variable — this was the sixth place in
+        # the codebase reading the tenant name its own way.
+        self._tenant_id = tenant_id or _resolved_tenant_or_none()
         self._tools: dict[str, ToolSpec] = {}
         path = allowlist_path if allowlist_path is not None else default_allowlist_path()
         self._allowlist: Optional[set[str]] = (
             load_allowlist(path) if path is not None and path.exists() else None
         )
         if strict is None:
-            strict = os.environ.get("TOOL_ALLOWLIST_STRICT", "").strip() == "1"
+            # security.tool_allowlist_strict in tenant.yaml, TOOL_ALLOWLIST_STRICT
+            # overriding. Deny-by-default enforcement is tenant policy an auditor
+            # reads; it was reachable only through an environment variable.
+            from runtime.config import as_bool, resolve
+
+            strict = as_bool(
+                resolve(
+                    "security.tool_allowlist_strict",
+                    env_var="TOOL_ALLOWLIST_STRICT",
+                    default=False,
+                )
+            )
         self._strict = bool(strict)
 
     def register(

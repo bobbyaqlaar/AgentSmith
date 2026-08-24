@@ -255,8 +255,10 @@ class TraceRedactor(_OTelSpanProcessor):
         # HITL-flagged span got encrypted with whichever tenant's key the
         # processor happened to be constructed with (Product_Archive.md 1.2).
         self.default_tenant_id = tenant_id or os.environ.get("TENANT_ID", "unknown")
-        self.enable_ip_redaction = (
-            os.environ.get("ENABLE_IP_REDACTION", "false").lower() == "true"
+        from runtime.config import as_bool, resolve
+
+        self.enable_ip_redaction = as_bool(
+            resolve("security.ip_redaction", env_var="ENABLE_IP_REDACTION", default=False)
         )
         self._extra_patterns = _load_extra_patterns()
         self._blob_stores: dict[str, HITLBlobStore] = {}

@@ -155,3 +155,64 @@ def test_a_blank_override_is_not_an_override(repo, monkeypatch):
     monkeypatch.setenv("CAP_VAR", "   ")
     assert resolve("budget.monthly_usd_cap", env_var="CAP_VAR", default=150.0,
                    cast=float, root=root) == 5.0
+
+
+# ── Security posture: declared in tenant.yaml, overridden by env ─────────────
+
+
+@pytest.mark.parametrize(
+    "dotted,env_var,declared,expected",
+    [
+        ("security.prompt_guard", "PROMPT_GUARD", "strict", "strict"),
+        ("security.input_guardrail", "INPUT_GUARDRAIL", "off", "off"),
+        ("moderation.mode", "MODERATION_HOOK", "required", "required"),
+    ],
+)
+def test_posture_is_readable_from_the_declaration(
+    repo, monkeypatch, dotted, env_var, declared, expected
+):
+    """These were reachable only through environment variables, so a tenant's
+    security posture lived nowhere reviewable — not in the repo, not in a diff,
+    not in anything an auditor could be handed."""
+    section, key = dotted.split(".")
+    root = repo({section: {key: declared}})
+    monkeypatch.delenv(env_var, raising=False)
+    assert resolve(dotted, env_var=env_var, default="", root=root) == expected
+
+
+def test_env_still_overrides_the_posture(repo, monkeypatch):
+    root = repo({"security": {"prompt_guard": "off"}})
+    monkeypatch.setenv("PROMPT_GUARD", "strict")
+    assert resolve("security.prompt_guard", env_var="PROMPT_GUARD",
+                   default="", root=root) == "strict"
+
+
+def test_a_declared_false_flag_is_honoured_not_treated_as_absent(repo, monkeypatch):
+    """`False` is a declared value; `None` is an absent one. Collapsing them
+    would make `tool_allowlist_strict: false` fall through to the default,
+    which for a deny-by-default guard is the wrong direction to guess."""
+    from runtime.config import as_bool
+
+    root = repo({"security": {"tool_allowlist_strict": False}})
+    monkeypatch.delenv("TOOL_ALLOWLIST_STRICT", raising=False)
+    assert resolve("security.tool_allowlist_strict",
+                   env_var="TOOL_ALLOWLIST_STRICT", default=True, root=root) is False
+    assert as_bool(False) is False
+
+
+def test_yaml_bare_off_would_have_been_a_boolean(repo, monkeypatch):
+    """Why every mode in the scaffold is quoted. YAML 1.1 parses a bare `off`
+    as the boolean false, so `prompt_guard: off` would resolve to False and
+    match no mode name at all."""
+    import yaml as _yaml
+
+    assert _yaml.safe_load("mode: off")["mode"] is False
+    assert _yaml.safe_load('mode: "off"')["mode"] == "off"
+
+
+def test_as_bool_reads_both_channels(monkeypatch):
+    from runtime.config import as_bool
+
+    assert as_bool(True) is True and as_bool(False) is False       # yaml
+    assert as_bool("1") and as_bool("true") and as_bool("YES")     # env
+    assert not as_bool("0") and not as_bool("") and not as_bool("maybe")

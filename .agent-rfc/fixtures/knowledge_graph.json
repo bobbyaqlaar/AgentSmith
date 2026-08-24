@@ -168,7 +168,7 @@
         "_sub_card",
         "_sub"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T17:29:48Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -244,7 +244,7 @@
         "apply_output_moderation",
         "__init__"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T17:29:40Z",
       "id": "runtime/moderation.py"
     },
     {
@@ -282,6 +282,7 @@
         "_schema_from_fn",
         "load_allowlist",
         "default_allowlist_path",
+        "_resolved_tenant_or_none",
         "ToolRegistry",
         "tool",
         "__init__",
@@ -292,7 +293,7 @@
         "invoke",
         "decorator"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T17:30:43Z",
       "id": "runtime/tool_registry.py"
     },
     {
@@ -317,7 +318,7 @@
         "_scrub",
         "_truncate"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T17:30:23Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -405,7 +406,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T17:29:48Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -3145,6 +3146,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "as_bool",
         "repo_root",
         "_dotenv_value",
         "load_env_file",
@@ -3152,7 +3154,7 @@
         "config_get",
         "resolve"
       ],
-      "last_modified": "2026-08-24T17:03:59Z",
+      "last_modified": "2026-08-24T17:29:49Z",
       "id": "runtime/config.py"
     },
     {
@@ -3171,9 +3173,14 @@
         "test_no_default_means_raise_not_invent",
         "test_a_malformed_override_raises_rather_than_falling_through",
         "test_a_blank_override_is_not_an_override",
+        "test_posture_is_readable_from_the_declaration",
+        "test_env_still_overrides_the_posture",
+        "test_a_declared_false_flag_is_honoured_not_treated_as_absent",
+        "test_yaml_bare_off_would_have_been_a_boolean",
+        "test_as_bool_reads_both_channels",
         "_build"
       ],
-      "last_modified": "2026-08-24T17:07:22Z",
+      "last_modified": "2026-08-24T17:32:15Z",
       "id": "runtime/test/test_config.py"
     }
   ],
@@ -3221,6 +3228,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/idempotency.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/moderation.py",
       "target": "runtime/__init__.py"
     },
     {

@@ -29,7 +29,6 @@ or PROMPT_DENYLIST_PATH.
 
 from __future__ import annotations
 
-import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -118,7 +117,12 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
 def resolve_mode() -> str:
     """off | warn | default | strict. Unrecognised values fall back to
     `default` (blocking) — a typo must never silently disable the guard."""
-    raw = os.environ.get("PROMPT_GUARD", "").strip().lower()
+    # security.prompt_guard in tenant.yaml, PROMPT_GUARD overriding it. The
+    # posture is tenant policy an auditor reads; it was reachable only through
+    # an environment variable, so it lived nowhere reviewable.
+    from runtime.config import resolve
+
+    raw = str(resolve("security.prompt_guard", env_var="PROMPT_GUARD", default="")).strip().lower()
     if raw == "block":  # explicit alias for the blocking default
         return "default"
     if raw in {"off", "warn", "default", "strict"}:
