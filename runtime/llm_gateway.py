@@ -100,7 +100,19 @@ def _load_yaml(path: Path) -> dict:
 
         with path.open() as fh:
             return yaml.safe_load(fh) or {}
-    except Exception:
+    except Exception as exc:
+        # A malformed registry returned {} and every role fell back to the
+        # framework's defaults — a tenant's whole routing table replaced by
+        # someone else's, from a YAML typo, with nothing said. The fallback is
+        # still right (the gateway must not refuse to start over a comment), but
+        # it is a different state from "no registry here".
+        logger.error(
+            "model registry NOT loaded from %s (%s) — falling back to framework "
+            "defaults, so this tenant's routes, costs and degrade ladder are NOT "
+            "in effect.",
+            path,
+            exc,
+        )
         return {}
 
 

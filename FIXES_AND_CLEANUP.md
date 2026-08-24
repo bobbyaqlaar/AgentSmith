@@ -168,11 +168,16 @@ Small, specific, and deliberately not fixed in that release.
   predates the control, which is a release decision, not a fix.
   **Trigger:** a tenant's fairness or hallucination gate is green and someone
   asks what it measured. Found in the 2026-08-24 review pass.
-- **`.env.swp`** — an orphaned vim swap file at the repo root, gitignored. Left
-  in place because it may hold unsaved `.env` edits; delete once you're sure.
-- **`scripts/verify_ttft.py:21`** — unused `from pathlib import Path`, flagged
-  by ruff. Its sibling import carries a deliberate `noqa`, so the pair was left
-  alone rather than half-changed.
+- ~~**`.env.swp`**~~ — **gone.** The orphaned vim swap file is no longer on
+  disk and was never tracked. This entry outlived the file it described.
+- ~~**`scripts/verify_ttft.py:21`**~~ — **closed.** `from pathlib import Path`
+  is no longer imported there and `ruff check` is clean on that file. The
+  remaining `noqa` on the `_shared` import is deliberate and still correct.
+
+  Both of the above were verified as false on 2026-08-24, which is the header's
+  own instruction working: *"If an entry here says something is missing, check
+  it still is."* A backlog that describes a fixed problem costs the same
+  attention as one that describes a real one, and spends it on nothing.
 
 ---
 

@@ -315,7 +315,7 @@
         "_scrub",
         "_truncate"
       ],
-      "last_modified": "2026-08-24T17:30:23Z",
+      "last_modified": "2026-08-24T19:48:17Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -380,7 +380,7 @@
         "_invoke",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-24T17:04:28Z",
+      "last_modified": "2026-08-24T19:48:17Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -902,7 +902,7 @@
         "find_violations",
         "main"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T19:48:17Z",
       "id": "scripts/check_bare_except.py"
     },
     {

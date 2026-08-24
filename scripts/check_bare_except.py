@@ -54,8 +54,18 @@ def _is_noop_body(body: list[ast.stmt]) -> bool:
 def find_violations(source: str, path: str) -> list[tuple[str, int]]:
     try:
         tree = ast.parse(source, filename=path)
-    except SyntaxError:
-        return []  # not this checker's job to report syntax errors
+    except SyntaxError as exc:
+        # Reporting the syntax error is not this checker's job — py_compile and
+        # ruff both do it. Returning [] silently IS its job to get right: an
+        # empty list means "examined, clean", and a file this checker could not
+        # read has not been examined at all. Say so, then defer.
+        print(
+            f"check_bare_except: SKIPPED {path} — could not parse it "
+            f"({exc.msg} at line {exc.lineno}), so it was NOT checked for bare "
+            f"excepts. Fix the syntax error and re-run.",
+            file=sys.stderr,
+        )
+        return []
 
     lines = source.splitlines()
     violations = []

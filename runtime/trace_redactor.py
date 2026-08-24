@@ -103,7 +103,21 @@ def _load_extra_patterns() -> list:
 
                 data = yaml.safe_load(candidate.read_text()) or {}
                 return [re.compile(p) for p in data.get("patterns", [])]
-            except Exception:
+            except Exception as exc:
+                # LOUD. A typo in a tenant's pattern file used to return an
+                # empty list, indistinguishable from "this tenant declared no
+                # extra patterns" — so the file silently stopped contributing
+                # and every payload it was written to scrub went to Phoenix
+                # less redacted than the tenant believed. The framework's own
+                # patterns still apply, so this degrades rather than fails, but
+                # it must not degrade quietly: it is a compliance control.
+                logger.error(
+                    "redaction patterns NOT loaded from %s (%s) — this tenant's "
+                    "extra PII patterns are NOT being applied; framework defaults "
+                    "only. Fix the file: spans are being exported meanwhile.",
+                    candidate,
+                    exc,
+                )
                 return []
         if (parent / ".git").exists():
             break
