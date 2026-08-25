@@ -272,26 +272,11 @@ class AgentLogger:
 
 # ── Module-level convenience instance ─────────────────────────────────────────
 
-_default_logger: Optional[AgentLogger] = None
-
-
-def get_logger(
-    agent_name: str = "Agent",
-    agent_role: Literal["orchestrator", "subagent", "standalone"] = "standalone",
-    orchestrator: Optional[str] = None,
-    session_id: Optional[str] = None,
-    model: Optional[str] = None,
-) -> AgentLogger:
-    global _default_logger
-    if _default_logger is None:
-        _default_logger = AgentLogger(
-            agent_name=agent_name,
-            agent_role=agent_role,
-            orchestrator=orchestrator,
-            session_id=session_id,
-            model=model,
-        )
-    return _default_logger
+# `get_logger()` and its module-level singleton were removed here (2026-08-26):
+# no caller anywhere, while every real call site constructs `AgentLogger(...)`
+# directly. A process-wide singleton is also the wrong shape for this class —
+# one worker serves many agent roles, and the first caller would have fixed the
+# role for every later one.
 
 
 # ── CLI: dump unresolved issues ───────────────────────────────────────────────

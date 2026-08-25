@@ -722,7 +722,6 @@
         "_git_config",
         "_owner",
         "AgentLogger",
-        "get_logger",
         "__init__",
         "info",
         "minor",
@@ -733,7 +732,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-25T15:22:37Z",
+      "last_modified": "2026-08-25T21:11:11Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -745,12 +744,11 @@
         "_send_webhook",
         "send_notification",
         "notify_hitl_required",
-        "notify_circuit_breaker",
         "notify_eval_result",
         "_post",
         "_dispatch"
       ],
-      "last_modified": "2026-08-25T15:23:43Z",
+      "last_modified": "2026-08-25T21:11:11Z",
       "id": "scripts/notifier.py"
     },
     {
@@ -812,15 +810,11 @@
       "symbols": [
         "is_online",
         "get_llm_endpoint",
-        "require_online",
-        "start_background_watcher",
-        "stop_background_watcher",
         "_notify",
         "_notify_offline",
-        "_notify_recovery",
-        "_run"
+        "_notify_recovery"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T21:11:11Z",
       "id": "scripts/network_watchdog.py"
     },
     {
@@ -3764,6 +3758,21 @@
       ],
       "last_modified": "2026-08-25T20:52:41Z",
       "id": "portal/lib/wireContract.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_tracked",
+        "_public_defs",
+        "_referenced_names",
+        "test_the_sweep_reads_something",
+        "test_the_sweep_can_see_a_real_caller",
+        "test_every_public_function_has_a_caller",
+        "test_configure_metrics_specifically_is_reachable"
+      ],
+      "last_modified": "2026-08-25T21:10:03Z",
+      "id": "scripts/test/test_no_orphaned_entrypoints.py"
     }
   ],
   "edges": [

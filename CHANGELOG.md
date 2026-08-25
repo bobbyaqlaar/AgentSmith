@@ -61,6 +61,36 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Review levers — three new, and five dead functions found by one of them
+
+- **`docs/review-levers.md` gains 1.8, 3.7 and 3.8**, plus an amendment to 4.6.
+  - **3.7 Implemented is not invoked** — the inverse of 3.4: not a control
+    declared and unenforced, but one fully built and never reached. Three
+    scalps in one session (`configure_metrics`, `purge_expired`,
+    `_DEFAULT_REGISTRY`) and five more the moment it was written as a test.
+  - **3.8 Two owners, two cadences** — when both sides of an interface deploy
+    independently, a version lag is the design, and the wire needs a version, a
+    written compatibility window, and consumers that read absent as "other
+    version" rather than "fault". Its second scalp is the review itself:
+    reading the tenant's pin as a defect rather than as the independence it
+    exists to provide.
+  - **1.8 Merging N copies** — pick the copy that is already right rather than
+    writing an N+1, and expect the merged one to face inputs none of them did.
+- **Five public functions deleted, none of which had a caller anywhere** — not
+  in this repo, a workflow, or a doc: `agent_logger.get_logger` (a process-wide
+  singleton, the wrong shape for a class whose worker serves many roles),
+  `notifier.notify_circuit_breaker` (a second format for an alert the breaker
+  already builds inline), `network_watchdog.require_online`, and
+  `start_background_watcher` with its `pass`-bodied partner
+  `stop_background_watcher`. The watcher's own docstring promised proactive
+  offline detection "at agent startup"; nothing ever started it.
+- **`scripts/test/test_no_orphaned_entrypoints.py`** makes the lever standing.
+  References come from the AST, not from grepping text — a function named in a
+  docstring is not a caller, and prose-right/wiring-absent is the case it
+  exists for — plus a control test that it can see three known-called functions,
+  so an empty result cannot pass for the wrong reason.
+
+
 ### Observability — a tenant now says which AgentSmith wrote the row
 
 **Tenant-visible.** New `runtime/version.py`. Every span's Resource carries

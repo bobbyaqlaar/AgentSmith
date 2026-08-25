@@ -84,47 +84,14 @@ def get_llm_endpoint() -> dict:
     return {"base_url": OLLAMA_BASE_URL, "api_key": OLLAMA_API_KEY}
 
 
-def require_online(feature: str = "this feature") -> None:
-    """
-    Raise a RuntimeError if offline. Use before any operation that
-    strictly requires internet access (e.g. fetching remote data).
-    """
-    if not is_online(force=True):
-        raise RuntimeError(
-            f"Network offline — {feature} requires internet connectivity. "
-            f"Start local Ollama: `ollama serve`"
-        )
-
-
-# ── Background keepalive thread ───────────────────────────────────────────────
-
-_watcher_thread: Optional[threading.Thread] = None
-
-
-def start_background_watcher(interval: float = RECHECK_INTERVAL) -> None:
-    """
-    Spawn a daemon thread that continuously monitors connectivity.
-    Call once at agent startup to enable proactive offline detection.
-    """
-    global _watcher_thread
-    if _watcher_thread and _watcher_thread.is_alive():
-        return
-
-    def _run() -> None:
-        while True:
-            is_online(force=True)
-            time.sleep(interval)
-
-    _watcher_thread = threading.Thread(
-        target=_run, daemon=True, name="network-watchdog"
-    )
-    _watcher_thread.start()
-
-
-def stop_background_watcher() -> None:
-    # Daemon thread — exits automatically with main process.
-    # This is a no-op kept for API symmetry.
-    pass
+# `require_online()` and the background keepalive thread were removed here
+# (2026-08-26). Three public functions, no caller anywhere — not in this repo,
+# not in a workflow, not in a doc. `start_background_watcher`'s own docstring
+# said "call once at agent startup to enable proactive offline detection", and
+# nothing ever did, so the detection it described had never run;
+# `stop_background_watcher` was `pass`, kept "for API symmetry" with it.
+# `is_online()` below is called on demand and caches, which is what every real
+# caller actually wanted.
 
 
 # ── Notifications ─────────────────────────────────────────────────────────────

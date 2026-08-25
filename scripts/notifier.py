@@ -186,13 +186,10 @@ def notify_hitl_required(
     )
 
 
-def notify_circuit_breaker(tier: str, detail: str) -> None:
-    """Convenience wrapper for circuit breaker alerts."""
-    send_notification(
-        title=f"🚨 Circuit Breaker ({tier})",
-        message=detail,
-        urgency="critical",
-    )
+# `notify_circuit_breaker()` was removed here (2026-08-26). It had no caller,
+# and circuit_breaker._notify_if_requested builds its own title inline — so the
+# repo held two formats for one alert and used the other one. The live path is
+# the one that stays.
 
 
 def notify_eval_result(

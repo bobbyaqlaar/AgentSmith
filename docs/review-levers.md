@@ -3,7 +3,9 @@
 The checklist a review pass runs against. Groups 1–5 are the standing list.
 Group 6 and the items marked **(+)** were added on 2026-08-24, the items
 marked **(++)** on 2026-08-25 after seven passes over `portal/`, and those
-marked **(+++)** on 2026-08-25 after a fourteenth pass over `scripts/`. Each one is
+marked **(+++)** on 2026-08-25 after a fourteenth pass over `scripts/`, and those
+marked **(++++)** on 2026-08-26 after closing the observability audit's last two
+items. Each one is
 traceable to a defect that a pass using the earlier list did not catch — the
 provenance is kept because a lever with no scalp is decoration.
 
@@ -34,6 +36,21 @@ honest outcome when the lever was right and its *scope* was wrong.
    *Caught: three TS catalogs against `db/schema.sql`'s CHECK constraints, one of
    them with a fourth copy in a route; `portal/lib/environment.ts` against
    `runtime/environment.py`'s alias table.*
+8. **(++++) When you merge N copies, find the one that is already right — and
+   expect the merged version to face inputs none of them did.** Two halves.
+   First: several implementations of one rule usually include a correct one,
+   and writing a fresh N+1 discards whatever it learned. Read them all, pick
+   the survivor, and say why in the module that keeps it. Second: extraction
+   is not relocation. Each copy was correct for the narrow domain its own
+   caller fed it, and the merged one is reachable from every caller at once,
+   so cases that were unreachable per-copy become live on the first day.
+   *Caught: four resolvers turning an endpoint variable into an OTLP URL. The
+   TypeScript one was the only one that handled a base already naming
+   `/v1/traces` — the trap this repo's own docs set — so it became the shared
+   Python one rather than a fifth invention. And because it had only ever
+   resolved traces, it had never had to handle a base naming a DIFFERENT
+   signal; asking it for metrics would have produced `/v1/traces/v1/metrics`,
+   a case that did not exist until the two signals shared a resolver.*
 
 ## 2 · Quality / safety
 
@@ -108,6 +125,48 @@ honest outcome when the lever was right and its *scope* was wrong.
 6. **(+) Minimal host dependency.** What does this require of the machine beyond the
    package — a shell profile, a specific shell, a writable `$HOME`, an OS?
    *Open: 15 zsh functions and ~61 lines in `~/.zshrc`, none testable, none portable.*
+7. **(++++) Implemented is not invoked. Ask "who calls this?" and grep.**
+   The inverse of item 4: not a control that is declared and unenforced, but
+   one that is fully BUILT and never reached. Correct code, correct tests,
+   zero call sites. It is invisible precisely because everything you would
+   inspect looks right, and a component that no-ops when uninstalled — the
+   usual, correct choice for telemetry — cannot tell you it was never
+   installed. The check costs one grep per public entry point, and it should
+   run against the ENTRYPOINTS a deployment actually starts: the worker, the
+   CLI, the container command.
+   *Caught three times in one session, which is why it is a lever:
+   `configure_metrics()` had no caller in the framework, the tenant or the
+   example, so every counter wrote into a proxy meter that was never resolved;
+   `IdempotencyStore.purge_expired` had no caller while its table grew a row
+   per gateway call forever; `_DEFAULT_REGISTRY` was private with no accessor,
+   so a tool registered through the documented decorator could not be invoked
+   by anything.*
+   *And five more on the lever's first run, once it was written as a test
+   (`scripts/test/test_no_orphaned_entrypoints.py`): `get_logger`,
+   `notify_circuit_breaker`, `require_online`, `start_background_watcher` and
+   its `pass`-bodied partner `stop_background_watcher`, kept "for API symmetry"
+   with a function nothing called. All five deleted — an allowlist is where
+   dead code goes to become permanent. Collect references from the AST, not by
+   grepping text: a function named in a docstring is not a caller, and the
+   prose being right while the wiring is absent is the exact case.*
+8. **(++++) Two owners, two cadences.** For every interface, ask who ships each
+   side and whether they can deploy independently. When the answer is yes —
+   platform team and product team, IT and the business, framework and tenant —
+   then a version lag is the DESIGN, not a defect, and three things must
+   exist: a version on the wire, a written compatibility window, and consumers
+   that read an unknown or absent field as "other version" rather than
+   "fault". Pinning gives the downstream side a cadence of its own; it does
+   not by itself tell the upstream side what it must keep accepting.
+   *Caught: AgentSmith pinned and tracked its LIBRARY surface — `runtime/`
+   imported into the tenant process — and left the WIRE surface (span
+   attributes, the run-status POST, `agent_runs` columns) carrying no version
+   at all, though that is the surface IT upgrades unilaterally and the one the
+   monitoring product is built on. A v1.2.0 tenant's NULL cost and a current
+   tenant's broken exporter were the same cell.*
+   *Also caught, in the review itself: reading the tenant's version lag as a
+   defect to be fixed rather than as the independence the pin exists to
+   provide. A review that calls a designed separation a bug will propose
+   coupling as the remedy.*
 
 ## 4 · Process (how work is done)
 
@@ -130,6 +189,12 @@ honest outcome when the lever was right and its *scope* was wrong.
    inside the tenant's own product.*
 6. **(+) Run the gates locally before pushing** — and check the git state matches what
    CI will see, or the local run is not the same run.
+   **(++++)** Run the ones CI LISTS, not the ones you remember. Enumerate the
+   workflow's steps and work down them; a subset that passes is not a pass.
+   *Caught: a push that failed on SPECS.md's §16 repo-tree drift check — a new
+   module had been added to the module table and not to the tree — after a
+   local run of every gate the author happened to know about. Item 4 of this
+   group already says `self-test.yml` is the definitive list.*
 
 ## 5 · Intuitive UI
 
