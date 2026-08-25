@@ -7,6 +7,38 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — review pass 13, three repos (2026-08-25)
+
+Run across AgentSmith, KYC Sentinel and `examples/oil-price-agent` together,
+looking for what crosses the boundaries between them.
+
+| Finding | Where | Fix |
+|---|---|---|
+| `SPECS.md` §25 taught `wait_condition(lambda: self._hitl_approved is not None, ...)` — the read-never-consume idiom pass 12 removed. The fix reached the base class, the example and the tests; the spec that teaches the pattern was the fourth site | AgentSmith | Rewritten around `await_hitl_approval`, naming both signals and stating why the field must not be waited on |
+| KYC's decision gate is `run_with_hitl_gate` (policy-006: `approve_activity` only after a recorded human decision) and **nothing in the repo could record one**. The README said "approve via the Ops Portal", which has no HITL surface — it does DLQ replay and discard — and no signal sender shipped. A HIGH-rating application had one reachable outcome: wait out the 24h timeout and dead-letter | KYC Sentinel | `resolve_hitl.py` ships, taking the workflow id `trigger_workflow.py` prints. README corrected. A test asserts a sender exists and that the README does not point approvals at the portal |
+| **Twelve passes of fixes reach no tenant.** KYC pins `agentsmith-runtime@v1.2.0`; passes 8–12 are unreleased on `main`, where `[Unreleased]` now holds 21 sections over 783 lines and the compatibility matrix's newest row is still 1.2.x | Both | **Reported, not actioned** — see below |
+
+**The release gap is the finding that matters most.** The DLQ replay
+idempotency, the budget period key, zero-cost billing on unreported usage, the
+dropped Anthropic temperature, the redactor's sequence gap and the HITL
+approval reuse are all on `main` and none are in a tag. The testbed tenant whose
+purpose is to exercise the framework pins a release that predates every one of
+them. Cutting a version is a decision about semver and the compatibility
+matrix — `run_with_hitl_gate` gained a signal and changed approval lifetime, the
+gateway's `CompletionResult.input_tokens` can now be `None`, and
+`DeadLetterQueue.replay` raises a new exception — so it is Bobby's call, not a
+review action.
+
+**Levers that came back clean, recorded because a checked suspicion is worth as
+much as a confirmed one.** Pass 10 found that temperature was dropped on every
+Anthropic-shaped request, which would have meant KYC's analyst running at 1.0
+rather than its declared 0.1 — and its workflow reasons carefully about that
+variance. It does not apply: KYC reaches Claude through OpenRouter with
+`api_format: openai_chat`, and its judge is on Groq. Both hosted routes are
+OpenAI-shaped, so the defect never touched this tenant.
+
+---
+
 ## Completed — review pass 12, `runtime/workflows/base_workflow.py` (2026-08-25)
 
 | Finding | Fix |

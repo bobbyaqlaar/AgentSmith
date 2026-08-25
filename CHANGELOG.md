@@ -20,6 +20,15 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Pass 13 — across AgentSmith, KYC Sentinel and the oil-price example
+
+- **`SPECS.md` still documented the HITL pattern pass 12 removed** — a bare
+  `wait_condition(lambda: self._hitl_approved is not None, ...)`, which is the
+  read-never-consume idiom that let one approval satisfy every later gate. The
+  fix had landed in the base class, the example and the tests, and not in the
+  spec that teaches the pattern. It now shows `await_hitl_approval` and says
+  plainly why waiting on the field is wrong.
+
 ### Runtime — pass 12, `base_workflow.py`
 
 **Tenant-visible.** `BaseAgentWorkflow` gains a `hitl_approved_for(gate_id,

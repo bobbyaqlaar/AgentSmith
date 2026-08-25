@@ -1792,9 +1792,23 @@ different kinds of human intervention:
 signal:
 
 ```python
-await workflow.wait_condition(lambda: self._hitl_approved is not None, timeout=timedelta(hours=24))
-# On timeout: DLQ entry created (reason="hitl_timeout"), workflow terminates ("dead_letter" status)
+# Inside run_with_hitl_gate, or directly when your resume step is not a
+# single activity (see examples/oil-price-agent):
+approved = await self.await_hitl_approval(gate_id, timeout=timedelta(hours=24))
+# None  -> timed out: DLQ entry created (reason="hitl_timeout"), status "dead_letter"
+# False -> rejected: status "failed", the resume step never runs
+# True  -> approved: resume
 ```
+
+The approval is **consumed** by the gate that reads it. Do not wait on
+`self._hitl_approved` directly — that is what this documented until
+2026-08-25, and reading the field instead of consuming it meant one approval
+satisfied every later gate in the workflow: a second gate found the condition
+already true and ran its high-impact activity with nobody having approved it.
+
+Signals: `hitl_approved(approved)` is answered by whichever gate is waiting;
+`hitl_approved_for(gate_id, approved)` names its gate, which is what a sender
+should use when a workflow has more than one.
 
 **Edit-and-resume** (`run_with_recoverable_step`) — for failures the
 human fixes rather than approves/rejects (e.g. an agent's tool call
