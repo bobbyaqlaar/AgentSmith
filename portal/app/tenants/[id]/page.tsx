@@ -8,6 +8,7 @@ import { getSuggestedPromotions } from "@/lib/promotions";
 import { CostChart } from "@/components/CostChart";
 import { canAccessTenant } from "@/lib/authz";
 import { isSafeHttpUrl } from "@/lib/safeUrl";
+import { isTruncated } from "@/lib/cappedList";
 import { currentAccess } from "@/lib/currentAccess";
 import { Badge, toneForLevel } from "@/components/ui/Badge";
 import { MetricCard } from "@/components/ui/Card";
@@ -68,7 +69,8 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
         )}
         {traceStats !== null && (
           <p className="text-sm mt-1 text-black/60 dark:text-white/60">
-            Last 24h: {traceStats.traceCount} trace(s)
+            Last 24h: {traceStats.traceCount} trace(s) in project{" "}
+            <code className="text-black/80 dark:text-white/80">{traceStats.projectName}</code>
             {traceStats.errorRate !== null && (
               <>
                 {" "}— error rate{" "}
@@ -76,6 +78,15 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
                   {(traceStats.errorRate * 100).toFixed(1)}%
                 </Badge>
               </>
+            )}
+            {/* The query reads the FIRST project the instance reports. With one
+                project that is the whole picture; with several it is a slice,
+                and the figure was previously presented as the tenant's with no
+                indication of which project produced it. */}
+            {traceStats.projectCount > 1 && (
+              <span className="ml-2 text-amber-700 dark:text-amber-400">
+                — this Phoenix has {traceStats.projectCount} projects; only the first is counted
+              </span>
             )}
           </p>
         )}
@@ -92,8 +103,11 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
         />
         <MetricCard
           label="Unresolved issues"
-          value={issues.length}
-          tone={issues.length > 0 ? "danger" : "success"}
+          // issues.total, not issues.entries.length — the list below is capped
+          // and this card used to report the cap as the count, disagreeing with
+          // the dashboard's SQL COUNT for the same tenant above 200.
+          value={issues.total}
+          tone={issues.total > 0 ? "danger" : "success"}
         />
       </div>
 
@@ -112,12 +126,19 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
       </section>
 
       <section>
-        <h3 className="text-lg font-medium mb-3">Unresolved MAJOR / CRITICAL issues</h3>
-        {issues.length === 0 ? (
+        <h3 className="text-lg font-medium mb-3">
+          Unresolved MAJOR / CRITICAL issues
+          {isTruncated(issues) && (
+            <span className="ml-2 text-sm font-normal text-black/50 dark:text-white/50">
+              showing the {issues.limit} most recent of {issues.total}
+            </span>
+          )}
+        </h3>
+        {issues.total === 0 ? (
           <p className="text-black/60 dark:text-white/60">None — clean.</p>
         ) : (
           <ul className="space-y-2">
-            {issues.map((i) => (
+            {issues.entries.map((i) => (
               <li key={i.entryId} className="border border-black/10 dark:border-white/10 rounded-lg p-3 text-sm">
                 <Badge tone={toneForLevel(i.level)}>{i.level}</Badge>
                 <span className="ml-2">{i.event}</span>{" "}
@@ -136,13 +157,25 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
               ? "Could not read shadow-eval results from Phoenix — this list is unavailable, not empty."
               : "No Phoenix endpoint registered for this tenant, so nothing has been read — this list is unavailable, not empty."}
           </p>
-        ) : suggestedPromotions.length === 0 ? (
+        ) : suggestedPromotions.failures.length === 0 ? (
           <p className="text-black/60 dark:text-white/60">
-            No shadow-eval failures in the last 24h — nothing suggested.
+            {/* The claim is bounded by what was read. It used to say "in the
+                last 24h" for a single page of a cursor-paginated endpoint. */}
+            No shadow-eval failures among the {suggestedPromotions.spansScanned} span(s) read
+            from the last 24h
+            {suggestedPromotions.truncated
+              ? " — and this window holds more than one page, so this is a sample, not the window."
+              : " — nothing suggested."}
           </p>
         ) : (
           <ul className="space-y-2">
-            {suggestedPromotions.map((p) => (
+            {suggestedPromotions.truncated && (
+              <li className="text-sm text-amber-700 dark:text-amber-400">
+                More spans exist in this window than were read — these failures come from the
+                most recent {suggestedPromotions.spansScanned}.
+              </li>
+            )}
+            {suggestedPromotions.failures.map((p) => (
               <li key={p.spanId} className="border border-black/10 dark:border-white/10 rounded-lg p-3 text-sm space-y-1">
                 <div>
                   <Badge tone="danger">score {p.score.toFixed(2)}</Badge>

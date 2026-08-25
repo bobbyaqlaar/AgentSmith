@@ -63,7 +63,7 @@ dev` — see `OPERATIONS.md` Part B/E and `install-ai-stack.sh`'s
 | `/api/tenants` | GET | Dashboard (any role) | List tenants in scope, with spend/issues/DLQ counts |
 | `/api/tenants` | POST | Dashboard (operator/admin, **and the tenant must be in the caller's scope**) | Register/update a tenant: `{ tenantId, name, isolation?, phoenixBaseUrl?, budgetCapUsd?, replayWebhookUrl?, replayWebhookSecret? }`. Both URL fields must be `http(s)`; unknown fields are ignored rather than forwarded to the database |
 | `/api/tenants/:id/cost` | GET | Dashboard | Monthly spend history + budget cap for one tenant |
-| `/api/tenants/:id/issues` | GET | Dashboard | Unresolved MAJOR/CRITICAL `.agent-history.log` entries |
+| `/api/tenants/:id/issues` | GET | Dashboard | Unresolved MAJOR/CRITICAL `.agent-history.log` entries: `{ issues, total, limit }` — `issues` is capped at `limit`, `total` is the real count |
 | `/api/tenants/:id/widget-token` | POST | Dashboard (operator/admin) | Mint a read-only widget token — plaintext returned once |
 | `/api/tenants/:id/widget-token` | DELETE | Dashboard (admin only) | Revoke every active widget token for this tenant |
 | `/api/dlq` | GET | Dashboard | `{ wired: boolean, pendingByTenant }` |

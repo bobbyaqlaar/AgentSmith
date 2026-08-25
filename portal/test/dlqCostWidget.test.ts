@@ -18,6 +18,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { getPool } from "../lib/db.ts";
 import { getTenantCost, getAllTenantsCurrentSpend } from "../lib/cost.ts";
+import { getUnresolvedIssues } from "../lib/issues.ts";
 import {
   getDLQStatus,
   listDLQEntries,
@@ -153,6 +154,25 @@ await test("getAllTenantsCurrentSpend only counts the current period", async () 
   assert.equal(spend.byTenant[tenantB], 1.5);
 });
 
+// ── Capped lists ─────────────────────────────────────────────────────────────
+
+await test("getUnresolvedIssues reports the real total, not the capped length", async () => {
+  // 205 rows against a LIMIT of 200. The tenant page rendered the array length
+  // as its "Unresolved issues" metric, so above the cap it disagreed with the
+  // dashboard's SQL COUNT for the same tenant — and showed the smaller number
+  // on the page you open to investigate.
+  await getPool().query(
+    `INSERT INTO agent_history_entries (tenant_id, entry_id, level, event, timestamp, hitl_resolved, raw)
+     SELECT $1, 'bulk-' || i, 'CRITICAL', 'event ' || i, now() - (i || ' seconds')::interval, FALSE, '{}'::jsonb
+     FROM generate_series(1, 205) AS i`,
+    [tenantB]
+  );
+  const issues = await getUnresolvedIssues(tenantB);
+  assert.equal(issues.entries.length, 200, "the query is capped");
+  assert.equal(issues.total, 205, "the count is not");
+  assert.equal(issues.limit, 200);
+});
+
 // ── DLQ triage ───────────────────────────────────────────────────────────────
 
 await test("wired status counts only pending entries per tenant", async () => {
@@ -170,9 +190,13 @@ await test("wired status counts only pending entries per tenant", async () => {
 });
 
 await test("listDLQEntries is tenant-scoped; getDlqEntry derives tenant from task alone", async () => {
-  const entries = await listDLQEntries(tenantA);
-  assert.ok(entries, "wired table must return a list, not the not-wired null");
-  assert.deepEqual(entries.map((e) => e.taskId).sort(), ["task-1", "task-2"]);
+  const list = await listDLQEntries(tenantA);
+  assert.ok(list, "wired table must return a list, not the not-wired null");
+  assert.deepEqual(list.entries.map((e) => e.taskId).sort(), ["task-1", "task-2"]);
+  // The true count, not the array length — they only agree below the cap, and
+  // the page renders `total`.
+  assert.equal(list.total, 2);
+  assert.equal(list.limit, 100);
   const entry = await getDlqEntry("task-3");
   assert.equal(entry?.tenantId, tenantB); // never client-supplied
   assert.equal(entry?.workflowId, "wf-3");

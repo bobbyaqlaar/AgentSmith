@@ -74,7 +74,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-06-26T21:15:31Z",
+      "last_modified": "2026-08-25T01:34:19Z",
       "id": "portal/tailwind.config.ts"
     },
     {
@@ -2565,7 +2565,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T23:13:40Z",
+      "last_modified": "2026-08-24T23:59:11Z",
       "id": "portal/test/dlqCostWidget.test.ts"
     },
     {
@@ -2579,7 +2579,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-06-26T21:15:31Z",
+      "last_modified": "2026-08-24T23:59:53Z",
       "id": "portal/test/phoenix.test.ts"
     },
     {
@@ -2662,7 +2662,7 @@
         "replayDlqEntry",
         "discardDlqEntry"
       ],
-      "last_modified": "2026-08-24T23:08:44Z",
+      "last_modified": "2026-08-24T23:57:43Z",
       "id": "portal/lib/dlq.ts"
     },
     {
@@ -2731,7 +2731,7 @@
         "RecentTraceStats",
         "getRecentTraceStats"
       ],
-      "last_modified": "2026-08-24T23:20:34Z",
+      "last_modified": "2026-08-24T23:59:52Z",
       "id": "portal/lib/phoenix.ts"
     },
     {
@@ -2820,7 +2820,7 @@
         "SyncEntryInput",
         "syncHistoryEntries"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-24T23:57:25Z",
       "id": "portal/lib/issues.ts"
     },
     {
@@ -2850,10 +2850,11 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
+        "PromotionScan",
         "SuggestedPromotion",
         "getSuggestedPromotions"
       ],
-      "last_modified": "2026-08-24T23:20:34Z",
+      "last_modified": "2026-08-25T01:33:30Z",
       "id": "portal/lib/promotions.ts"
     },
     {
@@ -2993,7 +2994,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-08-24T22:41:52Z",
+      "last_modified": "2026-08-24T23:58:48Z",
       "id": "portal/app/api/tenants/[id]/issues/route.ts"
     },
     {
@@ -3051,7 +3052,7 @@
         "dynamic",
         "TenantDlqPage"
       ],
-      "last_modified": "2026-08-24T23:09:26Z",
+      "last_modified": "2026-08-24T23:58:16Z",
       "id": "portal/app/dlq/[tenantId]/page.tsx"
     },
     {
@@ -3061,7 +3062,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-08-24T23:21:04Z",
+      "last_modified": "2026-08-25T01:33:44Z",
       "id": "portal/app/tenants/[id]/page.tsx"
     },
     {
@@ -3494,6 +3495,17 @@
       ],
       "last_modified": "2026-08-24T23:07:17Z",
       "id": "portal/lib/safeUrl.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "CappedList",
+        "capped",
+        "isTruncated"
+      ],
+      "last_modified": "2026-08-24T23:57:25Z",
+      "id": "portal/lib/cappedList.ts"
     }
   ],
   "edges": [
@@ -3869,6 +3881,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "portal/lib/dlq.ts",
+      "target": "portal/lib/cappedList.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "portal/lib/db.ts",
       "target": "portal/lib/tracing.ts"
     },
@@ -3941,6 +3958,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/issues.ts",
       "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/issues.ts",
+      "target": "portal/lib/cappedList.ts"
     },
     {
       "edge_type": "IMPORTS",

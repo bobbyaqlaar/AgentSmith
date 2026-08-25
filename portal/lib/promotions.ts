@@ -6,6 +6,23 @@
 
 import { phoenixFetch } from "./phoenix";
 
+/**
+ * One scan of a tenant's shadow-eval annotations.
+ *
+ * `spansScanned` and `truncated` exist because the spans endpoint is
+ * cursor-paginated (`next_cursor`) and this reads ONE page. The page below
+ * renders "No shadow-eval failures in the last 24h" — a claim about a window —
+ * and a one-page scan of a busy tenant does not support it. Following the
+ * cursor to exhaustion is not the fix either: that is unbounded work on a page
+ * render. Reporting the scope of what was actually looked at is.
+ */
+export interface PromotionScan {
+  failures: SuggestedPromotion[];
+  spansScanned: number;
+  /** Phoenix said there was another page and this did not read it. */
+  truncated: boolean;
+}
+
 export interface SuggestedPromotion {
   spanId: string;
   traceId: string | null;
@@ -45,7 +62,7 @@ async function phoenixGet(phoenixBaseUrl: string, path: string, params: URLSearc
 export async function getSuggestedPromotions(
   phoenixBaseUrl: string,
   opts: { sinceHours?: number; project?: string } = {},
-): Promise<SuggestedPromotion[] | null> {
+): Promise<PromotionScan | null> {
   // Returns null when the query FAILED, [] when it genuinely found nothing.
   // These are opposite facts and the page renders them differently: an empty
   // list says "no shadow-eval failures in the last 24h", which is a health
@@ -59,7 +76,9 @@ export async function getSuggestedPromotions(
     const spanParams = new URLSearchParams({ start_time: start.toISOString(), limit: "1000" });
     const spanData = await phoenixGet(phoenixBaseUrl, `/v1/projects/${project}/spans`, spanParams);
     const spans: PhoenixSpan[] = Array.isArray(spanData) ? spanData : spanData.data ?? [];
-    if (spans.length === 0) return [];
+    // Non-null next_cursor means Phoenix has more for this window than one page.
+    const truncated = !Array.isArray(spanData) && Boolean(spanData?.next_cursor);
+    if (spans.length === 0) return { failures: [], spansScanned: 0, truncated };
 
     const spanById = new Map(spans.map((s) => [s.context.span_id, s]));
     const annotationParams = new URLSearchParams();
@@ -84,7 +103,7 @@ export async function getSuggestedPromotions(
         outputValue: typeof attrs["output.value"] === "string" ? (attrs["output.value"] as string) : null,
       });
     }
-    return failures;
+    return { failures, spansScanned: spans.length, truncated };
   } catch {
     return null;
   }

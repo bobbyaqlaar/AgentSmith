@@ -20,6 +20,38 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Ops Portal — pass 6
+
+Every finding this pass is the same shape: **a partial answer presented as a
+complete one.**
+
+- **Two numbers for one fact.** The tenant page's "Unresolved issues" metric was
+  the length of a list capped at 200; the dashboard's number for the same tenant
+  was a SQL `COUNT(*)`. Above 200 they disagreed, and the smaller one was on the
+  page you open to investigate. `getUnresolvedIssues` and `listDLQEntries` now
+  return `{ entries, total, limit }`, and both pages say "showing the N most
+  recent of M". `GET /api/tenants/:id/issues` gained `total` and `limit`;
+  `issues` stays an array.
+- **Trace stats were attributed to a project nobody named.** `getRecentTraceStats`
+  takes the *first* project a Phoenix instance reports and the page rendered the
+  figure as the tenant's. It now names the project and warns when the instance
+  has more than one. Validated against a live Phoenix, like the other shapes in
+  that file.
+- **The shadow-eval scan read one page and claimed a window.** Phoenix's spans
+  endpoint is cursor-paginated; `getSuggestedPromotions` ignored `next_cursor`
+  and the page said "No shadow-eval failures in the last 24h". It now reports
+  how many spans it actually read, and says so when the window held more.
+  Following the cursor to exhaustion would be unbounded work on a page render —
+  reporting the scope is the honest fix.
+- **Dead theme configuration.** `tailwind.config.ts` declared `success`,
+  `warning` and `danger` colours under a comment pointing at `Badge.tsx`, which
+  uses Tailwind's own palette and never referenced them. Removed, with a pointer
+  to where the tones actually live.
+
+Checked and clean: the Phoenix REST paths and response shapes
+(`/v1/projects/:p/spans`, `/v1/projects/:p/span_annotations`) verified against a
+running instance, including a 26 KB query string, which it accepts.
+
 ### Ops Portal — pass 5
 
 - **A late `running` heartbeat un-finished a completed run.** The gateway's

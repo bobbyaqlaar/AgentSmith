@@ -27,7 +27,11 @@ await test("getRecentTraceStats sums ok/error/total across time-series bins", as
   globalThis.fetch = (async (url: string, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body));
     if (body.query.includes("projects {")) {
-      return new Response(JSON.stringify({ data: { projects: { edges: [{ node: { id: "proj1" } }] } } }));
+      return new Response(
+        JSON.stringify({
+          data: { projects: { edges: [{ node: { id: "proj1", name: "default" } }, { node: { id: "proj2", name: "other" } }] } },
+        }),
+      );
     }
     return new Response(
       JSON.stringify({
@@ -46,7 +50,15 @@ await test("getRecentTraceStats sums ok/error/total across time-series bins", as
   }) as typeof fetch;
 
   const stats = await getRecentTraceStats("http://phoenix:6006", { sinceHours: 24 });
-  assert.deepEqual(stats, { traceCount: 15, errorCount: 2, errorRate: 2 / 15 });
+  assert.deepEqual(stats, {
+    traceCount: 15,
+    errorCount: 2,
+    errorRate: 2 / 15,
+    // Named, and counted: these numbers are ONE project's, and the instance has
+    // two. The page used to present them as the tenant's without saying which.
+    projectName: "default",
+    projectCount: 2,
+  });
   globalThis.fetch = originalFetch;
 });
 

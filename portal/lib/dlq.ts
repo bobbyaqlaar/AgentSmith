@@ -20,6 +20,7 @@
 // cross-tenant endpoint.
 
 import { createHmac } from "node:crypto";
+import { capped, type CappedList } from "./cappedList";
 import { getPool, tableExists, columnExists } from "./db";
 import { getReplayWebhookConfig } from "./tenants";
 
@@ -69,18 +70,30 @@ async function hasReasonColumns(): Promise<boolean> {
  * page one click earlier said "Not wired" correctly. Same fact, two answers,
  * and the reassuring one was on the page an operator actually reads.
  */
-export async function listDLQEntries(tenantId: string, status: string = "pending"): Promise<DLQEntry[] | null> {
+const DLQ_LIMIT = 100;
+
+export async function listDLQEntries(
+  tenantId: string,
+  status: string = "pending",
+): Promise<CappedList<DLQEntry> | null> {
   if (!(await tableExists("dlq_entries"))) return null;
   const hasReason = await hasReasonColumns();
-  const { rows } = await getPool().query(
-    hasReason
-      ? `SELECT task_id, tenant_id, payload, error, reason, workflow_id, gate_id, status, created_at
-         FROM dlq_entries WHERE tenant_id = $1 AND status = $2 ORDER BY created_at DESC LIMIT 100`
-      : `SELECT task_id, tenant_id, payload, error, status, created_at
-         FROM dlq_entries WHERE tenant_id = $1 AND status = $2 ORDER BY created_at DESC LIMIT 100`,
-    [tenantId, status]
-  );
-  return rows.map((r) => ({
+  const where = `WHERE tenant_id = $1 AND status = $2`;
+  // The count comes back with the rows for the same reason it does in
+  // lib/issues.ts: the page showed at most 100 entries and said nothing about
+  // it, while the index page one click earlier showed the real total.
+  const [{ rows }, { rows: countRows }] = await Promise.all([
+    getPool().query(
+      hasReason
+        ? `SELECT task_id, tenant_id, payload, error, reason, workflow_id, gate_id, status, created_at
+           FROM dlq_entries ${where} ORDER BY created_at DESC LIMIT ${DLQ_LIMIT}`
+        : `SELECT task_id, tenant_id, payload, error, status, created_at
+           FROM dlq_entries ${where} ORDER BY created_at DESC LIMIT ${DLQ_LIMIT}`,
+      [tenantId, status]
+    ),
+    getPool().query(`SELECT count(*)::int AS n FROM dlq_entries ${where}`, [tenantId, status]),
+  ]);
+  const entries = rows.map((r) => ({
     taskId: r.task_id,
     tenantId: r.tenant_id,
     payload: r.payload,
@@ -91,6 +104,7 @@ export async function listDLQEntries(tenantId: string, status: string = "pending
     status: r.status,
     createdAt: r.created_at,
   }));
+  return capped(entries, countRows[0]?.n ?? entries.length, DLQ_LIMIT);
 }
 
 // Looks up an entry by task_id alone, no tenant_id required from the

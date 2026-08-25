@@ -7,6 +7,26 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — Ops Portal review pass 6 (2026-08-25)
+
+Four findings, and they are one finding wearing four hats: a partial answer
+rendered as a complete one.
+
+| Finding | Fix |
+|---|---|
+| The tenant page's "Unresolved issues" metric was `issues.length` from a query capped at `LIMIT 200`, beside a dashboard rendering a real `COUNT(*)` for the same tenant. They parted company at 200, and the drill-down page carried the wrong one. The DLQ list did the same at 100, silently | `getUnresolvedIssues` / `listDLQEntries` return `{ entries, total, limit }` (`lib/cappedList.ts`); both pages render "showing the N most recent of M". A test inserts 205 rows and asserts 200 entries against a total of 205 |
+| `getRecentTraceStats` used `projects.edges[0]` — an arbitrary project — and the page presented the number as the tenant's | The query asks for `name` (validated live), the page names the project, and says so when the instance has more than one |
+| `getSuggestedPromotions` read one page of a cursor-paginated endpoint and the page claimed "No shadow-eval failures in the last 24h" | Returns `spansScanned` and `truncated`; the page states the scope it actually covered. Following the cursor would be unbounded work on a render |
+| `tailwind.config.ts` declared three semantic colours under a comment saying `Badge.tsx` used them consistently. `Badge.tsx` uses Tailwind's palette and never referenced them | Removed, with a pointer to `TONE_CLASSES` where a new tone actually belongs |
+
+**Levers that came back clean.** The Phoenix REST shapes this portal depends on
+were re-validated against the running instance rather than trusted: the spans
+and span_annotations paths answer 200 with real ids, and a 26 KB query string
+built from 1,000 span ids is accepted — a suspected URL-length failure that
+turned out not to exist.
+
+---
+
 ## Completed — Ops Portal review pass 5 (2026-08-25)
 
 Five findings. The first was reproduced against a live Postgres before anything

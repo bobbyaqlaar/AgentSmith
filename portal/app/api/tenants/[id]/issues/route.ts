@@ -19,7 +19,11 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     const issues = await withIdentity({ tenantId: params.id, actorRole: access.role }, () =>
       getUnresolvedIssues(params.id),
     );
-    return NextResponse.json({ issues });
+    // `issues` stays an ARRAY — a consumer reading issues[0] or issues.length
+    // keeps working — and `total`/`limit` are added beside it. The list is
+    // capped at `limit`, so `issues.length` was never the number of unresolved
+    // issues and a caller had no way to know that.
+    return NextResponse.json({ issues: issues.entries, total: issues.total, limit: issues.limit });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

@@ -87,6 +87,14 @@ export interface RecentTraceStats {
   traceCount: number;
   errorCount: number;
   errorRate: number | null;
+  /** WHICH project these numbers came from. The query takes the first project
+   *  the instance reports, which is fine for the single-project default and a
+   *  silent misattribution otherwise — the page presented the figure as the
+   *  tenant's without ever naming its source. */
+  projectName: string;
+  /** How many projects the instance has. > 1 means the number above covers
+   *  one of several, which the page says out loud. */
+  projectCount: number;
 }
 
 async function graphqlQuery<T>(
@@ -113,7 +121,9 @@ async function graphqlQuery<T>(
   return json.data as T;
 }
 
-const PROJECTS_QUERY = `{ projects { edges { node { id } } } }`;
+// `name` alongside `id` — validated against a live Phoenix instance, like the
+// rest of the shapes in this file, not guessed at.
+const PROJECTS_QUERY = `{ projects { edges { node { id name } } } }`;
 
 const TRACE_STATS_QUERY = `
   query($id: ID!, $timeRange: TimeRange!, $timeBinConfig: TimeBinConfig!) {
@@ -140,14 +150,12 @@ export async function getRecentTraceStats(
 ): Promise<RecentTraceStats | null> {
   const sinceHours = opts.sinceHours ?? 24;
   try {
-    const projects = await graphqlQuery<{ projects: { edges: Array<{ node: { id: string } }> } }>(
-      phoenixBaseUrl,
-      PROJECTS_QUERY,
-      {},
-      "projects",
-    );
-    const projectId = projects.projects.edges[0]?.node.id;
-    if (!projectId) return null;
+    const projects = await graphqlQuery<{
+      projects: { edges: Array<{ node: { id: string; name: string } }> };
+    }>(phoenixBaseUrl, PROJECTS_QUERY, {}, "projects");
+    const edges = projects.projects.edges;
+    const project = edges[0]?.node;
+    if (!project) return null;
 
     const end = new Date();
     const start = new Date(end.getTime() - sinceHours * 60 * 60 * 1000);
@@ -157,7 +165,7 @@ export async function getRecentTraceStats(
       phoenixBaseUrl,
       TRACE_STATS_QUERY,
       {
-        id: projectId,
+        id: project.id,
         timeRange: { start: start.toISOString(), end: end.toISOString() },
         timeBinConfig: { scale: "HOUR" },
       },
@@ -171,6 +179,8 @@ export async function getRecentTraceStats(
       traceCount,
       errorCount,
       errorRate: traceCount > 0 ? errorCount / traceCount : null,
+      projectName: project.name,
+      projectCount: edges.length,
     };
   } catch {
     return null;

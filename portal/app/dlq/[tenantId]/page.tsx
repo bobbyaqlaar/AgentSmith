@@ -4,6 +4,7 @@ import { listDLQEntries } from "@/lib/dlq";
 import { canAccessTenant } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { DlqEntryCard } from "@/components/DlqEntryCard";
+import { isTruncated } from "@/lib/cappedList";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,11 @@ export default async function TenantDlqPage({ params }: { params: { tenantId: st
 
       <h2 className="text-xl font-medium">
         Pending entries <span className="text-black/40 dark:text-white/40">({params.tenantId})</span>
+        {entries && isTruncated(entries) && (
+          <span className="ml-2 text-sm font-normal text-black/50 dark:text-white/50">
+            showing the {entries.limit} most recent of {entries.total}
+          </span>
+        )}
       </h2>
 
       {entries === null ? (
@@ -33,11 +39,11 @@ export default async function TenantDlqPage({ params }: { params: { tenantId: st
           Not wired — no worker has constructed a <code>DeadLetterQueue</code> against this
           database yet, so this list is unavailable rather than empty.
         </p>
-      ) : entries.length === 0 ? (
+      ) : entries.total === 0 ? (
         <p className="text-black/60 dark:text-white/60">No pending DLQ entries for this tenant.</p>
       ) : (
         <div className="space-y-3">
-          {entries.map((entry) => (
+          {entries.entries.map((entry) => (
             <DlqEntryCard key={entry.taskId} entry={entry} />
           ))}
         </div>

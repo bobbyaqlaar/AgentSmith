@@ -2,6 +2,7 @@
 // synced per-tenant via POST /api/sync/history (SPECS.md §19, §26).
 
 import { getPool } from "./db";
+import { capped, type CappedList } from "./cappedList";
 
 export interface HistoryEntry {
   entryId: string;
@@ -12,16 +13,30 @@ export interface HistoryEntry {
   raw: Record<string, unknown>;
 }
 
-export async function getUnresolvedIssues(tenantId: string): Promise<HistoryEntry[]> {
-  const { rows } = await getPool().query(
-    `SELECT entry_id, level, event, timestamp, hitl_resolved, raw
-     FROM agent_history_entries
-     WHERE tenant_id = $1 AND hitl_resolved = FALSE AND level IN ('MAJOR', 'CRITICAL')
-     ORDER BY timestamp DESC
-     LIMIT 200`,
-    [tenantId]
-  );
-  return rows.map((r) => ({
+const ISSUE_LIMIT = 200;
+
+/**
+ * The most recent unresolved issues, WITH the true count.
+ *
+ * The count is a second query rather than an inference from the array length:
+ * `rows.length` maxes out at the LIMIT, and the tenant page was rendering it as
+ * the "Unresolved issues" metric beside a dashboard rendering a real COUNT for
+ * the same tenant. One fact, two numbers, and they parted company at 200.
+ */
+export async function getUnresolvedIssues(tenantId: string): Promise<CappedList<HistoryEntry>> {
+  const where = `WHERE tenant_id = $1 AND hitl_resolved = FALSE AND level IN ('MAJOR', 'CRITICAL')`;
+  const [{ rows }, { rows: countRows }] = await Promise.all([
+    getPool().query(
+      `SELECT entry_id, level, event, timestamp, hitl_resolved, raw
+       FROM agent_history_entries
+       ${where}
+       ORDER BY timestamp DESC
+       LIMIT ${ISSUE_LIMIT}`,
+      [tenantId]
+    ),
+    getPool().query(`SELECT count(*)::int AS n FROM agent_history_entries ${where}`, [tenantId]),
+  ]);
+  const entries = rows.map((r) => ({
     entryId: r.entry_id,
     level: r.level,
     event: r.event,
@@ -29,6 +44,7 @@ export async function getUnresolvedIssues(tenantId: string): Promise<HistoryEntr
     hitlResolved: r.hitl_resolved,
     raw: r.raw,
   }));
+  return capped(entries, countRows[0]?.n ?? entries.length, ISSUE_LIMIT);
 }
 
 export async function getUnresolvedCountByTenant(): Promise<Record<string, number>> {
