@@ -1,9 +1,14 @@
 # Review levers
 
 The checklist a review pass runs against. Groups 1–5 are the standing list.
-Group 6 and the items marked **(+)** were added on 2026-08-24, each one traceable
-to a defect that a pass using the earlier list did not catch — the provenance is
-kept because a lever with no scalp is decoration.
+Group 6 and the items marked **(+)** were added on 2026-08-24, and the items
+marked **(++)** on 2026-08-25 after seven passes over `portal/`. Each one is
+traceable to a defect that a pass using the earlier list did not catch — the
+provenance is kept because a lever with no scalp is decoration.
+
+Amendments to existing items carry the same marks inline. Three findings from
+those passes produced amendments rather than new levers, which is the more
+honest outcome when the lever was right and its *scope* was wrong.
 
 ---
 
@@ -18,6 +23,16 @@ kept because a lever with no scalp is decoration.
    file names restated anywhere else is a second catalog that will drift.
    *Caught: `SCORECARDS` restating `_shared.RESULTS_FILE`; the `Role` union written
    three times; the audit event catalog in a union plus two arrays.*
+7. **(++) A duplicate that CANNOT be removed must be pinned.** Items 2–6 all say
+   "extract to one module", which is impossible across a language or system
+   boundary — a TypeScript catalog and a SQL `CHECK`, a Python resolver and its
+   TypeScript mirror, a client-side validation and its server. The lever gave
+   advice that could not be followed, so those cases fell straight through it.
+   The substitute is a test that PARSES the other side rather than restating it,
+   because a test that hardcodes the second copy is just a third copy.
+   *Caught: three TS catalogs against `db/schema.sql`'s CHECK constraints, one of
+   them with a fourth copy in a route; `portal/lib/environment.ts` against
+   `runtime/environment.py`'s alias table.*
 
 ## 2 · Quality / safety
 
@@ -29,10 +44,35 @@ kept because a lever with no scalp is decoration.
    *Caught: `node:crypto` passing `tsc` and `npm test` and failing only `next build`;
    `runtime/` never loading `.env`; a sweep whose coverage depended on whether its
    own file was committed yet; mtimes rewritten by `actions/checkout`.*
+   **(++)** The second environment is often INSIDE the app: server component vs
+   client component, worker vs request, build vs run. Same question, same clock.
+   *Caught: `toLocaleString()` in two server components and one client one —
+   one instant, four strings across four timezones and two different dates, plus
+   a hydration mismatch on every render.*
 5. **(+) A guard must be able to fail.** Assertions inside the `try` they guard,
    conditions that can never be true, `except Exception` around the check itself.
    *Caught: `if span is None` on a value that is never None; F-scenario drivers
    raising `AssertionError` inside a caught block.*
+   **(++)** And a guard that CAN fail can still be too weak to hold: ask what
+   the check would let through, not only whether it runs.
+   *Caught: `redirect_to.startsWith("/")` accepting `//evil.example`, which
+   resolves to another origin.*
+6. **(++) Out-of-order and repeated messages.** Every best-effort POST, retry,
+   heartbeat and at-least-once queue means two writes can arrive in the other
+   order, or twice. Ask it of each one: what does the row look like then? An
+   upsert is where this lands, and a guard applied to four columns and not the
+   fifth is the usual shape.
+   *Caught: a retried `running` heartbeat overwriting a terminal status, leaving
+   `finished_at` set — the widget reported a completed run as running for good,
+   and in a group that row masked a real `failed`. Every neighbouring column in
+   that upsert already carried the guard.*
+7. **(++) Validation belongs on the receiving side of a trust boundary.** A
+   check the caller performs is a courtesy; the same check where the value is
+   accepted is a control. Finding the rule already implemented on the wrong side
+   is the tell — it means someone knew, and put it where it does not bind.
+   *Caught: `scripts/sync-portal-history.py` verified `replay_webhook_url` was
+   `http(s)` before sending it; the portal stored and fetched whatever arrived,
+   including from its other writer.*
 
 ## 3 · Architecture / product hygiene
 
@@ -45,6 +85,10 @@ kept because a lever with no scalp is decoration.
    *Caught: `budget.monthly_usd_cap: 5` declared while $150 was enforced;
    `tenant.id`, `workflow.task_queue`, `tenant.owner`, `workflow.engine`,
    `redaction_profile` all declared and unread; pillar 3's span contract.*
+   **(++)** Includes controls whose enforcer is a HUMAN: an instruction filed
+   where its audience never reads is not assigned to anyone.
+   *Caught: the `revoked_sessions` pruning schedule, stated only inside
+   `db/schema.sql` while the table grew a row per logout, forever.*
 5. **(+) Provenance and precedence.** Where can this value come from, and when two
    sources disagree, which wins and is that written down? Distinguish a channel the
    operator *declared* from one that is merely *ambient*.
@@ -67,6 +111,12 @@ kept because a lever with no scalp is decoration.
    not its identical neighbours is the most repeated defect in this codebase.
    *Caught: the TS loader on 2 of 3 invocations; `return 2` graceful-skip on 1 of 2;
    `is_recording()` correct in one function and absent in its sibling.*
+   **(++)** Follow the DATA, not the directory. The sibling that gets missed is
+   the one in another package, another language, or another repo — searching
+   where you are editing finds every copy except that one.
+   *Caught: a tenant-supplied URL validated at two of three render sites; the
+   third was `templates/in-app-widget/widget.js`, which renders it as an `href`
+   inside the tenant's own product.*
 6. **(+) Run the gates locally before pushing** — and check the git state matches what
    CI will see, or the local run is not the same run.
 
@@ -103,3 +153,13 @@ check did not actually run, would anything look different?*
 5. **A test that cannot fail is a finding.** Sweeps that match nothing, loops over empty
    collections, guards exempting themselves.
    *Caught: an import-graph walker that resolved zero files twice, both times passing.*
+6. **(++) An aggregate must name what it aggregated over.** A count, a rate, or a
+   "nothing found" claim is only checkable if it states its scope — which
+   project, how many rows, which window, and whether the source had more to
+   give. This is not item 1: the number is not ambiguous, it is unattributed,
+   and a reader has no way to notice.
+   *Caught: a tenant page rendering the length of a list capped at 200 as the
+   issue COUNT, disagreeing with the dashboard's SQL count for the same tenant;
+   "Last 24h: N traces" taken from whichever project the Phoenix instance
+   happened to list first; "No shadow-eval failures in the last 24h" from one
+   page of a cursor-paginated endpoint.*

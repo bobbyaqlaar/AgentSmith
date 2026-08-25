@@ -47,7 +47,22 @@ import os
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+# The framework ROOT (not runtime/ itself), so the imports inside _replay
+# resolve as proper `runtime.X` package members. At module scope, ONCE: this
+# ran inside the request handler, so every replay prepended another copy and
+# sys.path grew for the life of the process.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from runtime.dead_letter import AlreadyResolvedError
+
 logger = logging.getLogger(__name__)
+
+# A replay body is a task id and an edited payload — kilobytes. The handler
+# used to trust Content-Length and read exactly that many bytes, so any caller
+# able to reach the port could declare a gigabyte and have it allocated. This
+# receiver is a reference, and a reference that models an unbounded read is the
+# version a tenant copies into production.
+MAX_BODY_BYTES = 1 * 1024 * 1024
 
 
 def _verify_signature(secret: str, body: bytes, signature_header: str) -> bool:
@@ -61,24 +76,30 @@ def _verify_signature(secret: str, body: bytes, signature_header: str) -> bool:
 class ReplayWebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802 (http.server's required method name)
         if self.path != "/replay":
-            self.send_response(404)
-            self.end_headers()
+            self._json(404, {"error": "not found"})
             return
 
         secret = os.environ.get("REPLAY_WEBHOOK_SECRET", "")
         if not secret:
             logger.error("REPLAY_WEBHOOK_SECRET not set — refusing all requests")
-            self.send_response(503)
-            self.end_headers()
+            self._json(503, {"error": "REPLAY_WEBHOOK_SECRET is not configured"})
             return
 
-        length = int(self.headers.get("Content-Length", "0"))
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            # A non-numeric Content-Length used to raise out of do_POST, which
+            # http.server answers with a traceback and a dropped connection
+            # rather than a status a caller can act on.
+            self._json(400, {"error": "invalid Content-Length"})
+            return
+        if length < 0 or length > MAX_BODY_BYTES:
+            self._json(413, {"error": f"body must be 0..{MAX_BODY_BYTES} bytes"})
+            return
         body = self.rfile.read(length)
         signature = self.headers.get("X-Replay-Signature", "")
         if not _verify_signature(secret, body, signature):
-            self.send_response(401)
-            self.end_headers()
-            self.wfile.write(b'{"error":"invalid signature"}')
+            self._json(401, {"error": "invalid signature"})
             return
 
         try:
@@ -86,30 +107,45 @@ class ReplayWebhookHandler(BaseHTTPRequestHandler):
             task_id = data["taskId"]
             payload = data["payload"]
         except (json.JSONDecodeError, KeyError) as exc:
-            self.send_response(400)
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": f"bad request: {exc}"}).encode())
+            self._json(400, {"error": f"bad request: {exc}"})
             return
 
         try:
             self._replay(task_id, payload)
+        except KeyError:
+            # No such entry. Distinct from the case below, which is why
+            # dead_letter.py raises two different exceptions for them.
+            self._json(404, {"error": f"no DLQ entry with task_id {task_id}"})
+            return
+        except AlreadyResolvedError as exc:
+            # 409, not 500: nothing failed. The entry was already replayed or
+            # discarded, and the operator needs to know that rather than see
+            # "replay failed" for a replay that already happened.
+            logger.info("Replay refused for task_id=%s: %s", task_id, exc)
+            self._json(409, {"error": str(exc)})
+            return
         except Exception as exc:
             logger.exception("Replay failed for task_id=%s", task_id)
-            self.send_response(500)
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": str(exc)}).encode())
+            self._json(500, {"error": str(exc)})
             return
 
-        self.send_response(200)
+        self._json(200, {"ok": True})
+
+    def _json(self, status: int, body: dict) -> None:
+        """One place that writes a response, so every path sets a content type.
+
+        Every branch above hand-rolled send_response/end_headers/write, and the
+        error paths wrote a JSON body without ever declaring one — the portal
+        parses these with `resp.json()`.
+        """
+        encoded = json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
-        self.wfile.write(b'{"ok":true}')
+        self.wfile.write(encoded)
 
     def _replay(self, task_id: str, payload: dict) -> None:
-        # Inserts the framework ROOT (not runtime/ itself), so the imports
-        # below resolve as proper `runtime.X` package members — consistent
-        # with every other runtime module post-G6 — rather than the old
-        # bare-name dance this used to rely on.
-        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from runtime.dead_letter import DeadLetterQueue
         from runtime.temporal_replay import make_temporal_replay_handler
 

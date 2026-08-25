@@ -226,10 +226,10 @@
         "__init__",
         "get",
         "set",
-        "_connect",
-        "purge_expired"
+        "purge_expired",
+        "_connect"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T09:43:55Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -262,11 +262,12 @@
         "ReplayWebhookHandler",
         "main",
         "do_POST",
+        "_json",
         "_replay",
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T09:41:02Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -484,6 +485,7 @@
       "language": "python",
       "symbols": [
         "_notify",
+        "AlreadyResolvedError",
         "DLQEntry",
         "dead_letter_envelope",
         "DeadLetterQueue",
@@ -495,9 +497,10 @@
         "list",
         "_get",
         "replay",
+        "_release_claim",
         "discard"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T09:40:28Z",
       "id": "runtime/dead_letter.py"
     },
     {
@@ -2565,7 +2568,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T23:59:11Z",
+      "last_modified": "2026-08-25T09:42:29Z",
       "id": "portal/test/dlqCostWidget.test.ts"
     },
     {
@@ -2659,10 +2662,11 @@
         "getDlqEntry",
         "ReplayNotConfiguredError",
         "ReplayWebhookError",
+        "ReplayAlreadyResolvedError",
         "replayDlqEntry",
         "discardDlqEntry"
       ],
-      "last_modified": "2026-08-24T23:57:43Z",
+      "last_modified": "2026-08-25T09:41:35Z",
       "id": "portal/lib/dlq.ts"
     },
     {
@@ -2957,7 +2961,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-24T22:41:52Z",
+      "last_modified": "2026-08-25T09:41:35Z",
       "id": "portal/app/api/dlq/[taskId]/replay/route.ts"
     },
     {
@@ -3240,11 +3244,12 @@
         "_cmd_tenant_init",
         "_cmd_doctor",
         "_cmd_shellenv",
+        "_cmd_purge_idempotency",
         "_cmd_version",
         "build_parser",
         "main"
       ],
-      "last_modified": "2026-08-24T21:51:58Z",
+      "last_modified": "2026-08-25T09:45:01Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3261,6 +3266,7 @@
         "test_ci_callees_ship_with_their_caller",
         "test_unknown_stack_and_isolation_are_refused",
         "test_parser_covers_the_shell_functions_being_replaced",
+        "test_every_subcommand_dispatches_somewhere",
         "test_shellenv_emits_evaluable_exports",
         "test_main_returns_two_on_a_bad_argument",
         "test_stacks_match_the_shipped_ci_templates",
@@ -3271,7 +3277,7 @@
         "test_the_package_name_marker_reads_the_file_not_the_filename",
         "test_cli_exit_code_is_distinct_for_a_refusal"
       ],
-      "last_modified": "2026-08-24T20:47:24Z",
+      "last_modified": "2026-08-25T09:44:47Z",
       "id": "runtime/test/test_cli.py"
     },
     {
@@ -3532,6 +3538,25 @@
       ],
       "last_modified": "2026-08-25T09:24:39Z",
       "id": "portal/lib/formatTime.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "Recorder",
+        "_queue",
+        "_enqueue",
+        "_status",
+        "test_a_pending_entry_replays_exactly_once",
+        "test_replaying_twice_does_not_signal_twice",
+        "test_a_discarded_entry_cannot_be_replayed",
+        "test_a_failed_handler_returns_the_entry_to_pending",
+        "test_an_unknown_task_is_a_different_error_from_a_resolved_one",
+        "__init__",
+        "__call__"
+      ],
+      "last_modified": "2026-08-25T09:40:11Z",
+      "id": "runtime/test/test_dlq_replay_idempotency.py"
     }
   ],
   "edges": [
@@ -4052,6 +4077,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "runtime/cli.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "runtime/test/test_cli.py",
       "target": "runtime/__init__.py"
     },
@@ -4104,6 +4134,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/spanIdentity.ts",
       "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_dlq_replay_idempotency.py",
+      "target": "runtime/__init__.py"
     }
   ]
 }

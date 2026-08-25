@@ -6,7 +6,13 @@
 // a different tenant's webhook than the one the entry actually belongs to.
 
 import { NextResponse } from "next/server";
-import { getDlqEntry, replayDlqEntry, ReplayNotConfiguredError, ReplayWebhookError } from "@/lib/dlq";
+import {
+  getDlqEntry,
+  replayDlqEntry,
+  ReplayAlreadyResolvedError,
+  ReplayNotConfiguredError,
+  ReplayWebhookError,
+} from "@/lib/dlq";
 import { canAccessTenant, canWrite } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { portalSpan, withIdentity } from "@/lib/tracing";
@@ -51,6 +57,11 @@ export async function POST(request: Request, { params }: { params: { taskId: str
   } catch (err) {
     if (err instanceof ReplayNotConfiguredError) {
       return NextResponse.json({ error: err.message }, { status: 503 });
+    }
+    // 409 through, unchanged: the entry moved on between the page render and
+    // the click. Not a 502 — the receiver answered, and its answer was "no".
+    if (err instanceof ReplayAlreadyResolvedError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
     }
     if (err instanceof ReplayWebhookError) {
       return NextResponse.json({ error: err.message }, { status: 502 });

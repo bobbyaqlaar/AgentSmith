@@ -20,6 +20,54 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Runtime — pass 8, the first over `runtime/`
+
+Run with the levers `docs/review-levers.md` gained the same day, and the two new
+ones did the work: **out-of-order and repeated messages**, and **a task with no
+owner is not a control**.
+
+- **A DLQ replay could happen twice, and a discarded entry could be replayed.**
+  `DeadLetterQueue.replay()` called its handler — the side effect that signals a
+  live workflow — before consulting the entry's status at all. So a retried
+  portal POST, a double-clicked button, two browser tabs, or a captured webhook
+  re-signalled every time; in the CRM example that is the customer's record
+  written twice. And an entry a human had **discarded** could still be replayed,
+  because nothing read the status: the discard decision was advisory.
+  `portal/lib/dlq.ts`'s `discardDlqEntry` has carried `AND status = 'pending'`
+  since it was written; the runtime it drives had not.
+
+  The row is claimed atomically before the handler runs, a repeat raises the new
+  `AlreadyResolvedError`, and a handler that raises releases the claim so an
+  unreachable Temporal does not strand the entry. The receiver answers **409**
+  and the portal reports "no longer pending" rather than "replay failed".
+
+- **`idempotency_keys` grew one row per gateway call, forever.** `expires_at` is
+  only read in the lookup's `WHERE`, so an expired row stops being *returned* and
+  never stops *existing*. `IdempotencyStore.purge_expired()` existed the whole
+  time **with no caller anywhere**, and its docstring named a `verify_system.py`
+  check that does not call it. Now reachable as **`agentsmith purge-idempotency`**
+  and listed as a Day-2 task in `OPERATIONS.md` §9.
+
+- **The idempotency store's stated guarantee was wider than its real one.**
+  `get` then `set` is check-then-act with no reservation, so it suppresses
+  *sequential* duplicates — the crash-retry the docstring described — and not
+  concurrent ones: two workers handed the same task both miss the cache and both
+  make the paid call. Documented precisely rather than assumed away; closing it
+  needs a reservation and a decision about what the loser does, which is a
+  semantics change, not a fix.
+
+- **The reference replay receiver** read a body of whatever length the caller
+  declared, crashed on a non-numeric `Content-Length` instead of answering 400,
+  re-inserted `sys.path` on every request, and wrote JSON error bodies with no
+  `Content-Type` while the portal parses them as JSON. All four fixed — it is a
+  pattern tenants copy, and a reference that models an unbounded read is the
+  version that ends up in production.
+
+- `agentsmith` subcommands can now be registered without a handler only once:
+  a test walks every subparser and asserts it dispatches. Registering the parser
+  and forgetting `set_defaults` are one line apart.
+
+
 ### Ops Portal — pass 7
 
 - **The trace link the widget renders had no scheme check.** `traceUrl` is built

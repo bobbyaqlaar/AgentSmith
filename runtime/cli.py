@@ -312,6 +312,29 @@ def _cmd_shellenv(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_purge_idempotency(args: argparse.Namespace) -> int:
+    """Delete idempotency rows past their TTL.
+
+    `idempotency_keys.expires_at` is only read in the lookup's WHERE clause, so
+    an expired row stops being returned and never stops existing — the table
+    grows by one row per gateway call. `IdempotencyStore.purge_expired` has
+    existed the whole time with no caller anywhere; this is the caller, so the
+    Day-2 task in OPERATIONS.md §9 can name a command instead of raw SQL.
+    """
+    try:
+        from runtime.idempotency import IdempotencyStore
+
+        deleted = IdempotencyStore().purge_expired()
+    except Exception as exc:
+        print(f"agentsmith: idempotency purge failed: {exc}", file=sys.stderr)
+        return 1
+    if deleted < 0:
+        print("backend expires its own keys — nothing to purge")
+    else:
+        print(f"purged {deleted} expired idempotency key(s)")
+    return 0
+
+
 def _cmd_version(args: argparse.Namespace) -> int:
     try:
         from importlib.metadata import version
@@ -351,6 +374,11 @@ def build_parser() -> argparse.ArgumentParser:
     shellenv = sub.add_parser("shellenv", help="exports for `eval \"$(agentsmith shellenv)\"`")
     shellenv.add_argument("--mode", default="local", choices=["local", "hybrid"])
     shellenv.set_defaults(func=_cmd_shellenv)
+
+    purge = sub.add_parser(
+        "purge-idempotency", help="delete idempotency rows past their TTL"
+    )
+    purge.set_defaults(func=_cmd_purge_idempotency)
 
     ver = sub.add_parser("version", help="installed framework version")
     ver.set_defaults(func=_cmd_version)

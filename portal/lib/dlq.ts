@@ -140,6 +140,11 @@ export async function getDlqEntry(taskId: string): Promise<DLQEntry | null> {
 
 export class ReplayNotConfiguredError extends Error {}
 export class ReplayWebhookError extends Error {}
+/** The receiver refused because the entry is no longer pending (HTTP 409).
+ *  Separated from ReplayWebhookError because nothing failed — reporting
+ *  "replay failed" for a replay that already happened sends an operator
+ *  looking for a problem that does not exist. */
+export class ReplayAlreadyResolvedError extends Error {}
 
 /**
  * Sends the (possibly human-edited) payload to this entry's tenant's own
@@ -169,6 +174,14 @@ export async function replayDlqEntry(tenantId: string, taskId: string, editedPay
   });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
+    if (resp.status === 409) {
+      // runtime/dead_letter.py claims the row before signalling, so a second
+      // replay — a retry, a double-click, a resent webhook — is refused rather
+      // than re-running the workflow. That refusal is the system working.
+      throw new ReplayAlreadyResolvedError(
+        "This entry is no longer pending — it was already replayed or discarded. Nothing was re-sent.",
+      );
+    }
     throw new ReplayWebhookError(`Tenant replay webhook returned ${resp.status}: ${text}`);
   }
 }

@@ -2622,6 +2622,16 @@ dead-letter) — `DeadLetterQueue.replay()` still calls the configured
 handler, which logs a no-op warning when there's no live workflow to
 signal, same as before this redesign.
 
+**A replay happens once.** `DeadLetterQueue.replay()` claims the row — an
+`UPDATE ... WHERE status = 'pending'` — before it calls the handler, so a
+retried POST, a double-clicked button, two browser tabs or a captured-and-resent
+webhook are refused rather than signalling the workflow again. The receiver
+answers **409** and the portal shows "this entry is no longer pending", which is
+not an error to investigate. An entry a human has **discarded** cannot be
+replayed at all; before this it could, and the discard was advisory. If the
+handler raises, the claim is released and the entry returns to `pending`, so an
+unreachable Temporal does not strand it.
+
 The Ops Portal's DLQ view (`GET /api/dlq`) reports `wired: false` until a
 worker has constructed a `DeadLetterQueue` at least once against the same
 `DATABASE_URL` — that's a genuine "has anything actually run against this
@@ -2680,6 +2690,7 @@ Dataset Commits".
 | Promote staging → production | `ai-tenant-promote <id> --from staging --to production` |
 | Rotate a widget token | Mint a new one (`POST .../widget-token`) — old one keeps working until explicitly revoked |
 | Rotate the audit-log HMAC key | New events sign with the new key; old events will report `verified: false` against it — re-sign history or accept the discontinuity, document which |
+| Purge expired idempotency keys | `agentsmith purge-idempotency` — `idempotency_keys.expires_at` is only read by the lookup, so an expired row stops being *returned* and never stops *existing*: one row per gateway call, kept forever. `IdempotencyStore.purge_expired()` existed the whole time with no caller anywhere, and its docstring named a `verify_system.py` check that does not call it |
 | Prune expired session revocations | `DELETE FROM revoked_sessions WHERE revoked_at < now() - interval '1 day'` — one row per SSO logout, kept forever otherwise. A revocation only matters inside the 8h token TTL, so anything older is dead weight. The instruction previously existed only as a comment inside `portal/db/schema.sql`, which is not somewhere an operator reads |
 | Rotate the org GPG signing key | Re-run `package-hook-bundle.sh` with the new key; redistribute the new public key to MDM before the next deploy |
 | Check unresolved MAJOR/CRITICAL | `ai-stack-check`, or `GET /api/audit` / `GET /api/tenants` on the Ops Portal |

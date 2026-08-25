@@ -25,6 +25,7 @@ import {
   getDlqEntry,
   discardDlqEntry,
   replayDlqEntry,
+  ReplayAlreadyResolvedError,
   ReplayNotConfiguredError,
   ReplayWebhookError,
 } from "../lib/dlq.ts";
@@ -237,6 +238,25 @@ await test("replay HMAC-signs the edited payload for the tenant's own webhook", 
   const expected =
     "sha256=" + createHmac("sha256", "test-webhook-secret").update(captured.body!).digest("hex");
   assert.equal(captured.sig, expected);
+});
+
+await test("a 409 from the receiver is 'already resolved', not a failure", async () => {
+  // runtime/dead_letter.py claims the row before it signals, so a repeated
+  // replay is refused. The portal must not report that refusal as a webhook
+  // failure — an operator would go looking for a problem that does not exist.
+  const original = globalThis.fetch;
+  globalThis.fetch = (async () =>
+    new Response(JSON.stringify({ error: "already replayed" }), { status: 409 })) as typeof fetch;
+  try {
+    await assert.rejects(
+      // tenantB is the one with a webhook configured — tenantA deliberately
+      // has none, which is what the ReplayNotConfiguredError test above uses.
+      () => replayDlqEntry(tenantB, "task-3", { fixed: true }),
+      ReplayAlreadyResolvedError,
+    );
+  } finally {
+    globalThis.fetch = original;
+  }
 });
 
 await test("a non-2xx webhook response raises ReplayWebhookError (DB stays pending)", async () => {

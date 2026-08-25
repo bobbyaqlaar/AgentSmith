@@ -12,6 +12,7 @@ These assert on the scaffold as a value.
 from __future__ import annotations
 
 import sys
+import argparse
 from pathlib import Path
 
 import pytest
@@ -137,8 +138,28 @@ def test_parser_covers_the_shell_functions_being_replaced():
         ["shellenv", "--mode", "hybrid"],
         ["version"],
         ["doctor"],
+        ["purge-idempotency"],
     ):
         assert parser.parse_args(argv) is not None
+
+
+def test_every_subcommand_dispatches_somewhere():
+    """A subcommand without `set_defaults(func=...)` parses fine and then does
+    nothing — argparse does not mind, and `main` would raise AttributeError at
+    the moment someone runs it. Registering the parser and forgetting the
+    handler is one line apart in build_parser."""
+    parser = build_parser()
+    subparsers = [
+        action for action in parser._actions if isinstance(action, argparse._SubParsersAction)
+    ]
+    assert subparsers, "the parser has no subcommands — this test is checking nothing"
+    names = [name for action in subparsers for name in action.choices]
+    assert len(names) >= 5, f"expected the full command set, found {names}"
+    for name in names:
+        if name == "tenant":
+            continue  # a group, not a command — its children are checked below
+        args = parser.parse_args([name] if name != "shellenv" else [name])
+        assert callable(getattr(args, "func", None)), f"`agentsmith {name}` dispatches to nothing"
 
 
 def test_shellenv_emits_evaluable_exports(capsys):

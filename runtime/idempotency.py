@@ -5,6 +5,15 @@ Every LLM Gateway activity is assigned an idempotency key derived from
 a hash of its input parameters. Duplicate submissions (on retry after crash)
 are detected and short-circuited — the cached result is returned immediately.
 
+WHAT THIS GUARANTEES, PRECISELY. `get` then `set` is check-then-act with no
+reservation between them, so this suppresses SEQUENTIAL duplicates — the retry
+after a crash, which is the case above and the common one — and NOT concurrent
+ones. Two workers handed the same task at the same time both miss the cache and
+both do the work, including both paid LLM calls. Closing that needs a
+reservation (`SET NX` / `INSERT ... ON CONFLICT DO NOTHING`) and a decision
+about what the loser does — block, poll, or refuse — which is a semantics
+change rather than a fix, so it is stated here rather than quietly assumed away.
+
 Backend: Redis (default) or Postgres. Configurable via IDEMPOTENCY_BACKEND env var.
 
 Usage:
@@ -57,6 +66,18 @@ class IdempotencyStore:
     def set(self, key: str, value: Any, ttl_seconds: int = 86400) -> None:
         """Store result for key with TTL."""
         self._backend.set(key, value, ttl_seconds)
+
+    def purge_expired(self) -> int:
+        """Delete rows past their TTL. Returns the count, or -1 when the
+        backend expires its own keys.
+
+        Redis does (`ex=`), Postgres does not — `expires_at` is only consulted
+        by `get`. -1 rather than 0 so "this backend needs no purge" is not
+        reported as "nothing needed purging", which is the same value meaning
+        two things that pillar 15 is about.
+        """
+        purge = getattr(self._backend, "purge_expired", None)
+        return purge() if callable(purge) else -1
 
 
 class _RedisBackend:
@@ -138,9 +159,19 @@ class _PostgresBackend:
             conn.close()
 
     def purge_expired(self) -> int:
-        """Deletes rows past their TTL. Not called automatically — intended
-        for a periodic cleanup job (cron, or scripts/verify_system.py
-        --check-idempotency) since this class has no background thread."""
+        """Deletes rows past their TTL.
+
+        `expires_at` is only ever read in `get`'s WHERE clause, so an expired
+        row stops being *returned* and never stops *existing*: this table grows
+        by one row per gateway call, forever, and nothing deleted from it.
+
+        The previous version of this docstring named
+        `scripts/verify_system.py --check-idempotency` as a caller. That check
+        does not call this, and neither did anything else — the method had no
+        caller at all. It is reachable as `agentsmith purge-idempotency` now,
+        and listed as a Day-2 task in OPERATIONS.md §9, because a cleanup job
+        nobody is told to run is not a cleanup job.
+        """
         conn = self._connect()
         try:
             with conn, conn.cursor() as cur:

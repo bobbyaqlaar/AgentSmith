@@ -7,6 +7,25 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — review pass 8, `runtime/` (2026-08-25)
+
+The first pass over `runtime/`, run with the levers added the same day. Two of
+the new ones produced the findings: **2.6 out-of-order and repeated messages**
+and **3.4(++) a task whose enforcer is a human**.
+
+| Finding | Fix |
+|---|---|
+| `DeadLetterQueue.replay()` invoked its handler — the call that signals a live workflow — before consulting the entry's status. A retried POST, a double-click, two tabs or a resent webhook re-signalled every time, and an entry a human had DISCARDED could still be replayed. The portal's own `discardDlqEntry` has always carried `AND status = 'pending'` | The row is claimed atomically before the handler runs; a repeat raises `AlreadyResolvedError` (409 at the receiver, "no longer pending" in the portal); a failing handler releases the claim so `replayed` keeps meaning "an attempt reached the engine" |
+| `idempotency_keys` grows one row per gateway call and nothing ever deleted from it — `expires_at` is only read by the lookup. `purge_expired()` had **no caller anywhere**, and its docstring named a `verify_system.py` check that does not call it | `agentsmith purge-idempotency`, plus a Day-2 row in OPERATIONS.md §9. Running it against the local database deleted a real expired row on the first invocation |
+| The idempotency docstring claimed duplicate suppression without qualification. `get` then `set` has no reservation, so it covers sequential retries and not concurrent duplicates — two workers both miss and both pay for the call | Stated precisely. **Not fixed:** a reservation needs a decision about what the loser does (block, poll, refuse), which is a semantics change |
+| The reference replay receiver read a caller-declared `Content-Length` unbounded, crashed on a non-numeric one, grew `sys.path` per request, and wrote JSON errors with no `Content-Type` | All four. It is a pattern tenants copy into FastAPI or Flask, so its defects propagate |
+
+**Guard added:** every `agentsmith` subcommand must dispatch to a handler —
+registering a subparser and forgetting `set_defaults` are one line apart, and
+argparse does not mind.
+
+---
+
 ## Completed — Ops Portal review pass 7 (2026-08-25)
 
 | Finding | Fix |

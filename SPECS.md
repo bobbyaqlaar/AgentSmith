@@ -534,7 +534,7 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (§4a). |
 | `runtime/security_paths.py` | `security_artefact_path()` — the env-override-then-convention lookup `prompt_guard` and `tool_registry` had each implemented separately. |
 | `runtime/tenancy.py` | `resolve_tenant_id()` (explicit → `AGENT_TENANT_ID`/`TENANT_ID` → `tenant.yaml` → raise) and the `agent_context()` contextvars that `AgentIdentityProcessor` stamps onto every span. |
-| `runtime/cli.py` | The `agentsmith` console script (`[project.scripts]`). `tenant init` owns the scaffold that used to be a zsh heredoc in `~/.zshrc`; `doctor` delegates to `verify_system`; `shellenv` emits the exports a child process cannot set on its parent. The shell functions now delegate here. |
+| `runtime/cli.py` | The `agentsmith` console script (`[project.scripts]`). `tenant init` owns the scaffold that used to be a zsh heredoc in `~/.zshrc`; `doctor` delegates to `verify_system`; `shellenv` emits the exports a child process cannot set on its parent; `purge-idempotency` deletes expired rows from `idempotency_keys`, which nothing had ever deleted from. The shell functions now delegate here. |
 | `runtime/metrics.py` | OTel counters and histograms. Spans are the wrong instrument for a rate: sampled, expensive to scan, worse as traffic grows. Carries the cache hit ratio, which was previously only logged. |
 | `runtime/prompt_identity.py` | `prompt.system.sha256` — a digest of the system turn, which changes when a human edits the instructions and not when the input changes. The join column for "answers degraded on Tuesday", available without a template engine. |
 | `runtime/config.py` | `load_env_file()` — the runtime loaded no `.env` at all before this, only `scripts/` did — and `resolve()`, the single precedence: explicit → environment → `tenant.yaml` → documented default or raise. |
@@ -1748,9 +1748,20 @@ dlq.enqueue(payload, error, tenant_id, task_id=None,
 dlq.list(tenant_id=None, limit=100, status="pending")
 dlq.replay(task_id, override_payload=None)  # re-submits via replay_handler; override_payload
                                               # is the human-edited fix (e.g. correcting a
-                                              # hallucinated field name before resuming)
+                                              # hallucinated field name before resuming).
+                                              # Claims the row (status='pending') BEFORE
+                                              # calling the handler, so a repeat raises
+                                              # AlreadyResolvedError instead of signalling
+                                              # the workflow a second time; a handler that
+                                              # raises returns the entry to pending.
 dlq.discard(task_id)  # removes from DLQ + marks resolved
 ```
+
+`replay()` is idempotent too, and that is newer: the handler — the call that
+signals a live workflow — used to run before anything consulted the entry's
+status, so a retried POST, a double-clicked button or a resent webhook
+re-signalled every time, and an entry a human had **discarded** could still be
+replayed.
 
 `enqueue()` is idempotent on `task_id` (`ON CONFLICT DO NOTHING`) and posts
 to `SLACK_WEBHOOK_URL`/`TEAMS_WEBHOOK_URL` if configured. `reason` is a

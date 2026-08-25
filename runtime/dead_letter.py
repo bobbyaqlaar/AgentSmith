@@ -82,6 +82,16 @@ def _notify(tenant_id: str, task_id: str, reason: Optional[str], error: str) -> 
             logger.debug("DLQ notify via %s failed: %s", env_var, exc)
 
 
+class AlreadyResolvedError(RuntimeError):
+    """Raised when a replay is asked for an entry that is no longer pending.
+
+    Distinct from KeyError (no such entry) because the callers answer them
+    differently: an unknown task is a 404 and an already-resolved one is a 409,
+    and a caller that cannot tell them apart reports "replay failed" for a
+    replay that already happened.
+    """
+
+
 @dataclass
 class DLQEntry:
     task_id: str
@@ -370,28 +380,73 @@ class DeadLetterQueue:
         if override_payload is not None:
             entry.payload = override_payload
 
-        if self._replay_handler is not None:
-            self._replay_handler(entry)
-        else:
-            logger.warning(
-                "DeadLetterQueue.replay(%s) called with no replay_handler configured — "
-                "marking replayed without re-enqueueing to any workflow engine.",
-                task_id,
-            )
-
+        # CLAIM THE ROW BEFORE RUNNING THE HANDLER, and only if it is still
+        # pending. The handler is the side effect — it signals a live workflow —
+        # and it used to run unconditionally, before any status check:
+        #
+        #   * the portal's replay POST is an ordinary HTTP request, so a retry,
+        #     a double-click across two tabs, or a captured-and-resent webhook
+        #     re-signalled the workflow every time;
+        #   * an entry a human had DISCARDED could still be replayed, because
+        #     nothing consulted the status. The discard decision was advisory.
+        #
+        # `AND status = 'pending'` in the UPDATE makes the claim atomic, so two
+        # concurrent replays cannot both proceed — the loser sees rowcount 0.
+        # portal/lib/dlq.ts's discardDlqEntry has always had this clause; the
+        # runtime it drives did not.
         conn = self._connect()
         try:
             with conn, conn.cursor() as cur:
                 if override_payload is not None:
                     cur.execute(
-                        "UPDATE dlq_entries SET status = 'replayed', replayed_at = now(), payload = %s::jsonb WHERE task_id = %s",
+                        "UPDATE dlq_entries SET status = 'replayed', replayed_at = now(), payload = %s::jsonb "
+                        "WHERE task_id = %s AND status = 'pending'",
                         (json.dumps(override_payload, default=str), task_id),
                     )
                 else:
                     cur.execute(
-                        "UPDATE dlq_entries SET status = 'replayed', replayed_at = now() WHERE task_id = %s",
+                        "UPDATE dlq_entries SET status = 'replayed', replayed_at = now() "
+                        "WHERE task_id = %s AND status = 'pending'",
                         (task_id,),
                     )
+                claimed = cur.rowcount
+        finally:
+            conn.close()
+
+        if claimed == 0:
+            raise AlreadyResolvedError(
+                f"DLQ entry {task_id!r} is {entry.status}, not pending — nothing was replayed"
+            )
+
+        try:
+            if self._replay_handler is not None:
+                self._replay_handler(entry)
+            else:
+                logger.warning(
+                    "DeadLetterQueue.replay(%s) called with no replay_handler configured — "
+                    "marking replayed without re-enqueueing to any workflow engine.",
+                    task_id,
+                )
+        except Exception:
+            # Put it back. `replayed` has always meant "an attempt reached the
+            # engine" — portal/lib/dlq.ts declines to set it for that exact
+            # reason — so a claim followed by a failed handler must not leave
+            # the row claiming something that did not happen.
+            self._release_claim(task_id)
+            raise
+
+    def _release_claim(self, task_id: str) -> None:
+        """Return a claimed entry to `pending` after a failed replay handler."""
+        conn = self._connect()
+        try:
+            with conn, conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE dlq_entries SET status = 'pending', replayed_at = NULL "
+                    "WHERE task_id = %s AND status = 'replayed'",
+                    (task_id,),
+                )
+        except Exception:  # pragma: no cover - the original error is the one that matters
+            logger.exception("Failed to release the replay claim on %s", task_id)
         finally:
             conn.close()
 
