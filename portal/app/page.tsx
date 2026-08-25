@@ -3,6 +3,8 @@ import { listTenants } from "@/lib/tenants";
 import { getAllTenantsCurrentSpend } from "@/lib/cost";
 import { getUnresolvedCountByTenant } from "@/lib/issues";
 import { getDLQStatus } from "@/lib/dlq";
+import { getFrameworkVersionByTenant } from "@/lib/runStatus";
+import { FIRST_VERSIONED_RELEASE, versionBreakdown } from "@/lib/wireContract";
 import { filterTenantIds } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { MetricCard } from "@/components/ui/Card";
@@ -13,11 +15,12 @@ export const dynamic = "force-dynamic";
 export default async function TenantOverviewPage() {
   const access = currentAccess();
 
-  const [allTenants, spend, issues, dlq] = await Promise.all([
+  const [allTenants, spend, issues, dlq, frameworkVersions] = await Promise.all([
     listTenants(),
     getAllTenantsCurrentSpend(),
     getUnresolvedCountByTenant(),
     getDLQStatus(),
+    getFrameworkVersionByTenant(),
   ]);
   const visibleIds = new Set(filterTenantIds(access, allTenants.map((t) => t.tenantId)));
   const tenants = allTenants.filter((t) => visibleIds.has(t.tenantId));
@@ -27,6 +30,16 @@ export default async function TenantOverviewPage() {
     : null;
   const totalIssues = tenants.reduce((sum, t) => sum + (issues[t.tenantId] ?? 0), 0);
   const totalDlq = dlq.wired ? tenants.reduce((sum, t) => sum + (dlq.pendingByTenant[t.tenantId] ?? 0), 0) : null;
+
+  // The fleet view. This portal is operated by IT and the tenants by the
+  // business, on independent release cadences — so "which AgentSmith is my
+  // fleet on" is a question only this page can answer, and until the version
+  // was on the wire nothing could. Tenants that have never reported a run are
+  // excluded rather than bucketed: nothing has run, which is not a version.
+  const reportedVersions = tenants
+    .filter((t) => frameworkVersions.has(t.tenantId))
+    .map((t) => frameworkVersions.get(t.tenantId) ?? null);
+  const versions = versionBreakdown(reportedVersions);
 
   return (
     <div className="space-y-6">
@@ -55,6 +68,11 @@ export default async function TenantOverviewPage() {
         />
         <MetricCard label="DLQ pending" value={totalDlq ?? "—"} tone={totalDlq ? "warning" : "default"} />
         <MetricCard label="Tenants" value={tenants.length} />
+        <MetricCard
+          label="AgentSmith versions in the fleet"
+          value={versions.length === 0 ? "—" : versions.length}
+          tone={versions.length > 1 ? "warning" : "default"}
+        />
       </div>
 
       {tenants.length === 0 ? (
@@ -70,6 +88,7 @@ export default async function TenantOverviewPage() {
               <tr>
                 <th className="py-2.5 px-4 font-medium">Tenant</th>
                 <th className="py-2.5 px-4 font-medium">Isolation</th>
+                <th className="py-2.5 px-4 font-medium">AgentSmith</th>
                 <th className="py-2.5 px-4 font-medium">Spend (this month)</th>
                 <th className="py-2.5 px-4 font-medium">Unresolved issues</th>
                 <th className="py-2.5 px-4 font-medium">DLQ pending</th>
@@ -85,6 +104,22 @@ export default async function TenantOverviewPage() {
                     <span className="ml-2 text-black/40 dark:text-white/40">({t.tenantId})</span>
                   </td>
                   <td className="py-2.5 px-4 text-black/70 dark:text-white/70">{t.isolation}</td>
+                  {/* Three states, and the em dash is not one of the other two.
+                      A tenant with no runs has reported nothing; a tenant whose
+                      runs carry no version is on a framework older than the one
+                      that began reporting it — a fact about that tenant, not a
+                      gap in this table. */}
+                  <td className="py-2.5 px-4 text-black/70 dark:text-white/70">
+                    {!frameworkVersions.has(t.tenantId) ? (
+                      <span className="text-black/40 dark:text-white/40" title="no runs reported yet">—</span>
+                    ) : frameworkVersions.get(t.tenantId) === null ? (
+                      <span title={`reported no version, so older than ${FIRST_VERSIONED_RELEASE}`}>
+                        {`< ${FIRST_VERSIONED_RELEASE}`}
+                      </span>
+                    ) : (
+                      frameworkVersions.get(t.tenantId)
+                    )}
+                  </td>
                   <td className="py-2.5 px-4">
                     {spend.wired ? `$${(spend.byTenant[t.tenantId] ?? 0).toFixed(2)}` : "—"}
                   </td>

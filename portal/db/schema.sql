@@ -152,7 +152,15 @@ CREATE TABLE IF NOT EXISTS agent_runs (
     -- undercount every streamed run instead of showing a gap.
     input_tokens  INTEGER,
     output_tokens INTEGER,
-    cost_usd      NUMERIC(12, 6)
+    cost_usd      NUMERIC(12, 6),
+    -- Which AgentSmith wrote this row. NULLABLE, and the NULL is meaningful:
+    -- it is a row from a framework old enough not to report one, which is a
+    -- different fact from a current tenant that failed to. This portal is run
+    -- by IT and the tenants by the business on independent cadences, so it is
+    -- always reading a fleet spanning several versions — and a version decides
+    -- which of the columns above a tenant can populate at all. See
+    -- portal/lib/wireContract.ts.
+    framework_version TEXT
 );
 
 -- agent_runs predates these three, and CREATE TABLE IF NOT EXISTS is a no-op
@@ -163,6 +171,7 @@ CREATE TABLE IF NOT EXISTS agent_runs (
 ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS input_tokens  INTEGER;
 ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS output_tokens INTEGER;
 ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS cost_usd      NUMERIC(12, 6);
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS framework_version TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_started
     ON agent_runs (tenant_id, started_at DESC);

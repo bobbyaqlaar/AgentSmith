@@ -738,6 +738,7 @@ class LLMGateway:
             # unconnected traces and "follow the request across services"
             # stopped at the process boundary.
             from runtime.tracing import current_trace_id, inject_context
+            from runtime.version import framework_version
 
             httpx.post(
                 f"{ops_portal_url.rstrip('/')}/api/runs/ingest",
@@ -760,6 +761,15 @@ class LLMGateway:
                     "inputTokens": input_tokens,
                     "outputTokens": output_tokens,
                     "costUsd": cost_usd,
+                    # WHICH AGENTSMITH wrote this row. The portal is operated
+                    # by IT and the tenants by the business, on independent
+                    # release cadences, so the portal is always looking at a
+                    # fleet spanning several framework versions — and a version
+                    # decides what fields a tenant can populate at all. Without
+                    # it, a NULL cost from a version that never reported cost
+                    # and a NULL cost from a broken current tenant are the same
+                    # cell. See portal/lib/wireContract.ts.
+                    "frameworkVersion": framework_version(),
                 },
                 headers=inject_context({"Authorization": f"Bearer {sync_token}"}),
                 # Was a flat 5s, twice per call: a slow portal could add ten

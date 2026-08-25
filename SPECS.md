@@ -532,6 +532,7 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/moderation.py` | Pluggable output moderation hook (SEC-MOD-001), `MODERATION_HOOK=off\|optional\|required`. |
 | `runtime/structured_output.py` | `parse_llm_json` — fenced/bare JSON extraction + Pydantic validation (SEC-OUTPUT-001). |
 | `runtime/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (§4a). |
+| `runtime/version.py` | `framework_version()` — the running framework's version, for the OTel Resource and the run-status POST. An installed release reports bare; a source checkout reports `x.y.z+src`, because a working copy's pyproject version says which release it descends from and nothing about what it contains. |
 | `runtime/otlp.py` | `resolve_otlp_endpoint()` / `span_exporter()` / `metric_exporter()` — the one place an endpoint variable becomes an OTLP URL. Four callers did this separately and only `portal/lib/tracing.ts` handled a base that already names `/v1/traces`; that version is the one ported here, and the TS copy is pinned by a parsing test. |
 | `runtime/security_paths.py` | `security_artefact_path()` — the env-override-then-convention lookup `prompt_guard` and `tool_registry` had each implemented separately. |
 | `runtime/tenancy.py` | `resolve_tenant_id()` (explicit → `AGENT_TENANT_ID`/`TENANT_ID` → `tenant.yaml` → raise) and the `agent_context()` contextvars that `AgentIdentityProcessor` stamps onto every span. |
@@ -557,6 +558,7 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `portal/` | Ops dashboard (Next.js or equivalent). Multi-tenant pipeline view, cost, queue depth, unresolved issues, HITL promotion queue. SSO/OIDC when enterprise pack enabled. |
 | `portal/instrumentation.ts` → `instrumentation.node.ts` | Registers the portal's OTel provider before the first request. The SDK is behind a dynamic import guarded on `NEXT_RUNTIME` — it cannot load on the Edge runtime `middleware.ts` uses. No OTLP endpoint configured → nothing is registered and the portal behaves as it did before it was instrumented. |
 | `portal/lib/tracing.ts` | `portalSpan()`, `withIdentity()` (the OTel-context analogue of `runtime/tenancy.agent_context`), `currentTraceId()`, and `resolveTracesEndpoint()` — which detects an `OTEL_EXPORTER_OTLP_ENDPOINT` that already names `/v1/traces`, because this repo's own convention puts one there and the JS exporter appends its own. API-only, so it is safe to import from Edge code. |
+| `portal/lib/wireContract.ts` | Which fields a given framework version can emit, so an absent value can say WHY. IT runs the portal and the business runs the tenants on independent cadences, so the portal always reads a fleet spanning several versions; `emits()` answers yes/no/**unknown** and `explainAbsent()` distinguishes "this version never reported it" from "this version should have and did not". |
 | `portal/lib/spanIdentity.ts` | Pillar 3 for the portal, split as `runtime/tracing.py` splits it: per-process facts on the Resource (`service.name`, `project.name`, `environment`, `agent.role: ops-portal`), per-request facts (`tenant.id`, `portal.actor.role`) stamped at span start by `PortalIdentityProcessor`. |
 | `portal/lib/environment.ts` | Deliberate mirror of `runtime/environment.py`'s alias table, pinned by a drift test in `portal/test/tracing.test.ts`. Two services must not disagree about which environment they are in. |
 | `templates/in-app-widget/` | Embeddable component (React/Vanilla). Shows last agent run status, tenant-scoped trace link, error summary. Read-only; tenant-scoped auth. |
@@ -1257,6 +1259,7 @@ AgentSmith/
 │   ├── cli.py                   # `agentsmith` console script — tenant init, doctor, shellenv
 │   ├── metrics.py               # OTel counters/histograms — rates spans cannot answer
 │   ├── otlp.py                  # one endpoint resolver for both signals, four callers
+│   ├── version.py               # which AgentSmith is running — onto the Resource and the ingest
 │   ├── prompt_identity.py       # prompt.system.sha256 — the join column for degradation
 │   ├── self_correction.py       # Opt-in corrected-payload loop helper
 │   ├── conversation_memory.py   # Short-term memory (RAG substrate)

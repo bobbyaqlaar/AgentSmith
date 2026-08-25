@@ -29,6 +29,21 @@ function numberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/** A framework version string, or null.
+ *
+ *  Deliberately NOT checked against a list of known versions. This portal is
+ *  operated by IT and the tenants by the business, so a tenant reporting a
+ *  version this portal has never heard of is ordinary — it means the business
+ *  upgraded first. Rejecting it would silence exactly the tenants whose shape
+ *  the portal most needs to know about. Capped only so a malformed client
+ *  cannot write an unbounded string into every row.
+ */
+function versionOrNull(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed && trimmed.length <= 64 ? trimmed : null;
+}
+
 /** The 32-hex trace id out of a W3C `traceparent`, or null.
  *
  *  Kept as a hand parser even though the portal now runs an OTel SDK, because
@@ -109,6 +124,12 @@ export async function POST(request: Request) {
           inputTokens: numberOrNull(body.inputTokens),
           outputTokens: numberOrNull(body.outputTokens),
           costUsd: numberOrNull(body.costUsd),
+          // Trimmed and length-capped, not validated against a known list: a
+          // FUTURE version is the normal case for a portal that IT upgrades on
+          // its own cadence, and refusing one would make the newest tenants
+          // the ones that stop reporting. Unparseable is handled where it is
+          // read (lib/wireContract.ts), not by discarding it here.
+          frameworkVersion: versionOrNull(body.frameworkVersion),
         });
 
         return NextResponse.json({ ok: true });

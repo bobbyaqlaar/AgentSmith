@@ -144,7 +144,7 @@
         "is_recording",
         "on_start"
       ],
-      "last_modified": "2026-08-25T16:32:11Z",
+      "last_modified": "2026-08-25T20:50:54Z",
       "id": "runtime/tracing.py"
     },
     {
@@ -402,7 +402,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-25T11:54:10Z",
+      "last_modified": "2026-08-25T20:51:09Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -2615,7 +2615,7 @@
         "dynamic",
         "TenantOverviewPage"
       ],
-      "last_modified": "2026-08-24T23:09:10Z",
+      "last_modified": "2026-08-25T20:58:03Z",
       "id": "portal/app/page.tsx"
     },
     {
@@ -2841,9 +2841,10 @@
         "WidgetStatus",
         "UpsertAgentRunInput",
         "upsertAgentRun",
+        "getFrameworkVersionByTenant",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-08-25T09:26:05Z",
+      "last_modified": "2026-08-25T20:57:40Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -2988,7 +2989,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-24T23:26:24Z",
+      "last_modified": "2026-08-25T20:51:47Z",
       "id": "portal/app/api/runs/ingest/route.ts"
     },
     {
@@ -3708,6 +3709,61 @@
       ],
       "last_modified": "2026-08-25T16:31:13Z",
       "id": "runtime/test/test_telemetry_wiring.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_installed_version",
+        "_checkout_version",
+        "framework_version",
+        "is_source_checkout",
+        "_reset_cache"
+      ],
+      "last_modified": "2026-08-25T20:56:56Z",
+      "id": "runtime/version.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_fresh_cache",
+        "test_a_checkout_is_marked_as_one",
+        "test_source_builds_are_identifiable_without_parsing",
+        "test_the_checkout_version_matches_pyproject",
+        "test_an_installed_package_reports_its_release_version_bare",
+        "test_unresolvable_is_named_not_guessed",
+        "test_every_span_carries_the_framework_version",
+        "test_the_ingest_payload_carries_the_version",
+        "test_the_portal_column_is_nullable_and_added_by_an_alter",
+        "test_the_two_sides_agree_on_the_field_name",
+        "test_a_pinned_tenant_would_send_none_of_this",
+        "test_the_version_is_json_serialisable_for_the_post"
+      ],
+      "last_modified": "2026-08-25T20:54:24Z",
+      "id": "runtime/test/test_framework_version.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-08-25T20:53:37Z",
+      "id": "portal/test/wireContract.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "WireField",
+        "FIRST_VERSIONED_RELEASE",
+        "ParsedVersion",
+        "parseVersion",
+        "emits",
+        "explainAbsent",
+        "versionBreakdown"
+      ],
+      "last_modified": "2026-08-25T20:52:41Z",
+      "id": "portal/lib/wireContract.ts"
     }
   ],
   "edges": [
@@ -4309,6 +4365,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_otlp_endpoint.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_framework_version.py",
       "target": "runtime/__init__.py"
     }
   ]

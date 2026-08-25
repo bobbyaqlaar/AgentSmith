@@ -67,14 +67,17 @@ export interface UpsertAgentRunInput {
   inputTokens?: number | null;
   outputTokens?: number | null;
   costUsd?: number | null;
+  // null = a framework old enough not to report one. Distinct from a current
+  // tenant that failed to, which is why it is not defaulted to anything.
+  frameworkVersion?: string | null;
 }
 
 export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<void> {
   const finished = input.status !== "running";
   await getPool().query(
     `INSERT INTO agent_runs (run_id, tenant_id, workflow_id, status, trace_id, error_summary,
-                             input_tokens, output_tokens, cost_usd, finished_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, ${finished ? "now()" : "NULL"})
+                             input_tokens, output_tokens, cost_usd, framework_version, finished_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${finished ? "now()" : "NULL"})
      ON CONFLICT (run_id) DO UPDATE SET
        -- A late 'running' must not un-finish a run. The gateway's two POSTs
        -- are best-effort HTTP: a retried or reordered START can arrive after
@@ -99,6 +102,10 @@ export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<void> 
        input_tokens = COALESCE(EXCLUDED.input_tokens, agent_runs.input_tokens),
        output_tokens = COALESCE(EXCLUDED.output_tokens, agent_runs.output_tokens),
        cost_usd = COALESCE(EXCLUDED.cost_usd, agent_runs.cost_usd),
+       -- COALESCE like its neighbours. A run's framework cannot change
+       -- mid-run, so the only way the two writes differ is one of them not
+       -- carrying it — and the one that did is the one worth keeping.
+       framework_version = COALESCE(EXCLUDED.framework_version, agent_runs.framework_version),
        finished_at = ${finished ? "now()" : "agent_runs.finished_at"}`,
     [
       input.runId,
@@ -110,8 +117,37 @@ export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<void> 
       input.inputTokens ?? null,
       input.outputTokens ?? null,
       input.costUsd ?? null,
+      input.frameworkVersion ?? null,
     ]
   );
+}
+
+/** What each tenant's most recent run reported as its framework version.
+ *
+ * THREE STATES, because two would repeat the mistake this column exists to fix:
+ *
+ *   - a version string  — that tenant's newest run reported it;
+ *   - `null`            — the tenant HAS runs and none carried a version, so it
+ *                         is on a framework older than the release that began
+ *                         reporting one. A dated fact, not a gap;
+ *   - absent from the map — the tenant has no runs at all. Nothing has been
+ *                         measured, which is not the same as an old framework
+ *                         and must not render as one.
+ *
+ * DISTINCT ON rather than a GROUP BY max(): versions are not ordered by string
+ * comparison ("1.10.0" < "1.9.0") and a tenant mid-rollout legitimately has
+ * rows from two versions. The newest run is the honest answer to "what is this
+ * tenant emitting now".
+ */
+export async function getFrameworkVersionByTenant(): Promise<Map<string, string | null>> {
+  const { rows } = await getPool().query(
+    `SELECT DISTINCT ON (tenant_id) tenant_id, framework_version
+       FROM agent_runs
+      ORDER BY tenant_id, started_at DESC`
+  );
+  const out = new Map<string, string | null>();
+  for (const r of rows) out.set(r.tenant_id, r.framework_version ?? null);
+  return out;
 }
 
 interface AgentRunRow {

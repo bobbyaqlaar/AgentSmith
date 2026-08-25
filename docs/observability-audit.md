@@ -409,6 +409,85 @@ is now possible but not configured — both sides currently export to one endpoi
 
 ---
 
+## 6a. Two coupling surfaces, and only one was versioned
+
+**Added 2026-08-26.** Everything above treats AgentSmith and a tenant as one
+system. They are not: they have different owners and different release cadences.
+IT operations ships the framework and this portal; the business ships the tenant
+app and pins a framework version so IT's releases cannot move underneath it.
+That separation is the design — the pin is what makes it work — and it has a
+consequence the audit had not accounted for.
+
+There are two coupling surfaces:
+
+- **The library surface** — `runtime/` imported into the tenant's own process.
+  The pin governs it, the compatibility matrix tracks it, the business upgrades
+  on its own schedule. Fine.
+- **The wire surface** — span attributes, the run-status POST, `agent_runs`
+  columns, `dlq_entries`, the replay webhook. This is what actually delivers the
+  monitoring in §§1–6. IT upgrades it unilaterally. It carried **no version at
+  all**.
+
+So the portal could not tell which telemetry shape it was reading. A tenant
+pinned to v1.2.0 emits no `prompt.system.sha256` (no `prompt_identity`), no
+metrics (no `metrics.py`), and `tenant.id` only where a caller remembered the
+kwarg (no identity processor) — in `agent_runs` a NULL, which is the same NULL a
+current tenant writes when its provider reported no usage or its exporter is
+misconfigured. One value, two meanings, on the product whose users are IT ops.
+Pillar 15, at fleet scale.
+
+`framework.version` was declared in `.agenticframework/tenant.yaml` and read by
+nothing — the same shape as `tenant.id` and `budget.monthly_usd_cap` before those
+were closed. It could not have answered this regardless: what matters is the
+version of the code that is RUNNING, not the one the repo says it wants.
+
+### ✅ Fixed — the version is on both wires, and it means something
+
+`agentsmith.framework.version` on the OTel **Resource**, and `frameworkVersion`
+on the run-status POST into a nullable `agent_runs.framework_version`.
+
+The Resource is the correct home for this one, and §1 argues the opposite for
+its neighbours — deliberately. `agent.role` and `tenant.id` vary *within* one
+worker process, so a Resource would make most spans confident lies. The
+framework version is fixed for the life of the process. That is the whole test,
+and it is the only pillar-3-adjacent attribute that passes it.
+
+**A source checkout reports `1.2.0+src`.** `AGENTSMITH_DIR` — how tenant CI and
+local development run — puts a checkout on `sys.path` whose `pyproject.toml`
+still names the last release while `main` runs far ahead. This working copy
+reports `1.2.0+src` while carrying two dozen unreleased changelog sections; a
+bare `1.2.0` would be a confident lie of exactly the kind the version exists to
+prevent. `+src` is SemVer build metadata, orders equal, and says the number does
+not bound what the process contains.
+
+**`portal/lib/wireContract.ts` turns the version into an answer.** `emits()`
+returns **yes / no / unknown** — three states, because two is how this codebase
+keeps producing this defect — and `explainAbsent()` renders *"not reported by
+AgentSmith 1.2.0"* where the version is the reason, and stays **silent** where
+the absence is a genuine fault the caller must speak to in its own words.
+`unknown` covers a `+src` build and an unparseable string, which are neither.
+
+The ingest route accepts a version it has never heard of. A tenant ahead of the
+portal is ordinary when the business upgrades first, and rejecting it would
+silence exactly the tenants whose shape the portal most needs to know.
+
+The tenant list now carries an **AgentSmith** column and a fleet count, with the
+same three states: a version, `< 1.3.0` for a tenant whose runs carry none, and
+`—` for a tenant that has never reported a run. The third is not the second — no
+runs is not an old framework.
+
+**The contract is written down**, as a *Wire Contract* table beside the
+compatibility matrix in `CHANGELOG.md`: which field each version emits, so IT
+knows what it must keep accepting and for how long. That table is what makes
+"IT upgrades freely" true rather than hoped-for.
+
+**Still open:** the same treatment for `dlq_entries` and the replay webhook.
+`portal/lib/dlq.ts` already probes for the `reason` column at runtime, which is
+the right instinct arrived at ad hoc — it should read from the wire contract
+instead of asking the database what shape it is.
+
+---
+
 ## 7. Tooling posture
 
 You are OTel-native with Phoenix, and that is the right spine.

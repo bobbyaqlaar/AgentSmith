@@ -18,7 +18,100 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 | 1.1.x | 3.11 | 0.2 | 4.0 | Default model registry is local-only; `local_large`/`local_small` roles removed |
 | 1.0.x | 3.11 | 0.2 | 4.0 | Initial public release (documented only — never tagged or published) |
 
+## Wire Contract
+
+The compatibility matrix above governs the **library** surface — `runtime/`
+imported into the tenant's own process, which the tenant pins and upgrades on
+its own schedule. This table governs the **wire** surface: the telemetry and
+run-status a tenant emits to an Ops Portal that somebody else operates.
+
+They need separate tracking because they have separate owners. IT ships
+AgentSmith and the portal; the business ships the tenant and pins a framework
+version so IT's cadence cannot move underneath it. That means the portal is
+always reading a fleet spanning several framework versions, and a version
+decides which fields a tenant is *capable* of emitting. An absent field is
+therefore ambiguous unless the reader knows the version — which is why the
+version is itself on both wires from 1.3.0.
+
+| Emitted since | Field | Wire |
+|---|---|---|
+| 1.3.0 | `agentsmith.framework.version` | OTel Resource |
+| 1.3.0 | `frameworkVersion` → `agent_runs.framework_version` | run-status POST |
+| 1.3.0 | `llm.usage.input_tokens` / `output_tokens` / `total_tokens`, gated on `llm.usage.reported` | span |
+| 1.3.0 | `inputTokens` / `outputTokens` / `costUsd` | run-status POST |
+| 1.3.0 | `llm.gateway.cost_estimated` | span |
+| 1.3.0 | `prompt.system.sha256`, `prompt.template.id`, `prompt.system.chars`, `prompt.message_count` | span |
+| 1.3.0 | `traceId` → `agent_runs.trace_id`, and W3C `traceparent` on the POST | header + POST |
+| 1.3.0 | `tenant.id` / `agent.role` / `run.id` on **every** span (identity processor) | span |
+| 1.3.0 | `service.name`, `project.name`, `environment`, `agent.owner_id` | OTel Resource |
+| 1.3.0 | `agentsmith.llm.*` counters and histograms | OTel metrics |
+| 1.3.0 | retrieval spans with hit ids and scores | span |
+| 1.2.0 | `tenant.id` **conditionally** — only where a caller passed the kwarg | span |
+
+**A consumer must treat a missing field as "not emitted by that version", not as
+a fault**, and must accept a version string it has never heard of — a tenant
+ahead of the portal is normal when the business upgrades first.
+`portal/lib/wireContract.ts` implements both rules; it answers yes/no/**unknown**
+rather than yes/no, because a `+src` build and an unparseable string are neither.
+
+A row with no `framework_version` at all predates 1.3.0, since that is the
+release which began reporting it — so the column dates a row without any
+version table being consulted.
+
+
 ## [Unreleased]
+
+### Observability — a tenant now says which AgentSmith wrote the row
+
+**Tenant-visible.** New `runtime/version.py`. Every span's Resource carries
+`agentsmith.framework.version`, and the run-status POST carries
+`frameworkVersion` into the new nullable `agent_runs.framework_version` column.
+CHANGELOG gains a **Wire Contract** table alongside the compatibility matrix.
+
+- **The framework and its tenants have different owners, and only one surface
+  was versioned.** IT operations ships AgentSmith and the Ops Portal; the
+  business ships the tenant app and pins a framework version so IT's cadence
+  cannot move underneath it. The pin governs the *library* surface. The *wire*
+  surface — span attributes, the ingest body, `agent_runs` columns — is what
+  actually delivers the monitoring, is upgraded unilaterally by IT, and carried
+  no version at all.
+
+  So the portal could not tell which telemetry shape it was looking at. A tenant
+  pinned to v1.2.0 emits no `prompt.system.sha256` (no `prompt_identity`), no
+  metrics (no `metrics.py`), and `tenant.id` only where a caller remembered the
+  kwarg (no identity processor). In `agent_runs` that is a NULL — the same NULL
+  a current tenant writes when its provider reported no usage or its exporter is
+  misconfigured. One value, two meanings, on the product whose users are IT ops.
+
+  `framework.version` was declared in `.agenticframework/tenant.yaml` and read by
+  nothing — the same shape as `tenant.id` and `budget.monthly_usd_cap` before
+  those were closed. It could not have answered this anyway: what matters is the
+  version of the code that is RUNNING, not the one the repo says it wants.
+
+- **A source checkout reports `x.y.z+src`, and that is the point.** A framework
+  checkout on `sys.path` — `AGENTSMITH_DIR`, how tenant CI and local development
+  run — has a `pyproject.toml` pinned to the last release while `main` runs far
+  ahead of it. This working copy reports `1.2.0+src` while carrying two dozen
+  unreleased changelog sections; a bare `1.2.0` would have been a confident lie
+  of exactly the kind the version was added to prevent. `+src` is SemVer build
+  metadata, orders equal, and tells an operator the number does not bound what
+  the process contains.
+
+- **`portal/lib/wireContract.ts` makes the version mean something.** `emits()`
+  answers **yes / no / unknown** — never two states — and `explainAbsent()`
+  renders "not reported by AgentSmith 1.2.0" where the version is the reason and
+  stays silent where the absence is a genuine fault the caller must speak to.
+  `unknown` covers a `+src` build and an unparseable string, which are neither.
+  The ingest route accepts a version it has never heard of: a tenant ahead of the
+  portal is ordinary when the business upgrades first, and rejecting it would
+  silence exactly the tenants whose shape the portal most needs.
+
+  On the Resource rather than per span, deliberately — unlike `agent.role` and
+  `tenant.id`, which vary within one worker process and would be confident lies
+  on a Resource, the framework version is fixed for the life of the process. It
+  is the one identity attribute for which the Resource is the correct home, and
+  §1 of the observability audit reasons the other way for the others.
+
 
 ### Observability — the metrics had no provider, and four modules resolved the endpoint
 

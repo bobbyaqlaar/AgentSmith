@@ -276,10 +276,26 @@ def resource_attributes(project_name: Optional[str] = None) -> dict:
         env_var="AGENT_PROJECT_NAME",
         default=None,
     ) or _repo_root().name
+    from runtime.version import framework_version
+
     attrs = {
         "service.name": project,
         "project.name": project,
         "environment": get_environment(),
+        # WHICH AGENTSMITH emitted this. Per-process and constant, so unlike
+        # `agent.role` and `tenant.id` the Resource is the correct home for it
+        # — the reasoning in this docstring points the other way here.
+        #
+        # It is on the wire because the framework and the tenants that use it
+        # have different owners: IT ships AgentSmith, the business ships the
+        # tenant and pins a version so IT's cadence cannot move underneath it.
+        # IT therefore runs a FLEET on several versions at once, and a version
+        # decides what a tenant can emit at all — v1.2.0 has no
+        # prompt_identity, no metrics, and no identity processor, so its spans
+        # carry no `prompt.system.sha256`, no counters and often no `tenant.id`.
+        # Without this attribute that is indistinguishable, on an ops
+        # dashboard, from a current tenant that is broken.
+        "agentsmith.framework.version": framework_version(),
     }
     # `tenant.owner` is declared in tenant.yaml and was read by nothing, while
     # this attribute came from a shell profile — so on a dev machine every repo
