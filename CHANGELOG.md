@@ -20,6 +20,59 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Observability — the metrics had no provider, and four modules resolved the endpoint
+
+**Tenant-visible.** New `runtime.tracing.configure_telemetry()` installs the tracer and the
+meter in one call, and new `runtime/otlp.py` resolves OTLP endpoints for both signals.
+`configure_tracing()` and `configure_metrics()` keep their existing signatures and semantics.
+
+- **`configure_metrics()` had no caller anywhere**, so every counter and histogram in
+  `runtime/metrics.py` wrote into nothing. The call sites were all correct — LLM calls with
+  an `outcome` dimension, cache hit/miss, retries with a bounded reason, retrieval — and
+  without a `MeterProvider` `opentelemetry.metrics.get_meter()` hands back a `_ProxyMeter`
+  whose instruments buffer for a provider that never arrives. Nothing raises, nothing logs.
+  The error rate, the cache hit ratio and the TTFT percentiles — the numbers
+  `docs/observability-audit.md` §5 says spans are the wrong instrument for — were computable
+  in no deployment, while that section read ✅ Fixed.
+
+  This is `configure_tracing`'s own founding defect one signal over: KYC installed no
+  `TracerProvider`, so every `agent_span()` in the framework's own testbed was a no-op.
+  `runtime/worker.py`, `examples/oil-price-agent/worker.py` and KYC Sentinel's worker now all
+  call `configure_telemetry()`.
+
+  `test_metrics.py` was green throughout because it installs its own `MeterProvider` and
+  `InMemoryMetricReader`. It proved the instruments record when a provider exists; nothing
+  proved one ever did. `runtime/test/test_telemetry_wiring.py` asserts in a **subprocess** —
+  a worker is a fresh process, and OTel's globals are one-shot — that a real SDK meter and
+  non-proxy instruments result, with a control test that the same process without the call
+  gets proxies, and a sweep of every worker entrypoint for the call.
+
+- **Four implementations of "endpoint variable → OTLP URL", three of them wrong.**
+  `scripts/local_agent_stack.py`, `scripts/multi_agent_system.py` and KYC's `worker.py` each
+  ended `f"{endpoint.rstrip('/')}/v1/traces"`; `portal/lib/tracing.ts` did not, because this
+  repo's own convention — OPERATIONS.md, `docker-compose.yml`, SPECS.md §699,
+  `ai-dashboard-start` — sets `OTEL_EXPORTER_OTLP_ENDPOINT` to a full `…/v1/traces` URL in the
+  variable the OTLP spec defines as a base. `local_agent_stack.py` falls back to precisely
+  that variable and appended anyway, posting to `/v1/traces/v1/traces` and dropping everything
+  on a 404 that surfaces nowhere. The guard existed, once, in TypeScript.
+
+  `runtime/otlp.py` is the single copy, ported from the portal's rather than invented fifth,
+  and handles one case the portal's could not have: a base naming a different signal must not
+  yield `/v1/traces/v1/metrics`. The two also disagreed on precedence — only the portal read
+  `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, and two of the Python copies defaulted to
+  `http://localhost:6006`, so a production worker with nothing configured spent every export
+  on a connection to itself. `None` now means unconfigured.
+
+  `portal/lib/tracing.ts` cannot import Python, so the duplicate is **pinned** rather than
+  removed: `test_otlp_endpoint.py` parses the TypeScript for its variable order and its
+  suffix guard instead of restating them.
+
+- **`docs/observability-audit.md`** carries the correction in §5 rather than editing the
+  original claim away, marks Priority 5 (prompt hash) done — it had shipped as
+  `prompt.system.sha256` / `prompt.template.id` and was never struck — and updates the §3 and
+  §5 tables for prompt identity, RAG chunk identities, error rate and cache hit ratio.
+
+
 ### Pass 14 — `scripts/` (spend controls and the notification path)
 
 **Tenant-visible.** `audit_token_velocity_circuit` now raises `ValueError` on

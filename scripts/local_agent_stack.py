@@ -33,18 +33,21 @@ from typing import Any, Literal, Optional
 
 def _setup_otel(project_name: str, session_id: str) -> Any:
     """Initialise OTLP tracer. Returns the tracer or a no-op if unavailable."""
-    endpoint = os.environ.get(
-        "AGENT_PHOENIX_ENDPOINT",
-        os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:6006"),
-    )
     try:
         from opentelemetry import trace
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-            OTLPSpanExporter,
-        )
         from opentelemetry.sdk.resources import Resource
+
+        # runtime/otlp.py owns the endpoint, for all four callers that used to
+        # own it separately. This one's fallback chain ended at
+        # OTEL_EXPORTER_OTLP_ENDPOINT — the variable OPERATIONS.md,
+        # docker-compose.yml and `ai-dashboard-start` all set to a full
+        # `…/v1/traces` URL — and then appended `/v1/traces` to whatever it
+        # found. portal/lib/tracing.ts had documented that exact trap and
+        # guarded against it; this sibling, reading the same variable in the
+        # same repo, never got the guard.
+        from runtime.otlp import span_exporter
 
         from agent_logger import _tenant_id
 
@@ -58,8 +61,9 @@ def _setup_otel(project_name: str, session_id: str) -> Any:
             resource_attrs["tenant.id"] = tenant_id
         resource = Resource.create(resource_attrs)
         provider = TracerProvider(resource=resource)
-        exporter = OTLPSpanExporter(endpoint=f"{endpoint.rstrip('/')}/v1/traces")
-        provider.add_span_processor(BatchSpanProcessor(exporter))
+        exporter = span_exporter()
+        if exporter is not None:
+            provider.add_span_processor(BatchSpanProcessor(exporter))
         trace.set_tracer_provider(provider)
         return trace.get_tracer("agenticframework")
     except Exception:

@@ -375,6 +375,54 @@ def configure_tracing(
     return trace.get_tracer_provider()
 
 
+
+def configure_telemetry(
+    *,
+    project_name: Optional[str] = None,
+    redact: bool = True,
+    metrics_interval_ms: int = 60_000,
+) -> dict:
+    """Install BOTH providers, with exporters resolved from the environment.
+
+    The one call a worker makes. Returns
+    `{"tracer_provider": ..., "meter_provider": ...}`; either value is None when
+    that half is unavailable.
+
+    WHY THIS EXISTS, and it is the same argument `configure_tracing` already
+    makes one function up. `runtime/metrics.py` shipped counters and histograms
+    for calls, cache hit/miss, retries, cost and retrieval, every call site was
+    correctly placed, and `configure_metrics()` HAD NO CALLER ANYWHERE — not the
+    framework worker, not the tenant's, not the example's. Without a
+    MeterProvider `metrics.get_meter()` hands back a `_ProxyMeter` whose
+    instruments buffer for a real provider that never arrives, so every
+    `record_llm_call` in production wrote into nothing. The error rate, the
+    cache hit ratio and the TTFT percentiles — the four numbers the
+    observability audit says spans are the wrong instrument for — were
+    computable nowhere.
+
+    That is precisely the failure `configure_tracing` was written to end, one
+    signal over: KYC installed no TracerProvider, so every `agent_span()` in the
+    framework's own testbed was a no-op. A documented recipe produced zero
+    correct setups then, and separate `configure_tracing`/`configure_metrics`
+    calls produced one correct setup out of two now.
+
+    The two remain separately callable — a deployment can legitimately want
+    metrics on Prometheus and traces on Phoenix, and coupling them would force
+    both or neither. What changes is that the DEFAULT path does both, because
+    the evidence is that the assembling-by-hand path does not.
+    """
+    from runtime.metrics import configure_metrics
+    from runtime.otlp import metric_exporter, span_exporter
+
+    tracer_provider = configure_tracing(
+        project_name=project_name, exporter=span_exporter(), redact=redact
+    )
+    meter_provider = configure_metrics(
+        exporter=metric_exporter(), interval_ms=metrics_interval_ms
+    )
+    return {"tracer_provider": tracer_provider, "meter_provider": meter_provider}
+
+
 # ── Context propagation (W3C trace-context) ──────────────────────────────────
 
 

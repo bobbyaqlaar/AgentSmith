@@ -129,6 +129,17 @@ async def main() -> None:
         )
         sys.exit(1)
 
+    # Telemetry before the worker runs. This reference had none at all — the
+    # same gap KYC Sentinel had, and this file is what a tenant copies, so the
+    # omission propagated by design. One call installs the TracerProvider (with
+    # the Resource and the identity processor pillar 3 needs) and the
+    # MeterProvider, resolving both exporters from the environment. Unset
+    # endpoints are fine: the signals are still correctly formed, just not
+    # shipped.
+    from runtime.tracing import configure_telemetry
+
+    configure_telemetry()
+
     await _run_health_server()
     await _run_worker_with_retry(tenant_id)
 

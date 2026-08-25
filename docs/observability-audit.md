@@ -152,10 +152,10 @@ debug.
 
 | Item | Status |
 |---|---|
-| System prompt version | ❌ **not implementable today** |
-| Prompt template version | ❌ same |
+| System prompt version | ✅ **fixed** — `prompt.system.sha256` |
+| Prompt template version | ✅ **fixed** — `prompt.template.id`, chosen at the call site |
 | User prompt | ⚠️ redacted by profile; escrowed for HITL-flagged spans |
-| Retrieved RAG chunks | ❌ only `agent.tool.result_count` — a count, not identities |
+| Retrieved RAG chunks | ✅ **fixed** — ids and scores, see §6 |
 | Conversation history | ❌ `conversation_memory` is untraced |
 | Tool outputs | ❌ `record_tool_call` records name / allowed / duration / error only |
 
@@ -163,7 +163,17 @@ debug.
 prompts are inline f-strings. So there is **no version to log** — the gap is upstream of
 observability.
 
-### Recommendation — hash first, engine later
+### ✅ Fixed — hash first, engine later
+
+`runtime/prompt_identity.py` emits `prompt.system.sha256`, `prompt.system.chars`,
+`prompt.template.id` and `prompt.message_count`, stamped by the gateway's
+`_stamp_llm_span`. The digest is of the system turn, so it changes when and only
+when a human edits the prompt; the text itself is never recorded. The redactor
+lists `prompt.system.sha256` as untruncatable — a truncated digest silently stops
+joining, which is worse than an absent one.
+
+The recommendation as written, kept because it is the reasoning the fix was
+built on:
 
 Do not wait for the template engine. Emit `prompt.template.id` (a stable name chosen at the
 call site) and `prompt.template.sha256` (of the template *before* interpolation). That gives
@@ -218,9 +228,9 @@ Driven through tenacity itself in the test rather than a stand-in, so the wiring
 | First-token latency | ⚠️ `llm.gateway.ttft_ms`, **stream path only** |
 | Input / output tokens | ✅ **fixed** (§2) |
 | Cost per request | ✅ `llm.gateway.cost_usd`, now flagged when estimated |
-| Error rate | ⚠️ derivable from spans; no counter |
+| Error rate | ✅ **fixed** — `agentsmith.llm.calls` with an `outcome` dimension |
 | Hallucination feedback | ⚠️ offline only — the eval suites; shadow-eval samples spans |
-| Cache hit ratio | ❌ hit/miss is **logged**, never an attribute or metric |
+| Cache hit ratio | ✅ **fixed** — `agentsmith.llm.cache` with a `hit` dimension |
 
 TTFT on the non-stream path is unmeasurable without a synthetic first token and is already
 documented as such — that one is honest.
@@ -239,6 +249,53 @@ logged it, so no backend could compute the ratio at all.
 `configure_metrics()` is separate from `configure_tracing()` on purpose — a deployment can
 reasonably want metrics to Prometheus and traces to Phoenix, and coupling them would force
 both or neither.
+
+### ⚠️ → ✅ The correction: none of the above was reaching anything
+
+**Found 2026-08-25.** The section above was true about the instruments and wrong about the
+system. `configure_metrics()` **had no caller anywhere** — not `runtime/worker.py`, not KYC
+Sentinel's worker, not `examples/oil-price-agent`. Its only three mentions in the repo were
+its own definition, its own docstring, and the paragraph immediately above this one.
+
+With no MeterProvider installed, `opentelemetry.metrics.get_meter()` returns a `_ProxyMeter`
+whose instruments buffer for a real provider that never arrives. Nothing raises and nothing
+logs. So every correctly-placed, correctly-attributed `record_llm_call`, `record_cache`,
+`record_retry` and `record_retrieval` wrote into nothing, and the four numbers this section
+exists to deliver were computable nowhere — while the section read ✅.
+
+`runtime/test/test_metrics.py` was green throughout because it installs its own
+`MeterProvider` and `InMemoryMetricReader` in a fixture. It proves the instruments record
+**when a provider exists**; nothing proved one ever did. That is the same pairing that let
+pillar 3 pass while unenforced (§1) — a control with no enforcer, and a test of the helper
+rather than the contract.
+
+**Fixed:** `configure_telemetry()` installs both providers in one call, with exporters
+resolved from the environment, and `runtime/worker.py`, the example worker and KYC's worker
+all call it. `runtime/test/test_telemetry_wiring.py` asserts in a **subprocess** that a fresh
+process ends up with a real SDK meter and non-proxy instruments — plus a control test that
+the same process WITHOUT the call gets proxies, so the assertion is not free — and sweeps
+every worker entrypoint for the call itself, because the defect was an absent call rather
+than wrong code.
+
+### ✅ Fixed — one OTLP endpoint resolver, not four
+
+Wiring metrics surfaced a second thing. Four places turned an endpoint variable into an OTLP
+URL — `scripts/local_agent_stack.py`, `scripts/multi_agent_system.py`, KYC's `worker.py` and
+`portal/lib/tracing.ts` — and only the last was correct. Every Python copy ended
+`f"{endpoint.rstrip('/')}/v1/traces"`; the portal's detects a base that already names the path,
+because this repo's own convention (OPERATIONS.md, `docker-compose.yml`, SPECS.md §699,
+`ai-dashboard-start`) puts a full `…/v1/traces` URL in the variable the OTLP spec defines as a
+base. `local_agent_stack.py` falls back to exactly that variable and appended anyway.
+
+The guard was written once, in TypeScript, and the Python sibling reading the same variable in
+the same repo never got it — the "fix applied at one call site and not its identical
+neighbours" shape, across a language boundary.
+
+`runtime/otlp.py` is the one copy now, ported from the portal's rather than invented fifth. It
+also handles a case the portal's could not have: a base naming a DIFFERENT signal, which must
+not yield `/v1/traces/v1/metrics`. `portal/lib/tracing.ts` cannot import Python, so the two are
+**pinned** by a test that parses the TypeScript for its variable order and its suffix guard
+rather than restating them.
 
 ---
 
@@ -362,7 +419,7 @@ You are OTel-native with Phoenix, and that is the right spine.
 | **Phoenix (Arize)** | ✅ right for eval, hallucination analysis and trace inspection. The shadow-eval loop already feeds it. |
 | **LangSmith / Langfuse** | ⚠️ not recommended *alongside* OTel. Both bring their own span models; adopting one means two vocabularies and a lossy bridge. Choose them instead of OTel or not at all. |
 | **MLflow Tracing** | ⚠️ overlaps Phoenix. No reason to run both. |
-| **Prometheus / Grafana** | ✅ **the actual gap** — nothing in the current stack covers metrics (§5). |
+| **Prometheus / Grafana** | ✅ metrics now exist AND are exported — `configure_telemetry()` installs a MeterProvider and resolves `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`. Point it at a collector that fans out to Prometheus; no second instrumentation. |
 | **Datadog / Azure Monitor** | ⚠️ viable as an OTLP sink if the org already pays for one; not a second instrumentation. |
 | **Jaeger / Tempo** | ⚠️ only after §6 propagation exists, and via collector fan-out rather than double instrumentation. |
 
@@ -376,14 +433,24 @@ You are OTel-native with Phoenix, and that is the right spine.
 3. ~~Token capture~~ ✅ done, span and database, with "not measured" preserved.
 4. ~~Context propagation~~ ✅ done — `traceparent` injected and parsed, `trace_id`
    populated, retrieval and embedding spans emitted.
-5. **Prompt hash** — cheap root-cause for degradation, no template engine required.
-6. **OTel Metrics** — counters and histograms for the rates and ratios.
+5. ~~Prompt hash~~ ✅ done — `prompt.system.sha256`, `prompt.template.id`,
+   `prompt.system.chars`, `prompt.message_count`, with the digest untruncatable.
+6. ~~OTel Metrics~~ ✅ done — counters and histograms for the rates and ratios, **and a
+   provider that makes them leave the process.** The instruments landed first and were
+   proxied into nothing for as long as no entrypoint called `configure_metrics()`; see the
+   correction in §5. One `configure_telemetry()` installs both signals, and one
+   `runtime/otlp.py` resolves both endpoints for all four callers that used to do it
+   separately.
 7. ~~Retry visibility~~ ✅ done — `llm.gateway.attempts`, a span event per retry carrying the
    provider's message, and a counter with a bounded reason.
 
 ---
 
 *Fixed items are covered by `runtime/test/test_gateway_span_usage.py` (span attributes,
-including that unreported usage is absent rather than zero) and
+including that unreported usage is absent rather than zero),
 `portal/test/agentRuns.test.ts` (persistence, including that a later write carrying no usage
-does not blank a recorded figure). Both run in CI.*
+does not blank a recorded figure), `runtime/test/test_pillar3_conformance.py` (§1, asserted
+over emitted spans rather than the helper), `runtime/test/test_telemetry_wiring.py` (§5, that
+a fresh process ends up with a real meter and not a proxy) and
+`runtime/test/test_otlp_endpoint.py` (the single endpoint resolver, pinned against the
+TypeScript copy it cannot import). All run in CI.*

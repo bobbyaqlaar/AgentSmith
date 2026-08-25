@@ -93,15 +93,16 @@ def _default_state(task: str, spec: str, project: str) -> AgentState:
 
 
 def _get_tracer(project: str, session_id: str) -> Any:
-    endpoint = os.environ.get("AGENT_PHOENIX_ENDPOINT", "http://localhost:6006")
     try:
         from opentelemetry import trace
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-            OTLPSpanExporter,
-        )
         from opentelemetry.sdk.resources import Resource
+
+        # See local_agent_stack._setup_otel — one resolver, four callers. This
+        # copy read only AGENT_PHOENIX_ENDPOINT and defaulted to localhost, so
+        # it also ignored OTEL_EXPORTER_OTLP_TRACES_ENDPOINT entirely.
+        from runtime.otlp import span_exporter
 
         from agent_logger import _tenant_id
 
@@ -115,8 +116,9 @@ def _get_tracer(project: str, session_id: str) -> Any:
             resource_attrs["tenant.id"] = tenant_id
         resource = Resource.create(resource_attrs)
         provider = TracerProvider(resource=resource)
-        exporter = OTLPSpanExporter(endpoint=f"{endpoint.rstrip('/')}/v1/traces")
-        provider.add_span_processor(BatchSpanProcessor(exporter))
+        exporter = span_exporter()
+        if exporter is not None:
+            provider.add_span_processor(BatchSpanProcessor(exporter))
         trace.set_tracer_provider(provider)
         return trace.get_tracer("agenticframework.langgraph")
     except Exception:

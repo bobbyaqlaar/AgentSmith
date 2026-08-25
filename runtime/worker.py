@@ -70,6 +70,25 @@ def main() -> None:
 
     print(f"[worker] Starting {backend} worker for tenant={tenant_id}")
 
+    # Telemetry BEFORE the worker starts, both signals in one call.
+    #
+    # `configure_tracing` already existed because KYC installed no
+    # TracerProvider and every `agent_span()` in the framework's own testbed was
+    # therefore a no-op. Metrics were in the identical position and nobody had
+    # noticed: `configure_metrics()` had no caller in this repo, in the tenant,
+    # or in the example, so every counter and histogram in runtime/metrics.py
+    # wrote into a `_ProxyMeter` that was never resolved. Correct call sites,
+    # correct attributes, no provider — the error rate and cache hit ratio the
+    # observability audit asked for existed nowhere.
+    #
+    # Exporters resolve from the environment (runtime/otlp.py). Unset is not an
+    # error: the providers, the Resource and the identity processor are
+    # installed either way, so the signals are correctly formed and simply not
+    # shipped anywhere.
+    from runtime.tracing import configure_telemetry
+
+    configure_telemetry()
+
     # Say what was ignored. A declaration outranks an ambient export, which is
     # deliberate — but an operator who exports something and sees no effect,
     # with nothing said, will reasonably conclude the framework is broken.
