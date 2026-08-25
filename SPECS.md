@@ -1256,6 +1256,7 @@ AgentSmith/
 │   ├── config.py                # load_env_file() + tenant.yaml resolution, one precedence
 │   ├── cli.py                   # `agentsmith` console script — tenant init, doctor, shellenv
 │   ├── metrics.py               # OTel counters/histograms — rates spans cannot answer
+│   ├── otlp.py                  # one endpoint resolver for both signals, four callers
 │   ├── prompt_identity.py       # prompt.system.sha256 — the join column for degradation
 │   ├── self_correction.py       # Opt-in corrected-payload loop helper
 │   ├── conversation_memory.py   # Short-term memory (RAG substrate)
