@@ -32,6 +32,10 @@ jobs:
         run: |
           pip install "ruff>=0.6,<1.0"
           ruff check .
+      - name: "mypy (shipped runtime only — see pyproject.toml for the scope)"
+        run: |
+          pip install "mypy>=1.11,<2.0"
+          mypy
       - name: "py_compile sweep"
         run: |
           find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile

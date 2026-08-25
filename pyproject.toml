@@ -133,3 +133,29 @@ ignore = [
 # .v3.HttpConnectionManager" — are single tokens. Wrapping one changes the
 # config this script emits. A narrow exemption with a reason, not a waiver.
 "templates/onprem-deploy/scripts/render-envoy-config.py" = ["E501"]
+
+# ── Types ─────────────────────────────────────────────────────────────────────
+#
+# SHIPPED RUNTIME ONLY. Two exclusions, both deliberate:
+#
+#   runtime/test/ — 20 of the original 33 errors were `method-assign` from
+#   monkeypatching doubles onto real objects, which is what a test double IS.
+#   Type-checking there fights the pattern instead of finding defects.
+#
+#   scripts/ — the dev-lifecycle harness, not what a tenant imports.
+#
+# It earns its place on one finding: `_invoke` declared `-> tuple[str, int, int]`
+# while returning `parse_response`'s Optionals. That annotation was a false
+# guarantee, and it is precisely the guarantee scripts/cost_router.py trusted
+# when it passed None into the circuit breaker — where the TypeError landed in a
+# fail-open handler and the call went unmetered on both tiers. Review found that
+# one after it shipped; mypy names it in milliseconds.
+[tool.mypy]
+# No `python_version` pin. Pinning it to the minimum supported 3.11 makes mypy
+# parse third-party stubs under 3.11 rules, and numpy's ship 3.12+ syntax — so
+# the run dies on a dependency's stub rather than on this repo's code. The
+# running interpreter decides instead; CI is 3.11, which is the version that
+# matters.
+files = ["runtime"]
+exclude = ["runtime/test/"]
+ignore_missing_imports = true

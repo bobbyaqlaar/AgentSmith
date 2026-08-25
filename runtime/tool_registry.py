@@ -49,9 +49,12 @@ def _json_type(annotation: Any) -> dict[str, Any]:
         item = _json_type(args[0]) if args else {}
         return {"type": "array", "items": item or {}}
     if origin is Optional or (origin is getattr(__import__("typing"), "Union", None)):
-        args = [a for a in get_args(annotation) if a is not type(None)]
-        if len(args) == 1:
-            return _json_type(args[0])
+        # A distinct name: `args` above is the tuple from get_args, and rebinding
+        # it to a list here is what mypy objected to. Two different things with
+        # two different shapes deserve two names.
+        non_none = [a for a in get_args(annotation) if a is not type(None)]
+        if len(non_none) == 1:
+            return _json_type(non_none[0])
     if annotation in _PYTHON_TO_JSON:
         return {"type": _PYTHON_TO_JSON[annotation]}
     if isinstance(annotation, type) and annotation in _PYTHON_TO_JSON:

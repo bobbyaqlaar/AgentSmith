@@ -504,7 +504,13 @@ class VertexAIAdapter:
         VertexAIAdapter._cached_token_expiry = (
             credentials.expiry.timestamp() if credentials.expiry else time.time() + 3600
         )
-        return self._cached_token
+        if not VertexAIAdapter._cached_token:
+            # `credentials.token` is Optional while this is declared `-> str`, so
+            # a refresh that produced nothing would return None and the caller
+            # would send `Bearer None` — a 401 that reads as bad credentials
+            # rather than as a refresh that silently did not work.
+            raise RuntimeError("Vertex AI credential refresh returned no access token")
+        return VertexAIAdapter._cached_token
 
     _DEFAULT_URL_TEMPLATE_ANTHROPIC = (
         "https://{region}-aiplatform.googleapis.com/v1/projects/{project}"

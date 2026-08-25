@@ -14,7 +14,7 @@ import hashlib
 import math
 import os
 import struct
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -58,7 +58,7 @@ class SentenceTransformerEmbedder:
         self.model_name = model_name or os.environ.get(
             "EMBEDDING_MODEL", "all-MiniLM-L6-v2"
         )
-        self._model = None
+        self._model: Any = None
 
     def _load(self) -> None:
         if self._model is not None:

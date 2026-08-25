@@ -353,10 +353,23 @@ class BaseAgentWorkflow:
             )
 
         if gate_result is None:
+            # Guaranteed by the neither/both validation above — stated rather
+            # than assumed, because the guarantee lives thirty lines away.
+            assert gate_activity_name is not None
             gate_result = await workflow.execute_activity(
                 gate_activity_name,
                 gate_input,
                 start_to_close_timeout=timedelta(minutes=10),
+            )
+
+        if gate_result is None:
+            # The gate activity answered with nothing. Treated as "no decision
+            # was made" rather than as "no review needed": resuming here would
+            # run the high-impact action on the strength of an activity that
+            # returned null.
+            raise RuntimeError(
+                f"gate activity {gate_activity_name!r} returned no result — "
+                f"refusing to resume without a needs_hitl decision"
             )
 
         if not gate_result.get("needs_hitl"):

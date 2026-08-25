@@ -973,7 +973,7 @@ class LLMGateway:
             # budget silently undercounts every streamed call.
             reported = input_tokens is not None and output_tokens is not None
             span.set_attribute("llm.usage.reported", reported)
-            if reported:
+            if input_tokens is not None and output_tokens is not None:
                 span.set_attribute("llm.usage.input_tokens", int(input_tokens))
                 span.set_attribute("llm.usage.output_tokens", int(output_tokens))
                 span.set_attribute(
@@ -1527,6 +1527,15 @@ class LLMGateway:
                 ) from last_exc
             raise last_exc
 
+        if text is None:
+            # The loop above either binds `text` or raises, so this is
+            # unreachable — but `text` starts as None and nothing said where it
+            # stopped being None, which is how the type stays Optional for every
+            # line below and a reader has to reconstruct the loop to be sure.
+            raise RuntimeError(
+                "internal: the degrade ladder returned no text and did not raise"
+            )
+
         # WHEN THE PROVIDER REPORTED NO USAGE, the reservation stands as the
         # charge — exactly what complete_stream() already does with its
         # `cost_estimated=True` ("Stream v1 has no usage tokens; keep the
@@ -1737,7 +1746,7 @@ class LLMGateway:
             except Exception:  # a config this broken has a louder problem
                 continue
             if not api_key:
-                env = cfg.get("api_key_env") or _DEFAULT_API_KEY_ENV[provider]
+                env = str(cfg.get("api_key_env") or _DEFAULT_API_KEY_ENV[provider])
                 if env not in missing:
                     missing.append(env)
         return missing
@@ -1839,8 +1848,17 @@ class LLMGateway:
 
     async def _invoke(
         self, cfg: dict, messages: list[dict], max_tokens: int, temperature: float
-    ) -> tuple[str, int, int]:
+    ) -> tuple[str, Optional[int], Optional[int]]:
         """Call the provider for this model config. Returns (text, input_tokens, output_tokens).
+
+        The token counts are OPTIONAL and the annotation used to say they were
+        not. `parse_response` returns None when a provider omits its `usage`
+        block, so this has always been able to hand back None — and a caller
+        trusting `int` did arithmetic on it. That is exactly how
+        scripts/cost_router.py came to pass None into the circuit breaker,
+        where the TypeError landed in a fail-open handler and the call went
+        unmetered on both tiers, silently. The annotation is the fix at the
+        source; mypy names every caller that has not caught up.
 
         Request building / response parsing delegated to
         runtime/provider_dispatch.py, shared with scripts/cost_router.py

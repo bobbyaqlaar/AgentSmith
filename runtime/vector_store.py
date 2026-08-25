@@ -175,9 +175,10 @@ class PgVectorStore:
         dim: Optional[int] = None,
     ) -> None:
         self.embedder = embedder or make_embedder()
-        self.dsn = dsn or os.environ.get("DATABASE_URL")
-        if not self.dsn:
+        resolved = dsn or os.environ.get("DATABASE_URL")
+        if not resolved:
             raise RuntimeError("PgVectorStore requires DATABASE_URL")
+        self.dsn: str = resolved
         # Infer dim from a probe embed
         probe = self.embedder.embed(["dim-probe"])[0]
         self.dim = dim or len(probe)
