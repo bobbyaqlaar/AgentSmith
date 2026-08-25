@@ -55,7 +55,16 @@ _FALLBACK_EXHAUSTION_MARKERS = (
     "rate limit",
     "billing",
     "payment required",
-    "429",
+    # "429" alone used to be here, and `"429" in msg` matches the digits
+    # ANYWHERE: "however you requested 14290 tokens" is a context-length error,
+    # a hard user bug, and it was classified as exhaustion — so the gateway
+    # degraded through every tier on a malformed prompt and the eval path
+    # reported a billing problem that did not exist. Request ids do it too.
+    # The phrases below are what a real 429 carries in its body; the status
+    # code itself is checked structurally in is_provider_exhausted.
+    "too many requests",
+    "resource_exhausted",            # Google AI / Vertex
+    "quota exceeded",
     "overloaded",
 )
 

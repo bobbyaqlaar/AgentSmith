@@ -70,6 +70,53 @@ def test_ordinary_failures_are_not_exhaustion() -> None:
         assert not cost_router._exhausted(RuntimeError(msg)), msg
 
 
+def test_digits_that_merely_contain_429_are_not_exhaustion() -> None:
+    """`"429" in msg` matched the digits anywhere.
+
+    A context-length error quotes the token count, and a provider error body
+    quotes a request id — both routinely contain 429 as a substring. Classified
+    as exhaustion, the gateway degrades through every tier on a hard user bug
+    and the eval path names a billing state that does not exist.
+    """
+    for msg in (
+        "This model's maximum context length is 8192 tokens, however you requested 14290 tokens",
+        "HTTP 400 (request_id=req_4290ab): invalid 'messages[0].role'",
+        "connection reset after 429 ms",
+    ):
+        assert not is_provider_exhausted(RuntimeError(msg)), msg
+        assert not cost_router._exhausted(RuntimeError(msg)), msg
+
+
+def test_a_real_throttle_is_still_exhaustion() -> None:
+    """Removing the bare digits must not lose the case they were there for."""
+    for msg in (
+        "HTTP 429 Too Many Requests: rate limit exceeded for model gpt-4",
+        "429 RESOURCE_EXHAUSTED: Quota exceeded for quota metric 'Generate requests'",
+        "Error: The model is overloaded. Please try again later.",
+    ):
+        assert is_provider_exhausted(RuntimeError(msg)), msg
+        assert cost_router._exhausted(RuntimeError(msg)), msg
+
+
+def test_a_status_code_is_believed_over_the_body() -> None:
+    """An exception carrying a real 429/402 response is exhaustion even when
+    its text says nothing recognisable — which is the case for a bare
+    raise_for_status() on a provider that puts the reason in headers."""
+
+    class _Response:
+        def __init__(self, code: int) -> None:
+            self.status_code = code
+
+    class _StatusError(Exception):
+        def __init__(self, code: int) -> None:
+            super().__init__("Client error for url https://api.example.com/v1/chat")
+            self.response = _Response(code)
+
+    assert is_provider_exhausted(_StatusError(429))
+    assert is_provider_exhausted(_StatusError(402))
+    assert not is_provider_exhausted(_StatusError(400))
+
+
 def test_classifier_survives_an_older_runtime(monkeypatch) -> None:
     """scripts/ can be newer than the pinned runtime wheel. When the shared
     helper isn't there yet, cost_router must still classify rather than raise —

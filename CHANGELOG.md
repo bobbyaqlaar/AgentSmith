@@ -20,6 +20,34 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Runtime — pass 10, `provider_dispatch.py`
+
+Three findings, and the first two both end in money.
+
+- **A provider that omits `usage` was billed at $0.00.** The parsers defaulted a
+  missing usage block to `0`, so `cost_usd = 0 * rate + 0 * rate` and the budget
+  reconcile released the entire reservation. An OpenAI-compatible proxy, a shim,
+  or a stream without `stream_options.include_usage` cost nothing against the
+  monthly cap. It also destroyed, at the source, the None-vs-0 distinction the
+  rest of the stack preserves — nullable `agent_runs` columns,
+  `llm.usage.reported`, metrics that skip unreported counts, a portal that
+  renders a gap. The parsers return `None` now, and the gateway keeps the
+  reservation as the charge and flags `cost_estimated`, which is precisely what
+  `complete_stream()` already did for the same situation.
+- **Temperature never reached an Anthropic-shaped request.** `build_request`'s
+  anthropic branch, `_anthropic_messages_body` (Vertex) and Bedrock's own inline
+  copy all built a body without it, so every Claude route ran at the provider's
+  default of 1.0. The control that cares most is `scripts/eval_judge.py`'s
+  `JUDGE_TEMPERATURE = 0.0` — pinned so grading is deterministic, enforced on
+  OpenAI routes and silently dropped on the model most likely to be judging.
+  One body builder now, parameterised by the one string Bedrock differed on,
+  which is why the omission had to be made three times instead of once.
+- **`is_provider_exhausted` matched the digits `429` anywhere in a message.**
+  "however you requested 14290 tokens" is a context-length error — a hard user
+  bug — and it was classified as exhaustion, so the gateway degraded through
+  every tier and the eval path reported a billing state that did not exist.
+  Status codes are checked structurally now; the text markers are phrases.
+
 ### Runtime — pass 9, `llm_gateway.py`
 
 - **The default budget backend never reset the monthly cap.** Redis keys on

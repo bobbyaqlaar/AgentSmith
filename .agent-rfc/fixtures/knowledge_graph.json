@@ -397,7 +397,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-25T10:08:33Z",
+      "last_modified": "2026-08-25T11:54:10Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -531,6 +531,7 @@
         "supports_streaming",
         "parse_stream_delta",
         "CloudProviderAdapter",
+        "_anthropic_temperature",
         "_anthropic_messages_body",
         "VertexAIAdapter",
         "AzureOpenAIAdapter",
@@ -542,7 +543,7 @@
         "parse_cloud_response",
         "_get_access_token"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T12:01:12Z",
       "id": "runtime/provider_dispatch.py"
     },
     {
@@ -896,7 +897,7 @@
         "__init__",
         "__repr__"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T11:58:09Z",
       "id": "scripts/cost_router.py"
     },
     {
@@ -1453,12 +1454,18 @@
         "test_the_error_that_started_this_is_classified",
         "test_a_bare_status_line_is_not_classifiable",
         "test_ordinary_failures_are_not_exhaustion",
+        "test_digits_that_merely_contain_429_are_not_exhaustion",
+        "test_a_real_throttle_is_still_exhaustion",
+        "test_a_status_code_is_believed_over_the_body",
         "test_classifier_survives_an_older_runtime",
         "test_cost_router_does_not_walk_the_degrade_chain",
         "test_openrouter_credit_exhaustion_is_classified",
-        "test_a_bare_status_number_is_not_a_diagnosis"
+        "test_a_bare_status_number_is_not_a_diagnosis",
+        "_Response",
+        "_StatusError",
+        "__init__"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T11:57:53Z",
       "id": "scripts/test/test_exhaustion_classification.py"
     },
     {
@@ -1982,6 +1989,8 @@
         "test_reservation_releases_on_invoke_failure",
         "test_free_tier_model_bypasses_reservation",
         "test_reservation_reconciles_to_actual_cost",
+        "test_unreported_usage_bills_the_reservation_not_zero",
+        "test_a_genuine_zero_is_still_a_zero",
         "test_invoke_retries_transient_errors_with_backoff",
         "test_invoke_does_not_retry_non_transient_errors",
         "test_invoke_groq_provider_uses_groq_base_url_and_key",
@@ -1991,7 +2000,7 @@
         "fake_post",
         "fake_post_401"
       ],
-      "last_modified": "2026-08-25T10:08:11Z",
+      "last_modified": "2026-08-25T11:55:13Z",
       "id": "runtime/test/test_llm_gateway_budget.py"
     },
     {
@@ -3572,6 +3581,25 @@
       ],
       "last_modified": "2026-08-25T10:05:50Z",
       "id": "runtime/test/test_gateway_provider_catalog.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_openai_shape_without_usage_reports_none",
+        "test_openai_shape_with_a_reported_zero_reports_zero",
+        "test_openai_shape_with_a_null_usage_block_reports_none",
+        "test_anthropic_shape_matches_its_sibling",
+        "test_parse_response_preserves_absence_for_every_route",
+        "test_cloud_adapters_preserve_absence_too",
+        "test_real_counts_still_come_through",
+        "test_the_direct_anthropic_route_sends_temperature",
+        "test_the_openai_route_still_does",
+        "test_every_cloud_anthropic_route_sends_temperature",
+        "test_a_temperature_above_the_anthropic_maximum_is_clamped_loudly"
+      ],
+      "last_modified": "2026-08-25T12:00:48Z",
+      "id": "runtime/test/test_provider_usage_reporting.py"
     }
   ],
   "edges": [
@@ -4158,6 +4186,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_gateway_provider_catalog.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_provider_usage_reporting.py",
       "target": "runtime/__init__.py"
     }
   ]

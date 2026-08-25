@@ -38,9 +38,12 @@ threaded through three concerns at once.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 from typing import Any, Optional, Protocol
+
+logger = logging.getLogger(__name__)
 
 
 # ── Direct-API providers (anthropic / openai-compatible) ──────────────────────
@@ -121,6 +124,17 @@ def build_request(
             "model": model_id,
             "max_tokens": max_tokens,
             "messages": user_messages,
+            # TEMPERATURE WAS DROPPED HERE. The OpenAI branch below has always
+            # sent it; this one built a body without it, so every Anthropic-
+            # shaped route ran at the provider's default of 1.0 no matter what
+            # the caller asked for.
+            #
+            # The casualty is a control this repo went to some trouble over:
+            # scripts/eval_judge.py pins JUDGE_TEMPERATURE = 0.0 so grading is
+            # deterministic, and a judge routed to Claude direct — the obvious
+            # choice — graded at 1.0 instead. Pinned on the OpenAI routes,
+            # discarded on the Anthropic ones, with nothing to show which.
+            "temperature": _anthropic_temperature(temperature),
         }
         if system:
             body["system"] = system
@@ -136,8 +150,22 @@ def build_request(
     return "/chat/completions", headers, body
 
 
-def parse_openai_completion(data: dict) -> tuple[str, int, int]:
+def parse_openai_completion(data: dict) -> tuple[str, Optional[int], Optional[int]]:
     """(text, prompt_tokens, completion_tokens) from an OpenAI-shaped response.
+
+    THE COUNTS ARE None WHEN THE PROVIDER DID NOT REPORT THEM. They defaulted
+    to 0, which is the one thing this codebase refuses to do anywhere else:
+    `agent_runs.input_tokens` is nullable so "not reported" stays
+    distinguishable from "used nothing", `_record_span_attributes` writes
+    `llm.usage.reported`, and `runtime/metrics` declines to put an unreported
+    count into a histogram. All of that guards a distinction this function had
+    already destroyed.
+
+    It was not only a dashboard problem. `cost_usd` is computed from these, so
+    a provider that omits `usage` — an OpenAI-compatible proxy, a shim, a
+    streamed response without `stream_options.include_usage` — produced a cost
+    of exactly $0.00, and the budget reconcile then released the whole
+    reservation. The call was free as far as the cap was concerned.
 
     `.get("content") or ""`, not a bare index: OpenAI-compatible providers
     legitimately return `"content": null` — a model that emitted only reasoning
@@ -154,26 +182,29 @@ def parse_openai_completion(data: dict) -> tuple[str, int, int]:
     still crashed on those two routes.
     """
     text = data["choices"][0]["message"].get("content") or ""
-    usage = data.get("usage", {})
-    return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+    usage = data.get("usage") or {}
+    return text, usage.get("prompt_tokens"), usage.get("completion_tokens")
 
 
-def parse_anthropic_completion(data: dict) -> tuple[str, int, int]:
+def parse_anthropic_completion(data: dict) -> tuple[str, Optional[int], Optional[int]]:
     """(text, input_tokens, output_tokens) from an Anthropic-shaped response.
 
     An empty `content` array is this shape's equivalent of a null completion —
     a stop before any block was emitted. Indexing it raises IndexError inside a
     guardrail rather than returning nothing for the caller to interpret.
+
+    Counts are None when unreported, for the reasons on
+    `parse_openai_completion` — the two are siblings and were wrong together.
     """
     blocks = data.get("content") or []
     text = (blocks[0].get("text") if blocks else "") or ""
-    usage = data.get("usage", {})
-    return text, usage.get("input_tokens", 0), usage.get("output_tokens", 0)
+    usage = data.get("usage") or {}
+    return text, usage.get("input_tokens"), usage.get("output_tokens")
 
 
 def parse_response(
     provider: str, data: dict, api_format: Optional[str] = None
-) -> tuple[str, int, int]:
+) -> tuple[str, Optional[int], Optional[int]]:
     """Returns (text, input_tokens, output_tokens).
 
     Mirrors build_request: the response envelope must be parsed with the same
@@ -267,7 +298,16 @@ _EXHAUSTION_MARKERS = (
     "rate limit",
     "billing",
     "payment required",
-    "429",
+    # "429" alone used to be here, and `"429" in msg` matches the digits
+    # ANYWHERE: "however you requested 14290 tokens" is a context-length error,
+    # a hard user bug, and it was classified as exhaustion — so the gateway
+    # degraded through every tier on a malformed prompt and the eval path
+    # reported a billing problem that did not exist. Request ids do it too.
+    # The phrases below are what a real 429 carries in its body; the status
+    # code itself is checked structurally in is_provider_exhausted.
+    "too many requests",
+    "resource_exhausted",            # Google AI / Vertex
+    "quota exceeded",
     "overloaded",
 )
 
@@ -290,6 +330,13 @@ def is_provider_exhausted(exc: Exception) -> bool:
     fixed twice — once on the gateway's streaming path (found live against a
     credit-exhausted key) and once in cost_router.
     """
+    # Structured first, where the exception carries a status. A 429 or a 402 is
+    # one whatever the body says, and — the point of the change — the digits
+    # "429" appearing inside a message are not.
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    if status in (402, 429):
+        return True
+
     msg = str(exc).lower()
     return any(k in msg for k in _EXHAUSTION_MARKERS)
 
@@ -350,20 +397,60 @@ class CloudProviderAdapter(Protocol):
         """Returns (full_url, headers, body)."""
         ...
 
-    def parse_response(self, data: dict) -> tuple[str, int, int]:
+    def parse_response(self, data: dict) -> tuple[str, Optional[int], Optional[int]]:
         """Returns (text, input_tokens, output_tokens)."""
         ...
 
 
+def _anthropic_temperature(temperature: float) -> float:
+    """A temperature the Anthropic Messages API will accept.
+
+    Its documented range is 0..1, OpenAI's is 0..2. Every caller in this repo
+    asks for 0.0, 0.2 or 0.7, so the clamp is a guard rather than a behaviour
+    change — but it is a LOUD one: silently sending a different number than the
+    caller asked for is the kind of substitution this codebase refuses
+    elsewhere, and silently sending an out-of-range one turns a working call
+    into a 400.
+    """
+    if temperature > 1.0:
+        logger.warning(
+            "temperature=%.2f exceeds the Anthropic Messages API maximum of 1.0 — "
+            "sending 1.0. OpenAI-shaped routes accept up to 2.0, so the same "
+            "config behaves differently by provider.",
+            temperature,
+        )
+        return 1.0
+    return max(0.0, temperature)
+
+
 def _anthropic_messages_body(
-    model_id: str, messages: list[dict], max_tokens: int
+    messages: list[dict],
+    max_tokens: int,
+    temperature: float,
+    anthropic_version: str,
 ) -> dict:
+    """The Anthropic Messages body, for every route that speaks it.
+
+    `anthropic_version` is the only thing that differed between the two
+    versions of this that existed: Vertex sends `vertex-2023-10-16`, Bedrock
+    `bedrock-2023-05-31`. Bedrock had its own inline copy of the system/user
+    split for that one string — a near-duplicate the DRY levers ask to
+    parameterise rather than clone, and the reason `temperature` had to be
+    forgotten three separate times (here, in Bedrock's copy, and in
+    build_request's direct branch) instead of once.
+
+    It also took a `model_id` it never used: Vertex and Bedrock both carry the
+    model in the URL, so the parameter was decoration.
+    """
     system = "\n".join(m["content"] for m in messages if m["role"] == "system") or None
     user_messages = [m for m in messages if m["role"] != "system"]
     body: dict[str, Any] = {
-        "anthropic_version": "vertex-2023-10-16",
+        "anthropic_version": anthropic_version,
         "max_tokens": max_tokens,
         "messages": user_messages,
+        # See build_request's anthropic branch: omitted on every Anthropic
+        # route, so all of them ran at the provider's default of 1.0.
+        "temperature": _anthropic_temperature(temperature),
     }
     if system:
         body["system"] = system
@@ -465,7 +552,9 @@ class VertexAIAdapter:
             url = cfg.get("url_template", self._DEFAULT_URL_TEMPLATE_ANTHROPIC).format(
                 **fmt
             )
-            body = _anthropic_messages_body(model_id, messages, max_tokens)
+            body = _anthropic_messages_body(
+                messages, max_tokens, temperature, "vertex-2023-10-16"
+            )
         else:
             url = cfg.get("url_template", self._DEFAULT_URL_TEMPLATE_GENERIC).format(
                 **fmt
@@ -486,7 +575,7 @@ class VertexAIAdapter:
             }
         return url, headers, body
 
-    def parse_response(self, data: dict) -> tuple[str, int, int]:
+    def parse_response(self, data: dict) -> tuple[str, Optional[int], Optional[int]]:
         if (
             "content" in data
         ):  # Anthropic-on-Vertex envelope mirrors the direct Messages API shape
@@ -545,7 +634,7 @@ class AzureOpenAIAdapter:
         }
         return url, headers, body
 
-    def parse_response(self, data: dict) -> tuple[str, int, int]:
+    def parse_response(self, data: dict) -> tuple[str, Optional[int], Optional[int]]:
         return parse_openai_completion(data)
 
 
@@ -599,17 +688,9 @@ class BedrockAdapter:
             region=region, model_id=model_id
         )
 
-        system = (
-            "\n".join(m["content"] for m in messages if m["role"] == "system") or None
+        body = _anthropic_messages_body(
+            messages, max_tokens, temperature, "bedrock-2023-05-31"
         )
-        user_messages = [m for m in messages if m["role"] != "system"]
-        body: dict[str, Any] = {
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": max_tokens,
-            "messages": user_messages,
-        }
-        if system:
-            body["system"] = system
         body_bytes = json.dumps(body).encode()
 
         session = boto3.Session()
@@ -624,7 +705,7 @@ class BedrockAdapter:
         headers = dict(request.headers)
         return url, headers, body
 
-    def parse_response(self, data: dict) -> tuple[str, int, int]:
+    def parse_response(self, data: dict) -> tuple[str, Optional[int], Optional[int]]:
         return parse_anthropic_completion(data)
 
 
@@ -711,7 +792,7 @@ class HuaweiModelArtsAdapter:
         }
         return url, headers, body
 
-    def parse_response(self, data: dict) -> tuple[str, int, int]:
+    def parse_response(self, data: dict) -> tuple[str, Optional[int], Optional[int]]:
         return parse_openai_completion(data)
 
 
@@ -750,6 +831,6 @@ def build_cloud_request(
     )
 
 
-def parse_cloud_response(provider: str, data: dict) -> tuple[str, int, int]:
+def parse_cloud_response(provider: str, data: dict) -> tuple[str, Optional[int], Optional[int]]:
     """Returns (text, input_tokens, output_tokens) for a cloud-native provider."""
     return get_cloud_adapter(provider).parse_response(data)

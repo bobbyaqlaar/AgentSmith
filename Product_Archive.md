@@ -7,6 +7,21 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — review pass 10, `runtime/provider_dispatch.py` (2026-08-25)
+
+| Finding | Fix |
+|---|---|
+| `parse_openai_completion` / `parse_anthropic_completion` defaulted a missing `usage` block to `0`. `cost_usd` is computed from those counts, so a provider that omits usage produced $0.00 and the reconcile released the whole reservation — the call was free against the cap. It also destroyed the None-vs-0 distinction the nullable `agent_runs` columns, `llm.usage.reported`, `runtime/metrics` and the portal all exist to preserve | Parsers return `None` for absent counts; the gateway keeps the reservation as the charge and sets `cost_estimated`, which is what `complete_stream()` already did for the identical case |
+| Temperature was dropped on every Anthropic-shaped route — the direct branch, Vertex's anthropic publisher, and Bedrock's inline copy of the same body. `JUDGE_TEMPERATURE = 0.0` was enforced on OpenAI routes and not on Claude | One `_anthropic_messages_body`, parameterised by the `anthropic_version` string Bedrock differed on — the near-duplicate is why the omission had to be made three times. Values above Anthropic's maximum of 1.0 are clamped with a warning rather than silently substituted or sent to a 400 |
+| `is_provider_exhausted` matched `"429"` as a substring, so a context-length error quoting `14290 tokens` read as throttling and the gateway degraded through every tier on a prompt bug | A structured `response.status_code in (402, 429)` check first; the text markers are phrases (`too many requests`, `resource_exhausted`, `quota exceeded`). Mirrored into `cost_router`'s pinned fallback copy |
+
+**A guard of mine that did not guard.** The budget tests stub `_invoke`, so
+reverting the parsers to `0` left them green — I had tested the gateway's
+handling of a `None` without testing that anything produces one. The parsers now
+have their own suite, and reverting them fails ten of its twelve cases.
+
+---
+
 ## Completed — review pass 9, `runtime/llm_gateway.py` (2026-08-25)
 
 | Finding | Fix |

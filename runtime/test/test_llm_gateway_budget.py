@@ -173,6 +173,57 @@ async def test_reservation_reconciles_to_actual_cost():
 
 
 @pytest.mark.asyncio
+async def test_unreported_usage_bills_the_reservation_not_zero():
+    """A provider that omits `usage` must not come out free.
+
+    `parse_response` used to default a missing usage block to 0/0, so
+    `cost_usd = 0 * rate + 0 * rate` was exactly $0.00 and the reconcile
+    released the whole reservation. An OpenAI-compatible proxy, a shim, or a
+    stream without `stream_options.include_usage` charged nothing against the
+    monthly cap. complete_stream() already handled this — it keeps the
+    try_reserve() amount and flags `cost_estimated` — and complete() did not.
+    """
+    gw = _make_gateway(cap_usd=30.0, output_cost_per_token=0.1, input_cost_per_token=0.1)
+
+    async def fake_invoke(cfg, messages, max_tokens, temperature):
+        return "ok", None, None  # the provider reported nothing
+
+    gw._invoke = fake_invoke
+
+    result = await gw.complete(prompt="hi", model_hint="developer", max_tokens=100)
+
+    # The reservation was 100 * (0.1 + 0.1) = 20, and it stands.
+    spend = gw._budget.get_spend("acme")
+    assert abs(spend - 20.0) < 1e-9, f"expected the reservation to stand, spend was {spend}"
+    assert abs(result.cost_usd - 20.0) < 1e-9
+    # And the absence travels: None, not 0, so a consumer summing tokens sees
+    # a gap rather than a confident zero.
+    assert result.input_tokens is None
+    assert result.output_tokens is None
+
+
+@pytest.mark.asyncio
+async def test_a_genuine_zero_is_still_a_zero():
+    """The other half of the distinction. A provider that reports 0/0 —
+    a cached completion, an empty response it still counted — really did cost
+    nothing, and the reservation must be released. If both cases behaved the
+    same, the fix above would just be the old bug with new wording."""
+    gw = _make_gateway(cap_usd=30.0, output_cost_per_token=0.1, input_cost_per_token=0.1)
+
+    async def fake_invoke(cfg, messages, max_tokens, temperature):
+        return "ok", 0, 0  # counted, and the count is zero
+
+    gw._invoke = fake_invoke
+
+    result = await gw.complete(prompt="hi", model_hint="developer", max_tokens=100)
+
+    assert abs(gw._budget.get_spend("acme")) < 1e-9, "a measured zero must release the reservation"
+    assert result.cost_usd == 0.0
+    assert result.input_tokens == 0
+    assert result.output_tokens == 0
+
+
+@pytest.mark.asyncio
 async def test_invoke_retries_transient_errors_with_backoff():
     """_invoke() retries httpx.TransportError/429/5xx (the documented but
     previously-unimplemented "Throttle: exponential backoff" degrade-ladder

@@ -54,8 +54,11 @@ class CompletionResult:
 
     text: str
     model_used: str
-    input_tokens: int
-    output_tokens: int
+    # None = the provider reported no usage. Not 0 — a caller summing these
+    # across runs must be able to see a gap rather than a confident zero, and
+    # `cost_usd` is a ceiling rather than a measurement whenever they are None.
+    input_tokens: Optional[int]
+    output_tokens: Optional[int]
     cost_usd: float
     degrade_tier: Optional[str] = None  # None = nominal; "downgrade" | "local" | etc.
     ttft_ms: Optional[float] = None
@@ -1514,15 +1517,37 @@ class LLMGateway:
                 ) from last_exc
             raise last_exc
 
-        cost_usd = in_tok * cfg.get("cost_per_input_token", 0) + out_tok * cfg.get(
-            "cost_per_output_token", 0
-        )
+        # WHEN THE PROVIDER REPORTED NO USAGE, the reservation stands as the
+        # charge — exactly what complete_stream() already does with its
+        # `cost_estimated=True` ("Stream v1 has no usage tokens; keep the
+        # try_reserve() amount as cost"). The two paths are siblings and only
+        # one of them knew: parse_response used to default a missing `usage`
+        # block to 0/0, so this line computed a cost of $0.00 for a real call
+        # and the reconcile below released the entire reservation. A provider
+        # that omits usage was free, as far as the monthly cap was concerned.
+        usage_reported = in_tok is not None and out_tok is not None
+        if usage_reported:
+            cost_usd = in_tok * cfg.get("cost_per_input_token", 0) + out_tok * cfg.get(
+                "cost_per_output_token", 0
+            )
+        else:
+            logger.warning(
+                "provider %r returned no usage block for model=%r — billing the "
+                "reserved estimate ($%.4f) rather than treating the call as free",
+                cfg.get("provider"),
+                model_id,
+                estimated_cost_usd,
+            )
+            cost_usd = estimated_cost_usd if (reserved and estimated_cost_usd) else 0.0
+
         if reserved and estimated_cost_usd:
             # Reconcile: replace the (conservative) reservation with the
             # actual cost. The delta can be negative (actual < estimate,
             # the common case) or positive (rare, e.g. provider returned
             # more output tokens than max_tokens would suggest) — add_spend
-            # accepts a signed amount either way.
+            # accepts a signed amount either way. With no usage reported,
+            # cost_usd IS the estimate, so the delta is zero and the
+            # reservation simply stands.
             delta = cost_usd - estimated_cost_usd
             if delta:
                 self._budget.add_spend(self.tenant_id, delta)
@@ -1549,6 +1574,10 @@ class LLMGateway:
             cost_usd,
             input_tokens=in_tok,
             output_tokens=out_tok,
+            # The span says the cost is an estimate whenever it is one, the
+            # same flag the streaming path sets. A consumer summing
+            # `llm.gateway.cost_usd` can then tell a measurement from a ceiling.
+            cost_estimated=not usage_reported,
             started_ns=started_ns,
             messages=messages,
         )
