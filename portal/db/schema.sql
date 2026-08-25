@@ -119,10 +119,16 @@ CREATE TABLE IF NOT EXISTS revoked_sessions (
     revoked_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Revoked entries are only ever relevant within the token's own 8h TTL —
--- safe to prune anything older than that on a schedule (e.g. nightly cron
--- calling `DELETE FROM revoked_sessions WHERE revoked_at < now() - interval '1 day'`);
--- not automated here since this schema file only runs migrations, not cron.
+-- Revoked entries only matter inside the token's own 8h TTL, so anything older
+-- is dead weight and safe to prune:
+--
+--   DELETE FROM revoked_sessions WHERE revoked_at < now() - interval '1 day';
+--
+-- Not automated here — this file runs migrations, not cron. It is listed as a
+-- Day-2 task in OPERATIONS.md §9, which it was not until 2026-08-25: a
+-- maintenance instruction that exists only inside a schema file is filed where
+-- nobody maintaining the portal will read it, and the table grew one row per
+-- logout, forever.
 
 -- Agent run status (Product_Archive.md P2a). Unlike dlq_entries/
 -- llm_gateway_budget, this IS portal-owned state — runtime/llm_gateway.py

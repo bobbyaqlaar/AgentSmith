@@ -20,6 +20,30 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Ops Portal — pass 7
+
+- **The trace link the widget renders had no scheme check.** `traceUrl` is built
+  from a tenant's `phoenix_base_url` and lands in an `href` inside the
+  *tenant's own product*, so `javascript:…` there is XSS in a customer's page
+  rather than in an operator's dashboard. Pass 1 validated the write path and
+  the portal's own render and **missed this third site**. Fixed at both ends:
+  `getWidgetStatus` no longer serves a non-`http(s)` `traceUrl` (which protects
+  every widget already embedded somewhere, since those never update), and the
+  widget refuses to render one.
+- **Two clocks, neither labelled.** `new Date(x).toLocaleString()` appeared
+  three times — twice in server components, formatting in the container's
+  timezone, once in a client component, formatting in the browser's. The same
+  product printed the same kind of fact in two zones depending on the page. It
+  was also a hydration mismatch, since client components are server-rendered
+  first. One `<Timestamp>` now renders deterministic `YYYY-MM-DD HH:MM:SS UTC`
+  with the ISO value on `title`. The formatting rule lives in `lib/formatTime.ts`
+  because `--experimental-strip-types` cannot load a `.tsx`, so logic parked
+  beside JSX is logic no suite here can reach.
+- **`revoked_sessions` grows one row per logout, forever.** The instruction to
+  prune it existed only as a comment inside `db/schema.sql` — a maintenance task
+  filed where nobody maintaining the portal reads it. Now a Day-2 row in
+  `OPERATIONS.md` §9, with the schema comment pointing at it.
+
 ### Ops Portal — pass 6
 
 Every finding this pass is the same shape: **a partial answer presented as a

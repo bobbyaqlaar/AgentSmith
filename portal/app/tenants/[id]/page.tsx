@@ -12,6 +12,7 @@ import { isTruncated } from "@/lib/cappedList";
 import { currentAccess } from "@/lib/currentAccess";
 import { Badge, toneForLevel } from "@/components/ui/Badge";
 import { MetricCard } from "@/components/ui/Card";
+import { Timestamp } from "@/components/ui/Timestamp";
 
 export const dynamic = "force-dynamic";
 
@@ -142,7 +143,9 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
               <li key={i.entryId} className="border border-black/10 dark:border-white/10 rounded-lg p-3 text-sm">
                 <Badge tone={toneForLevel(i.level)}>{i.level}</Badge>
                 <span className="ml-2">{i.event}</span>{" "}
-                <span className="text-black/40 dark:text-white/40">— {new Date(i.timestamp).toLocaleString()}</span>
+                <span className="text-black/40 dark:text-white/40">
+                  — <Timestamp value={i.timestamp} />
+                </span>
               </li>
             ))}
           </ul>

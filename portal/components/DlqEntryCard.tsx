@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Badge, toneForDlqReason } from "./ui/Badge";
+import { Timestamp } from "./ui/Timestamp";
 import type { DLQEntry } from "@/lib/dlq";
 
 // CRM example (Product_Archive.md HITL/DLQ redesign): the agent
@@ -99,7 +100,7 @@ export function DlqEntryCard({ entry }: { entry: DLQEntry }) {
             <span title="Resumable — this entry came from a live, still-parked workflow">▶ {entry.workflowId}</span>
           )}
         </div>
-        <span className="text-xs text-black/40 dark:text-white/40">{new Date(entry.createdAt).toLocaleString()}</span>
+        <Timestamp value={entry.createdAt} className="text-xs text-black/40 dark:text-white/40" />
       </div>
 
       <p className="text-sm text-red-700 dark:text-red-400">{entry.error}</p>

@@ -1025,7 +1025,7 @@
       "node_type": "CodebaseFile",
       "language": "javascript",
       "symbols": [],
-      "last_modified": "2026-06-26T21:15:31Z",
+      "last_modified": "2026-08-25T09:26:44Z",
       "id": "templates/in-app-widget/widget.js"
     },
     {
@@ -2625,7 +2625,7 @@
       "symbols": [
         "DlqEntryCard"
       ],
-      "last_modified": "2026-08-24T23:09:46Z",
+      "last_modified": "2026-08-25T09:23:32Z",
       "id": "portal/components/DlqEntryCard.tsx"
     },
     {
@@ -2785,7 +2785,7 @@
         "upsertAgentRun",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-08-24T23:38:15Z",
+      "last_modified": "2026-08-25T09:26:05Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -2883,7 +2883,7 @@
         "dynamic",
         "AuditLogPage"
       ],
-      "last_modified": "2026-08-24T23:42:03Z",
+      "last_modified": "2026-08-25T09:23:32Z",
       "id": "portal/app/audit/page.tsx"
     },
     {
@@ -3062,7 +3062,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-08-25T01:33:44Z",
+      "last_modified": "2026-08-25T09:23:32Z",
       "id": "portal/app/tenants/[id]/page.tsx"
     },
     {
@@ -3119,7 +3119,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T23:38:01Z",
+      "last_modified": "2026-08-25T09:26:59Z",
       "id": "portal/test/agentRuns.test.ts"
     },
     {
@@ -3506,6 +3506,32 @@
       ],
       "last_modified": "2026-08-24T23:57:25Z",
       "id": "portal/lib/cappedList.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-08-25T09:24:21Z",
+      "id": "portal/test/timestamp.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "Timestamp"
+      ],
+      "last_modified": "2026-08-25T09:24:21Z",
+      "id": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "formatUtc",
+        "isoOrUndefined"
+      ],
+      "last_modified": "2026-08-25T09:24:39Z",
+      "id": "portal/lib/formatTime.ts"
     }
   ],
   "edges": [
@@ -3871,6 +3897,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "portal/components/DlqEntryCard.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "portal/lib/dlq.ts",
       "target": "portal/lib/db.ts"
     },
@@ -3943,6 +3974,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/runStatus.ts",
       "target": "portal/lib/phoenix.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/runStatus.ts",
+      "target": "portal/lib/safeUrl.ts"
     },
     {
       "edge_type": "IMPORTS",

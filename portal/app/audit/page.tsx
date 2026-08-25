@@ -2,6 +2,7 @@ import { listAuditEvents } from "@/lib/auditLog";
 import { canAdmin } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { Badge } from "@/components/ui/Badge";
+import { Timestamp } from "@/components/ui/Timestamp";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ export default async function AuditLogPage() {
               {events.map((e) => (
                 <tr key={e.eventId} className="border-t border-black/10 dark:border-white/10">
                   <td className="py-2.5 px-4 text-black/70 dark:text-white/70">
-                    {new Date(e.timestamp).toLocaleString()}
+                    <Timestamp value={e.timestamp} />
                   </td>
                   <td className="py-2.5 px-4 font-mono text-xs">{e.eventType}</td>
                   <td className="py-2.5 px-4">{e.actorId}</td>

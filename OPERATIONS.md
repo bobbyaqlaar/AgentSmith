@@ -2680,6 +2680,7 @@ Dataset Commits".
 | Promote staging → production | `ai-tenant-promote <id> --from staging --to production` |
 | Rotate a widget token | Mint a new one (`POST .../widget-token`) — old one keeps working until explicitly revoked |
 | Rotate the audit-log HMAC key | New events sign with the new key; old events will report `verified: false` against it — re-sign history or accept the discontinuity, document which |
+| Prune expired session revocations | `DELETE FROM revoked_sessions WHERE revoked_at < now() - interval '1 day'` — one row per SSO logout, kept forever otherwise. A revocation only matters inside the 8h token TTL, so anything older is dead weight. The instruction previously existed only as a comment inside `portal/db/schema.sql`, which is not somewhere an operator reads |
 | Rotate the org GPG signing key | Re-run `package-hook-bundle.sh` with the new key; redistribute the new public key to MDM before the next deploy |
 | Check unresolved MAJOR/CRITICAL | `ai-stack-check`, or `GET /api/audit` / `GET /api/tenants` on the Ops Portal |
 | Remove the framework from a machine | `ai-stack-uninstall` |

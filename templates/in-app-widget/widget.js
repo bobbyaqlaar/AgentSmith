@@ -98,6 +98,7 @@
       const status = data?.status || "unknown";
       const color = STATUS_COLORS[status] || STATUS_COLORS.unknown;
       const label = STATUS_LABELS[status] || STATUS_LABELS.unknown;
+      const safeTraceHref = data?.traceUrl ? this._safeHref(data.traceUrl) : null;
 
       this._root.innerHTML = `
         <style>
@@ -136,11 +137,25 @@
                 <span class="af-dot" style="background:${color}"></span>
                 <span>${tenantLabel ? this._escape(tenantLabel) + ": " : ""}${label}</span>
                 ${data?.errorSummary ? `<span class="af-muted" title="${this._escapeAttr(data.errorSummary)}"> — ${this._escape(this._truncate(data.errorSummary, 40))}</span>` : ""}
-                ${data?.traceUrl ? `<a class="af-link" href="${this._escapeAttr(data.traceUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:underline">trace</a>` : ""}
+                ${safeTraceHref ? `<a class="af-link" href="${this._escapeAttr(safeTraceHref)}" target="_blank" rel="noopener noreferrer" style="text-decoration:underline">trace</a>` : ""}
               `
           }
         </div>
       `;
+    }
+
+    // An `href` the widget is willing to emit. The portal already refuses to
+    // serve a non-http(s) traceUrl, and this refuses to render one anyway:
+    // _escapeAttr stops a value breaking OUT of the attribute and does nothing
+    // about `javascript:` INSIDE it, and this markup lands in the tenant's own
+    // page. A widget already embedded somewhere never picks up a server fix.
+    _safeHref(value) {
+      try {
+        const url = new URL(String(value), window.location.href);
+        return url.protocol === "http:" || url.protocol === "https:" ? String(value) : null;
+      } catch (e) {
+        return null;
+      }
     }
 
     _truncate(text, max) {

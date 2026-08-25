@@ -29,6 +29,7 @@
 import { getPool } from "./db";
 import { getTenant } from "./tenants";
 import { tenantTraceUrl } from "./phoenix";
+import { isSafeHttpUrl } from "./safeUrl";
 
 /** The statuses a worker can REPORT, and the exact set `agent_runs.status`
  *  CHECKs in db/schema.sql. One catalog, the type derived from it — the shape
@@ -230,6 +231,16 @@ export async function getWidgetStatus(tenantId: string): Promise<WidgetStatus> {
     status,
     lastEventAt,
     errorSummary,
-    traceUrl: tenant?.phoenixBaseUrl ? tenantTraceUrl(tenant.phoenixBaseUrl) : null,
+    // Scheme-checked HERE, not only at the render sites. This value is served
+    // to the In-App Widget, which puts it in an `href` inside the TENANT's own
+    // product — so a `phoenix_base_url` of `javascript:…` would be XSS in a
+    // customer's page, not in an operator's dashboard. POST /api/tenants
+    // validates on the way in now, but rows written before that still hold
+    // anything, and a deployed widget never updates. The server is the only
+    // place that protects both.
+    traceUrl:
+      tenant?.phoenixBaseUrl && isSafeHttpUrl(tenant.phoenixBaseUrl)
+        ? tenantTraceUrl(tenant.phoenixBaseUrl)
+        : null,
   };
 }

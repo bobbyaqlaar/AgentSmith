@@ -217,6 +217,18 @@ await test("an unresolved CRITICAL entry outranks it", async () => {
   assert.equal(status.errorSummary, "gateway down");
 });
 
+await test("a traceUrl the widget would not link to is not served", async () => {
+  // getWidgetStatus feeds the In-App Widget, which puts traceUrl in an href in
+  // the tenant's own page. Rows predating POST /api/tenants' validation can
+  // still hold any scheme, and an embedded widget never picks up a fix.
+  await upsertTenant({ tenantId: QUIET, name: QUIET, phoenixBaseUrl: "javascript:alert(1)" });
+  assert.equal((await getWidgetStatus(QUIET)).traceUrl, null);
+
+  await upsertTenant({ tenantId: QUIET, name: QUIET, phoenixBaseUrl: "https://phoenix.example.com" });
+  const ok = await getWidgetStatus(QUIET);
+  assert.ok(ok.traceUrl?.startsWith("https://phoenix.example.com"), ok.traceUrl ?? "(null)");
+});
+
 await test("an open agent_runs row wins over the history fallback", async () => {
   await upsertAgentRun({ ...base, tenantId: QUIET, runId: `${QUIET}-open`, status: "running" });
   const status = await getWidgetStatus(QUIET);

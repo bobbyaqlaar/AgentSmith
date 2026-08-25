@@ -7,6 +7,16 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — Ops Portal review pass 7 (2026-08-25)
+
+| Finding | Fix |
+|---|---|
+| `traceUrl` — built from a tenant's `phoenix_base_url` — is rendered as an `href` by the In-App Widget, inside the TENANT's own page, with no scheme check. `_escapeAttr` stops a value breaking out of the attribute and does nothing about `javascript:` inside it. Pass 1 fixed the write path and the portal's own render and missed this third site, which is the one that executes in a customer's product | Refused at both ends: `getWidgetStatus` will not serve a non-`http(s)` `traceUrl`, and the widget will not render one. The server half is what protects widgets already embedded, which never update |
+| Three `toLocaleString()` calls: two in server components (container timezone — UTC on Cloud Run), one in a client component (browser timezone), none labelled. The same product showed times on two clocks, and the client one was also a hydration mismatch, since client components are server-rendered first. A test across four zones showed four strings and two different DATES | One `<Timestamp>`, deterministic `… UTC`, ISO on `title`. The rule lives in `lib/formatTime.ts`: the bare type-stripping runner cannot load a `.tsx`, the same seam `lib/authz.ts` and `lib/auditSignature.ts` were split along |
+| `revoked_sessions` gains a row per SSO logout and is never pruned. The instruction to prune existed only inside `db/schema.sql` | A Day-2 row in `OPERATIONS.md` §9; the schema comment now points at it rather than being the only copy |
+
+---
+
 ## Completed — Ops Portal review pass 6 (2026-08-25)
 
 Four findings, and they are one finding wearing four hats: a partial answer

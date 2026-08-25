@@ -70,6 +70,41 @@ await test("renders status, tenant label, truncated error, and trace link", asyn
   assert.match(html, /href="https:\/\/phoenix\.acme\.example\.com\/projects"/);
 });
 
+await test("refuses a traceUrl whose scheme is not http(s)", async () => {
+  // This markup lands in the TENANT's own page, so a `javascript:` href here is
+  // XSS in a customer's product rather than in an operator's dashboard.
+  // _escapeAttr stops a value breaking OUT of the attribute and does nothing
+  // about the scheme INSIDE it. The portal refuses to serve one now too — this
+  // is the half that protects a widget already embedded somewhere, which never
+  // picks up a server fix.
+  for (const hostile of ["javascript:alert(1)", "javascript:alert(1)/projects", "data:text/html,<script>"]) {
+    global.fetch = async () => ({
+      ok: true,
+      json: async () => ({ tenantId: "acme", status: "success", errorSummary: null, traceUrl: hostile }),
+    });
+    const el = await mountWidget({ "tenant-id": "acme", token: "good", "portal-url": "https://ops.example.com" });
+    const html = el.shadowRoot.innerHTML;
+    assert.ok(!/javascript:/i.test(html), `rendered a javascript: href for ${hostile}`);
+    assert.ok(!/data:text\/html/i.test(html), `rendered a data: href for ${hostile}`);
+    assert.ok(!/>trace</.test(html), `emitted a trace link for ${hostile}`);
+  }
+});
+
+await test("still renders an ordinary https trace link", async () => {
+  // A guard that drops working links gets deleted.
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      tenantId: "acme",
+      status: "success",
+      errorSummary: null,
+      traceUrl: "https://phoenix.acme.example.com/projects",
+    }),
+  });
+  const el = await mountWidget({ "tenant-id": "acme", token: "good", "portal-url": "https://ops.example.com" });
+  assert.match(el.shadowRoot.innerHTML, /href="https:\/\/phoenix\.acme\.example\.com\/projects"/);
+});
+
 await test("renders 'Working' for status=running, not the 'Unknown' fallback", async () => {
   // Regression: STATUS_LABELS/STATUS_COLORS had no "running" entry even
   // after runStatus.ts made "running" a reachable status (agent_runs +
