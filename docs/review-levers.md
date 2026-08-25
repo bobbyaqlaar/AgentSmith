@@ -1,8 +1,9 @@
 # Review levers
 
 The checklist a review pass runs against. Groups 1–5 are the standing list.
-Group 6 and the items marked **(+)** were added on 2026-08-24, and the items
-marked **(++)** on 2026-08-25 after seven passes over `portal/`. Each one is
+Group 6 and the items marked **(+)** were added on 2026-08-24, the items
+marked **(++)** on 2026-08-25 after seven passes over `portal/`, and those
+marked **(+++)** on 2026-08-25 after a fourteenth pass over `scripts/`. Each one is
 traceable to a defect that a pass using the earlier list did not catch — the
 provenance is kept because a lever with no scalp is decoration.
 
@@ -73,6 +74,16 @@ honest outcome when the lever was right and its *scope* was wrong.
    *Caught: `scripts/sync-portal-history.py` verified `replay_webhook_url` was
    `http(s)` before sending it; the portal stored and fetched whatever arrived,
    including from its other writer.*
+   **(+++)** The receiving side is often an INTERPRETER, not a network peer.
+   Text spliced into shell, AppleScript, SQL or HTML source has crossed into a
+   language whether or not it left the process — so ask of every string built
+   with `f"..."` and then handed to something that EXECUTES it: what is the
+   most hostile value the source of this string can produce?
+   *Caught: `scripts/notifier.py` interpolating a notification body into
+   `display notification "{message}"` and running it under `osascript`. A `"`
+   closes the literal and `do shell script` follows; the body reaching that
+   sink is `"\n".join(state["issues"])` — the Validator agent's own model
+   output. Confirmed by running it: the payload wrote a file.*
 
 ## 3 · Architecture / product hygiene
 
@@ -163,3 +174,16 @@ check did not actually run, would anything look different?*
    "Last 24h: N traces" taken from whichever project the Phoenix instance
    happened to list first; "No shadow-eval failures in the last 24h" from one
    page of a cursor-paginated endpoint.*
+7. **(+++) An early exit must not take the bookkeeping with it.** When a
+   function both RECORDS something and DECIDES something, every `raise`,
+   `return` and `break` between the two skips the record. Ask of each one:
+   what had this function already committed to that it is now not going to
+   finish? Tripping, denying and rejecting are decisions about what happens
+   NEXT — never grounds to un-record what already happened. The tell is a
+   guard sitting textually between an append and an accrual.
+   *Caught: `scripts/circuit_breaker.py`'s burst tier raising between "append
+   the event" and "add this call's cost to the month", so every call that
+   tripped tier 1 — the heaviest bursts, the ones a spend cap most needs to
+   see — was free on the monthly ledger. Its two tiers were each tested alone
+   and never in the combination where they interact: the monthly test raises
+   the burst limit to 10,000,000 specifically to keep tier 1 out of the way.*

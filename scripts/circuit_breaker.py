@@ -14,6 +14,7 @@ To reset manually:
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import sys
@@ -49,10 +50,23 @@ _EMPTY_STATE: dict = {
 }
 
 
+def _empty_state() -> dict:
+    """A fresh empty state, not a view onto the constant.
+
+    `dict(_EMPTY_STATE)` is a SHALLOW copy: the returned dict is new, but
+    `state["events"]` is the same list object as `_EMPTY_STATE["events"]`, so
+    the first `events.append` mutates the module-level constant and the next
+    "empty" state comes back carrying the previous run's events. It matters on
+    exactly the path this fallback exists for — a missing or unwritable cache
+    file, where `_save_state` fails open and every call re-enters here.
+    """
+    return copy.deepcopy(_EMPTY_STATE)
+
+
 def _load_state() -> dict:
     path = _cache_path()
     if not path.exists():
-        return dict(_EMPTY_STATE)
+        return _empty_state()
     try:
         with path.open() as fh:
             state = json.load(fh)
@@ -62,7 +76,7 @@ def _load_state() -> dict:
                 state[k] = type(v)()
         return state
     except Exception:
-        return dict(_EMPTY_STATE)
+        return _empty_state()
 
 
 def _save_state(state: dict) -> None:
@@ -99,6 +113,22 @@ def audit_token_velocity_circuit(
     Called automatically by AgentLogger.llm_call(); can also be called
     directly by agents that manage their own LLM calls.
     """
+    if input_tokens is None or output_tokens is None:
+        # A provider that reports no `usage` block gives None since
+        # runtime/provider_dispatch.py stopped defaulting it to 0. Reaching the
+        # arithmetic below with None raises TypeError, which every caller here
+        # wraps in a fail-open `except Exception: pass` — so the call would be
+        # unmetered on BOTH tiers and nobody told. Refusing by name gives the
+        # caller something it can act on. See scripts/cost_router.py, which
+        # does.
+        raise ValueError(
+            "audit_token_velocity_circuit needs real token counts; got "
+            f"input_tokens={input_tokens!r}, output_tokens={output_tokens!r}. "
+            "A provider that reported no usage cannot be metered — decide at "
+            "the call site whether to estimate or to record the gap, rather "
+            "than passing an absence in as if it were a number."
+        )
+
     state = _load_state()
     now = time.time()
 
@@ -109,7 +139,17 @@ def audit_token_velocity_circuit(
         state["monthly_accumulated_spend_usd"] = 0.0
         state["events"] = []
 
-    # ── Record this event ─────────────────────────────────────────────────────
+    # ── Record this event, and BILL IT, before either tier can raise ──────────
+    #
+    # The burst check used to sit between the append and the accrual, and it
+    # raises. So the tokens of a burst-tripping call were recorded and its
+    # DOLLARS were not: the monthly accumulator silently skipped every call
+    # that tripped tier 1 — the heaviest bursts, the ones the cap most needs to
+    # see. The money was spent either way; the provider had already been
+    # called by the time this function runs.
+    #
+    # Both tiers now measure the same event. Tripping is a decision about what
+    # to do next, never a reason to un-record what already happened.
     event = {
         "ts": now,
         "input_tokens": input_tokens,
@@ -117,32 +157,34 @@ def audit_token_velocity_circuit(
     }
     state["events"].append(event)
 
-    # ── Tier 1: burst (5-min rolling window) ──────────────────────────────────
-    cutoff = now - BURST_WINDOW_SECONDS
-    window_events = [e for e in state["events"] if e["ts"] >= cutoff]
-    window_tokens = sum(e["input_tokens"] + e["output_tokens"] for e in window_events)
-    if window_tokens > BURST_TOKEN_LIMIT:
-        msg = (
-            f"Burst limit exceeded: {window_tokens:,} tokens in last 5 minutes "
-            f"(limit: {BURST_TOKEN_LIMIT:,}). Cooling down."
-        )
-        _save_state(state)
-        _notify_if_requested(notify, "BURST", msg)
-        raise CircuitBreakerTripped("BURST", msg)
-
-    # ── Tier 2: monthly spend ─────────────────────────────────────────────────
     this_cost = (
         input_tokens * COST_PER_INPUT_TOKEN + output_tokens * COST_PER_OUTPUT_TOKEN
     )
     state["monthly_accumulated_spend_usd"] = (
         state.get("monthly_accumulated_spend_usd", 0.0) + this_cost
     )
-    # Prune old events (only keep last 24 h for storage efficiency)
+
+    cutoff = now - BURST_WINDOW_SECONDS
+    window_events = [e for e in state["events"] if e["ts"] >= cutoff]
+    window_tokens = sum(e["input_tokens"] + e["output_tokens"] for e in window_events)
+
+    # Prune old events (only keep last 24 h for storage efficiency). After the
+    # window sum above, which reads a 5-minute slice and is unaffected.
     state["events"] = [e for e in state["events"] if e["ts"] >= now - 86400]
 
     monthly_total = state["monthly_accumulated_spend_usd"]
     _save_state(state)
 
+    # ── Tier 1: burst (5-min rolling window) ──────────────────────────────────
+    if window_tokens > BURST_TOKEN_LIMIT:
+        msg = (
+            f"Burst limit exceeded: {window_tokens:,} tokens in last 5 minutes "
+            f"(limit: {BURST_TOKEN_LIMIT:,}). Cooling down."
+        )
+        _notify_if_requested(notify, "BURST", msg)
+        raise CircuitBreakerTripped("BURST", msg)
+
+    # ── Tier 2: monthly spend ─────────────────────────────────────────────────
     if monthly_total > MONTHLY_USD_CAP:
         msg = (
             f"Monthly spend cap exceeded: ${monthly_total:.4f} "

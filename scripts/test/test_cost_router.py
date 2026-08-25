@@ -288,3 +288,94 @@ def test_http_error_without_a_body_still_reports_the_status(monkeypatch) -> None
 
     with pytest.raises(RuntimeError, match="HTTP 503"):
         cost_router.call("hi", force_model="llama-3.3-70b-versatile")
+
+
+# ── A provider that reports no usage must not be silently unmetered ──────────
+#
+# runtime/provider_dispatch.parse_response returns Optional[int]: a response
+# with no `usage` block yields None rather than a fabricated 0. cost_router
+# handed that straight to audit_token_velocity_circuit, whose arithmetic raised
+# TypeError into a blanket `except Exception: pass` — so the call counted
+# toward neither the 5-minute burst window nor the monthly cap, and nothing was
+# printed, logged or raised.
+#
+# runtime/llm_gateway.py's sibling path already warned and billed the reserved
+# estimate for exactly this response shape. This call site is in another
+# package, which is the whole reason it was missed (review-levers 4.5).
+
+
+class _RespNoUsage(_Resp):
+    def json(self) -> dict:
+        return {"choices": [{"message": {"content": "ok"}}]}  # no usage block
+
+
+def _record_audits(monkeypatch):
+    import circuit_breaker
+
+    calls: list[tuple] = []
+    monkeypatch.setattr(
+        circuit_breaker,
+        "audit_token_velocity_circuit",
+        lambda *a, **k: calls.append(a),
+    )
+    return calls
+
+
+def test_a_response_without_usage_never_reaches_the_circuit_breaker(monkeypatch, capsys):
+    _stub_transport(monkeypatch, [_RespNoUsage(200)])
+    calls = _record_audits(monkeypatch)
+
+    assert cost_router.call("hi") == "ok"  # the call itself still succeeds
+
+    assert calls == [], f"None token counts were passed to the breaker: {calls}"
+    err = capsys.readouterr().err
+    assert "no usage block" in err and "NOT counted" in err, (
+        "the call went unmetered and nothing said so"
+    )
+
+
+def test_a_normal_response_is_still_metered(monkeypatch):
+    """The other half — the guard must not have turned metering off."""
+    _stub_transport(monkeypatch, [_Resp(200)])
+    calls = _record_audits(monkeypatch)
+
+    assert cost_router.call("hi") == "ok"
+    assert calls == [(1, 1)]
+
+
+def test_a_tripped_breaker_does_not_fail_a_call_the_provider_already_answered(
+    monkeypatch, capsys
+):
+    """The trip is reported, not swallowed and not raised.
+
+    The provider has already been called and paid for by the time the breaker
+    runs here, so there is nothing left to break — but the blanket
+    `except Exception: pass` that used to catch it also caught the TypeError
+    above, for as long as it stood.
+    """
+    import circuit_breaker
+
+    _stub_transport(monkeypatch, [_Resp(200)])
+
+    def _trip(*_a, **_k):
+        raise circuit_breaker.CircuitBreakerTripped("BURST", "over the window")
+
+    monkeypatch.setattr(circuit_breaker, "audit_token_velocity_circuit", _trip)
+
+    assert cost_router.call("hi") == "ok"
+    assert "over the window" in capsys.readouterr().err
+
+
+def test_a_breaker_fault_is_reported_rather_than_swallowed(monkeypatch, capsys):
+    import circuit_breaker
+
+    _stub_transport(monkeypatch, [_Resp(200)])
+
+    def _boom(*_a, **_k):
+        raise RuntimeError("cache is on fire")
+
+    monkeypatch.setattr(circuit_breaker, "audit_token_velocity_circuit", _boom)
+
+    assert cost_router.call("hi") == "ok"  # still fail-open
+    err = capsys.readouterr().err
+    assert "bookkeeping failed" in err and "cache is on fire" in err

@@ -635,13 +635,52 @@ def call(
 
         text, in_tok, out_tok = parse_response(provider, data)
 
-        # Record token usage for circuit breaker
-        try:
-            from circuit_breaker import audit_token_velocity_circuit
+        # Record token usage for circuit breaker.
+        #
+        # `parse_response` returns Optional[int] — a provider that omits its
+        # `usage` block reports None rather than a fabricated 0. Handing that
+        # to the breaker raised TypeError straight into the blanket
+        # `except Exception: pass` below, so the call was silently unmetered on
+        # BOTH tiers: no tokens toward the 5-minute burst window, no dollars
+        # toward the monthly cap. runtime/llm_gateway.py's sibling path already
+        # warns and bills the reserved estimate for exactly this case; this
+        # call site never got the same treatment because it lives in another
+        # package (review-levers 4.5).
+        #
+        # There is no reservation to fall back on here — cost_router has no
+        # budget ledger — so the honest outcome is to say the call went
+        # unmetered rather than to invent a number for it.
+        from circuit_breaker import CircuitBreakerTripped, audit_token_velocity_circuit
 
-            audit_token_velocity_circuit(in_tok, out_tok)
-        except Exception:  # fail-open: circuit breaker is a side-effect check after a successful call; the call's own errors are handled by the outer except below, not this one
-            pass
+        if in_tok is None or out_tok is None:
+            print(
+                f"[cost_router] WARNING: provider {provider!r} returned no usage "
+                f"block for model {route_result.model!r} — this call is NOT counted "
+                f"against the burst window or the monthly cap. Both tiers "
+                f"under-report by however many such calls are made.",
+                file=sys.stderr,
+            )
+        else:
+            try:
+                audit_token_velocity_circuit(in_tok, out_tok)
+            except CircuitBreakerTripped as tripped:
+                # Deliberate, and narrow. The provider call above already
+                # completed and was already paid for, so there is nothing left
+                # to break; the breaker's job at this call site is to record
+                # and to alert (it notifies before raising). Catching only this
+                # is the point — the blanket `except Exception: pass` that used
+                # to stand here is what hid the TypeError above for as long as
+                # it stood.
+                print(f"[cost_router] {tripped}", file=sys.stderr)
+            except Exception as exc:  # noqa: BLE001
+                # Still fail-open — a bookkeeping fault must not fail a call
+                # the provider already answered — but SAID, not swallowed. The
+                # silent version is what let a TypeError stand.
+                print(
+                    f"[cost_router] WARNING: circuit breaker bookkeeping failed "
+                    f"({type(exc).__name__}: {exc}) — this call is unmetered.",
+                    file=sys.stderr,
+                )
 
         record_success(route_result.model)
         return text

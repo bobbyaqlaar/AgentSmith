@@ -145,13 +145,30 @@ class AgentLogger:
             model=model or self.model,
             **kwargs,
         )
-        # Circuit breaker — import lazily to avoid circular deps
+        # Circuit breaker — import lazily to avoid circular deps.
+        #
+        # Fail-open, as before: the log entry above is already written and a
+        # breaker fault must not retract it. But the blanket silent `pass` made
+        # every fault indistinguishable from "under both limits" — including a
+        # caller passing None token counts, which a provider that omits its
+        # `usage` block now produces. Same split as scripts/cost_router.py: the
+        # TRIP is an expected outcome and is reported as one; anything else is
+        # a fault and says so.
         try:
-            from circuit_breaker import audit_token_velocity_circuit
+            from circuit_breaker import (
+                CircuitBreakerTripped,
+                audit_token_velocity_circuit,
+            )
 
             audit_token_velocity_circuit(input_tokens, output_tokens)
-        except Exception:  # fail-open: circuit breaker is a side-effect check; it must never prevent the log entry above from being written
-            pass
+        except CircuitBreakerTripped as tripped:
+            print(f"[agent_logger] {tripped}", file=sys.stderr)
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"[agent_logger] WARNING: circuit breaker bookkeeping failed "
+                f"({type(exc).__name__}: {exc}) — this call is unmetered.",
+                file=sys.stderr,
+            )
         return entry
 
     # ── Internal ──────────────────────────────────────────────────────────────

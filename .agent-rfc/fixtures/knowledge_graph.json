@@ -292,6 +292,7 @@
         "default_allowlist_path",
         "_resolved_tenant_or_none",
         "ToolRegistry",
+        "default_registry",
         "tool",
         "__init__",
         "register",
@@ -301,7 +302,7 @@
         "invoke",
         "decorator"
       ],
-      "last_modified": "2026-08-24T21:39:27Z",
+      "last_modified": "2026-08-25T15:26:09Z",
       "id": "runtime/tool_registry.py"
     },
     {
@@ -731,7 +732,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-24T17:41:17Z",
+      "last_modified": "2026-08-25T15:22:37Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -748,7 +749,7 @@
         "_post",
         "_dispatch"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T15:23:43Z",
       "id": "scripts/notifier.py"
     },
     {
@@ -826,6 +827,7 @@
       "language": "python",
       "symbols": [
         "_cache_path",
+        "_empty_state",
         "_load_state",
         "_save_state",
         "CircuitBreakerTripped",
@@ -835,7 +837,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T15:24:48Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -900,7 +902,7 @@
         "__init__",
         "__repr__"
       ],
-      "last_modified": "2026-08-25T11:58:09Z",
+      "last_modified": "2026-08-25T15:25:34Z",
       "id": "scripts/cost_router.py"
     },
     {
@@ -1269,9 +1271,13 @@
         "test_monthly_trip_independent_of_burst",
         "test_month_rollover_resets_accumulator",
         "test_reset_monthly",
-        "test_corrupt_state_file_recovers"
+        "test_corrupt_state_file_recovers",
+        "test_a_burst_trip_still_bills_the_month",
+        "test_every_burst_tripped_call_is_still_on_the_ledger",
+        "test_none_token_counts_are_refused_by_name",
+        "test_a_fresh_empty_state_carries_no_events"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T15:24:30Z",
       "id": "scripts/test/test_circuit_breaker.py"
     },
     {
@@ -1617,14 +1623,22 @@
         "test_local_model_ids_route_to_ollama",
         "test_http_error_surfaces_the_provider_response_body",
         "test_http_error_without_a_body_still_reports_the_status",
+        "_RespNoUsage",
+        "_record_audits",
+        "test_a_response_without_usage_never_reaches_the_circuit_breaker",
+        "test_a_normal_response_is_still_metered",
+        "test_a_tripped_breaker_does_not_fail_a_call_the_provider_already_answered",
+        "test_a_breaker_fault_is_reported_rather_than_swallowed",
         "__init__",
         "raise_for_status",
         "json",
         "fake_uniform",
         "_ErrResp",
-        "_BodilessResp"
+        "_BodilessResp",
+        "_trip",
+        "_boom"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T15:25:23Z",
       "id": "scripts/test/test_cost_router.py"
     },
     {
@@ -2203,11 +2217,17 @@
         "test_allowlist_permits_listed_tool",
         "test_allowlist_denies_unlisted_tool_in_strict",
         "test_load_allowlist_reads_template",
+        "_fresh_default_registry",
+        "test_the_default_registry_honours_a_declared_strict_allowlist",
+        "test_the_default_registry_is_reachable_at_all",
+        "test_importing_the_module_builds_no_registry",
         "add",
         "echo",
-        "secret_tool"
+        "secret_tool",
+        "unlisted_by_default",
+        "greet"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T15:25:55Z",
       "id": "runtime/test/test_tool_registry.py"
     },
     {
@@ -3621,6 +3641,26 @@
       ],
       "last_modified": "2026-08-25T12:00:48Z",
       "id": "runtime/test/test_provider_usage_reporting.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "captured",
+        "test_message_is_never_spliced_into_the_script_source",
+        "test_title_is_never_spliced_into_the_script_source",
+        "test_the_hitl_wrapper_carries_model_output_through_unspliced",
+        "test_a_rejected_script_is_not_reported_as_delivered",
+        "test_a_non_mac_host_declines",
+        "_Proc",
+        "_fake_run",
+        "_InlineThread",
+        "_Failed",
+        "__init__",
+        "start"
+      ],
+      "last_modified": "2026-08-25T15:23:27Z",
+      "id": "scripts/test/test_notifier_injection.py"
     }
   ],
   "edges": [

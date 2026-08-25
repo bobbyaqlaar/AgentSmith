@@ -20,6 +20,68 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Pass 14 — `scripts/` (spend controls and the notification path)
+
+**Tenant-visible.** `audit_token_velocity_circuit` now raises `ValueError` on
+`None` token counts instead of `TypeError`, and `runtime.tool_registry` exposes
+`default_registry()`; the registry `@tool(...)` falls back to is built on first
+use and resolves `security.tool_allowlist_strict` like any other, where it
+previously hardcoded strict off.
+
+- **A notification body was compiled into AppleScript and executed.**
+  `scripts/notifier.py._notify_osascript` built its script by f-string —
+  `display notification "{message}" with title "..."` — and AppleScript does no
+  escaping inside a string literal. A `"` in the body closes the literal and
+  what follows runs, including `do shell script`, as whoever the agent runs as.
+  The body is not operator-authored: `scripts/multi_agent_system.py`'s
+  `hitl_node` calls `notify_hitl_required(detail="\n".join(state["issues"]))`,
+  and `issues` is the Validator agent's model output. So a model that echoes an
+  injected instruction — or merely quotes the code it is reviewing — reaches a
+  shell. Confirmed by running it, not inferred: a crafted message wrote a file
+  under `/tmp`. The text is now passed as `argv` to an `on run argv` script and
+  never enters the source.
+- **`_notify_osascript` reported every attempt as delivered.**
+  `subprocess.run` without `check=` does not raise on a non-zero exit, so a
+  script osascript rejected returned `True`. It is the FALLBACK — plyer has
+  already failed by the time it runs — so a false "delivered" spent the last
+  channel to a human and said nothing. It returns `proc.returncode == 0`.
+- **A burst trip billed nothing to the monthly cap.**
+  `scripts/circuit_breaker.py` appended the usage event, then checked tier 1 and
+  RAISED, and only then added the call's cost to the month. So every call that
+  tripped the 5-minute burst window had its tokens recorded and its dollars
+  dropped — the heaviest bursts, which are the traffic a spend cap most needs to
+  see, were free on the ledger. The money was already spent; the provider had
+  answered before the breaker ran. Both tiers now measure the same event, and
+  the accrual happens before either can raise.
+- **A provider that reported no usage was silently unmetered.** Since
+  `parse_response` began returning `Optional[int]`, `scripts/cost_router.py`
+  handed `None` to the circuit breaker, whose arithmetic raised `TypeError`
+  straight into a blanket `except Exception: pass`. Neither tier saw the call
+  and nothing was printed. `runtime/llm_gateway.py`'s sibling path already
+  warned and billed the reserved estimate for exactly this response shape; this
+  call site is in another package, which is why it was missed. It now names the
+  provider and says the call is not counted. The blanket handler is split in
+  both `cost_router` and `agent_logger`: a TRIP is an expected outcome and is
+  reported as one, any other fault stays fail-open but is printed.
+- **`_load_state` handed out the empty-state constant's own list.**
+  `dict(_EMPTY_STATE)` is a shallow copy, so the first `events.append` mutated
+  the module-level constant and every later "empty" state came back carrying the
+  previous run's events — on exactly the path the fallback exists for, a missing
+  or unwritable cache file.
+- **The default tool registry could not enforce the allowlist, and nothing
+  could invoke it.** `_DEFAULT_REGISTRY = ToolRegistry(strict=False)` hardcoded
+  strict off thirty lines below the constructor that resolves
+  `security.tool_allowlist_strict` — so a tenant declaring deny-by-default got
+  it on every registry except the one the documented bare `@tool(name=...)`
+  form uses. It was also private with no accessor, so a tool registered that way
+  could not be invoked through any registry at all. Now lazy, config-resolved,
+  and reachable via `default_registry()`.
+- **`docs/review-levers.md`** gains **6.7 — an early exit must not take the
+  bookkeeping with it** (the burst-trip accrual), and an amendment to **2.7**:
+  the receiving side of a trust boundary is often an INTERPRETER, not a network
+  peer (the osascript splice).
+
+
 ### Pass 13 — across AgentSmith, KYC Sentinel and the oil-price example
 
 - **`SPECS.md` still documented the HITL pattern pass 12 removed** — a bare

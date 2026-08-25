@@ -102,3 +102,87 @@ def test_corrupt_state_file_recovers(tmp_path):
     cache.write_text("{not json")
     _audit(10, 10)  # must not raise
     assert circuit_breaker.get_status()["burst_tokens_5min"] == 20
+
+
+# ── Tripping a tier is not a reason to un-record the spend (pass 14) ──────────
+#
+# The burst check used to sit between "append the event" and "add this call's
+# cost to the month", and it raises. So a burst-tripping call had its TOKENS
+# recorded and its DOLLARS dropped: the monthly accumulator silently skipped
+# every call that tripped tier 1 — the heaviest bursts, which are the ones the
+# cap most needs to see. The money was already spent; the provider had answered
+# before this function ran.
+#
+# The existing monthly tests could not see it. test_monthly_trip_independent_
+# of_burst raises BURST_TOKEN_LIMIT to 10,000,000 precisely to keep tier 1 out
+# of the way, and test_burst_trip asserts the tier and nothing about spend — so
+# the two tiers were each covered alone and never in the combination where they
+# interact.
+
+
+def test_a_burst_trip_still_bills_the_month():
+    _audit(300, 300)  # $0.6, under the 1000-token window
+    before = circuit_breaker.get_status()["monthly_spend_usd"]
+
+    with pytest.raises(circuit_breaker.CircuitBreakerTripped) as exc:
+        _audit(300, 300)  # 1200 tokens in the window — trips BURST
+    assert exc.value.tier == "BURST"
+
+    after = circuit_breaker.get_status()["monthly_spend_usd"]
+    assert after == pytest.approx(before + 0.6), (
+        "the burst-tripped call's tokens were recorded but its cost was not — "
+        f"monthly went {before} -> {after}"
+    )
+
+
+def test_every_burst_tripped_call_is_still_on_the_ledger(monkeypatch):
+    """The cumulative shape of it. Three $0.80 calls, the last two of which
+    trip tier 1 — the month owes $2.40 either way, because all three reached
+    the provider. Under the old order the ledger showed $0.80 and the two
+    expensive calls were free."""
+    monkeypatch.setattr(circuit_breaker, "MONTHLY_USD_CAP", 100.0)  # tier 2 out of the way
+    for _ in range(3):
+        try:
+            _audit(400, 400)  # 800 tokens each; the window limit is 1000
+        except circuit_breaker.CircuitBreakerTripped as exc:
+            assert exc.tier == "BURST"
+
+    assert circuit_breaker.get_status()["monthly_spend_usd"] == pytest.approx(2.4), (
+        "calls that tripped the burst tier were dropped from the monthly ledger"
+    )
+
+
+# ── An absent token count is not a token count ───────────────────────────────
+
+
+def test_none_token_counts_are_refused_by_name():
+    """runtime/provider_dispatch.parse_response returns Optional[int] since the
+    usage-reporting fix — a provider that omits its `usage` block gives None.
+
+    Reaching the arithmetic with None raised TypeError, and every caller wraps
+    this in a fail-open handler, so the call went unmetered on BOTH tiers with
+    nothing said. A named refusal is something a call site can act on;
+    scripts/cost_router.py now does.
+    """
+    with pytest.raises(ValueError, match="token counts"):
+        circuit_breaker.audit_token_velocity_circuit(None, None, notify=False)
+    with pytest.raises(ValueError, match="token counts"):
+        circuit_breaker.audit_token_velocity_circuit(10, None, notify=False)
+
+
+# ── The empty state must actually be empty ───────────────────────────────────
+
+
+def test_a_fresh_empty_state_carries_no_events():
+    """`dict(_EMPTY_STATE)` is a shallow copy: the dict is new, the `events`
+    list is the module-level constant's own. One append mutated it, and every
+    later "empty" state came back holding the previous run's events — on
+    exactly the path the fallback exists for, a missing or unwritable cache."""
+    first = circuit_breaker._load_state()
+    first["events"].append({"ts": 1.0, "input_tokens": 5, "output_tokens": 5})
+
+    second = circuit_breaker._load_state()
+    assert second["events"] == [], (
+        "a freshly loaded empty state carries events appended to an earlier one"
+    )
+    assert circuit_breaker._EMPTY_STATE["events"] == []

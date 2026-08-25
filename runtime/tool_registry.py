@@ -229,7 +229,36 @@ class ToolRegistry:
         return result
 
 
-_DEFAULT_REGISTRY = ToolRegistry(strict=False)
+_DEFAULT_REGISTRY: Optional[ToolRegistry] = None
+
+
+def default_registry() -> ToolRegistry:
+    """The registry `@tool(...)` uses when the caller names none.
+
+    Two things were wrong with the module-level `ToolRegistry(strict=False)`
+    this replaces.
+
+    It hardcoded `strict=False`, thirty lines below the constructor that
+    resolves `security.tool_allowlist_strict` from tenant.yaml and
+    `TOOL_ALLOWLIST_STRICT` from the environment. So a tenant declaring
+    deny-by-default got it on every registry EXCEPT the default one — and the
+    bare `@tool(name=...)` form is what SPECS.md §26 and OPERATIONS.md name as
+    the API. A declared control that the documented path does not apply is the
+    shape of review-levers 3.4.
+
+    And it was private with no accessor, so a tool registered through that form
+    could not be invoked through any registry at all: `tool()` returns the
+    function unchanged, the allowlist only binds inside `ToolRegistry.invoke`,
+    and nothing could reach the object holding the registration.
+
+    Built on first use rather than at import: constructing one reads
+    tenant.yaml and stats the allowlist path, and `import runtime.tool_registry`
+    should not do either.
+    """
+    global _DEFAULT_REGISTRY
+    if _DEFAULT_REGISTRY is None:
+        _DEFAULT_REGISTRY = ToolRegistry()
+    return _DEFAULT_REGISTRY
 
 
 def tool(
@@ -240,7 +269,7 @@ def tool(
     """Decorator to register a function as an invocable tool."""
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
-        reg = registry if registry is not None else _DEFAULT_REGISTRY
+        reg = registry if registry is not None else default_registry()
         reg.register(fn, name=name, description=description)
         return fn
 
