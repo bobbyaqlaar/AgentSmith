@@ -20,6 +20,43 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Runtime — pass 11, `trace_redactor.py`
+
+- **Sequence attributes were never scrubbed.** The loop did
+  `if not isinstance(value, str): continue`, and a sequence of strings is a
+  first-class OTel attribute type the SDK accepts without comment. Verified
+  against a real span: an email, an API key and a valid card number in a list
+  attribute all reached the exporter untouched, **in production**. Both shapes
+  are scrubbed now, each element, keeping the sequence's type and length.
+- **Production truncated `prompt.system.sha256` to 50 characters** — a digest
+  recorded precisely so the prompt itself never reaches a span, turned into a
+  string that is not a sha256 of anything and joins with nothing computed
+  elsewhere. The one attribute designed to be safe in production was the one
+  production broke. Named exemption, not a hole: ordinary free text still gets
+  the §27 ceiling.
+- **The tenant pattern file was found relative to the process's working
+  directory.** `_load_extra_patterns` walked up from `Path.cwd()` with its own
+  stop-at-`.git` rule — a sixth root finder, written before the others were
+  consolidated and missed when they were. A worker started outside the repo
+  silently got framework defaults only, indistinguishable from "this tenant
+  declared no patterns". Anchored on `runtime.config.repo_root()`, and it now
+  says at INFO which of the two states it is in.
+- **`--check-redaction` tested the regex, not the control.** It called
+  `redactor._scrub(...)` with a string and never `on_end` with a span, so it
+  passed while sequences leaked. It now drives a real span through a real
+  provider and asserts on what the exporter received.
+
+**Correction.** Commit `a18c848` earlier in this work claimed the redactor was
+inert — that `span.end()` always hands processors an immutable
+`BoundedAttributes`, so every span raised and nothing was ever redacted.
+Re-checking against a real `span.end()` shows that is wrong on the SDK this repo
+runs: `BoundedAttributes` defaults to `immutable=True`, which is what the
+original probe hit, but a live span's attributes are built mutable and
+`_readable_span()` passes that same object through. Redaction was working. The
+`_writable_attributes` helper is kept — it tolerates the immutable shape where
+it genuinely occurs — but its docstring no longer claims to have repaired a
+broken control.
+
 ### Runtime — pass 10, `provider_dispatch.py`
 
 Three findings, and the first two both end in money.

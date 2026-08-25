@@ -7,6 +7,27 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — review pass 11, `runtime/trace_redactor.py` (2026-08-25)
+
+| Finding | Fix |
+|---|---|
+| The scrub loop skipped every non-`str` attribute, and a SEQUENCE of strings is a first-class OTel attribute type. Verified against a real span: an email, an API key and a valid card number inside a list attribute all reached the exporter untouched, in production | Strings and string sequences both scrubbed, per element, preserving the sequence's type and length. Mixed-type sequences are left alone rather than partly processed |
+| Production truncated `prompt.system.sha256` to 50 characters — a digest recorded so the prompt itself never reaches a span, reduced to a value that hashes nothing and joins with nothing | A named `_UNTRUNCATED_ATTRIBUTES` exemption; ordinary free text still gets the §27 ceiling |
+| `_load_extra_patterns` walked up from `Path.cwd()` — a SIXTH root finder, missed when the other five were consolidated. Which tenant PII patterns loaded depended on the process's working directory, and "not found" returned the same empty list as "none declared" while the parse-error path was deliberately loud | Anchored on `runtime.config.repo_root()`, and it logs which of the two states it is in |
+| `--check-redaction` called `redactor._scrub()` with a string and never `on_end` with a span — it certified the pattern library, not the control, and passed while sequences leaked | Drives a real span through a real provider and asserts on the exporter's copy. Confirmed to fail when sequence handling is removed |
+
+**Correction to commit `a18c848`.** That commit claimed this module was inert —
+every span raising out of `end()`, nothing ever redacted. Re-checked against a
+real `span.end()` on SDK 1.42.1: `BoundedAttributes` defaults to
+`immutable=True`, which is what the original probe exercised, but a live span's
+attributes are constructed mutable and `Span._readable_span()` passes that same
+object through rather than copying it. Writes in `on_end` succeed and always
+did; redaction was working. `_writable_attributes` is kept for the immutable
+shape where it does occur, and its docstring now says so instead of claiming a
+repair.
+
+---
+
 ## Completed — review pass 10, `runtime/provider_dispatch.py` (2026-08-25)
 
 | Finding | Fix |

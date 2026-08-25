@@ -72,6 +72,17 @@ _REDACTED_MARKER = "[REDACTED]"
 # Attributes that carry free-text payloads worth redacting/truncating.
 _PAYLOAD_ATTRIBUTES = {"input.value", "output.value"}
 
+# Attributes whose value is bounded and non-sensitive BY CONSTRUCTION, and which
+# the production profile therefore must not truncate.
+#
+# `prompt.system.sha256` is a digest — runtime/prompt_identity records it
+# precisely so the prompt itself never reaches a span, and it is the join column
+# for "answers changed when this hash changed". Truncating it to 50 characters
+# produced a string that is not a sha256 of anything and matches nothing
+# computed anywhere else, so the one attribute designed to be safe in production
+# was the one production broke.
+_UNTRUNCATED_ATTRIBUTES = {"prompt.system.sha256"}
+
 
 # Shared with input_guardrail.py — one Luhn implementation for both the
 # pre-call guard and the post-call redactor (ReviewFindings-2026-07-18 B1).
@@ -93,9 +104,25 @@ def _hash8(text: str) -> str:
 
 
 def _load_extra_patterns() -> list:
-    """Tenant repos extend the pattern library via .agenticframework/redaction-patterns.yaml (§27)."""
-    cwd = Path.cwd()
-    for parent in [cwd, *cwd.parents]:
+    """Tenant repos extend the pattern library via .agenticframework/redaction-patterns.yaml (§27).
+
+    Anchored on `runtime.config.repo_root()`, which is what every other module
+    in this package uses. This walked up from `Path.cwd()` with its own
+    stop-at-`.git` rule — a SIXTH root finder, written before the others were
+    consolidated and missed when they were.
+
+    The consequence is not stylistic: which patterns load depended on the
+    process's working directory. A worker started from a subdirectory outside
+    the repo, or from `/`, found no file and returned an empty list — the same
+    value as "this tenant declared no extra patterns". The parse-error path
+    below is deliberately LOUD for exactly that reason, and the not-found path
+    was silent, so a tenant's PII patterns could stop applying with nothing
+    anywhere to say so.
+    """
+    from runtime.config import repo_root
+
+    root = repo_root()
+    for parent in [root, *root.parents]:
         candidate = parent / ".agenticframework" / "redaction-patterns.yaml"
         if candidate.exists():
             try:
@@ -122,6 +149,24 @@ def _load_extra_patterns() -> list:
         if (parent / ".git").exists():
             break
     return []
+
+
+def _describe_extra_patterns(count: int) -> None:
+    """Say, once, what the tenant pattern file contributed.
+
+    Zero patterns is a legitimate state and an alarming one, and they look
+    identical from the outside. Logged at INFO so an operator reading startup
+    can see which of the two they have, rather than inferring it from what does
+    not get redacted later.
+    """
+    if count:
+        logger.info("redaction: %d tenant pattern(s) loaded from .agenticframework/", count)
+    else:
+        logger.info(
+            "redaction: no tenant patterns loaded (no .agenticframework/"
+            "redaction-patterns.yaml found from %s) — framework defaults only",
+            repr(str(Path.cwd())),
+        )
 
 
 # ── Encrypted HITL blob storage (§27) ─────────────────────────────────────────
@@ -239,28 +284,65 @@ def _make_blob_ref(trace_id: str, span_id: str, attr_key: str) -> str:
 def _writable_attributes(span: Any) -> Optional[dict]:
     """The span's attribute mapping, in a form that can be written to.
 
-    `span.end()` hands processors a ReadableSpan whose `_attributes` is a
-    `BoundedAttributes` constructed with `immutable=True`; assigning to it
-    raises a bare `TypeError`. This module has always mutated `_attributes`
-    directly — the documented workaround, since OTel offers no "rewrite before
-    export" hook — and against the real SDK that meant EVERY span raised out of
-    `end()` and NOTHING was ever redacted.
+    CORRECTED 2026-08-25. An earlier commit (a18c848) claimed this helper fixed
+    a live defect — that `span.end()` always handed processors an immutable
+    `BoundedAttributes`, so every span raised `TypeError` out of `end()` and
+    nothing was ever redacted. That is NOT what happens on the SDK this repo
+    runs (1.42.x), and re-checking it against a real `span.end()` is what showed
+    the diagnosis was wrong:
 
-    It was invisible because every test here drives `on_end` with a `FakeSpan`
-    whose `_attributes` is a plain dict, which accepts writes the real one
-    refuses. A test double more capable than the real thing, which is the first
-    entry in this repo's own lessons appendix.
+      * `BoundedAttributes.__init__` does default to `immutable=True`, so any
+        hand-CONSTRUCTED one refuses writes — which is what the original probe
+        exercised;
+      * but a live span's attributes are built with `immutable=False`, and
+        `Span._readable_span()` passes that same object through rather than
+        copying it. Writes in `on_end` succeed, and always did.
 
-    `BoundedAttributes` wraps a plain dict it does not guard; writing through
-    it is one more layer of private access than the previous code, in exchange
-    for the control functioning at all. `test_real_span_is_scrubbed_end_to_end`
-    is the guard that this keeps working across an SDK upgrade.
+    So the redaction control was working. What this helper actually buys is
+    tolerance of the immutable shape where it does occur — a hand-built
+    `ReadableSpan`, and any SDK version that copies attributes on the way out —
+    and it costs one more layer of private access. That is worth keeping; the
+    claim that it repaired a broken control was not true and is corrected here
+    rather than left for a future reader to inherit.
     """
     attributes = getattr(span, "_attributes", None)
     if attributes is None:
         return None
     inner = getattr(attributes, "_dict", None)
     return inner if isinstance(inner, dict) else (attributes or None)
+
+
+def _string_parts(value: Any) -> Optional[list[str]]:
+    """The string content of an attribute, or None when there is none to scrub.
+
+    OTel attribute values are `str | bool | int | float` or a homogeneous
+    SEQUENCE of those. The scrub loop only ever handled the first `str` case, so
+    every sequence-valued attribute passed through untouched — which is not a
+    corner: `set_attribute("retrieved_docs", [...])` is ordinary, and this is
+    the module that stops a document going to Phoenix with an email in it.
+
+    A sequence containing a non-string is left alone rather than partly
+    processed: mixed types are not a shape this scrubber understands, and
+    guessing at one is how a redactor starts corrupting data instead of
+    protecting it.
+    """
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (list, tuple)) and value and all(isinstance(v, str) for v in value):
+        return list(value)
+    return None
+
+
+def _rebuild(original: Any, parts: list[str]) -> Any:
+    """Put scrubbed parts back in the shape they came from.
+
+    Written back through `_attributes._dict`, which bypasses the SDK's own
+    coercion — so a tuple that goes out as a list changes the exported type of
+    an attribute for no reason.
+    """
+    if isinstance(original, str):
+        return parts[0]
+    return tuple(parts) if isinstance(original, tuple) else parts
 
 
 class TraceRedactor(_OTelSpanProcessor):
@@ -302,6 +384,7 @@ class TraceRedactor(_OTelSpanProcessor):
             resolve("security.ip_redaction", env_var="ENABLE_IP_REDACTION", default=False)
         )
         self._extra_patterns = _load_extra_patterns()
+        _describe_extra_patterns(len(self._extra_patterns))
         self._blob_stores: dict[str, HITLBlobStore] = {}
 
     def _blob_store_for(self, tenant_id: str) -> HITLBlobStore:
@@ -337,17 +420,29 @@ class TraceRedactor(_OTelSpanProcessor):
         tenant_id = attributes.get(_TENANT_ATTRIBUTE) or self.default_tenant_id
 
         for key, value in list(attributes.items()):
-            if not isinstance(value, str):
+            # STRINGS AND SEQUENCES OF STRINGS. The loop used to `continue` on
+            # anything that was not a `str`, and a sequence of strings is a
+            # first-class OTel attribute type the SDK accepts without comment —
+            # so `span.set_attribute("docs", [...])` carrying an email, an API
+            # key or a card number was exported whole, in every profile,
+            # production included. Verified against a real span before and
+            # after; see test_trace_redactor.
+            strings = _string_parts(value)
+            if strings is None:
                 continue
 
             if self.profile == "staging":
-                attributes[key] = self._scrub(value, hash_identifiers=True)
+                attributes[key] = _rebuild(
+                    value, [self._scrub(part, hash_identifiers=True) for part in strings]
+                )
             elif self.profile == "production":
-                scrubbed = self._scrub(value, hash_identifiers=False)
-                if key in _PAYLOAD_ATTRIBUTES and len(scrubbed) > 50:
+                scrubbed = [self._scrub(part, hash_identifiers=False) for part in strings]
+                if key in _PAYLOAD_ATTRIBUTES and sum(len(p) for p in scrubbed) > 50:
                     ref = _make_blob_ref(trace_id, span_id, key)
                     try:
-                        self._blob_store_for(tenant_id).put(ref, value)
+                        # The ORIGINAL, rendered — a sequence payload has to
+                        # reach the compliance blob whole, like a string one.
+                        self._blob_store_for(tenant_id).put(ref, "\n".join(strings))
                         attributes[f"{key}.hitl_blob_ref"] = ref
                     except RuntimeError as exc:
                         # Missing HITL_ENCRYPTION_KEY for this tenant — log
@@ -359,7 +454,12 @@ class TraceRedactor(_OTelSpanProcessor):
                             ref,
                             exc,
                         )
-                attributes[key] = self._truncate(scrubbed, max_chars=50)
+                if key in _UNTRUNCATED_ATTRIBUTES:
+                    attributes[key] = _rebuild(value, scrubbed)
+                else:
+                    attributes[key] = _rebuild(
+                        value, [self._truncate(part, max_chars=50) for part in scrubbed]
+                    )
 
     def shutdown(self) -> None:
         pass

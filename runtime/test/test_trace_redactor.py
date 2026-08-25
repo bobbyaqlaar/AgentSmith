@@ -256,3 +256,94 @@ def test_development_profile_leaves_a_real_span_alone():
         span.set_attribute("input.value", "card=4111111111111111")
 
     assert "4111111111111111" in dict(exporter.get_finished_spans()[0].attributes)["input.value"]
+
+
+# ── Sequence attributes (pass 11) ────────────────────────────────────────────
+#
+# The scrub loop did `if not isinstance(value, str): continue`, and a sequence
+# of strings is a first-class OTel attribute type the SDK accepts without
+# comment. So `set_attribute("retrieved_docs", [...])` — an entirely ordinary
+# thing for a RAG step to do — exported whole, in every profile, production
+# included. Verified against a real span before the fix: an email, an API key
+# and a valid card number all reached the exporter untouched.
+#
+# These drive a REAL provider, which is the only way the sequence gap was
+# visible: a FakeSpan carrying a plain dict scrubs whatever the loop hands it,
+# and the loop was skipping sequences before it got there.
+#
+# (The earlier note here said the FakeSpan had hidden the redactor being
+# entirely inert. That claim was wrong — see _writable_attributes' docstring
+# for the correction. A live span's attributes are mutable and the control was
+# working. The case for a real provider stands on its own without it.)
+
+
+def _export_with_profile(profile: str, attributes: dict) -> dict:
+    """One span through a real provider with the redactor attached."""
+    pytest.importorskip("opentelemetry.sdk.trace")
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(tr.TraceRedactor(profile=profile))
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    with provider.get_tracer("test").start_as_current_span("s") as span:
+        for key, value in attributes.items():
+            span.set_attribute(key, value)
+    return dict(exporter.get_finished_spans()[0].attributes)
+
+
+@pytest.mark.parametrize("profile", ["staging", "production"])
+def test_a_sequence_attribute_is_scrubbed_like_a_string_one(profile) -> None:
+    out = _export_with_profile(
+        profile,
+        {"docs": ["contact bob@example.com", "key sk-ant-aaaaaaaaaaaaaaaaaaaaaaaa"]},
+    )
+    joined = " ".join(out["docs"])
+    assert "bob@example.com" not in joined, f"{profile}: an email left in a list attribute"
+    assert "sk-ant-" not in joined, f"{profile}: an API key left in a list attribute"
+    assert "REDACTED" in joined
+
+
+def test_a_card_number_in_a_sequence_is_redacted() -> None:
+    out = _export_with_profile("production", {"docs": ["card 4111 1111 1111 1111"]})
+    assert "4111" not in " ".join(out["docs"])
+
+
+def test_the_sequence_keeps_its_shape_and_length() -> None:
+    """A scrubber must not quietly change an attribute's type or drop entries —
+    writing through `_attributes._dict` bypasses the SDK's own coercion."""
+    out = _export_with_profile("staging", {"docs": ["a@b.com", "plain text", "c@d.com"]})
+    assert isinstance(out["docs"], tuple)
+    assert len(out["docs"]) == 3
+    assert out["docs"][1] == "plain text"
+
+
+def test_non_string_attributes_are_left_alone() -> None:
+    """Ints, bools and mixed sequences are not this scrubber's shape. Guessing
+    at one is how a redactor starts corrupting data instead of protecting it."""
+    out = _export_with_profile("production", {"count": 7, "ok": True})
+    assert out["count"] == 7
+    assert out["ok"] is True
+
+
+def test_production_does_not_truncate_a_digest() -> None:
+    """`prompt.system.sha256` is recorded PRECISELY so the prompt itself never
+    reaches a span. Truncating it to 50 characters produced a string that is
+    not a sha256 of anything and joins with nothing computed elsewhere — the
+    one attribute designed to be safe in production was the one production
+    broke."""
+    digest = "b" * 64
+    out = _export_with_profile("production", {"prompt.system.sha256": digest})
+    assert out["prompt.system.sha256"] == digest
+
+
+def test_production_still_truncates_ordinary_free_text() -> None:
+    """The exemption is a named set, not a hole: everything else still gets the
+    50-character ceiling §27 asks for."""
+    out = _export_with_profile("production", {"note": "x" * 200})
+    assert len(out["note"]) < 200
+    assert "truncated" in out["note"]

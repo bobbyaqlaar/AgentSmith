@@ -311,9 +311,12 @@
         "_redact_credit_cards",
         "_hash8",
         "_load_extra_patterns",
+        "_describe_extra_patterns",
         "HITLBlobStore",
         "_make_blob_ref",
         "_writable_attributes",
+        "_string_parts",
+        "_rebuild",
         "TraceRedactor",
         "_sub",
         "__init__",
@@ -327,7 +330,7 @@
         "_scrub",
         "_truncate"
       ],
-      "last_modified": "2026-08-24T21:49:52Z",
+      "last_modified": "2026-08-25T12:17:49Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -1023,7 +1026,7 @@
         "_run",
         "_git_repo"
       ],
-      "last_modified": "2026-08-24T11:11:39Z",
+      "last_modified": "2026-08-25T12:15:22Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -2310,9 +2313,16 @@
         "test_real_span_is_scrubbed_end_to_end",
         "test_ending_a_span_with_the_redactor_installed_does_not_raise",
         "test_development_profile_leaves_a_real_span_alone",
+        "_export_with_profile",
+        "test_a_sequence_attribute_is_scrubbed_like_a_string_one",
+        "test_a_card_number_in_a_sequence_is_redacted",
+        "test_the_sequence_keeps_its_shape_and_length",
+        "test_non_string_attributes_are_left_alone",
+        "test_production_does_not_truncate_a_digest",
+        "test_production_still_truncates_ordinary_free_text",
         "__init__"
       ],
-      "last_modified": "2026-08-24T21:50:15Z",
+      "last_modified": "2026-08-25T12:17:49Z",
       "id": "runtime/test/test_trace_redactor.py"
     },
     {

@@ -312,6 +312,18 @@ def check_redaction() -> bool:
     (from $ENVIRONMENT) against fixture payloads containing known secret/PII
     patterns and fails if any raw pattern survives scrubbing.
 
+    TWO LEVELS, and the second is the one that matters. The fixture loop below
+    calls `redactor._scrub(...)` with a string — it proves the PATTERN LIBRARY
+    works, and it proved that happily throughout the period when the redactor
+    was not redacting anything at all: `on_end` raised TypeError on every real
+    span because a finished span's attributes are immutable, and this gate
+    never called `on_end`. It also passed while every SEQUENCE-valued attribute
+    exported unscrubbed, because it only ever handed the scrubber a `str`.
+
+    So a span now goes through a real TracerProvider with the redactor attached
+    and the assertions are made on what the EXPORTER received. A control is
+    what reaches the wire, not what a helper returns.
+
     Used by cd-staging.yml / cd-production.yml:
         python3 scripts/verify_system.py --check-redaction
     """
@@ -352,6 +364,55 @@ def check_redaction() -> bool:
             f"fixture scrubbed: {fixture[:40]}...", not leaked, f"leaked → {scrubbed!r}"
         ):
             failures += 1
+
+    # ── The control, not the helper ──────────────────────────────────────────
+    try:
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+            InMemorySpanExporter,
+        )
+    except ImportError:
+        _check(
+            "opentelemetry not installed — the end-to-end span check cannot run "
+            "(nothing is exporting spans on this host either)",
+            True,
+            warn_only=True,
+        )
+    else:
+        exporter = InMemorySpanExporter()
+        provider = TracerProvider()
+        provider.add_span_processor(TraceRedactor())
+        provider.add_span_processor(SimpleSpanProcessor(exporter))
+        try:
+            with provider.get_tracer("verify_system").start_as_current_span("probe") as span:
+                span.set_attribute("input.value", fixtures[1])
+                # A SEQUENCE, because that is a first-class OTel attribute type
+                # and the scrub loop used to skip it entirely.
+                span.set_attribute("docs", [fixtures[0], fixtures[2]])
+            spans = exporter.get_finished_spans()
+        except Exception as exc:  # a redactor that raises out of span.end()
+            _check(f"a real span survives export ({exc})", False)
+            failures += 1
+            spans = []
+
+        if not _check("the redactor emitted a span at all", bool(spans)):
+            failures += 1
+        else:
+            attrs = dict(spans[0].attributes)
+            rendered = " ".join(
+                part
+                for value in attrs.values()
+                for part in (value if isinstance(value, (list, tuple)) else [value])
+                if isinstance(part, str)
+            )
+            for marker, what in (("sk-", "an API key"), ("@example.com", "an email"), ("4111", "a card number")):
+                if not _check(
+                    f"{what} does not survive to the exporter",
+                    marker not in rendered,
+                    f"leaked → {rendered[:120]!r}",
+                ):
+                    failures += 1
 
     print()
     print("═══════════════════════════════════════════════════")
