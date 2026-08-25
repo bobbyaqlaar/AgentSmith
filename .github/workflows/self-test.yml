@@ -34,7 +34,7 @@ jobs:
           ruff check .
       - name: "mypy (shipped runtime only — see pyproject.toml for the scope)"
         run: |
-          pip install "mypy>=1.11,<2.0"
+          pip install "mypy>=1.11,<2.0" types-PyYAML
           mypy
       - name: "py_compile sweep"
         run: |

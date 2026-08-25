@@ -159,3 +159,9 @@ ignore = [
 files = ["runtime"]
 exclude = ["runtime/test/"]
 ignore_missing_imports = true
+
+# `ignore_missing_imports` does NOT cover a library that has a published stub
+# package — mypy reports `import-untyped` and names the package instead, which
+# is the more useful answer. `types-PyYAML` is installed alongside mypy in CI.
+# Local runs passed because the venv happened to have it; CI did not. Recording
+# it here so the next person is not diagnosing an environment difference.
