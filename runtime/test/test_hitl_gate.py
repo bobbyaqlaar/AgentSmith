@@ -41,13 +41,33 @@ class _FakeWorkflowModule:
         return {"ran": name}
 
     async def wait_condition(self, predicate, timeout=None):
-        if self._timeout:
+        """Honours the predicate, which the first version of this did not.
+
+        It returned `predicate()` unconditionally, so a gate whose condition was
+        FALSE carried on into the decision branch exactly as if it had been
+        approved — the double was more permissive than `workflow.wait_condition`,
+        which blocks until the predicate holds and otherwise raises. No test
+        here could tell "an approval arrived" from "no approval arrived and the
+        gate resumed anyway", which is the one distinction a HITL gate exists
+        to make.
+
+        Modelled synchronously: true now means the signal is already queued
+        (normal in Temporal — signals are applied before the wait is reached);
+        false means nothing will arrive, which in a real workflow is the
+        timeout.
+        """
+        if self._timeout or not predicate():
             raise TimeoutError("no signal within HITL_SIGNAL_TIMEOUT")
-        return predicate()
+        return True
 
     def info(self):
         class _Info:
             workflow_id = "wf-test-1"
+            # `run_id` as well. A double that carries only the fields the code
+            # happened to use when it was written breaks the next change and
+            # points nowhere near the cause — the same way this module's
+            # `wait_condition` stand-in used to ignore its predicate.
+            run_id = "run-test-1"
 
         return _Info()
 
@@ -195,3 +215,65 @@ def test_timeout_without_tenant_id_keeps_the_legacy_flattened_shape(fake_workflo
 # SEC-DLQ-001's evidence, and a control cannot be proven by another control's
 # suite. What stays here is the HITL gate's use of it — which envelope shape a
 # timeout emits — because that is the gate's behaviour, not the DLQ's.
+
+
+# ── One approval answers one gate (pass 12) ──────────────────────────────────
+#
+# `_hitl_approved` was a single field that nothing reset, so in a workflow with
+# two HITL gates — the shape this class exists to support — the second gate's
+# `wait_condition(lambda: self._hitl_approved is not None)` was already true and
+# it resumed without anyone approving it. A silent HITL bypass on a high-impact
+# action, which is exactly what run_with_hitl_gate's own docstring warns about
+# for a different reason.
+#
+# `_gate_fixes` one method below has been keyed by gate_id from the start, with
+# a comment explaining why. Approvals were the sibling that did not get it.
+
+
+def test_an_approval_does_not_carry_over_to_the_next_gate(fake_workflow):
+    fake = fake_workflow()
+    wf = BaseAgentWorkflow()
+    wf._hitl_approved = True
+
+    first = _gate(wf, gate_result={"needs_hitl": True}, gate_id="gate-one")
+    assert first == {"ran": "approve_activity"}
+
+    # The second gate has had no approval of its own. It must wait, and time
+    # out into the dead-letter path — not resume on the first gate's answer.
+    second = _gate(wf, gate_result={"needs_hitl": True}, gate_id="gate-two")
+    assert second == AgentWorkflowResult(status="dead_letter"), (
+        "the second gate resumed on the first gate's approval"
+    )
+    assert [name for name, _ in fake.executed].count("approve_activity") == 1
+
+
+def test_a_rejection_does_not_carry_over_either(fake_workflow):
+    """The other direction: a rejected gate must not silently reject the next
+    one, which would look like a workflow failing for no stated reason."""
+    fake_workflow()
+    wf = BaseAgentWorkflow()
+    wf._hitl_approved = False
+
+    assert _gate(wf, gate_result={"needs_hitl": True}, gate_id="gate-one") == (
+        AgentWorkflowResult(status="failed")
+    )
+    assert _gate(wf, gate_result={"needs_hitl": True}, gate_id="gate-two") == (
+        AgentWorkflowResult(status="dead_letter")
+    )
+
+
+def test_an_addressed_approval_answers_only_its_own_gate(fake_workflow):
+    """`hitl_approved_for(gate_id, approved)` is the form a sender that knows
+    which gate it means should use — with two gates waiting, an unaddressed
+    approval cannot say."""
+    fake = fake_workflow()
+    wf = BaseAgentWorkflow()
+    wf._gate_approvals["gate-two"] = True
+
+    assert _gate(wf, gate_result={"needs_hitl": True}, gate_id="gate-one") == (
+        AgentWorkflowResult(status="dead_letter")
+    )
+    assert _gate(wf, gate_result={"needs_hitl": True}, gate_id="gate-two") == (
+        {"ran": "approve_activity"}
+    )
+    assert [name for name, _ in fake.executed].count("approve_activity") == 1

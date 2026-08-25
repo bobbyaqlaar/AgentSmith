@@ -117,6 +117,31 @@ if _HAS_TEMPORAL:
         )
 
 
+def _dlq_task_id(run_id: str, gate_id: str, attempt: Any) -> str:
+    """A DLQ task id that is the same on every delivery of one enqueue, and
+    different for every run.
+
+    Keyed on RUN id, not workflow id. A Temporal workflow can be retried or
+    reset, and the new run carries the SAME workflow_id — so a task id built
+    from workflow_id + gate + attempt collides with the previous run's, and
+    `enqueue`'s `ON CONFLICT DO NOTHING` silently drops the new run's entry. A
+    duplicate DLQ row is noise; a missing one is a failure nobody is told
+    about, which is the worse trade and the one the first version of this
+    function made.
+
+    Every component is deterministic in workflow scope — replays of one run
+    produce the same run_id, gate_id and attempt number — so a retried
+    `dlq_enqueue_activity` targets the row it already wrote and the second
+    delivery is a no-op. That is the property `enqueue`'s ON CONFLICT was
+    waiting for a caller to supply.
+
+    Readable rather than hashed: it is what an operator sees in the portal's
+    DLQ list, and it says which run, which gate and which attempt without a
+    lookup.
+    """
+    return f"{run_id}/{gate_id}/{attempt}"
+
+
 @dataclass
 class AgentWorkflowInput:
     tenant_id: str
@@ -143,16 +168,78 @@ class BaseAgentWorkflow:
     for the oil-price example) while keeping the HITL/DLQ control flow here.
     """
 
+    # The key a legacy `hitl_approved` signal (which carries no gate id) is
+    # filed under. Any waiting gate will accept it; see hitl_approved below.
+    _ANY_GATE = "*"
+
     def __init__(self) -> None:
-        self._hitl_approved: Optional[bool] = None
+        # KEYED BY gate_id, and CONSUMED when a gate reads one — the same
+        # treatment `_gate_fixes` has always had, for the same reason its
+        # docstring gives: "multiple recoverable steps in one workflow
+        # (sequential or concurrent) don't clobber each other".
+        #
+        # Approval was a single `self._hitl_approved` field that nothing ever
+        # reset. A workflow with two HITL gates — which this class exists to
+        # support — had its SECOND gate satisfied instantly by the first gate's
+        # approval, because `wait_condition(lambda: self._hitl_approved is not
+        # None)` was already true. That is a silent HITL bypass on a
+        # high-impact action, which is precisely what run_with_hitl_gate's own
+        # docstring warns about for a different reason two paragraphs down.
+        self._gate_approvals: Dict[str, bool] = {}
         self._gate_fixes: Dict[str, Any] = {}
+
+    @property
+    def _hitl_approved(self) -> Optional[bool]:
+        """The legacy single-gate view, kept for subclasses that read it.
+
+        Returns whatever approval is currently outstanding, or None. Reading it
+        does not consume anything — the gate loop does that explicitly.
+        """
+        if self._ANY_GATE in self._gate_approvals:
+            return self._gate_approvals[self._ANY_GATE]
+        return next(iter(self._gate_approvals.values()), None)
+
+    @_hitl_approved.setter
+    def _hitl_approved(self, approved: Optional[bool]) -> None:
+        """Assignment still works, and still means "approve the next gate".
+
+        A tenant subclass (and this repo's own tests) assigned this field
+        directly when it was a plain attribute. Turning it into a read-only
+        property would break them for no gain — the defect was never the write,
+        it was that nothing ever cleared the value.
+        """
+        if approved is None:
+            self._gate_approvals.pop(self._ANY_GATE, None)
+        else:
+            self._gate_approvals[self._ANY_GATE] = approved
 
     if _HAS_TEMPORAL:
 
         @workflow.signal
         def hitl_approved(self, approved: bool) -> None:
-            """External signal fired by the Phoenix annotation -> Ops Portal bridge on HITL review."""
-            self._hitl_approved = approved
+            """External signal fired by the Phoenix annotation -> Ops Portal bridge on HITL review.
+
+            Carries no gate id — it predates multi-gate workflows — so it is
+            filed under `_ANY_GATE` and the next waiting gate consumes it. That
+            keeps every existing sender working while making the approval
+            single-use: it used to set a field that was never cleared, so one
+            approval satisfied every later gate in the workflow.
+
+            Prefer `hitl_approved_for(gate_id, approved)` when the sender knows
+            which gate it is answering, which the Ops Portal does.
+            """
+            self._gate_approvals[self._ANY_GATE] = approved
+
+        @workflow.signal
+        def hitl_approved_for(self, gate_id: str, approved: bool) -> None:
+            """Approve or reject ONE gate by id.
+
+            The gate-addressed form of the signal above, mirroring
+            `human_fix_payload(gate_id, fix)`. With two gates waiting
+            concurrently, an unaddressed approval cannot say which one it
+            means; this can.
+            """
+            self._gate_approvals[gate_id] = approved
 
         @workflow.signal
         def human_fix_payload(self, gate_id: str, fix: Any) -> None:
@@ -239,9 +326,15 @@ class BaseAgentWorkflow:
                 start_to_close_timeout=timedelta(minutes=10),
             )
 
+        # NOT cleared before waiting. A signal that arrives before the workflow
+        # reaches its wait is normal in Temporal — signals are queued and
+        # applied on replay — so discarding one here would throw away a valid
+        # approval to guard against a stale one. Consumption below is what
+        # stops an approval satisfying a second gate, and it is enough.
         try:
             await workflow.wait_condition(
-                lambda: self._hitl_approved is not None,
+                lambda: gate_id in self._gate_approvals
+                or self._ANY_GATE in self._gate_approvals,
                 timeout=HITL_SIGNAL_TIMEOUT,
             )
         except TimeoutError:
@@ -257,6 +350,9 @@ class BaseAgentWorkflow:
                     reason="hitl_timeout",
                     workflow_id=workflow.info().workflow_id,
                     gate_id=gate_id,
+                    # One timeout, one entry, however many times the activity
+                    # is delivered. See _dlq_task_id.
+                    task_id=_dlq_task_id(workflow.info().run_id, gate_id, "hitl_timeout"),
                 )
             await workflow.execute_activity(
                 dead_letter_activity_name,
@@ -265,7 +361,20 @@ class BaseAgentWorkflow:
             )
             return AgentWorkflowResult(status="dead_letter")
 
-        if not self._hitl_approved:
+        # CONSUMED, not read: an approval answers one gate. Addressed approvals
+        # win over an unaddressed one when both are present.
+        if gate_id in self._gate_approvals:
+            approved = self._gate_approvals.pop(gate_id)
+            self._gate_approvals.pop(self._ANY_GATE, None)
+        else:
+            # Default, not a bare pop: wait_condition returning means one of the
+            # two keys was present, but a KeyError here would turn a
+            # never-supposed-to-happen into a workflow task failure that retries
+            # forever. Treat an absent approval as "not approved" — the
+            # fail-closed direction for a gate guarding a high-impact action.
+            approved = self._gate_approvals.pop(self._ANY_GATE, False)
+
+        if not approved:
             return AgentWorkflowResult(status="failed")
 
         return await workflow.execute_activity(
@@ -377,7 +486,11 @@ class BaseAgentWorkflow:
                 "See SPECS.md §25 for the production runtime spec."
             )
 
-        workflow_id = workflow.info().workflow_id
+        info = workflow.info()
+        workflow_id = info.workflow_id
+        # The DLQ task id is keyed on the RUN, so a reset or retried workflow
+        # files its own entries instead of colliding with the previous run's.
+        run_id = info.run_id
         current_payload = payload
 
         for attempt in range(max_attempts):
@@ -414,6 +527,16 @@ class BaseAgentWorkflow:
                     reason=reason,
                     workflow_id=workflow_id,
                     gate_id=gate_id,
+                    # A STABLE id per (run, gate, attempt), built from values
+                    # that are deterministic in workflow scope. Without one
+                    # `enqueue` mints a uuid4, and a Temporal activity is
+                    # at-least-once: a retry after the insert committed — a
+                    # worker crash between commit and completion, a lost
+                    # response — wrote a second row, and the operator saw one
+                    # failure twice in the portal's DLQ. `ON CONFLICT DO
+                    # NOTHING` was already there waiting for a caller to make
+                    # it mean something.
+                    task_id=_dlq_task_id(run_id, gate_id, attempt),
                 ),
                 start_to_close_timeout=timedelta(minutes=5),
             )

@@ -117,6 +117,7 @@ def dead_letter_envelope(
     reason: Optional[str] = None,
     workflow_id: Optional[str] = None,
     gate_id: Optional[str] = None,
+    task_id: Optional[str] = None,
 ) -> dict:
     """The dict form of a DLQEntry, for crossing an activity boundary.
 
@@ -133,7 +134,9 @@ def dead_letter_envelope(
     cannot omit a field the consumer requires.
 
     `enqueue()` takes these same names as keyword arguments, so
-    `dlq.enqueue(**envelope)` round-trips without restating them a third time.
+    `dlq.enqueue(**envelope)` round-trips without restating them a third time —
+    including `task_id`, which is what makes the round trip idempotent under
+    Temporal's at-least-once activity delivery.
     """
     return {
         "payload": payload,
@@ -142,6 +145,14 @@ def dead_letter_envelope(
         "reason": reason,
         "workflow_id": workflow_id,
         "gate_id": gate_id,
+        # `enqueue` is idempotent on task_id and generates a uuid4 when given
+        # none — which makes it idempotent for a caller that supplies a stable
+        # one and not at all for a caller that does not. A Temporal activity is
+        # at-least-once by construction, so `dlq_enqueue_activity` retried after
+        # a committed insert wrote a SECOND row and a human saw one failure
+        # twice in the portal. base_workflow builds this id from values that are
+        # deterministic in workflow scope.
+        "task_id": task_id,
     }
 
 

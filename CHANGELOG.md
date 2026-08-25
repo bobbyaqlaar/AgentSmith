@@ -20,6 +20,33 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Runtime — pass 12, `base_workflow.py`
+
+**Tenant-visible.** `BaseAgentWorkflow` gains a `hitl_approved_for(gate_id,
+approved)` signal, and an approval is now consumed by the gate that reads it.
+The existing `hitl_approved(approved)` signal and direct assignment to
+`self._hitl_approved` both keep working — `examples/oil-price-agent` reads that
+field — but an approval no longer persists after the gate it answered.
+
+- **One HITL approval satisfied every later gate.** `_hitl_approved` was a
+  single field that nothing reset, so in a workflow with two gates the second
+  one's `wait_condition(lambda: self._hitl_approved is not None)` was already
+  true and it ran the high-impact activity with nobody approving it. A silent
+  HITL bypass — the failure `run_with_hitl_gate`'s own docstring warns about for
+  a different reason. `_gate_fixes`, one method below, has been keyed by
+  `gate_id` from the start with a comment explaining exactly this hazard;
+  approvals were the sibling that never got it.
+- **Every DLQ enqueue wrote a fresh row on retry.** `dlq_enqueue_activity` is a
+  Temporal activity, so delivery is at-least-once, and `dead_letter_envelope`
+  carried no `task_id` — leaving `enqueue` to mint a uuid4 per delivery. Its
+  `ON CONFLICT DO NOTHING` protected callers that supplied a stable id and
+  nobody else. The envelope carries one now, built from run id, gate and
+  attempt.
+- **The HITL test double ignored its own wait predicate.** It returned
+  `predicate()` unconditionally, so a gate whose condition was false carried on
+  exactly as if approved, and no test in the file could tell "approved" from
+  "resumed without approval" — the one distinction the gate exists to make.
+
 ### Runtime — pass 11, `trace_redactor.py`
 
 - **Sequence attributes were never scrubbed.** The loop did

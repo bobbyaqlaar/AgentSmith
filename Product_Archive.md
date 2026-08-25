@@ -7,6 +7,30 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — review pass 12, `runtime/workflows/base_workflow.py` (2026-08-25)
+
+| Finding | Fix |
+|---|---|
+| `_hitl_approved` was one field that nothing reset, so a workflow's SECOND HITL gate found `wait_condition(lambda: self._hitl_approved is not None)` already true and ran its high-impact activity unapproved. `_gate_fixes` one method below is keyed by `gate_id` with a comment naming this exact hazard | Approvals keyed by gate and CONSUMED when read; a new `hitl_approved_for(gate_id, approved)` signal for senders that know which gate they mean. The legacy signal and direct assignment still work — `examples/oil-price-agent` reads the field |
+| `dlq_enqueue_activity` is at-least-once and `dead_letter_envelope` carried no `task_id`, so `enqueue` minted a uuid4 per delivery and a retry after a committed insert wrote a second row | The envelope carries a task id built from run id, gate and attempt |
+| The `wait_condition` double returned `predicate()` unconditionally, so a gate whose condition was false proceeded as if approved — no test could distinguish the two | The double raises when its predicate is false, which is what the real one does by timing out |
+
+**A defect I introduced and caught before pushing.** The first version of
+`_dlq_task_id` keyed on `workflow_id`. A Temporal workflow that is reset or
+retried keeps its workflow id and gets a new run id, so the new run's DLQ entry
+would have collided with the old one's and `ON CONFLICT DO NOTHING` would have
+dropped it — trading a duplicate row, which is noise, for a missing one, which
+is a failure nobody is told about. Keyed on `run_id`, with a test that two runs
+of one workflow file separately.
+
+**Noted, not changed:** `examples/oil-price-agent/workflows/oil_price_workflow.py`
+hand-rolls the same gate — its own `wait_condition` on `self._hitl_approved`,
+its own approval read — rather than calling `run_with_hitl_gate`. It has one
+gate, so the reuse defect does not bite it, but it is the reference a tenant
+copies and it teaches the unconsumed pattern.
+
+---
+
 ## Completed — review pass 11, `runtime/trace_redactor.py` (2026-08-25)
 
 | Finding | Fix |

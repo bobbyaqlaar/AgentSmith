@@ -504,7 +504,7 @@
         "_release_claim",
         "discard"
       ],
-      "last_modified": "2026-08-25T09:40:28Z",
+      "last_modified": "2026-08-25T13:55:09Z",
       "id": "runtime/dead_letter.py"
     },
     {
@@ -2271,6 +2271,9 @@
         "test_rejects_neither_gate_activity_nor_gate_result",
         "test_timeout_with_tenant_id_emits_the_generic_dlq_envelope",
         "test_timeout_without_tenant_id_keeps_the_legacy_flattened_shape",
+        "test_an_approval_does_not_carry_over_to_the_next_gate",
+        "test_a_rejection_does_not_carry_over_either",
+        "test_an_addressed_approval_answers_only_its_own_gate",
         "__init__",
         "execute_activity",
         "wait_condition",
@@ -2279,7 +2282,7 @@
         "_install",
         "_Info"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T14:22:27Z",
       "id": "runtime/test/test_hitl_gate.py"
     },
     {
@@ -2453,9 +2456,12 @@
         "test_envelope_keys_match_what_enqueue_accepts",
         "test_the_legacy_flattened_shape_is_rejected_by_name",
         "test_every_producer_builds_the_envelope_through_the_builder",
-        "test_envelope_defaults_the_optional_fields_rather_than_omitting_them"
+        "test_envelope_defaults_the_optional_fields_rather_than_omitting_them",
+        "test_the_task_id_is_stable_across_deliveries_of_one_enqueue",
+        "test_a_reset_or_retried_run_does_not_collide_with_the_previous_one",
+        "test_each_attempt_and_each_gate_files_separately"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T14:22:53Z",
       "id": "runtime/test/test_dead_letter.py"
     },
     {
@@ -2549,21 +2555,24 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_dlq_task_id",
         "AgentWorkflowInput",
         "AgentWorkflowResult",
         "BaseAgentWorkflow",
         "dlq_enqueue_activity",
         "self_correct_payload_activity",
         "__init__",
+        "_hitl_approved",
         "run_with_hitl_gate",
         "run_with_self_correction",
         "run_with_recoverable_step",
         "_Workflow",
         "hitl_approved",
+        "hitl_approved_for",
         "human_fix_payload",
         "signal"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T14:23:01Z",
       "id": "runtime/workflows/base_workflow.py"
     },
     {
