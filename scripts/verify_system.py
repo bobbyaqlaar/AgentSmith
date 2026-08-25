@@ -1060,8 +1060,8 @@ def check_onprem_deploy() -> bool:
     if have_helm:
         chart = base / "kubernetes"
         result = subprocess.run(
-            ["helm", "lint", str(chart)], capture_output=True, text=True
-        , check=False)
+            ["helm", "lint", str(chart)], capture_output=True, text=True, check=False
+        )
         if not _check(
             "helm lint passes", result.returncode == 0, result.stdout + result.stderr
         ):

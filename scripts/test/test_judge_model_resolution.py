@@ -70,8 +70,8 @@ def test_registry_is_readable_from_a_directly_invoked_script(tmp_path: Path) -> 
     probe.write_text("import _shared; print(_shared._registry_judge_model())", encoding="utf-8")
     try:
         out = subprocess.run(
-            [sys.executable, str(probe)], capture_output=True, text=True, cwd=REPO
-        , check=False)
+            [sys.executable, str(probe)], capture_output=True, text=True, cwd=REPO, check=False
+        )
     finally:
         probe.unlink()
     assert out.stdout.strip() == "falcon3:3b", out.stderr[-400:]

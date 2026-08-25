@@ -115,6 +115,18 @@ async def _run_worker_with_retry(tenant_id: str) -> None:
 
 
 async def main() -> None:
+    # .env FIRST, before anything reads configuration — including TENANT_ID
+    # below and the OTLP endpoint configure_telemetry() resolves. The runtime
+    # loads no config file of its own, so a worker started outside a shell that
+    # had already exported everything runs silently on defaults.
+    #
+    # runtime/worker.py and KYC Sentinel's worker both gained this line when
+    # that was found; this reference — the file a tenant COPIES — did not, so
+    # the omission was propagating by design.
+    from runtime.config import load_env_file
+
+    load_env_file()
+
     tenant_id = os.environ.get("TENANT_ID", "")
     if not tenant_id:
         print("ERROR: TENANT_ID environment variable is required.", file=sys.stderr)

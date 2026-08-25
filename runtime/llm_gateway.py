@@ -1528,12 +1528,22 @@ class LLMGateway:
             raise last_exc
 
         if text is None:
-            # The loop above either binds `text` or raises, so this is
-            # unreachable — but `text` starts as None and nothing said where it
-            # stopped being None, which is how the type stays Optional for every
-            # line below and a reader has to reconstruct the loop to be sure.
+            # NOT unreachable, which is what a first pass at this comment said.
+            # The loop `continue`s past any role missing from `self.models`, so
+            # a degrade chain whose every role is unconfigured completes with no
+            # attempt made, no exception, and `text` still None — and the
+            # `last_exc is not None` branch above never fires because nothing
+            # ever failed. Nothing was tried.
+            #
+            # Before this, that fell through to `apply_output_moderation(None)`
+            # and a CompletionResult carrying text=None: a caller got an answer
+            # object for a call that never happened.
             raise RuntimeError(
-                "internal: the degrade ladder returned no text and did not raise"
+                f"No configured model tier for role {role!r}: the degrade chain "
+                f"{self._degrade_chain(role)} resolved to nothing in this "
+                f"tenant's registry, so no provider was called. Check "
+                f"models.yaml for a role entry, or a degrade_to pointing at a "
+                f"role that does not exist."
             )
 
         # WHEN THE PROVIDER REPORTED NO USAGE, the reservation stands as the

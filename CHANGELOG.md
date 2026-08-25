@@ -61,6 +61,37 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Review pass over the lint/type work itself
+
+Three findings, two of them against changes made minutes earlier.
+
+- **The oil-price example never loaded `.env`.** `runtime/worker.py` and KYC's
+  worker both gained `load_env_file()` when the runtime was found not to read
+  `.env` at all; the example — the file a tenant COPIES — did not, so the
+  omission was propagating by design. It began to bite the moment
+  `configure_telemetry()` landed there, since the OTLP endpoint comes from the
+  environment: a correctly installed provider with no destination, which looks
+  identical to a working one until someone goes looking for the traces. Fixed,
+  and guarded for all three entrypoints by an ordering test.
+- **The fall-through in `complete()` was not unreachable, and the comment said
+  it was.** The degrade loop `continue`s past any role missing from
+  `self.models`, so a chain whose every role is unconfigured — one bad
+  `degrade_to` in models.yaml — completes with no attempt, no exception, and
+  `text` still None. The `last_exc is not None` branch never fires because
+  nothing failed. That fell through to `apply_output_moderation(None)` and a
+  `CompletionResult` carrying `text=None`: an answer object for a call that
+  never happened. It now refuses and names the chain that resolved to nothing.
+- **Six `, check=False)` left dangling on their own line** by the rewriter that
+  made the subprocess `check` argument explicit — valid Python, so the repair
+  pass that fixed the syntax errors did not see them.
+
+The ordering test's own first version compared `text.index(...)` and failed on
+the file it was checking, because the comment EXPLAINING the ordering names
+`configure_telemetry()` above the `load_env_file()` call it explains. Rewritten
+over the AST — which is the rule the orphan sweep was written around two commits
+earlier, broken about ten minutes later.
+
+
 ### Review levers — three new, and five dead functions found by one of them
 
 - **`docs/review-levers.md` gains 1.8, 3.7 and 3.8**, plus an amendment to 4.6.

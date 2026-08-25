@@ -54,8 +54,8 @@ def _in_subprocess(body: str, env_extra: dict | None = None) -> str:
         env.pop(var, None)
     env.update(env_extra or {})
     proc = subprocess.run(
-        [sys.executable, "-c", body], capture_output=True, text=True, env=env, timeout=120
-    , check=False)
+        [sys.executable, "-c", body], capture_output=True, text=True, env=env, timeout=120, check=False
+    )
     assert proc.returncode == 0, f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
     return proc.stdout.strip()
 
@@ -145,4 +145,53 @@ def test_every_worker_entrypoint_configures_telemetry(module: str) -> None:
     assert "configure_telemetry()" in text, (
         f"{path.name} starts a worker without installing telemetry — this is "
         "how metrics came to have no provider in any deployment"
+    )
+
+
+@pytest.mark.parametrize(
+    "module",
+    ["runtime.worker", "examples/oil-price-agent/worker.py", "KYC worker (tenant repo)"],
+)
+def test_env_is_loaded_before_telemetry_reads_it(module: str) -> None:
+    """`.env` must be loaded BEFORE `configure_telemetry()` resolves an endpoint.
+
+    The endpoint comes from the environment, so a worker that configures
+    telemetry first exports nowhere and says nothing about it — it is a
+    correctly-installed provider with no destination, which looks identical to a
+    working one until someone goes looking for the traces.
+
+    `runtime/worker.py` and KYC's worker both gained `load_env_file()` when the
+    runtime was found not to read `.env` at all. The oil-price example did not,
+    and it is the file a tenant copies — so the omission propagated by design
+    until telemetry made it bite.
+    """
+    if module == "runtime.worker":
+        path = ROOT / "runtime" / "worker.py"
+    elif module.startswith("examples"):
+        path = ROOT / "examples" / "oil-price-agent" / "worker.py"
+    else:
+        path = ROOT.parent / "KYC_Sentinel" / "worker.py"
+        if not path.exists():
+            pytest.skip("KYC Sentinel checkout not present")
+
+    # From the AST, not from the text. The first version of this test compared
+    # `text.index(...)` and failed on this very file, because the comment
+    # EXPLAINING the ordering names `configure_telemetry()` above the
+    # `load_env_file()` call it is explaining. A function named in a comment is
+    # not a call — the same rule the orphan sweep in scripts/test/ was written
+    # around, and it took about ten minutes to break it.
+    import ast
+
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    calls: dict[str, int] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            calls.setdefault(node.func.id, node.lineno)
+
+    assert "load_env_file" in calls, f"{path.name} never loads .env"
+    assert "configure_telemetry" in calls, f"{path.name} never configures telemetry"
+    assert calls["load_env_file"] < calls["configure_telemetry"], (
+        f"{path.name} configures telemetry at line {calls['configure_telemetry']} "
+        f"but loads .env at line {calls['load_env_file']}, so the OTLP endpoint "
+        "declared in .env is invisible to it"
     )

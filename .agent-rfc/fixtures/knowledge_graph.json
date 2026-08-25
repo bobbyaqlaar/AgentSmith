@@ -402,7 +402,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-25T21:47:42Z",
+      "last_modified": "2026-08-25T22:05:55Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -732,7 +732,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-25T22:00:39Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -1023,7 +1023,7 @@
         "_run",
         "_git_repo"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-25T22:00:39Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -1380,7 +1380,7 @@
         "test_credential_resolution_survives_an_older_runtime",
         "test_fallback_map_matches_the_runtime_mapping"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-25T22:00:39Z",
       "id": "scripts/test/test_judge_model_resolution.py"
     },
     {
@@ -1672,7 +1672,7 @@
         "test_fail_closed_behaviour_is_stated_not_just_the_variable",
         "test_every_shipped_command_is_in_the_canonical_reference"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-25T22:00:39Z",
       "id": "scripts/test/test_env_var_documentation.py"
     },
     {
@@ -1893,7 +1893,7 @@
         "main",
         "healthz"
       ],
-      "last_modified": "2026-08-25T16:30:30Z",
+      "last_modified": "2026-08-25T22:03:48Z",
       "id": "examples/oil-price-agent/worker.py"
     },
     {
@@ -2137,9 +2137,10 @@
         "test_chain_without_any_free_tier_falls_back_to_next_paid_rung",
         "test_no_cheaper_tier_halts_with_alert",
         "test_broken_chain_link_is_skipped_not_fatal",
-        "test_cycle_in_degrade_chain_terminates"
+        "test_cycle_in_degrade_chain_terminates",
+        "test_a_chain_with_no_configured_tier_refuses_rather_than_returning_nothing"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-25T22:05:26Z",
       "id": "runtime/test/test_degrade_ladder.py"
     },
     {
@@ -3702,9 +3703,10 @@
         "test_the_gateways_instruments_are_not_proxies_after_configure",
         "test_without_configuration_they_are_proxies",
         "test_tracing_is_still_installed_by_the_same_call",
-        "test_every_worker_entrypoint_configures_telemetry"
+        "test_every_worker_entrypoint_configures_telemetry",
+        "test_env_is_loaded_before_telemetry_reads_it"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-25T22:03:19Z",
       "id": "runtime/test/test_telemetry_wiring.py"
     },
     {
@@ -3774,7 +3776,7 @@
         "test_every_public_function_has_a_caller",
         "test_configure_metrics_specifically_is_reachable"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-25T22:00:39Z",
       "id": "scripts/test/test_no_orphaned_entrypoints.py"
     }
   ],

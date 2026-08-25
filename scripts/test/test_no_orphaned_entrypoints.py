@@ -45,8 +45,8 @@ _INVOKED_BY_NAME = {"main", "run", "sync", "promote"}
 
 def _tracked(pattern: str) -> list[Path]:
     out = subprocess.run(
-        ["git", "ls-files", pattern], cwd=ROOT, capture_output=True, text=True
-    , check=False).stdout.split()
+        ["git", "ls-files", pattern], cwd=ROOT, capture_output=True, text=True, check=False
+    ).stdout.split()
     return [ROOT / p for p in out]
 
 

@@ -59,8 +59,8 @@ def _git_config(key: str) -> Optional[str]:
     """`git config user.email`, or None. The dev-session fallback."""
     try:
         out = subprocess.run(
-            ["git", "config", "--get", key], capture_output=True, text=True, timeout=5
-        , check=False)
+            ["git", "config", "--get", key], capture_output=True, text=True, timeout=5, check=False
+        )
     except (OSError, subprocess.SubprocessError):
         return None
     value = out.stdout.strip()

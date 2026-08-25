@@ -95,8 +95,8 @@ def _portal_source_files() -> list[Path]:
 
 def _documented_text() -> str:
     out = subprocess.run(
-        ["git", "-C", str(REPO), "ls-files", "*.md"], capture_output=True, text=True
-    , check=False).stdout.split()
+        ["git", "-C", str(REPO), "ls-files", "*.md"], capture_output=True, text=True, check=False
+    ).stdout.split()
     return "".join((REPO / p).read_text(errors="ignore") for p in out if (REPO / p).exists())
 
 

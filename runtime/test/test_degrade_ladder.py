@@ -118,3 +118,28 @@ def test_cycle_in_degrade_chain_terminates():
     gw = _gw(models)
     assert gw._degrade_chain("a") == ["a", "b"]  # _seen guard stops the loop
     assert gw._resolve_role("a", BREACHED) == ("b", "downgrade")
+
+
+def test_a_chain_with_no_configured_tier_refuses_rather_than_returning_nothing():
+    """Every role in the degrade chain missing from the registry.
+
+    The loop `continue`s past each one, so it completes having made no attempt
+    and caught no exception — and the "all tiers exhausted" branch never fires,
+    because nothing failed. `text` was still None, and that fell through to
+    output moderation and into a CompletionResult: a caller received an answer
+    object for a call that never happened.
+
+    Reachable, despite a first version of the guard's comment calling it
+    unreachable — a `degrade_to` pointing at a role that does not exist is
+    enough, which is a one-character typo in models.yaml.
+    """
+    import asyncio
+
+    from _gateway_fixtures import fake_gateway
+
+    gw = fake_gateway(role="developer")
+    # The chain names a role the registry does not have. Nothing to call.
+    gw._degrade_chain = lambda _role: ["nonexistent-role"]
+
+    with pytest.raises(RuntimeError, match="No configured model tier"):
+        asyncio.run(gw.complete("hello", model_hint="developer"))
