@@ -151,10 +151,20 @@ export class ReplayAlreadyResolvedError extends Error {}
  * replay_webhook_url, HMAC-signed with that tenant's replay_webhook_secret.
  * Does NOT update dlq_entries itself — the tenant's receiver
  * (runtime/replay_webhook_server.py) is responsible for calling
- * DeadLetterQueue.replay(taskId, override_payload=...) once it has
- * actually signaled the live workflow, so the DB only reflects "replayed"
- * once a real resume attempt happened, not just "the portal tried to
- * notify someone."
+ * DeadLetterQueue.replay(taskId, override_payload=...), so the DB never
+ * reflects "replayed" merely because the portal notified someone.
+ *
+ * This used to say the receiver marks the row "once it has actually signaled
+ * the live workflow". That stopped being the order when replay() started
+ * CLAIMING the row before invoking the handler — it has to, or a retried or
+ * double-clicked POST re-signals the workflow. The guarantee is now the other
+ * way round and slightly weaker: the claim is released back to `pending` if the
+ * handler raises, so "replayed" still means an attempt reached the engine, but
+ * it is set first and withdrawn on failure rather than set on success. The one
+ * case it does not cover is a handler that returns without signalling —
+ * temporal_replay does exactly that for an entry with no workflow_id/gate_id —
+ * which is why the replay route answers `resumable: false` rather than a bare
+ * `ok: true`.
  */
 export async function replayDlqEntry(tenantId: string, taskId: string, editedPayload: unknown): Promise<void> {
   const config = await getReplayWebhookConfig(tenantId);
