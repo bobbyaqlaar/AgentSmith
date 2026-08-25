@@ -390,13 +390,14 @@
         "_retry_reason",
         "_on_retry",
         "_is_retryable_provider_error",
+        "_unset_key_envs",
         "_resolve_endpoint",
         "_lookup_api_key",
         "_invoke",
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-24T21:24:05Z",
+      "last_modified": "2026-08-25T10:08:33Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -1975,6 +1976,8 @@
       "language": "python",
       "symbols": [
         "_make_gateway",
+        "test_the_memory_backend_resets_at_a_month_boundary",
+        "test_the_memory_backend_keeps_tenants_apart",
         "test_concurrent_calls_cannot_exceed_cap",
         "test_reservation_releases_on_invoke_failure",
         "test_free_tier_model_bypasses_reservation",
@@ -1988,7 +1991,7 @@
         "fake_post",
         "fake_post_401"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T10:08:11Z",
       "id": "runtime/test/test_llm_gateway_budget.py"
     },
     {
@@ -3299,7 +3302,7 @@
         "_FakeHttpx",
         "post"
       ],
-      "last_modified": "2026-08-24T21:01:05Z",
+      "last_modified": "2026-08-25T10:07:35Z",
       "id": "runtime/test/test_context_propagation.py"
     },
     {
@@ -3557,6 +3560,18 @@
       ],
       "last_modified": "2026-08-25T09:40:11Z",
       "id": "runtime/test/test_dlq_replay_idempotency.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_the_catalog_is_not_empty",
+        "test_every_provider_resolves_its_key_from_the_shared_catalog",
+        "test_a_per_role_override_still_wins",
+        "test_an_override_that_is_unset_falls_back_rather_than_going_dark"
+      ],
+      "last_modified": "2026-08-25T10:05:50Z",
+      "id": "runtime/test/test_gateway_provider_catalog.py"
     }
   ],
   "edges": [
@@ -4138,6 +4153,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_dlq_replay_idempotency.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_gateway_provider_catalog.py",
       "target": "runtime/__init__.py"
     }
   ]

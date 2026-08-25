@@ -7,6 +7,25 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — review pass 9, `runtime/llm_gateway.py` (2026-08-25)
+
+| Finding | Fix |
+|---|---|
+| `_MemoryBudgetBackend` — the DEFAULT backend — keyed spend by tenant alone while Redis and Postgres both key by `(tenant, period)`. The monthly cap never reset: a long-lived worker carried the previous month's spend forward and eventually refused every call, with `get_budget_status()` reporting a lifetime total beside the current month's `period_start` | Keyed by `(tenant_id, _current_period())` like its siblings, with tests for the boundary and for tenant separation |
+| The provider → API-key-env catalog existed a THIRD time as literals in `_resolve_endpoint`. The other two copies are pinned equal by `scripts/test/test_judge_model_resolution.py`; this one was not, and forgetting a branch resolves a new provider's key from `OPENAI_API_KEY` | Reads `provider_dispatch._DEFAULT_API_KEY_ENV`; a new test walks every provider in the catalog and asserts the gateway honours it |
+| An unset API key presented as `All model tiers exhausted` — 401 → `_is_provider_exhausted` → degrade → chain ends. The degrade-on-auth-error behaviour is deliberate; the diagnosis was the casualty | The exhaustion error names the unset variables, resolved through `_resolve_endpoint` rather than a reimplementation that would have been a fourth copy |
+| Run-status reporting failed at DEBUG, so a rotated token silently stopped filling `agent_runs` at every log level anyone runs | WARNING once per process, DEBUG after — it is on the hot path |
+| The run-status POST is synchronous, twice per call, at a flat 5s timeout, and the docstring claimed it never blocks the LLM call | Per-phase timeouts and an honest docstring. **Not fixed:** making it async needs a thread or queue and a shutdown path |
+
+**A test double caught in the act, on the other side of the usual lesson.**
+`test_context_propagation`'s fake `httpx` carried `post` and nothing else, so
+building an `httpx.Timeout` raised inside the reporter's `except Exception`, the
+POST silently never happened, and the test failed with a `KeyError` pointing
+nowhere near the cause. Usually a double is too capable; this one was too thin,
+and the effect is the same — it hid a change instead of checking it.
+
+---
+
 ## Completed — review pass 8, `runtime/` (2026-08-25)
 
 The first pass over `runtime/`, run with the levers added the same day. Two of

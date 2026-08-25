@@ -20,6 +20,38 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 ## [Unreleased]
 
+### Runtime — pass 9, `llm_gateway.py`
+
+- **The default budget backend never reset the monthly cap.** Redis keys on
+  `budget:{tenant}:{period}` and Postgres has `PRIMARY KEY (tenant_id, period)`.
+  `_MemoryBudgetBackend` — the default, since `BUDGET_BACKEND` is unset unless a
+  deployment chooses otherwise — keyed by tenant alone, so spend accumulated for
+  the life of the process. A worker alive across the 1st carried the previous
+  month's total into the new one and eventually refused every call against a cap
+  that should have been empty, while `get_budget_status()` reported that
+  lifetime figure beside a `period_start` naming the current month.
+- **A third copy of the provider → API-key-env catalog**, spelled as literals in
+  `_resolve_endpoint`'s if/elif chain. The other two — `provider_dispatch`'s dict
+  and `scripts/_shared`'s deliberate vendoring mirror — are already pinned equal
+  by a test; this one had nothing. Adding a provider to the dict and forgetting
+  the branch resolved its key from `OPENAI_API_KEY` silently. Now read from the
+  shared catalog, with a test that walks every provider in it.
+- **"All model tiers exhausted" was what an unset API key looked like.** An empty
+  key produces a 401, `_is_provider_exhausted` counts auth errors as exhaustion
+  (deliberately — a tenant holding one vendor's key should degrade past the
+  others), so with no key set every tier "exhausts" and the operator is sent to
+  their provider's billing page. The error now names the variables that are unset.
+- **Run-status reporting could stop entirely without a word.** Its failure path
+  logged at DEBUG, so a rotated token or a DNS change simply stopped filling
+  `agent_runs`. Now WARNING once per process, DEBUG thereafter — it sits on the
+  hot path and a per-call warning would be its own outage.
+- **The telemetry POST is on the critical path.** Two synchronous calls per LLM
+  call at a flat 5s timeout each; the first delays the provider request itself.
+  The docstring said "never block or fail the LLM call" and only the second half
+  was true. Timeout split per phase and tightened; the docstring now says what it
+  does. Making it asynchronous is a decision — thread or queue, shutdown path,
+  out-of-order tolerance — not a cleanup, and is left as one.
+
 ### Runtime — pass 8, the first over `runtime/`
 
 Run with the levers `docs/review-levers.md` gained the same day, and the two new

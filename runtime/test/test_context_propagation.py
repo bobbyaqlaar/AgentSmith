@@ -89,10 +89,19 @@ def test_the_gateway_sends_traceparent_and_a_trace_id(spans, monkeypatch):
     captured: dict = {}
 
     class _FakeHttpx:
+        # `Timeout` as well as `post`. The gateway builds an httpx.Timeout for
+        # the call, and a double carrying only `post` raised AttributeError
+        # INSIDE the reporter's `except Exception`, so the POST silently did
+        # not happen and this test failed with a KeyError on `captured` — the
+        # symptom pointing nowhere near the cause. A double that is LESS
+        # capable than the real module hides a change instead of checking it.
+        Timeout = staticmethod(lambda **kwargs: ("timeout", kwargs))
+
         @staticmethod
         def post(url, json=None, headers=None, timeout=None):
             captured["headers"] = headers or {}
             captured["json"] = json or {}
+            captured["timeout"] = timeout
 
     monkeypatch.setitem(sys.modules, "httpx", _FakeHttpx)
 
@@ -103,6 +112,9 @@ def test_the_gateway_sends_traceparent_and_a_trace_id(spans, monkeypatch):
     assert TRACEPARENT.match(captured["headers"]["traceparent"])
     assert captured["json"]["traceId"] == captured["headers"]["traceparent"].split("-")[1]
     assert captured["headers"]["Authorization"] == "Bearer t"
+    # Bounded, and bounded per phase. A flat multi-second timeout on a
+    # fire-and-forget telemetry POST is latency the LLM call pays twice.
+    assert captured["timeout"] is not None, "the report went out with no timeout at all"
 
 
 # ── the retrieval hop ────────────────────────────────────────────────────────

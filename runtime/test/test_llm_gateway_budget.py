@@ -37,6 +37,48 @@ def _make_gateway(
     return gw
 
 
+def test_the_memory_backend_resets_at_a_month_boundary(monkeypatch):
+    """The DEFAULT backend keyed spend by tenant alone, so a monthly cap never
+    reset.
+
+    Redis keys `budget:{tenant}:{period}` and Postgres has
+    `PRIMARY KEY (tenant_id, period)`; this one accumulated for the life of the
+    process. A worker alive across the 1st carried the previous month's spend
+    into the new one and eventually refused every call against a cap that
+    should have been empty — while `get_budget_status()` reported that lifetime
+    figure beside a `period_start` naming the current month.
+    """
+    from runtime import llm_gateway
+
+    backend = llm_gateway._MemoryBudgetBackend()
+
+    monkeypatch.setattr(llm_gateway, "_current_period", lambda: "2026-08")
+    assert backend.try_reserve("acme", 9.0, cap_usd=10.0) is True
+    assert backend.get_spend("acme") == 9.0
+    # The cap is nearly gone in August...
+    assert backend.try_reserve("acme", 5.0, cap_usd=10.0) is False
+
+    monkeypatch.setattr(llm_gateway, "_current_period", lambda: "2026-09")
+    # ...and untouched in September.
+    assert backend.get_spend("acme") == 0.0
+    assert backend.try_reserve("acme", 9.0, cap_usd=10.0) is True
+
+    # August's figure is still August's — the reset is a new key, not a wipe.
+    monkeypatch.setattr(llm_gateway, "_current_period", lambda: "2026-08")
+    assert backend.get_spend("acme") == 9.0
+
+
+def test_the_memory_backend_keeps_tenants_apart(monkeypatch):
+    """Guard on the guard: if the key were the period alone, every assertion
+    above would still pass and every tenant would share one budget."""
+    from runtime import llm_gateway
+
+    monkeypatch.setattr(llm_gateway, "_current_period", lambda: "2026-08")
+    backend = llm_gateway._MemoryBudgetBackend()
+    backend.add_spend("acme", 4.0)
+    assert backend.get_spend("globex") == 0.0
+
+
 @pytest.mark.asyncio
 async def test_concurrent_calls_cannot_exceed_cap():
     """N concurrent complete() calls for the same tenant must never let

@@ -333,27 +333,44 @@ class _BudgetBackend:
 
 
 class _MemoryBudgetBackend(_BudgetBackend):
-    """Single-process budget tracking. Suitable for dev/CI; not for multi-worker prod fleets."""
+    """Single-process budget tracking. Suitable for dev/CI; not for multi-worker prod fleets.
+
+    KEYED BY (tenant, period), like the other two. It was keyed by tenant
+    alone, so the monthly cap never reset: Redis keys on
+    `budget:{tenant}:{period}` and Postgres has `PRIMARY KEY (tenant_id,
+    period)`, and this one — the DEFAULT, since `BUDGET_BACKEND` is unset in
+    every deployment that has not chosen otherwise — accumulated for the life
+    of the process. A worker alive across the 1st carried December's spend into
+    January, and `get_budget_status()` reported that lifetime total next to a
+    `period_start` naming the current month. Eventually the cap is "breached"
+    by spend from a month that is over.
+    """
 
     def __init__(self) -> None:
-        self._spend: dict[str, float] = {}
+        self._spend: dict[tuple[str, str], float] = {}
         self._lock = threading.Lock()
+
+    @staticmethod
+    def _key(tenant_id: str) -> tuple[str, str]:
+        return (tenant_id, _current_period())
 
     def get_spend(self, tenant_id: str) -> float:
         with self._lock:
-            return self._spend.get(tenant_id, 0.0)
+            return self._spend.get(self._key(tenant_id), 0.0)
 
     def add_spend(self, tenant_id: str, amount_usd: float) -> float:
         with self._lock:
-            self._spend[tenant_id] = self._spend.get(tenant_id, 0.0) + amount_usd
-            return self._spend[tenant_id]
+            key = self._key(tenant_id)
+            self._spend[key] = self._spend.get(key, 0.0) + amount_usd
+            return self._spend[key]
 
     def try_reserve(self, tenant_id: str, amount_usd: float, cap_usd: float) -> bool:
         with self._lock:
-            current = self._spend.get(tenant_id, 0.0)
+            key = self._key(tenant_id)
+            current = self._spend.get(key, 0.0)
             if current + amount_usd > cap_usd:
                 return False
-            self._spend[tenant_id] = current + amount_usd
+            self._spend[key] = current + amount_usd
             return True
 
 
@@ -662,6 +679,10 @@ class LLMGateway:
 
     # ── Run status reporting (Ops Portal, Product_Archive.md P2a) ─────────
 
+    # Set the first time a run-status POST fails, so the warning below is
+    # emitted once per process rather than once per LLM call.
+    _run_status_failure_logged = False
+
     def _report_run_status(
         self,
         run_id: str,
@@ -678,8 +699,22 @@ class LLMGateway:
         gated on OPS_PORTAL_URL being set, fails open (logs, never raises)
         on any error. Same philosophy as every other runtime/-to-portal
         call in this codebase (e.g. _ai_audit_log_event in
-        install-ai-stack.sh): never let optional observability infra block
-        or fail the actual LLM call.
+        install-ai-stack.sh): never let optional observability infra FAIL the
+        actual LLM call.
+
+        It can still DELAY one, and the previous version of this sentence said
+        "block or fail", which was half true. This is a synchronous POST called
+        twice per gateway call — once before the provider request, once after —
+        so a portal that is merely slow adds its latency to every call, and the
+        first of the two delays the provider request itself. The timeout below
+        is what bounds that, and it is deliberately short: this is telemetry,
+        and a second of it is already too much to spend on a call that works.
+
+        Making it asynchronous is the real fix and is a decision, not a
+        cleanup: it needs a thread or a queue, a shutdown path, and tolerance
+        for the two reports arriving out of order — which the portal's ingest
+        upsert now has, since it refuses to let a late `running` un-finish a
+        run.
 
         workflow_id is the grouping key portal/lib/runStatus.ts uses to
         aggregate multiple gateway calls within one workflow run (it was
@@ -724,15 +759,35 @@ class LLMGateway:
                     "costUsd": cost_usd,
                 },
                 headers=inject_context({"Authorization": f"Bearer {sync_token}"}),
-                timeout=5.0,
+                # Was a flat 5s, twice per call: a slow portal could add ten
+                # seconds to an LLM call for the sake of a status row. Split so
+                # an unreachable host fails fast while a reachable-but-busy one
+                # still gets a moment to answer.
+                timeout=httpx.Timeout(connect=1.0, read=2.0, write=2.0, pool=1.0),
             )
         except Exception as exc:
-            logger.debug(
-                "run-status report failed tenant=%s run_id=%s: %s",
-                self.tenant_id,
-                run_id,
-                exc,
-            )
+            # WARNING once per process, DEBUG after. This was DEBUG-only, so a
+            # portal that had stopped accepting reports — a rotated token, a
+            # DNS change, a missing dependency — went unnoticed at every log
+            # level anyone actually runs, and `agent_runs` simply stopped
+            # filling. Once, because it sits on the hot path of every call and
+            # a per-call warning would be its own outage.
+            if not LLMGateway._run_status_failure_logged:
+                LLMGateway._run_status_failure_logged = True
+                logger.warning(
+                    "run-status reporting to the Ops Portal is failing (further "
+                    "occurrences at DEBUG) tenant=%s run_id=%s: %s",
+                    self.tenant_id,
+                    run_id,
+                    exc,
+                )
+            else:
+                logger.debug(
+                    "run-status report failed tenant=%s run_id=%s: %s",
+                    self.tenant_id,
+                    run_id,
+                    exc,
+                )
 
     # ── Span attribute recording (§15, §29) ──────────────────────────────────
 
@@ -1442,8 +1497,20 @@ class LLMGateway:
                 error_summary=str(last_exc)[:500],
             )
             if tried:
+                # Name the unset credentials when there are any. "All model
+                # tiers exhausted" sends an operator to their provider's
+                # billing page; an empty ANTHROPIC_API_KEY sends them to their
+                # own environment, which is where the problem is.
+                missing = self._unset_key_envs(tried)
+                hint = (
+                    f" No API key is set for: {', '.join(missing)} — an unset key "
+                    "reads as an auth failure, which this gateway treats as tier "
+                    "exhaustion."
+                    if missing
+                    else ""
+                )
                 raise RuntimeError(
-                    f"All model tiers exhausted (tried: {tried}). Last error: {last_exc}"
+                    f"All model tiers exhausted (tried: {tried}). Last error: {last_exc}.{hint}"
                 ) from last_exc
             raise last_exc
 
@@ -1602,6 +1669,40 @@ class LLMGateway:
             return status == 429 or status >= 500
         return False
 
+    def _unset_key_envs(self, roles: list[str]) -> list[str]:
+        """Env vars the tried tiers needed and did not have.
+
+        `_lookup_api_key` returns "" for an unset variable, so the gateway
+        sends an empty credential, the provider answers 401, and
+        `_is_provider_exhausted` counts an auth error as exhaustion — by
+        design, so a tenant holding only one vendor's key degrades past the
+        others. The cost is the diagnosis: with NO key set, every tier
+        "exhausts" and the operator is told `All model tiers exhausted`, which
+        reads as a capacity or billing problem at the provider. It is a unset
+        variable.
+
+        Resolution goes through `_resolve_endpoint` rather than being
+        recomputed here — a second implementation of the lookup would be a
+        fourth copy of the thing this pass just collapsed into one.
+        """
+        from runtime.provider_dispatch import _DEFAULT_API_KEY_ENV
+
+        missing: list[str] = []
+        for role in roles:
+            cfg = self.models.get(role) or {}
+            provider = cfg.get("provider", "openai")
+            if not _DEFAULT_API_KEY_ENV.get(provider):
+                continue  # local or cloud-credential provider — no key to miss
+            try:
+                _, api_key = self._resolve_endpoint(cfg)
+            except Exception:  # a config this broken has a louder problem
+                continue
+            if not api_key:
+                env = cfg.get("api_key_env") or _DEFAULT_API_KEY_ENV[provider]
+                if env not in missing:
+                    missing.append(env)
+        return missing
+
     @staticmethod
     def _resolve_endpoint(cfg: dict) -> tuple[str, str]:
         """(base_url, api_key) for a direct-API provider config.
@@ -1618,9 +1719,22 @@ class LLMGateway:
         anthropic branch, which is part of why streaming never worked for
         it (TestbedFeedback-2026-07-21 G1).
         """
+        # The provider -> API-key-env mapping comes from
+        # provider_dispatch._DEFAULT_API_KEY_ENV, which this module already
+        # imports from. It was spelled out again here as literals in an
+        # if/elif chain — a THIRD copy of a catalog that also exists in
+        # scripts/_shared.py, and the only one of the three with nothing
+        # pinning it (scripts/test/test_judge_model_resolution.py already
+        # asserts the other two are equal). Adding a provider meant editing a
+        # dict, a mirror, and a branch, and forgetting the branch resolved the
+        # new provider's key from OPENAI_API_KEY without a word.
+        from runtime.provider_dispatch import _DEFAULT_API_KEY_ENV
+
         provider = cfg.get("provider", "openai")
+        key_env = _DEFAULT_API_KEY_ENV.get(provider) or "OPENAI_API_KEY"
+
         if provider == "anthropic":
-            api_key = LLMGateway._lookup_api_key(cfg, "ANTHROPIC_API_KEY")
+            api_key = LLMGateway._lookup_api_key(cfg, key_env)
             base_url = cfg.get("endpoint") or "https://api.anthropic.com"
         elif provider == "ollama":
             base_url = os.path.expandvars(cfg.get("endpoint", "${OLLAMA_BASE_URL}/v1"))
@@ -1635,18 +1749,18 @@ class LLMGateway:
             # parse_response's non-anthropic branch handles it) — only the
             # host and API key env var differ from direct OpenAI, same as
             # every other "openai_compatible" provider in this codebase.
-            api_key = LLMGateway._lookup_api_key(cfg, "GROQ_API_KEY")
+            api_key = LLMGateway._lookup_api_key(cfg, key_env)
             base_url = cfg.get("endpoint") or "https://api.groq.com/openai/v1"
         elif provider == "xai":
             # OpenAI-compatible; only host and key differ.
-            api_key = LLMGateway._lookup_api_key(cfg, "XAI_API_KEY")
+            api_key = LLMGateway._lookup_api_key(cfg, key_env)
             base_url = cfg.get("endpoint") or "https://api.x.ai/v1"
         elif provider == "google_ai":
             # Google AI Studio's OpenAI-compatibility layer. Distinct from the
             # `vertex_ai` adapter, which is the same models behind
             # service-account OAuth — an AI Studio key will not authenticate
             # there, and vice versa.
-            api_key = LLMGateway._lookup_api_key(cfg, "GEMINI_API_KEY")
+            api_key = LLMGateway._lookup_api_key(cfg, key_env)
             base_url = (
                 cfg.get("endpoint")
                 or "https://generativelanguage.googleapis.com/v1beta/openai"
@@ -1657,10 +1771,10 @@ class LLMGateway:
             # envelope is OpenAI chat regardless of whose model it is — which
             # is why api_format is declared per catalog entry rather than
             # inferred from the vendor in the id.
-            api_key = LLMGateway._lookup_api_key(cfg, "OPENROUTER_API_KEY")
+            api_key = LLMGateway._lookup_api_key(cfg, key_env)
             base_url = cfg.get("endpoint") or "https://openrouter.ai/api/v1"
         else:
-            api_key = LLMGateway._lookup_api_key(cfg, "OPENAI_API_KEY")
+            api_key = LLMGateway._lookup_api_key(cfg, key_env)
             base_url = cfg.get("endpoint") or "https://api.openai.com/v1"
         return os.path.expandvars(base_url), api_key
 
