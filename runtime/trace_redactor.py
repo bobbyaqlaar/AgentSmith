@@ -449,7 +449,8 @@ class TraceRedactor(_OTelSpanProcessor):
                         # loudly rather than silently truncating the payload
                         # with a dangling blob ref nothing ever wrote to.
                         logger.error(
-                            "HITL blob NOT written for tenant=%s ref=%s: %s — payload truncated without compliance backup.",
+                            "HITL blob NOT written for tenant=%s ref=%s: %s — payload truncated "
+                            "without compliance backup.",
                             tenant_id,
                             ref,
                             exc,

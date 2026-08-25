@@ -55,7 +55,7 @@ def _in_subprocess(body: str, env_extra: dict | None = None) -> str:
     env.update(env_extra or {})
     proc = subprocess.run(
         [sys.executable, "-c", body], capture_output=True, text=True, env=env, timeout=120
-    )
+    , check=False)
     assert proc.returncode == 0, f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
     return proc.stdout.strip()
 

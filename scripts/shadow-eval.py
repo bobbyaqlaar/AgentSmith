@@ -65,7 +65,7 @@ SHADOW_CRITERIA = {
 
 
 from _shared import _repo_root  # noqa: E402,F401 — re-export for callers/tests
-from _shared import _load_sync_state, _save_sync_state  # noqa: E402,F401
+from _shared import _load_sync_state, _save_sync_state  # noqa: E402
 from _shared import _phoenix_get as _shared_phoenix_get  # noqa: E402
 from _shared import _phoenix_post as _shared_phoenix_post  # noqa: E402
 from _shared import judge_model as _resolve_judge_model  # noqa: E402
@@ -147,7 +147,8 @@ def run_shadow_eval(sample_rate: float = 0.05, since_hours: float = 24.0) -> dic
     stats = {"sampled": 0, "judged": 0, "failed": 0, "skipped": 0, "errors": 0}
 
     print(
-        f"🌗 Shadow eval — sampling {sample_rate:.0%} of production traces (last {since_hours}h) from {PHOENIX_ENDPOINT}"
+        f"🌗 Shadow eval — sampling {sample_rate:.0%} of production traces "
+        f"(last {since_hours}h) from {PHOENIX_ENDPOINT}"
     )
 
     spans = _fetch_production_spans(since_hours)

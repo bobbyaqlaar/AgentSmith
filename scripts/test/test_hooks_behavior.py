@@ -58,6 +58,7 @@ def _commit(repo: Path, filename: str, content: str, message: str) -> subprocess
         ],
         capture_output=True,
         text=True,
+        check=False,
     )
 
 

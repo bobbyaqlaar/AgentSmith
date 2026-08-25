@@ -21,7 +21,7 @@ import time
 
 import httpx
 
-from _shared import _repo_root, _load_dotenv, role_model  # noqa: E402,F401 — _repo_root kept for callers
+from _shared import _repo_root, _load_dotenv, role_model  # noqa: F401 — _repo_root kept for callers
 
 DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 DEFAULT_FAIL_ABOVE_MS = 2000

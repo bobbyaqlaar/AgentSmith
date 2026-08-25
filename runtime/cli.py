@@ -292,7 +292,7 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     if not script.is_file():
         print(f"agentsmith: verify_system.py not found at {script}", file=sys.stderr)
         return 1
-    return subprocess.run([sys.executable, str(script), *args.checks]).returncode
+    return subprocess.run([sys.executable, str(script), *args.checks], check=False).returncode
 
 
 def _cmd_shellenv(args: argparse.Namespace) -> int:

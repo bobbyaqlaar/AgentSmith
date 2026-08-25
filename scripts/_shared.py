@@ -294,7 +294,9 @@ def _tenant_id() -> Optional[str]:
             for line in tenant_file.read_text().splitlines():
                 if line.strip().startswith("id:"):
                     return line.split(":", 1)[1].strip()
-        except Exception:  # fail-open: best-effort tenant-id lookup; None is a valid "no tenant" result, same as the yaml-parse path below
+        # fail-open: best-effort tenant-id lookup; None is a valid "no tenant" result,
+        # same as the yaml-parse path below
+        except Exception:
             pass
         return None
     except Exception:
@@ -517,7 +519,7 @@ class RateLimiter:
     need no branch at the call site.
     """
 
-    __slots__ = ("_min_interval", "_last")
+    __slots__ = ("_last", "_min_interval")
 
     def __init__(self, rpm: float = 0.0) -> None:
         self._min_interval = 60.0 / rpm if rpm and rpm > 0 else 0.0

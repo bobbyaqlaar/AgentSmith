@@ -63,6 +63,7 @@ def _run_post_checkout(repo: Path) -> subprocess.CompletedProcess:
         cwd=repo,
         capture_output=True,
         text=True,
+        check=False,
     )
 
 

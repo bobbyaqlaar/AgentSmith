@@ -45,11 +45,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "workflows"))
 
 pytest.importorskip("temporalio", reason="temporalio not installed")
-from temporalio.worker import Worker  # noqa: E402
-from temporalio.testing import WorkflowEnvironment  # noqa: E402
+from temporalio.worker import Worker
+from temporalio.testing import WorkflowEnvironment
 
-from base_workflow import dlq_enqueue_activity  # type: ignore  # noqa: E402
-from _recoverable_step_fixtures import ATTEMPT_COUNT, CRMWorkflow, crm_update_activity  # type: ignore  # noqa: E402
+from base_workflow import dlq_enqueue_activity  # type: ignore
+from _recoverable_step_fixtures import ATTEMPT_COUNT, CRMWorkflow, crm_update_activity  # type: ignore
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set"

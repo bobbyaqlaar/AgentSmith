@@ -74,7 +74,7 @@ def _verify_signature(secret: str, body: bytes, signature_header: str) -> bool:
 
 
 class ReplayWebhookHandler(BaseHTTPRequestHandler):
-    def do_POST(self) -> None:  # noqa: N802 (http.server's required method name)
+    def do_POST(self) -> None:  # http.server's required method name
         if self.path != "/replay":
             self._json(404, {"error": "not found"})
             return
@@ -164,7 +164,7 @@ class ReplayWebhookHandler(BaseHTTPRequestHandler):
         dlq = DeadLetterQueue(replay_handler=make_temporal_replay_handler(client))
         dlq.replay(task_id, override_payload=payload)
 
-    def log_message(self, format: str, *args) -> None:  # noqa: A002
+    def log_message(self, format: str, *args) -> None:
         logger.info("%s - %s", self.address_string(), format % args)
 
 

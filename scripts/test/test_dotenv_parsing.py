@@ -19,7 +19,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts"))
 
-from _shared import _dotenv_value, _load_dotenv  # noqa: E402
+from _shared import _dotenv_value, _load_dotenv
 
 
 @pytest.mark.parametrize(
@@ -138,7 +138,7 @@ def test_the_onprem_bundle_parses_values_identically() -> None:
     bundle = root / "templates" / "onprem-deploy" / "scripts"
     if str(bundle) not in sys.path:
         sys.path.insert(0, str(bundle))
-    import _env as module  # type: ignore  # noqa: E402
+    import _env as module  # type: ignore
 
     cases = [
         "8080  # the app port",

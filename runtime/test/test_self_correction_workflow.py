@@ -9,8 +9,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "workflows"))
 
-import base_workflow as bw  # type: ignore  # noqa: E402
-from base_workflow import BaseAgentWorkflow  # type: ignore  # noqa: E402
+import base_workflow as bw  # type: ignore
+from base_workflow import BaseAgentWorkflow  # type: ignore
 
 
 class FakeWorkflow:

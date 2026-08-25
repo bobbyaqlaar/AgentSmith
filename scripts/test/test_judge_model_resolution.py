@@ -21,7 +21,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts"))
 
-import _shared  # noqa: E402
+import _shared
 
 
 @pytest.fixture(autouse=True)
@@ -71,7 +71,7 @@ def test_registry_is_readable_from_a_directly_invoked_script(tmp_path: Path) -> 
     try:
         out = subprocess.run(
             [sys.executable, str(probe)], capture_output=True, text=True, cwd=REPO
-        )
+        , check=False)
     finally:
         probe.unlink()
     assert out.stdout.strip() == "falcon3:3b", out.stderr[-400:]

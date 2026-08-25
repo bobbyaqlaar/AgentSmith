@@ -18,7 +18,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.tenancy import (  # noqa: E402
+from runtime.tenancy import (
     TENANT_ENV_VAR,
     TenantUnresolvedError,
     agent_context,

@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.prompt_identity import (  # noqa: E402
+from runtime.prompt_identity import (
     prompt_attributes,
     system_fingerprint,
     system_prompt,

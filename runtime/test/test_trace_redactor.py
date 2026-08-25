@@ -18,8 +18,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime import trace_redactor as tr  # noqa: E402
-from runtime.environment import get_environment  # noqa: E402
+from runtime import trace_redactor as tr
+from runtime.environment import get_environment
 
 pytestmark = pytest.mark.skipif(
     not tr._HAS_OTEL, reason="opentelemetry-sdk not installed"

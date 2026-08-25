@@ -22,7 +22,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime import moderation as mod  # noqa: E402
+from runtime import moderation as mod
 
 
 @pytest.fixture(autouse=True)

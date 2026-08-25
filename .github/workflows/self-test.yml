@@ -22,6 +22,16 @@ jobs:
           python-version: "3.11"
           cache: "pip"
       - run: pip install -r requirements.txt
+      - name: "ruff (lint config lives in pyproject.toml)"
+        # Ruff had no configuration and was run by NOTHING — not CI, not a hook
+        # — so it ran on its defaults whenever a human happened to invoke it.
+        # That is how the repo accumulated `# noqa` codes for rules that were
+        # never enabled: suppressions reading as "checked and waived" while
+        # nothing checked. RUF100 is selected precisely to keep that from
+        # recurring, and it can only do that from here.
+        run: |
+          pip install "ruff>=0.6,<1.0"
+          ruff check .
       - name: "py_compile sweep"
         run: |
           find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile

@@ -29,8 +29,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO))
 
-import cost_router  # noqa: E402
-import _shared  # noqa: E402
+import cost_router
+import _shared
 
 
 def _tenant_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, yaml_body: str) -> None:

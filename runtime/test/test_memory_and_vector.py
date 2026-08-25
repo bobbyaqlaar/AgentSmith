@@ -12,9 +12,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.conversation_memory import ConversationMemory  # noqa: E402
-from runtime.embeddings import HashEmbedder, make_embedder  # noqa: E402
-from runtime.vector_store import MemoryVectorStore, make_vector_store  # noqa: E402
+from runtime.conversation_memory import ConversationMemory
+from runtime.embeddings import HashEmbedder, make_embedder
+from runtime.vector_store import MemoryVectorStore, make_vector_store
 
 
 def test_conversation_memory_evicts_oldest_when_over_budget() -> None:

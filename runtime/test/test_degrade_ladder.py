@@ -19,7 +19,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.llm_gateway import (  # noqa: E402
+from runtime.llm_gateway import (
     BudgetExceededError,
     BudgetStatus,
     LLMGateway,

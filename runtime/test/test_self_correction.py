@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.self_correction import propose_corrected_payload, run_self_correction_loop  # type: ignore  # noqa: E402
+from runtime.self_correction import propose_corrected_payload, run_self_correction_loop  # type: ignore
 
 
 class FakeCompletion:

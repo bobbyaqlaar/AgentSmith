@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SCRIPTS))
 
-from _shared import load_script  # noqa: E402
+from _shared import load_script
 sys.path.insert(0, str(ROOT))
 
 REQUIRED_ADV_KEYS = ("id", "input", "expect")

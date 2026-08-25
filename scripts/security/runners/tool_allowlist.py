@@ -119,7 +119,7 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
             denied.append(name)
             if should_allow:
                 failures.append(f"{name}: allowlisted but denied")
-        except Exception as exc:  # noqa: BLE001 — anything else is a real failure
+        except Exception as exc:  # anything else is a real failure
             failures.append(f"{name}: unexpected {type(exc).__name__}: {exc}")
 
     if failures:

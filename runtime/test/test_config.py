@@ -21,7 +21,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.config import (  # noqa: E402
+from runtime.config import (
     config_get,
     load_env_file,
     resolve,
@@ -363,7 +363,7 @@ def test_one_root_finder_and_a_tenant_beats_its_parent_repo(tmp_path: Path):
 
     # And every module now asks the same function.
     from runtime import llm_gateway, moderation, tracing
-    from _shared import _repo_root as shared_root  # noqa: E402
+    from _shared import _repo_root as shared_root
 
     cwd = Path.cwd()
     try:

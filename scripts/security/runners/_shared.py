@@ -55,6 +55,7 @@ def verify_system(
         capture_output=True,
         text=True,
         env={**os.environ, "ENVIRONMENT": "staging", **(env or {})},
+        check=False,
     )
     return _subprocess_result(
         control, proc, f"verify_system {flag} passed", f"verify_system {flag} failed"
@@ -119,6 +120,7 @@ def pytest_suite(
         capture_output=True,
         text=True,
         env={**clean, "ENVIRONMENT": "staging", **(env or {})},
+        check=False,
     )
     # pytest exit 2 = collection/usage error: the suite could not RUN (a
     # missing dependency, an import error), which is categorically different
@@ -383,6 +385,7 @@ def node_suite(
         cwd=portal,
         capture_output=True,
         text=True,
+        check=False,
     )
     return _subprocess_result(
         control, proc, f"{rel_path} passed", f"{rel_path} failed"

@@ -82,7 +82,7 @@ def test_load_allowlist_reads_template() -> None:
 # Every test above passes `registry=`, which is why neither showed.
 
 
-import runtime.tool_registry as tr  # noqa: E402
+import runtime.tool_registry as tr
 
 
 @pytest.fixture(autouse=True)

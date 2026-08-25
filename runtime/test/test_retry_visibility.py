@@ -18,8 +18,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.llm_gateway import LLMGateway  # noqa: E402
-from runtime.tracing import agent_span  # noqa: E402
+from runtime.llm_gateway import LLMGateway
+from runtime.tracing import agent_span
 
 
 @pytest.fixture
@@ -82,7 +82,7 @@ def test_the_full_message_is_on_the_event_not_the_metric(spans, gateway):
     hook = gateway._on_retry("m")
     with agent_span("llm.call"):
         hook(_State(RuntimeError("LLM API error 429: quota for project X exhausted")))
-    event = list(spans.get_finished_spans()[0].events)[0]
+    event = next(iter(spans.get_finished_spans()[0].events))
     assert "quota for project X exhausted" in event.attributes["error"]
 
 
@@ -95,7 +95,7 @@ def test_the_hook_survives_an_outcome_with_no_exception(gateway, spans):
     state = _State(None)
     with agent_span("llm.call"):
         gateway._on_retry("m")(state)
-    event = list(spans.get_finished_spans()[0].events)[0]
+    event = next(iter(spans.get_finished_spans()[0].events))
     assert event.attributes["reason"] == "unknown"
 
 

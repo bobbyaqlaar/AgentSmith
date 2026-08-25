@@ -48,7 +48,7 @@ class VectorStore(Protocol):
 def _cosine(a: list[float], b: list[float]) -> float:
     if not a or not b or len(a) != len(b):
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
     na = math.sqrt(sum(x * x for x in a)) or 1.0
     nb = math.sqrt(sum(y * y for y in b)) or 1.0
     return dot / (na * nb)
@@ -127,7 +127,7 @@ class MemoryVectorStore:
         if len(metas) != len(ids):
             raise ValueError("metadatas length must match ids")
         vectors = self.embedder.embed(texts)
-        for vid, text, meta, vec in zip(ids, texts, metas, vectors):
+        for vid, text, meta, vec in zip(ids, texts, metas, vectors, strict=True):
             if vid in self._ids:
                 idx = self._ids.index(vid)
                 self._texts[idx] = text
@@ -246,7 +246,7 @@ class PgVectorStore:
         conn = self._connect()
         try:
             with conn.cursor() as cur:
-                for vid, text, meta, vec in zip(ids, texts, metas, vectors):
+                for vid, text, meta, vec in zip(ids, texts, metas, vectors, strict=True):
                     cur.execute(
                         """
                         INSERT INTO agentsmith_embeddings (id, text, metadata, embedding)

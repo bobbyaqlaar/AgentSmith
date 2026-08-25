@@ -26,7 +26,7 @@ from typing import Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-from _shared import (  # noqa: E402
+from _shared import (
     _repo_root,
     _iso_now,
     fixtures_path,
@@ -178,7 +178,9 @@ def _mark_log_resolved(event_filter: str, resolver: str, ts: str) -> int:
                     entry["hitl_resolved_at"] = ts
                     raw = json.dumps(entry, default=str)
                     updated += 1
-            except Exception:  # fail-open: one malformed JSON-lines entry must not abort resolving the rest; raw line is preserved unchanged below either way
+            # fail-open: one malformed JSON-lines entry must not abort resolving the rest;
+            # raw line is preserved unchanged below either way
+            except Exception:
                 pass
             lines.append(raw)
 

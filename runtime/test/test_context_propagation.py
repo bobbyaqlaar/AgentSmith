@@ -25,15 +25,15 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.embeddings import HashEmbedder  # noqa: E402
-from runtime.tenancy import agent_context  # noqa: E402
-from runtime.tracing import (  # noqa: E402
+from runtime.embeddings import HashEmbedder
+from runtime.tenancy import agent_context
+from runtime.tracing import (
     agent_span,
     current_trace_id,
     inject_context,
     traceparent,
 )
-from runtime.vector_store import MemoryVectorStore  # noqa: E402
+from runtime.vector_store import MemoryVectorStore
 
 TRACEPARENT = re.compile(r"^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$")
 

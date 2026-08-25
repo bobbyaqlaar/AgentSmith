@@ -159,6 +159,7 @@ def test_a_pinned_tenant_would_send_none_of_this() -> None:
         ["git", "cat-file", "-e", "v1.2.0:runtime/version.py"],
         cwd=ROOT,
         capture_output=True,
+        check=False,
     )
     if proc.returncode == 0:
         pytest.fail("v1.2.0 has runtime/version.py — the dating premise is wrong")

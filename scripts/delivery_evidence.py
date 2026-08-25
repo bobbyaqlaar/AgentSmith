@@ -36,13 +36,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, NamedTuple
 
-from _shared import RESULTS_FILE, _repo_root  # noqa: E402
+from _shared import RESULTS_FILE, _repo_root
 
 # delivery_model.py owns where these files live and how they parse. Restating
 # `root / ".agenticframework" / "tenant.yaml"` here is the same defect as the
 # portal's `lib/tenants.ts` inlining a type that `lib/isolation.ts` exists to
 # provide: two copies of one fact, and the pack is the copy that drifts.
-from delivery_model import _load_yaml, org_policy_path, tenant_yaml_path  # noqa: E402
+from delivery_model import _load_yaml, org_policy_path, tenant_yaml_path
 
 
 TS_FORMAT = "%Y-%m-%dT%H:%M:%SZ"

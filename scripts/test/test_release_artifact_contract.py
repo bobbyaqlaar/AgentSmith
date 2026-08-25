@@ -35,7 +35,10 @@ _TAR_BUILD = re.compile(r"-czf\s+dist/([\w.-]+)")
 _COPY_BUILD = re.compile(r"cp\s+\S+\s+dist/([\w.-]+)")
 _SHASUM_BUILD = re.compile(r"shasum[^\n]*>\s*([\w.-]+)")
 # Any release-download URL in the docs, pinned or latest.
-_DOC_RELEASE_URL = re.compile(r"releases/(?:latest|download/[^/\s]+)/download/([\w.-]+)|releases/download/[^/\s]+/([\w.-]+)")
+_DOC_RELEASE_URL = re.compile(
+    r"releases/(?:latest|download/[^/\s]+)/download/([\w.-]+)"
+    r"|releases/download/[^/\s]+/([\w.-]+)"
+)
 
 
 def _requested_artifacts() -> set[str]:

@@ -12,8 +12,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime import input_guardrail, trace_redactor  # noqa: E402
-from runtime.luhn import luhn_valid  # noqa: E402
+from runtime import input_guardrail, trace_redactor
+from runtime.luhn import luhn_valid
 
 VALID_CARDS = [
     "4111111111111111",  # Visa test number

@@ -27,8 +27,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.llm_gateway import LLMGateway  # noqa: E402
-from runtime.tracing import agent_span  # noqa: E402
+from runtime.llm_gateway import LLMGateway
+from runtime.tracing import agent_span
 
 
 def _only_span(exporter) -> dict:

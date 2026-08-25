@@ -88,3 +88,48 @@ packages = ["runtime", "runtime.workflows"]
 
 [tool.setuptools.package-data]
 runtime = ["models.yaml", "requirements-runtime.txt"]
+
+# ── Lint ──────────────────────────────────────────────────────────────────────
+#
+# Ruff had no configuration and was not run by CI or any hook, so it ran on its
+# defaults (E4, E7, E9, F) whenever someone happened to invoke it. That is why
+# the repo accumulated `# noqa` codes for rules that were never enabled —
+# BLE001, N802, D401, A002 — suppressions that read as "checked and waived"
+# while nothing checked. RUF100 is selected below precisely to keep that from
+# happening again.
+#
+# The selection is deliberate rather than maximal. Two families were measured
+# and rejected: `S` (bandit) reports 1429, almost all of it every subprocess
+# call and every assert; `BLE` reports 130, which is this repo's deliberate
+# fail-open idiom already governed by scripts/check_bare_except.py's stricter
+# rule that each one carry a `# fail-open:` justification. Turning either on
+# would produce noqa noise, and a lint rule that is mostly waived teaches people
+# to waive lint rules.
+#
+# What IS here earns its place: PLW1510 caught `subprocess.run` without an
+# explicit `check`, which is exactly how notifier._notify_osascript reported
+# every attempt as delivered however osascript exited.
+[tool.ruff]
+line-length = 120
+extend-exclude = [".venv", "node_modules", ".next", "portal/.next"]
+
+[tool.ruff.lint]
+select = ["E", "F", "N", "B", "RUF", "PLW1510"]
+ignore = [
+    # Em dashes and typographic quotes are house style in this codebase's
+    # comments, which carry the reasoning rather than restating the code.
+    "RUF001", "RUF002", "RUF003",
+    # `CircuitBreakerTripped` is a signal, not a fault report, and it is public
+    # API for tenants that call the breaker directly. An Error suffix would be
+    # a rename for a naming rule.
+    "N818",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests bind fixtures and doubles at module scope after a sys.path insert.
+"*/test/*" = ["E402"]
+# Fully-qualified protobuf type URLs — e.g.
+# "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager
+# .v3.HttpConnectionManager" — are single tokens. Wrapping one changes the
+# config this script emits. A narrow exemption with a reason, not a waiver.
+"templates/onprem-deploy/scripts/render-envoy-config.py" = ["E501"]

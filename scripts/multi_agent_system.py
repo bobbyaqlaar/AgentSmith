@@ -126,16 +126,16 @@ def _get_tracer(project: str, session_id: str) -> Any:
         class _Noop:
             def start_as_current_span(self, *a, **k):
                 class _Span:
-                    def __enter__(s):
-                        return s
+                    def __enter__(self):
+                        return self
 
-                    def __exit__(s, *_):
+                    def __exit__(self, *_):
                         pass
 
-                    def set_attribute(s, *_):
+                    def set_attribute(self, *_):
                         pass
 
-                    def record_exception(s, *_):
+                    def record_exception(self, *_):
                         pass
 
                 return _Span()

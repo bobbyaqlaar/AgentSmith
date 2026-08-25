@@ -12,7 +12,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime import input_guardrail as ig  # noqa: E402
+from runtime import input_guardrail as ig
 
 
 @pytest.fixture(autouse=True)

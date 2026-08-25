@@ -17,12 +17,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.tool_registry import (  # noqa: E402
+from runtime.tool_registry import (
     ToolNotAllowedError,
     ToolRegistry,
     tool,
 )
-from runtime.tracing import agent_span, record_tool_call  # noqa: E402
+from runtime.tracing import agent_span, record_tool_call
 
 
 # ── No-op path (no OTel tracer configured) ───────────────────────────────────

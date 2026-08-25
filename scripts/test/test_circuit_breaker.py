@@ -19,7 +19,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # scripts/
 
-import circuit_breaker  # noqa: E402
+import circuit_breaker
 
 
 @pytest.fixture(autouse=True)

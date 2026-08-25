@@ -18,8 +18,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.llm_gateway import CompletionResult, LLMGateway  # noqa: E402
-from runtime.test._gateway_fixtures import fake_gateway  # noqa: E402
+from runtime.llm_gateway import CompletionResult, LLMGateway
+from runtime.test._gateway_fixtures import fake_gateway
 
 def _gateway() -> LLMGateway:
     """The shared builder, with this module's transport stub."""

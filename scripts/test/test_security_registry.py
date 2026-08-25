@@ -182,6 +182,7 @@ def test_scripts_has_exactly_one_script_loader() -> None:
     files = subprocess.run(
         ["git", "-C", str(repo), "ls-files", "scripts/*.py"],
         capture_output=True, text=True,
+        check=False,
     ).stdout.split()
 
     offenders = []

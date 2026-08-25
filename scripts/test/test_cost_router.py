@@ -23,7 +23,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # scripts/
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root (runtime/)
 
-import cost_router  # noqa: E402
+import cost_router
 
 
 @pytest.fixture(autouse=True)

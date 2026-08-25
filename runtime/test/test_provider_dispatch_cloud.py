@@ -20,7 +20,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.provider_dispatch import (  # noqa: E402
+from runtime.provider_dispatch import (
     build_cloud_request,
     get_cloud_adapter,
     is_cloud_provider,
@@ -107,7 +107,7 @@ def test_vertex_ai_gemini_publisher():
         patch("google.auth.default", return_value=(fake_creds, "proj")),
         patch("google.auth.transport.requests.Request", return_value=MagicMock()),
     ):
-        url, headers, body = build_cloud_request(
+        url, _headers, body = build_cloud_request(
             "vertex_ai",
             "gemini-1.5-pro",
             MESSAGES,

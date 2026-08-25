@@ -28,8 +28,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.llm_gateway import LLMGateway  # noqa: E402
-from runtime.provider_dispatch import _DEFAULT_API_KEY_ENV  # noqa: E402
+from runtime.llm_gateway import LLMGateway
+from runtime.provider_dispatch import _DEFAULT_API_KEY_ENV
 
 # Providers whose catalog entry is None need no key (ollama is local; vertex_ai,
 # bedrock and huawei_modelarts authenticate with cloud credentials, not a

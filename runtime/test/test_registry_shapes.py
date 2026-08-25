@@ -24,8 +24,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from runtime.llm_gateway import _roles_from_doc, _active_profile_name  # noqa: E402
-from runtime.provider_dispatch import (  # noqa: E402
+from runtime.llm_gateway import _roles_from_doc, _active_profile_name
+from runtime.provider_dispatch import (
     API_FORMAT_ANTHROPIC,
     API_FORMAT_OPENAI,
     build_request,

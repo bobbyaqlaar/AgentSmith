@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from _shared import load_script  # noqa: E402
+from _shared import load_script
 
 MTIME_A = "2020-01-01T00:00:00Z"
 MTIME_B = "2026-08-24T09:15:00Z"

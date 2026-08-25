@@ -40,7 +40,7 @@ from typing import Optional
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-from _shared import (  # noqa: E402
+from _shared import (
     _repo_root,
     _load_dotenv,
     judge_model as _judge_model,

@@ -22,7 +22,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.tracing import (  # noqa: E402
+from runtime.tracing import (
     TOOL_INPUT_ATTRIBUTE,
     TOOL_OUTPUT_ATTRIBUTE,
     _serialise_payload,

@@ -28,8 +28,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.tenancy import agent_context  # noqa: E402
-from runtime.tracing import (  # noqa: E402
+from runtime.tenancy import agent_context
+from runtime.tracing import (
     agent_span,
     record_tool_call,
     resource_attributes,

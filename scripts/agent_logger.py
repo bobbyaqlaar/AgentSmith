@@ -45,7 +45,9 @@ def _project_name() -> str:
         ).strip()
         if remote:
             return remote.rstrip("/").split("/")[-1].removesuffix(".git")
-    except Exception:  # fail-open: no git remote / not a git repo / git not installed all fall back to the dir name below
+    # fail-open: no git remote / not a git repo / git not installed all fall back to the
+    # dir name below
+    except Exception:
         pass
     return root.name
 
@@ -58,7 +60,7 @@ def _git_config(key: str) -> Optional[str]:
     try:
         out = subprocess.run(
             ["git", "config", "--get", key], capture_output=True, text=True, timeout=5
-        )
+        , check=False)
     except (OSError, subprocess.SubprocessError):
         return None
     value = out.stdout.strip()
@@ -163,7 +165,7 @@ class AgentLogger:
             audit_token_velocity_circuit(input_tokens, output_tokens)
         except CircuitBreakerTripped as tripped:
             print(f"[agent_logger] {tripped}", file=sys.stderr)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(
                 f"[agent_logger] WARNING: circuit breaker bookkeeping failed "
                 f"({type(exc).__name__}: {exc}) — this call is unmetered.",
@@ -240,7 +242,9 @@ class AgentLogger:
                         entry["hitl_resolved_at"] = ts
                         raw = json.dumps(entry, default=str)
                         updated += 1
-                except Exception:  # fail-open: one malformed JSON-lines entry must not abort resolving the rest; raw line is preserved unchanged below either way
+                # fail-open: one malformed JSON-lines entry must not abort resolving the
+                # rest; raw line is preserved unchanged below either way
+                except Exception:
                     pass
                 lines.append(raw)
         with self._log_path.open("w", encoding="utf-8") as fh:
@@ -265,7 +269,9 @@ class AgentLogger:
                         and not entry.get("hitl_resolved", True)
                     ):
                         results.append(entry)
-                except Exception:  # fail-open: one malformed JSON-lines entry must not abort scanning the rest of the log for unresolved issues
+                # fail-open: one malformed JSON-lines entry must not abort scanning the
+                # rest of the log for unresolved issues
+                except Exception:
                     pass
         return results
 

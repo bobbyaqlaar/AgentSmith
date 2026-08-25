@@ -17,7 +17,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from runtime.temporal_client import (  # noqa: E402
+from runtime.temporal_client import (
     DEFAULT_ADDRESS,
     temporal_address,
     tls_enabled,
@@ -66,6 +66,7 @@ def test_no_caller_builds_its_own_temporal_connection() -> None:
         ["git", "-C", str(repo), "grep", "-l", "Client.connect", "--",
          "runtime/", "examples/", "scripts/"],
         capture_output=True, text=True,
+        check=False,
     ).stdout.split()
     allowed = {"runtime/temporal_client.py", "runtime/test/test_temporal_client.py"}
     assert set(hits) <= allowed, (

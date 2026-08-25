@@ -36,7 +36,7 @@ HISTORY_LOG_FILE = ".agent-history.log"
 
 
 from _shared import _repo_root, _tenant_id  # noqa: E402
-from _shared import _load_sync_state, _save_sync_state  # noqa: E402,F401
+from _shared import _load_sync_state, _save_sync_state  # noqa: E402
 
 
 def _load_tenant_yaml() -> dict:
@@ -54,7 +54,8 @@ def _load_tenant_yaml() -> dict:
         return yaml.safe_load(tenant_yaml.read_text()) or {}
     except Exception as exc:
         print(
-            f"⚠️  Failed to parse .agenticframework/tenant.yaml ({exc}) — budget cap / replay webhook sync skipped this run."
+            f"⚠️  Failed to parse .agenticframework/tenant.yaml ({exc}) — "
+            f"budget cap / replay webhook sync skipped this run."
         )
         return {}
 

@@ -16,7 +16,7 @@ SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 
-from _shared import load_script  # noqa: E402
+from _shared import load_script
 
 
 def _load(name: str, filename: str):

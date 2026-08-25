@@ -286,10 +286,13 @@ def _default_project_name(repo_root: Path) -> str:
             capture_output=True,
             text=True,
             timeout=5,
+            check=False,
         ).stdout.strip()
         if url:
             return url.rsplit("/", 1)[-1].removesuffix(".git")
-    except Exception:  # fail-open: no git remote / not a git repo / git not installed all fall back to the dir name below
+    # fail-open: no git remote / not a git repo / git not installed all fall back to the
+    # dir name below
+    except Exception:
         pass
     return repo_root.resolve().name
 
@@ -351,7 +354,8 @@ def main() -> None:
     if not cursorrules_path.exists():
         cursorrules_path.write_text(_render_cursorrules(rules, stack, ctx))
         print(
-            f"✅ Written .cursorrules ({len(rules.get('pillars', []))} pillars + {stack} addendum) from agent-rules.yaml"
+            f"✅ Written .cursorrules ({len(rules.get('pillars', []))} pillars "
+            f"+ {stack} addendum) from agent-rules.yaml"
         )
 
     claude_md_path = repo_root / "CLAUDE.md"

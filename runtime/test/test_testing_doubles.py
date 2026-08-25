@@ -17,8 +17,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.llm_gateway import BudgetExceededError, CompletionResult  # noqa: E402
-from runtime.testing import FakeGateway, RecordingGateway  # noqa: E402
+from runtime.llm_gateway import BudgetExceededError, CompletionResult
+from runtime.testing import FakeGateway, RecordingGateway
 
 
 @pytest.mark.asyncio

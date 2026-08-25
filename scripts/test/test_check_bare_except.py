@@ -101,3 +101,40 @@ def test_syntax_error_does_not_raise():
     """Not this checker's job to report syntax errors — must not crash the
     pre-commit hook on an unrelated file that fails to parse."""
     assert checker.find_violations("def f(:\n  pass", "test.py") == []
+
+
+def test_a_reason_on_the_line_above_counts() -> None:
+    """A reason worth writing is often longer than fits after `except Exception:`.
+
+    Requiring it inline put twelve handlers in this repo over any sane line
+    limit, setting this checker against E501 — two standards that could not both
+    be satisfied. That is how a rule gets waived rather than followed.
+    """
+    src = (
+        "try:\n"
+        "    pass\n"
+        "# fail-open: the exporter is best-effort and must not fail the call\n"
+        "except Exception:\n"
+        "    pass\n"
+    )
+    assert checker.find_violations(src, "x.py") == []
+
+
+def test_a_reason_further_up_does_not_count() -> None:
+    """Only an unbroken run of comment lines. A `fail-open:` note separated by
+    code is about a different handler, and would silently exempt this one."""
+    src = (
+        "# fail-open: this comment is about something else entirely\n"
+        "x = 1\n"
+        "try:\n"
+        "    pass\n"
+        "except Exception:\n"
+        "    pass\n"
+    )
+    assert checker.find_violations(src, "x.py") != []
+
+
+def test_an_undocumented_handler_still_fails() -> None:
+    """The control: if this ever passes, the two tests above prove nothing."""
+    src = "try:\n    pass\nexcept Exception:\n    pass\n"
+    assert checker.find_violations(src, "x.py") != []

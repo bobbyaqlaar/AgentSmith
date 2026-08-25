@@ -26,7 +26,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.provider_dispatch import (  # noqa: E402
+from runtime.provider_dispatch import (
     parse_anthropic_completion,
     parse_cloud_response,
     parse_openai_completion,
@@ -113,7 +113,7 @@ def test_real_counts_still_come_through() -> None:
 # so grading is deterministic — was enforced on OpenAI routes and silently not
 # on Claude, which is the obvious model to judge with.
 
-from runtime.provider_dispatch import build_request, build_cloud_request  # noqa: E402
+from runtime.provider_dispatch import build_request, build_cloud_request
 
 MESSAGES = [{"role": "system", "content": "be brief"}, {"role": "user", "content": "hi"}]
 

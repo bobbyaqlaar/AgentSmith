@@ -21,9 +21,9 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts"))
 
-from runtime import moderation as mod  # noqa: E402
-from security.registry import ControlSpec, FrameworkTags  # noqa: E402
-from security.runners.moderation_hook import run as run_moderation  # noqa: E402
+from runtime import moderation as mod
+from security.registry import ControlSpec, FrameworkTags
+from security.runners.moderation_hook import run as run_moderation
 
 
 def _control() -> ControlSpec:

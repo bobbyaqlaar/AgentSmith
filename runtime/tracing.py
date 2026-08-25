@@ -50,7 +50,7 @@ def _repo_root() -> Path:
 class _NoopSpan:
     """Stand-in when tracing is unavailable — same surface, does nothing."""
 
-    def set_attribute(self, key: str, value: Any) -> None:  # noqa: D401
+    def set_attribute(self, key: str, value: Any) -> None:
         return None
 
     def record_exception(self, exc: BaseException) -> None:

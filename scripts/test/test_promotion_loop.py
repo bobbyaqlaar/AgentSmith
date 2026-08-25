@@ -26,7 +26,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 
 # _shared.load_script is the same function, caching included.
-from _shared import load_script  # noqa: E402
+from _shared import load_script
 
 
 promote_learning = load_script("promote-learning")

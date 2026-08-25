@@ -126,10 +126,7 @@ def test_the_portal_resolver_reads_the_same_variables_in_the_same_order() -> Non
         "AGENT_PHOENIX_ENDPOINT",
     ], f"portal precedence changed: {ordered}"
 
-    python_order = ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] + [
-        "OTEL_EXPORTER_OTLP_ENDPOINT",
-        "AGENT_PHOENIX_ENDPOINT",
-    ]
+    python_order = ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "OTEL_EXPORTER_OTLP_ENDPOINT", "AGENT_PHOENIX_ENDPOINT"]
     assert ordered == python_order
 
 

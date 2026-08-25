@@ -33,7 +33,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # scripts/
 
-import notifier  # noqa: E402
+import notifier
 
 
 # A message shaped like the exploit: it closes the literal, runs a command, and

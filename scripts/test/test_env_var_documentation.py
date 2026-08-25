@@ -77,6 +77,7 @@ def _source_files() -> list[Path]:
         ["git", "-C", str(REPO), "ls-files", "runtime/*.py", "scripts/*.py",
          "runtime/workflows/*.py", "portal/*.py"],
         capture_output=True, text=True,
+        check=False,
     ).stdout.split()
     return [REPO / p for p in out if "/test" not in p and "/test_" not in p]
 
@@ -87,6 +88,7 @@ def _portal_source_files() -> list[Path]:
          "portal/lib/*.ts", "portal/app/**/*.ts", "portal/app/**/*.tsx",
          "portal/components/**/*.tsx", "portal/scripts/*.ts"],
         capture_output=True, text=True,
+        check=False,
     ).stdout.split()
     return [REPO / p for p in out if "/test/" not in p]
 
@@ -94,7 +96,7 @@ def _portal_source_files() -> list[Path]:
 def _documented_text() -> str:
     out = subprocess.run(
         ["git", "-C", str(REPO), "ls-files", "*.md"], capture_output=True, text=True
-    ).stdout.split()
+    , check=False).stdout.split()
     return "".join((REPO / p).read_text(errors="ignore") for p in out if (REPO / p).exists())
 
 

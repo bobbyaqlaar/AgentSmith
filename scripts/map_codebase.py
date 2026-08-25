@@ -22,7 +22,7 @@ from typing import Optional
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-from _shared import _repo_root  # noqa: E402
+from _shared import _repo_root
 
 
 IGNORED_DIRS = {
@@ -101,7 +101,9 @@ def _parse_python(path: Path) -> tuple[list[str], list[str]]:
             for node in ast.walk(tree)
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
         ]
-    except SyntaxError:  # fail-open: one unparsable file must not abort the whole codebase scan; it just contributes no symbols/imports
+    # fail-open: one unparsable file must not abort the whole codebase scan; it just
+    # contributes no symbols/imports
+    except SyntaxError:
         pass
     return list(dict.fromkeys(symbols)), list(dict.fromkeys(imports))
 
@@ -128,7 +130,9 @@ def _parse_typescript(path: Path) -> tuple[list[str], list[str]]:
             imp = m.group(1)
             if imp.startswith("."):
                 imports.append(imp)
-    except Exception:  # fail-open: one unparsable file must not abort the whole codebase scan; it just contributes no symbols/imports
+    # fail-open: one unparsable file must not abort the whole codebase scan; it just
+    # contributes no symbols/imports
+    except Exception:
         pass
     return list(dict.fromkeys(symbols)), list(dict.fromkeys(imports))
 
@@ -150,7 +154,9 @@ def _parse_go(path: Path) -> tuple[list[str], list[str]]:
             pkg = m.group(1)
             if "/" in pkg:
                 imports.append(pkg.split("/")[-1])
-    except Exception:  # fail-open: one unparsable file must not abort the whole codebase scan; it just contributes no symbols/imports
+    # fail-open: one unparsable file must not abort the whole codebase scan; it just
+    # contributes no symbols/imports
+    except Exception:
         pass
     return list(dict.fromkeys(symbols)), list(dict.fromkeys(imports))
 
@@ -183,7 +189,9 @@ def _extract_guardrails_from_cursorrules(path: Path) -> list[dict]:
                     "source_file": str(path),
                 }
             )
-    except Exception:  # fail-open: one unparsable .cursorrules file must not abort the whole codebase scan; it just contributes no guardrails
+    # fail-open: one unparsable .cursorrules file must not abort the whole codebase scan;
+    # it just contributes no guardrails
+    except Exception:
         pass
     return guardrails
 
@@ -244,11 +252,11 @@ def _resolve_local_import(
             "/index.tsx",
             "/index.js",
         ):
-            candidate = (
-                Path(str(base) + ext)
-                if not ext.startswith("/")
-                else Path(str(base) + ext)
-            )
+            # Plain concatenation covers both shapes: `foo` + `.ts` and
+            # `foo` + `/index.ts`. This was a ternary whose two branches were
+            # character-for-character identical — a special case someone
+            # started writing and did not need.
+            candidate = Path(str(base) + ext)
             if candidate.exists():
                 return str(candidate.relative_to(root))
     return None

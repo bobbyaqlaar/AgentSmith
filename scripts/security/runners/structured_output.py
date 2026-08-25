@@ -28,7 +28,7 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
         )
         if parsed.answer != "ok" or parsed.score != 1:
             failures.append("fenced parse mismatch")
-    except Exception as exc:  # noqa: BLE001 — harness aggregates
+    except Exception as exc:  # the harness aggregates; a raise loses every other control
         failures.append(f"fenced: {exc}")
 
     try:
@@ -36,7 +36,7 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
         failures.append("invalid schema did not raise")
     except StructuredOutputError:
         pass
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         failures.append(f"invalid schema wrong error: {exc}")
 
     if failures:

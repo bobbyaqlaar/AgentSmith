@@ -35,7 +35,7 @@ MAX_SYNCED_IDS = 5000
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 from _shared import _repo_root, _iso_now  # noqa: E402,F401 — _repo_root re-exported for tests
-from _shared import _load_sync_state, _save_sync_state  # noqa: E402,F401
+from _shared import _load_sync_state, _save_sync_state  # noqa: E402
 from _shared import _phoenix_get as _shared_phoenix_get  # noqa: E402
 
 

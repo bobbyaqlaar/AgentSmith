@@ -30,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from _shared import _load_dotenv, judge_model, load_registry, role_credential_env  # noqa: E402
+from _shared import _load_dotenv, judge_model, load_registry, role_credential_env
 
 
 def main() -> int:

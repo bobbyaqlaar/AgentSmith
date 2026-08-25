@@ -19,7 +19,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.llm_gateway import BudgetExceededError, LLMGateway  # noqa: E402
+from runtime.llm_gateway import BudgetExceededError, LLMGateway
 
 
 def _make_gateway(
@@ -255,7 +255,7 @@ async def test_invoke_retries_transient_errors_with_backoff():
         )
 
     with patch.object(httpx.AsyncClient, "post", fake_post):
-        text, in_tok, out_tok = await gw._invoke(
+        text, _in_tok, _out_tok = await gw._invoke(
             cfg, [{"role": "user", "content": "hi"}], 10, 0.2
         )
 

@@ -20,7 +20,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.cli import (  # noqa: E402
+from runtime.cli import (
     ISOLATIONS,
     STACKS,
     build_parser,
@@ -158,7 +158,7 @@ def test_every_subcommand_dispatches_somewhere():
     for name in names:
         if name == "tenant":
             continue  # a group, not a command — its children are checked below
-        args = parser.parse_args([name] if name != "shellenv" else [name])
+        args = parser.parse_args([name])
         assert callable(getattr(args, "func", None)), f"`agentsmith {name}` dispatches to nothing"
 
 

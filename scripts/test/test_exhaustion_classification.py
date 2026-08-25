@@ -23,8 +23,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO))
 
-import cost_router  # noqa: E402
-from runtime.provider_dispatch import (  # noqa: E402
+import cost_router
+from runtime.provider_dispatch import (
     _EXHAUSTION_MARKERS,
     is_provider_exhausted,
 )

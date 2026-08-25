@@ -238,7 +238,9 @@ def run_checks() -> bool:
                         "hitl_resolved", True
                     ):
                         unresolved.append(entry)
-                except Exception:  # fail-open: one malformed JSON-lines entry must not abort scanning the rest of the log for unresolved issues
+                # fail-open: one malformed JSON-lines entry must not abort scanning the
+                # rest of the log for unresolved issues
+                except Exception:
                     pass
 
         if unresolved:
@@ -290,6 +292,7 @@ def check_security() -> bool:
         cwd=root,
         capture_output=True,
         text=True,
+        check=False,
     )
     detail = (proc.stderr or proc.stdout or "").strip()
     if len(detail) > 400:
@@ -571,7 +574,7 @@ def check_hooks() -> bool:
     failures = 0
 
     def _run(cmd: list, cwd: Path, env: dict) -> subprocess.CompletedProcess:
-        return subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True)
+        return subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, check=False)
 
     def _git_repo(tmp: Path, name: str) -> Path:
         repo = tmp / name
@@ -720,6 +723,7 @@ def check_history_sync() -> bool:
             env=env,
             capture_output=True,
             text=True,
+            check=False,
         )
         if not _check(
             "first sync run exits 0",
@@ -734,6 +738,7 @@ def check_history_sync() -> bool:
             env=env,
             capture_output=True,
             text=True,
+            check=False,
         )
         idempotent = "Nothing new to sync" in result2.stdout
         if not _check(
@@ -833,6 +838,7 @@ def _git_tracked_files() -> Optional[set[str]]:
             capture_output=True,
             text=True,
             timeout=30,
+            check=False,
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -989,6 +995,7 @@ def check_onprem_deploy() -> bool:
                     cwd=base,
                     capture_output=True,
                     text=True,
+                    check=False,
                 )
                 rendered_ok = r.returncode == 0
                 if not _check(
@@ -1033,6 +1040,7 @@ def check_onprem_deploy() -> bool:
                     ],
                     capture_output=True,
                     text=True,
+                    check=False,
                 )
                 if not _check(
                     f"{engine}: docker compose config validates",
@@ -1053,7 +1061,7 @@ def check_onprem_deploy() -> bool:
         chart = base / "kubernetes"
         result = subprocess.run(
             ["helm", "lint", str(chart)], capture_output=True, text=True
-        )
+        , check=False)
         if not _check(
             "helm lint passes", result.returncode == 0, result.stdout + result.stderr
         ):
@@ -1079,6 +1087,7 @@ def check_onprem_deploy() -> bool:
                 ["helm", "template", "verify-check", str(chart), *set_args],
                 capture_output=True,
                 text=True,
+                check=False,
             )
             ok = result.returncode == 0
             if ok:

@@ -37,7 +37,7 @@ from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _shared import role_model  # noqa: E402
+from _shared import role_model
 
 
 # Mirrors runtime.provider_dispatch._EXHAUSTION_MARKERS. Duplicated on purpose
@@ -672,7 +672,7 @@ def call(
                 # to stand here is what hid the TypeError above for as long as
                 # it stood.
                 print(f"[cost_router] {tripped}", file=sys.stderr)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 # Still fail-open — a bookkeeping fault must not fail a call
                 # the provider already answered — but SAID, not swallowed. The
                 # silent version is what let a TypeError stand.

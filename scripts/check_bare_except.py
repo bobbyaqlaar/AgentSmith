@@ -81,7 +81,19 @@ def find_violations(source: str, path: str) -> list[tuple[str, int]]:
         # the suppression marker, not just that one line.
         body_start = node.body[0].lineno if node.body else node.lineno + 1
         header_lines = lines[node.lineno - 1 : max(node.lineno, body_start - 1)]
-        if any("fail-open:" in line for line in header_lines):
+        # ALSO the comment lines immediately ABOVE the except, because a reason
+        # worth writing is often longer than what fits after `except Exception:`.
+        # Requiring it inline put twelve of these over any sane line limit and
+        # set this checker against E501 — two standards in one repo that could
+        # not both be satisfied, which is how a rule gets waived. Only an
+        # unbroken run of comment lines counts: a `fail-open:` note further up,
+        # separated by code, is about something else.
+        above = []
+        i = node.lineno - 2
+        while i >= 0 and lines[i].lstrip().startswith("#"):
+            above.append(lines[i])
+            i -= 1
+        if any("fail-open:" in line for line in header_lines + above):
             continue
         violations.append((path, node.lineno))
     return violations

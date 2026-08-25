@@ -14,6 +14,7 @@ def test_run_security_checks_smoke_exits_zero() -> None:
         cwd=REPO,
         capture_output=True,
         text=True,
+        check=False,
     )
     assert proc.returncode == 0, proc.stderr + proc.stdout
 
@@ -32,6 +33,7 @@ def test_run_security_checks_writes_report(tmp_path: Path) -> None:
         cwd=REPO,
         capture_output=True,
         text=True,
+        check=False,
     )
     assert proc.returncode == 0, proc.stderr
     report = out / "security_report.json"

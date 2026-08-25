@@ -18,7 +18,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-import runtime.metrics as m  # noqa: E402
+import runtime.metrics as m
 
 
 @pytest.fixture(scope="module")

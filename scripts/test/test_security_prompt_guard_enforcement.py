@@ -18,8 +18,8 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts"))
 
-from security.registry import ControlSpec, FrameworkTags  # noqa: E402
-from security.runners.prompt_guard import run as run_prompt_guard  # noqa: E402
+from security.registry import ControlSpec, FrameworkTags
+from security.runners.prompt_guard import run as run_prompt_guard
 
 
 def _control() -> ControlSpec:

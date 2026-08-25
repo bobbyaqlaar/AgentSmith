@@ -24,7 +24,7 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from _shared import RateLimiter, load_script, rate_limiter_from_env  # noqa: E402
+from _shared import RateLimiter, load_script, rate_limiter_from_env
 
 
 def _row(case_id: str) -> dict:

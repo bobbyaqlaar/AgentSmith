@@ -31,7 +31,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from runtime.dead_letter import AlreadyResolvedError, DeadLetterQueue  # noqa: E402
+from runtime.dead_letter import AlreadyResolvedError, DeadLetterQueue
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set — live Postgres test"

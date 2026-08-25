@@ -100,6 +100,7 @@ def _notify_osascript(title: str, message: str) -> bool:
             ],
             capture_output=True,
             timeout=5,
+            check=False,
         )
         return proc.returncode == 0
     except Exception:

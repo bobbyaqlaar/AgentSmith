@@ -28,7 +28,7 @@ if not os.environ.get("DATABASE_URL"):
 
 psycopg2 = pytest.importorskip("psycopg2")
 
-from runtime.llm_gateway import _PostgresBudgetBackend  # noqa: E402
+from runtime.llm_gateway import _PostgresBudgetBackend
 
 
 @pytest.fixture()

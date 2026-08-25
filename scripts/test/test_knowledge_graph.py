@@ -23,8 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # scripts/
 
 nx = pytest.importorskip("networkx")
 
-from local_knowledge_graph import AgentKnowledgeGraph  # noqa: E402
-import map_codebase  # noqa: E402
+from local_knowledge_graph import AgentKnowledgeGraph
+import map_codebase
 
 
 @pytest.fixture()

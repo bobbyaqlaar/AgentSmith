@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "runtime" / "workflows"))
 
-from runtime.dead_letter import DeadLetterQueue, dead_letter_envelope  # noqa: E402
+from runtime.dead_letter import DeadLetterQueue, dead_letter_envelope
 
 # The envelope's own keys, named once. Both producers and the consumer are
 # checked against this rather than against a list retyped per test.
