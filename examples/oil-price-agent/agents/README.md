@@ -22,11 +22,12 @@ See `../workflows/oil_price_workflow.py` and `../workflows/activities.py`.
 `runtime/workflows/base_workflow.py`'s `BaseAgentWorkflow` (§25) — not just
 "follows the same shape," it inherits the `hitl_approved` signal directly
 and demonstrates both of the framework's HITL patterns:
-- The price-anomaly/low-confidence gate above uses the inherited
-  `self._hitl_approved` signal (approve/reject — `run_with_hitl_gate`
-  itself isn't used here since its `resume_input` is fixed before the gate
-  runs, but this pipeline's resume step needs the gate's own prediction
-  output as input).
+- The price-anomaly/low-confidence gate above waits via the inherited
+  `await_hitl_approval(gate_id)`, which consumes the approval so it cannot
+  also satisfy a later gate. `run_with_hitl_gate` itself is not used here
+  because it resumes by executing one named activity, and this pipeline's
+  resume step is another framework method (`run_with_recoverable_step`).
+  The control flow stays in the workflow; the wait and the consume do not.
 - The order-placement step (`decide_action_activity`) is wrapped in
   `run_with_recoverable_step` — a malformed payload (missing/wrong-typed
   `prediction`/`confidence` fields, the same class of error as the

@@ -42,6 +42,16 @@ field — but an approval no longer persists after the gate it answered.
   `ON CONFLICT DO NOTHING` protected callers that supplied a stable id and
   nobody else. The envelope carries one now, built from run id, gate and
   attempt.
+- **The reference example hand-rolled the same gate**, and carried the same
+  defect. `examples/oil-price-agent` had its own `wait_condition` on
+  `self._hitl_approved is not None` and its own read of that field afterwards.
+  It has one gate, so nothing broke there — but it is the file a tenant copies
+  into their own repo, where a second gate is ordinary. The wait and the
+  consume now come from a new `BaseAgentWorkflow.await_hitl_approval(gate_id)`;
+  the control flow stays local, because `run_with_hitl_gate` resumes by
+  executing one named activity and this pipeline's resume step is another
+  framework method. A sweep over `examples/` and `runtime/workflows/` fails if
+  a workflow waits on the approval field directly again.
 - **The HITL test double ignored its own wait predicate.** It returned
   `predicate()` unconditionally, so a gate whose condition was false carried on
   exactly as if approved, and no test in the file could tell "approved" from

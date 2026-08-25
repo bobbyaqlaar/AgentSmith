@@ -33,6 +33,10 @@ async def main() -> None:
     client = await connect_temporal()   # address + TEMPORAL_TLS + timeout, one place
 
     handle = client.get_workflow_handle(WORKFLOW_ID)
+    # The UNADDRESSED signal, which any gate currently waiting will consume.
+    # Correct for this demo, which has exactly one gate. A workflow with two
+    # would use `hitl_approved_for(gate_id, approved)` instead — an approval
+    # that does not name its gate cannot say which of two it means.
     await handle.signal("hitl_approved", approve)
 
     decision = "APPROVED" if approve else "REJECTED"

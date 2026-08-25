@@ -254,6 +254,46 @@ class BaseAgentWorkflow:
             """
             self._gate_fixes[gate_id] = fix
 
+    async def await_hitl_approval(
+        self, gate_id: str, timeout: Optional[timedelta] = None
+    ) -> Optional[bool]:
+        """Wait for this gate's approval and CONSUME it. None means timed out.
+
+        Extracted so a workflow that cannot use `run_with_hitl_gate` — because
+        its resume step is not a single activity, which is the shape
+        `examples/oil-price-agent` has — does not have to hand-roll the wait
+        and the consume. It hand-rolled both, and inherited the defect this
+        method exists to hold: an approval that is read rather than consumed
+        satisfies every later gate in the workflow.
+
+        NOT cleared before waiting. A signal that arrives before the workflow
+        reaches its wait is normal in Temporal — signals are queued and applied
+        on replay — so discarding one here would throw away a valid approval to
+        guard against a stale one. Consumption is what stops an approval
+        answering a second gate, and it is enough.
+        """
+        try:
+            await workflow.wait_condition(
+                lambda: gate_id in self._gate_approvals
+                or self._ANY_GATE in self._gate_approvals,
+                timeout=timeout or HITL_SIGNAL_TIMEOUT,
+            )
+        except TimeoutError:
+            return None
+
+        # An addressed approval wins over an unaddressed one when both are
+        # present — the sender that named a gate knew which one it meant.
+        if gate_id in self._gate_approvals:
+            approved = self._gate_approvals.pop(gate_id)
+            self._gate_approvals.pop(self._ANY_GATE, None)
+            return approved
+        # Default rather than a bare pop: wait_condition returning means one of
+        # the two keys was there, but a KeyError would turn a
+        # never-supposed-to-happen into a workflow task failure that retries
+        # forever. An absent approval reads as "not approved", the fail-closed
+        # direction for a gate guarding a high-impact action.
+        return self._gate_approvals.pop(self._ANY_GATE, False)
+
     async def run_with_hitl_gate(
         self,
         gate_activity_name: Optional[str],
@@ -326,18 +366,8 @@ class BaseAgentWorkflow:
                 start_to_close_timeout=timedelta(minutes=10),
             )
 
-        # NOT cleared before waiting. A signal that arrives before the workflow
-        # reaches its wait is normal in Temporal — signals are queued and
-        # applied on replay — so discarding one here would throw away a valid
-        # approval to guard against a stale one. Consumption below is what
-        # stops an approval satisfying a second gate, and it is enough.
-        try:
-            await workflow.wait_condition(
-                lambda: gate_id in self._gate_approvals
-                or self._ANY_GATE in self._gate_approvals,
-                timeout=HITL_SIGNAL_TIMEOUT,
-            )
-        except TimeoutError:
+        approved = await self.await_hitl_approval(gate_id)
+        if approved is None:
             if tenant_id is None:
                 dead_letter_input: Any = {**gate_input, "error": "hitl_timeout"}
             else:
@@ -360,19 +390,6 @@ class BaseAgentWorkflow:
                 start_to_close_timeout=timedelta(minutes=5),
             )
             return AgentWorkflowResult(status="dead_letter")
-
-        # CONSUMED, not read: an approval answers one gate. Addressed approvals
-        # win over an unaddressed one when both are present.
-        if gate_id in self._gate_approvals:
-            approved = self._gate_approvals.pop(gate_id)
-            self._gate_approvals.pop(self._ANY_GATE, None)
-        else:
-            # Default, not a bare pop: wait_condition returning means one of the
-            # two keys was present, but a KeyError here would turn a
-            # never-supposed-to-happen into a workflow task failure that retries
-            # forever. Treat an absent approval as "not approved" — the
-            # fail-closed direction for a gate guarding a high-impact action.
-            approved = self._gate_approvals.pop(self._ANY_GATE, False)
 
         if not approved:
             return AgentWorkflowResult(status="failed")

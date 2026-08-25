@@ -1900,7 +1900,7 @@
       "symbols": [
         "main"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T14:34:45Z",
       "id": "examples/oil-price-agent/resolve_hitl.py"
     },
     {
@@ -1938,7 +1938,7 @@
         "run",
         "_decide"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-25T14:35:27Z",
       "id": "examples/oil-price-agent/workflows/oil_price_workflow.py"
     },
     {
@@ -2274,6 +2274,7 @@
         "test_an_approval_does_not_carry_over_to_the_next_gate",
         "test_a_rejection_does_not_carry_over_either",
         "test_an_addressed_approval_answers_only_its_own_gate",
+        "test_no_workflow_waits_on_the_approval_field_directly",
         "__init__",
         "execute_activity",
         "wait_condition",
@@ -2282,7 +2283,7 @@
         "_install",
         "_Info"
       ],
-      "last_modified": "2026-08-25T14:22:27Z",
+      "last_modified": "2026-08-25T14:35:10Z",
       "id": "runtime/test/test_hitl_gate.py"
     },
     {
@@ -2563,6 +2564,7 @@
         "self_correct_payload_activity",
         "__init__",
         "_hitl_approved",
+        "await_hitl_approval",
         "run_with_hitl_gate",
         "run_with_self_correction",
         "run_with_recoverable_step",
@@ -2572,7 +2574,7 @@
         "human_fix_payload",
         "signal"
       ],
-      "last_modified": "2026-08-25T14:23:01Z",
+      "last_modified": "2026-08-25T14:33:44Z",
       "id": "runtime/workflows/base_workflow.py"
     },
     {

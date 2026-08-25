@@ -15,12 +15,19 @@ hitl_approved signal + wait_condition inline, which worked but meant this
 to be built on, and never exercised run_with_recoverable_step at all).
 Two of the framework's patterns are demonstrated here, deliberately kept
 distinct because they answer different questions:
-  - run_with_hitl_gate-style approve/reject (still hand-rolled below using
-    the INHERITED self._hitl_approved signal, not run_with_hitl_gate
-    itself — that method's resume_input is a fixed value decided before
-    the gate runs, but this pipeline's resume step needs the gate's OWN
-    output (the prediction) as its input, a shape run_with_hitl_gate
-    doesn't support) for "should this prediction be acted on at all."
+  - An approve/reject gate for "should this prediction be acted on at
+    all." `run_with_hitl_gate` is not used because it resumes by executing
+    ONE named activity, and this pipeline's resume step is another
+    framework method (run_with_recoverable_step, via _decide) rather than
+    a single activity. The control flow therefore stays here — but the
+    wait and the approval consume come from the base class's
+    `await_hitl_approval`, which is the part that used to be copied.
+
+    It was copied, and it carried the defect that copy existed to have:
+    reading `self._hitl_approved` instead of consuming it, so one approval
+    would satisfy every later gate. This file has one gate, so nothing
+    broke here — but it is the reference a tenant pastes into their own
+    repo, where a second gate is ordinary.
   - run_with_recoverable_step for "decide_action_activity rejected this
     specific payload" — e.g. a malformed action shape — demonstrating the
     CRM-style edit-and-replay pattern (Product_Archive.md's HITL/DLQ
@@ -93,22 +100,28 @@ class OilPricePredictionWorkflow(BaseAgentWorkflow):
         if not prediction.get("needs_hitl"):
             return await self._decide(input.tenant_id, prediction)
 
-        # Approve/reject gate — inherited signal (self._hitl_approved), see
-        # this file's module docstring for why run_with_hitl_gate itself
-        # isn't used here.
-        try:
-            await workflow.wait_condition(
-                lambda: self._hitl_approved is not None,
-                timeout=HITL_SIGNAL_TIMEOUT,
-            )
-        except TimeoutError:
+        # Approve/reject gate. The WAIT and the CONSUME come from the base
+        # class (await_hitl_approval); only the control flow around them is
+        # local, which is the part run_with_hitl_gate cannot express for this
+        # pipeline — see the module docstring.
+        #
+        # This used to hand-roll both halves: its own wait_condition on
+        # `self._hitl_approved is not None`, and its own read of that field
+        # afterwards. Reading rather than consuming is how one approval came to
+        # satisfy every later gate in a workflow, and a reference example is the
+        # worst place to keep a copy of a control-flow detail — it is what a
+        # tenant pastes into their own repo.
+        approved = await self.await_hitl_approval(
+            "prediction-approval-gate", timeout=HITL_SIGNAL_TIMEOUT
+        )
+        if approved is None:
             return await workflow.execute_activity(
                 "dead_letter_activity",
                 {**prediction, "error": "hitl_timeout"},
                 start_to_close_timeout=timedelta(minutes=5),
             )
 
-        if not self._hitl_approved:
+        if not approved:
             return {"status": "rejected", **prediction}
 
         return await self._decide(input.tenant_id, prediction)

@@ -20,6 +20,7 @@ no human in the loop at all.
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -277,3 +278,44 @@ def test_an_addressed_approval_answers_only_its_own_gate(fake_workflow):
         {"ran": "approve_activity"}
     )
     assert [name for name, _ in fake.executed].count("approve_activity") == 1
+
+
+# ── No workflow hand-rolls the approval wait ─────────────────────────────────
+
+
+def test_no_workflow_waits_on_the_approval_field_directly() -> None:
+    """Every HITL wait must go through `await_hitl_approval`.
+
+    `examples/oil-price-agent` had its own `wait_condition` on
+    `self._hitl_approved is not None` followed by its own read of that field —
+    a copy of the base class's control flow that carried the defect the copy
+    existed to have: read, never consumed, so one approval satisfied every
+    later gate. It has one gate, so nothing broke there; it is also the file a
+    tenant pastes into their own repo, where a second gate is ordinary.
+
+    A grep, because the alternative is noticing the next copy by hand.
+    """
+    root = Path(__file__).resolve().parents[2]
+    sources = [
+        p
+        for p in [*root.glob("examples/**/*.py"), *root.glob("runtime/workflows/*.py")]
+        if "__pycache__" not in p.parts
+    ]
+    assert len(sources) >= 5, f"the sweep found almost nothing to read: {sources}"
+
+    offenders = []
+    for path in sources:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "wait_condition" not in text:
+            continue
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#") or stripped.startswith("*"):
+                continue  # prose explaining the rule is not a breach of it
+            if "_hitl_approved" in stripped and "wait_condition" in text and "lambda" in stripped:
+                offenders.append(f"{path.relative_to(root)}: {stripped}")
+
+    assert not offenders, (
+        "these wait on the approval field directly instead of calling "
+        "await_hitl_approval, which consumes it:\n  " + "\n  ".join(offenders)
+    )

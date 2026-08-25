@@ -23,11 +23,22 @@ dropped it — trading a duplicate row, which is noise, for a missing one, which
 is a failure nobody is told about. Keyed on `run_id`, with a test that two runs
 of one workflow file separately.
 
-**Noted, not changed:** `examples/oil-price-agent/workflows/oil_price_workflow.py`
-hand-rolls the same gate — its own `wait_condition` on `self._hitl_approved`,
-its own approval read — rather than calling `run_with_hitl_gate`. It has one
-gate, so the reuse defect does not bite it, but it is the reference a tenant
-copies and it teaches the unconsumed pattern.
+**The example, fixed in the same slice.**
+`examples/oil-price-agent/workflows/oil_price_workflow.py` hand-rolled the same
+gate — its own `wait_condition` on `self._hitl_approved`, its own read of that
+field — and so carried the same read-never-consume defect. One gate, so nothing
+broke there; it is also what a tenant pastes into their own repo.
+
+`run_with_hitl_gate` genuinely cannot express this pipeline: it resumes by
+executing ONE named activity, and this resume step is another framework method
+(`run_with_recoverable_step`, via `_decide`). So the duplicated part — the wait
+and the consume — was extracted as `BaseAgentWorkflow.await_hitl_approval(gate_id)`
+and the example calls it, keeping only the control flow that is genuinely local.
+A sweep over `examples/` and `runtime/workflows/` fails if any workflow waits on
+the approval field directly again; confirmed by putting the old code back.
+
+`resolve_hitl.py` still sends the unaddressed `hitl_approved` signal, which is
+correct for a one-gate demo, and now says so and names the addressed form.
 
 ---
 
