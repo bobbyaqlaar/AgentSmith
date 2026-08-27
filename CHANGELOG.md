@@ -12,9 +12,22 @@ explicitly — those are the two contracts tenant repos depend on.
 
 Canonical copy — SPECS.md §28 mirrors the current row.
 
+**Backward compatibility within a major is an obligation (SPECS.md §28), and it
+applies from 1.3.0 forward. 1.3.x is the one release that broke it**, and saying
+so here is cheaper than a reader discovering it: it shipped five breaking
+changes as a MINOR, all listed in its row below. It was cut that way knowingly,
+when the framework's only consumers were two repositories under one owner.
+
+The consequence to know about: `runtime/version.py`'s startup check warns only
+across MAJOR boundaries, because that is where the promise ends — so a tenant
+moving from 1.2.x to 1.3.x gets **silence** from it and still needs to read the
+1.3.x row. That is the single case where the check is quiet about a real
+incompatibility, and it does not recur unless a future release repeats the
+mistake.
+
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 1.3.x | 3.11 | 0.2 | 4.0 | `CompletionResult.input_tokens`/`output_tokens` are `Optional[int]` — a provider that reports no `usage` now yields `None` where 1.2.x yielded `0`, so a consumer doing arithmetic on them must handle `None`; `DeadLetterQueue.replay()` raises `AlreadyResolvedError` when the entry is not `pending` instead of replaying it; a HITL approval is consumed by the gate that reads it and no longer satisfies later gates (`hitl_approved_for(gate_id, approved)` addresses one explicitly); `run_with_hitl_gate` raises when the gate activity returns `None` rather than treating it as "no review needed"; `audit_token_velocity_circuit` raises `ValueError` on `None` token counts |
+| 1.3.x | 3.11 | 0.2 | 4.0 | **Breaking, in a MINOR — see the note above.** `CompletionResult.input_tokens`/`output_tokens` are `Optional[int]` — a provider that reports no `usage` now yields `None` where 1.2.x yielded `0`, so a consumer doing arithmetic on them must handle `None`; `DeadLetterQueue.replay()` raises `AlreadyResolvedError` when the entry is not `pending` instead of replaying it; a HITL approval is consumed by the gate that reads it and no longer satisfies later gates (`hitl_approved_for(gate_id, approved)` addresses one explicitly); `run_with_hitl_gate` raises when the gate activity returns `None` rather than treating it as "no review needed"; `audit_token_velocity_circuit` raises `ValueError` on `None` token counts |
 | 1.2.x | 3.11 | 0.2 | 4.0 | `AGENT_JUDGE_MODEL` no longer overrides a declared `judge` role; a tenant `models.yaml` entry with a different `id` REPLACES the framework entry rather than merging into it; `--strict` fails a control declaring `met`/`partial` with no runner |
 | 1.1.x | 3.11 | 0.2 | 4.0 | Default model registry is local-only; `local_large`/`local_small` roles removed |
 | 1.0.x | 3.11 | 0.2 | 4.0 | Initial public release (documented only — never tagged or published) |

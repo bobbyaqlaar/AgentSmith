@@ -2117,6 +2117,12 @@ python3 scripts/verify_system.py --check-redaction
   schedule; the framework is what has to keep working under a tenant already in
   production. A change that cannot be made compatible belongs in a MAJOR, and
   `runtime/version.py` warns a tenant at startup when it is running across one.
+- **It applies from 1.3.0 forward. 1.3.x is the one release that broke it** —
+  five breaking changes shipped as a MINOR, listed in that row of the
+  compatibility matrix. Recorded rather than quietly restated as a rule the
+  history already contradicts. The startup check is silent on 1.2.x → 1.3.x for
+  the same reason it is silent on every within-major move, so that upgrade needs
+  the matrix read by hand.
 - Releases are tagged via the framework's own `post-commit` hook
 - Signed release artifacts published via `release.yml`
 - Release notes document any span attribute changes or hook interface changes

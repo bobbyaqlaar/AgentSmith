@@ -3723,7 +3723,7 @@
         "warn_if_declared_version_differs",
         "_reset_cache"
       ],
-      "last_modified": "2026-08-27T20:12:45Z",
+      "last_modified": "2026-08-27T20:40:21Z",
       "id": "runtime/version.py"
     },
     {

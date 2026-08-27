@@ -153,6 +153,15 @@ def warn_if_declared_version_differs(root: Optional[Path] = None) -> Optional[st
     matrix exists to describe. That is the only case worth a tenant operator's
     attention, so it is the only case this warns about.
 
+    ONE HISTORICAL EXCEPTION, and it is the reason to read this paragraph rather
+    than trust the rule: 1.3.0 shipped five breaking changes as a MINOR, cut that
+    way knowingly when the framework's only consumers were two repositories under
+    one owner. So this check is silent on a 1.2.x → 1.3.x move that can genuinely
+    break a tenant. The obligation holds from 1.3.0 forward; that upgrade needs
+    the compatibility matrix read by hand. Special-casing it here was considered
+    and rejected — a version check carrying a table of past mistakes is a table
+    nobody maintains.
+
     WARNS, NEVER RAISES. Even across a major, refusing to start would take a
     running tenant down at upgrade time on the strength of a config string —
     and the tenant's own tests, not this, are what establish whether it still
