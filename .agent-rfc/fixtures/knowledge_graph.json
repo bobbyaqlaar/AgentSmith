@@ -3719,11 +3719,11 @@
         "_checkout_version",
         "framework_version",
         "is_source_checkout",
-        "_minor_series",
+        "_series",
         "warn_if_declared_version_differs",
         "_reset_cache"
       ],
-      "last_modified": "2026-08-27T19:17:30Z",
+      "last_modified": "2026-08-27T20:12:45Z",
       "id": "runtime/version.py"
     },
     {
@@ -3743,10 +3743,10 @@
         "test_a_pinned_tenant_would_send_none_of_this",
         "test_the_version_is_json_serialisable_for_the_post",
         "_tenant_root",
-        "test_a_matching_declaration_says_nothing",
-        "test_a_patch_release_is_not_a_mismatch",
-        "test_a_source_checkout_matches_its_declared_series",
-        "test_a_different_minor_series_warns",
+        "test_anything_inside_the_declared_major_is_silent",
+        "test_a_source_checkout_inside_the_major_is_silent",
+        "test_crossing_up_a_major_warns_and_points_at_the_matrix",
+        "test_running_an_older_major_than_declared_warns_differently",
         "test_it_warns_once_per_process",
         "test_no_declaration_is_silent",
         "test_an_unreadable_declaration_is_reported_not_ignored",
@@ -3754,7 +3754,7 @@
         "test_it_never_raises",
         "test_every_worker_entrypoint_runs_the_check"
       ],
-      "last_modified": "2026-08-27T19:42:30Z",
+      "last_modified": "2026-08-27T20:12:09Z",
       "id": "runtime/test/test_framework_version.py"
     },
     {

@@ -117,48 +117,47 @@ def is_source_checkout(version: Optional[str] = None) -> bool:
 _mismatch_warned = False
 
 
-def _minor_series(version: str) -> Optional[tuple[int, int]]:
-    """`(major, minor)` from `1.3.0`, `1.3.x`, `1.3.0+src`, or None.
-
-    MINOR granularity on purpose. It is the granularity the compatibility matrix
-    in CHANGELOG.md is written at — its rows are `1.3.x` — and it is what
-    `.agenticframework/tenant.yaml` declares, because the scaffold writes
-    `1.3.x` too. Comparing patch levels would warn on every patch release,
-    which teaches an operator to ignore the warning.
-    """
-    m = re.match(r"^(\d+)\.(\d+)\.", version.strip())
-    if m:
-        return int(m.group(1)), int(m.group(2))
-    m = re.match(r"^(\d+)\.(\d+)\.[xX*]$", version.strip())
+def _series(version: str) -> Optional[tuple[int, int]]:
+    """`(major, minor)` from `1.3.0`, `1.3.x`, `1.3.0+src`, or None."""
+    v = version.strip()
+    m = re.match(r"^(\d+)\.(\d+)\.", v) or re.match(r"^(\d+)\.(\d+)\.[xX*]$", v)
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
 def warn_if_declared_version_differs(root: Optional[Path] = None) -> Optional[str]:
-    """Warn once when `framework.version` disagrees with what is installed.
+    """Warn once when the running framework crosses a MAJOR boundary from the
+    version this tenant declares it was built against.
 
     Returns the warning text, or None when there is nothing to say — so a caller
     can surface it its own way and a test can assert on it without capturing
     logs.
 
-    WHY THIS EXISTS. `framework.version` has been declared in
-    `.agenticframework/tenant.yaml` since the scaffold shipped and read by
-    nothing — the same declared-but-unenforced shape as `tenant.id`,
-    `budget.monthly_usd_cap` and `workflow.engine` before those were closed. And
-    `ai-tenant-init` writes that declaration but no `requirements.txt` and no
-    pin, so a tenant is scaffolded stating a version that nothing installs and
-    nothing checks.
+    WHAT THIS IS AND IS NOT. It is not a check that two strings agree. A first
+    version compared MINOR series and warned on any disagreement, which made it
+    a bookkeeping alarm: a config string differing from an installed package is
+    not a risk to anybody, and a warning that fires when nothing is wrong is one
+    an operator learns to skip past.
 
-    That gap is invisible in the framework's own repo and in KYC Sentinel, both
-    of which have a framework checkout to compare against. It is the ONLY check
-    available to the tenants that matter: separate repositories, monitored and
-    traced by an AgentSmith that has no access to their code. This needs no git,
-    no tags and no checkout — just the installed distribution.
+    The obligations run in one direction and it is worth being explicit about
+    them, because the check follows from them:
 
-    WARNS, NEVER RAISES. A tenant one line ahead of its own declaration is not a
-    safety problem, and refusing to start would make the upgrade order-dependent
-    — bump the pin and the declaration in either order and one boot fails.
-    `resolve_tenant_id` refuses because an unattributed run corrupts the budget
-    ledger and the audit trail; this is not that.
+      * A TENANT conforms to AgentSmith's specs. It does that irrespective of
+        version, and it does not owe anyone a config string kept in sync with
+        whatever IT installed.
+      * AGENTSMITH maintains backward compatibility for tenants already in
+        production. Inside a major series that is a promise, not a hope — so a
+        tenant declaring `1.3.x` and running 1.4 or 1.9 is the system working,
+        and silence is the correct output.
+
+    What breaks that promise is a MAJOR release, which is what the compatibility
+    matrix exists to describe. That is the only case worth a tenant operator's
+    attention, so it is the only case this warns about.
+
+    WARNS, NEVER RAISES. Even across a major, refusing to start would take a
+    running tenant down at upgrade time on the strength of a config string —
+    and the tenant's own tests, not this, are what establish whether it still
+    works. `resolve_tenant_id` refuses because an unattributed run corrupts the
+    budget ledger and the audit trail; this is not that.
     """
     global _mismatch_warned
     if _mismatch_warned:
@@ -166,10 +165,6 @@ def warn_if_declared_version_differs(root: Optional[Path] = None) -> Optional[st
 
     running = framework_version()
     if running == UNKNOWN:
-        # Nothing to compare against. Reported rather than silent: a runtime
-        # that cannot name itself is also a runtime whose telemetry carries
-        # `unknown`, and an operator should hear that here rather than find it
-        # on a fleet dashboard.
         _mismatch_warned = True
         text = (
             "AgentSmith cannot determine its own version — neither an installed "
@@ -183,13 +178,10 @@ def warn_if_declared_version_differs(root: Optional[Path] = None) -> Optional[st
 
     declared = config_get("framework.version", root)
     if declared is None or not str(declared).strip():
-        # Not scaffolded, or scaffolded without the key. A normal state for a
-        # repo that has not adopted the config file, and not worth a warning —
-        # same reasoning as tenant_id_from_config returning None.
         return None
 
-    want = _minor_series(str(declared))
-    have = _minor_series(running)
+    want = _series(str(declared))
+    have = _series(running)
     if want is None:
         _mismatch_warned = True
         text = (
@@ -199,18 +191,30 @@ def warn_if_declared_version_differs(root: Optional[Path] = None) -> Optional[st
         )
         logger.warning(text)
         return text
-    if have is None or want == have:
+    if have is None or want[0] == have[0]:
+        # Same major. Backward compatibility within a major is AgentSmith's
+        # obligation, so any minor or patch difference here is the framework
+        # keeping its side of the bargain — there is nothing to report.
         return None
 
     _mismatch_warned = True
-    text = (
-        f"AgentSmith {running} is running, but "
-        f".agenticframework/tenant.yaml declares framework.version={declared!r}. "
-        f"Nothing installs from that declaration — it is documentation — so the "
-        f"two can drift silently. Telemetry from this process will report "
-        f"{running}, which is what an Ops Portal sees. Bump the declaration, or "
-        f"the dependency pin, so they agree."
-    )
+    if have[0] > want[0]:
+        text = (
+            f"AgentSmith {running} is running, but this tenant declares it was "
+            f"built against framework.version={declared!r}. That is a MAJOR "
+            f"version boundary, which is where AgentSmith's backward-compatibility "
+            f"promise ends — see the compatibility matrix in the framework's "
+            f"CHANGELOG.md for what changed between {want[0]}.x and {have[0]}.x, "
+            f"and re-run this tenant's own tests before trusting the upgrade."
+        )
+    else:
+        text = (
+            f"AgentSmith {running} is running, but this tenant declares "
+            f"framework.version={declared!r} — a NEWER major than what is "
+            f"installed. Anything this tenant uses that arrived in "
+            f"{want[0]}.x will be missing; expect ImportError or absent "
+            f"behaviour rather than a graceful degrade."
+        )
     logger.warning(text)
     return text
 

@@ -87,6 +87,28 @@ tenant is a cycle, and it is the one that quietly stops being checked.
   claiming to be a sandbox, and asserts it read the suite. Naming a tenant in
   prose stays fine — the framework documents its testbed.
 
+### The startup version check warns on MAJOR boundaries only
+
+Rescoped from what it shipped as a day earlier, which compared MINOR series and
+warned on any disagreement. That made it a bookkeeping alarm — a config string
+differing from an installed package is not a risk to anyone — and a warning that
+fires when nothing is wrong is one an operator learns to skip.
+
+The obligations run in one direction. A **tenant** conforms to AgentSmith's
+specs, irrespective of version; it does not owe anyone a config string kept in
+sync with whatever IT installed. **AgentSmith** maintains backward compatibility
+for tenants already in production, and inside a major series that is a promise.
+So a tenant declaring `1.3.x` and running 1.9 is the promise being kept, and
+silence is the correct output. What breaks the promise is a major release —
+which is what the compatibility matrix exists to describe, and now the only case
+this warns about.
+
+Crossing up a major points at the matrix and says to re-run the tenant's own
+tests. Crossing down says to expect `ImportError` rather than a graceful
+degrade, because that is a different failure. It still never raises: refusing
+would take a running tenant down at upgrade time on the strength of a config
+string, and the tenant's own tests are what establish whether it still works.
+
 ### `framework.version` is finally read by something
 
 - **A startup check, warning not refusing.** `framework.version` has been

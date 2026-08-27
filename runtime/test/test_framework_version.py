@@ -169,18 +169,18 @@ def test_the_version_is_json_serialisable_for_the_post() -> None:
     json.dumps({"frameworkVersion": version_mod.framework_version()})
 
 
-# ── Declared versus installed ────────────────────────────────────────────────
+# ── Declared versus running: MAJOR boundaries only ───────────────────────────
 #
-# `framework.version` in .agenticframework/tenant.yaml has been declared since
-# the scaffold shipped and read by nothing, and `ai-tenant-init` writes that
-# declaration but no requirements.txt and no pin — so a tenant is scaffolded
-# stating a version that nothing installs and nothing checks.
+# The obligations run in one direction. A TENANT conforms to AgentSmith's specs,
+# irrespective of version — it does not owe anyone a config string kept in sync
+# with whatever IT installed. AGENTSMITH maintains backward compatibility for
+# tenants already in production, and inside a major series that is a promise.
 #
-# This is the only check available to the tenants that matter. KYC Sentinel is
-# an exception: it lives beside the framework and can be compared against a
-# checkout with tags. Real tenants are separate repositories, monitored and
-# traced by an AgentSmith with no access to their code, so a guard that needs
-# git, tags or a sibling directory is a guard they cannot run.
+# So a minor or patch difference is the framework KEEPING that promise, and
+# warning about it is a bookkeeping alarm that teaches an operator to skip past
+# warnings. A first version of this compared minor series and did exactly that.
+# What breaks the promise is a major release — which is what the compatibility
+# matrix exists to describe, and the only case worth an operator's attention.
 
 
 def _tenant_root(tmp_path, declared: str):
@@ -192,40 +192,45 @@ def _tenant_root(tmp_path, declared: str):
     return tmp_path
 
 
-def test_a_matching_declaration_says_nothing(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.3.4")
+@pytest.mark.parametrize("running", ["1.3.4", "1.4.0", "1.9.12", "1.3.0"])
+def test_anything_inside_the_declared_major_is_silent(tmp_path, monkeypatch, running) -> None:
+    """The case the first version got wrong. A tenant built against 1.3 and
+    running 1.9 is the backward-compatibility promise working — there is
+    nothing for an operator to do, so there is nothing to say."""
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: running)
     version_mod._reset_cache()
     assert version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "1.3.x")) is None
 
 
-def test_a_patch_release_is_not_a_mismatch(tmp_path, monkeypatch) -> None:
-    """Minor granularity, which is what the compatibility matrix is written at
-    and what the scaffold declares. Warning on every patch release teaches an
-    operator to ignore the warning."""
-    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.3.9")
-    version_mod._reset_cache()
-    assert version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "1.3.0")) is None
-
-
-def test_a_source_checkout_matches_its_declared_series(tmp_path, monkeypatch) -> None:
+def test_a_source_checkout_inside_the_major_is_silent(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(version_mod, "_installed_version", lambda: None)
-    monkeypatch.setattr(version_mod, "_checkout_version", lambda: "1.3.0")
+    monkeypatch.setattr(version_mod, "_checkout_version", lambda: "1.4.0")
     version_mod._reset_cache()
     assert version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "1.3.x")) is None
 
 
-def test_a_different_minor_series_warns(tmp_path, monkeypatch) -> None:
-    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.2.0")
+def test_crossing_up_a_major_warns_and_points_at_the_matrix(tmp_path, monkeypatch) -> None:
+    """The case that matters: the tenant was built against 1.x and something
+    installed 2.x, where the compatibility promise ends."""
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "2.0.0")
     version_mod._reset_cache()
     text = version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "1.3.x"))
-    assert text and "1.2.0" in text and "1.3.x" in text
-    assert "Ops Portal sees" in text, "the operator needs to know what the fleet view will show"
+    assert text and "MAJOR" in text
+    assert "compatibility matrix" in text, "the operator needs to be told where to look"
+    assert "1.x and 2.x" in text
+
+
+def test_running_an_older_major_than_declared_warns_differently(tmp_path, monkeypatch) -> None:
+    """The other direction is not the same problem. Nothing broke — things are
+    ABSENT — so the message says to expect ImportError, not to read the matrix."""
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.9.0")
+    version_mod._reset_cache()
+    text = version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "2.0.x"))
+    assert text and "NEWER major" in text and "ImportError" in text
 
 
 def test_it_warns_once_per_process(tmp_path, monkeypatch) -> None:
-    """A per-call warning on a worker that logs at startup is noise; a
-    per-process one is a fact."""
-    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.2.0")
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "2.0.0")
     version_mod._reset_cache()
     root = _tenant_root(tmp_path, "1.3.x")
     assert version_mod.warn_if_declared_version_differs(root) is not None
@@ -260,11 +265,12 @@ def test_an_unknown_running_version_is_reported(tmp_path, monkeypatch) -> None:
 
 
 def test_it_never_raises(tmp_path, monkeypatch) -> None:
-    """The control: a version check that breaks startup is worse than the drift
-    it reports."""
-    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.2.0")
+    """Even across a major. Refusing would take a running tenant down at upgrade
+    time on the strength of a config string, and the tenant's own tests — not
+    this — are what establish whether it still works."""
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "9.9.9")
     version_mod._reset_cache()
-    version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "9.9.x"))
+    version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "1.3.x"))
 
 
 @pytest.mark.parametrize(
