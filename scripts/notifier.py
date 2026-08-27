@@ -194,15 +194,40 @@ def notify_hitl_required(
 
 
 def notify_eval_result(
-    score: float, threshold: float, project: Optional[str] = None
+    score: float,
+    threshold: float,
+    project: Optional[str] = None,
+    passed: Optional[bool] = None,
 ) -> None:
-    """Convenience wrapper for post-eval summary."""
-    emoji = "✅" if score >= threshold else "❌"
+    """Post-eval summary. `passed` is the RUN's verdict, not a score comparison.
+
+    This used to derive the verdict itself as `score >= threshold`, and a
+    scorecard's verdict is not that. `run_scorecard` also gates on parity, the
+    hallucination rate, a missed positive control, and the adversarial /
+    RAG-poison guard — so a fairness run whose rationales all score 0.95 against
+    a 0.80 bar, with one protected-attribute pair diverged, exits 1 and prints ❌
+    while this notification said ✅ at normal urgency.
+
+    That is the copy of the verdict that reaches a human who is not watching CI,
+    which makes it the worst of the two to be wrong.
+
+    `passed=None` keeps the old derivation for any caller outside this repo that
+    has only the two numbers.
+    """
+    verdict = (score >= threshold) if passed is None else passed
+    emoji = "✅" if verdict else "❌"
     project_tag = f" [{project}]" if project else ""
+    detail = (
+        ""
+        if verdict or score < threshold
+        # Failed on something the score does not show. Saying so is the whole
+        # point: "Score: 0.95 (threshold: 0.80) ❌" reads as a display bug.
+        else " — failed an aggregate gate (parity / hallucination / guard)"
+    )
     send_notification(
         title=f"{emoji} Eval Result{project_tag}",
-        message=f"Score: {score:.2f} (threshold: {threshold:.2f})",
-        urgency="normal" if score >= threshold else "critical",
+        message=f"Score: {score:.2f} (threshold: {threshold:.2f}){detail}",
+        urgency="normal" if verdict else "critical",
     )
 
 

@@ -683,7 +683,7 @@
         "_resolve_fail_below",
         "_write_results"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-27T18:42:45Z",
       "id": "scripts/run-evals.py"
     },
     {
@@ -748,7 +748,7 @@
         "_post",
         "_dispatch"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-27T18:43:31Z",
       "id": "scripts/notifier.py"
     },
     {
@@ -1325,9 +1325,10 @@
         "test_one_diverging_pair_fails_however_many_clean_pairs_surround_it",
         "test_parity_floor_does_not_move_when_the_quality_bar_is_recalibrated",
         "test_clean_parity_passes_even_when_rationale_quality_is_mediocre",
-        "test_an_unparseable_parity_floor_stays_strict"
+        "test_an_unparseable_parity_floor_stays_strict",
+        "test_failing_pairs_are_reported_against_the_floor_that_failed_them"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-27T18:41:52Z",
       "id": "scripts/test/test_fairness_evals.py"
     },
     {
@@ -3652,6 +3653,9 @@
         "test_the_hitl_wrapper_carries_model_output_through_unspliced",
         "test_a_rejected_script_is_not_reported_as_delivered",
         "test_a_non_mac_host_declines",
+        "test_an_aggregate_failure_notifies_as_a_failure",
+        "test_a_passing_run_still_notifies_as_one",
+        "test_without_a_verdict_it_falls_back_to_the_score",
         "_Proc",
         "_fake_run",
         "_InlineThread",
@@ -3659,7 +3663,7 @@
         "__init__",
         "start"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-27T18:42:59Z",
       "id": "scripts/test/test_notifier_injection.py"
     },
     {

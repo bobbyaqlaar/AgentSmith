@@ -134,3 +134,60 @@ def test_a_rejected_script_is_not_reported_as_delivered(monkeypatch):
 def test_a_non_mac_host_declines(monkeypatch):
     monkeypatch.setattr(platform, "system", lambda: "Linux")
     assert notifier._notify_osascript("t", "m") is False
+
+
+# ── The verdict is the run's, not a score comparison ─────────────────────────
+
+
+def test_an_aggregate_failure_notifies_as_a_failure(monkeypatch):
+    """A scorecard's verdict is not `score >= threshold`.
+
+    `run_scorecard` also gates on parity, the hallucination rate, a missed
+    positive control, and the adversarial / RAG-poison guard. A fairness run
+    whose rationales all score 0.95 against a 0.80 bar, with one
+    protected-attribute pair diverged, exits 1 and prints ❌ — and this
+    notification said ✅ at normal urgency, because it recomputed the verdict
+    from the two numbers it happened to be handed.
+
+    That copy is the one that reaches a human who is not watching CI.
+    """
+    sent = {}
+    monkeypatch.setattr(
+        notifier, "send_notification",
+        lambda title, message, urgency="normal", **k: sent.update(
+            title=title, message=message, urgency=urgency
+        ),
+    )
+
+    notifier.notify_eval_result(0.95, 0.80, project="kyc", passed=False)
+
+    assert sent["title"].startswith("❌"), sent["title"]
+    assert sent["urgency"] == "critical"
+    assert "aggregate gate" in sent["message"], (
+        "a ❌ next to a passing score reads as a display bug unless it says why"
+    )
+
+
+def test_a_passing_run_still_notifies_as_one(monkeypatch):
+    sent = {}
+    monkeypatch.setattr(
+        notifier, "send_notification",
+        lambda title, message, urgency="normal", **k: sent.update(
+            title=title, urgency=urgency
+        ),
+    )
+    notifier.notify_eval_result(0.95, 0.80, passed=True)
+    assert sent["title"].startswith("✅") and sent["urgency"] == "normal"
+
+
+def test_without_a_verdict_it_falls_back_to_the_score(monkeypatch):
+    """Kept for any caller outside this repo holding only the two numbers."""
+    sent = {}
+    monkeypatch.setattr(
+        notifier, "send_notification",
+        lambda title, message, urgency="normal", **k: sent.update(title=title),
+    )
+    notifier.notify_eval_result(0.50, 0.80)
+    assert sent["title"].startswith("❌")
+    notifier.notify_eval_result(0.90, 0.80)
+    assert sent["title"].startswith("✅")

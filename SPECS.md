@@ -700,7 +700,8 @@ For internal registries, the installer supports fetching from a private artifact
 | `OPENAI_API_KEY` | Required for hybrid mode | `sk-...` |
 | `ANTHROPIC_API_KEY` | Required for hybrid mode | `sk-ant-...` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Set by `ai-dashboard-start` | `http://localhost:6006/v1/traces` |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Traces-only override, read by the Ops Portal. Used as-is; takes precedence over the variable above | *(unset)* |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Traces-only override, read by the Ops Portal **and by `runtime/otlp.py`**. Used as-is; takes precedence over the variable above | *(unset)* |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Metrics-only override, same precedence. Without it the metrics endpoint is derived from the base URL above — and a base that already names `/v1/traces`, which this repo's own convention sets, has that path replaced rather than appended to | *(unset)* |
 | `AGENT_JUDGE_MODEL` | Names a judge ONLY where no `judge` role is declared | *(unset)* — the `judge` role in `models.yaml` wins and an ignored value is logged (framework default `falcon3:3b`); `scripts/_shared.py:DEFAULT_JUDGE_MODEL` is the last-resort fallback when `runtime/` isn't importable |
 | `AGENT_OWNER_ID` | Real user identity. **No longer exported to the shell profile** — ambient there, it outranked every tenant's declared `tenant.owner` and was absent in CI entirely. Resolution: `tenant.owner` → this → `git config user.email` | *(from tenant.yaml, then git)* |
 | `AGENT_OWNER_NAME` | Display name. Override for `tenant.owner_name`; falls back to `git config user.name` | *(from tenant.yaml, then git)* |
@@ -1365,6 +1366,11 @@ second-level entries of `scripts/`, `runtime/`, `docs/`, and `fixtures/`
 Ollama/API keys, owner identity) — not meaningful in a generic CI runner with
 none of that configured. The framework's own CI instead validates what's
 actually checkable without live infra:
+- `ruff check .` — config in `pyproject.toml`. The selection is deliberate
+  rather than maximal; the two families measured and rejected (`S`, `BLE`) are
+  recorded there with their counts and the reason
+- `mypy` over the shipped runtime only (`runtime/`, excluding its tests) —
+  scoped in `pyproject.toml`, with the reason the tests are excluded
 - `py_compile` sweep over `scripts/`, `runtime/`, `examples/`
 - `bash -n` / `zsh -n` on `install-ai-stack.sh`, `enterprise/*.sh`, `hooks/*`
 - ShellCheck (advisory, non-blocking — no existing baseline to compare against)

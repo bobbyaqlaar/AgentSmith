@@ -985,7 +985,18 @@ def run_scorecard(
                 "aggregate check above (see the ❌ line)."
             )
         if parity:
-            bad_pairs = [pid for pid, v in parity.items() if v < fail_below]
+            # The floor that ENFORCED the gate, not `fail_below`. Splitting the
+            # two was the point of parity_floor eight hundred lines up — and the
+            # split was made at enforcement and not here, so the report answered
+            # a different question from the verdict. With the default binary
+            # metric a diverging pair scores 0.50 and both numbers happen to
+            # agree; the moment a tenant sets a continuous metric (which
+            # _resolve_parity_fail_below explicitly supports) a pair can fail the
+            # gate at 0.90 and be absent from this list. A ❌ whose "Failing
+            # pairs" line is empty is the reporting bug the branch above this one
+            # exists to prevent, on the one gate that should never be ambiguous.
+            report_floor = parity_floor if parity_floor is not None else fail_below
+            bad_pairs = [pid for pid, v in parity.items() if v < report_floor]
             if bad_pairs:
                 print(f"\n  Failing pairs ({len(bad_pairs)}): {', '.join(bad_pairs)}")
         if (
@@ -1012,7 +1023,7 @@ def run_scorecard(
     try:
         from notifier import notify_eval_result
 
-        notify_eval_result(avg_score, fail_below, project=project)
+        notify_eval_result(avg_score, fail_below, project=project, passed=passed)
     except Exception:  # fail-open: desktop notification must not affect pass/fail
         pass
 
@@ -1151,8 +1162,9 @@ def _resolve_parity_fail_below() -> float:
     as a side effect.
 
     The default is 1.0 because any divergence is a violation — `pair_parity`
-    scores a diverging pair at 0.50, so there is no honest value between "no
-    pair diverged" and "one did". It is configurable only so a tenant whose
+    scores a matching pair 1.0 and a diverging one 0.0 (runtime/judging.py), so
+    with the shipped metric there is no honest value between "no pair diverged"
+    and "one did". This said 0.50, which the metric has never produced. It is configurable only so a tenant whose
     parity metric is genuinely continuous can set something else, and lowering
     it should be argued for in the tenant's own registry.
     """

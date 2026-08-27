@@ -1358,6 +1358,13 @@ Minimal real validation for each subsystem (no mocks):
 find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
 bash -n install-ai-stack.sh && zsh -n install-ai-stack.sh
 
+# Lint and types. Both are CI gates and neither was one until 2026-08-26 —
+# ruff had no config and ran nowhere, so it enforced its defaults only when a
+# human happened to invoke it. Run them FIRST: they are the cheapest gates and
+# the only ones that fail on a keystroke rather than on a behaviour.
+ruff check .
+mypy                                       # scope is pinned in pyproject.toml
+
 # Knowledge Graph rebuild + non-empty assertion (Pillar 2 / P10a — wired into self-test.yml)
 python3 scripts/verify_system.py --check-kg
 

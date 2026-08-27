@@ -61,6 +61,50 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Review pass 16 — the eval gate reported against the wrong threshold
+
+- **"Failing pairs" was computed with `fail_below`, not the floor that failed
+  them.** `run_scorecard` deliberately splits the two: `parity_floor` measures
+  bias, `fail_below` a judge's read of rationale quality, and the comment
+  arguing for the split says coupling them let a routine recalibration loosen
+  the bias control. The split was made at ENFORCEMENT and not at the report, so
+  the two answered different questions. With the shipped metric they agree by
+  luck — `pair_parity` returns only 0.0 or 1.0 and both floors sit between them
+  — but `_resolve_parity_fail_below` explicitly supports a tenant with a
+  continuous metric, and there a pair failing at 0.90 against a 1.0 floor is not
+  below a 0.80 `fail_below`: a ❌ whose "Failing pairs" line is empty, which is
+  the reporting bug the branch directly above it exists to prevent.
+- **The desktop notification recomputed the verdict and could say ✅ on a failed
+  run.** `notify_eval_result(avg_score, fail_below)` derived pass/fail from two
+  numbers, while `run_scorecard` also gates on parity, the hallucination rate, a
+  missed positive control, and the adversarial / RAG-poison guard. A fairness
+  run whose rationales all score 0.95 against a 0.80 bar, with one
+  protected-attribute pair diverged, exits 1 and prints ❌ — and the
+  notification went out as ✅ at normal urgency. That is the copy of the verdict
+  that reaches a human who is not watching CI. It now takes the run's verdict,
+  and says when the failure is one the score cannot show.
+- **`_resolve_parity_fail_below`'s docstring cited a score the metric never
+  produces** — 0.50 for a diverging pair, where `runtime/judging.pair_parity`
+  returns 0.0. The whole "no honest value between" argument rests on that
+  number.
+
+### Documentation and cleanup
+
+- `SPECS.md` gains the ruff and mypy gates in its CI list, and an
+  `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` row; the traces row now says the runtime
+  reads it too, not only the portal.
+- `OPERATIONS.md`'s local pre-push recipe runs lint and types first — the
+  cheapest gates, and the only ones that fail on a keystroke rather than a
+  behaviour.
+- `.gitignore` lists `.ruff_cache/` and `.mypy_cache/` alongside
+  `.pytest_cache/`. Both tools self-ignore via a `.gitignore` they write inside
+  their own cache, so this changes nothing today — it just stops the repo
+  depending on that.
+- `DemoScript.md` (demo-private) gains the metrics-with-no-provider and
+  notifier-injection stories in Beat 23, and the fleet-version column in Beat
+  23a, where the IT-runs-the-framework / business-runs-the-tenant split belongs.
+
+
 ### Review pass over the lint/type work itself
 
 Three findings, two of them against changes made minutes earlier.

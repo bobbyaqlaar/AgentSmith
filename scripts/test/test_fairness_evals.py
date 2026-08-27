@@ -347,3 +347,36 @@ def test_an_unparseable_parity_floor_stays_strict(monkeypatch, capsys) -> None:
     monkeypatch.setenv("FAIRNESS_PARITY_FAIL_BELOW", "one")
     assert revals._resolve_parity_fail_below() == 1.0
     assert "not a number" in capsys.readouterr().out
+
+
+def test_failing_pairs_are_reported_against_the_floor_that_failed_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The list under a ❌ must name the pairs that caused it.
+
+    Enforcement uses `parity_floor` — a deliberate split from `fail_below`,
+    because one measures bias and the other a judge's read of rationale
+    quality. The split was made at enforcement and NOT at the report, so the
+    two answered different questions.
+
+    The shipped metric returns only 0.0 or 1.0, and both floors sit between
+    them, so they agree by luck. `_resolve_parity_fail_below` explicitly
+    supports a tenant with a continuous metric, and there the report went
+    silent: a pair failing at 0.90 against a 1.0 floor is not below a 0.80
+    `fail_below`, so the ❌ came with an empty "Failing pairs" line — the
+    reporting bug the branch directly above it exists to prevent.
+    """
+    revals = load_script("run-evals")
+
+    parity = {"pair-ok": 1.0, "pair-drifted": 0.90}
+    parity_floor = revals._resolve_parity_fail_below()   # 1.0 by default
+    fail_below = 0.80
+
+    assert parity_floor == 1.0
+    enforced_failures = [p for p, v in parity.items() if v < parity_floor]
+    reported_with_fail_below = [p for p, v in parity.items() if v < fail_below]
+
+    assert enforced_failures == ["pair-drifted"]
+    assert reported_with_fail_below == [], (
+        "this is the bug: the gate fails and the old report names nobody"
+    )
