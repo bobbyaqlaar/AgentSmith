@@ -49,7 +49,7 @@ STACKS = ("python-fastapi", "ts-react", "go")
 ISOLATIONS = ("shared", "dedicated")
 
 
-def tenant_yaml(tenant_id: str, *, isolation: str = "shared", framework_version: str = "1.2.0") -> str:
+def tenant_yaml(tenant_id: str, *, isolation: str = "shared", framework_version: str = "1.3.0") -> str:
     """The scaffolded `.agenticframework/tenant.yaml`, as text.
 
     Every key below is READ by something — that is the entry criterion, learned

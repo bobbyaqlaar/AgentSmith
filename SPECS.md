@@ -14,7 +14,7 @@
 > [Product_Archive.md](./Product_Archive.md), remaining to-dos in
 > [FIXES_AND_CLEANUP.md](./FIXES_AND_CLEANUP.md).
 
-**Version:** 1.2.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
+**Version:** 1.3.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
 `pyproject.toml` — pinned together by
 `scripts/test/test_version_consistency.py`)
 **Date:** 2026-07-29
@@ -2134,7 +2134,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 1.2.x | 3.11 | 0.2 | 4.0 | `AGENT_JUDGE_MODEL` no longer overrides a declared `judge` role; a tenant `models.yaml` entry with a different `id` REPLACES the framework entry rather than merging; `--strict` fails a control declaring `met`/`partial` with no runner |
+| 1.3.x | 3.11 | 0.2 | 4.0 | Token counts are `Optional[int]`; `DeadLetterQueue.replay()` raises `AlreadyResolvedError` on a non-pending entry; a HITL approval is consumed by the gate that reads it; `run_with_hitl_gate` raises on a `None` gate result. Full text and the **Wire Contract** table in [`CHANGELOG.md`](./CHANGELOG.md) |
 
 ### Examples as Forks
 

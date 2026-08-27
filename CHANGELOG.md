@@ -14,6 +14,7 @@ Canonical copy — SPECS.md §28 mirrors the current row.
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
+| 1.3.x | 3.11 | 0.2 | 4.0 | `CompletionResult.input_tokens`/`output_tokens` are `Optional[int]` — a provider that reports no `usage` now yields `None` where 1.2.x yielded `0`, so a consumer doing arithmetic on them must handle `None`; `DeadLetterQueue.replay()` raises `AlreadyResolvedError` when the entry is not `pending` instead of replaying it; a HITL approval is consumed by the gate that reads it and no longer satisfies later gates (`hitl_approved_for(gate_id, approved)` addresses one explicitly); `run_with_hitl_gate` raises when the gate activity returns `None` rather than treating it as "no review needed"; `audit_token_velocity_circuit` raises `ValueError` on `None` token counts |
 | 1.2.x | 3.11 | 0.2 | 4.0 | `AGENT_JUDGE_MODEL` no longer overrides a declared `judge` role; a tenant `models.yaml` entry with a different `id` REPLACES the framework entry rather than merging into it; `--strict` fails a control declaring `met`/`partial` with no runner |
 | 1.1.x | 3.11 | 0.2 | 4.0 | Default model registry is local-only; `local_large`/`local_small` roles removed |
 | 1.0.x | 3.11 | 0.2 | 4.0 | Initial public release (documented only — never tagged or published) |
@@ -59,7 +60,16 @@ release which began reporting it — so the column dates a row without any
 version table being consulted.
 
 
-## [Unreleased]
+## [1.3.0] — 2026-08-27
+
+The observability release. Metrics that reach a collector, a trace that survives
+the process hop, prompt identity, a framework version on the wire — and sixteen
+review passes' worth of fixes behind them.
+
+**Read the Wire Contract table above before upgrading a consumer.** The
+telemetry a tenant emits changed more than the library API did, and an Ops
+Portal reading a mixed-version fleet needs to know which fields each version
+can produce.
 
 ### Review pass 16 — the eval gate reported against the wrong threshold
 
