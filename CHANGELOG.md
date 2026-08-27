@@ -62,6 +62,31 @@ version table being consulted.
 
 ## [Unreleased]
 
+### The framework's tests no longer reach into a tenant's checkout
+
+Five test locations resolved a sibling `../KYC_Sentinel`: three sweeping its
+`worker.py` for framework wiring, two asserting things about its eval fixture.
+All five skipped or returned silently when the directory was absent — which is
+every CI runner, because AgentSmith's CI does not check a tenant out. Verified
+by cloning this repo to a temp directory and running them: three SKIPPED. Their
+green was the green of a test that cannot fail.
+
+KYC Sentinel is the exception that made this easy to write by accident — it is
+the demo tenant and it sits beside the framework on one machine. Every other
+tenant is a separate repository, monitored and traced by an AgentSmith with no
+access to its code. The direction matters: a tenant depending on the framework
+is the architecture, and that is what the pin is; the framework depending on a
+tenant is a cycle, and it is the one that quietly stops being checked.
+
+- The worker-entrypoint sweeps now cover the framework's own entrypoints only,
+  and **assert** rather than skip when one is missing.
+- The two tenant-fixture tests moved to KYC Sentinel's own suite, where they
+  run.
+- `scripts/test/test_no_tenant_repo_dependency.py` stops it growing back. It
+  catches the two escape idioms this repo actually used, says so rather than
+  claiming to be a sandbox, and asserts it read the suite. Naming a tenant in
+  prose stays fine — the framework documents its testbed.
+
 ### `framework.version` is finally read by something
 
 - **A startup check, warning not refusing.** `framework.version` has been

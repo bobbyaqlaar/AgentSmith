@@ -121,25 +121,24 @@ def test_tracing_is_still_installed_by_the_same_call() -> None:
 
 
 @pytest.mark.parametrize(
-    "module",
-    ["runtime.worker", "examples/oil-price-agent/worker.py", "KYC worker (tenant repo)"],
+    "module", ["runtime.worker", "examples/oil-price-agent/worker.py"]
 )
 def test_every_worker_entrypoint_configures_telemetry(module: str) -> None:
     """A sweep, because the defect was an absent CALL, not wrong code.
 
     Reading the source rather than importing: these entrypoints connect to
-    Temporal and bind ports. The tenant worker lives in another repo and is
-    checked only when that checkout is present — skipped rather than silently
-    passing, since a sweep that matches nothing is itself a finding.
+    Temporal and bind ports.
+
+    THE FRAMEWORK'S OWN ENTRYPOINTS ONLY. This swept a sibling
+    `../KYC_Sentinel/worker.py` too, which skipped on every CI runner — the
+    framework's CI does not check the tenant out, so that leg had never run
+    where it mattered. A tenant asserting its own wiring belongs in the
+    tenant's suite; see KYC Sentinel's `test/test_worker_wiring.py`.
     """
     if module == "runtime.worker":
         path = ROOT / "runtime" / "worker.py"
-    elif module.startswith("examples"):
-        path = ROOT / "examples" / "oil-price-agent" / "worker.py"
     else:
-        path = ROOT.parent / "KYC_Sentinel" / "worker.py"
-        if not path.exists():
-            pytest.skip("KYC Sentinel checkout not present")
+        path = ROOT / "examples" / "oil-price-agent" / "worker.py"
 
     text = path.read_text(encoding="utf-8")
     assert "configure_telemetry()" in text, (
@@ -149,8 +148,7 @@ def test_every_worker_entrypoint_configures_telemetry(module: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "module",
-    ["runtime.worker", "examples/oil-price-agent/worker.py", "KYC worker (tenant repo)"],
+    "module", ["runtime.worker", "examples/oil-price-agent/worker.py"]
 )
 def test_env_is_loaded_before_telemetry_reads_it(module: str) -> None:
     """`.env` must be loaded BEFORE `configure_telemetry()` resolves an endpoint.
@@ -167,12 +165,8 @@ def test_env_is_loaded_before_telemetry_reads_it(module: str) -> None:
     """
     if module == "runtime.worker":
         path = ROOT / "runtime" / "worker.py"
-    elif module.startswith("examples"):
-        path = ROOT / "examples" / "oil-price-agent" / "worker.py"
     else:
-        path = ROOT.parent / "KYC_Sentinel" / "worker.py"
-        if not path.exists():
-            pytest.skip("KYC Sentinel checkout not present")
+        path = ROOT / "examples" / "oil-price-agent" / "worker.py"
 
     # From the AST, not from the text. The first version of this test compared
     # `text.index(...)` and failed on this very file, because the comment

@@ -148,7 +148,7 @@ def test_the_two_sides_agree_on_the_field_name() -> None:
 def test_a_pinned_tenant_would_send_none_of_this() -> None:
     """The premise, checked against the tag rather than assumed.
 
-    v1.2.0 — the version KYC Sentinel pins — has no version module to report
+    v1.2.0 — the version KYC Sentinel pinned until 2026-08-27 — has no version module to report
     from. That is what makes a NULL `framework_version` a reliable date stamp
     rather than a guess: the release that added the column is the release that
     started filling it.
@@ -272,10 +272,11 @@ def test_it_never_raises(tmp_path, monkeypatch) -> None:
     [
         ROOT / "runtime" / "worker.py",
         ROOT / "examples" / "oil-price-agent" / "worker.py",
-        ROOT.parent / "KYC_Sentinel" / "worker.py",
     ],
 )
 def test_every_worker_entrypoint_runs_the_check(path) -> None:
-    if not path.exists():
-        pytest.skip(f"{path} not present")
+    """The framework's own entrypoints. A tenant's worker is asserted in the
+    tenant's own suite — this swept `../KYC_Sentinel/worker.py` and skipped on
+    every CI runner, because the framework's CI does not check a tenant out."""
+    assert path.exists(), f"{path} is missing — the sweep has lost an entrypoint"
     assert "warn_if_declared_version_differs()" in path.read_text(encoding="utf-8")

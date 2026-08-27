@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sys
 from pathlib import Path
 
@@ -243,28 +242,6 @@ def test_a_case_carries_its_context_through_judge_case(monkeypatch) -> None:
     assert "Source of funds must be evidenced." in seen["prompt"]
 
 
-def test_the_ghost_citation_case_is_still_catchable() -> None:
-    """The guard on this whole change: context is resolved from what was
-    RETRIEVED, never from what the agent CITED. Resolving the agent's citations
-    would hand a ghost citation its own evidence and quietly disarm F7.
-    """
-    import json
-    from pathlib import Path
-
-    tenant = Path(__file__).resolve().parents[3] / "KYC_Sentinel"
-    fixture = tenant / ".agent-rfc/fixtures/hallucination_evals.json"
-    if not fixture.exists():           # framework repo standalone — nothing to check
-        return
-
-    corpus_ids = {p["id"] for p in json.loads((tenant / "corpus/policies.json").read_text())}
-    for case in json.loads(fixture.read_text()):
-        for doc in case.get("retrieved_context") or []:
-            assert doc["id"] in corpus_ids, (
-                f"{case['id']}: retrieved_context cites {doc['id']}, which is not in the "
-                "corpus — context must come from retrieval, never from the agent's output"
-            )
-
-
 # ── The suite needs a positive control, and must gate on it ──────────────────
 
 
@@ -347,28 +324,6 @@ def test_a_suite_with_no_positive_control_says_so(monkeypatch, capsys) -> None:
 
     revals.run_scorecard(fail_below=0.5, suite="hallucination")
     assert "no positive control" in capsys.readouterr().out
-
-
-def test_the_tenant_suite_actually_has_a_positive_control() -> None:
-    """Guards the regression this whole change addresses: the suite shipped for
-    weeks measuring only false positives."""
-    import json
-    from pathlib import Path
-
-    fixture = (Path(__file__).resolve().parents[3] / "KYC_Sentinel"
-               / ".agent-rfc/fixtures/hallucination_evals.json")
-    if not fixture.exists():
-        return
-    cases = json.loads(fixture.read_text())
-    planted = [c for c in cases if c.get("expect_hallucination")]
-    assert planted, "hallucination suite has no case that SHOULD be flagged"
-    for c in planted:
-        ctx_ids = {d["id"] for d in c.get("retrieved_context") or []}
-        cited = set(re.findall(r"policy-\d+", c["actual_output"]))
-        assert cited - ctx_ids, (
-            f"{c['id']}: every cited policy is in retrieved_context, so there is "
-            "nothing ungrounded to detect — the control cannot fail"
-        )
 
 
 def test_an_errored_positive_control_is_not_reported_as_absent(monkeypatch, capsys) -> None:
@@ -611,3 +566,11 @@ def test_no_annotation_outside_github_actions(tmp_path, monkeypatch, capsys) -> 
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     revals._github_warning("t", "m")
     assert "::warning" not in capsys.readouterr().out
+
+# Two tests that lived here now live in the tenant's own repo, as
+# `test/test_hallucination_fixture.py`: one asserting every `retrieved_context`
+# id exists in that tenant's corpus, one asserting its suite has a positive
+# control. Both were assertions about a TENANT's data, reached through
+# `../KYC_Sentinel`, and both returned silently when the sibling was absent —
+# which is every CI runner, since the framework's CI does not check a tenant
+# out. They had never run where it counted.
