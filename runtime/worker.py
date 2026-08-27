@@ -86,8 +86,16 @@ def main() -> None:
     # installed either way, so the signals are correctly formed and simply not
     # shipped anywhere.
     from runtime.tracing import configure_telemetry
+    from runtime.version import warn_if_declared_version_differs
 
     configure_telemetry()
+
+    # After .env and before any work: `framework.version` in tenant.yaml is a
+    # DECLARATION that nothing installs from, so it and the installed package
+    # can drift silently. Warns, never refuses — a tenant one line ahead of its
+    # own declaration is not a safety problem, and refusing would make bumping
+    # the pin and the declaration order-dependent.
+    warn_if_declared_version_differs()
 
     # Say what was ignored. A declaration outranks an ambient export, which is
     # deliberate — but an operator who exports something and sees no effect,

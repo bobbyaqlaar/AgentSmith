@@ -149,8 +149,10 @@ async def main() -> None:
     # endpoints are fine: the signals are still correctly formed, just not
     # shipped.
     from runtime.tracing import configure_telemetry
+    from runtime.version import warn_if_declared_version_differs
 
     configure_telemetry()
+    warn_if_declared_version_differs()
 
     await _run_health_server()
     await _run_worker_with_retry(tenant_id)

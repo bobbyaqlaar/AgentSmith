@@ -118,7 +118,7 @@
         "_start_temporal_worker",
         "_start_celery_worker"
       ],
-      "last_modified": "2026-08-25T16:27:46Z",
+      "last_modified": "2026-08-27T19:16:11Z",
       "id": "runtime/worker.py"
     },
     {
@@ -1894,7 +1894,7 @@
         "main",
         "healthz"
       ],
-      "last_modified": "2026-08-25T22:03:48Z",
+      "last_modified": "2026-08-27T19:16:11Z",
       "id": "examples/oil-price-agent/worker.py"
     },
     {
@@ -3721,9 +3721,11 @@
         "_checkout_version",
         "framework_version",
         "is_source_checkout",
+        "_minor_series",
+        "warn_if_declared_version_differs",
         "_reset_cache"
       ],
-      "last_modified": "2026-08-25T20:56:56Z",
+      "last_modified": "2026-08-27T19:17:30Z",
       "id": "runtime/version.py"
     },
     {
@@ -3741,9 +3743,20 @@
         "test_the_portal_column_is_nullable_and_added_by_an_alter",
         "test_the_two_sides_agree_on_the_field_name",
         "test_a_pinned_tenant_would_send_none_of_this",
-        "test_the_version_is_json_serialisable_for_the_post"
+        "test_the_version_is_json_serialisable_for_the_post",
+        "_tenant_root",
+        "test_a_matching_declaration_says_nothing",
+        "test_a_patch_release_is_not_a_mismatch",
+        "test_a_source_checkout_matches_its_declared_series",
+        "test_a_different_minor_series_warns",
+        "test_it_warns_once_per_process",
+        "test_no_declaration_is_silent",
+        "test_an_unreadable_declaration_is_reported_not_ignored",
+        "test_an_unknown_running_version_is_reported",
+        "test_it_never_raises",
+        "test_every_worker_entrypoint_runs_the_check"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-27T19:16:37Z",
       "id": "runtime/test/test_framework_version.py"
     },
     {
@@ -4383,6 +4396,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_otlp_endpoint.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/version.py",
       "target": "runtime/__init__.py"
     },
     {

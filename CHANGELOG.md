@@ -60,6 +60,34 @@ release which began reporting it — so the column dates a row without any
 version table being consulted.
 
 
+## [Unreleased]
+
+### `framework.version` is finally read by something
+
+- **A startup check, warning not refusing.** `framework.version` has been
+  declared in `.agenticframework/tenant.yaml` since the scaffold shipped and
+  read by nothing — the same declared-but-unenforced shape as `tenant.id`,
+  `budget.monthly_usd_cap` and `workflow.engine` before those were closed. And
+  `ai-tenant-init` writes that declaration but **no `requirements.txt` and no
+  pin**, so a tenant is scaffolded stating a version that nothing installs and
+  nothing checks. `warn_if_declared_version_differs()` says so once at worker
+  startup, from all three entrypoints.
+- **It needs no git, no tags and no checkout**, which is the point. KYC
+  Sentinel can be checked against a tagged framework beside it —
+  `test_pin_satisfies_the_code.py` does exactly that — but KYC is an exception:
+  it lives next to the framework because it is the demo tenant. Real tenants are
+  separate repositories, monitored and traced by an AgentSmith with no access to
+  their code, and a guard needing a sibling directory is a guard they cannot
+  run. This one reads the installed distribution and the config file.
+- **Warns rather than refuses**, deliberately. A tenant one line ahead of its own
+  declaration is not a safety problem, and refusing would make the upgrade
+  order-dependent — bump the pin and the declaration in either order and one
+  boot fails. `resolve_tenant_id` refuses because an unattributed run corrupts
+  the budget ledger and the audit trail; this is not that.
+- Compared at **minor** granularity — what the compatibility matrix is written
+  at and what the scaffold declares. Warning on every patch release teaches an
+  operator to ignore the warning.
+
 ## [1.3.0] — 2026-08-27
 
 The observability release. Metrics that reach a collector, a trace that survives

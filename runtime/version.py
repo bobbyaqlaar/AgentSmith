@@ -38,9 +38,12 @@ emits. `UNKNOWN` when even that cannot be determined — never a guess.
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 DIST_NAME = "agentsmith-runtime"
 
@@ -109,7 +112,111 @@ def is_source_checkout(version: Optional[str] = None) -> bool:
     )
 
 
+# ── Declared versus installed ─────────────────────────────────────────────────
+
+_mismatch_warned = False
+
+
+def _minor_series(version: str) -> Optional[tuple[int, int]]:
+    """`(major, minor)` from `1.3.0`, `1.3.x`, `1.3.0+src`, or None.
+
+    MINOR granularity on purpose. It is the granularity the compatibility matrix
+    in CHANGELOG.md is written at — its rows are `1.3.x` — and it is what
+    `.agenticframework/tenant.yaml` declares, because the scaffold writes
+    `1.3.x` too. Comparing patch levels would warn on every patch release,
+    which teaches an operator to ignore the warning.
+    """
+    m = re.match(r"^(\d+)\.(\d+)\.", version.strip())
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    m = re.match(r"^(\d+)\.(\d+)\.[xX*]$", version.strip())
+    return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+def warn_if_declared_version_differs(root: Optional[Path] = None) -> Optional[str]:
+    """Warn once when `framework.version` disagrees with what is installed.
+
+    Returns the warning text, or None when there is nothing to say — so a caller
+    can surface it its own way and a test can assert on it without capturing
+    logs.
+
+    WHY THIS EXISTS. `framework.version` has been declared in
+    `.agenticframework/tenant.yaml` since the scaffold shipped and read by
+    nothing — the same declared-but-unenforced shape as `tenant.id`,
+    `budget.monthly_usd_cap` and `workflow.engine` before those were closed. And
+    `ai-tenant-init` writes that declaration but no `requirements.txt` and no
+    pin, so a tenant is scaffolded stating a version that nothing installs and
+    nothing checks.
+
+    That gap is invisible in the framework's own repo and in KYC Sentinel, both
+    of which have a framework checkout to compare against. It is the ONLY check
+    available to the tenants that matter: separate repositories, monitored and
+    traced by an AgentSmith that has no access to their code. This needs no git,
+    no tags and no checkout — just the installed distribution.
+
+    WARNS, NEVER RAISES. A tenant one line ahead of its own declaration is not a
+    safety problem, and refusing to start would make the upgrade order-dependent
+    — bump the pin and the declaration in either order and one boot fails.
+    `resolve_tenant_id` refuses because an unattributed run corrupts the budget
+    ledger and the audit trail; this is not that.
+    """
+    global _mismatch_warned
+    if _mismatch_warned:
+        return None
+
+    running = framework_version()
+    if running == UNKNOWN:
+        # Nothing to compare against. Reported rather than silent: a runtime
+        # that cannot name itself is also a runtime whose telemetry carries
+        # `unknown`, and an operator should hear that here rather than find it
+        # on a fleet dashboard.
+        _mismatch_warned = True
+        text = (
+            "AgentSmith cannot determine its own version — neither an installed "
+            "`agentsmith-runtime` distribution nor a readable pyproject.toml. "
+            "Telemetry will report the framework version as 'unknown'."
+        )
+        logger.warning(text)
+        return text
+
+    from runtime.config import config_get
+
+    declared = config_get("framework.version", root)
+    if declared is None or not str(declared).strip():
+        # Not scaffolded, or scaffolded without the key. A normal state for a
+        # repo that has not adopted the config file, and not worth a warning —
+        # same reasoning as tenant_id_from_config returning None.
+        return None
+
+    want = _minor_series(str(declared))
+    have = _minor_series(running)
+    if want is None:
+        _mismatch_warned = True
+        text = (
+            f"framework.version={declared!r} in .agenticframework/tenant.yaml is "
+            f"not a version this can read (expected e.g. '1.3.x' or '1.3.0'); "
+            f"the running framework is {running}."
+        )
+        logger.warning(text)
+        return text
+    if have is None or want == have:
+        return None
+
+    _mismatch_warned = True
+    text = (
+        f"AgentSmith {running} is running, but "
+        f".agenticframework/tenant.yaml declares framework.version={declared!r}. "
+        f"Nothing installs from that declaration — it is documentation — so the "
+        f"two can drift silently. Telemetry from this process will report "
+        f"{running}, which is what an Ops Portal sees. Bump the declaration, or "
+        f"the dependency pin, so they agree."
+    )
+    logger.warning(text)
+    return text
+
+
 def _reset_cache() -> None:
     """For tests only."""
-    global _cached
+    global _cached, _mismatch_warned
     _cached = None
+    _mismatch_warned = False

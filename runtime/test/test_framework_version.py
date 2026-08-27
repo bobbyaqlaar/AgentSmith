@@ -167,3 +167,115 @@ def test_a_pinned_tenant_would_send_none_of_this() -> None:
 
 def test_the_version_is_json_serialisable_for_the_post() -> None:
     json.dumps({"frameworkVersion": version_mod.framework_version()})
+
+
+# ── Declared versus installed ────────────────────────────────────────────────
+#
+# `framework.version` in .agenticframework/tenant.yaml has been declared since
+# the scaffold shipped and read by nothing, and `ai-tenant-init` writes that
+# declaration but no requirements.txt and no pin — so a tenant is scaffolded
+# stating a version that nothing installs and nothing checks.
+#
+# This is the only check available to the tenants that matter. KYC Sentinel is
+# an exception: it lives beside the framework and can be compared against a
+# checkout with tags. Real tenants are separate repositories, monitored and
+# traced by an AgentSmith with no access to their code, so a guard that needs
+# git, tags or a sibling directory is a guard they cannot run.
+
+
+def _tenant_root(tmp_path, declared: str):
+    cfg = tmp_path / ".agenticframework"
+    cfg.mkdir()
+    (cfg / "tenant.yaml").write_text(
+        f'tenant:\n  id: t\nframework:\n  version: "{declared}"\n', encoding="utf-8"
+    )
+    return tmp_path
+
+
+def test_a_matching_declaration_says_nothing(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.3.4")
+    version_mod._reset_cache()
+    assert version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "1.3.x")) is None
+
+
+def test_a_patch_release_is_not_a_mismatch(tmp_path, monkeypatch) -> None:
+    """Minor granularity, which is what the compatibility matrix is written at
+    and what the scaffold declares. Warning on every patch release teaches an
+    operator to ignore the warning."""
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.3.9")
+    version_mod._reset_cache()
+    assert version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "1.3.0")) is None
+
+
+def test_a_source_checkout_matches_its_declared_series(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: None)
+    monkeypatch.setattr(version_mod, "_checkout_version", lambda: "1.3.0")
+    version_mod._reset_cache()
+    assert version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "1.3.x")) is None
+
+
+def test_a_different_minor_series_warns(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.2.0")
+    version_mod._reset_cache()
+    text = version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "1.3.x"))
+    assert text and "1.2.0" in text and "1.3.x" in text
+    assert "Ops Portal sees" in text, "the operator needs to know what the fleet view will show"
+
+
+def test_it_warns_once_per_process(tmp_path, monkeypatch) -> None:
+    """A per-call warning on a worker that logs at startup is noise; a
+    per-process one is a fact."""
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.2.0")
+    version_mod._reset_cache()
+    root = _tenant_root(tmp_path, "1.3.x")
+    assert version_mod.warn_if_declared_version_differs(root) is not None
+    assert version_mod.warn_if_declared_version_differs(root) is None
+
+
+def test_no_declaration_is_silent(tmp_path, monkeypatch) -> None:
+    """A repo that has not adopted the config file is a normal state — the same
+    reasoning as tenant_id_from_config returning None rather than raising."""
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.3.0")
+    version_mod._reset_cache()
+    (tmp_path / ".agenticframework").mkdir()
+    (tmp_path / ".agenticframework" / "tenant.yaml").write_text("tenant:\n  id: t\n")
+    assert version_mod.warn_if_declared_version_differs(tmp_path) is None
+
+
+def test_an_unreadable_declaration_is_reported_not_ignored(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.3.0")
+    version_mod._reset_cache()
+    text = version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "latest"))
+    assert text and "not a version this can read" in text
+
+
+def test_an_unknown_running_version_is_reported(tmp_path, monkeypatch) -> None:
+    """A runtime that cannot name itself also emits `unknown` on the wire. The
+    operator should hear that here, not find it on a fleet dashboard."""
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: None)
+    monkeypatch.setattr(version_mod, "_checkout_version", lambda: None)
+    version_mod._reset_cache()
+    text = version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "1.3.x"))
+    assert text and "cannot determine its own version" in text
+
+
+def test_it_never_raises(tmp_path, monkeypatch) -> None:
+    """The control: a version check that breaks startup is worse than the drift
+    it reports."""
+    monkeypatch.setattr(version_mod, "_installed_version", lambda: "1.2.0")
+    version_mod._reset_cache()
+    version_mod.warn_if_declared_version_differs(_tenant_root(tmp_path, "9.9.x"))
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ROOT / "runtime" / "worker.py",
+        ROOT / "examples" / "oil-price-agent" / "worker.py",
+        ROOT.parent / "KYC_Sentinel" / "worker.py",
+    ],
+)
+def test_every_worker_entrypoint_runs_the_check(path) -> None:
+    if not path.exists():
+        pytest.skip(f"{path} not present")
+    assert "warn_if_declared_version_differs()" in path.read_text(encoding="utf-8")
