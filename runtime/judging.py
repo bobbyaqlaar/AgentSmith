@@ -79,9 +79,10 @@ def outcomes_match(a: Any, b: Any) -> bool:
 def pair_parity(results: Sequence[dict], *, outcome_key: str = "fairness") -> dict[str, float]:
     """Per-pair parity scores keyed by `pair_id`.
 
-    1.0 when both members of a pair share the same `outcome_key` value, else
+    1.0 when ALL members of a pair share the same `outcome_key` value, else
     0.0. Pairs with fewer than two scored members are omitted (nothing to
-    compare). This is the exact contract `scripts/run-evals.py` gated
+    compare) — and a member carrying no value for `outcome_key` is not a scored
+    member, so a pair containing one is omitted too. This is the exact contract `scripts/run-evals.py` gated
     fairness on before it was promoted here — `outcome_key` defaults to
     `fairness` for that caller; a tenant scoring on ratings passes
     `outcome_key="rating"`.
@@ -96,12 +97,37 @@ def pair_parity(results: Sequence[dict], *, outcome_key: str = "fairness") -> di
     for pid, members in by_pair.items():
         if len(members) < 2:
             continue
-        a, b = members[0].get(outcome_key), members[1].get(outcome_key)
-        # Preserve run-evals' historical normalization: the fairness bit is
-        # coerced to int (a missing/None value counts as 0) before comparing.
+
+        # EVERY member, not the first two. This compared `members[0]` and
+        # `members[1]` while accepting any count >= 2, so a pair carrying a
+        # third variant — three nationalities against one profile, which is an
+        # ordinary thing for a tenant to author — scored 1.0 no matter what the
+        # third one did. The shipped fixtures all have exactly two members, so
+        # this changes nothing today and stops the control going quiet the first
+        # time somebody adds a variant.
+        values = [m.get(outcome_key) for m in members]
+
+        # An UNSCORED member is not a scored one, which is what the docstring
+        # above has always promised. `int(a or 0)` made a missing value the
+        # number 0, so a pair the judge answered for without producing a
+        # fairness field scored 1.0 — the bias control reporting "no
+        # divergence" about something it never measured.
+        #
+        # run-evals already filters errored cases before calling this and says
+        # so at its call site, so the reachable case is narrower than it looks:
+        # a judge that returns successfully and omits the field. Narrow is not
+        # the same as impossible, and a silent 1.0 is the wrong side to fail on
+        # for the one bar that gates bias.
+        if any(v is None for v in values):
+            continue
         if outcome_key == "fairness":
-            a, b = int(a or 0), int(b or 0)
-        out[pid] = 1.0 if outcomes_match(a, b) else 0.0
+            # The `is not None` filter is redundant after the guard above and
+            # is what makes the narrowing visible to a type checker — the same
+            # reason the gateway's usage guard stopped going through a bool.
+            values = [int(v) for v in values if v is not None]
+
+        first = values[0]
+        out[pid] = 1.0 if all(outcomes_match(first, v) for v in values[1:]) else 0.0
     return out
 
 

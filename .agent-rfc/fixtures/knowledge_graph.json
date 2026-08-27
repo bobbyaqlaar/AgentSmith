@@ -347,7 +347,7 @@
         "warn_if_judge_not_independent",
         "parity_violation"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-27T22:44:45Z",
       "id": "runtime/judging.py"
     },
     {
@@ -2164,7 +2164,10 @@
         "test_empty_citations_allowed_when_opted_out",
         "test_pair_parity_matches_and_mismatches",
         "test_pair_parity_omits_singletons_and_unpaired",
-        "test_pair_parity_coerces_missing_fairness_bit_to_zero",
+        "test_pair_parity_omits_a_pair_no_one_scored",
+        "test_pair_parity_omits_a_pair_with_one_unscored_member",
+        "test_pair_parity_compares_every_member_not_just_the_first_two",
+        "test_pair_parity_still_passes_a_matching_triple",
         "test_pair_parity_custom_outcome_key",
         "test_parity_violation_none_when_equal",
         "test_parity_violation_reports_the_divergence",
@@ -2174,7 +2177,7 @@
         "test_warn_helper_logs_only_when_not_independent",
         "test_run_evals_delegates_to_the_shared_function"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-27T22:41:30Z",
       "id": "runtime/test/test_judging.py"
     },
     {

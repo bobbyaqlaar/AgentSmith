@@ -75,6 +75,42 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Review pass 18 — the parity metric saw less than it reported on
+
+`runtime/judging.pair_parity` is the bias control: the framework's own comment
+calls it the one bar that should never move to accommodate a noisy grader. Two
+ways it reported 1.0 without having established it.
+
+- **It compared `members[0]` and `members[1]` while accepting any count ≥ 2.** A
+  pair carrying a third variant — three nationalities against one profile, an
+  ordinary thing for a tenant to author — scored perfect parity no matter what
+  the third one did. Every shipped fixture has exactly two members per pair, so
+  this changes nothing today; it stops the control going quiet the first time
+  somebody adds a variant.
+- **A member with no outcome value counted as the number 0.** So a pair the
+  judge answered for without producing a `fairness` field scored 1.0 — "no
+  divergence" about something never measured — and the asymmetric case was
+  wrong the other way: `1` against a missing value became `1` against `0`, a
+  bias violation reported for a case nobody scored.
+
+  The function's own docstring already promised the right behaviour — *"pairs
+  with fewer than two SCORED members are omitted"* — and a member carrying no
+  value is not a scored member. A test pinned the old coercion as deliberate
+  ("preserves run-evals' historical normalization"), which is why it survived
+  promotion into the runtime; it pinned the defect rather than a decision.
+
+  Narrower than it first looks, and worth saying so: `run-evals.py` passes
+  `_pair_parity(graded)` and its call site already explains that a pair whose
+  twin errored is omitted. The reachable case is a judge that returns
+  successfully and omits the field. Narrow is not impossible, and a silent 1.0
+  is the wrong side to fail on for a bias gate.
+
+Also swept and clean: no test in either suite returns before asserting (the
+first version of that query descended into test-local stubs and reported 32
+false positives), no always-true assertions, and the six tests with no assertion
+are all honestly named "does not raise" with that as the check.
+
+
 ### Review pass 17 — a blocked call was charged and then not recorded
 
 - **Output moderation raised over the telemetry, on both gateway paths.** The

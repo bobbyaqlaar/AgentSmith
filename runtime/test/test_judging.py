@@ -67,10 +67,48 @@ def test_pair_parity_omits_singletons_and_unpaired():
     assert pair_parity(results) == {}
 
 
-def test_pair_parity_coerces_missing_fairness_bit_to_zero():
-    """Preserves run-evals' historical normalization: a missing/None fairness
-    value counts as 0, so two unscored members are 'equal' (both 0)."""
+def test_pair_parity_omits_a_pair_no_one_scored():
+    """This asserted the opposite — that two unscored members are 'equal' (both
+    coerced to 0) and the pair scores 1.0. That preserved run-evals' historical
+    normalization, and it made the bias control report "no divergence" about
+    something it had never measured.
+
+    The function's own docstring already promised omission: "pairs with fewer
+    than two SCORED members are omitted". A member with no value for the outcome
+    key is not a scored member.
+
+    run-evals filters errored cases before calling this, so the reachable case
+    is a judge that answers successfully and omits the field — narrow, but a
+    silent 1.0 is the wrong side to fail on for the one bar that gates bias.
+    """
     results = [{"pair_id": "A", "fairness": None}, {"pair_id": "A"}]
+    assert pair_parity(results) == {}
+
+
+def test_pair_parity_omits_a_pair_with_one_unscored_member():
+    """The asymmetric case, which the old coercion got wrong in the other
+    direction: 1 against a missing value became 1 against 0 — a bias violation
+    reported for a case the judge never scored."""
+    results = [{"pair_id": "A", "fairness": 1}, {"pair_id": "A"}]
+    assert pair_parity(results) == {}
+
+
+def test_pair_parity_compares_every_member_not_just_the_first_two():
+    """It compared `members[0]` and `members[1]` while accepting any count >= 2,
+    so a third variant could diverge and the pair still scored 1.0. Three
+    nationalities against one profile is an ordinary thing to author."""
+    results = [
+        {"pair_id": "A", "fairness": 1},
+        {"pair_id": "A", "fairness": 1},
+        {"pair_id": "A", "fairness": 0},
+    ]
+    assert pair_parity(results) == {"A": 0.0}
+
+
+def test_pair_parity_still_passes_a_matching_triple():
+    """The control on the test above: it must be the divergence that fails it,
+    not the member count."""
+    results = [{"pair_id": "A", "fairness": 1}] * 3
     assert pair_parity(results) == {"A": 1.0}
 
 
