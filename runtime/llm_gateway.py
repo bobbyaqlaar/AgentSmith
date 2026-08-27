@@ -819,6 +819,7 @@ class LLMGateway:
         started_ns: Optional[int] = None,
         messages: Any = None,
         prompt_template_id: Optional[str] = None,
+        outcome: Optional[str] = None,
     ) -> None:
         """Record gateway facts: onto the active span, or onto one we create.
 
@@ -853,7 +854,7 @@ class LLMGateway:
                 )
                 self._emit_call_metrics(
                     role, model_id, degrade_tier, cost_usd, ttft_ms,
-                    input_tokens, output_tokens,
+                    input_tokens, output_tokens, outcome,
                 )
                 return
 
@@ -889,7 +890,7 @@ class LLMGateway:
                 )
                 self._emit_call_metrics(
                     role, model_id, degrade_tier, cost_usd, ttft_ms,
-                    input_tokens, output_tokens,
+                    input_tokens, output_tokens, outcome,
                 )
             finally:
                 span.end()
@@ -905,8 +906,14 @@ class LLMGateway:
         ttft_ms: Optional[float],
         input_tokens: Optional[int],
         output_tokens: Optional[int],
+        outcome: Optional[str] = None,
     ) -> None:
         """Counters and histograms alongside the span.
+
+        `outcome` overrides the success/degraded derivation. A moderation block
+        is a real outcome of a real call — it was made and paid for — and
+        deriving the dimension from `degrade_tier` alone could only ever say
+        "success" for it.
 
         Spans answer "what happened in this request"; they are the wrong
         instrument for "what fraction of requests failed", which is sampled,
@@ -918,7 +925,7 @@ class LLMGateway:
             tenant_id=self.tenant_id,
             model=model_id,
             role=role,
-            outcome="degraded" if degrade_tier else "success",
+            outcome=outcome or ("degraded" if degrade_tier else "success"),
             ttft_ms=ttft_ms,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -1229,16 +1236,16 @@ class LLMGateway:
         cost_usd = estimated_cost_usd if (reserved and estimated_cost_usd) else 0.0
 
         # Output moderation (SEC-MOD-001) — before success status (audit truth).
+        # Caught rather than raised through, for the reason `complete()` spells
+        # out: re-raising here jumps over `_record_span_attributes`, and a
+        # blocked call that was already charged then emits no cost, no TTFT and
+        # no call counter. The streaming path is the sibling that had the same
+        # defect and would have kept it.
+        blocked: Optional[Exception] = None
         try:
             apply_output_moderation(text, raise_on_block=True)
         except (ModerationBlockedError, ModerationHookRequiredError) as exc:
-            self._report_run_status(
-                run_id,
-                "failed",
-                workflow_id=workflow_id,
-                error_summary=str(exc)[:500],
-            )
-            raise
+            blocked = exc
 
         self._record_span_attributes(
             role,
@@ -1255,7 +1262,18 @@ class LLMGateway:
             cost_estimated=True,
             started_ns=started_ns,
             messages=messages,
+            outcome="blocked" if blocked else None,
         )
+
+        if blocked is not None:
+            self._report_run_status(
+                run_id,
+                "failed",
+                workflow_id=workflow_id,
+                error_summary=str(blocked)[:500],
+            )
+            raise blocked
+
         self._report_run_status(
             run_id,
             "degraded" if degrade_tier else "success",
@@ -1584,16 +1602,24 @@ class LLMGateway:
             self._budget.add_spend(self.tenant_id, cost_usd)
 
         # Output moderation (SEC-MOD-001) — before success status (audit truth).
+        #
+        # CAUGHT, not raised through. Re-raising here jumped over
+        # `_record_span_attributes` below, and that call is what emits the LLM
+        # span attributes AND the `agentsmith.llm.*` counters. So a blocked call
+        # was charged to the budget ledger a dozen lines up and then emitted no
+        # cost attribute, no token attributes and no call counter at all: the
+        # ledger and the telemetry disagreed by exactly the moderation-blocked
+        # calls, and the `outcome` dimension that exists to make an error rate
+        # computable never saw the one outcome a security control produces.
+        #
+        # The call happened and was paid for, so it is recorded. Only the run
+        # STATUS waits for moderation, which is the audit-truth ordering this
+        # comment has always been about.
+        blocked: Optional[Exception] = None
         try:
             apply_output_moderation(text, raise_on_block=True)
         except (ModerationBlockedError, ModerationHookRequiredError) as exc:
-            self._report_run_status(
-                run_id,
-                "failed",
-                workflow_id=workflow_id,
-                error_summary=str(exc)[:500],
-            )
-            raise
+            blocked = exc
 
         self._record_span_attributes(
             role,
@@ -1609,7 +1635,18 @@ class LLMGateway:
             cost_estimated=not usage_reported,
             started_ns=started_ns,
             messages=messages,
+            outcome="blocked" if blocked else None,
         )
+
+        if blocked is not None:
+            self._report_run_status(
+                run_id,
+                "failed",
+                workflow_id=workflow_id,
+                error_summary=str(blocked)[:500],
+            )
+            raise blocked
+
         self._report_run_status(
             run_id,
             "degraded" if degrade_tier else "success",

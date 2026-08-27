@@ -153,3 +153,103 @@ def test_off_mode_never_loads_the_declaration(tenant, monkeypatch):
     _declare(tenant, "tenant_mod:blocks_everything")
     assert mod.apply_output_moderation("forbidden").allowed is True
     assert mod.get_output_moderator() is None
+
+
+# ── A blocked call still happened, and still cost money ──────────────────────
+
+
+def test_a_moderation_block_still_records_the_call(monkeypatch) -> None:
+    """The budget is charged before output moderation runs — the provider was
+    called and the tokens were paid for. Re-raising the block jumped over
+    `_record_span_attributes`, which emits the span attributes AND the
+    `agentsmith.llm.*` counters, so the ledger and the telemetry disagreed by
+    exactly the blocked calls.
+
+    An `outcome` dimension exists on the call counter to make an error rate
+    computable without scanning spans. A moderation block is the one outcome a
+    security control produces, and it was the one the counter never saw.
+    """
+    import asyncio
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from _gateway_fixtures import fake_gateway
+
+    from runtime.llm_gateway import ModerationBlockedError
+
+    gw = fake_gateway()
+    recorded: dict = {}
+    gw._record_span_attributes = lambda *a, **k: recorded.update(k, positional=a)
+
+    def _block(text, raise_on_block=False):
+        raise ModerationBlockedError("blocked by the tenant's classifier")
+
+    monkeypatch.setattr("runtime.llm_gateway.apply_output_moderation", _block)
+
+    async def _invoke(cfg, messages, max_tokens, temperature):
+        return "some output", 10, 20
+
+    gw._invoke = _invoke
+
+    with pytest.raises(ModerationBlockedError):
+        asyncio.run(gw.complete("hello"))
+
+    assert recorded, "a blocked call emitted no span attributes at all"
+    assert recorded.get("outcome") == "blocked", (
+        f"the call was recorded with outcome={recorded.get('outcome')!r} — a "
+        "blocked call must not be counted as a success"
+    )
+    assert recorded.get("input_tokens") == 10, "the tokens it was charged for are absent"
+
+
+def test_the_streaming_path_records_a_blocked_call_too(monkeypatch) -> None:
+    """The sibling. `complete_stream` had the identical shape — moderation
+    raising over `_record_span_attributes` — and a fix applied to one of two
+    identical neighbours is this codebase's most repeated defect.
+
+    Driven through the real transport stub the TTFT tests use, so the assertion
+    is about the gateway's own sequencing rather than about a stand-in for it.
+    """
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from runtime.llm_gateway import ModerationBlockedError
+
+    import test_ttft_stream as tts
+
+    gw = tts.LLMGateway.__new__(tts.LLMGateway)
+    gw.tenant_id = "t"
+    gw.models = {"developer": {"id": "test-model", "provider": "ollama",
+                               "endpoint": "http://127.0.0.1:11434/v1"}}
+    gw.budget_cap_usd = 10.0
+    gw._idempotency = None
+    gw.get_budget_status = MagicMock(return_value={"ok": True, "remaining_usd": 10})
+    gw._resolve_role = MagicMock(return_value=("developer", None))
+    gw._coerce_messages = MagicMock(return_value=[{"role": "user", "content": "hi"}])
+    gw._report_run_status = MagicMock()
+    gw._degrade_chain = MagicMock(return_value=["developer"])
+    gw._is_free_tier = MagicMock(return_value=True)
+
+    recorded: dict = {}
+    gw._record_span_attributes = lambda *a, **k: recorded.update(k)
+
+    def _block(text, raise_on_block=False):
+        raise ModerationBlockedError("blocked")
+
+    monkeypatch.setattr("runtime.llm_gateway.apply_output_moderation", _block)
+
+    fake = tts._FakeStreamResp(tts.SSE)
+    client = MagicMock()
+    client.stream = MagicMock(return_value=fake)
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch("httpx.AsyncClient", return_value=client):
+        with pytest.raises(ModerationBlockedError):
+            asyncio.run(gw.complete_stream("hi", model_hint="developer"))
+
+    assert recorded, "a blocked streamed call emitted no span attributes at all"
+    assert recorded.get("outcome") == "blocked", (
+        f"streaming recorded outcome={recorded.get('outcome')!r} for a blocked call"
+    )

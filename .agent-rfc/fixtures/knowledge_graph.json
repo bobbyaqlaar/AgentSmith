@@ -402,7 +402,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-25T22:05:55Z",
+      "last_modified": "2026-08-27T22:29:01Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -2558,9 +2558,13 @@
         "test_required_still_raises_without_a_declaration",
         "test_use_declared_false_isolates_the_harness_assertion",
         "test_imperative_registration_wins",
-        "test_off_mode_never_loads_the_declaration"
+        "test_off_mode_never_loads_the_declaration",
+        "test_a_moderation_block_still_records_the_call",
+        "test_the_streaming_path_records_a_blocked_call_too",
+        "_block",
+        "_invoke"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-27T22:28:26Z",
       "id": "runtime/test/test_moderation_declared.py"
     },
     {

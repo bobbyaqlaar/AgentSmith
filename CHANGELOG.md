@@ -75,6 +75,38 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Review pass 17 — a blocked call was charged and then not recorded
+
+- **Output moderation raised over the telemetry, on both gateway paths.** The
+  budget is charged a dozen lines before `apply_output_moderation` runs — the
+  provider was called and the tokens were paid for — and re-raising the block
+  jumped straight over `_record_span_attributes`, which emits the LLM span
+  attributes AND the `agentsmith.llm.*` counters. So a blocked call left the
+  budget ledger and the telemetry disagreeing by exactly the moderation-blocked
+  calls: spend rose, `llm.gateway.cost_usd` never mentioned it, and the call
+  counter never saw it at all.
+
+  The `outcome` dimension exists on that counter so an error rate is a division
+  rather than a span scan — and the one outcome a security control produces was
+  the one outcome it could not express, since `outcome` was derived as
+  `"degraded" if degrade_tier else "success"`. It takes an override now, and a
+  blocked call records `outcome="blocked"`.
+
+  The block is caught rather than raised through; only the run STATUS still
+  waits on moderation, which is the audit-truth ordering that comment was always
+  about.
+
+- **`complete_stream` had the identical shape.** Found by looking, because a fix
+  applied to one of two identical neighbours is this codebase's most repeated
+  defect. Both are now covered, the streaming one driven through the same
+  transport stub the TTFT tests use rather than a stand-in for the gateway's own
+  sequencing.
+
+Found by sweeping for the lever added in pass 14 — a `raise` sitting between two
+state writes — over every function in `runtime/` and `scripts/`. Five candidates,
+three of them tests or a discarded half-built object, one of them this.
+
+
 ### The framework's tests no longer reach into a tenant's checkout
 
 Five test locations resolved a sibling `../KYC_Sentinel`: three sweeping its
