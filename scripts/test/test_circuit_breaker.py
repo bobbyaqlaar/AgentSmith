@@ -11,6 +11,7 @@ isolated to a tmp repo root (the breaker persists under
 
 from __future__ import annotations
 
+import importlib
 import sys
 import time
 from pathlib import Path
@@ -186,3 +187,68 @@ def test_a_fresh_empty_state_carries_no_events():
         "a freshly loaded empty state carries events appended to an earlier one"
     )
     assert circuit_breaker._EMPTY_STATE["events"] == []
+
+
+# ── Config read at import time ────────────────────────────────────────────────
+#
+# These reload the module deliberately: the constants are module-level, so the
+# failure being tested is an ImportError in every consumer rather than a bad
+# value in one call.
+
+
+@pytest.fixture
+def _restore_breaker_config():
+    """Reload the module back to the ambient environment after each case."""
+    yield
+    importlib.reload(circuit_breaker)
+
+
+@pytest.mark.parametrize(
+    "var, attribute, expected",
+    [
+        ("AGENT_MONTHLY_USD_CAP", "MONTHLY_USD_CAP", 150.0),
+        ("AGENT_BURST_TOKEN_LIMIT", "BURST_TOKEN_LIMIT", 50_000),
+        ("AGENT_COST_PER_INPUT_TOKEN", "COST_PER_INPUT_TOKEN", 0.000003),
+        ("AGENT_COST_PER_OUTPUT_TOKEN", "COST_PER_OUTPUT_TOKEN", 0.000015),
+    ],
+)
+def test_a_set_but_empty_limit_does_not_break_the_import(
+    monkeypatch, capsys, _restore_breaker_config, var, attribute, expected
+):
+    """`VAR=` in a manifest is an empty string, not an absent key.
+
+    int()/float() of "" raises, and these run at module level, so the whole
+    module failed to import. Both consumers treat a breaker they cannot import
+    as "proceed unmetered" — so an empty variable in a k8s manifest turned the
+    spend cap off rather than setting it.
+    """
+    monkeypatch.setenv(var, "")
+    reloaded = importlib.reload(circuit_breaker)
+    assert getattr(reloaded, attribute) == expected
+
+    # And QUIETLY. An empty variable is an absent value, not a mistake; the
+    # malformed case below is the one that warrants a warning. Without this
+    # assertion the empty-string guard can be removed entirely and the value
+    # still comes out right, by way of the ValueError path — mutation testing
+    # found exactly that, so the distinction the guard exists for was untested.
+    assert var not in capsys.readouterr().err
+
+
+def test_a_malformed_limit_falls_back_and_says_so(
+    monkeypatch, capsys, _restore_breaker_config
+):
+    """A typo is not an empty value: it gets the default AND a warning.
+
+    Silence here would be the wrong trade — an operator who typed a cap and got
+    the default needs to know the number they set is not the number in force.
+    """
+    monkeypatch.setenv("AGENT_MONTHLY_USD_CAP", "one hundred")
+    reloaded = importlib.reload(circuit_breaker)
+    assert reloaded.MONTHLY_USD_CAP == 150.0
+    assert "AGENT_MONTHLY_USD_CAP" in capsys.readouterr().err
+
+
+def test_a_valid_limit_is_still_honoured(monkeypatch, _restore_breaker_config):
+    """The guard must not swallow the value it exists to protect."""
+    monkeypatch.setenv("AGENT_MONTHLY_USD_CAP", "42.5")
+    assert importlib.reload(circuit_breaker).MONTHLY_USD_CAP == 42.5

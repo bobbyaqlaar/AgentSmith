@@ -16,26 +16,35 @@ from __future__ import annotations
 
 import copy
 import json
-import os
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Moved up from below the config block, where it carried an E402 suppression.
+# The constants below now call env_number, so the import has to precede
+# them; nothing here imports circuit_breaker back, so the late placement
+# was not guarding a cycle.
+from _shared import env_number, fixtures_path
+
 # ── Config ────────────────────────────────────────────────────────────────────
 
 BURST_WINDOW_SECONDS = 300  # 5 minutes
-BURST_TOKEN_LIMIT = int(os.environ.get("AGENT_BURST_TOKEN_LIMIT", "50000"))
-MONTHLY_USD_CAP = float(os.environ.get("AGENT_MONTHLY_USD_CAP", "150.0"))
+# Read through env_number, not int()/float() directly. These are MODULE-LEVEL,
+# so a malformed or empty value here is not a bad config value — it is an
+# ImportError, raised at `from circuit_breaker import ...` in every consumer.
+# Both consumers treat a breaker they cannot import as "proceed unmetered", so
+# the failure mode of a stray `AGENT_MONTHLY_USD_CAP=` in a manifest was the
+# spend cap quietly ceasing to apply.
+BURST_TOKEN_LIMIT = env_number("AGENT_BURST_TOKEN_LIMIT", 50_000, cast=int)
+MONTHLY_USD_CAP = env_number("AGENT_MONTHLY_USD_CAP", 150.0)
 
 # Approximate blended cost per token in USD (conservative estimate).
 # Override via env for more accurate per-model pricing.
-COST_PER_INPUT_TOKEN = float(os.environ.get("AGENT_COST_PER_INPUT_TOKEN", "0.000003"))
-COST_PER_OUTPUT_TOKEN = float(os.environ.get("AGENT_COST_PER_OUTPUT_TOKEN", "0.000015"))
+COST_PER_INPUT_TOKEN = env_number("AGENT_COST_PER_INPUT_TOKEN", 0.000003)
+COST_PER_OUTPUT_TOKEN = env_number("AGENT_COST_PER_OUTPUT_TOKEN", 0.000015)
 
 # ── State file ────────────────────────────────────────────────────────────────
-
-from _shared import fixtures_path  # noqa: E402
 
 
 def _cache_path() -> Path:

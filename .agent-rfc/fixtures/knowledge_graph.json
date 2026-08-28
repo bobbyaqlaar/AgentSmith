@@ -734,7 +734,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-25T22:00:39Z",
+      "last_modified": "2026-08-28T22:08:12Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -798,12 +798,13 @@
         "load_script",
         "fixtures_path",
         "RateLimiter",
+        "env_number",
         "rate_limiter_from_env",
         "__init__",
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-28T22:08:35Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -834,7 +835,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-28T22:10:03Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -899,7 +900,7 @@
         "__init__",
         "__repr__"
       ],
-      "last_modified": "2026-08-28T19:52:08Z",
+      "last_modified": "2026-08-28T22:06:10Z",
       "id": "scripts/cost_router.py"
     },
     {
@@ -1275,9 +1276,13 @@
         "test_a_burst_trip_still_bills_the_month",
         "test_every_burst_tripped_call_is_still_on_the_ledger",
         "test_none_token_counts_are_refused_by_name",
-        "test_a_fresh_empty_state_carries_no_events"
+        "test_a_fresh_empty_state_carries_no_events",
+        "_restore_breaker_config",
+        "test_a_set_but_empty_limit_does_not_break_the_import",
+        "test_a_malformed_limit_falls_back_and_says_so",
+        "test_a_valid_limit_is_still_honoured"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-28T22:08:33Z",
       "id": "scripts/test/test_circuit_breaker.py"
     },
     {
@@ -3914,6 +3919,17 @@
       ],
       "last_modified": "2026-08-28T20:12:57Z",
       "id": "runtime/pii_patterns.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_unimportable_breaker",
+        "test_llm_call_survives_a_breaker_it_cannot_import",
+        "test_the_unmetered_warning_names_the_cause"
+      ],
+      "last_modified": "2026-08-28T22:07:51Z",
+      "id": "scripts/test/test_breaker_fail_open.py"
     }
   ],
   "edges": [

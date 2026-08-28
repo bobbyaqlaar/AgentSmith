@@ -650,9 +650,31 @@ def call(
         # There is no reservation to fall back on here — cost_router has no
         # budget ledger — so the honest outcome is to say the call went
         # unmetered rather than to invent a number for it.
-        from circuit_breaker import CircuitBreakerTripped, audit_token_velocity_circuit
+        # Guarded, and its own statement. This import stood bare in the middle
+        # of a request path, so any failure to load the breaker — a malformed
+        # env var read at its module level, a missing dependency — propagated
+        # out of a call whose provider request had already completed and had
+        # already been paid for. An unloadable breaker is a bookkeeping fault
+        # like any other here: say it, and let the call return.
+        try:
+            from circuit_breaker import (
+                CircuitBreakerTripped,
+                audit_token_velocity_circuit,
+            )
+        except Exception as exc:
+            breaker = None
+            print(
+                f"[cost_router] WARNING: circuit breaker unavailable "
+                f"({type(exc).__name__}: {exc}) — this call is NOT counted "
+                f"against the burst window or the monthly cap.",
+                file=sys.stderr,
+            )
+        else:
+            breaker = audit_token_velocity_circuit
 
-        if in_tok is None or out_tok is None:
+        if breaker is None:
+            pass  # already reported above
+        elif in_tok is None or out_tok is None:
             print(
                 f"[cost_router] WARNING: provider {provider!r} returned no usage "
                 f"block for model {route_result.model!r} — this call is NOT counted "
@@ -662,7 +684,7 @@ def call(
             )
         else:
             try:
-                audit_token_velocity_circuit(in_tok, out_tok)
+                breaker(in_tok, out_tok)
             except CircuitBreakerTripped as tripped:
                 # Deliberate, and narrow. The provider call above already
                 # completed and was already paid for, so there is nothing left

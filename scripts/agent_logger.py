@@ -156,21 +156,35 @@ class AgentLogger:
         # `usage` block now produces. Same split as scripts/cost_router.py: the
         # TRIP is an expected outcome and is reported as one; anything else is
         # a fault and says so.
+        # The import is its OWN try, and the call is a separate one. With both
+        # inside a single try, a failed import left `CircuitBreakerTripped`
+        # unbound while still being named by the first except clause — Python
+        # evaluates those clauses in order, so resolving the name raised
+        # UnboundLocalError and that escaped the try entirely. The handler
+        # written to keep this fail-open was the thing that raised, and it did
+        # so for a plain `AGENT_MONTHLY_USD_CAP=` in the environment.
         try:
             from circuit_breaker import (
                 CircuitBreakerTripped,
                 audit_token_velocity_circuit,
             )
-
-            audit_token_velocity_circuit(input_tokens, output_tokens)
-        except CircuitBreakerTripped as tripped:
-            print(f"[agent_logger] {tripped}", file=sys.stderr)
         except Exception as exc:
             print(
-                f"[agent_logger] WARNING: circuit breaker bookkeeping failed "
+                f"[agent_logger] WARNING: circuit breaker unavailable "
                 f"({type(exc).__name__}: {exc}) — this call is unmetered.",
                 file=sys.stderr,
             )
+        else:
+            try:
+                audit_token_velocity_circuit(input_tokens, output_tokens)
+            except CircuitBreakerTripped as tripped:
+                print(f"[agent_logger] {tripped}", file=sys.stderr)
+            except Exception as exc:
+                print(
+                    f"[agent_logger] WARNING: circuit breaker bookkeeping failed "
+                    f"({type(exc).__name__}: {exc}) — this call is unmetered.",
+                    file=sys.stderr,
+                )
         return entry
 
     # ── Internal ──────────────────────────────────────────────────────────────

@@ -545,6 +545,34 @@ class RateLimiter:
         return slept
 
 
+def env_number(var: str, default: "float | int", *, cast: Any = float) -> "float | int":
+    """A numeric env var, or `default` — never an exception.
+
+    `int(os.environ.get(VAR, "50000"))` looks defaulted and is not: the default
+    applies only when the key is ABSENT. `VAR=""` — declared with no value,
+    which is what a k8s manifest or a CI matrix produces for an unset input —
+    reaches int() as the empty string and raises. At module level, as in
+    circuit_breaker.py, that turns an empty environment variable into an
+    ImportError for every consumer of the module.
+
+    Falls back rather than raising, and says so on stderr. For a spend cap the
+    documented default is the safe value; refusing to load the breaker at all
+    is not, because the callers treat an unloadable breaker as "proceed
+    unmetered".
+    """
+    raw = (os.environ.get(var) or "").strip()
+    if not raw:
+        return default
+    try:
+        return cast(raw)
+    except (TypeError, ValueError):
+        print(
+            f"⚠️  {var}={raw!r} is not a number — using {default}",
+            file=sys.stderr,
+        )
+        return default
+
+
 def rate_limiter_from_env(var: str = "EVAL_RPM", default: float = 0.0) -> RateLimiter:
     """Build a RateLimiter from an env var naming requests-per-minute.
 
