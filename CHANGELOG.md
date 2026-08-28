@@ -75,6 +75,30 @@ version table being consulted.
 
 ## [Unreleased]
 
+### The levers split from their evidence
+
+`docs/review-levers.md` had grown to 339 lines, and 42 of them were `Caught:`
+blocks. The evidence had come to outweigh the checklist, which makes a checklist
+harder to run — the thing it is for.
+
+- **`review-levers.md` is the rules**, 200 lines, one line to a few per item.
+- **`review-lever-scalps.md` is the evidence**, one entry per lever, naming the
+  defect it earned its place with.
+
+Both halves matter and they pull in opposite directions: the checklist has to be
+short enough to work down, and the provenance has to exist or an item nobody can
+trace to a real failure gets followed with the same conviction as one that has
+caught things. Splitting is how both can be true.
+
+**Two files sharing one numbering scheme is exactly what lever 1.7 is about**, so
+`scripts/test/test_lever_scalps.py` pins them: a scalp filed under a number that
+no longer exists, a dated lever with no evidence, and a scalp whose title has
+drifted from its lever all fail. Neither file is restated in the test — it parses
+both, which is 1.7's own rule. Mutation-tested against all three.
+
+`(legacy)` items are exempt and absent from the scalps file by design.
+
+
 ### Review pass 22 — run with the two levers written last pass
 
 Both new levers found something, which is the test of whether they were worth

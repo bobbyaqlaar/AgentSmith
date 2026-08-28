@@ -1318,6 +1318,7 @@ AgentSmith/
 │   ├── team-observability.md
 │   ├── observability-audit.md   # Gap register: spans/metrics/propagation vs pillar 3
 │   ├── review-levers.md         # The checklist a review pass runs against (6 groups)
+│   ├── review-lever-scalps.md   # The defect each lever earned its place with
 │   ├── testbed-tenant-spec.md   # Proposed "KYC Sentinel" E2E testbed tenant (multi-LLM, multi-agent)
 │   ├── session-handoff/         # Cross-session working notes
 │   └── superpowers/             # Design specs + implementation plans

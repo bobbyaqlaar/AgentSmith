@@ -3856,6 +3856,20 @@
       ],
       "last_modified": "2026-08-28T12:37:43Z",
       "id": "scripts/test/test_lever_references.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_levers",
+        "_scalps",
+        "test_both_files_parse_to_something",
+        "test_no_scalp_is_orphaned",
+        "test_every_non_legacy_lever_has_a_scalp",
+        "test_the_two_files_agree_on_every_title"
+      ],
+      "last_modified": "2026-08-28T13:40:41Z",
+      "id": "scripts/test/test_lever_scalps.py"
     }
   ],
   "edges": [
