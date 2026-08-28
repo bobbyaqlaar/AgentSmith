@@ -75,6 +75,38 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Review pass 19 — the automatic fixer's own failure skipped the human
+
+`run_with_self_correction` exists to try an activity, ask a model to correct the
+payload, and — when that does not work — fall through to
+`run_with_recoverable_step`, which parks the work for a person. The correction
+step was not wrapped, and it ends in `json.loads` via
+`propose_corrected_payload`.
+
+So a model answering in prose instead of JSON — the ordinary failure of "return
+ONLY JSON" — raised `JSONDecodeError` out of the correction activity. With
+`maximum_attempts=1` that propagated out of the method and failed the workflow,
+skipping the human path entirely. **The most likely failure of the automatic
+fixer was the one that stopped an application ever reaching a person**, which is
+the class of loss the whole HITL/DLQ design exists to prevent.
+
+Both twins had it: `runtime/self_correction.run_self_correction_loop` (where it
+skipped the `__self_correction_exhausted__` result a caller is given instead of
+an exception) and `base_workflow.run_with_self_correction`. Fixed in both — a
+failed correction is a failed attempt, not a crash.
+
+`current_payload` is deliberately not reassigned when a correction fails: what
+reaches the fallback should be the last real payload, not the wreckage of a
+correction that did not parse. A test asserts the human is handed the original.
+
+Also swept, and clean: the security runners' `verify_system` delegation. Its
+`--check-redaction` path does return success when the profile is `none`, but
+`_shared.verify_system` forces `ENVIRONMENT=staging` for exactly that reason and
+says so — and `get_environment()` reads only that variable and fails closed to
+production, so there is no config a tenant could set to reach the skip. The
+mitigation is documented where the risk is.
+
+
 ### Review pass 18 — the parity metric saw less than it reported on
 
 `runtime/judging.pair_parity` is the bias control: the framework's own comment

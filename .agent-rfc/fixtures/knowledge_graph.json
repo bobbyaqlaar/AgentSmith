@@ -155,7 +155,7 @@
         "propose_corrected_payload",
         "run_self_correction_loop"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-28T09:27:32Z",
       "id": "runtime/self_correction.py"
     },
     {
@@ -2386,11 +2386,17 @@
         "FakeWorkflow",
         "test_run_with_self_correction_retries_corrected_payload",
         "test_run_with_self_correction_falls_back_to_recoverable_step_with_last_payload",
+        "test_a_failing_correction_activity_falls_through_to_the_human_path",
         "__init__",
         "execute_activity",
-        "fallback"
+        "fallback",
+        "_Fake",
+        "_recoverable",
+        "info",
+        "signal",
+        "_I"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-28T09:27:53Z",
       "id": "runtime/test/test_self_correction_workflow.py"
     },
     {
@@ -2517,11 +2523,17 @@
         "test_propose_corrected_payload_parses_json_from_fenced_response",
         "test_run_self_correction_loop_succeeds_after_one_correction",
         "test_run_self_correction_loop_returns_sentinel_when_exhausted",
+        "test_a_corrector_that_answers_in_prose_exhausts_rather_than_raising",
+        "test_the_payload_handed_on_is_the_last_real_one",
+        "test_a_working_corrector_is_unaffected",
         "__init__",
         "complete",
-        "activity_fn"
+        "activity_fn",
+        "Gateway",
+        "activity",
+        "R"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-28T09:27:08Z",
       "id": "runtime/test/test_self_correction.py"
     },
     {
@@ -2599,7 +2611,7 @@
         "human_fix_payload",
         "signal"
       ],
-      "last_modified": "2026-08-25T21:47:42Z",
+      "last_modified": "2026-08-28T09:28:20Z",
       "id": "runtime/workflows/base_workflow.py"
     },
     {
@@ -4118,6 +4130,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_structured_output.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_self_correction_workflow.py",
       "target": "runtime/__init__.py"
     },
     {

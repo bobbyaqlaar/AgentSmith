@@ -61,9 +61,23 @@ async def run_self_correction_loop(
         last_error = str(exc)
 
     for _ in range(max_self_correction_attempts):
-        current_payload = await propose_corrected_payload(
-            gateway, current_payload, last_error, model_hint=model_hint
-        )
+        # The CORRECTOR can fail too, and its most likely failure is the one
+        # this loop exists to survive: `propose_corrected_payload` ends in
+        # `json.loads`, so a model that answers in prose — the ordinary failure
+        # of "return ONLY JSON" — raised JSONDecodeError straight out of here.
+        # That skipped the exhaustion result below, which is the whole reason a
+        # caller gets a structured "could not fix it" instead of an exception.
+        #
+        # A failed correction is a failed attempt, not a crash. The payload is
+        # left as it was: whatever reaches the fallback should be the last real
+        # payload, not the wreckage of a correction that did not parse.
+        try:
+            current_payload = await propose_corrected_payload(
+                gateway, current_payload, last_error, model_hint=model_hint
+            )
+        except Exception as exc:
+            last_error = f"self-correction failed to produce a usable payload: {exc}"
+            continue
         try:
             return await activity_fn(current_payload)
         except Exception as exc:

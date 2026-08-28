@@ -450,17 +450,35 @@ class BaseAgentWorkflow:
             last_error = str(exc)[:500]
 
         for _ in range(max_self_correction_attempts):
-            current_payload = await workflow.execute_activity(
-                self_correct_payload_activity,
-                {
-                    "payload": current_payload,
-                    "error": last_error,
-                    "tenant_id": tenant_id,
-                    "model_hint": model_hint,
-                },
-                start_to_close_timeout=timedelta(minutes=10),
-                retry_policy=RetryPolicy(maximum_attempts=1),
-            )
+            # The correction activity is wrapped for the same reason its
+            # non-Temporal twin in runtime/self_correction.py is: it ends in
+            # `json.loads`, so a model answering in prose raises out of here —
+            # and with maximum_attempts=1 that propagated out of this method and
+            # failed the workflow, skipping the `run_with_recoverable_step`
+            # fallback below. That fallback is the human DLQ path. The most
+            # likely failure of the automatic fixer was the one that stopped the
+            # application ever reaching a person.
+            #
+            # `current_payload` is deliberately not reassigned on failure: what
+            # a human is handed should be the last real payload.
+            try:
+                current_payload = await workflow.execute_activity(
+                    self_correct_payload_activity,
+                    {
+                        "payload": current_payload,
+                        "error": last_error,
+                        "tenant_id": tenant_id,
+                        "model_hint": model_hint,
+                    },
+                    start_to_close_timeout=timedelta(minutes=10),
+                    retry_policy=RetryPolicy(maximum_attempts=1),
+                )
+            except Exception as exc:
+                last_error = (
+                    f"self-correction failed to produce a usable payload: "
+                    f"{str(exc)[:400]}"
+                )
+                continue
             try:
                 return await workflow.execute_activity(
                     activity_name,

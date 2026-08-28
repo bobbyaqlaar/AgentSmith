@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 from pathlib import Path
 from typing import Any
@@ -85,3 +86,81 @@ async def test_run_self_correction_loop_returns_sentinel_when_exhausted() -> Non
         "payload": {"customer_id": 102, "account_status": "active"},
         "error": "account_status is not a valid property",
     }
+
+
+# ── The corrector's own failure must not skip the fallback ───────────────────
+
+
+def test_a_corrector_that_answers_in_prose_exhausts_rather_than_raising():
+    """`propose_corrected_payload` ends in `json.loads`, so a model that
+    answers in prose — the ordinary failure of "return ONLY JSON" — raised
+    JSONDecodeError straight out of the loop.
+
+    That skipped the `__self_correction_exhausted__` result, which is the whole
+    reason a caller gets a structured "could not fix it" instead of an
+    exception. In the Temporal twin the skipped fallback is the human DLQ path,
+    so the most likely failure of the automatic fixer was the one that stopped
+    an application ever reaching a person.
+    """
+    class Gateway:
+        async def complete(self, prompt, model_hint=None):
+            class R:
+                text = "I'm sorry, I can't produce JSON for that."
+            return R()
+
+    async def activity(_payload):
+        raise ValueError("schema mismatch: 'amount' must be a number")
+
+    out = asyncio.run(
+        run_self_correction_loop(
+            activity_fn=activity, payload={"amount": "ten"}, gateway=Gateway()
+        )
+    )
+    assert out["__self_correction_exhausted__"] is True
+    assert "self-correction failed to produce a usable payload" in out["error"]
+
+
+def test_the_payload_handed_on_is_the_last_real_one():
+    """Not the wreckage of a correction that did not parse. Whatever reaches
+    the fallback is what a human is asked to fix."""
+    class Gateway:
+        async def complete(self, prompt, model_hint=None):
+            class R:
+                text = "not json"
+            return R()
+
+    async def activity(_payload):
+        raise ValueError("nope")
+
+    original = {"amount": "ten"}
+    out = asyncio.run(
+        run_self_correction_loop(
+            activity_fn=activity, payload=original, gateway=Gateway()
+        )
+    )
+    assert out["payload"] == original
+
+
+def test_a_working_corrector_is_unaffected():
+    """The control: the guard must not swallow a correction that worked."""
+    class Gateway:
+        async def complete(self, prompt, model_hint=None):
+            class R:
+                text = '{"amount": 10}'
+            return R()
+
+    seen = []
+
+    async def activity(payload):
+        seen.append(payload)
+        if payload.get("amount") != 10:
+            raise ValueError("must be a number")
+        return {"ok": True}
+
+    out = asyncio.run(
+        run_self_correction_loop(
+            activity_fn=activity, payload={"amount": "ten"}, gateway=Gateway()
+        )
+    )
+    assert out == {"ok": True}
+    assert seen[-1] == {"amount": 10}
