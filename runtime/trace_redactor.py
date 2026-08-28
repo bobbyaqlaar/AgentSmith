@@ -400,7 +400,31 @@ class TraceRedactor(_OTelSpanProcessor):
         # processing spans for multiple tenants in one process, every
         # HITL-flagged span got encrypted with whichever tenant's key the
         # processor happened to be constructed with (Product_Archive.md 1.2).
-        self.default_tenant_id = tenant_id or os.environ.get("TENANT_ID", "unknown")
+        # Resolved the way every other module resolves it. This line read
+        # os.environ["TENANT_ID"] directly and was the last place in the repo
+        # doing that (tool_registry.py's comment counted five others before it).
+        # Reading it raw got two things wrong, and both land on the fallback
+        # that decides which tenant's key a HITL compliance blob is written
+        # under — the same binding this class's __init__ comment calls the
+        # original cross-tenant leak:
+        #
+        #   AGENT_TENANT_ID, the variable tenancy.py names FIRST and the docs
+        #   call primary, was not read at all — a deployment setting only that
+        #   one fell through to "unknown".
+        #
+        #   TENANT_ID="" — set-but-empty, routine in k8s manifests and CI
+        #   matrices — yielded "" rather than the intended default, because
+        #   os.environ.get only substitutes when the key is ABSENT.
+        #
+        # Non-fatal by design: resolve_tenant_id raises rather than guessing,
+        # which is right for a worker refusing to start and wrong for a span
+        # processor, where it would take down telemetry for an unset variable.
+        try:
+            from runtime.tenancy import resolve_tenant_id
+
+            self.default_tenant_id = resolve_tenant_id(tenant_id)
+        except Exception:
+            self.default_tenant_id = "unknown"
         from runtime.config import as_bool, resolve
 
         self.enable_ip_redaction = as_bool(

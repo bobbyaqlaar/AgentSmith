@@ -388,3 +388,53 @@ def test_a_plain_number_is_left_alone():
     number is [REDACTED] tells an operator nothing."""
     r = tr.TraceRedactor(profile="production")
     assert r._scrub("order 12345 qty 7", hash_identifiers=False) == "order 12345 qty 7"
+
+
+def _fallback_tenant(monkeypatch, tmp_path, **env):
+    """The redactor's fallback tenant under a given environment.
+
+    chdir'd to an empty directory so `tenant.yaml` discovery cannot reach the
+    framework's own config and make every case below pass for that reason.
+    """
+    for var in ("AGENT_TENANT_ID", "TENANT_ID"):
+        monkeypatch.delenv(var, raising=False)
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.chdir(tmp_path)
+    return tr.TraceRedactor(profile="production").default_tenant_id
+
+
+def test_fallback_tenant_reads_the_primary_env_var(monkeypatch, tmp_path):
+    """AGENT_TENANT_ID is what tenancy.py names first and the docs call primary.
+
+    This line read os.environ["TENANT_ID"] directly and did not know the primary
+    variable existed, so a deployment setting only that one got "unknown" — and
+    the fallback is what decides which tenant's key a HITL compliance blob is
+    written under.
+    """
+    assert _fallback_tenant(monkeypatch, tmp_path, AGENT_TENANT_ID="acme") == "acme"
+    assert _fallback_tenant(monkeypatch, tmp_path, TENANT_ID="legacy-co") == "legacy-co"
+    assert (
+        _fallback_tenant(
+            monkeypatch, tmp_path, AGENT_TENANT_ID="primary", TENANT_ID="legacy"
+        )
+        == "primary"
+    )
+
+
+def test_a_set_but_empty_tenant_var_falls_back_to_unknown(monkeypatch, tmp_path):
+    """`TENANT_ID=""` is routine in k8s manifests and CI matrices.
+
+    os.environ.get(key, default) substitutes only when the key is ABSENT, so a
+    declared-but-empty variable produced "" — a compliance blob keyed and
+    encrypted under the empty tenant rather than the intended default.
+    """
+    assert _fallback_tenant(monkeypatch, tmp_path, TENANT_ID="") == "unknown"
+    assert _fallback_tenant(monkeypatch, tmp_path, AGENT_TENANT_ID="   ") == "unknown"
+
+
+def test_an_unresolvable_tenant_never_takes_down_the_processor(monkeypatch, tmp_path):
+    """resolve_tenant_id raises rather than guessing, which is right for a
+    worker refusing to start and wrong here: a span processor that raises on an
+    unset variable takes telemetry down with it."""
+    assert _fallback_tenant(monkeypatch, tmp_path) == "unknown"
