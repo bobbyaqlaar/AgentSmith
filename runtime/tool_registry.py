@@ -247,7 +247,7 @@ def default_registry() -> ToolRegistry:
     deny-by-default got it on every registry EXCEPT the default one — and the
     bare `@tool(name=...)` form is what SPECS.md §26 and OPERATIONS.md name as
     the API. A declared control that the documented path does not apply is the
-    shape of review-levers 3.4.
+    shape of review-levers 3.4: declared vs enforced.
 
     And it was private with no accessor, so a tool registered through that form
     could not be invoked through any registry at all: `tool()` returns the

@@ -66,7 +66,8 @@ def _notify_plyer(title: str, message: str, timeout: int = 8) -> bool:
 # So a model that echoes an injected instruction, or merely quotes the code it
 # is reviewing, reaches a shell on the operator's machine. Model output is
 # untrusted input; this is the receiving side of that boundary, and it is the
-# side that has to hold (review-levers 2.7).
+# side that has to hold (review-levers 2.8: validation belongs on the
+# receiving side of a trust boundary).
 _OSASCRIPT_NOTIFY = """on run argv
   display notification (item 1 of argv) with title (item 2 of argv) \
     subtitle (item 3 of argv) sound name (item 4 of argv)

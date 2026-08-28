@@ -10,25 +10,47 @@ already the point at which the mark stopped telling anyone anything. Each one is
 traceable to a defect that a pass using the earlier list did not catch — the
 provenance is kept because a lever with no scalp is decoration.
 
-Amendments to existing items carry the same marks inline. Three findings from
-those passes produced amendments rather than new levers, which is the more
-honest outcome when the lever was right and its *scope* was wrong.
+Amendments to existing items carry the same marks inline. Seven findings so far
+have produced amendments rather than new levers, which is the more honest
+outcome when the lever was right and its *scope* was wrong.
+
+**(legacy)** marks the original standing list — the items that predate the
+provenance convention. They are deliberately EXEMPT from the scalp requirement
+and are kept as a hygiene checklist: they are the things a reviewer should
+confirm every pass, whether or not any single one has a defect filed against it.
+Naming the exemption is the point. Before this, seventeen of forty items carried
+no `Caught:` line while the paragraph above declared that a lever without one is
+decoration — a standard the document applied to its newer half only.
 
 ---
 
 ## 1 · DRY & shared code
 
-1. No redundant code, files, or docs at the end of a slice.
-2. No copy-paste functions (even under other names / other files) — extract to a shared library.
-3. Before writing a new function: search existing shared helpers first; reuse/extend.
-4. Prefer one parameterized helper over near-duplicates (vary by args, not by cloning).
-5. Clean up dead imports, unused exports, and obsolete docs/files when the slice finishes.
+1. **(legacy)** No redundant code, files, or docs at the end of a slice — dead
+   imports, unused exports and obsolete files included. *(Was two items, 1 and
+   5, saying the same thing in the group about things that say the same thing.)*
+2. **(legacy)** No copy-paste functions (even under other names / other files) — extract to a shared library.
+3. **(legacy)** Before writing a new function: search existing shared helpers first; reuse/extend.
+4. **(legacy)** Prefer one parameterized helper over near-duplicates (vary by args, not by cloning).
+5. **(2026-08-28) One verdict, computed once.** A decision recomputed
+   downstream, from different inputs than the one that made it, is right at
+   both sites and wrong between them. Data duplication drifts loudly; a
+   duplicated DECISION drifts silently, because each copy looks locally
+   correct. Pass the verdict, never the ingredients to re-derive it.
+   *Caught twice in one pass: `notify_eval_result(avg_score, fail_below)`
+   derived pass/fail itself while `run_scorecard` had already gated on parity,
+   the hallucination rate, a missed positive control and the adversarial guard
+   — so a fairness run that exited 1 and printed ❌ notified as ✅ at normal
+   urgency, on the copy of the verdict that reaches a human not watching CI.
+   And "Failing pairs" was listed against `fail_below` while the gate that
+   failed them used `parity_floor`, two numbers the code's own comment says
+   must never be coupled.*
 6. **(+) A catalog belongs to one module.** A list of valid suites, roles, event types or
    file names restated anywhere else is a second catalog that will drift.
    *Caught: `SCORECARDS` restating `_shared.RESULTS_FILE`; the `Role` union written
    three times; the audit event catalog in a union plus two arrays.*
-7. **(++) A duplicate that CANNOT be removed must be pinned.** Items 2–6 all say
-   "extract to one module", which is impossible across a language or system
+7. **(++) A duplicate that CANNOT be removed must be pinned.** Items 1–4 and 6
+   all say "extract to one module", which is impossible across a language or system
    boundary — a TypeScript catalog and a SQL `CHECK`, a Python resolver and its
    TypeScript mirror, a client-side validation and its server. The lever gave
    advice that could not be followed, so those cases fell straight through it.
@@ -55,9 +77,9 @@ honest outcome when the lever was right and its *scope* was wrong.
 
 ## 2 · Quality / safety
 
-1. Prefer standard, optimised, safe, secure library/APIs already in the repo — don't invent parallel paths.
-2. Security/scope consistency matters: same gate pattern across mutating routes (no "forgot ActorDep / scope" holes).
-3. Don't hide auth failures as "offline/mock" — network fallback only when appropriate.
+1. **(legacy)** Prefer standard, optimised, safe, secure library/APIs already in the repo — don't invent parallel paths.
+2. **(legacy)** Security/scope consistency matters: same gate pattern across mutating routes (no "forgot ActorDep / scope" holes).
+3. **(legacy)** Don't hide auth failures as "offline/mock" — network fallback only when appropriate.
 4. **(+) Environment parity.** Does this behave the same on a developer machine, in
    CI, and in production? Name what differs — runtime, filesystem, clock, git state.
    *Caught: `node:crypto` passing `tsc` and `npm test` and failing only `next build`;
@@ -127,9 +149,13 @@ honest outcome when the lever was right and its *scope* was wrong.
 
 ## 3 · Architecture / product hygiene
 
-1. Single source of truth for catalogs/constants (streams, function units, etc.) — don't re-home lists across web/API/ingest.
-2. Keep docs aligned with shipped behavior (SPECS / UserManual / OPERATIONS / DemoScript); no stale contradictions.
-3. Backlog discipline: open in PRODUCT_BACKLOG; done → PRODUCT_ARCHIVE with date + evidence.
+1. **(legacy)** Single source of truth for catalogs/constants — don't re-home
+   lists across web/API/ingest. *This is lever **1.6** stated twice, in two
+   groups; 1.6 is the version with scalps and with the cross-language case
+   (1.7). Kept here as a pointer because the hygiene question belongs in an
+   architecture review too — follow it there.*
+2. **(legacy)** Keep docs aligned with shipped behavior (SPECS / UserManual / OPERATIONS / DemoScript); no stale contradictions.
+3. **(legacy)** Backlog discipline: open in PRODUCT_BACKLOG; done → PRODUCT_ARCHIVE with date + evidence.
 4. **(+) Declared vs enforced.** Every control a config file or doc declares must have
    something that reads it. A declared-but-unenforced control is worse than an absent
    one: it reads as a control in an audit and is not one.
@@ -147,7 +173,10 @@ honest outcome when the lever was right and its *scope* was wrong.
    in six places; two budget keys, one feeding the dashboard and one the enforcement.*
 6. **(+) Minimal host dependency.** What does this require of the machine beyond the
    package — a shell profile, a specific shell, a writable `$HOME`, an OS?
-   *Open: 15 zsh functions and ~61 lines in `~/.zshrc`, none testable, none portable.*
+   *ACCEPTED OPEN since 2026-08-24, not a scalp: 15 zsh functions and ~61 lines
+   in `~/.zshrc`, none testable, none portable. Recorded as accepted rather than
+   left looking like a finding nobody actioned — the lever still applies to new
+   work, and this instance is a known debt with an owner.*
 7. **(++++) Implemented is not invoked. Ask "who calls this?" and grep.**
    The inverse of item 4: not a control that is declared and unenforced, but
    one that is fully BUILT and never reached. Correct code, correct tests,
@@ -193,9 +222,9 @@ honest outcome when the lever was right and its *scope* was wrong.
 
 ## 4 · Process (how work is done)
 
-1. Brainstorm → design approve → spec → plan → build (no blind coding).
-2. After build, expect thorough re-review for repeats / gaps / redundancy (multi-pass if asked).
-3. Ship small, testable slices; verify before claiming done.
+1. **(legacy)** Brainstorm → design approve → spec → plan → build (no blind coding).
+2. **(legacy)** After build, expect thorough re-review for repeats / gaps / redundancy (multi-pass if asked).
+3. **(legacy)** Ship small, testable slices; verify before claiming done.
 4. **(+) Review the branch, not the diff.** Scope the pass by what the branch ships and
    what CI checks — `self-test.yml` is the definitive list — not by the files you edited.
    *Caught: three review passes reporting clean while `main` had been red for three
@@ -221,10 +250,13 @@ honest outcome when the lever was right and its *scope* was wrong.
 
 ## 5 · Intuitive UI
 
-1. UI stays intuitive on the user journey — product-shippable; no confusing auth-mode chrome; reuse normal SSO → work path.
+1. **(legacy)** UI stays intuitive on the user journey — product-shippable; no confusing auth-mode chrome; reuse normal SSO → work path.
 2. **(+) An interface must not present a failure as a result.** Empty, zero and
    unavailable are three different things on a screen as much as in a metric.
-   *Caught: a failed query rendering as "No shadow-eval failures in the last 24h".*
+   *Caught: a failed query rendering as "No shadow-eval failures in the last
+   24h". Lever 6.6 cites the same SENTENCE for a different defect — there, the
+   query worked and read one page of a paginated endpoint. One screen, two ways
+   to claim a clean result you do not have.*
 
 ## 6 · Signal integrity — does green mean green? **(+ new group)**
 
@@ -261,7 +293,9 @@ check did not actually run, would anything look different?*
    issue COUNT, disagreeing with the dashboard's SQL count for the same tenant;
    "Last 24h: N traces" taken from whichever project the Phoenix instance
    happened to list first; "No shadow-eval failures in the last 24h" from one
-   page of a cursor-paginated endpoint.*
+   page of a cursor-paginated endpoint — the same sentence lever 5.2 cites, but
+   a different defect: there the query FAILED, here it succeeded and saw a
+   fraction of the rows.*
 7. **(+++) An early exit must not take the bookkeeping with it.** When a
    function both RECORDS something and DECIDES something, every `raise`,
    `return` and `break` between the two skips the record. Ask of each one:
@@ -287,3 +321,19 @@ check did not actually run, would anything look different?*
    `return` is not the test's); a security-runner sweep reporting nine of eleven
    with no verdict at all (they delegate to a shared body). Every one would have
    been reported as findings by a reviewer who trusted the output.*
+9. **(2026-08-28) A test can pin a defect, and a confident docstring is what
+   makes it survive.** Item 5 is a test that cannot fail. This one can, and
+   does, and asserts the wrong thing — so it defends the defect from the next
+   reviewer. The tell is a test whose docstring justifies surprising behaviour
+   by HISTORY rather than by a requirement: "preserves the previous
+   normalization", "matches what the old script did". That sentence reads as
+   due diligence and functions as a lock. When you meet one, ask what the
+   behaviour SHOULD be, not what it has been — and check the docstring of the
+   function under test, which in the worst case already promises the opposite.
+   *Caught: `test_pair_parity_coerces_missing_fairness_bit_to_zero` asserted
+   that two unscored members of a fairness pair are "equal" and score 1.0,
+   citing run-evals' historical normalization. `pair_parity`'s own docstring
+   said "pairs with fewer than two SCORED members are omitted". The test won,
+   the bias control reported "no divergence" about pairs it had never measured,
+   and the behaviour was carried into `runtime/` on promotion because a test
+   appeared to have decided it.*

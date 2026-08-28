@@ -75,6 +75,50 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Review of the review levers, against themselves
+
+The document was audited against its own standard and against each other, and
+the audit found more than the code passes did.
+
+- **Two new levers.** **1.5 one verdict, computed once** — a decision
+  recomputed downstream from different inputs is right at both sites and wrong
+  between them; data duplication drifts loudly, a duplicated DECISION drifts
+  silently. **6.9 a test can pin a defect** — item 6.5 is a test that cannot
+  fail; this one can, and asserts the wrong thing, so it defends the defect from
+  the next reviewer. The tell is a docstring justifying surprising behaviour by
+  history rather than by a requirement.
+- **The anti-duplication group contained a duplicate.** Items 1 and 5 said the
+  same thing; merged into 1, and 5 now holds the new verdict lever, which keeps
+  every number below it stable — two code comments cite 1.7, and renumbering
+  would have broken them silently.
+- **3.1 was 1.6 restated in another group.** Now a pointer to it.
+- **The header claimed three amendments.** There are seven.
+- **A scalp was cited twice** — "No shadow-eval failures in the last 24h"
+  appears under 5.2 and 6.6. They are genuinely two different defects on one
+  sentence (a failed query; one page of a paginated endpoint), which is now said
+  in both places.
+- **`(legacy)`** marks the original standing list, exempt from the scalp
+  requirement and kept as a hygiene checklist. Seventeen of forty items carried
+  no `Caught:` line while the header declared that a lever without one is
+  decoration — a standard applied to the newer half only. Naming the exemption
+  is the fix. **3.6** is separately marked ACCEPTED OPEN rather than left
+  looking like a finding nobody actioned.
+
+### A citation that had quietly started lying
+
+`scripts/notifier.py` cited `review-levers 2.7` for "validation belongs on the
+receiving side of a trust boundary". Inserting a new lever at 2.7 two passes ago
+pushed validation to 2.8, and the comment went on naming a number that had come
+to mean something else. Nothing failed — it is the stale-doc defect the levers
+are about, committed inside the levers.
+
+An existence check would not have caught it, because 2.7 existed throughout. So
+a citation now carries a short NAME as well as a number, and
+`scripts/test/test_lever_references.py` reads both sides and compares them —
+parsing each rather than restating either, which is lever 1.7's own rule.
+Mutation-tested against the real drift.
+
+
 ### Review pass 21 — the on-prem bundle's two proxies disagreed about a port
 
 `templates/onprem-deploy/` ships a customer both an Envoy and a Traefik path
