@@ -127,3 +127,51 @@ def test_detect_pii_ignores_guardrail_mode(monkeypatch: pytest.MonkeyPatch) -> N
     work in development, where resolve_mode() is off."""
     monkeypatch.setenv("INPUT_GUARDRAIL", "off")
     assert ig.detect_pii("card 4111 1111 1111 1111") == {"card": 1}
+
+
+# ── Arabic-Indic numerals are how the market writes digits ───────────────────
+
+_ARABIC = str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩")
+
+
+def _arabic(s: str) -> str:
+    return s.translate(_ARABIC)
+
+
+def test_an_emirates_id_in_arabic_numerals_is_scrubbed():
+    """`٧٨٤-١٢٣٤-...` is how a person writes an Emirates ID in Arabic, in a
+    framework whose market is the UAE.
+
+    The pattern anchors on a literal ASCII `784`, so it matched nothing and the
+    identifier went to the model in the clear. What made it invisible is the
+    asymmetry: `\\d` DOES match Arabic-Indic digits, so the card pattern caught
+    them all along and `runtime/luhn.py` validates them — anyone testing
+    "do we handle Arabic numerals" with a card number would have concluded yes.
+    """
+    out, counts = ig.scrub_text(f"id {_arabic('784-1234-1234567-1')} ok", mode="default")
+    assert counts == {"emirates_id": 1}
+    assert "[REDACTED_EMIRATES_ID]" in out
+    assert "٧٨٤" not in out
+
+
+def test_the_bare_15_digit_form_too():
+    _out, counts = ig.scrub_text(f"id {_arabic('784123412345671')} ok", mode="default")
+    assert counts == {"emirates_id": 1}
+
+
+def test_a_card_in_arabic_numerals_still_luhn_checks():
+    """The control: normalising must not have broken the case that worked."""
+    _out, counts = ig.scrub_text(f"pay {_arabic('4111111111111111')}", mode="default")
+    assert counts == {"card": 1}
+    # And a Luhn-invalid run is still left alone, in either script.
+    _, none = ig.scrub_text(f"ref {_arabic('4111111111111112')}", mode="default")
+    assert none == {}
+
+
+def test_the_scrubbed_text_keeps_the_users_own_characters():
+    """Detection runs on an ASCII-normalised copy; the text written out is the
+    original. A scrubber must not quietly rewrite the parts it did not redact."""
+    out, _ = ig.scrub_text(f"order {_arabic('12345')} and id {_arabic('784123412345671')}",
+                           mode="default")
+    assert "١٢٣٤٥" in out, "an untouched Arabic number was rewritten to ASCII"
+    assert "[REDACTED_EMIRATES_ID]" in out

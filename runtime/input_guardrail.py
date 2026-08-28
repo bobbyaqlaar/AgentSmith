@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import copy
 import logging
-import re
 from collections.abc import Callable
 from typing import Any, Optional
 
@@ -31,20 +30,18 @@ ScrubFn = Callable[[str], tuple[str, dict[str, int]]]
 
 _custom_scrubber: Optional[ScrubFn] = None
 
-# Emirates ID: 784-XXXX-XXXXXXX-X (hyphenated) or 15 digits starting with 784
-_EMIRATES_ID_HYPHEN = re.compile(
-    r"\b784-\d{4}-\d{7}-\d\b",
+# The shapes themselves live in runtime/pii_patterns.py, shared with
+# trace_redactor.py — the pre-export half of this control, which knew about
+# neither Emirates IDs nor phone numbers while this half did. Same extraction
+# runtime/luhn.py got, for the same reason.
+from runtime.pii_patterns import (  # noqa: E402
+    CARD_CANDIDATE as _CARD_CANDIDATE,
+    EMAIL as _EMAIL,
+    EMIRATES_ID_DIGITS as _EMIRATES_ID_DIGITS,
+    EMIRATES_ID_HYPHEN as _EMIRATES_ID_HYPHEN,
+    PHONE as _PHONE,
+    ascii_digits as _ascii_digits,
 )
-_EMIRATES_ID_DIGITS = re.compile(
-    r"\b784\d{12}\b",
-)
-_EMAIL = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
-# UAE / intl phones: +971… or 00… or long digit runs with optional separators
-_PHONE = re.compile(
-    r"(?<!\d)(?:\+|00)?(?:971[\s-]?)?(?:0?5\d|5\d)[\s-]?\d{3}[\s-]?\d{4}\b"
-    r"|(?<!\d)\+\d{10,15}\b"
-)
-_CARD_CANDIDATE = re.compile(r"(?:\d[ -]?){13,19}")
 
 
 # Shared with trace_redactor.py — one Luhn implementation for both the
@@ -96,42 +93,47 @@ def _default_scrub(text: str) -> tuple[str, dict[str, int]]:
     counts: dict[str, int] = {}
     out = text
 
-    def _redactor(label: str, replacement: str):
-        """Count a hit under `label` and replace it.
-
-        Four of these were written out separately and differed only in those
-        two strings — which meant the counter key and the redaction token could
-        drift apart, and `guardrail_counts` is evidence a tenant records in its
-        own decision record (every PDPL/GDPR decision-path app). Pairing them in
-        one place is what keeps a count of "email" from labelling something
-        redacted as a phone number.
-        """
-
-        def _sub(m: "re.Match[str]") -> str:
-            counts[label] = counts.get(label, 0) + 1
-            return replacement
-
-        return _sub
-
-    def _sub_card(m: "re.Match[str]") -> str:
-        # Not built by _redactor: a card candidate is only redacted if it
-        # passes Luhn, so this one can decline to substitute — and must not
-        # count when it does.
-        if _luhn_valid(m.group(0)):
-            counts["card"] = counts.get("card", 0) + 1
-            return "[REDACTED_CARD]"
-        return m.group(0)
+    # MATCH ON THE ASCII-NORMALISED COPY, SPLICE INTO THE ORIGINAL. `\d`
+    # already matched Arabic-Indic digits, so cards were caught; the Emirates ID
+    # patterns anchor on a literal `784` and matched nothing when the digits
+    # were written `٧٨٤` — which is how a person writes them in Arabic, in a
+    # framework whose market is the UAE. `ascii_digits` is a per-character
+    # mapping, so a span in the normalised copy addresses the same characters
+    # in the text the user actually wrote, and the original is what gets
+    # rewritten.
+    probe = _ascii_digits(out)
 
     # Order matters: the hyphenated Emirates ID pattern runs before the
     # bare-digit one so the more specific form is consumed first.
+    spans: list[tuple[int, int, str]] = []
+    taken: list[tuple[int, int]] = []
+
+    def _claim(start: int, end: int) -> bool:
+        if any(start < e and s_ < end for s_, e in taken):
+            return False
+        taken.append((start, end))
+        return True
+
     for pattern, label, replacement in (
         (_EMIRATES_ID_HYPHEN, "emirates_id", "[REDACTED_EMIRATES_ID]"),
         (_EMIRATES_ID_DIGITS, "emirates_id", "[REDACTED_EMIRATES_ID]"),
         (_EMAIL, "email", "[REDACTED_EMAIL]"),
         (_PHONE, "phone", "[REDACTED_PHONE]"),
     ):
-        out = pattern.sub(_redactor(label, replacement), out)
-    out = _CARD_CANDIDATE.sub(_sub_card, out)
+        for m in pattern.finditer(probe):
+            if _claim(*m.span()):
+                counts[label] = counts.get(label, 0) + 1
+                spans.append((m.start(), m.end(), replacement))
+
+    for m in _CARD_CANDIDATE.finditer(probe):
+        # Luhn on the normalised digits; a candidate that fails is left alone,
+        # and must not be counted.
+        if _luhn_valid(m.group(0)) and _claim(*m.span()):
+            counts["card"] = counts.get("card", 0) + 1
+            spans.append((m.start(), m.end(), "[REDACTED_CARD]"))
+
+    for start, end, replacement in sorted(spans, reverse=True):
+        out = out[:start] + replacement + out[end:]
     return out, counts
 
 

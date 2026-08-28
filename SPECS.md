@@ -534,6 +534,7 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (§4a). |
 | `runtime/version.py` | `framework_version()` — the running framework's version, for the OTel Resource and the run-status POST. `warn_if_declared_version_differs()` warns once at worker startup when the running framework crosses a **MAJOR** boundary from the `framework.version` this tenant declares. Minor and patch differences are silent by design: backward compatibility within a major is AgentSmith's obligation, so a tenant on 1.3.x running 1.9 is the promise being kept, and warning there would train an operator to skip warnings. Needs no git, tags or checkout. An installed release reports bare; a source checkout reports `x.y.z+src`, because a working copy's pyproject version says which release it descends from and nothing about what it contains. |
 | `runtime/otlp.py` | `resolve_otlp_endpoint()` / `span_exporter()` / `metric_exporter()` — the one place an endpoint variable becomes an OTLP URL. Four callers did this separately and only `portal/lib/tracing.ts` handled a base that already names `/v1/traces`; that version is the one ported here, and the TS copy is pinned by a parsing test. |
+| `runtime/pii_patterns.py` | The PII shapes `input_guardrail.py` and `trace_redactor.py` both read, plus `ascii_digits()`. Extracted for the reason `runtime/luhn.py` was: the pre-call and pre-export halves of one control disagreed about what PII is. |
 | `runtime/security_paths.py` | `security_artefact_path()` — the env-override-then-convention lookup `prompt_guard` and `tool_registry` had each implemented separately. |
 | `runtime/tenancy.py` | `resolve_tenant_id()` (explicit → `AGENT_TENANT_ID`/`TENANT_ID` → `tenant.yaml` → raise) and the `agent_context()` contextvars that `AgentIdentityProcessor` stamps onto every span. |
 | `runtime/cli.py` | The `agentsmith` console script (`[project.scripts]`). `tenant init` owns the scaffold that used to be a zsh heredoc in `~/.zshrc`; `doctor` delegates to `verify_system`; `shellenv` emits the exports a child process cannot set on its parent; `purge-idempotency` deletes expired rows from `idempotency_keys`, which nothing had ever deleted from. The shell functions now delegate here. |
@@ -1246,6 +1247,7 @@ AgentSmith/
 │   ├── pg_pool.py               # Shared Postgres connection pool (budget / idempotency / DLQ)
 │   ├── environment.py           # Canonical fail-closed $ENVIRONMENT resolver
 │   ├── input_guardrail.py       # Pre-call PII scrub (PDPL)
+│   ├── pii_patterns.py           # Emirates ID / phone / email / card shapes, both PII halves
 │   ├── luhn.py                  # Single Luhn validator (input_guardrail + trace_redactor)
 │   ├── testing.py               # FakeGateway / RecordingGateway test doubles for tenant suites
 │   ├── judging.py               # Shared judge primitives: citation grounding + pair parity (CI + per-request)

@@ -75,6 +75,36 @@ version table being consulted.
 
 ## [Unreleased]
 
+### The two halves of the PII control did not agree on what PII is
+
+Reviewing `input_guardrail.py` and `trace_redactor.py` directly for the first
+time — they had only ever been touched through the Luhn finding.
+
+- **An Emirates ID written in Arabic-Indic numerals was not detected.** The
+  patterns anchor on a literal ASCII `784`, so `٧٨٤-١٢٣٤-١٢٣٤٥٦٧-١` matched
+  nothing and went to the model in the clear. That is how a person writes the
+  number in Arabic, in a framework whose market is the UAE and whose scaffold
+  ships `templates/uae-sovereign/`.
+
+  What kept it invisible is an asymmetry: `\d` **does** match Arabic-Indic
+  digits, so the card pattern caught them all along and `runtime/luhn.py`
+  validates them. Anyone checking "do we handle Arabic numerals" with a card
+  number would have concluded yes.
+
+- **`trace_redactor` had no Emirates ID or phone pattern at all** — not even
+  ASCII. It covered API keys, bearer tokens, email, cards and IPs. So an
+  identifier the pre-call guard stripped from a prompt still left the process on
+  a span attribute, and KYC Sentinel — whose entire subject is Emirates IDs —
+  declared no extra patterns, because nothing told it that it had to. The
+  framework's own documentation calls these two symmetric controls.
+
+`runtime/pii_patterns.py` now holds the shapes both halves read, extracted for
+the reason `runtime/luhn.py` was. Detection runs on an ASCII-normalised copy and
+redaction splices into the original, so a scrubber never quietly rewrites the
+characters it did not redact — and one identifier written two ways hashes to one
+value in the staging profile instead of looking like two people.
+
+
 ### The checklist is a checklist again
 
 It was not optimised, and the numbers said so. The **legacy** items — the

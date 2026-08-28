@@ -347,3 +347,44 @@ def test_production_still_truncates_ordinary_free_text() -> None:
     out = _export_with_profile("production", {"note": "x" * 200})
     assert len(out["note"]) < 200
     assert "truncated" in out["note"]
+
+
+# ── The two halves of the PII control now agree on what PII is ───────────────
+
+_ARABIC_DIGITS = str.maketrans("0123456789", "٠١٢٣٤٥٦٧٨٩")
+
+
+def test_the_redactor_scrubs_the_identifiers_the_input_guard_does():
+    """`input_guardrail` stripped Emirates IDs and phone numbers from prompts;
+    this half knew about neither, so an identifier that never reached the model
+    still reached Phoenix on a span attribute. The framework's own docs call the
+    two symmetric, and the tenant whose whole subject is Emirates IDs declared
+    no extra patterns — nothing told it that it had to.
+    """
+    r = tr.TraceRedactor(profile="production")
+    out = r._scrub("id 784-1234-1234567-1 phone 0501234567", hash_identifiers=False)
+    assert "784-1234-1234567-1" not in out
+    assert "0501234567" not in out
+
+
+def test_the_redactor_handles_arabic_numerals_too():
+    r = tr.TraceRedactor(profile="production")
+    arabic = "784-1234-1234567-1".translate(_ARABIC_DIGITS)
+    assert arabic not in r._scrub(f"id {arabic}", hash_identifiers=False)
+
+
+def test_one_identifier_written_two_ways_hashes_the_same():
+    """Staging hashes rather than blanks, so an operator can correlate. Matching
+    on the normalised copy means the ASCII and Arabic forms of one Emirates ID
+    correlate to one hash instead of looking like two people."""
+    r = tr.TraceRedactor(profile="staging")
+    a = r._scrub("id 784-1234-1234567-1", hash_identifiers=True)
+    b = r._scrub("id " + "784-1234-1234567-1".translate(_ARABIC_DIGITS), hash_identifiers=True)
+    assert a == b
+
+
+def test_a_plain_number_is_left_alone():
+    """The control: over-redaction is its own failure — a span whose every
+    number is [REDACTED] tells an operator nothing."""
+    r = tr.TraceRedactor(profile="production")
+    assert r._scrub("order 12345 qty 7", hash_identifiers=False) == "order 12345 qty 7"

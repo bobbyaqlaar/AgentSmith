@@ -169,11 +169,9 @@
         "_default_scrub",
         "detect_pii",
         "scrub_messages",
-        "_redactor",
-        "_sub_card",
-        "_sub"
+        "_claim"
       ],
-      "last_modified": "2026-08-24T17:29:48Z",
+      "last_modified": "2026-08-28T20:15:33Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -310,6 +308,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_splice",
         "_redact_credit_cards",
         "_hash8",
         "_load_extra_patterns",
@@ -332,7 +331,7 @@
         "_scrub",
         "_truncate"
       ],
-      "last_modified": "2026-08-25T21:41:36Z",
+      "last_modified": "2026-08-28T20:15:39Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -2350,9 +2349,13 @@
         "test_non_string_attributes_are_left_alone",
         "test_production_does_not_truncate_a_digest",
         "test_production_still_truncates_ordinary_free_text",
+        "test_the_redactor_scrubs_the_identifiers_the_input_guard_does",
+        "test_the_redactor_handles_arabic_numerals_too",
+        "test_one_identifier_written_two_ways_hashes_the_same",
+        "test_a_plain_number_is_left_alone",
         "__init__"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-28T20:14:43Z",
       "id": "runtime/test/test_trace_redactor.py"
     },
     {
@@ -2514,9 +2517,14 @@
         "test_detect_pii_agrees_with_scrub_text",
         "test_detect_pii_rejects_long_non_luhn_digit_runs",
         "test_detect_pii_ignores_guardrail_mode",
+        "_arabic",
+        "test_an_emirates_id_in_arabic_numerals_is_scrubbed",
+        "test_the_bare_15_digit_form_too",
+        "test_a_card_in_arabic_numerals_still_luhn_checks",
+        "test_the_scrubbed_text_keeps_the_users_own_characters",
         "custom"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-28T20:17:01Z",
       "id": "runtime/test/test_input_guardrail.py"
     },
     {
@@ -3869,6 +3877,15 @@
       ],
       "last_modified": "2026-08-28T20:04:11Z",
       "id": "scripts/test/test_lever_notes.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "ascii_digits"
+      ],
+      "last_modified": "2026-08-28T20:12:57Z",
+      "id": "runtime/pii_patterns.py"
     }
   ],
   "edges": [

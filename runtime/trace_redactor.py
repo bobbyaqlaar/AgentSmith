@@ -62,7 +62,30 @@ _SECRET_PATTERNS = [
 ]
 
 # Candidate credit-card-shaped digit runs; validated with Luhn before redaction.
-_CARD_CANDIDATE = re.compile(r"(?:\d[ -]?){13,19}")
+from runtime.pii_patterns import (  # noqa: E402
+    CARD_CANDIDATE as _CARD_CANDIDATE,
+    EMIRATES_ID_DIGITS as _EMIRATES_ID_DIGITS,
+    EMIRATES_ID_HYPHEN as _EMIRATES_ID_HYPHEN,
+    PHONE as _PHONE,
+    ascii_digits as _ascii_digits,
+)
+
+
+def _splice(text, probe, pattern, marker_fn, only_if=None):
+    """Replace `pattern`'s matches in `probe` at the same spans in `text`.
+
+    The two are the same length by construction (`ascii_digits` maps character
+    for character), so a span found in one addresses the other exactly.
+    """
+    out, shift = text, 0
+    for m in pattern.finditer(probe):
+        if only_if is not None and not only_if(m.group(0)):
+            continue
+        replacement = marker_fn(m)
+        start, end = m.start() + shift, m.end() + shift
+        out = out[:start] + replacement + out[end:]
+        shift += len(replacement) - (m.end() - m.start())
+    return out
 
 # Disabled by default in staging per §27 ("optional — disabled by default in staging").
 _IP_PATTERN = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
@@ -481,15 +504,31 @@ class TraceRedactor(_OTelSpanProcessor):
             else (lambda m: _REDACTED_MARKER)
         )
 
+        # ASCII-normalised for MATCHING only; the text written out is the
+        # original. `\d` already matched Arabic-Indic digits, but the Emirates
+        # ID shapes anchor on a literal `784`, so `٧٨٤-…` matched nothing. See
+        # runtime/pii_patterns.ascii_digits — a per-character mapping, so a span
+        # here addresses the same characters there.
+        probe = _ascii_digits(text)
+
+        # The PERSONAL identifiers, from the same module input_guardrail.py
+        # reads. They were absent here entirely: this half of the control knew
+        # about API keys, bearer tokens, email and cards, and nothing about an
+        # Emirates ID or a phone number — so an identifier the pre-call guard
+        # stripped from a prompt still left the process on a span attribute.
+        # The framework's own documentation calls the two symmetric, and the
+        # tenant whose whole subject is Emirates IDs declared no extra patterns,
+        # because nothing told it that it had to.
+        for pattern in (_EMIRATES_ID_HYPHEN, _EMIRATES_ID_DIGITS, _PHONE):
+            text = _splice(text, probe, pattern, marker_fn)
+            probe = _ascii_digits(text)
+
         for pattern in (*_SECRET_PATTERNS, *self._extra_patterns):
             text = pattern.sub(marker_fn, text)
 
-        text = (
-            _redact_credit_cards(text)
-            if not hash_identifiers
-            else _CARD_CANDIDATE.sub(
-                lambda m: marker_fn(m) if _luhn_valid(m.group(0)) else m.group(0), text
-            )
+        probe = _ascii_digits(text)
+        text = _splice(
+            text, probe, _CARD_CANDIDATE, marker_fn, only_if=_luhn_valid
         )
 
         if self.enable_ip_redaction:
