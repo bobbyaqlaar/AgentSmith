@@ -75,6 +75,47 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Review levers — three lessons, a new pillar, and one hygiene fix
+
+**Levers.** `docs/review-levers.md` gains **2.7 (ask what happens when the
+FALLBACK fails)** and **6.8 (a check that fires on almost everything is as
+broken as one that never fires)**, plus an amendment to **2.5**: write the guard
+so a type checker can follow it, because a reader follows the same path.
+
+6.8 is the one worth reading. It has three scalps in three passes and all of
+them are mine: an orphan-function grep that flagged 190 of 192, an early-return
+sweep that flagged 32 tests because `ast.walk` descends into test-local stubs,
+and a security-runner sweep reporting nine of eleven with no verdict because
+they delegate to a shared body. Each would have been reported as findings by a
+reviewer who trusted the output. Read the count before the hits.
+
+New items carry a **date** rather than another plus sign — four was already the
+point where the mark stopped telling anyone anything.
+
+**Standards.** `templates/agent-rules.yaml` gains pillar 16, **Recovery Paths**,
+the generalisable half of 2.7: wrap every rung of a recovery ladder, and hand
+the next rung the last GOOD state rather than the wreckage of the step that just
+failed. Pillar 15 came from this same lever family, which is the precedent.
+
+**Hygiene, found by running the repo's own tool inside it.**
+`scripts/generate-ide-config.py` writes `.cursorrules`, `CLAUDE.md`, `AGENTS.md`,
+`GEMINI.md`, `.github/copilot-instructions.md`, `.agents/` and
+`.agent-history.log` into whatever repo it runs in. The framework does not track
+its own IDE configs — a tenant generates them in ITS repo — but `.gitignore`
+covered none of them, so the files sat untracked and a `git add -A` would have
+committed seven pieces of build output. Now ignored.
+
+**Pass 20 found no new code defect**, which is worth stating plainly rather than
+padding. 2.7 run as a query over `runtime/` and `scripts/` returned 15
+candidates, all of them tenacity internals, a last rung, or a fallback that IS
+the except branch; the one true instance was the self-correction defect fixed in
+pass 19. `run_with_recoverable_step` was then read directly: bounded attempts, a
+five-minute enqueue under Temporal's default retry, timeout to dead-letter, and
+the fix consumed rather than read. Leaving its DLQ write unwrapped is correct —
+swallowing it would park the workflow forever on a queue entry that does not
+exist.
+
+
 ### Review pass 19 — the automatic fixer's own failure skipped the human
 
 `run_with_self_correction` exists to try an activity, ask a model to correct the

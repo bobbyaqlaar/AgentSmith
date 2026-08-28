@@ -158,6 +158,22 @@ pillars:
       pattern; the sibling instance usually exists already, sometimes with the
       fix documented in another module.
 
+  - id: 16
+    name: Recovery Paths
+    rule: >
+      Ask what happens when the FALLBACK fails. Recovery is written as a ladder —
+      retry, then repair automatically, then hand it to a human — and it gets
+      reviewed at the rungs rather than at the joints. The question that finds
+      real defects is not "does the repair step work" but "when the repair step
+      itself FAILS, does control reach the human, or does that failure escape the
+      ladder entirely?" A recovery step is not imagined as a source of failure,
+      because it exists to handle failure, so nobody writes the test. Wrap every
+      rung: a failed repair is a failed attempt, not a crash. And hand the next
+      rung the last GOOD state, not the wreckage of the step that just failed —
+      whoever picks it up is being asked to fix something, and the thing they are
+      shown should be the thing that broke. Where the last rung is a person, this
+      is the difference between work parked for review and work lost.
+
 # ── Stack addenda ─────────────────────────────────────────────────────────────
 
 stacks:

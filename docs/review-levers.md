@@ -5,7 +5,8 @@ Group 6 and the items marked **(+)** were added on 2026-08-24, the items
 marked **(++)** on 2026-08-25 after seven passes over `portal/`, and those
 marked **(+++)** on 2026-08-25 after a fourteenth pass over `scripts/`, and those
 marked **(++++)** on 2026-08-26 after closing the observability audit's last two
-items. Each one is
+items. From 2026-08-28 new items carry a **date** instead — four plus signs was
+already the point at which the mark stopped telling anyone anything. Each one is
 traceable to a defect that a pass using the earlier list did not catch — the
 provenance is kept because a lever with no scalp is decoration.
 
@@ -75,6 +76,15 @@ honest outcome when the lever was right and its *scope* was wrong.
    the check would let through, not only whether it runs.
    *Caught: `redirect_to.startsWith("/")` accepting `//evil.example`, which
    resolves to another origin.*
+   **(2026-08-28)** And write the guard so a type checker can follow it, because
+   a reader follows the same path. Narrowing that goes through an intermediate
+   boolean, or that happens in a different method from the use, is narrowing
+   only a human who already knows the code can see.
+   *Caught three times while turning mypy on: `reported = a is not None and b is
+   not None` followed by `int(a)`; `PgVectorStore.dsn` and `HashEmbedder._model`
+   guarded in `__init__` and used elsewhere; `any(v is None for v in values)`
+   before `int(v)`. Every one was correct and unreadable to the checker, which
+   is the same thing as unreadable to the next person.*
 6. **(++) Out-of-order and repeated messages.** Every best-effort POST, retry,
    heartbeat and at-least-once queue means two writes can arrive in the other
    order, or twice. Ask it of each one: what does the row look like then? An
@@ -84,7 +94,20 @@ honest outcome when the lever was right and its *scope* was wrong.
    `finished_at` set — the widget reported a completed run as running for good,
    and in a group that row masked a real `failed`. Every neighbouring column in
    that upsert already carried the guard.*
-7. **(++) Validation belongs on the receiving side of a trust boundary.** A
+7. **(2026-08-28) Ask what happens when the FALLBACK fails.** Every recovery
+   ladder — retry, then auto-correct, then park it for a human — is reviewed at
+   the rungs and not at the joints. The question is not "does step B work" but
+   "when step B FAILS, does control reach step C, or does B's failure escape the
+   ladder entirely?" A recovery step that raises is the case nobody writes a
+   test for, because the step exists to handle failure and is not imagined as a
+   source of it.
+   *Caught: `run_with_self_correction` asks a model for a corrected payload and
+   parses it with `json.loads`. A model answering in prose — the ordinary
+   failure of "return ONLY JSON" — raised straight out of the method and past
+   `run_with_recoverable_step`, the human DLQ path. The most likely failure of
+   the automatic fixer was the one that stopped the work ever reaching a person.
+   Both twins, the plain loop and the Temporal one.*
+8. **(++) Validation belongs on the receiving side of a trust boundary.** A
    check the caller performs is a courtesy; the same check where the value is
    accepted is a control. Finding the rule already implemented on the wrong side
    is the tell — it means someone knew, and put it where it does not bind.
@@ -252,3 +275,15 @@ check did not actually run, would anything look different?*
    see — was free on the monthly ledger. Its two tiers were each tested alone
    and never in the combination where they interact: the monthly test raises
    the burst limit to 10,000,000 specifically to keep tier 1 out of the way.*
+8. **(2026-08-28) A check that fires on almost everything is as broken as one
+   that never fires.** Item 5 covers the sweep that matches nothing. This is its
+   twin, and it is the one that wastes a reviewer's afternoon: a query returning
+   a result too large to match what the code obviously does is a broken query,
+   not a discovery. Read the count before reading the hits — if a sweep says
+   most of the codebase is defective, the sweep is the defect.
+   *Caught three times in three passes, all mine: an orphan-function grep that
+   flagged 190 of 192 (it counted occurrences wrong); an early-return sweep that
+   flagged 32 tests (`ast.walk` descends into test-local stub functions, whose
+   `return` is not the test's); a security-runner sweep reporting nine of eleven
+   with no verdict at all (they delegate to a shared body). Every one would have
+   been reported as findings by a reviewer who trusted the output.*
