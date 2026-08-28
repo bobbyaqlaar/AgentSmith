@@ -75,6 +75,32 @@ version table being consulted.
 
 ## [Unreleased]
 
+### The checklist is a checklist again
+
+It was not optimised, and the numbers said so. The **legacy** items — the
+original standing list — average 13 words. Everything added since averaged **46**,
+with the longest at 118. Five to eight times the density of the list they were
+appended to, in a document whose whole purpose is to be worked down during a
+review.
+
+`review-levers.md` is now **70 lines**, one line per lever, mean **12 words**,
+longest 19. The 22-line header is six. Nothing is lost: the reasoning moved to
+`review-lever-notes.md` (renamed from `review-lever-scalps.md`, since it now
+carries **Why** as well as **Caught**).
+
+The test that pinned the two files lost its title comparison. The checklist
+carries a RULE and the notes carry a title — different sentences by design — and
+that test began failing the moment the checklist was compressed, which is what
+surfaced that it was compensating for numbering rather than checking anything
+slugs do not already cover. What remains is the slug link, checked both ways,
+plus a new assertion that a `(legacy)` item never acquires notes: the exemption
+should stay visible, and an item that earns evidence should lose the mark rather
+than hold both.
+
+Mutation-tested: renaming a lever, adding a dated one with no notes, and giving a
+legacy item notes all fail.
+
+
 ### Levers are identified by slug, not by position
 
 Numbers were the wrong identifier. They encode reading order, which changes, and

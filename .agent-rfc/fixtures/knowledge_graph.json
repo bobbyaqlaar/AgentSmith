@@ -3861,14 +3861,14 @@
       "language": "python",
       "symbols": [
         "_levers",
-        "_scalps",
+        "_noted",
         "test_both_files_parse_to_something",
-        "test_no_scalp_is_orphaned",
-        "test_every_non_legacy_lever_has_a_scalp",
-        "test_the_two_files_agree_on_every_title"
+        "test_no_note_is_orphaned",
+        "test_every_non_legacy_lever_has_notes",
+        "test_legacy_levers_stay_out_of_the_notes"
       ],
-      "last_modified": "2026-08-28T19:52:41Z",
-      "id": "scripts/test/test_lever_scalps.py"
+      "last_modified": "2026-08-28T20:04:11Z",
+      "id": "scripts/test/test_lever_notes.py"
     }
   ],
   "edges": [
