@@ -195,32 +195,31 @@ def notify_hitl_required(
 
 
 def notify_eval_result(
-    score: float,
-    threshold: float,
-    project: Optional[str] = None,
-    passed: Optional[bool] = None,
+    score: float, threshold: float, passed: bool, project: Optional[str] = None
 ) -> None:
     """Post-eval summary. `passed` is the RUN's verdict, not a score comparison.
 
-    This used to derive the verdict itself as `score >= threshold`, and a
-    scorecard's verdict is not that. `run_scorecard` also gates on parity, the
-    hallucination rate, a missed positive control, and the adversarial /
-    RAG-poison guard — so a fairness run whose rationales all score 0.95 against
-    a 0.80 bar, with one protected-attribute pair diverged, exits 1 and prints ❌
-    while this notification said ✅ at normal urgency.
+    REQUIRED, not derived. This used to compute the verdict itself as
+    `score >= threshold`, and a scorecard's verdict is not that: `run_scorecard`
+    also gates on parity, the hallucination rate, a missed positive control and
+    the adversarial / RAG-poison guard. A fairness run whose rationales all
+    score 0.95 against a 0.80 bar, with one protected-attribute pair diverged,
+    exits 1 and prints ❌ — and this notification said ✅ at normal urgency, on
+    the copy of the verdict that reaches a human who is not watching CI.
 
-    That is the copy of the verdict that reaches a human who is not watching CI,
-    which makes it the worst of the two to be wrong.
-
-    `passed=None` keeps the old derivation for any caller outside this repo that
-    has only the two numbers.
+    The first fix left `passed=None` deriving the old way "for any caller
+    outside this repo holding only the two numbers". There is no such caller —
+    the only one omitting it was the test written to cover the fallback, which
+    is a code path whose sole evidence of need was its own test. Deriving a
+    verdict from ingredients is what this function got wrong in the first place,
+    so the parameter is required. A vendored caller that has not adapted gets a
+    TypeError at its own call site, which is strictly better than a silent ✅.
     """
-    verdict = (score >= threshold) if passed is None else passed
-    emoji = "✅" if verdict else "❌"
+    emoji = "✅" if passed else "❌"
     project_tag = f" [{project}]" if project else ""
     detail = (
         ""
-        if verdict or score < threshold
+        if passed or score < threshold
         # Failed on something the score does not show. Saying so is the whole
         # point: "Score: 0.95 (threshold: 0.80) ❌" reads as a display bug.
         else " — failed an aggregate gate (parity / hallucination / guard)"
@@ -228,7 +227,7 @@ def notify_eval_result(
     send_notification(
         title=f"{emoji} Eval Result{project_tag}",
         message=f"Score: {score:.2f} (threshold: {threshold:.2f}){detail}",
-        urgency="normal" if verdict else "critical",
+        urgency="normal" if passed else "critical",
     )
 
 

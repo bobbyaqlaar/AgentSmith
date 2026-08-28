@@ -75,6 +75,36 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Review pass 22 — run with the two levers written last pass
+
+Both new levers found something, which is the test of whether they were worth
+adding.
+
+- **6.9 (a test can pin a defect), run as a query** over test docstrings
+  justifying behaviour by history. Twelve hits, ten of them the good pattern —
+  describing an old defect to explain why the new assertion is right. One was
+  mine: `notify_eval_result`'s `passed=None` fallback, kept "for any caller
+  outside this repo holding only the two numbers". There is no such caller. The
+  only one omitting the argument was the test written to cover the fallback — a
+  code path whose sole evidence of need was its own test. `passed` is required
+  now; a vendored caller that has not adapted gets a TypeError at its own call
+  site, which is what the pass-17 fix argued for in the first place.
+
+- **1.5 (one verdict, computed once), run as a query** over thresholds compared
+  in more than one place. `run_scorecard` computed four sub-verdicts — parity,
+  hallucination rate, the guard ceiling, a missed positive control — at the gate
+  and RE-DERIVED each three hundred lines later for its reason line. One of the
+  four had already drifted and was fixed in pass 17 **in isolation**, leaving
+  its three neighbours in the shape that produced it. Lever 4.5 says to grep for
+  the siblings when a fix lands; that did not happen. Each sub-verdict is named
+  once and reused now.
+
+- **Nothing asserted the reason lines print at all** — a suite of tests on the
+  verdict and none on the explanation, which is why the drift could happen
+  quietly. Two tests added: a failing hallucination gate must print its reason
+  and the two numbers, and a diverging pair must be named in the output.
+
+
 ### Review of the review levers, against themselves
 
 The document was audited against its own standard and against each other, and

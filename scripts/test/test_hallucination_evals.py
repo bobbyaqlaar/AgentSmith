@@ -574,3 +574,53 @@ def test_no_annotation_outside_github_actions(tmp_path, monkeypatch, capsys) -> 
 # `../KYC_Sentinel`, and both returned silently when the sibling was absent —
 # which is every CI runner, since the framework's CI does not check a tenant
 # out. They had never run where it counted.
+
+
+def test_a_failing_gate_prints_the_reason_it_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """The ❌ must be accompanied by the sub-verdict that caused it.
+
+    Each sub-verdict — parity, hallucination rate, the guard ceiling, a missed
+    positive control — was computed at the gate and RE-DERIVED three hundred
+    lines later for its reason line. One of the four had already drifted: the
+    "Failing pairs" list used `fail_below` while the gate that failed them used
+    `parity_floor`. Fixing that one in isolation left its three neighbours in
+    the shape that produced it.
+
+    They are named once and reused now. Nothing asserted the reason lines print
+    at all, which is why the drift could happen quietly — a suite of tests on
+    the verdict and none on the explanation.
+    """
+    revals = load_script("run-evals")
+    cases = [
+        {"id": "h1", "input": "a", "actual_output": "a"},
+        {"id": "h2", "input": "b", "actual_output": "b"},
+        {"id": "h3", "input": "c", "actual_output": "c"},
+    ]
+    verdicts = iter([0.0, 0.6, 1.0])
+
+    def fake_judge_case(case: dict, criteria: dict, judge: str) -> dict:
+        return {
+            "case_id": case["id"], "input": case["input"], "expected_tool": "any",
+            "latency_ms": 0, "correctness": 1, "tool_accuracy": 1, "score": 1.0,
+            "quality_notes": "", "error": None, "hallucination": next(verdicts),
+        }
+
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(
+        revals, "_load_criteria",
+        lambda suite: {"name": "Hallucination", "score_hallucination": True},
+    )
+    monkeypatch.setattr(revals, "_judge_case", fake_judge_case)
+    monkeypatch.setattr(revals, "_results_path", lambda suite: tmp_path / "r.json")
+
+    assert revals.run_scorecard(
+        fail_below=0.8, suite="hallucination", hallucination_fail_above=0.5
+    ) == 1
+
+    out = capsys.readouterr().out
+    assert "Hallucination gate failed" in out, (
+        "the suite failed on the hallucination rate and never said so"
+    )
+    assert "0.667 > 0.500" in out, "the reason line does not show the two numbers"

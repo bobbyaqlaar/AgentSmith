@@ -159,7 +159,7 @@ def test_an_aggregate_failure_notifies_as_a_failure(monkeypatch):
         ),
     )
 
-    notifier.notify_eval_result(0.95, 0.80, project="kyc", passed=False)
+    notifier.notify_eval_result(0.95, 0.80, passed=False, project="kyc")
 
     assert sent["title"].startswith("❌"), sent["title"]
     assert sent["urgency"] == "critical"
@@ -180,14 +180,18 @@ def test_a_passing_run_still_notifies_as_one(monkeypatch):
     assert sent["title"].startswith("✅") and sent["urgency"] == "normal"
 
 
-def test_without_a_verdict_it_falls_back_to_the_score(monkeypatch):
-    """Kept for any caller outside this repo holding only the two numbers."""
-    sent = {}
-    monkeypatch.setattr(
-        notifier, "send_notification",
-        lambda title, message, urgency="normal", **k: sent.update(title=title),
-    )
-    notifier.notify_eval_result(0.50, 0.80)
-    assert sent["title"].startswith("❌")
-    notifier.notify_eval_result(0.90, 0.80)
-    assert sent["title"].startswith("✅")
+def test_the_verdict_cannot_be_omitted() -> None:
+    """`passed` is required, and the absence of a default is the point.
+
+    The first fix made it optional, deriving the old `score >= threshold` when
+    omitted, "for any caller outside this repo holding only the two numbers". A
+    sweep for tests justifying behaviour by history found this one, and then
+    found that the only caller omitting it was the test covering the fallback —
+    a code path whose sole evidence of need was its own test.
+
+    Deriving a verdict from ingredients is what this function got wrong to begin
+    with. A caller that has not adapted now gets a TypeError at its own call
+    site, which is strictly better than a silent ✅ on a failed run.
+    """
+    with pytest.raises(TypeError):
+        notifier.notify_eval_result(0.90, 0.80)  # type: ignore[call-arg]

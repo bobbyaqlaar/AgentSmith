@@ -380,3 +380,106 @@ def test_failing_pairs_are_reported_against_the_floor_that_failed_them(
     assert reported_with_fail_below == [], (
         "this is the bug: the gate fails and the old report names nobody"
     )
+
+
+def test_a_diverging_pair_is_named_in_the_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """The ❌ must name the pair that caused it.
+
+    The pass-17 fix pointed "Failing pairs" at `parity_floor` instead of
+    `fail_below`, and nothing covered it: reverting that fix left every fairness
+    test green, because they all assert on parity VALUES and none on what the
+    run prints. A gate's explanation is part of its contract — an operator who
+    cannot see which pair diverged cannot act on the failure.
+    """
+    revals = load_script("run-evals")
+    cases = [
+        {"id": "f1", "input": "applicant A", "pair_id": "p1"},
+        {"id": "f2", "input": "applicant B", "pair_id": "p1"},
+    ]
+    fairness_bits = iter([1, 0])   # the pair diverges
+
+    def fake_judge_case(case: dict, criteria: dict, judge: str) -> dict:
+        return {
+            "case_id": case["id"], "input": case["input"], "expected_tool": "any",
+            "latency_ms": 0, "correctness": 1, "tool_accuracy": 1, "score": 1.0,
+            "quality_notes": "", "error": None, "fairness": next(fairness_bits),
+            "pair_id": case["pair_id"],
+        }
+
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(
+        revals, "_load_criteria",
+        lambda suite: {"name": "Fairness", "score_fairness": True},
+    )
+    monkeypatch.setattr(revals, "_judge_case", fake_judge_case)
+    monkeypatch.setattr(revals, "_results_path", lambda suite: tmp_path / "r.json")
+
+    rc = revals.run_scorecard(fail_below=0.8, suite="fairness")
+
+    out = capsys.readouterr().out
+    assert rc == 1, f"a diverging protected-attribute pair did not fail the suite:\n{out}"
+    assert "p1" in out, f"the diverging pair is not named anywhere in the output:\n{out}"
+
+
+def test_the_pairs_report_uses_the_floor_that_failed_them(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """The threshold choice, pinned — which the test above cannot do.
+
+    With the shipped metric a diverging pair scores 0.0, below `fail_below`
+    (0.80) and `parity_floor` (1.0) alike, so the two agree by luck and
+    swapping them changes nothing observable. That was found by mutation:
+    pointing the report back at `fail_below` left the previous test green.
+
+    A CONTINUOUS parity metric is what `_resolve_parity_fail_below` explicitly
+    supports, and there the two floors separate. 0.90 fails the gate at 1.0 and
+    is not below 0.80, so a report using `fail_below` names nobody while the run
+    exits 1 — a ❌ with an empty "Failing pairs" line, the reporting bug the
+    branch beside it exists to prevent.
+    """
+    revals = load_script("run-evals")
+    cases = [
+        {"id": "f1", "input": "applicant A", "pair_id": "p1"},
+        {"id": "f2", "input": "applicant B", "pair_id": "p1"},
+    ]
+
+    def fake_judge_case(case: dict, criteria: dict, judge: str) -> dict:
+        return {
+            "case_id": case["id"], "input": case["input"], "expected_tool": "any",
+            "latency_ms": 0, "correctness": 1, "tool_accuracy": 1, "score": 1.0,
+            "quality_notes": "", "error": None, "fairness": 1,
+            "pair_id": case["pair_id"],
+        }
+
+    monkeypatch.setattr(revals, "_load_cases", lambda suite: cases)
+    monkeypatch.setattr(
+        revals, "_load_criteria",
+        lambda suite: {"name": "Fairness", "score_fairness": True},
+    )
+    monkeypatch.setattr(revals, "_judge_case", fake_judge_case)
+    monkeypatch.setattr(revals, "_results_path", lambda suite: tmp_path / "r.json")
+    # A tenant whose parity metric is continuous — the case the resolver's own
+    # docstring says the floor is configurable for.
+    monkeypatch.setattr(revals, "_pair_parity", lambda rows: {"p1": 0.90})
+
+    rc = revals.run_scorecard(fail_below=0.8, suite="fairness")
+    out = capsys.readouterr().out
+
+    assert rc == 1, f"0.90 did not fail a 1.0 parity floor:\n{out}"
+
+    # The "Failing pairs" LINE specifically. A first version asserted `"p1" in
+    # out`, which passes on the summary line above it — that one prints the
+    # worst pair id whatever the report decides — so the test could not fail for
+    # the reason it claimed. Mutation testing is what surfaced that.
+    failing_line = next(
+        (ln for ln in out.splitlines() if "Failing pairs" in ln), None
+    )
+    assert failing_line is not None, (
+        f"the run failed on parity and printed no Failing pairs line:\n{out}"
+    )
+    assert "p1" in failing_line, (
+        f"the Failing pairs line names nobody — the report is using a different "
+        f"threshold from the gate: {failing_line!r}"
+    )
