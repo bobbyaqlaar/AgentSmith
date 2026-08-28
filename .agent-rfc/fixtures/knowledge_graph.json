@@ -82,10 +82,12 @@
       "language": "python",
       "symbols": [
         "StructuredOutputError",
+        "_is_json",
+        "_candidates",
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-28T21:36:50Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -331,7 +333,7 @@
         "_scrub",
         "_truncate"
       ],
-      "last_modified": "2026-08-28T20:15:39Z",
+      "last_modified": "2026-08-28T21:40:11Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -2363,9 +2365,13 @@
         "test_the_redactor_handles_arabic_numerals_too",
         "test_one_identifier_written_two_ways_hashes_the_same",
         "test_a_plain_number_is_left_alone",
+        "_fallback_tenant",
+        "test_fallback_tenant_reads_the_primary_env_var",
+        "test_a_set_but_empty_tenant_var_falls_back_to_unknown",
+        "test_an_unresolvable_tenant_never_takes_down_the_processor",
         "__init__"
       ],
-      "last_modified": "2026-08-28T20:14:43Z",
+      "last_modified": "2026-08-28T21:39:59Z",
       "id": "runtime/test/test_trace_redactor.py"
     },
     {
@@ -2392,9 +2398,21 @@
         "test_parse_bare_json",
         "test_parse_fenced_without_language_tag",
         "test_invalid_schema_raises",
-        "test_malformed_json_raises"
+        "test_malformed_json_raises",
+        "Row",
+        "Rows",
+        "test_a_bare_json_array_is_parsed",
+        "test_a_bare_array_and_a_fenced_one_agree",
+        "test_the_answer_fence_wins_over_an_earlier_working_fence",
+        "test_a_non_json_language_tag_does_not_hijack_extraction",
+        "test_an_explicit_json_tag_outranks_an_earlier_untagged_fence",
+        "test_a_failure_names_the_block_it_tried",
+        "test_the_error_does_not_quote_the_model_output",
+        "test_an_empty_fence_is_not_blamed_for_a_later_failure",
+        "test_a_truncated_first_fence_falls_through_to_the_next",
+        "test_a_prose_fence_falls_through_to_bare_json"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-28T21:34:00Z",
       "id": "runtime/test/test_structured_output.py"
     },
     {
