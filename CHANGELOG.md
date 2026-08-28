@@ -75,6 +75,45 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Four ways past the injection guard, three of them one character wide
+
+`grep-for-siblings` pointed here: the previous pass fixed a normalisation gap in
+one guardrail, so the injection detector was the obvious neighbour. It matched
+raw text.
+
+| evasion | cost to an attacker |
+|---|---|
+| `ig<U+200B>nore all previous instructions` | one invisible character |
+| Cyrillic `о` for Latin `o` | one keystroke, identical glyph |
+| fullwidth Latin | a text transform |
+| `ignore-all-previous-instructions` | **no Unicode at all** |
+
+All four defeated every pattern in the module, including the five that
+SEC-PROMPT-001's corpus asserts are blocked — and that corpus is seven ASCII
+cases in canonical phrasing, so it tested the patterns with the input the
+patterns were written for.
+
+**What this does not claim.** Detection by pattern is a heuristic and cannot be
+complete: an attacker who rephrases in ordinary language defeats any regex, and
+nothing here changes that. What is closed is the mechanical class — strings
+identical to a human and to the model that differed only as bytes. NFKC, format
+characters stripped, a small Latin-confusables map, and separators that accept a
+hyphen. Five evasion cases and a benign hyphenated-prose control are now in the
+shared corpus, so every tenant's SEC-PROMPT-001 probes them.
+
+- **A regression I introduced, and then fixed.** Stripping format characters for
+  matching left a payload padded with zero-width characters entirely invisible
+  to the guard — before, they at least broke patterns by accident.
+  `_control_char_ratio` counted `ord(ch) < 32` only, so it never saw them.
+  It counts format characters now, which also catches bidi-override payloads
+  that reorder what a human reviewer sees without changing what the model reads.
+- **ZWJ and ZWNJ are excluded from that count deliberately.** Persian and Arabic
+  use them for correct letter forms, Indic scripts for conjuncts, emoji families
+  are built from them. Counting them would fire the guard on ordinary text in
+  the languages this framework is aimed at — the same regional-correctness point
+  as the Emirates ID in Arabic-Indic numerals.
+
+
 ### The two halves of the PII control did not agree on what PII is
 
 Reviewing `input_guardrail.py` and `trace_redactor.py` directly for the first

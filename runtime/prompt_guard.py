@@ -30,6 +30,7 @@ or PROMPT_DENYLIST_PATH.
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Optional
@@ -51,25 +52,70 @@ class PromptGuardResult:
     reasons: list[str] = field(default_factory=list)
 
 
+
+# ── Normalisation, for MATCHING only ─────────────────────────────────────────
+#
+# WHAT THIS DOES AND DOES NOT CLAIM. Injection detection by pattern is a
+# heuristic and cannot be complete: an attacker who rephrases in ordinary
+# language defeats any regex, and nothing here changes that. What it closes is
+# the MECHANICAL class — strings identical to a human and to the model, that
+# differed only as bytes:
+#
+#   ig<U+200B>nore all previous instructions   one invisible character
+#   ignоre all previous instructions           Cyrillic о
+#   ｉｇｎｏｒｅ all previous instructions           fullwidth
+#   ignore-all-previous-instructions           no Unicode at all
+#
+# All four evaded every pattern in this module, including the five the
+# SEC-PROMPT-001 corpus asserts are blocked. The corpus is seven ASCII cases in
+# canonical phrasing — it tested the patterns with the input the patterns were
+# written for.
+#
+# Detection-only and deliberately lossy: the caller's text is never rewritten
+# from this. That is the opposite trade from runtime/pii_patterns.ascii_digits,
+# which is span-preserving precisely so redaction can splice into the original.
+
+# Latin lookalikes, not the full Unicode confusables table — that is thousands
+# of code points and a dependency. These are the ones that appear in real
+# homoglyph evasion because they render identically in common fonts.
+_CONFUSABLES = str.maketrans({
+    "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x", "у": "y",
+    "і": "i", "ѕ": "s", "ԁ": "d", "ո": "n", "м": "m", "т": "t", "в": "b",
+    "ο": "o", "α": "a", "ε": "e", "ι": "i", "ν": "v", "ρ": "p", "τ": "t",
+})
+
+
+def _normalise(text: str) -> str:
+    """NFKC, minus format characters, minus homoglyphs.
+
+    NFKC folds fullwidth and other compatibility forms to ASCII. Removing
+    category Cf drops zero-width spaces, joiners and bidi controls — characters
+    with no visible width whose only effect here was to break a word in half.
+    """
+    folded = unicodedata.normalize("NFKC", text)
+    stripped = "".join(c for c in folded if unicodedata.category(c) != "Cf")
+    return stripped.translate(_CONFUSABLES)
+
+
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     (
         "instruction_override",
         re.compile(
-            r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|rules)",
+            r"ignore[\s\-_]+(all[\s\-_]+)?(previous|prior|above)[\s\-_]+(instructions|prompts|rules)",
             re.IGNORECASE,
         ),
     ),
     (
         "instruction_override",
         re.compile(
-            r"disregard\s+(all\s+)?(previous|prior|above)\s+(instructions|prompts|rules)",
+            r"disregard[\s\-_]+(all[\s\-_]+)?(previous|prior|above)[\s\-_]+(instructions|prompts|rules)",
             re.IGNORECASE,
         ),
     ),
     (
         "reveal_system",
         re.compile(
-            r"(reveal|show|print|dump)\s+(the\s+)?(system\s+prompt|hidden\s+instructions)",
+            r"(reveal|show|print|dump)[\s\-_]+(the[\s\-_]+)?(system[\s\-_]+prompt|hidden[\s\-_]+instructions)",
             re.IGNORECASE,
         ),
     ),
@@ -156,11 +202,35 @@ def _load_denylist() -> list[str]:
     return lines
 
 
+# Zero-width JOINER and NON-JOINER are excluded deliberately. They are not
+# decoration: Persian and Arabic use them for correct letter forms, Indic
+# scripts for conjuncts, and emoji families are built from them. Counting them
+# would make this guard fire on ordinary text in the languages this framework
+# is aimed at — the same regional-correctness point as the Emirates ID in
+# Arabic-Indic numerals.
+_LEGITIMATE_FORMAT_CHARS = {"\u200c", "\u200d"}
+
+
 def _control_char_ratio(text: str) -> float:
+    """The share of characters that are invisible.
+
+    Counts C0 controls AND format characters — zero-width spaces, bidi
+    overrides, soft hyphens, byte-order marks. Format characters used to be
+    absent from this count, so a payload padded with them was measured as
+    entirely ordinary. That mattered more once `_normalise` began stripping them
+    before matching: they had at least broken patterns by accident before, and
+    silently removing them would have left no signal at all. This restores one
+    deliberately.
+    """
     if not text:
         return 0.0
-    control = sum(1 for ch in text if ord(ch) < 32 and ch not in "\n\r\t")
-    return control / len(text)
+    invisible = sum(
+        1
+        for ch in text
+        if (ord(ch) < 32 and ch not in "\n\r\t")
+        or (unicodedata.category(ch) == "Cf" and ch not in _LEGITIMATE_FORMAT_CHARS)
+    )
+    return invisible / len(text)
 
 
 def scan_prompt(
@@ -171,10 +241,14 @@ def scan_prompt(
 ) -> PromptGuardResult:
     """Scan text for prompt-injection heuristics."""
     reasons: list[str] = []
-    lowered = text.lower()
+    # Match on the normalised copy — see _normalise. The control-char ratio
+    # below deliberately reads the ORIGINAL: a payload padded with invisible
+    # characters is itself a signal, and normalising first would erase it.
+    probe = _normalise(text)
+    lowered = probe.lower()
 
     for label, pattern in _PATTERNS:
-        if pattern.search(text):
+        if pattern.search(probe):
             reasons.append(label)
 
     if _control_char_ratio(text) > 0.05:
