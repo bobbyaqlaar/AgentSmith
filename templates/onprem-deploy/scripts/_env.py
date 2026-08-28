@@ -60,3 +60,33 @@ def load_env(env_path: Path) -> dict:
             k, v = line.split("=", 1)
             env.setdefault(k.strip(), parse_value(v))
     return env
+
+
+def port(env: dict, name: str, default: str) -> int:
+    """A TCP port from `env`, or a clear failure.
+
+    Here rather than in either renderer because the two had drifted on exactly
+    this, in the bundle whose duplication this module exists to remove.
+    `render-envoy-config.py` wrapped APP_PORT in `int()` and crashed with a
+    bare ValueError traceback on a bad value; `render-traefik-config.py` took
+    the string and interpolated it into a backend URL, so
+    `APP_PORT=8080/../admin` rendered `http://app-prod:8080/../admin` and
+    `APP_PORT=not-a-port` rendered a URL the proxy rejects at startup, hours
+    away from the file that caused it.
+
+    Neither was right. One failed unhelpfully, one did not fail at all, and a
+    customer switching proxies on the same `.env` got different behaviour from
+    the same bundle.
+
+    Raises ValueError with a message naming the variable and the value — the
+    renderers catch it and exit non-zero, the way they already do for the
+    canary and shadow percentages.
+    """
+    raw = (env.get(name) or default).strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        raise ValueError(f"{name} must be a whole number, got {raw!r}") from None
+    if not 1 <= value <= 65535:
+        raise ValueError(f"{name} must be a TCP port in 1-65535, got {value}")
+    return value

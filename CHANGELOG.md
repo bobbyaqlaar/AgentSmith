@@ -75,6 +75,37 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Review pass 21 — the on-prem bundle's two proxies disagreed about a port
+
+`templates/onprem-deploy/` ships a customer both an Envoy and a Traefik path
+over one `.env`, and `_env.py` exists in that bundle to stop its two scripts
+drifting — its own docstring says so. They drifted anyway, in the validation
+rather than the parsing:
+
+- `render-envoy-config.py` wrapped `APP_PORT` in `int()`, so a bad value died
+  with a bare `ValueError` traceback rather than the `❌` message it already
+  uses for the canary and shadow percentages;
+- `render-traefik-config.py` took the string and interpolated it into a backend
+  URL. `APP_PORT=8080/../admin` rendered `http://app-prod:8080/../admin`;
+  `APP_PORT=not-a-port` rendered a URL the proxy rejects at startup, hours from
+  the file that caused it.
+
+Neither was right, and a customer switching proxies on the same `.env` got
+different behaviour from the same bundle. Port parsing is `_env.port` now — a
+range check and a message naming the variable and the value — and both
+renderers exit non-zero the same way.
+
+Not a security finding, and worth being precise about that: `APP_PORT` comes
+from the operator's own `.env` on their own host. It is a robustness and
+consistency defect, and the traversal case is what makes it worth fixing rather
+than documenting.
+
+Also swept and clean: both renderers emit through `yaml.safe_dump` on a dict
+rather than templating text, so there is no config-injection surface — which is
+what sent the pass there, under the lever about interpolation into an
+interpreted language.
+
+
 ### Review levers — three lessons, a new pillar, and one hygiene fix
 
 **Levers.** `docs/review-levers.md` gains **2.7 (ask what happens when the

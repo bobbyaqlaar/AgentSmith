@@ -13,7 +13,7 @@ regenerated every run, never edited by hand.
 import sys
 from pathlib import Path
 
-from _env import load_env  # sibling module; the bundle ships together
+from _env import load_env, port  # sibling module; the bundle ships together
 
 import yaml
 
@@ -24,7 +24,11 @@ HERE = Path(__file__).resolve().parent.parent
 
 def main() -> int:
     env = load_env(HERE / ".env")
-    app_port = env.get("APP_PORT", "8080")
+    try:
+        app_port = port(env, "APP_PORT", "8080")
+    except ValueError as exc:
+        print(f"❌ {exc}", file=sys.stderr)
+        return 1
     canary_image = env.get("APP_IMAGE_CANARY", "").strip()
     shadow_image = env.get("APP_IMAGE_SHADOW", "").strip()
     canary_weight = int(env.get("CANARY_WEIGHT_PERCENT", "10") or "10")

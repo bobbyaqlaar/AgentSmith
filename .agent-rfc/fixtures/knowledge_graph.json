@@ -1039,7 +1039,7 @@
       "symbols": [
         "main"
       ],
-      "last_modified": "2026-08-20T20:42:06Z",
+      "last_modified": "2026-08-28T10:09:33Z",
       "id": "templates/onprem-deploy/scripts/render-traefik-config.py"
     },
     {
@@ -1049,7 +1049,7 @@
         "cluster",
         "main"
       ],
-      "last_modified": "2026-08-25T21:40:24Z",
+      "last_modified": "2026-08-28T10:08:18Z",
       "id": "templates/onprem-deploy/scripts/render-envoy-config.py"
     },
     {
@@ -1057,9 +1057,10 @@
       "language": "python",
       "symbols": [
         "parse_value",
-        "load_env"
+        "load_env",
+        "port"
       ],
-      "last_modified": "2026-08-08T20:32:46Z",
+      "last_modified": "2026-08-28T10:08:18Z",
       "id": "templates/onprem-deploy/scripts/_env.py"
     },
     {
@@ -3824,6 +3825,20 @@
       ],
       "last_modified": "2026-08-27T19:43:30Z",
       "id": "scripts/test/test_no_tenant_repo_dependency.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "bundle",
+        "_render",
+        "test_the_fixture_lays_the_bundle_out_the_way_the_scripts_expect",
+        "test_both_renderers_refuse_the_same_bad_port",
+        "test_a_valid_port_still_renders",
+        "test_a_bad_port_never_reaches_a_rendered_url"
+      ],
+      "last_modified": "2026-08-28T10:08:54Z",
+      "id": "scripts/test/test_onprem_renderers.py"
     }
   ],
   "edges": [

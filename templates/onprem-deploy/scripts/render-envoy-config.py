@@ -13,7 +13,7 @@ filter needed, both are core HTTP connection manager route fields.
 import sys
 from pathlib import Path
 
-from _env import load_env  # sibling module; the bundle ships together
+from _env import load_env, port  # sibling module; the bundle ships together
 
 import yaml
 
@@ -52,8 +52,12 @@ def cluster(name: str, address: str, port: int) -> dict:
 
 def main() -> int:
     env = load_env(HERE / ".env")
-    app_port = int(env.get("APP_PORT", "8080") or "8080")
-    listen_port = int(env.get("PROXY_LISTEN_PORT", "80") or "80")
+    try:
+        app_port = port(env, "APP_PORT", "8080")
+        listen_port = port(env, "PROXY_LISTEN_PORT", "80")
+    except ValueError as exc:
+        print(f"❌ {exc}", file=sys.stderr)
+        return 1
     canary_image = env.get("APP_IMAGE_CANARY", "").strip()
     shadow_image = env.get("APP_IMAGE_SHADOW", "").strip()
     canary_weight = int(env.get("CANARY_WEIGHT_PERCENT", "10") or "10")
