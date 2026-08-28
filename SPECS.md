@@ -1339,6 +1339,7 @@ AgentSmith/
 ├── init-db/                     # Postgres bootstrap for docker-compose.yml (creates agenticframework DB)
 ├── pyproject.toml               # Packages runtime/ as `agentsmith-runtime` (§25) — pip-installable by tenants
 ├── requirements.txt
+├── requirements-lint.txt        # ruff + mypy + stubs, pinned exactly so the gate is reproducible
 ├── pytest.ini
 ├── .gitignore
 ├── docker-compose.yml

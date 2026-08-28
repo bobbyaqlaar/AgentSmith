@@ -30,11 +30,11 @@ jobs:
         # nothing checked. RUF100 is selected precisely to keep that from
         # recurring, and it can only do that from here.
         run: |
-          pip install "ruff>=0.6,<1.0"
+          pip install -r requirements-lint.txt
           ruff check .
       - name: "mypy (shipped runtime only — see pyproject.toml for the scope)"
         run: |
-          pip install "mypy>=1.11,<2.0" types-PyYAML
+          pip install -r requirements-lint.txt
           mypy
       - name: "py_compile sweep"
         run: |

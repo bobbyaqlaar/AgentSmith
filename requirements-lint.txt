@@ -1,0 +1,21 @@
+# The lint/type toolchain, pinned exactly.
+#
+# CI installed these inline as ranges ("mypy>=1.11,<2.0"), so every run resolved
+# whatever was newest that day and no developer could reproduce the gate: an
+# unpinned tool answers a slightly different question each time it is installed.
+# Paired with `python_version` in pyproject.toml [tool.mypy], the two together
+# make the gate deterministic — the tool version and the language level it
+# targets are both stated rather than inherited from the machine.
+#
+# Exact pins mean these need bumping by hand. That is the cost, and it is
+# smaller than a gate whose result depends on the date. Bump deliberately, run
+# both gates, and commit the result.
+mypy==1.14.1
+ruff==0.15.20
+
+# NOT covered by `ignore_missing_imports`: mypy reports `import-untyped` and
+# names the package when a library HAS a published stub, which is the more
+# useful answer. Installed here rather than only in the CI step, so a local run
+# resolves the same stubs — this was previously CI-only, and a laptop reported
+# a `yaml` stub error that CI never saw.
+types-PyYAML>=6.0,<7.0

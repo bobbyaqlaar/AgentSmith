@@ -151,11 +151,19 @@ ignore = [
 # fail-open handler and the call went unmetered on both tiers. Review found that
 # one after it shipped; mypy names it in milliseconds.
 [tool.mypy]
-# No `python_version` pin. Pinning it to the minimum supported 3.11 makes mypy
-# parse third-party stubs under 3.11 rules, and numpy's ship 3.12+ syntax — so
-# the run dies on a dependency's stub rather than on this repo's code. The
-# running interpreter decides instead; CI is 3.11, which is the version that
-# matters.
+# Pinned to the minimum supported version, so the gate answers the same question
+# everywhere. Unpinned, mypy targets whatever interpreter it happens to run
+# under, and that is not a property of this repo: on one laptop, `mypy` through
+# a pyenv shim reported 9 errors, the same mypy aimed at the system python
+# reported 3, and CI reported none. All three were "the mypy gate".
+#
+# The comment this replaces said pinning made the run die inside numpy's stubs,
+# which ship 3.12+ syntax. Measured again before changing it: zero stub failures
+# under the pin. Whatever mypy or numpy version that was true of, it is not true
+# of the ones pinned in `lint` below — and an unreproducible gate was the larger
+# cost. If a dependency's stubs do break under 3.11 again, exclude that
+# dependency rather than un-pinning the language version for the whole repo.
+python_version = "3.11"
 files = ["runtime"]
 exclude = ["runtime/test/"]
 ignore_missing_imports = true
