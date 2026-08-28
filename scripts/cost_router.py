@@ -645,7 +645,7 @@ def call(
         # toward the monthly cap. runtime/llm_gateway.py's sibling path already
         # warns and bills the reserved estimate for exactly this case; this
         # call site never got the same treatment because it lives in another
-        # package (review-levers 4.5: when a fix lands, grep for the siblings).
+        # package (review-levers: grep-for-siblings).
         #
         # There is no reservation to fall back on here — cost_router has no
         # budget ledger — so the honest outcome is to say the call went

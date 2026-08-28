@@ -20,7 +20,7 @@ instrument for — were computable nowhere, while §5 of that audit read
 WHY test_metrics.py DID NOT CATCH IT. It installs its own MeterProvider and an
 InMemoryMetricReader in a fixture, then asserts the instruments record. That
 proves the instruments work WHEN a provider exists. Nothing proved one ever
-did — review-levers 3.4 (declared vs enforced) and 6.4 (test the contract, not
+did — review-levers: declared-vs-enforced and test-the-contract (not
 the helper), which is the same pairing that let pillar 3 pass while unenforced.
 
 IN A SUBPROCESS, deliberately. OTel's global providers are one-shot per

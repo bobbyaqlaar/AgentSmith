@@ -1,18 +1,18 @@
 """
-scripts/test/test_lever_references.py — a `review-levers N.M` citation must
-still point at the lever it meant.
+scripts/test/test_lever_references.py — a lever cited from code must exist.
 
-THE DRIFT THIS CATCHES, which happened here. `scripts/notifier.py` cited
-`review-levers 2.7` for "validation belongs on the receiving side of a trust
-boundary". A later pass inserted a new lever at 2.7 and pushed validation to
-2.8, so the comment went on naming a number that had come to mean something
-else. Nothing failed; the citation just quietly started lying — which is the
-same shape as the stale-doc defects the levers themselves are about.
+Citations used to carry a NUMBER, and numbers move. `scripts/notifier.py` cited
+`review-levers 2.7` for "validation belongs on the receiving side"; a later pass
+inserted a lever at 2.7 and pushed validation to 2.8, so the comment went on
+naming a number that had come to mean something else. Nothing failed — the
+citation just quietly started lying, which is the stale-doc defect the levers are
+about, committed inside the levers.
 
-An existence check would not have caught it: 2.7 existed the whole time. So a
-citation carries a short NAME as well as a number, and this reads both sides
-and compares them. Neither the name nor the number is restated here — a test
-that hardcodes the mapping is just a third copy of it (lever 1.7).
+The first fix required citations to carry a short name as well as the number, and
+compared the two by word overlap. That worked and was fiddly. Levers are keyed by
+SLUG now, which is a stable identifier rather than a position, so the whole
+question disappears: a slug either exists or it does not, and reordering or
+regrouping the checklist cannot invalidate a single citation.
 """
 
 from __future__ import annotations
@@ -24,30 +24,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LEVERS = ROOT / "docs" / "review-levers.md"
 
-# `review-levers 2.8: some name` or `(review-levers 1.7: some name)` or
-# `... 3.4 (declared vs enforced)`. The name may wrap onto the next line.
-_CITATION = re.compile(
-    r"review-levers?\s+(\d+)\.(\d+)\s*[:(]\s*([^)\n]*(?:\n[^)\n]*)?)", re.I
-)
-_STOP = {"a", "an", "the", "is", "of", "on", "to", "not", "must", "that", "and", "as", "for"}
+_CITATION = re.compile(r"review-levers:\s*([a-z][a-z0-9-]*)")
 
 
-def _lever_titles() -> dict[tuple[int, int], str]:
-    """{(group, item): title} parsed from the document."""
-    titles: dict[tuple[int, int], str] = {}
-    group = 0
-    for line in LEVERS.read_text(encoding="utf-8").splitlines():
-        m = re.match(r"^## (\d+) · ", line)
-        if m:
-            group = int(m.group(1))
-            continue
-        m = re.match(r"^(\d+)\.\s+(.*)$", line)
-        if m and group:
-            titles[(group, int(m.group(1)))] = m.group(2)
-    return titles
+def _defined_slugs() -> set[str]:
+    return set(re.findall(r"^- `([a-z][a-z0-9-]*)` — ", LEVERS.read_text(encoding="utf-8"), re.M))
 
 
-def _cited() -> list[tuple[Path, int, int, str]]:
+def _citations() -> list[tuple[Path, str]]:
     files = subprocess.run(
         ["git", "ls-files", "*.py", "*.ts", "*.tsx"], cwd=ROOT,
         capture_output=True, text=True, check=False,
@@ -61,45 +45,23 @@ def _cited() -> list[tuple[Path, int, int, str]]:
             text = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        for m in _CITATION.finditer(text):
-            out.append((path, int(m.group(1)), int(m.group(2)), m.group(3)))
+        out += [(path, m.group(1)) for m in _CITATION.finditer(text)]
     return out
 
 
-def test_the_sweep_reads_the_document_and_the_citations() -> None:
-    """Either side coming back empty would make every assertion below vacuous."""
-    titles = _lever_titles()
-    assert len(titles) > 30, f"parsed only {len(titles)} levers from the document"
-    assert len(_cited()) >= 5, "found almost no lever citations to check"
+def test_the_sweep_reads_both_sides() -> None:
+    """Either side empty would make the assertion below vacuous."""
+    assert len(_defined_slugs()) > 30, "parsed almost no levers from the checklist"
+    assert len(_citations()) >= 5, "found almost no citations to check"
 
 
-def test_every_cited_lever_number_exists() -> None:
-    titles = _lever_titles()
-    missing = [
-        f"{p.relative_to(ROOT)} cites {g}.{i}, which does not exist"
-        for p, g, i, _ in _cited() if (g, i) not in titles
+def test_every_cited_slug_exists() -> None:
+    defined = _defined_slugs()
+    unknown = [
+        f"{p.relative_to(ROOT)} cites `{slug}`, which is not a lever"
+        for p, slug in _citations() if slug not in defined
     ]
-    assert not missing, "\n  " + "\n  ".join(missing)
-
-
-def test_every_citation_names_the_lever_it_points_at() -> None:
-    """The half an existence check cannot do. A number that still resolves but
-    now means something else is the failure that actually happened."""
-    titles = _lever_titles()
-    wrong = []
-    for path, group, item, name in _cited():
-        title = titles.get((group, item), "")
-        cited_words = {w for w in re.findall(r"[a-z]+", name.lower()) if w not in _STOP}
-        title_words = {w for w in re.findall(r"[a-z]+", title.lower()) if w not in _STOP}
-        if not cited_words:
-            continue  # a bare number, covered by the test above
-        overlap = cited_words & title_words
-        if len(overlap) < max(2, len(cited_words) // 3):
-            wrong.append(
-                f"{path.relative_to(ROOT)} cites {group}.{item} as "
-                f"{name.strip()!r}, but {group}.{item} is {title[:70]!r}"
-            )
-    assert not wrong, (
-        "these citations name a lever other than the one at that number — a "
-        "lever was probably inserted above it:\n  " + "\n  ".join(wrong)
+    assert not unknown, (
+        "a citation names a lever that does not exist — it was renamed, or the "
+        "slug is a typo:\n  " + "\n  ".join(unknown)
     )

@@ -301,8 +301,7 @@ def test_http_error_without_a_body_still_reports_the_status(monkeypatch) -> None
 #
 # runtime/llm_gateway.py's sibling path already warned and billed the reserved
 # estimate for exactly this response shape. This call site is in another
-# package, which is the whole reason it was missed (review-levers 4.5: when a
-# fix lands, grep for the siblings).
+# package, which is the whole reason it was missed (review-levers: grep-for-siblings).
 
 
 class _RespNoUsage(_Resp):

@@ -22,14 +22,13 @@ everything on a 404 that surfaces nowhere.
 unconditionally. The guard was written once, in TypeScript, for the portal, and
 the Python sibling reading the same variable never got it — the "fix applied at
 one call site and not its identical neighbours" shape, across a language
-boundary (review-levers 4.5: when a fix lands, grep for the siblings).
+boundary (review-levers: grep-for-siblings).
 
 THE PORTAL'S VERSION IS THE CANONICAL ONE, ported here rather than a fifth
 invention, because it is the only one that handled the trap and the only one
 with the full precedence chain. `portal/lib/tracing.ts` cannot import this —
 different language, different process — so the two are PINNED by a test that
-parses the TypeScript rather than restating it (review-levers 1.7: a
-duplicate that cannot be removed must be pinned).
+parses the TypeScript rather than restating it (review-levers: pin-unremovable-duplicates).
 
 ONE THING THE PORTAL'S VERSION COULD NOT HAVE. It only ever resolves traces, so
 it never had to consider a base that already names a DIFFERENT signal. Asking

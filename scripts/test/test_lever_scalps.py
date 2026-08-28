@@ -3,19 +3,20 @@ scripts/test/test_lever_scalps.py — the checklist and its evidence must agree.
 
 `docs/review-levers.md` holds the rules and `docs/review-lever-scalps.md` holds
 the defect each one earned its place with. Splitting them keeps the checklist
-short enough to use, and creates exactly the problem lever 1.7 is about: two
-files sharing one numbering scheme, with nothing to stop them drifting.
+short enough to use, and creates exactly the problem `pin-unremovable-duplicates`
+is about: two files sharing one set of identifiers, with nothing to stop them
+drifting. Slugs remove the renumbering hazard; they do not remove this one.
 
 So this parses both and compares. Neither side is restated here — a test that
 hardcodes the mapping is a third copy of it.
 
 WHAT COUNTS AS DRIFT:
-  * a scalp for a lever number that does not exist (an item was renumbered or
-    deleted and its evidence was orphaned);
+  * a scalp for a slug that does not exist (a lever was renamed or deleted and
+    its evidence was orphaned);
   * a dated or `(+)`-marked lever with no scalp — the document's own standard is
     that such an item is decoration;
-  * a title in the scalps file that no longer matches the lever's, which is the
-    renumbering failure that already happened once to a code citation.
+  * a title in the scalps file that no longer matches the lever's — the two
+    drifting apart while both look plausible on their own.
 
 `(legacy)` items are exempt by design: the original standing list, kept as a
 hygiene checklist rather than as evidence-backed findings.
@@ -32,31 +33,24 @@ SCALPS = ROOT / "docs" / "review-lever-scalps.md"
 
 
 def _levers() -> dict[str, tuple[str, bool]]:
-    """{"6.7": (title, is_legacy)} from the checklist."""
+    """{slug: (title, is_legacy)} from the checklist."""
     out: dict[str, tuple[str, bool]] = {}
-    group = 0
-    for line in LEVERS.read_text(encoding="utf-8").splitlines():
-        g = re.match(r"^## (\d+) · ", line)
-        if g:
-            group = int(g.group(1))
-            continue
-        m = re.match(r"^(\d+)\.\s+(.*)$", line)
-        if not (m and group):
-            continue
+    for m in re.finditer(
+        r"^- `([a-z][a-z0-9-]*)` — (.*)$", LEVERS.read_text(encoding="utf-8"), re.M
+    ):
         rest = m.group(2)
-        legacy = "(legacy)" in rest
         t = re.match(r"\*\*(?:\([^)]*\)\s*)?(.+?)\*\*", rest)
         title = (t.group(1) if t else rest[:70]).rstrip(".")
-        out[f"{group}.{m.group(1)}"] = (title, legacy)
+        out[m.group(1)] = (title, "(legacy)" in rest)
     return out
 
 
 def _scalps() -> dict[str, str]:
-    """{"6.7": title} from the evidence file's headings."""
+    """{slug: title} from the evidence file's headings."""
     return {
         m.group(1): m.group(2).strip()
         for m in re.finditer(
-            r"^### (\d+\.\d+) — (.+)$", SCALPS.read_text(encoding="utf-8"), re.M
+            r"^### `([a-z][a-z0-9-]*)` — (.+)$", SCALPS.read_text(encoding="utf-8"), re.M
         )
     }
 
@@ -72,8 +66,8 @@ def test_no_scalp_is_orphaned() -> None:
     levers = _levers()
     orphans = [k for k in _scalps() if k not in levers]
     assert not orphans, (
-        "these scalps cite a lever number that no longer exists — an item was "
-        f"renumbered or removed and its evidence was left behind: {orphans}"
+        "these scalps cite a slug that is not a lever — it was renamed or "
+        f"removed and its evidence was left behind: {orphans}"
     )
 
 
@@ -92,9 +86,8 @@ def test_every_non_legacy_lever_has_a_scalp() -> None:
 
 
 def test_the_two_files_agree_on_every_title() -> None:
-    """The renumbering failure, caught before it reaches a reader. A scalp filed
-    under a number that has come to mean something else is worse than no scalp:
-    it lends evidence to the wrong rule."""
+    """A scalp whose title has drifted from its lever lends evidence to a rule
+    that may no longer be the one it was collected for."""
     levers = _levers()
     wrong = [
         f"{k}: scalps say {st!r}, levers say {levers[k][0]!r}"

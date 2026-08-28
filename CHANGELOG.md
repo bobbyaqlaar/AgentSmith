@@ -75,6 +75,32 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Levers are identified by slug, not by position
+
+Numbers were the wrong identifier. They encode reading order, which changes, and
+every consumer — code citations, the scalps file, cross-references between levers
+— had to be kept in step by hand. One citation had already drifted silently
+(`notifier.py` naming 2.7 after an insertion moved that lever to 2.8), and the
+previous fix policed the symptom: citations carried a name as well as a number,
+compared by word overlap.
+
+Each lever now carries a **slug** — `grep-for-siblings`, `one-verdict`,
+`early-exit-keeps-the-record` — and that is its identity. The checklist has no
+numbers at all. Reordering, regrouping or inserting cannot invalidate a
+reference, which is verified rather than asserted: a mutation that moves group 6
+above group 1 leaves every test green, where under numbering it would have
+broken every citation and every scalp key.
+
+The two guards get simpler as a result. `test_lever_references.py` no longer
+matches titles by word overlap — a slug either exists or it does not.
+`test_lever_scalps.py` keys the checklist to its evidence by slug, so a renamed
+lever orphans its scalp loudly instead of quietly pointing at whatever now sits
+at that number.
+
+Both remain mutation-tested: an unknown slug in a citation, a renamed lever, a
+drifted title, and a dated lever with no evidence all fail.
+
+
 ### The levers split from their evidence
 
 `docs/review-levers.md` had grown to 339 lines, and 42 of them were `Caught:`

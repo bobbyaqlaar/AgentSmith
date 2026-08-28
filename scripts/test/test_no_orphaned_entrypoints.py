@@ -96,7 +96,7 @@ def _referenced_names() -> set[str]:
 
 def test_the_sweep_reads_something() -> None:
     """A sweep that matches nothing passes for the wrong reason
-    (review-levers 6.5: a test that cannot fail is a finding)."""
+    (review-levers: test-that-cannot-fail)."""
     defs = _public_defs()
     assert len(defs) > 100, f"the sweep found almost no definitions: {len(defs)}"
     refs = _referenced_names()

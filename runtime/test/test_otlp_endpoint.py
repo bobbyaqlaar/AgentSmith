@@ -19,7 +19,7 @@ falls back to precisely that variable and appends anyway, giving
 
 The portal's version is the canonical one, ported to runtime/otlp.py. The TS
 copy CANNOT be deleted — different language, different process — so the last
-test here PARSES it rather than restating it (review-levers 1.7: a duplicate
+test here PARSES it rather than restating it (review-levers: pin-unremovable-duplicates — a duplicate
 that cannot be removed must be pinned, and a test that hardcodes the second copy
 is just a third copy).
 """

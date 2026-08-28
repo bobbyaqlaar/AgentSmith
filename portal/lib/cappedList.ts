@@ -10,7 +10,7 @@
 // opens to investigate.
 //
 // The type is shared rather than written twice because the mistake is the same
-// mistake: a truncated list presented as the whole one (review-levers 5.2: an interface must not present a failure as a result), and
+// mistake: a truncated list presented as the whole one (review-levers: failure-is-not-a-result), and
 // one fact with two values (15).
 
 export interface CappedList<T> {
