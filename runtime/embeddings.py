@@ -2,19 +2,50 @@
 runtime/embeddings.py — pluggable text embedders for vector retrieval.
 
 EMBEDDER env:
-  hash (default in tests / when unset and sentence-transformers missing)
+  hash (DEFAULT — a deterministic fake with no semantic meaning; see below)
   sentence-transformers | st  — local SentenceTransformer model
 
 EMBEDDING_MODEL — model id for sentence-transformers (default all-MiniLM-L6-v2)
+
+THE DEFAULT IS A FAKE. HashEmbedder hashes text; it does not model meaning. It
+exists so CI and a laptop can exercise the retrieval path without downloading a
+model, and it is what `make_embedder()` returns when EMBEDDER is unset — which
+is the documented usage in vector_store.py's own docstring:
+
+    store = make_vector_store()
+    hits = store.query("commodity volatility", k=5)
+
+Measured on that path, unrelated text outscores a paraphrase:
+
+    "sanctions screening returned a confirmed match"
+      vs "the applicant appears on a sanctions list"   -0.025
+      vs "the weather in Dubai is hot today"           +0.043
+
+and the query "is this person on a sanctions list?" ranks "today is sunny in
+Abu Dhabi" FIRST. Nothing errors, the scores look like scores, and the
+retrieved context goes to the model as though it meant something.
+
+This header used to read "default in tests / when unset and sentence-
+transformers missing", describing a fallback chain that does not exist — nothing
+here ever tries sentence-transformers on its own.
+
+Using the fake outside development now says so once, at ERROR level. It stays a
+warning rather than a refusal: tenants are running this default in production
+today, and the framework does not break them outside a major release.
 """
 
 from __future__ import annotations
 
 import hashlib
+import logging
 import math
 import os
 import struct
 from typing import Any, Protocol, runtime_checkable
+
+logger = logging.getLogger(__name__)
+
+_fake_embedder_warned = False
 
 
 @runtime_checkable
@@ -22,6 +53,48 @@ class Embedder(Protocol):
     def embed(self, texts: list[str]) -> list[list[float]]:
         """Return one embedding vector per input text."""
         ...
+
+    @property
+    def identity(self) -> str:
+        """A stable name for whatever produced these vectors.
+
+        HashEmbedder and all-MiniLM-L6-v2 both emit 384 dimensions, so a store
+        cannot tell them apart by shape: vectors written by one and queried by
+        the other produce confident nonsense and no error anywhere. This is the
+        value a store records to notice that.
+        """
+        ...
+
+
+def _warn_if_fake_outside_development() -> None:
+    """Say once that retrieval is not semantic.
+
+    Once rather than per call — an embedder is called in a loop. At ERROR level
+    outside development because the symptom is invisible: a RAG pipeline on the
+    fake returns ranked, plausible-looking, meaningless context, and the first
+    sign of trouble is an answer nobody can explain.
+    """
+    global _fake_embedder_warned
+    if _fake_embedder_warned:
+        return
+    _fake_embedder_warned = True
+    try:
+        from runtime.environment import get_environment
+
+        environment = get_environment()
+    except Exception:
+        environment = "unknown"
+
+    message = (
+        "EMBEDDER is unset or 'hash': retrieval is using HashEmbedder, a "
+        "deterministic FAKE with no semantic meaning. Vector search will return "
+        "ranked but arbitrary results. Set EMBEDDER=sentence-transformers (and "
+        "install the `embeddings` extra) for real retrieval."
+    )
+    if environment in {"staging", "production"}:
+        logger.error("%s [environment=%s]", message, environment)
+    else:
+        logger.info("%s [environment=%s]", message, environment)
 
 
 class HashEmbedder:
@@ -31,6 +104,11 @@ class HashEmbedder:
         if dim < 8:
             raise ValueError("dim must be >= 8")
         self.dim = dim
+        _warn_if_fake_outside_development()
+
+    @property
+    def identity(self) -> str:
+        return f"hash:{self.dim}"
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         return [self._one(t) for t in texts]
@@ -59,6 +137,10 @@ class SentenceTransformerEmbedder:
             "EMBEDDING_MODEL", "all-MiniLM-L6-v2"
         )
         self._model: Any = None
+
+    @property
+    def identity(self) -> str:
+        return f"sentence-transformers:{self.model_name}"
 
     def _load(self) -> None:
         if self._model is not None:

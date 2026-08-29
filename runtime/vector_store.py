@@ -54,6 +54,20 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return dot / (na * nb)
 
 
+def _identity_of(embedder: Any) -> Optional[str]:
+    """The embedder's identity, or None if it does not report one.
+
+    Optional because Embedder is a Protocol a tenant can satisfy with its own
+    class, and one written before `identity` existed must keep working — this
+    is a diagnostic, not a requirement.
+    """
+    try:
+        value = embedder.identity
+    except Exception:
+        return None
+    return str(value) if value else None
+
+
 def _retrieval_span(backend: str, k: int):
     """A span around a retrieval, or a no-op when tracing is off.
 
@@ -68,7 +82,12 @@ def _retrieval_span(backend: str, k: int):
 
 
 def _record_hits(
-    span, hits: list, *, corpus: Optional[int] = None, backend: str = "memory"
+    span,
+    hits: list,
+    *,
+    corpus: Optional[int] = None,
+    backend: str = "memory",
+    embedder: Optional[str] = None,
 ) -> None:
     """Chunk IDENTITIES and scores, not just a count.
 
@@ -91,6 +110,13 @@ def _record_hits(
     except Exception:  # fail-open: a metric must never break a query
         pass
     try:
+        # WHICH embedder produced these vectors. The default is HashEmbedder, a
+        # fake with no semantic meaning, and the symptom of running on it is
+        # ranked, plausible, arbitrary results — indistinguishable in a trace
+        # from a real retriever having a bad day. Recording the identity is
+        # what makes those two pictures different, and it costs one attribute.
+        if embedder:
+            span.set_attribute("agent.retrieval.embedder", embedder)
         span.set_attribute("agent.retrieval.hit_count", len(hits))
         if corpus is not None:
             span.set_attribute("agent.retrieval.corpus_size", corpus)
@@ -142,7 +168,13 @@ class MemoryVectorStore:
     def query(self, text: str, k: int = 5) -> list[VectorHit]:
         with _retrieval_span("memory", k) as span:
             if not self._ids or k < 1:
-                _record_hits(span, [], corpus=len(self._ids), backend="memory")
+                _record_hits(
+                    span,
+                    [],
+                    corpus=len(self._ids),
+                    backend="memory",
+                    embedder=_identity_of(self.embedder),
+                )
                 return []
             q = self.embedder.embed([text])[0]
             scored = [
@@ -156,7 +188,13 @@ class MemoryVectorStore:
             ]
             scored.sort(key=lambda h: h.score, reverse=True)
             hits = scored[:k]
-            _record_hits(span, hits, corpus=len(self._ids), backend="memory")
+            _record_hits(
+                span,
+                hits,
+                corpus=len(self._ids),
+                backend="memory",
+                embedder=_identity_of(self.embedder),
+            )
             return hits
 
 
@@ -269,7 +307,9 @@ class PgVectorStore:
 
     def _query(self, text: str, k: int, span) -> list[VectorHit]:
         if k < 1:
-            _record_hits(span, [], backend="pgvector")
+            _record_hits(
+                    span, [], backend="pgvector", embedder=_identity_of(self.embedder)
+                )
             return []
         q = self.embedder.embed([text])[0]
         q_literal = "[" + ",".join(str(x) for x in q) + "]"
@@ -300,7 +340,9 @@ class PgVectorStore:
                     metadata=meta,
                 )
             )
-        _record_hits(span, hits, backend="pgvector")
+        _record_hits(
+            span, hits, backend="pgvector", embedder=_identity_of(self.embedder)
+        )
         return hits
 
 

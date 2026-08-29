@@ -5,6 +5,7 @@ runtime/test/test_memory_and_vector.py — conversation memory + vector store
 
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 
@@ -14,7 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from runtime import conversation_memory as cm
 from runtime.conversation_memory import ConversationMemory
+from runtime import embeddings as emb
 from runtime.embeddings import HashEmbedder, make_embedder
+from runtime import vector_store as vs
 from runtime.vector_store import MemoryVectorStore, make_vector_store
 
 
@@ -187,3 +190,144 @@ def test_the_fallback_says_once_that_it_is_estimating(monkeypatch, caplog) -> No
 
     assert caplog.text.count("tiktoken unavailable") == 1
     cm._encoder.cache_clear()
+
+
+# ── The default embedder is a fake, and it has to say so ──────────────────────
+
+
+def test_the_default_embedder_is_still_the_fake(monkeypatch) -> None:
+    """Pinned deliberately, not endorsed.
+
+    Tenants run this default in production today and the framework does not
+    break them outside a major release, so the fix is a warning rather than a
+    refusal. This asserts the compatibility promise: if the default ever
+    changes, that is a MAJOR-version decision and this test is where it is
+    made, not a side effect of an edit.
+    """
+    monkeypatch.delenv("EMBEDDER", raising=False)
+    assert isinstance(make_embedder(), HashEmbedder)
+
+
+def test_using_the_fake_outside_development_is_an_error_level_event(
+    monkeypatch, caplog
+) -> None:
+    """The symptom is invisible, so the log has to carry it.
+
+    A RAG pipeline on HashEmbedder returns ranked, plausible, arbitrary context
+    and no error anywhere. Measured: the query "is this person on a sanctions
+    list?" ranks "today is sunny in Abu Dhabi" first.
+    """
+    monkeypatch.setattr(emb, "_fake_embedder_warned", False)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.delenv("EMBEDDER", raising=False)
+
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        make_embedder()
+
+    assert any(r.levelno >= logging.ERROR for r in caplog.records), (
+        f"expected an ERROR-level record, got {[r.levelname for r in caplog.records]}"
+    )
+    assert "FAKE" in caplog.text
+
+
+def test_development_gets_the_same_message_without_the_alarm(
+    monkeypatch, caplog
+) -> None:
+    """CI and a laptop run on the fake by design — this must not shout there."""
+    monkeypatch.setattr(emb, "_fake_embedder_warned", False)
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.delenv("EMBEDDER", raising=False)
+
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        make_embedder()
+
+    assert caplog.records, "the message is still worth having in development"
+    assert all(r.levelno < logging.ERROR for r in caplog.records)
+
+
+def test_the_fake_warning_is_said_once(monkeypatch, caplog) -> None:
+    """An embedder is constructed per store and called in a loop."""
+    monkeypatch.setattr(emb, "_fake_embedder_warned", False)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.delenv("EMBEDDER", raising=False)
+
+    caplog.clear()
+    with caplog.at_level(logging.INFO):
+        for _ in range(4):
+            make_embedder()
+
+    assert caplog.text.count("HashEmbedder") == 1
+
+
+def test_embedders_report_an_identity_that_distinguishes_them() -> None:
+    """Both emit 384 dimensions, so shape cannot tell them apart.
+
+    Vectors written by one and queried by the other produce confident nonsense
+    and no error, and a store has nothing else to notice that with.
+    """
+    from runtime.embeddings import SentenceTransformerEmbedder
+
+    fake = HashEmbedder()
+    real = SentenceTransformerEmbedder(model_name="all-MiniLM-L6-v2")
+
+    assert fake.identity != real.identity
+    assert "hash" in fake.identity
+    # The dimension both share, and which therefore proves nothing on its own.
+    assert fake.dim == 384
+
+
+def test_a_retrieval_span_names_the_embedder() -> None:
+    """Otherwise a trace of a fake retriever looks exactly like a trace of a
+    real one having a bad day."""
+    recorded: dict = {}
+
+    class _Span:
+        def set_attribute(self, key, value):
+            recorded[key] = value
+
+    vs._record_hits(_Span(), [], corpus=0, backend="memory", embedder="hash:384")
+
+    assert recorded.get("agent.retrieval.embedder") == "hash:384"
+
+
+def test_a_real_store_puts_the_embedder_on_its_span() -> None:
+    """End to end, not just the helper: the identity has to survive the call
+    path from the store to the span."""
+    recorded: dict = {}
+
+    class _Span:
+        def set_attribute(self, key, value):
+            recorded[key] = value
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    store = MemoryVectorStore()
+    store.add(ids=["1"], texts=["sanctions screening confirmed a match"])
+    original = vs._retrieval_span
+    try:
+        vs._retrieval_span = lambda backend, k: _Span()
+        store.query("sanctions", k=1)
+    finally:
+        vs._retrieval_span = original
+
+    assert recorded.get("agent.retrieval.embedder") == "hash:384"
+
+
+def test_an_embedder_without_an_identity_still_works() -> None:
+    """Embedder is a Protocol a tenant implements. One written before
+    `identity` existed must not start raising inside a query."""
+
+    class LegacyEmbedder:
+        def embed(self, texts):
+            return [[0.0] * 8 for _ in texts]
+
+    assert vs._identity_of(LegacyEmbedder()) is None
+    store = MemoryVectorStore(embedder=LegacyEmbedder())
+    store.add(ids=["1"], texts=["anything"])
+    assert store.query("anything", k=1)
