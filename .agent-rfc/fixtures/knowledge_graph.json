@@ -87,7 +87,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-08-29T22:52:45Z",
+      "last_modified": "2026-08-29T23:21:51Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -173,7 +173,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-08-29T22:53:35Z",
+      "last_modified": "2026-08-29T23:22:04Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -214,7 +214,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-08-29T22:54:40Z",
+      "last_modified": "2026-08-29T23:23:02Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -261,6 +261,7 @@
       "language": "python",
       "symbols": [
         "_verify_signature",
+        "_verify_timestamped",
         "ReplayWebhookHandler",
         "main",
         "do_POST",
@@ -269,7 +270,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-29T23:21:39Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -338,7 +339,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-08-29T22:51:23Z",
+      "last_modified": "2026-08-29T23:21:28Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -408,7 +409,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-29T22:54:15Z",
+      "last_modified": "2026-08-29T23:22:39Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -432,7 +433,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-08-29T22:51:56Z",
+      "last_modified": "2026-08-29T23:21:44Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -450,7 +451,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-08-29T22:54:31Z",
+      "last_modified": "2026-08-29T23:22:54Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -462,7 +463,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-08-29T22:54:11Z",
+      "last_modified": "2026-08-29T23:22:35Z",
       "id": "runtime/environment.py"
     },
     {
@@ -580,7 +581,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-08-29T22:53:26Z",
+      "last_modified": "2026-08-29T23:21:59Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -747,7 +748,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-29T22:53:21Z",
+      "last_modified": "2026-08-29T23:21:56Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -817,7 +818,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-08-29T22:53:18Z",
+      "last_modified": "2026-08-29T23:21:55Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -848,7 +849,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-08-29T22:53:08Z",
+      "last_modified": "2026-08-29T23:21:53Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -2829,10 +2830,11 @@
         "ReplayNotConfiguredError",
         "ReplayWebhookError",
         "ReplayAlreadyResolvedError",
+        "replaySignatureHeaders",
         "replayDlqEntry",
         "discardDlqEntry"
       ],
-      "last_modified": "2026-08-25T15:35:35Z",
+      "last_modified": "2026-08-29T23:15:59Z",
       "id": "portal/lib/dlq.ts"
     },
     {
@@ -3360,7 +3362,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-08-29T22:53:34Z",
+      "last_modified": "2026-08-29T23:22:03Z",
       "id": "runtime/config.py"
     },
     {
@@ -3968,7 +3970,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-08-29T22:50:15Z",
+      "last_modified": "2026-08-29T23:20:42Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -4018,7 +4020,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-08-29T22:48:38Z",
+      "last_modified": "2026-08-29T23:17:37Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4038,6 +4040,38 @@
       ],
       "last_modified": "2026-08-29T21:50:45Z",
       "id": "runtime/test/test_config_choices.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_v2",
+        "_legacy",
+        "test_a_fresh_timestamped_signature_is_accepted",
+        "test_a_stale_request_is_refused",
+        "test_a_request_from_the_future_is_refused_too",
+        "test_ordinary_clock_skew_still_works",
+        "test_the_timestamp_cannot_be_moved_without_breaking_the_signature",
+        "test_a_tampered_body_is_refused",
+        "test_the_wrong_secret_is_refused",
+        "test_a_malformed_timestamp_is_refused_not_crashed",
+        "test_the_reason_separates_stale_from_forged",
+        "test_the_legacy_signature_still_verifies",
+        "test_the_tolerance_is_stated_in_seconds_and_is_short",
+        "test_a_non_finite_timestamp_cannot_skip_the_window",
+        "test_infinity_is_refused_as_well",
+        "test_the_signature_matches_the_portal_byte_for_byte",
+        "test_signatures_are_compared_in_constant_time"
+      ],
+      "last_modified": "2026-08-29T23:19:31Z",
+      "id": "runtime/test/test_replay_webhook_signature.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-08-29T23:16:35Z",
+      "id": "portal/test/replaySignature.test.ts"
     }
   ],
   "edges": [
@@ -4669,6 +4703,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_config_choices.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_replay_webhook_signature.py",
       "target": "runtime/__init__.py"
     }
   ]

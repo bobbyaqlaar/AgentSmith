@@ -166,6 +166,39 @@ export class ReplayAlreadyResolvedError extends Error {}
  * which is why the replay route answers `resumable: false` rather than a bare
  * `ok: true`.
  */
+/**
+ * The signature headers for a replay webhook request.
+ *
+ * Exported and pure so the derivation can be tested without a database —
+ * `replayDlqEntry` needs one to read the tenant's secret, which made the
+ * security-critical half of it reachable only from the DB-gated suite.
+ *
+ * `nowMs` is a parameter for the same reason: a signature scheme whose only
+ * test is "it produced something" is not tested.
+ */
+export function replaySignatureHeaders(
+  secret: string,
+  body: string,
+  nowMs: number = Date.now()
+): Record<string, string> {
+  const timestamp = Math.floor(nowMs / 1000).toString();
+  return {
+    // Body only, and therefore valid forever. Kept so a receiver that has not
+    // been upgraded yet keeps working; dropped in the release that stops
+    // supporting those.
+    "X-Replay-Signature":
+      "sha256=" + createHmac("sha256", secret).update(body).digest("hex"),
+    // `timestamp.body`, checked against a five-minute window by
+    // runtime/replay_webhook_server.py. The timestamp is inside the signed
+    // material: a header alone could be replaced by whoever replays the body.
+    "X-Replay-Timestamp": timestamp,
+    "X-Replay-Signature-V2":
+      "sha256=" +
+      createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex"),
+  };
+}
+
+
 export async function replayDlqEntry(tenantId: string, taskId: string, editedPayload: unknown): Promise<void> {
   const config = await getReplayWebhookConfig(tenantId);
   if (!config) {
@@ -174,11 +207,24 @@ export async function replayDlqEntry(tenantId: string, taskId: string, editedPay
     );
   }
   const body = JSON.stringify({ taskId, payload: editedPayload });
-  const signature = "sha256=" + createHmac("sha256", config.secret).update(body).digest("hex");
 
+  // BOTH signatures, because the receiver is the tenant's and ships on its own
+  // cadence (review-levers: two-owners-two-cadences). A receiver that
+  // understands timestamps requires the v2 header; one that does not ignores
+  // the two it has never heard of and verifies the legacy signature exactly as
+  // before. Neither side has to move first.
+  //
+  // Legacy is a signature over the body alone, so it never expires: a captured
+  // request stays replayable for as long as the secret does. v2 signs
+  // `timestamp.body` and runtime/replay_webhook_server.py rejects anything
+  // outside a five-minute window. The legacy header goes away in the release
+  // that drops support for receivers older than that change.
   const resp = await fetch(config.url, {
     method: "POST",
-    headers: { "content-type": "application/json", "X-Replay-Signature": signature },
+    headers: {
+      "content-type": "application/json",
+      ...replaySignatureHeaders(config.secret, body),
+    },
     body,
     signal: AbortSignal.timeout(10_000),
   });

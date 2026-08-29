@@ -150,6 +150,44 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        name="replay_webhook",
+        tests=("runtime/test/test_replay_webhook_signature.py",),
+        mutations=(
+            Mutation(
+                "the tolerance window is removed — a captured request is valid forever",
+                "runtime/replay_webhook_server.py",
+                "    if drift > SIGNATURE_TOLERANCE_SECONDS:",
+                "    if False:",
+            ),
+            Mutation(
+                "a non-finite timestamp skips the window again (NaN beats every "
+                "comparison)",
+                "runtime/replay_webhook_server.py",
+                "    if not math.isfinite(sent_at):\n        return False, \"malformed timestamp\"",
+                "    if False:\n        return False, \"malformed timestamp\"",
+            ),
+            Mutation(
+                "the timestamp leaves the signed material — replaying a body with a "
+                "fresh timestamp works",
+                "runtime/replay_webhook_server.py",
+                '    signed = timestamp_header.encode() + b"." + body',
+                "    signed = body",
+            ),
+            Mutation(
+                "the tolerance is widened to a day",
+                "runtime/replay_webhook_server.py",
+                "SIGNATURE_TOLERANCE_SECONDS = 300",
+                "SIGNATURE_TOLERANCE_SECONDS = 86400",
+            ),
+            Mutation(
+                "signature comparison stops being constant-time",
+                "runtime/replay_webhook_server.py",
+                "    if not hmac.compare_digest(expected, signature_header[len(\"sha256=\") :]):",
+                '    if expected != signature_header[len("sha256=") :]:',
+            ),
+        ),
+    ),
+    Suite(
         name="prompt_guard",
         tests=(
             "runtime/test/test_prompt_guard.py",

@@ -41,8 +41,10 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import hmac
+import time
 import json
 import logging
+import math
 import os
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -57,6 +59,8 @@ from runtime.dead_letter import AlreadyResolvedError
 
 logger = logging.getLogger(__name__)
 
+from runtime.environment import warn_once  # noqa: E402
+
 # A replay body is a task id and an edited payload — kilobytes. The handler
 # used to trust Content-Length and read exactly that many bytes, so any caller
 # able to reach the port could declare a gigabyte and have it allocated. This
@@ -65,12 +69,70 @@ logger = logging.getLogger(__name__)
 MAX_BODY_BYTES = 1 * 1024 * 1024
 
 
+# How far a request's timestamp may be from ours. Covers ordinary clock skew
+# and a slow link; short enough that a captured request stops being useful
+# quickly. Stripe uses five minutes for the same trade.
+SIGNATURE_TOLERANCE_SECONDS = 300
+
+
 def _verify_signature(secret: str, body: bytes, signature_header: str) -> bool:
+    """The legacy signature: HMAC over the body alone.
+
+    Valid forever, which is the problem. dead_letter.py's atomic claim stops a
+    captured request from replaying an entry that is already `replayed`, but
+    _release_claim deliberately returns an entry to `pending` when the handler
+    fails — so after a replay that could not reach Temporal, a captured request
+    is live again. Security should not rest on a status column designed to
+    revert.
+    """
     if not signature_header.startswith("sha256="):
         return False
     expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     provided = signature_header[len("sha256=") :]
     return hmac.compare_digest(expected, provided)
+
+
+def _verify_timestamped(
+    secret: str, body: bytes, timestamp_header: str, signature_header: str, *, now: float
+) -> tuple[bool, str]:
+    """The v2 signature: HMAC over `timestamp.body`, inside a tolerance window.
+
+    Returns (ok, reason) so the caller can say WHICH check failed — a stale
+    request and a forged one need different answers from an operator's point of
+    view, and collapsing them into "invalid signature" is how a clock-skew
+    outage gets diagnosed as an attack.
+
+    The timestamp is part of the signed material, not a separate header the
+    sender could pin while replaying the body.
+    """
+    try:
+        sent_at = float(timestamp_header)
+    except (TypeError, ValueError):
+        return False, "malformed timestamp"
+
+    # NaN parses, and EVERY comparison against NaN is False — so `drift >
+    # tolerance` would be False and a NaN timestamp would sail through the
+    # window check untested. Infinity is caught by the comparison; NaN is the
+    # one that needs saying. Found by a test written for malformed input, not
+    # by reading the code.
+    if not math.isfinite(sent_at):
+        return False, "malformed timestamp"
+
+    drift = abs(now - sent_at)
+    if drift > SIGNATURE_TOLERANCE_SECONDS:
+        return False, (
+            f"timestamp is {drift:.0f}s from now, outside the "
+            f"{SIGNATURE_TOLERANCE_SECONDS}s tolerance"
+        )
+
+    if not signature_header.startswith("sha256="):
+        return False, "signature is not sha256="
+
+    signed = timestamp_header.encode() + b"." + body
+    expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature_header[len("sha256=") :]):
+        return False, "signature does not match"
+    return True, ""
 
 
 class ReplayWebhookHandler(BaseHTTPRequestHandler):
@@ -97,10 +159,36 @@ class ReplayWebhookHandler(BaseHTTPRequestHandler):
             self._json(413, {"error": f"body must be 0..{MAX_BODY_BYTES} bytes"})
             return
         body = self.rfile.read(length)
-        signature = self.headers.get("X-Replay-Signature", "")
-        if not _verify_signature(secret, body, signature):
-            self._json(401, {"error": "invalid signature"})
-            return
+
+        # Two accepted shapes, so the portal and this receiver can be upgraded
+        # in either order — they are operated by different people on different
+        # cadences (review-levers: two-owners-two-cadences).
+        #
+        #   timestamp present -> v2 is REQUIRED. A sender that knows about
+        #                        timestamps must not be able to have one
+        #                        stripped to fall back to the weaker check.
+        #   timestamp absent  -> legacy, accepted and reported once.
+        timestamp = self.headers.get("X-Replay-Timestamp", "")
+        if timestamp:
+            signature = self.headers.get("X-Replay-Signature-V2", "")
+            ok, reason = _verify_timestamped(
+                secret, body, timestamp, signature, now=time.time()
+            )
+            if not ok:
+                logger.warning("Rejected replay request: %s", reason)
+                self._json(401, {"error": f"invalid signature: {reason}"})
+                return
+        else:
+            if not _verify_signature(secret, body, self.headers.get("X-Replay-Signature", "")):
+                self._json(401, {"error": "invalid signature"})
+                return
+            warn_once(
+                "replay-webhook-legacy-signature",
+                "Replay webhook accepted a request signed WITHOUT a timestamp. "
+                "That signature never expires, so a captured request stays "
+                "replayable. Upgrade the sender (Ops Portal) to send "
+                "X-Replay-Timestamp and X-Replay-Signature-V2.",
+            )
 
         try:
             data = json.loads(body)
