@@ -181,3 +181,58 @@ ignore_missing_imports = true
 # is the more useful answer. `types-PyYAML` is installed alongside mypy in CI.
 # Local runs passed because the venv happened to have it; CI did not. Recording
 # it here so the next person is not diagnosing an environment difference.
+
+
+[tool.mutmut]
+# The exhaustive half of this repo's mutation testing. scripts/mutation_check.py
+# holds the hand-picked half — properties someone chose to defend; mutmut
+# enumerates the ones nobody thought of. It is ADVISORY: its CI job does not
+# gate a merge, because a surviving mutant is a question ("is this line
+# asserted, and should it be?") rather than a defect, and treating every one as
+# a failure is how a team learns to ignore the report.
+# "." and not "runtime": mutmut puts `mutants/<source_path>` on sys.path, so it
+# wants the directory CONTAINING the package. With "runtime" it inserted
+# mutants/runtime, `import runtime.x` kept resolving to the real tree, and no
+# mutant was ever exercised — the run reported "could not find any test case
+# for any mutant" and would have been a green CI job asserting nothing.
+# only_mutate below is what keeps the scope small; this only widens the copy.
+source_paths = ["."]
+do_not_mutate = ["runtime/test/*", "scripts/test/*"]
+
+# Scoped to the guard modules rather than all of runtime/. These are the files
+# where an unasserted line is a control that has quietly stopped holding, which
+# is what this is for; a full run over runtime/ takes long enough that nobody
+# would read the result. Widen it deliberately, not by accident.
+only_mutate = [
+    "runtime/prompt_guard.py",
+    "runtime/input_guardrail.py",
+    "runtime/pii_patterns.py",
+    "runtime/trace_redactor.py",
+    "runtime/structured_output.py",
+    "runtime/conversation_memory.py",
+    "runtime/environment.py",
+    "runtime/luhn.py",
+    "runtime/embeddings.py",
+    "runtime/vector_store.py",
+]
+
+# mutmut copies the source tree into mutants/ and runs the suite from there.
+# Anything the suite reads from OUTSIDE runtime/ is not in that copy, so tests
+# that stat scripts/ or assert something about the framework's own location
+# fail on the copy for reasons unrelated to any mutant. Rather than deselect
+# them one at a time, the selection is the suites that actually exercise the
+# modules above.
+#
+# WHAT THIS COSTS, stated because it changes how the number reads: a mutant
+# killed only by a test outside this list will be reported as surviving. The
+# survivor count is therefore an upper bound and a reading list, not a score —
+# which is also why the job is advisory.
+pytest_add_cli_args_test_selection = [
+    "runtime/test/test_prompt_guard.py",
+    "runtime/test/test_input_guardrail.py",
+    "runtime/test/test_trace_redactor.py",
+    "runtime/test/test_structured_output.py",
+    "runtime/test/test_memory_and_vector.py",
+    "runtime/test/test_degraded_defaults.py",
+    "runtime/test/test_luhn_parity.py",
+]

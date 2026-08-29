@@ -36,6 +36,23 @@ jobs:
         run: |
           pip install -r requirements-lint.txt
           mypy
+      - name: "mutation_check.py (curated — the properties we chose to defend)"
+        run: |
+          pip install pytest pytest-asyncio pydantic pyyaml httpx tenacity tiktoken
+          python3 scripts/mutation_check.py
+      - name: "mutmut (exhaustive — ADVISORY, never gates a merge)"
+        # Advisory on purpose. A surviving mutant is a question — "is this line
+        # asserted, and should it be?" — not a defect, and a job that fails the
+        # build on every one teaches a team to stop reading it. The curated
+        # check above is the one that gates: each of its mutations was written
+        # against a real defect and failed a test the day it was added.
+        continue-on-error: true
+        timeout-minutes: 25
+        run: |
+          pip install -r requirements-lint.txt
+          mutmut run || true
+          echo "── surviving mutants (a reading list, not a score) ──"
+          mutmut results || true
       - name: "py_compile sweep"
         run: |
           find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile

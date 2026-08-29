@@ -68,3 +68,7 @@ docker-compose.override.yml
 # Framework repo's own event log (generated)
 .agent-history.log
 security-evidence/
+
+# mutmut working tree (scripts/mutation_check.py and the advisory CI job)
+/mutants/
+.mutmut-cache

@@ -1,4 +1,4 @@
-# The lint/type toolchain, pinned exactly.
+# The analysis toolchain — lint, types, mutation — pinned exactly.
 #
 # CI installed these inline as ranges ("mypy>=1.11,<2.0"), so every run resolved
 # whatever was newest that day and no developer could reproduce the gate: an
@@ -19,3 +19,9 @@ ruff==0.15.20
 # resolves the same stubs — this was previously CI-only, and a laptop reported
 # a `yaml` stub error that CI never saw.
 types-PyYAML>=6.0,<7.0
+
+# Exhaustive mutation testing (advisory CI job; see pyproject.toml
+# [tool.mutmut]). Pinned like the rest: a mutation score that moves because the
+# tool changed under you is worse than no score, since the number's only use is
+# comparison against the last run.
+mutmut==3.7.0

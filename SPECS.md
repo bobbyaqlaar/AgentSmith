@@ -1221,6 +1221,7 @@ AgentSmith/
 │   ├── notifier.py
 │   ├── run-evals.py             # golden | fairness | hallucination | adversarial | rag_poison
 │   ├── run-security-checks.py   # SEC-* harness (P12): smoke|ci|full, --strict, --evidence-pack
+│   ├── mutation_check.py        # Curated mutation testing — the guards, and proof their tests bite
 │   ├── security/                # Harness internals: registry.py, report.py, runners/, schemas/
 │   ├── eval_judge.py            # Shared LLM-judge path (run-evals + shadow-eval)
 │   ├── shadow-eval.py           # 5% post-hoc production-trace sampler (§9)
