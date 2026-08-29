@@ -200,6 +200,14 @@ class HITLBlobStore:
     Stores the full, unredacted payload for production spans flagged for HITL
     review. Encrypted with AES-256-GCM using a per-tenant key.
 
+    The per-tenant key is HITL_ENCRYPTION_KEY_<TENANT>, where <TENANT> is the
+    tenant id upper-cased with every non-alphanumeric character replaced by an
+    underscore — `kyc-sentinel` becomes HITL_ENCRYPTION_KEY_KYC_SENTINEL. The
+    id was previously spliced in raw, which is not a settable variable name for
+    the hyphenated ids everyone actually uses, so those tenants fell through to
+    the fleet-wide key without a word. Falling back is still allowed and is now
+    reported.
+
     Storage backend: local filesystem by default (HITL_BLOB_DIR, default
     runtime/.hitl_blobs/); set HITL_BLOB_S3_BUCKET to write to S3 instead.
 
@@ -211,14 +219,56 @@ class HITLBlobStore:
     def __init__(self, tenant_id: str) -> None:
         self.tenant_id = tenant_id
 
+    @staticmethod
+    def env_suffix(tenant_id: str) -> str:
+        """A tenant id as the tail of an environment variable NAME.
+
+        The per-tenant variable used to be `HITL_ENCRYPTION_KEY_{id.upper()}`
+        with the id spliced in raw, which is not a variable name for any id
+        containing a hyphen or a dot — `HITL_ENCRYPTION_KEY_KYC-SENTINEL` is
+        something a shell refuses to set. The conventional tenant id is exactly
+        that shape (this framework's own testbed is `kyc-sentinel`), so for
+        those tenants the per-tenant key was UNREACHABLE and every one of them
+        silently shared the fleet-wide HITL_ENCRYPTION_KEY — in the one store
+        that holds unredacted payloads on purpose, while the class docstring
+        and OPERATIONS.md both promise a per-tenant key.
+        """
+        return re.sub(r"[^A-Za-z0-9]", "_", tenant_id).upper()
+
     def _key(self) -> bytes:
-        raw = os.environ.get(
+        from runtime.environment import warn_degraded_default
+
+        def configured(name: str) -> Optional[str]:
+            """The value, or None. Whitespace-only counts as unset.
+
+            The value is returned RAW. It is hashed to derive the key, so
+            stripping it would change the derived key and make every blob
+            already written with it undecryptable.
+            """
+            value = os.environ.get(name)
+            return value if value and value.strip() else None
+
+        suffix = self.env_suffix(self.tenant_id)
+        # The legacy spelling is still honoured: for an id with no punctuation
+        # the two are identical, and for one WITH punctuation it was never
+        # settable, so nothing that works today stops working.
+        raw = configured(f"HITL_ENCRYPTION_KEY_{suffix}") or configured(
             f"HITL_ENCRYPTION_KEY_{self.tenant_id.upper()}"
-        ) or os.environ.get("HITL_ENCRYPTION_KEY", "")
-        if not raw:
+        )
+        if raw is None:
+            raw = configured("HITL_ENCRYPTION_KEY")
+            if raw is not None:
+                warn_degraded_default(
+                    f"hitl-shared-key:{self.tenant_id}",
+                    f"tenant={self.tenant_id!r} is encrypting HITL compliance "
+                    f"blobs with the FLEET-WIDE HITL_ENCRYPTION_KEY. Anyone who "
+                    f"can decrypt one tenant's payloads can decrypt this one's. "
+                    f"Set HITL_ENCRYPTION_KEY_{suffix} for a per-tenant key.",
+                )
+        if raw is None:
             raise RuntimeError(
                 f"No HITL encryption key configured for tenant={self.tenant_id!r}. "
-                f"Set HITL_ENCRYPTION_KEY_{self.tenant_id.upper()} or HITL_ENCRYPTION_KEY."
+                f"Set HITL_ENCRYPTION_KEY_{suffix} or HITL_ENCRYPTION_KEY."
             )
         # Derive a 32-byte key regardless of input length/encoding.
         return hashlib.sha256(raw.encode("utf-8")).digest()

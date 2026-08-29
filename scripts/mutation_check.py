@@ -90,6 +90,28 @@ CATALOGUE: tuple[Suite, ...] = (
                 "for pattern in ():",
             ),
             Mutation(
+                "the tenant id is spliced into the key variable raw — a hyphenated "
+                "tenant silently shares the fleet key again",
+                "runtime/trace_redactor.py",
+                '        return re.sub(r"[^A-Za-z0-9]", "_", tenant_id).upper()',
+                "        return tenant_id.upper()",
+            ),
+            Mutation(
+                "falling back to the fleet-wide HITL key stops being reported",
+                "runtime/trace_redactor.py",
+                "                warn_degraded_default(\n"
+                '                    f"hitl-shared-key:{self.tenant_id}",',
+                "                _unused = (\n"
+                '                    f"hitl-shared-key:{self.tenant_id}",',
+            ),
+            Mutation(
+                "the key value is stripped before hashing — every existing blob "
+                "becomes undecryptable",
+                "runtime/trace_redactor.py",
+                "            return value if value and value.strip() else None",
+                "            return value.strip() if value and value.strip() else None",
+            ),
+            Mutation(
                 "the fallback tenant goes back to reading TENANT_ID raw",
                 "runtime/trace_redactor.py",
                 "            self.default_tenant_id = resolve_tenant_id(tenant_id)",

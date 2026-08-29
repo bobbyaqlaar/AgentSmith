@@ -680,7 +680,7 @@ it being the default for an unset variable.
 |---|---|
 | `development` (must be set explicitly) | No scrubbing |
 | `staging` | Secrets/PII replaced with `[REDACTED:<hash8>]`; structure preserved |
-| `production` (also the fallback for unset/unrecognized) | Scrubbed + truncated to 50 chars; full original payload stored in an AES-256-GCM-encrypted blob (`HITL_ENCRYPTION_KEY` / `HITL_ENCRYPTION_KEY_<TENANT>`), keyed per-span by `{trace_id}.{span_id}.{attr_key}` |
+| `production` (also the fallback for unset/unrecognized) | Scrubbed + truncated to 50 chars; full original payload stored in an AES-256-GCM-encrypted blob (`HITL_ENCRYPTION_KEY` / `HITL_ENCRYPTION_KEY_<TENANT>`, where `<TENANT>` is the tenant id upper-cased with every non-alphanumeric character replaced by `_` — `kyc-sentinel` → `HITL_ENCRYPTION_KEY_KYC_SENTINEL`; without a per-tenant key the fleet-wide key is used and that is logged at ERROR), keyed per-span by `{trace_id}.{span_id}.{attr_key}` |
 
 The tenant id used for HITL blob encryption is read from each span's own
 `tenant.id` attribute, not bound once when the processor is constructed —

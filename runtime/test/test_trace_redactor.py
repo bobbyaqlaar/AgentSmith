@@ -11,6 +11,9 @@ failing for an unrelated reason.
 
 from __future__ import annotations
 
+import logging
+import os
+import re
 import sys
 from pathlib import Path
 
@@ -438,3 +441,106 @@ def test_an_unresolvable_tenant_never_takes_down_the_processor(monkeypatch, tmp_
     worker refusing to start and wrong here: a span processor that raises on an
     unset variable takes telemetry down with it."""
     assert _fallback_tenant(monkeypatch, tmp_path) == "unknown"
+
+
+# ── Per-tenant HITL encryption keys ───────────────────────────────────────────
+
+
+def _key_for(monkeypatch, tenant_id, **env):
+    from runtime import environment
+
+    monkeypatch.setattr(environment, "_degraded_warned", set())
+    for name in list(os.environ):
+        if name.startswith("HITL_ENCRYPTION_KEY"):
+            monkeypatch.delenv(name, raising=False)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    return tr.HITLBlobStore(tenant_id)._key()
+
+
+def _sha(value: str) -> bytes:
+    import hashlib
+
+    return hashlib.sha256(value.encode("utf-8")).digest()
+
+
+@pytest.mark.parametrize(
+    "tenant_id, expected_suffix",
+    [
+        ("kyc-sentinel", "KYC_SENTINEL"),
+        ("acme-corp", "ACME_CORP"),
+        ("tenant.one", "TENANT_ONE"),
+        ("acme", "ACME"),
+    ],
+)
+def test_the_per_tenant_key_variable_is_a_legal_name(tenant_id, expected_suffix):
+    """`HITL_ENCRYPTION_KEY_KYC-SENTINEL` is not something a shell can set.
+
+    The id used to be spliced in raw, so for every hyphenated tenant — which is
+    the conventional shape, and this framework's own testbed — the per-tenant
+    key was unreachable and the fleet-wide key was used instead.
+    """
+    assert tr.HITLBlobStore.env_suffix(tenant_id) == expected_suffix
+    assert re.fullmatch(r"[A-Za-z0-9_]+", tr.HITLBlobStore.env_suffix(tenant_id))
+
+
+def test_a_hyphenated_tenant_gets_its_own_key(monkeypatch):
+    """The finding, asserted directly: this returned the shared key before."""
+    key = _key_for(
+        monkeypatch,
+        "kyc-sentinel",
+        HITL_ENCRYPTION_KEY="fleet-wide",
+        HITL_ENCRYPTION_KEY_KYC_SENTINEL="kyc-only",
+    )
+    assert key == _sha("kyc-only")
+    assert key != _sha("fleet-wide")
+
+
+def test_an_unpunctuated_tenant_keeps_the_name_it_already_had(monkeypatch):
+    """Backward compatibility. For an id with no punctuation the normalised and
+    legacy spellings are identical, so a working deployment keeps working."""
+    assert _key_for(
+        monkeypatch, "acme", HITL_ENCRYPTION_KEY_ACME="acme-only"
+    ) == _sha("acme-only")
+
+
+def test_falling_back_to_the_fleet_key_is_reported(monkeypatch, caplog):
+    """Still allowed — refusing would break deployments — but not silent.
+
+    The message names the variable to set, because "configure a per-tenant key"
+    is not actionable when the reason it was missing was that its name could
+    not be typed.
+    """
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    with caplog.at_level(logging.INFO):
+        key = _key_for(monkeypatch, "acme-corp", HITL_ENCRYPTION_KEY="fleet-wide")
+
+    assert key == _sha("fleet-wide")
+    assert any(r.levelno >= logging.ERROR for r in caplog.records)
+    assert "HITL_ENCRYPTION_KEY_ACME_CORP" in caplog.text
+
+
+def test_the_key_value_is_hashed_verbatim(monkeypatch):
+    """The value is NOT stripped before hashing.
+
+    Whitespace-only means unset, but a real value is used exactly as given:
+    trimming it would derive a different key and orphan every blob already
+    written with the old one.
+    """
+    assert _key_for(
+        monkeypatch, "acme", HITL_ENCRYPTION_KEY_ACME="  padded  "
+    ) == _sha("  padded  ")
+
+
+def test_a_whitespace_only_key_counts_as_unset(monkeypatch):
+    """`HITL_ENCRYPTION_KEY_ACME=" "` is a declared-but-empty variable, not a key."""
+    with pytest.raises(RuntimeError, match="No HITL encryption key"):
+        _key_for(monkeypatch, "acme", HITL_ENCRYPTION_KEY_ACME="   ")
+
+
+def test_the_missing_key_error_names_the_settable_variable(monkeypatch):
+    """It used to name HITL_ENCRYPTION_KEY_KYC-SENTINEL — an instruction that
+    cannot be followed."""
+    with pytest.raises(RuntimeError) as exc:
+        _key_for(monkeypatch, "kyc-sentinel")
+    assert "HITL_ENCRYPTION_KEY_KYC_SENTINEL" in str(exc.value)
