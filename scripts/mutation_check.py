@@ -90,6 +90,30 @@ CATALOGUE: tuple[Suite, ...] = (
                 "for pattern in ():",
             ),
             Mutation(
+                "the blob stores the SCRUBBED text instead of the original — the "
+                "compliance guarantee becomes a no-op",
+                "runtime/trace_redactor.py",
+                '                        self._blob_store_for(tenant_id).put(ref, "\\n".join(strings))',
+                "                        self._blob_store_for(tenant_id).put(ref, \"\\n\".join(scrubbed))",
+            ),
+            Mutation(
+                "a blob that does not decrypt is returned as nonsense instead of raising",
+                "runtime/trace_redactor.py",
+                "        except Exception as exc:\n"
+                "            raise RuntimeError(\n"
+                '                f"HITL blob {ref!r} for tenant={self.tenant_id!r} did not decrypt "',
+                "        except Exception as exc:  # noqa\n"
+                "            return None  # type: ignore[return-value]\n"
+                "            raise RuntimeError(\n"
+                '                f"HITL blob {ref!r} for tenant={self.tenant_id!r} did not decrypt "',
+            ),
+            Mutation(
+                "get() silently reads the local directory even when S3 is the backend",
+                "runtime/trace_redactor.py",
+                '        if os.environ.get("HITL_BLOB_S3_BUCKET"):\n            raise NotImplementedError(',
+                '        if False:\n            raise NotImplementedError(',
+            ),
+            Mutation(
                 "the tenant id is spliced into the key variable raw — a hyphenated "
                 "tenant silently shares the fleet key again",
                 "runtime/trace_redactor.py",

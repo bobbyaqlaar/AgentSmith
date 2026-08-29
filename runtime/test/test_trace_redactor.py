@@ -544,3 +544,99 @@ def test_the_missing_key_error_names_the_settable_variable(monkeypatch):
     with pytest.raises(RuntimeError) as exc:
         _key_for(monkeypatch, "kyc-sentinel")
     assert "HITL_ENCRYPTION_KEY_KYC_SENTINEL" in str(exc.value)
+
+
+# ── The compliance guarantee, asserted rather than assumed ────────────────────
+#
+# The tests above check that a blob FILE APPEARS under the right tenant and that
+# two spans get distinct names. Neither ever opened one. So "the full original
+# payload is preserved for compliance review" was asserted as "something was
+# written": storing the scrubbed text instead of the original, deriving the key
+# differently, or writing a corrupt nonce would all have passed, and the failure
+# would surface at a compliance request — the worst moment to discover it.
+
+
+def _stored_payload(tmp_path, monkeypatch, payload, tenant="acme", key="k"):
+    """Run a span through the production redactor and read its blob back."""
+    monkeypatch.setenv("HITL_BLOB_DIR", str(tmp_path))
+    monkeypatch.setenv("HITL_ENCRYPTION_KEY", key)
+    redactor = _redactor("production", tenant_id=tenant)
+    span = FakeSpan({"input.value": payload}, trace_id=11, span_id=2)
+    redactor.on_end(span)
+    ref = span._attributes["input.value.hitl_blob_ref"]
+    return tr.HITLBlobStore(tenant).get(ref), span
+
+
+def test_the_blob_round_trips_to_the_original_payload(tmp_path, monkeypatch):
+    """The whole point of the store, in one assertion."""
+    payload = "Applicant Emirates ID 784-1234-1234567-1 and email a.b@example.com " + "z" * 40
+    recovered, _ = _stored_payload(tmp_path, monkeypatch, payload)
+    assert recovered == payload
+
+
+def test_the_blob_keeps_what_the_span_had_to_lose(tmp_path, monkeypatch):
+    """The two halves must disagree, and that is the design.
+
+    The exported span is scrubbed and truncated; the blob holds the identifiers
+    verbatim. A blob that stored the SCRUBBED text would satisfy every earlier
+    test in this file and quietly make the control pointless.
+    """
+    payload = "Emirates ID 784-1234-1234567-1, card 4111 1111 1111 1111 " + "z" * 40
+    recovered, span = _stored_payload(tmp_path, monkeypatch, payload)
+
+    assert "784-1234-1234567-1" in recovered
+    assert "4111 1111 1111 1111" in recovered
+
+    exported = str(span._attributes["input.value"])
+    assert "784-1234-1234567-1" not in exported, "the span exported the raw identifier"
+    assert "REDACTED" in exported
+
+
+def test_a_missing_ref_is_none_not_an_error(tmp_path, monkeypatch):
+    """A compliance lookup for a blob that was never written — because its
+    write failed and was logged — must be distinguishable from a decrypt
+    failure, not collapsed into one."""
+    monkeypatch.setenv("HITL_BLOB_DIR", str(tmp_path))
+    monkeypatch.setenv("HITL_ENCRYPTION_KEY", "k")
+    assert tr.HITLBlobStore("acme").get("never-written") is None
+
+
+def test_the_wrong_key_raises_instead_of_returning_nonsense(tmp_path, monkeypatch):
+    """AES-GCM authenticates, so a failed tag is real information: this blob
+    belongs to another tenant, or the key has rotated. Both need saying."""
+    payload = "sensitive " + "z" * 60
+    _stored_payload(tmp_path, monkeypatch, payload, key="the-right-key")
+
+    monkeypatch.setenv("HITL_ENCRYPTION_KEY", "the-wrong-key")
+    store = tr.HITLBlobStore("acme")
+    ref = next(iter(p.stem for p in (tmp_path / "acme").glob("*.json")))
+    with pytest.raises(RuntimeError, match="did not decrypt"):
+        store.get(ref)
+
+
+def test_one_tenants_key_does_not_open_anothers_blob(tmp_path, monkeypatch):
+    """Per-tenant keys are the isolation claim; this is it end to end."""
+    monkeypatch.setenv("HITL_BLOB_DIR", str(tmp_path))
+    monkeypatch.setenv("HITL_ENCRYPTION_KEY_ACME", "acme-key")
+    monkeypatch.setenv("HITL_ENCRYPTION_KEY_OTHER", "other-key")
+    monkeypatch.delenv("HITL_ENCRYPTION_KEY", raising=False)
+
+    redactor = _redactor("production", tenant_id="acme")
+    span = FakeSpan({"input.value": "acme secret " + "z" * 60}, trace_id=5, span_id=1)
+    redactor.on_end(span)
+    ref = span._attributes["input.value.hitl_blob_ref"]
+
+    assert tr.HITLBlobStore("acme").get(ref) is not None
+    # Same ref, other tenant: its own directory has no such blob.
+    assert tr.HITLBlobStore("other").get(ref) is None
+
+
+def test_get_refuses_rather_than_guessing_when_s3_is_configured(tmp_path, monkeypatch):
+    """put() writes to S3 when the bucket is set. get() reads the local backend
+    only, and says so — returning None there would read as "no such blob" for a
+    blob that exists in a bucket this method never looked in."""
+    monkeypatch.setenv("HITL_BLOB_DIR", str(tmp_path))
+    monkeypatch.setenv("HITL_ENCRYPTION_KEY", "k")
+    monkeypatch.setenv("HITL_BLOB_S3_BUCKET", "some-bucket")
+    with pytest.raises(NotImplementedError, match="local filesystem"):
+        tr.HITLBlobStore("acme").get("any-ref")

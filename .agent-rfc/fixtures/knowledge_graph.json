@@ -87,7 +87,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-08-29T22:18:28Z",
+      "last_modified": "2026-08-29T22:52:45Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -173,7 +173,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-08-29T22:20:21Z",
+      "last_modified": "2026-08-29T22:53:35Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -214,7 +214,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-08-29T22:22:23Z",
+      "last_modified": "2026-08-29T22:54:40Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -327,6 +327,8 @@
         "env_suffix",
         "_key",
         "put",
+        "_blob_path",
+        "get",
         "_blob_store_for",
         "on_start",
         "on_end",
@@ -336,7 +338,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-08-29T22:17:25Z",
+      "last_modified": "2026-08-29T22:51:23Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -406,7 +408,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-29T22:21:35Z",
+      "last_modified": "2026-08-29T22:54:15Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -430,7 +432,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-08-29T22:17:33Z",
+      "last_modified": "2026-08-29T22:51:56Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -448,7 +450,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-08-29T22:22:10Z",
+      "last_modified": "2026-08-29T22:54:31Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -460,7 +462,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-08-29T22:21:26Z",
+      "last_modified": "2026-08-29T22:54:11Z",
       "id": "runtime/environment.py"
     },
     {
@@ -578,7 +580,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-08-29T22:19:31Z",
+      "last_modified": "2026-08-29T22:53:26Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -745,7 +747,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-29T22:19:03Z",
+      "last_modified": "2026-08-29T22:53:21Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -815,7 +817,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-08-29T22:18:55Z",
+      "last_modified": "2026-08-29T22:53:18Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -846,7 +848,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-08-29T22:18:40Z",
+      "last_modified": "2026-08-29T22:53:08Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -2394,9 +2396,16 @@
         "test_the_key_value_is_hashed_verbatim",
         "test_a_whitespace_only_key_counts_as_unset",
         "test_the_missing_key_error_names_the_settable_variable",
+        "_stored_payload",
+        "test_the_blob_round_trips_to_the_original_payload",
+        "test_the_blob_keeps_what_the_span_had_to_lose",
+        "test_a_missing_ref_is_none_not_an_error",
+        "test_the_wrong_key_raises_instead_of_returning_nonsense",
+        "test_one_tenants_key_does_not_open_anothers_blob",
+        "test_get_refuses_rather_than_guessing_when_s3_is_configured",
         "__init__"
       ],
-      "last_modified": "2026-08-29T22:15:10Z",
+      "last_modified": "2026-08-29T22:48:10Z",
       "id": "runtime/test/test_trace_redactor.py"
     },
     {
@@ -3351,7 +3360,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-08-29T22:20:09Z",
+      "last_modified": "2026-08-29T22:53:34Z",
       "id": "runtime/config.py"
     },
     {
@@ -3959,7 +3968,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-08-29T22:16:47Z",
+      "last_modified": "2026-08-29T22:50:15Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -4009,7 +4018,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-08-29T22:15:29Z",
+      "last_modified": "2026-08-29T22:48:38Z",
       "id": "scripts/mutation_check.py"
     },
     {

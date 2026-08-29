@@ -341,6 +341,66 @@ class HITLBlobStore:
             )
             return ref
 
+    def _blob_path(self, ref: str) -> Path:
+        blob_dir = Path(
+            os.environ.get(
+                "HITL_BLOB_DIR",
+                str(Path(__file__).resolve().parent / ".hitl_blobs"),
+            )
+        )
+        return blob_dir / self.tenant_id / f"{ref}.json"
+
+    def get(self, ref: str) -> Optional[str]:
+        """Decrypt and return the payload stored under `ref`, or None if absent.
+
+        The counterpart to put(), and until now there was none: nothing in this
+        framework could read a HITL blob back. The store exists so an unredacted
+        payload survives for compliance review, and the only way to satisfy such
+        a request was to reverse-engineer the format from put() — read the JSON,
+        hex-decode nonce and ciphertext, SHA-256 the environment key, AES-GCM
+        open. An operator doing that under time pressure, on the one artifact
+        that holds the data the redactor deliberately removed from everywhere
+        else, is not a procedure anyone should have to invent.
+
+        A wrong key raises rather than returning nonsense: AES-GCM authenticates,
+        so a failed tag is the difference between "this blob belongs to another
+        tenant" and "this blob is corrupt", and both need saying out loud.
+
+        Only the local filesystem backend is implemented here. put() also writes
+        to S3 when HITL_BLOB_S3_BUCKET is set, and that path has no test and no
+        S3 in CI to get one; claiming to read it back would be claiming more
+        than is verified.
+        """
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        import json
+
+        if os.environ.get("HITL_BLOB_S3_BUCKET"):
+            raise NotImplementedError(
+                "HITLBlobStore.get() reads the local filesystem backend only; "
+                "HITL_BLOB_S3_BUCKET is set. Fetch the object from S3 and decrypt "
+                "it with the same derivation (see this method's source)."
+            )
+
+        path = self._blob_path(ref)
+        if not path.exists():
+            return None
+
+        blob = json.loads(path.read_text())
+        key = self._key()  # raises RuntimeError if unconfigured — let it propagate
+        try:
+            plaintext = AESGCM(key).decrypt(
+                bytes.fromhex(blob["nonce"]),
+                bytes.fromhex(blob["ciphertext"]),
+                None,
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"HITL blob {ref!r} for tenant={self.tenant_id!r} did not decrypt "
+                f"with the configured key. Either the key changed or the blob "
+                f"belongs to a different tenant. Underlying: {type(exc).__name__}"
+            ) from exc
+        return plaintext.decode("utf-8")
+
 
 def _make_blob_ref(trace_id: str, span_id: str, attr_key: str) -> str:
     # span_id is required: a single trace with multiple independently

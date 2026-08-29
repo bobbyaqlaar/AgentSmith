@@ -687,6 +687,21 @@ The tenant id used for HITL blob encryption is read from each span's own
 required for correctness on a shared (non-dedicated) worker pool processing
 spans for more than one tenant in the same process.
 
+**Retrieving a payload for a compliance request.** The span carries the blob's
+reference on `<attr>.hitl_blob_ref`; `HITLBlobStore.get()` decrypts it:
+
+```python
+from runtime.trace_redactor import HITLBlobStore
+print(HITLBlobStore("kyc-sentinel").get("<trace_id>.<span_id>.input.value"))
+```
+
+`None` means no blob was written under that reference — the write failed and
+was logged at ERROR. A `RuntimeError` means the stored bytes did not
+authenticate: the key has rotated, or the blob belongs to another tenant. The
+two are deliberately different answers. Local filesystem backend only; when
+`HITL_BLOB_S3_BUCKET` is set, fetch the object and decrypt with the same
+derivation rather than letting `get()` report a blob it never looked for.
+
 CI check (also wired into `cd-staging.yml` / `cd-production.yml`):
 
 ```bash
