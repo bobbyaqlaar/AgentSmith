@@ -74,6 +74,19 @@ def env_choice(var: str, *, default: str, allowed: Iterable[str]) -> str:
     return raw
 
 
+def warn_once(key: str, message: str, level: int = logging.WARNING) -> None:
+    """Log `message` the first time `key` is seen, and never again.
+
+    The call sites for these warnings are constructors and resolvers that run
+    per worker, per store, or inside a loop, so "say it" has to mean "say it
+    once" or it says nothing anyone reads.
+    """
+    if key in _degraded_warned:
+        return
+    _degraded_warned.add(key)
+    logger.log(level, "%s", message)
+
+
 def warn_degraded_default(key: str, message: str) -> None:
     """Say once that a default has quietly downgraded a control.
 
@@ -87,11 +100,6 @@ def warn_degraded_default(key: str, message: str) -> None:
     empty result, just a control that has stopped meaning what it says. Once
     per key because the call sites sit in constructors and loops.
     """
-    if key in _degraded_warned:
-        return
-    _degraded_warned.add(key)
     environment = get_environment()
-    if environment in {"staging", "production"}:
-        logger.error("%s [environment=%s]", message, environment)
-    else:
-        logger.info("%s [environment=%s]", message, environment)
+    level = logging.ERROR if environment in {"staging", "production"} else logging.INFO
+    warn_once(key, f"{message} [environment={environment}]", level)

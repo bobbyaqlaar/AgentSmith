@@ -61,17 +61,26 @@ def register_input_guardrail(fn: ScrubFn) -> None:
     _custom_scrubber = fn
 
 
-def resolve_mode() -> str:
-    from runtime.config import resolve
+MODES = ("off", "default", "custom")
 
-    raw = str(
-        resolve("security.input_guardrail", env_var="INPUT_GUARDRAIL", default="")
-    ).strip().lower()
-    if raw in {"off", "default", "custom"}:
-        return raw
-    if get_environment() == "development":
-        return "off"
-    return "default"
+
+def resolve_mode() -> str:
+    """off | default | custom. Unset means off in development, default elsewhere.
+
+    Goes through resolve_choice so that `security.input_guardrail: off` in
+    tenant.yaml — the value this module's own docstring documents — is not
+    silently discarded as the YAML boolean False, and so an unrecognised value
+    is reported rather than quietly replaced.
+    """
+    from runtime.config import resolve_choice
+
+    fallback = "off" if get_environment() == "development" else "default"
+    return resolve_choice(
+        "security.input_guardrail",
+        env_var="INPUT_GUARDRAIL",
+        allowed=MODES,
+        fallback=fallback,
+    )
 
 
 def scrub_text(text: str, mode: Optional[str] = None) -> tuple[str, dict[str, int]]:

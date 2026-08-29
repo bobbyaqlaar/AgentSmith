@@ -62,7 +62,7 @@ import logging
 import os
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator, Optional
+from typing import Any, Iterable, Iterator, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -290,6 +290,63 @@ def _cast(value: Any, cast: Any, source: str, dotted: str) -> Any:
         # Loud. A malformed value must not fall through to a lower-precedence
         # source, or whoever set it is silently ignored.
         raise ValueError(f"{dotted}: {value!r} from {source} is not valid") from exc
+
+
+def resolve_choice(
+    dotted: str,
+    *,
+    env_var: Optional[str] = None,
+    allowed: Iterable[str],
+    fallback: str,
+) -> str:
+    """Resolve a setting whose value is one of a fixed set of WORDS.
+
+    Two things go wrong with `str(resolve(...)).strip().lower()`, and both were
+    silent.
+
+    YAML 1.1 reads a bare `off` as the boolean False — and `off` is a
+    DOCUMENTED value of security.input_guardrail, security.prompt_guard and
+    moderation.mode. A tenant writing the value the docs told them to write got
+    False, which matches no mode, so their declaration was discarded and the
+    fallback applied instead. `on`, `no` and `yes` coerce the same way.
+
+    The boolean is NOT translated back to a word. Mapping False to "off" would
+    read `prompt_guard: false` as an instruction to disable the guard, which is
+    a way to turn a control off by writing something that was never a valid
+    value for it. It says what happened and keeps the fail-closed fallback.
+
+    And an unrecognised value was replaced in silence. A tenant who typed
+    `warnn` got the blocking default and no indication their policy had been
+    ignored — the posture an auditor reads in tenant.yaml was not the posture
+    in force.
+    """
+    from runtime.environment import warn_once
+
+    raw = resolve(dotted, env_var=env_var, default="")
+    options = sorted(allowed)
+
+    if isinstance(raw, bool):
+        warn_once(
+            f"config-choice-bool:{dotted}",
+            f"{dotted} was read as the YAML boolean {raw!r} — YAML 1.1 parses "
+            f"bare off/on/yes/no as booleans, and this setting takes a word. "
+            f'Quote it (`{dotted.split(".")[-1]}: "off"`). '
+            f"Using {fallback!r}; accepted: {', '.join(options)}.",
+        )
+        return fallback
+
+    text = str(raw).strip().lower()
+    if not text:
+        return fallback
+    if text in options:
+        return text
+
+    warn_once(
+        f"config-choice-unknown:{dotted}",
+        f"{dotted}={text!r} is not a recognised value. Using {fallback!r}; "
+        f"accepted: {', '.join(options)}.",
+    )
+    return fallback
 
 
 def resolve(

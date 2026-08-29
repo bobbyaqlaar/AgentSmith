@@ -34,6 +34,7 @@ import argparse
 import signal
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -290,6 +291,48 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        name="config_choices",
+        tests=("runtime/test/test_config_choices.py",),
+        mutations=(
+            Mutation(
+                "a YAML boolean is no longer noticed — a bare `off` is discarded "
+                "in silence again",
+                "runtime/config.py",
+                "    if isinstance(raw, bool):",
+                "    if False:",
+            ),
+            Mutation(
+                "the boolean is translated to a word — `prompt_guard: false` "
+                "disables the guard",
+                "runtime/config.py",
+                '            f"Using {fallback!r}; accepted: {\', \'.join(options)}.",\n'
+                "        )\n"
+                "        return fallback",
+                '            f"Using {fallback!r}; accepted: {\', \'.join(options)}.",\n'
+                "        )\n"
+                '        return "off"',
+            ),
+            Mutation(
+                "an unrecognised value goes back to being replaced silently",
+                "runtime/config.py",
+                '    warn_once(\n        f"config-choice-unknown:{dotted}",',
+                '    _unused = (\n        f"config-choice-unknown:{dotted}",',
+            ),
+            Mutation(
+                "unset starts warning too — the signal drowns in noise",
+                "runtime/config.py",
+                "    if not text:\n        return fallback",
+                "    if False:\n        return fallback",
+            ),
+            Mutation(
+                "the input guard's development fallback becomes the production one",
+                "runtime/input_guardrail.py",
+                '    fallback = "off" if get_environment() == "development" else "default"',
+                '    fallback = "default"',
+            ),
+        ),
+    ),
+    Suite(
         name="degraded_defaults",
         tests=(
             "runtime/test/test_degraded_defaults.py",
@@ -310,13 +353,13 @@ CATALOGUE: tuple[Suite, ...] = (
                 "    if False:\n        raise ValueError(",
             ),
             Mutation(
+                # Re-pointed when warn_once was extracted: the level choice moved
+                # but the property it defends did not.
                 "a degraded default is logged at the same level everywhere",
                 "runtime/environment.py",
-                '    if environment in {"staging", "production"}:\n'
-                '        logger.error("%s [environment=%s]", message, environment)\n'
-                '    else:\n'
-                '        logger.info("%s [environment=%s]", message, environment)',
-                '    logger.info("%s [environment=%s]", message, environment)',
+                '    level = logging.ERROR if environment in {"staging", "production"} '
+                "else logging.INFO",
+                "    level = logging.INFO",
             ),
             Mutation(
                 "one degraded default silences the others",
@@ -375,6 +418,12 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
     ),
 )
+
+
+def _backup_dir() -> Path:
+    """Somewhere outside the repo to keep pristine copies during a dirty run."""
+    backup = Path(tempfile.mkdtemp(prefix="mutation_check_backup_"))
+    return backup
 
 
 def _dirty_catalogue_files(suites: tuple[Suite, ...]) -> list[str]:
@@ -502,6 +551,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("suites", nargs="*", help="suite names (default: all)")
     parser.add_argument("--list", action="store_true", help="list suites and exit")
+    parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="run over uncommitted changes (the normal case while fixing something); "
+        "pristine copies are saved beside the repo first",
+    )
     args = parser.parse_args()
 
     if args.list:
@@ -521,7 +576,20 @@ def main() -> int:
         selected = tuple(s for s in CATALOGUE if s.name in set(args.suites))
 
     dirty = _dirty_catalogue_files(selected)
-    if dirty:
+    if dirty and args.allow_dirty:
+        # The author's own case: you cannot mutation-test a fix before you
+        # commit it, and requiring a commit first means committing unverified
+        # code. The default stays refuse — this is the deliberate exception —
+        # and a pristine copy goes to disk so that even a SIGKILL, which no
+        # handler can catch, leaves something to restore from.
+        backup = _backup_dir()
+        for path in dirty:
+            destination = backup / path.replace("/", "__")
+            destination.write_text((REPO / path).read_text(encoding="utf-8"),
+                                   encoding="utf-8")
+        print(f"⚠️  running over {len(dirty)} uncommitted file(s); "
+              f"pristine copies saved to {backup}\n", file=sys.stderr)
+    elif dirty:
         print(
             "🛑  refusing to run: these files have uncommitted changes and this "
             "harness rewrites them.\n",
@@ -530,9 +598,10 @@ def main() -> int:
         for path in dirty:
             print(f"      {path}", file=sys.stderr)
         print(
-            "\n    Commit or stash them first. If you did not edit these, a previous "
-            "run\n    was killed before it could restore one — check the diff before "
-            "discarding it.",
+            "\n    Commit or stash them first, or pass --allow-dirty (it saves "
+            "pristine\n    copies before it starts). If you did not edit these, a "
+            "previous run was\n    killed before it could restore one — check the diff "
+            "before discarding it.",
             file=sys.stderr,
         )
         return 1

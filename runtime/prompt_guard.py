@@ -166,14 +166,16 @@ def resolve_mode() -> str:
     # security.prompt_guard in tenant.yaml, PROMPT_GUARD overriding it. The
     # posture is tenant policy an auditor reads; it was reachable only through
     # an environment variable, so it lived nowhere reviewable.
-    from runtime.config import resolve
+    from runtime.config import resolve, resolve_choice
 
-    raw = str(resolve("security.prompt_guard", env_var="PROMPT_GUARD", default="")).strip().lower()
-    if raw == "block":  # explicit alias for the blocking default
-        return "default"
-    if raw in {"off", "warn", "default", "strict"}:
-        return raw
-    return "default"
+    if str(resolve("security.prompt_guard", env_var="PROMPT_GUARD", default="")).strip().lower() == "block":
+        return "default"  # explicit alias for the blocking default
+    return resolve_choice(
+        "security.prompt_guard",
+        env_var="PROMPT_GUARD",
+        allowed=("off", "warn", "default", "strict"),
+        fallback="default",
+    )
 
 
 def is_enforcing(mode: Optional[str] = None) -> bool:

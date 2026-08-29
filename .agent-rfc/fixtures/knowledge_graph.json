@@ -87,7 +87,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-08-29T21:21:11Z",
+      "last_modified": "2026-08-29T21:52:34Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -173,7 +173,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-08-28T20:15:33Z",
+      "last_modified": "2026-08-29T21:53:00Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -214,7 +214,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-08-29T21:22:21Z",
+      "last_modified": "2026-08-29T21:53:59Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -253,7 +253,7 @@
         "apply_output_moderation",
         "__init__"
       ],
-      "last_modified": "2026-08-24T19:55:52Z",
+      "last_modified": "2026-08-29T21:36:08Z",
       "id": "runtime/moderation.py"
     },
     {
@@ -334,7 +334,7 @@
         "_scrub",
         "_truncate"
       ],
-      "last_modified": "2026-08-29T21:20:59Z",
+      "last_modified": "2026-08-29T21:52:21Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -404,7 +404,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-29T21:21:55Z",
+      "last_modified": "2026-08-29T21:53:31Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -428,7 +428,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-08-29T21:21:03Z",
+      "last_modified": "2026-08-29T21:52:25Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -446,7 +446,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-08-29T21:22:12Z",
+      "last_modified": "2026-08-29T21:53:49Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -455,9 +455,10 @@
       "symbols": [
         "get_environment",
         "env_choice",
+        "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-08-29T21:21:50Z",
+      "last_modified": "2026-08-29T21:53:26Z",
       "id": "runtime/environment.py"
     },
     {
@@ -575,7 +576,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-08-29T21:21:22Z",
+      "last_modified": "2026-08-29T21:52:54Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -742,7 +743,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-29T21:21:17Z",
+      "last_modified": "2026-08-29T21:52:49Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -812,7 +813,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-08-29T21:21:16Z",
+      "last_modified": "2026-08-29T21:52:48Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -843,7 +844,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-08-29T21:21:14Z",
+      "last_modified": "2026-08-29T21:52:46Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -3336,9 +3337,10 @@
         "override",
         "env_overrides",
         "_cast",
+        "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-08-24T20:14:46Z",
+      "last_modified": "2026-08-29T21:52:59Z",
       "id": "runtime/config.py"
     },
     {
@@ -3946,7 +3948,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-08-29T21:20:56Z",
+      "last_modified": "2026-08-29T21:52:18Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -3986,6 +3988,7 @@
       "symbols": [
         "Mutation",
         "Suite",
+        "_backup_dir",
         "_dirty_catalogue_files",
         "_install_restore_handlers",
         "_pytest",
@@ -3995,8 +3998,26 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-08-29T21:20:53Z",
+      "last_modified": "2026-08-29T21:40:08Z",
       "id": "scripts/mutation_check.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "tenant_yaml",
+        "test_a_bare_off_is_reported_not_obeyed_and_not_ignored",
+        "test_the_remedy_in_the_warning_actually_works",
+        "test_false_does_not_disable_a_guard",
+        "test_an_unrecognised_value_is_reported",
+        "test_an_unset_value_says_nothing",
+        "test_development_still_defaults_the_input_guard_off",
+        "test_a_valid_word_is_honoured",
+        "test_the_block_alias_still_maps_to_default",
+        "_write"
+      ],
+      "last_modified": "2026-08-29T21:50:45Z",
+      "id": "runtime/test/test_config_choices.py"
     }
   ],
   "edges": [
@@ -4522,6 +4543,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "runtime/config.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "runtime/test/test_config.py",
       "target": "runtime/__init__.py"
     },
@@ -4618,6 +4644,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_degraded_defaults.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_config_choices.py",
       "target": "runtime/__init__.py"
     }
   ]
