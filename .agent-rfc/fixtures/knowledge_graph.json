@@ -214,7 +214,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-08-29T11:07:25Z",
+      "last_modified": "2026-08-29T20:18:29Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -231,7 +231,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-08-25T09:43:55Z",
+      "last_modified": "2026-08-29T20:14:44Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -404,7 +404,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-27T22:29:01Z",
+      "last_modified": "2026-08-29T20:18:20Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -446,16 +446,18 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-08-29T11:07:24Z",
+      "last_modified": "2026-08-29T20:18:33Z",
       "id": "runtime/embeddings.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "get_environment"
+        "get_environment",
+        "env_choice",
+        "warn_degraded_default"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-29T20:18:16Z",
       "id": "runtime/environment.py"
     },
     {
@@ -2525,7 +2527,7 @@
         "__exit__",
         "embed"
       ],
-      "last_modified": "2026-08-29T11:07:07Z",
+      "last_modified": "2026-08-29T20:20:02Z",
       "id": "runtime/test/test_memory_and_vector.py"
     },
     {
@@ -3957,6 +3959,26 @@
       ],
       "last_modified": "2026-08-28T22:07:51Z",
       "id": "scripts/test/test_breaker_fail_open.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_clear_warn_state",
+        "test_a_declared_but_empty_selector_means_unset",
+        "test_a_typo_still_raises",
+        "test_a_real_value_is_honoured_case_insensitively",
+        "test_the_budget_selector_no_longer_crashes_on_an_empty_var",
+        "test_the_in_process_spend_cap_is_an_error_in_production",
+        "test_the_in_process_vector_index_is_an_error_in_production",
+        "test_development_is_told_without_being_alarmed",
+        "test_each_degraded_default_is_announced_once",
+        "test_the_three_warnings_do_not_suppress_each_other",
+        "test_every_vector_alias_still_resolves",
+        "test_the_defaults_themselves_are_unchanged"
+      ],
+      "last_modified": "2026-08-29T20:16:03Z",
+      "id": "runtime/test/test_degraded_defaults.py"
     }
   ],
   "edges": [
@@ -4573,6 +4595,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_framework_version.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_degraded_defaults.py",
       "target": "runtime/__init__.py"
     }
   ]

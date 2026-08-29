@@ -346,11 +346,28 @@ class PgVectorStore:
         return hits
 
 
+_VECTOR_ALIASES = ("memory", "mem", "inmemory", "postgres", "pgvector", "pg")
+
+
 def make_vector_store(embedder: Optional[Embedder] = None) -> VectorStore:
-    backend = os.environ.get("VECTOR_BACKEND", "memory").strip().lower()
+    from runtime.environment import env_choice, warn_degraded_default
+
+    # Every alias this accepted is still accepted — a tenant setting
+    # VECTOR_BACKEND=pgvector must keep working. What changes is that empty is
+    # handled here the way the other selectors now handle it, in one place.
+    backend = env_choice("VECTOR_BACKEND", default="memory", allowed=_VECTOR_ALIASES)
     emb = embedder or make_embedder()
-    if backend in {"", "memory", "mem", "inmemory"}:
-        return MemoryVectorStore(embedder=emb)
     if backend in {"postgres", "pgvector", "pg"}:
         return PgVectorStore(embedder=emb)
-    raise ValueError(f"Unknown VECTOR_BACKEND={backend!r}; use memory or postgres")
+
+    # In-process, and the default. The index lives and dies with the worker, so
+    # everything indexed is gone on restart and no two workers in a fleet share
+    # a corpus — a retrieval that returns nothing looks identical to a corpus
+    # that genuinely has nothing to say.
+    warn_degraded_default(
+        "vector-backend-memory",
+        "VECTOR_BACKEND is unset: the vector index is IN PROCESS. It is lost on "
+        "restart and not shared between workers. Set VECTOR_BACKEND=postgres "
+        "for a durable store.",
+    )
+    return MemoryVectorStore(embedder=emb)

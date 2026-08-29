@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from runtime import conversation_memory as cm
 from runtime.conversation_memory import ConversationMemory
-from runtime import embeddings as emb
+from runtime import environment as env
 from runtime.embeddings import HashEmbedder, make_embedder
 from runtime import vector_store as vs
 from runtime.vector_store import MemoryVectorStore, make_vector_store
@@ -217,7 +217,7 @@ def test_using_the_fake_outside_development_is_an_error_level_event(
     and no error anywhere. Measured: the query "is this person on a sanctions
     list?" ranks "today is sunny in Abu Dhabi" first.
     """
-    monkeypatch.setattr(emb, "_fake_embedder_warned", False)
+    monkeypatch.setattr(env, "_degraded_warned", set())
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.delenv("EMBEDDER", raising=False)
 
@@ -235,7 +235,7 @@ def test_development_gets_the_same_message_without_the_alarm(
     monkeypatch, caplog
 ) -> None:
     """CI and a laptop run on the fake by design — this must not shout there."""
-    monkeypatch.setattr(emb, "_fake_embedder_warned", False)
+    monkeypatch.setattr(env, "_degraded_warned", set())
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.delenv("EMBEDDER", raising=False)
 
@@ -249,7 +249,7 @@ def test_development_gets_the_same_message_without_the_alarm(
 
 def test_the_fake_warning_is_said_once(monkeypatch, caplog) -> None:
     """An embedder is constructed per store and called in a loop."""
-    monkeypatch.setattr(emb, "_fake_embedder_warned", False)
+    monkeypatch.setattr(env, "_degraded_warned", set())
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.delenv("EMBEDDER", raising=False)
 

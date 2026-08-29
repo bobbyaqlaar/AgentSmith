@@ -49,15 +49,19 @@ class IdempotencyStore:
     """
 
     def __init__(self) -> None:
-        backend = os.environ.get("IDEMPOTENCY_BACKEND", "redis").lower()
+        from runtime.environment import env_choice
+
+        # Empty means unset, as everywhere else. This raised on
+        # `IDEMPOTENCY_BACKEND=""` — a declared-but-empty variable — while
+        # VECTOR_BACKEND treated the same input as ordinary. The default is
+        # durable either way, so there is nothing to warn about here.
+        backend = env_choice(
+            "IDEMPOTENCY_BACKEND", default="redis", allowed=("redis", "postgres")
+        )
         if backend == "redis":
             self._backend: Any = _RedisBackend()
-        elif backend == "postgres":
-            self._backend = _PostgresBackend()
         else:
-            raise ValueError(
-                f"Unknown IDEMPOTENCY_BACKEND={backend!r}. Use 'redis' or 'postgres'."
-            )
+            self._backend = _PostgresBackend()
 
     def get(self, key: str) -> Optional[Any]:
         """Return cached result for key, or None if not found / expired."""

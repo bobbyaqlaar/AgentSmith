@@ -19,7 +19,13 @@ callers should import this instead of reading os.environ directly.
 
 from __future__ import annotations
 
+import logging
 import os
+from typing import Iterable
+
+logger = logging.getLogger(__name__)
+
+_degraded_warned: set[str] = set()
 
 _ALIASES = {
     "development": "development",
@@ -41,3 +47,51 @@ def get_environment() -> str:
     """
     raw = os.environ.get("ENVIRONMENT", "").strip().lower()
     return _ALIASES.get(raw, "production")
+
+
+def env_choice(var: str, *, default: str, allowed: Iterable[str]) -> str:
+    """A backend selector read the same way everywhere.
+
+    Three selectors read three env vars for the same kind of choice and
+    disagreed about the same input. `VECTOR_BACKEND=""` fell back to the
+    default; `BUDGET_BACKEND=""` and `IDEMPOTENCY_BACKEND=""` raised. A
+    variable declared with no value is what a k8s manifest or a CI matrix
+    produces for an unset input, so two of the three crashed on a shape the
+    third treated as ordinary.
+
+    Empty means UNSET here. A non-empty value that is not allowed still raises,
+    which is the other half: a typo'd backend name must not quietly resolve to
+    a default the operator did not choose.
+    """
+    raw = os.environ.get(var, "").strip().lower()
+    if not raw:
+        return default
+    options = list(allowed)
+    if raw not in options:
+        raise ValueError(
+            f"Unknown {var}={raw!r}. Use one of: {', '.join(sorted(options))}."
+        )
+    return raw
+
+
+def warn_degraded_default(key: str, message: str) -> None:
+    """Say once that a default has quietly downgraded a control.
+
+    Several defaults in this framework pick the ephemeral or the fake option:
+    an in-process budget ledger, an in-process vector index, a hash embedder
+    with no semantic meaning. Each is the right choice for CI and a laptop, and
+    each is chosen by DOING NOTHING — so the deployments most likely to be
+    running one are the ones that never made a decision about it.
+
+    ERROR outside development because these fail invisibly: no exception, no
+    empty result, just a control that has stopped meaning what it says. Once
+    per key because the call sites sit in constructors and loops.
+    """
+    if key in _degraded_warned:
+        return
+    _degraded_warned.add(key)
+    environment = get_environment()
+    if environment in {"staging", "production"}:
+        logger.error("%s [environment=%s]", message, environment)
+    else:
+        logger.info("%s [environment=%s]", message, environment)

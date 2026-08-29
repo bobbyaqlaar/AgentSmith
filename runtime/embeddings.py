@@ -45,8 +45,6 @@ from typing import Any, Protocol, runtime_checkable
 
 logger = logging.getLogger(__name__)
 
-_fake_embedder_warned = False
-
 
 @runtime_checkable
 class Embedder(Protocol):
@@ -69,32 +67,20 @@ class Embedder(Protocol):
 def _warn_if_fake_outside_development() -> None:
     """Say once that retrieval is not semantic.
 
-    Once rather than per call — an embedder is called in a loop. At ERROR level
-    outside development because the symptom is invisible: a RAG pipeline on the
-    fake returns ranked, plausible-looking, meaningless context, and the first
-    sign of trouble is an answer nobody can explain.
+    Delegates to runtime.environment.warn_degraded_default — this was the first
+    of these warnings and briefly the only one; the budget ledger and the vector
+    index have the same shape, so the once-per-key and level-by-environment
+    logic lives in one place rather than three.
     """
-    global _fake_embedder_warned
-    if _fake_embedder_warned:
-        return
-    _fake_embedder_warned = True
-    try:
-        from runtime.environment import get_environment
+    from runtime.environment import warn_degraded_default
 
-        environment = get_environment()
-    except Exception:
-        environment = "unknown"
-
-    message = (
+    warn_degraded_default(
+        "embedder-hash",
         "EMBEDDER is unset or 'hash': retrieval is using HashEmbedder, a "
         "deterministic FAKE with no semantic meaning. Vector search will return "
         "ranked but arbitrary results. Set EMBEDDER=sentence-transformers (and "
-        "install the `embeddings` extra) for real retrieval."
+        "install the `embeddings` extra) for real retrieval.",
     )
-    if environment in {"staging", "production"}:
-        logger.error("%s [environment=%s]", message, environment)
-    else:
-        logger.info("%s [environment=%s]", message, environment)
 
 
 class HashEmbedder:

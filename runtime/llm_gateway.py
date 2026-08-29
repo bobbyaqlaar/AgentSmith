@@ -513,16 +513,34 @@ class _PostgresBudgetBackend(_BudgetBackend):
 
 
 def _make_budget_backend() -> _BudgetBackend:
-    backend = os.environ.get("BUDGET_BACKEND", "memory").lower()
+    from runtime.environment import env_choice, warn_degraded_default
+
+    # `BUDGET_BACKEND=""` used to raise here. That is what a k8s manifest
+    # produces for a declared-but-unset input, and it crashed gateway
+    # construction over a variable nobody had set. env_choice treats empty as
+    # unset; a genuine typo still raises, because a misspelled backend must not
+    # resolve to a default the operator did not choose.
+    backend = env_choice(
+        "BUDGET_BACKEND", default="memory", allowed=("memory", "redis", "postgres")
+    )
     if backend == "redis":
         return _RedisBudgetBackend()
     if backend == "postgres":
         return _PostgresBudgetBackend()
-    if backend == "memory":
-        return _MemoryBudgetBackend()
-    raise ValueError(
-        f"Unknown BUDGET_BACKEND={backend!r}. Use 'memory', 'redis', or 'postgres'."
+
+    # The spend cap is per-process on this backend, and it is the default. A
+    # fleet of N workers therefore enforces N caps: a $150 monthly limit
+    # becomes $150 PER WORKER, with every worker correctly reporting itself
+    # under budget. The class docstring has said "not for multi-worker prod
+    # fleets" all along; nothing said it where an operator would see it.
+    warn_degraded_default(
+        "budget-backend-memory",
+        "BUDGET_BACKEND is unset: the spend cap is tracked IN PROCESS. Every "
+        "worker enforces its own copy of the cap, so a fleet of N workers can "
+        "spend N times it. Set BUDGET_BACKEND=redis or =postgres for a shared "
+        "ledger.",
     )
+    return _MemoryBudgetBackend()
 
 
 # ── Gateway ───────────────────────────────────────────────────────────────────
