@@ -65,8 +65,16 @@ postgres = ["psycopg2-binary>=2.9,<3.0"]
 redis = ["redis>=5.0,<6.0"]
 temporal = ["temporalio>=1.5,<2.0"]
 hitl = ["cryptography>=42.0,<44.0"]
+# Exact token counts for conversation_memory. Optional because it is a compiled
+# wheel and a tenant that never builds a chat buffer should not carry it — but
+# WITHOUT it the buffer falls back to an estimate, and that estimate reads
+# Arabic about 65% low, so a budget sized to a context window silently holds
+# roughly three times what it thinks. The fallback errs high now and says once
+# that it is estimating; this is how you turn it off.
+tokenizer = ["tiktoken>=0.5,<1.0"]
 cloud = ["google-auth>=2.30,<3.0", "boto3>=1.34,<2.0", "aiohttp>=3.9,<4.0"]
 all = [
+    "tiktoken>=0.5,<1.0",
     "psycopg2-binary>=2.9,<3.0",
     "redis>=5.0,<6.0",
     "temporalio>=1.5,<2.0",

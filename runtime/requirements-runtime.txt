@@ -23,3 +23,11 @@ boto3>=1.34,<2.0
 
 # Container health endpoint (examples/oil-price-agent/worker.py)
 aiohttp>=3.9,<4.0
+
+# Optional — exact token counts for runtime/conversation_memory.py. Without it
+# the buffer estimates, and the estimate reads Arabic ~65% low: a budget sized
+# to a context window then holds about three times what it believes. The
+# estimate errs high now and logs once that it is estimating, so this is a
+# correctness upgrade rather than a requirement. Matches the `tokenizer` extra
+# in pyproject.toml.
+tiktoken>=0.5,<1.0

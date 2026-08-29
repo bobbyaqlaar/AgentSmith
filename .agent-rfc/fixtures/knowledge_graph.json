@@ -557,6 +557,8 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_encoder",
+        "_estimate_tokens",
         "_count_tokens",
         "ConversationMemory",
         "__init__",
@@ -565,9 +567,10 @@
         "as_messages",
         "token_count",
         "clear",
-        "_evict"
+        "_evict",
+        "_message_tokens"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-29T10:43:52Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -2496,9 +2499,16 @@
         "test_hash_embedder_is_deterministic_and_fixed_dim",
         "test_make_embedder_defaults_to_hash_when_embedder_hash",
         "test_memory_vector_store_add_and_query_returns_nearest",
-        "test_make_vector_store_defaults_to_memory"
+        "test_make_vector_store_defaults_to_memory",
+        "_fill",
+        "test_the_system_prompt_survives_eviction",
+        "test_eviction_still_happens_around_the_protected_message",
+        "test_multiple_system_messages_are_all_kept",
+        "test_a_budget_too_small_for_its_system_prompt_warns",
+        "test_the_estimate_is_not_systematically_low_on_non_latin_text",
+        "test_the_fallback_says_once_that_it_is_estimating"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-29T10:43:05Z",
       "id": "runtime/test/test_memory_and_vector.py"
     },
     {
