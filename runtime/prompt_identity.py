@@ -43,8 +43,15 @@ from typing import Any, Optional
 SYSTEM_ROLES = {"system", "developer"}
 
 
-def _text_of(content: Any) -> str:
+def content_text(content: Any) -> str:
     """Message content as text, flattening the multipart shape.
+
+    Public because runtime/testing.py needs the same answer. It had its own
+    inline version that joined `m.get("content", "")` directly, which raises
+    TypeError the moment content is a list — the shape this docstring is about
+    — so FakeGateway crashed on a prompt the real gateway accepts. Two
+    functions for one question, and only one of them knew about half the
+    inputs (review-levers: one-catalog).
 
     Anthropic and OpenAI both allow `content` to be a list of typed parts. A
     prompt that switches between the two shapes without changing a word must
@@ -75,7 +82,7 @@ def system_prompt(messages: Any) -> Optional[str]:
     if not isinstance(messages, list):
         return None
     texts = [
-        _text_of(m.get("content"))
+        content_text(m.get("content"))
         for m in messages
         if isinstance(m, dict) and str(m.get("role", "")).lower() in SYSTEM_ROLES
     ]

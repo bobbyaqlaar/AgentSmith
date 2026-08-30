@@ -150,6 +150,34 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        name="testing_double",
+        tests=(
+            "runtime/test/test_testing_double_parity.py",
+            "runtime/test/test_prompt_identity.py",
+        ),
+        mutations=(
+            Mutation(
+                "the double goes back to its own inline flattening — a multimodal "
+                "prompt raises TypeError out of FakeGateway",
+                "runtime/testing.py",
+                "            content_text(m.get(\"content\")) for m in prompt if isinstance(m, dict)",
+                "            m.get(\"content\", \"\") for m in prompt if isinstance(m, dict)",
+            ),
+            Mutation(
+                "content_text stops flattening typed parts",
+                "runtime/prompt_identity.py",
+                "    if isinstance(content, list):",
+                "    if False:",
+            ),
+            Mutation(
+                "None content stops being empty text",
+                "runtime/prompt_identity.py",
+                '    return "" if content is None else str(content)',
+                "    return str(content)",
+            ),
+        ),
+    ),
+    Suite(
         name="idempotency_key",
         tests=("runtime/test/test_idempotency_key.py",),
         mutations=(

@@ -42,6 +42,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Union
 
 from runtime.llm_gateway import BudgetExceededError, CompletionResult
+from runtime.prompt_identity import content_text
 from runtime.provider_dispatch import supports_streaming
 
 # What a role's response can be: a fixed string, a queue of strings consumed
@@ -275,11 +276,20 @@ class RecordingGateway:
 
 
 def _as_text(prompt: Any) -> str:
-    """Gateways accept a string or a message list; tests assert on text."""
+    """Gateways accept a string or a message list; tests assert on text.
+
+    Content flattening is prompt_identity.content_text, which is what the real
+    gateway's prompt hashing uses. This joined `m.get("content", "")` straight
+    into a str.join, so any message whose content was a LIST of typed parts —
+    the ordinary Anthropic and OpenAI shape — raised TypeError out of
+    FakeGateway, on a prompt the real gateway handles. `content: None` did the
+    same. A test double that refuses inputs the real thing accepts sends the
+    tenant looking for a bug in their own code.
+    """
     if isinstance(prompt, str):
         return prompt
     if isinstance(prompt, list):
         return "\n".join(
-            m.get("content", "") for m in prompt if isinstance(m, dict)
+            content_text(m.get("content")) for m in prompt if isinstance(m, dict)
         )
     return json.dumps(prompt, default=str)

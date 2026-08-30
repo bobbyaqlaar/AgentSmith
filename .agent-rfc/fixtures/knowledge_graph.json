@@ -87,7 +87,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-08-30T11:20:21Z",
+      "last_modified": "2026-08-30T11:33:04Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -173,7 +173,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-08-30T11:20:38Z",
+      "last_modified": "2026-08-30T11:33:21Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -214,7 +214,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-08-30T11:21:34Z",
+      "last_modified": "2026-08-30T11:34:25Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -233,7 +233,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-08-30T11:20:04Z",
+      "last_modified": "2026-08-30T11:32:47Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -272,7 +272,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-08-30T11:20:09Z",
+      "last_modified": "2026-08-30T11:32:51Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -341,7 +341,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-08-30T11:19:51Z",
+      "last_modified": "2026-08-30T11:32:26Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -411,7 +411,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-30T11:21:09Z",
+      "last_modified": "2026-08-30T11:33:52Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -435,7 +435,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-08-30T11:20:12Z",
+      "last_modified": "2026-08-30T11:32:55Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -453,7 +453,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-08-30T11:21:26Z",
+      "last_modified": "2026-08-30T11:34:14Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -465,7 +465,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-08-30T11:21:04Z",
+      "last_modified": "2026-08-30T11:33:48Z",
       "id": "runtime/environment.py"
     },
     {
@@ -498,7 +498,7 @@
         "degrade_tiers",
         "__getattr__"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-08-30T11:32:28Z",
       "id": "runtime/testing.py"
     },
     {
@@ -583,7 +583,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-08-30T11:20:32Z",
+      "last_modified": "2026-08-30T11:33:15Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -750,7 +750,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-30T11:20:28Z",
+      "last_modified": "2026-08-30T11:33:10Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -820,7 +820,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-08-30T11:20:27Z",
+      "last_modified": "2026-08-30T11:33:09Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -851,7 +851,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-08-30T11:20:24Z",
+      "last_modified": "2026-08-30T11:33:07Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -3364,7 +3364,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-08-30T11:20:37Z",
+      "last_modified": "2026-08-30T11:33:20Z",
       "id": "runtime/config.py"
     },
     {
@@ -3495,12 +3495,12 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "_text_of",
+        "content_text",
         "system_prompt",
         "system_fingerprint",
         "prompt_attributes"
       ],
-      "last_modified": "2026-08-24T21:12:42Z",
+      "last_modified": "2026-08-30T11:32:31Z",
       "id": "runtime/prompt_identity.py"
     },
     {
@@ -3972,7 +3972,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-08-30T11:19:41Z",
+      "last_modified": "2026-08-30T11:32:16Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -4022,7 +4022,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-08-30T11:19:10Z",
+      "last_modified": "2026-08-30T11:31:56Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4092,6 +4092,18 @@
       ],
       "last_modified": "2026-08-30T11:22:33Z",
       "id": "runtime/test/test_idempotency_key.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_every_prompt_shape_converts_without_raising",
+        "test_the_double_accepts_a_multimodal_prompt_end_to_end",
+        "test_recorded_prompts_stay_assertable",
+        "test_the_two_converters_are_one_function"
+      ],
+      "last_modified": "2026-08-30T11:31:42Z",
+      "id": "runtime/test/test_testing_double_parity.py"
     }
   ],
   "edges": [
@@ -4733,6 +4745,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_idempotency_key.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_testing_double_parity.py",
       "target": "runtime/__init__.py"
     }
   ]
