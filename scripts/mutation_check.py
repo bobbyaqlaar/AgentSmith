@@ -150,6 +150,50 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        name="tenant_scaffold",
+        tests=("runtime/test/test_cli.py",),
+        mutations=(
+            Mutation(
+                "the tenant id goes back into the YAML unquoted — `init off` writes "
+                "a boolean",
+                "runtime/cli.py",
+                "  id: {quoted_id}\n  name: {quoted_id}",
+                "  id: {tenant_id}\n  name: {tenant_id}",
+            ),
+            Mutation(
+                "any tenant id is accepted again",
+                "runtime/cli.py",
+                "    if not TENANT_ID_PATTERN.match(tenant_id):",
+                "    if False:",
+            ),
+            Mutation(
+                "an empty tenant id is accepted",
+                "runtime/cli.py",
+                "    if not isinstance(tenant_id, str) or not tenant_id.strip():",
+                "    if False:",
+            ),
+            Mutation(
+                "validation moves back after the first mkdir, leaving a partial "
+                "scaffold behind",
+                "runtime/cli.py",
+                "    validate_tenant_id(tenant_id)\n    if isolation not in ISOLATIONS:",
+                "    if isolation not in ISOLATIONS:",
+            ),
+            Mutation(
+                "the declared version is a hardcoded literal again",
+                "runtime/cli.py",
+                "  version: \"{framework_version or _default_framework_version()}\"",
+                '  version: "1.3.0"',
+            ),
+            Mutation(
+                "the source-checkout marker leaks into the tenant's declared version",
+                "runtime/cli.py",
+                "    return version[: -len(SOURCE_SUFFIX)] if version.endswith(SOURCE_SUFFIX) else version",
+                "    return version",
+            ),
+        ),
+    ),
+    Suite(
         name="testing_double",
         tests=(
             "runtime/test/test_testing_double_parity.py",

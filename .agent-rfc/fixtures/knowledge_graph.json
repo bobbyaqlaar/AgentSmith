@@ -87,7 +87,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-08-30T11:33:04Z",
+      "last_modified": "2026-08-30T11:55:20Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -173,7 +173,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-08-30T11:33:21Z",
+      "last_modified": "2026-08-30T11:55:36Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -214,7 +214,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-08-30T11:34:25Z",
+      "last_modified": "2026-08-30T11:56:34Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -233,7 +233,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-08-30T11:32:47Z",
+      "last_modified": "2026-08-30T11:55:01Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -272,7 +272,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-08-30T11:32:51Z",
+      "last_modified": "2026-08-30T11:55:07Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -341,7 +341,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-08-30T11:32:26Z",
+      "last_modified": "2026-08-30T11:54:38Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -411,7 +411,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-30T11:33:52Z",
+      "last_modified": "2026-08-30T11:56:08Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -435,7 +435,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-08-30T11:32:55Z",
+      "last_modified": "2026-08-30T11:55:11Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -453,7 +453,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-08-30T11:34:14Z",
+      "last_modified": "2026-08-30T11:56:25Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -465,7 +465,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-08-30T11:33:48Z",
+      "last_modified": "2026-08-30T11:56:03Z",
       "id": "runtime/environment.py"
     },
     {
@@ -498,7 +498,7 @@
         "degrade_tiers",
         "__getattr__"
       ],
-      "last_modified": "2026-08-30T11:32:28Z",
+      "last_modified": "2026-08-30T11:54:46Z",
       "id": "runtime/testing.py"
     },
     {
@@ -583,7 +583,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-08-30T11:33:15Z",
+      "last_modified": "2026-08-30T11:55:30Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -750,7 +750,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-30T11:33:10Z",
+      "last_modified": "2026-08-30T11:55:26Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -820,7 +820,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-08-30T11:33:09Z",
+      "last_modified": "2026-08-30T11:55:25Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -851,7 +851,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-08-30T11:33:07Z",
+      "last_modified": "2026-08-30T11:55:22Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -3364,7 +3364,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-08-30T11:33:20Z",
+      "last_modified": "2026-08-30T11:55:35Z",
       "id": "runtime/config.py"
     },
     {
@@ -3408,6 +3408,8 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "validate_tenant_id",
+        "_default_framework_version",
         "tenant_yaml",
         "_templates_dir",
         "FrameworkRootError",
@@ -3421,7 +3423,7 @@
         "build_parser",
         "main"
       ],
-      "last_modified": "2026-08-27T18:54:05Z",
+      "last_modified": "2026-08-30T11:54:45Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3447,9 +3449,18 @@
         "test_the_override_works_when_meant",
         "test_two_markers_are_required_not_one",
         "test_the_package_name_marker_reads_the_file_not_the_filename",
-        "test_cli_exit_code_is_distinct_for_a_refusal"
+        "test_cli_exit_code_is_distinct_for_a_refusal",
+        "test_the_scaffolded_id_is_the_id_that_was_asked_for",
+        "test_the_scaffold_round_trips_through_the_real_resolver",
+        "test_an_unusable_tenant_id_is_refused_at_creation",
+        "test_a_non_string_id_is_a_clear_error_not_a_typeerror",
+        "test_the_refusal_explains_the_shape",
+        "test_init_refuses_a_bad_id_before_writing_anything",
+        "test_the_scaffold_declares_the_installed_version",
+        "test_the_declared_version_follows_the_module_not_a_literal",
+        "test_the_declared_version_carries_no_source_marker"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-30T11:54:05Z",
       "id": "runtime/test/test_cli.py"
     },
     {
@@ -3500,7 +3511,7 @@
         "system_fingerprint",
         "prompt_attributes"
       ],
-      "last_modified": "2026-08-30T11:32:31Z",
+      "last_modified": "2026-08-30T11:54:48Z",
       "id": "runtime/prompt_identity.py"
     },
     {
@@ -3972,7 +3983,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-08-30T11:32:16Z",
+      "last_modified": "2026-08-30T11:54:29Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -4022,7 +4033,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-08-30T11:31:56Z",
+      "last_modified": "2026-08-30T11:53:33Z",
       "id": "scripts/mutation_check.py"
     },
     {

@@ -20,6 +20,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
+from runtime import cli
 from runtime.cli import (
     ISOLATIONS,
     STACKS,
@@ -271,3 +272,132 @@ def test_cli_exit_code_is_distinct_for_a_refusal(capsys):
     framework = Path(__file__).resolve().parent.parent.parent
     assert main(["tenant", "init", "acme", "--root", str(framework)]) == 3
     assert "refusing to scaffold here" in capsys.readouterr().err
+
+
+# ── The tenant id has to survive being written and read back ──────────────────
+
+
+@pytest.mark.parametrize(
+    "tenant_id",
+    ["acme", "off", "no", "yes", "on", "true", "null", "123", "1.5",
+     "kyc-sentinel", "acme.corp", "a_1"],
+)
+def test_the_scaffolded_id_is_the_id_that_was_asked_for(tenant_id):
+    """YAML 1.1 reads bare off/no/yes/on/true as booleans and 123 as an int.
+
+    The id was interpolated unquoted, so `agentsmith tenant init off` wrote
+    `id: off`, YAML read False, and runtime/tenancy.py resolved the tenant to
+    the string "False" — which then keys the spend ledger, the
+    HITL_ENCRYPTION_KEY_<TENANT> variable and every span.
+
+    This file's own docstring already explained the trap and quoted the MODE
+    values. The quoting had been applied to the values someone thought about
+    rather than to the class of problem.
+    """
+    import yaml
+
+    document = yaml.safe_load(cli.tenant_yaml(tenant_id))
+    assert document["tenant"]["id"] == tenant_id
+    assert isinstance(document["tenant"]["id"], str)
+    assert document["tenant"]["name"] == tenant_id
+
+
+def test_the_scaffold_round_trips_through_the_real_resolver(tmp_path, monkeypatch):
+    """Not just yaml.safe_load — the function that actually reads this file."""
+    import runtime.config as config
+    from runtime.tenancy import resolve_tenant_id
+
+    monkeypatch.setattr(config, "_CACHE", {})
+    for var in ("AGENT_TENANT_ID", "TENANT_ID"):
+        monkeypatch.delenv(var, raising=False)
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".agenticframework").mkdir()
+    (tmp_path / ".agenticframework" / "tenant.yaml").write_text(
+        cli.tenant_yaml("off"), encoding="utf-8"
+    )
+    monkeypatch.chdir(tmp_path)
+
+    assert resolve_tenant_id() == "off", "the resolver saw a boolean, not the id"
+
+
+@pytest.mark.parametrize(
+    "bad",
+    ["", "   ", "a b", "acme\ncorp: x", 'acme"q', "-leading", "a:b", "x" * 65],
+)
+def test_an_unusable_tenant_id_is_refused_at_creation(bad):
+    """The id is written into YAML, resolved back, and spliced into an
+    environment variable NAME. Creation is the only moment it is free to
+    change, so it is checked there rather than surfacing later as a broken
+    config file or an unsettable key variable."""
+    with pytest.raises(ValueError, match="tenant id"):
+        cli.validate_tenant_id(bad)
+
+
+def test_a_non_string_id_is_a_clear_error_not_a_typeerror():
+    """The isinstance guard is what separates this from a TypeError out of
+    re.match. The regex alone rejects "" and "   ", so mutation testing showed
+    the guard doing nothing for every case that WAS tested — None is the case
+    that needs it.
+    """
+    for value in (None, 123, ["acme"]):
+        with pytest.raises(ValueError, match="non-empty string"):
+            cli.validate_tenant_id(value)
+
+
+def test_the_refusal_explains_the_shape():
+    with pytest.raises(ValueError) as exc:
+        cli.validate_tenant_id("a b")
+    assert "letters, digits" in str(exc.value)
+    assert "HITL_ENCRYPTION_KEY" in str(exc.value)
+
+
+def test_init_refuses_a_bad_id_before_writing_anything(tmp_path):
+    """The guard belongs before the first mkdir, not after a partial scaffold."""
+    with pytest.raises(ValueError):
+        cli.init_tenant("bad id", tmp_path, allow_framework_root=True)
+    assert not (tmp_path / ".agenticframework").exists()
+
+
+# ── The declared framework version ────────────────────────────────────────────
+
+
+def test_the_scaffold_declares_the_installed_version():
+    """It was the literal "1.3.0" in a default argument — a second copy of the
+    version number that would drift from pyproject.toml at the next bump, and
+    every tenant scaffolded after that would declare a stale release."""
+    import yaml
+
+    from runtime.version import SOURCE_SUFFIX, framework_version
+
+    declared = yaml.safe_load(cli.tenant_yaml("acme"))["framework"]["version"]
+    running = framework_version()
+    expected = (
+        running[: -len(SOURCE_SUFFIX)] if running.endswith(SOURCE_SUFFIX) else running
+    )
+    assert declared == expected
+
+
+def test_the_declared_version_follows_the_module_not_a_literal(monkeypatch):
+    """The assertion that a hardcoded literal cannot pass.
+
+    Comparing the scaffold's version to framework_version() holds just as well
+    when the scaffold hardcodes today's number — mutation testing put "1.3.0"
+    back and every version test stayed green, because "1.3.0" is what
+    framework_version() currently returns. Moving the module's answer is the
+    only way to tell the two apart.
+    """
+    import yaml
+
+    monkeypatch.setattr(cli, "_default_framework_version", lambda: "9.9.9")
+    declared = yaml.safe_load(cli.tenant_yaml("acme"))["framework"]["version"]
+    assert declared == "9.9.9", "the scaffold is not reading the version, it is a literal"
+
+
+def test_the_declared_version_carries_no_source_marker():
+    """framework_version() reports `1.3.0+src` from a checkout. That is the
+    right answer for "what is running" and the wrong one to write into a
+    tenant's config, which declares the RELEASE it targets."""
+    import yaml
+
+    declared = yaml.safe_load(cli.tenant_yaml("acme"))["framework"]["version"]
+    assert "+src" not in declared
