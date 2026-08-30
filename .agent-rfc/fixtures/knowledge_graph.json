@@ -87,7 +87,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-08-29T23:21:51Z",
+      "last_modified": "2026-08-30T11:20:21Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -173,7 +173,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-08-29T23:22:04Z",
+      "last_modified": "2026-08-30T11:20:38Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -214,13 +214,15 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-08-29T23:23:02Z",
+      "last_modified": "2026-08-30T11:21:34Z",
       "id": "runtime/vector_store.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "UnstableIdempotencyKey",
+        "_canonical",
         "make_key",
         "IdempotencyStore",
         "_RedisBackend",
@@ -231,7 +233,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-08-29T20:14:44Z",
+      "last_modified": "2026-08-30T11:20:04Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -270,7 +272,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-08-29T23:21:39Z",
+      "last_modified": "2026-08-30T11:20:09Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -339,7 +341,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-08-29T23:21:28Z",
+      "last_modified": "2026-08-30T11:19:51Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -409,7 +411,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-08-29T23:22:39Z",
+      "last_modified": "2026-08-30T11:21:09Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -433,7 +435,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-08-29T23:21:44Z",
+      "last_modified": "2026-08-30T11:20:12Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -451,7 +453,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-08-29T23:22:54Z",
+      "last_modified": "2026-08-30T11:21:26Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -463,7 +465,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-08-29T23:22:35Z",
+      "last_modified": "2026-08-30T11:21:04Z",
       "id": "runtime/environment.py"
     },
     {
@@ -581,7 +583,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-08-29T23:21:59Z",
+      "last_modified": "2026-08-30T11:20:32Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -748,7 +750,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-29T23:21:56Z",
+      "last_modified": "2026-08-30T11:20:28Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -818,7 +820,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-08-29T23:21:55Z",
+      "last_modified": "2026-08-30T11:20:27Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -849,7 +851,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-08-29T23:21:53Z",
+      "last_modified": "2026-08-30T11:20:24Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -3362,7 +3364,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-08-29T23:22:03Z",
+      "last_modified": "2026-08-30T11:20:37Z",
       "id": "runtime/config.py"
     },
     {
@@ -3970,7 +3972,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-08-29T23:20:42Z",
+      "last_modified": "2026-08-30T11:19:41Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -4020,7 +4022,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-08-29T23:17:37Z",
+      "last_modified": "2026-08-30T11:19:10Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4072,6 +4074,24 @@
       "symbols": [],
       "last_modified": "2026-08-29T23:16:35Z",
       "id": "portal/test/replaySignature.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "Colour",
+        "_key_in_subprocess",
+        "test_the_key_is_the_same_in_another_process",
+        "test_a_payload_with_no_stable_form_is_refused_loudly",
+        "test_the_refusal_says_what_to_do_about_it",
+        "test_set_ordering_does_not_change_the_key",
+        "test_different_members_still_change_the_key",
+        "test_a_set_collides_with_its_sorted_list_and_that_is_known",
+        "test_json_payloads_hash_exactly_as_they_did_before",
+        "Ctx"
+      ],
+      "last_modified": "2026-08-30T11:22:33Z",
+      "id": "runtime/test/test_idempotency_key.py"
     }
   ],
   "edges": [
@@ -4708,6 +4728,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_replay_webhook_signature.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_idempotency_key.py",
       "target": "runtime/__init__.py"
     }
   ]

@@ -35,9 +35,86 @@ import os
 from typing import Any, Optional
 
 
+class UnstableIdempotencyKey(TypeError):
+    """Raised for a payload that cannot produce the same key twice."""
+
+
+def _canonical(value: Any) -> Any:
+    """A deterministic stand-in for a value json cannot encode.
+
+    This used to be `default=str`, which accepts everything and is stable for
+    almost none of it:
+
+      * a set of strings stringifies in ITERATION order, and Python randomises
+        string hashing per process — measured, {"kyc","sanctions","pep"} gave
+        three different keys in three processes;
+      * an object with no __str__ stringifies as `<Ctx object at 0x7f…>`, which
+        is a memory address.
+
+    Both cases silently defeat the one thing this module exists for. The retry
+    that matters is the retry after a crash, and that runs in a NEW process —
+    exactly where a per-process key stops matching. The cache misses, the work
+    runs again, and the duplicate LLM call is paid for.
+
+    So: canonicalise what has a deterministic form, and REFUSE the rest rather
+    than return a key that will not be produced again. A loud error at the call
+    site is fixable; an unstable key is a silent recurring charge.
+    """
+    import datetime
+    import decimal
+    import enum
+    import pathlib
+    import uuid
+
+    if isinstance(value, (set, frozenset)):
+        # Sorted by each element's ENCODED form, so ordering does not depend on
+        # hash randomisation. The elements are returned as they are and encoded
+        # by the caller's json.dumps, which reaches back into this function only
+        # for the ones it cannot encode itself — canonicalising them here
+        # instead put plain strings through the refusal path below.
+        return sorted(
+            value, key=lambda item: json.dumps(item, sort_keys=True, default=_canonical)
+        )
+    if isinstance(value, enum.Enum):
+        # The value itself, NOT _canonical(value.value). This function is a
+        # json `default=` hook: it is only ever handed things json could not
+        # encode, so passing it an ordinary string sends it straight to the
+        # refusal below. If the enum's value is itself unencodable, json calls
+        # back in here for it.
+        return value.value
+    if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+        return value.isoformat()
+    if isinstance(value, decimal.Decimal):
+        return str(value)
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    if isinstance(value, pathlib.PurePath):
+        return str(value)
+    if isinstance(value, (bytes, bytearray)):
+        return value.hex()
+
+    raise UnstableIdempotencyKey(
+        f"cannot derive a stable idempotency key from {type(value).__name__}: "
+        f"its text form is not guaranteed to be the same in another process, so "
+        f"a retry after a crash would compute a different key and redo the work. "
+        f"Convert it to a JSON value before calling make_key()."
+    )
+
+
 def make_key(payload: Any) -> str:
-    """Derive a stable idempotency key from any JSON-serialisable payload."""
-    canonical = json.dumps(payload, sort_keys=True, default=str)
+    """Derive a stable idempotency key from a JSON-serialisable payload.
+
+    Stable means: the same payload gives the same key in a different process,
+    on a different machine, after a restart. That is the only property that
+    makes the key useful, since the retry it guards is a retry after a crash.
+
+    Values json cannot encode are canonicalised where a deterministic form
+    exists (sets, datetimes, Decimal, UUID, Path, Enum, bytes) and raise
+    UnstableIdempotencyKey otherwise. Plain JSON payloads hash EXACTLY as
+    before — a change there would orphan every cached entry in every
+    deployment.
+    """
+    canonical = json.dumps(payload, sort_keys=True, default=_canonical)
     return "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
 
 

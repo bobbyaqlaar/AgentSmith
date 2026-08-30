@@ -150,6 +150,39 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        name="idempotency_key",
+        tests=("runtime/test/test_idempotency_key.py",),
+        mutations=(
+            Mutation(
+                "default=str returns — a set of strings keys differently in every "
+                "process and the crash-retry pays twice",
+                "runtime/idempotency.py",
+                "    canonical = json.dumps(payload, sort_keys=True, default=_canonical)",
+                "    canonical = json.dumps(payload, sort_keys=True, default=str)",
+            ),
+            Mutation(
+                "sets stop being sorted — iteration order decides the key again",
+                "runtime/idempotency.py",
+                "        return sorted(\n"
+                "            value, key=lambda item: json.dumps(item, sort_keys=True, default=_canonical)\n"
+                "        )",
+                "        return list(value)",
+            ),
+            Mutation(
+                "sort_keys goes away — dict insertion order decides the key",
+                "runtime/idempotency.py",
+                "    canonical = json.dumps(payload, sort_keys=True, default=_canonical)",
+                "    canonical = json.dumps(payload, sort_keys=False, default=_canonical)",
+            ),
+            Mutation(
+                "an unstable payload is accepted instead of refused",
+                "runtime/idempotency.py",
+                "    raise UnstableIdempotencyKey(",
+                "    return str(value)\n    raise UnstableIdempotencyKey(",
+            ),
+        ),
+    ),
+    Suite(
         name="replay_webhook",
         tests=("runtime/test/test_replay_webhook_signature.py",),
         mutations=(
