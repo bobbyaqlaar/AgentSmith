@@ -19,7 +19,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts"))
 
-from _shared import _dotenv_value, _load_dotenv
+from _shared import _dotenv_value, _load_dotenv, _load_dotenv_standalone
 
 
 @pytest.mark.parametrize(
@@ -79,6 +79,88 @@ def test_existing_environment_still_wins(tmp_path: Path, monkeypatch) -> None:
     import os
 
     assert os.environ["SOME_TEST_VAR2"] == "from-env"
+
+
+# ── The loader must survive `runtime` being absent ───────────────────────────
+#
+# `_load_dotenv` delegates to `runtime.config.load_env_file` when it can. For
+# five days (2026-08-25 → 08-29) it did so unconditionally, and every standalone
+# script invocation from a tenant directory died on `ModuleNotFoundError: No
+# module named 'runtime'` before doing any work. The whole local suite passed
+# throughout — pytest puts the repo root on sys.path, so the import always
+# succeeded here and never in the place it mattered. These two tests are the
+# ones that can fail.
+
+ENV_SAMPLE = "\n".join(
+    [
+        "AF_DOTENV_PROBE_URL=http://localhost:11434   # intake route",
+        "export AF_DOTENV_PROBE_EXPORTED=abc  # note",
+        'AF_DOTENV_PROBE_QUOTED="a#b # c"',
+        "AF_DOTENV_PROBE_FRAG=http://host/path#frag",
+        "# a whole-line comment",
+        "",
+        "AF_DOTENV_PROBE_PLAIN=plain-value",
+    ]
+)
+PROBE_KEYS = [
+    "AF_DOTENV_PROBE_URL",
+    "AF_DOTENV_PROBE_EXPORTED",
+    "AF_DOTENV_PROBE_QUOTED",
+    "AF_DOTENV_PROBE_FRAG",
+    "AF_DOTENV_PROBE_PLAIN",
+]
+
+
+def _read_probes() -> dict[str, str]:
+    import os
+
+    return {k: os.environ[k] for k in PROBE_KEYS if k in os.environ}
+
+
+def _clear_probes(monkeypatch) -> None:
+    for key in PROBE_KEYS:
+        monkeypatch.delenv(key, raising=False)
+
+
+def test_shared_and_runtime_loaders_agree(tmp_path: Path, monkeypatch) -> None:
+    """`_load_dotenv_standalone` is a DELIBERATE mirror of the os.environ half of
+    `runtime.config.load_env_file`, for processes where `runtime` cannot be
+    imported at all. A deliberate duplicate needs a drift test, the same as
+    `_dotenv_value` and the `_FALLBACK_*` maps.
+
+    Drift here is quiet and expensive: the two would disagree only on unusual
+    lines, so a tenant whose .env happens to use one would find the same file
+    read two ways depending on which process opened it.
+    """
+    import sys as _sys
+
+    _sys.path.insert(0, str(REPO))
+    from runtime.config import load_env_file
+
+    (tmp_path / ".env").write_text(ENV_SAMPLE + "\n", encoding="utf-8")
+
+    _clear_probes(monkeypatch)
+    _load_dotenv_standalone(tmp_path)
+    from_shared = _read_probes()
+
+    _clear_probes(monkeypatch)
+    load_env_file(tmp_path)
+    from_runtime = _read_probes()
+
+    assert from_shared == from_runtime, (
+        "scripts/_shared and runtime/config disagree on the same .env: "
+        f"{from_shared} vs {from_runtime}"
+    )
+    # Not vacuous — a mirror test that compares two empty dicts proves nothing.
+    assert len(from_shared) == len(PROBE_KEYS)
+    assert from_shared["AF_DOTENV_PROBE_URL"] == "http://localhost:11434"
+
+
+# The integration half — a real entrypoint started from a tenant directory with
+# `runtime` genuinely off the path — lives in
+# `scripts/test/test_standalone_without_runtime.py`, with the rest of that
+# guarantee. It cannot be tested in-process: pytest puts the repo root on
+# sys.path, so the import always succeeds here.
 
 
 # ── Ollama base URL normalisation ────────────────────────────────────────────

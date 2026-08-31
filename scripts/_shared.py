@@ -244,8 +244,12 @@ def judge_model() -> str:
     return env or DEFAULT_JUDGE_MODEL
 
 
-def _repo_root() -> Path:
+def _repo_root(start: Optional[Path] = None) -> Path:
     """Nearest ancestor holding `.agenticframework/` or `.git/`; else cwd.
+
+    `start` mirrors `runtime.config.repo_root`'s parameter of the same shape.
+    It exists so `_load_dotenv`'s standalone fallback can resolve a caller-given
+    root without a third copy of this walk.
 
     A DELIBERATE mirror of runtime.config.repo_root, not an oversight — the same
     arrangement as `_FALLBACK_EXHAUSTION_MARKERS` below, and for the same reason.
@@ -263,7 +267,7 @@ def _repo_root() -> Path:
     directory must win over a parent repo containing it, or tenant.yaml and
     models.yaml resolve to different directories in one process.
     """
-    cwd = Path.cwd()
+    cwd = start or Path.cwd()
     for parent in [cwd, *cwd.parents]:
         if (parent / ".agenticframework").is_dir() or (parent / ".git").exists():
             return parent
@@ -366,14 +370,67 @@ def _dotenv_value(raw: str) -> str:
 def _load_dotenv(root: Optional[Path] = None) -> None:
     """Best-effort load of repo-root .env into os.environ (no overwrite).
 
-    Delegates to runtime.config.load_env_file. This used to be the ONLY loader
-    in the codebase, which is why the runtime never saw .env at all: scripts got
-    it, workers did not. Now both call the same function and the only difference
-    is who calls it.
+    Prefers runtime.config.load_env_file when `runtime` is importable, and only
+    then. This used to be the ONLY loader in the codebase, which is why the
+    runtime never saw .env at all: scripts got it, workers did not. Delegating
+    fixed that — and reintroduced, three lines below `_repo_root`, the exact
+    import that `_repo_root`'s docstring exists to warn against. `scripts/` is
+    machine-installed and `runtime/` is a pip package; a standalone script run
+    from a tenant directory has no `runtime` on sys.path, and an unconditional
+    import here kills the process before it does any work.
+
+    That is not hypothetical. It took out the KYC Sentinel judged-eval split run
+    for five consecutive daily windows (2026-08-25 → 08-29). The driver read the
+    nonzero exit as "judge unreachable" and logged `NO VERDICT — will retry in a
+    later window`, so the symptom presented as an exhausted free-tier quota. The
+    golden and hallucination suites graded nothing for five days while the log
+    said the gate was merely waiting its turn.
+
+    So: delegate when co-located — the shared `_ENV_FILE` that `resolve()` and
+    `shadowed_env()` read is worth keeping single-sourced whenever both halves
+    are in one process — and mirror the os.environ half when not. The mirror is
+    the same arrangement as `_dotenv_value` and `_FALLBACK_EXHAUSTION_MARKERS`,
+    pinned by `test_shared_and_runtime_loaders_agree`.
     """
-    from runtime.config import load_env_file
+    try:
+        from runtime.config import load_env_file
+    except ImportError:  # standalone script: runtime/ is not on sys.path
+        _load_dotenv_standalone(root)
+        return
 
     load_env_file(root)
+
+
+def _load_dotenv_standalone(root: Optional[Path] = None) -> None:
+    """The os.environ half of `runtime.config.load_env_file`, for script-only
+    processes. A DELIBERATE mirror — see `_load_dotenv`.
+
+    `_ENV_FILE` is deliberately not reproduced. Nothing in a scripts-only
+    process can read it: the only readers are `runtime.config.resolve` and
+    `shadowed_env`, and if those were importable this branch would not run.
+    Keeping a second copy of that dict here would create a state that agrees
+    with the runtime's by luck rather than by construction.
+    """
+    path = _repo_root(root) / ".env"
+    if not path.exists():
+        return
+    try:
+        lines = path.read_text().splitlines()
+    except OSError:  # fail-open: .env is optional convenience, never fatal
+        return
+
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, raw = line.partition("=")
+        key = key.strip()
+        if key.startswith("export "):
+            key = key[len("export "):].strip()
+        if not key:
+            continue
+        if key not in os.environ:
+            os.environ[key] = _dotenv_value(raw)
 
 
 def _phoenix_request(

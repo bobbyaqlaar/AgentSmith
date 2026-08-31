@@ -79,8 +79,29 @@ def _owner(dotted: str, env_var: str, git_key: str) -> str:
 
     Outside a tenant — the dev-session tooling this logger mostly serves — git
     already knows the answer and needs no configuration at all.
+
+    The import is guarded because `scripts/` is machine-installed and `runtime/`
+    ships as a pip package: a standalone invocation from a tenant directory has
+    no `runtime` on sys.path, and an unguarded import here killed AgentLogger's
+    constructor — the same defect, and the same day, as the one `_load_dotenv`
+    in `_shared` documents at length.
+
+    The degraded path deliberately does NOT rebuild `resolve`'s precedence from
+    parts. That chain is four layers deep (permitted override → .env →
+    tenant.yaml → ambient) and its ORDER is the load-bearing part; a
+    hand-reconstruction that put .env and tenant.yaml the wrong way round would
+    reintroduce exactly the ambient-outranks-declaration bug described above,
+    and it would do it silently. Without the runtime, tenant.yaml and .env are
+    not readable as configuration at all, so what is left is the ambient
+    environment and git — in that order, and named as such on the record. This
+    is authorship metadata on a log line, not a control, and the alternative is
+    a dead process.
     """
-    from runtime.config import resolve
+    try:
+        from runtime.config import resolve
+    except ImportError:  # standalone script: runtime/ is not on sys.path
+        ambient = os.environ.get(env_var, "").strip()
+        return ambient or (_git_config(git_key) or "unknown")
 
     declared = resolve(dotted, env_var=env_var, default=None)
     return str(declared) if declared else (_git_config(git_key) or "unknown")
