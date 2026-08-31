@@ -750,7 +750,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-08-30T11:55:26Z",
+      "last_modified": "2026-08-31T19:40:30Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -808,6 +808,7 @@
         "_save_sync_state",
         "_dotenv_value",
         "_load_dotenv",
+        "_load_dotenv_standalone",
         "_phoenix_request",
         "_phoenix_get",
         "_phoenix_post",
@@ -820,7 +821,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-08-30T11:55:25Z",
+      "last_modified": "2026-08-31T19:13:09Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -1618,11 +1619,14 @@
         "os_environ_value",
         "test_export_prefix_is_tolerated",
         "test_existing_environment_still_wins",
+        "_read_probes",
+        "_clear_probes",
+        "test_shared_and_runtime_loaders_agree",
         "test_ollama_base_url_tolerates_both_conventions",
         "test_ollama_base_url_defaults_without_the_variable",
         "test_the_onprem_bundle_parses_values_identically"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-08-31T19:36:48Z",
       "id": "scripts/test/test_dotenv_parsing.py"
     },
     {
@@ -4115,6 +4119,21 @@
       ],
       "last_modified": "2026-08-30T11:31:42Z",
       "id": "runtime/test/test_testing_double_parity.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_run_standalone",
+        "_tenant",
+        "test_runtime_really_is_absent",
+        "test_run_evals_entrypoint_starts",
+        "test_dotenv_still_loads_without_runtime",
+        "test_agent_logger_constructs",
+        "test_agent_logger_prefers_the_ambient_owner_when_degraded"
+      ],
+      "last_modified": "2026-08-31T19:42:10Z",
+      "id": "scripts/test/test_standalone_without_runtime.py"
     }
   ],
   "edges": [
@@ -4276,6 +4295,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_judge_routing.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_dotenv_parsing.py",
       "target": "runtime/__init__.py"
     },
     {
