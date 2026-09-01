@@ -69,6 +69,28 @@ _FALLBACK_EXHAUSTION_MARKERS = (
 )
 
 
+# Statuses worth another attempt on the SAME route.
+#
+# 429 is throttling. 502/503/504 are the provider being transiently
+# unavailable, and they are a different failure from exhaustion: the tier still
+# has budget, the endpoint just did not serve this request. Retrying is what
+# the provider itself asks for — Gemini's 503 body reads "Spikes in demand are
+# usually temporary. Please try again later."
+#
+# Only 429 was here, which cost a real verdict. On 2026-08-31 the first call of
+# KYC Sentinel's 7-case hallucination suite took a 503; the other six graded
+# cleanly, including the planted ghost-citation control. But a judged gate needs
+# every case under the 100%-graded quorum rule, so one un-retried transient
+# turned a complete result into NO VERDICT — and on a free tier of ~20 calls a
+# day, that is a whole daily window spent for nothing.
+#
+# 500 is deliberately NOT here. It is what several providers return for a
+# request they will reject identically every time (a malformed body, an
+# unsupported parameter), and retrying that burns three more calls out of the
+# same daily allowance to arrive at the same error, more slowly.
+_RETRYABLE_STATUSES = frozenset({429, 502, 503, 504})
+
+
 def _exhausted(exc: Exception) -> bool:
     """Is this a provider-exhaustion failure (billing / quota / throttling)?
 
@@ -580,19 +602,20 @@ def call(
             "/messages" if provider == "anthropic" else path_suffix
         )
 
-        # Rate-limit retry with FULL JITTER (P11a lesson — do not remove the
-        # jitter): a bare `2**n * 5` gives every concurrent CI job identical
+        # Transient-failure retry with FULL JITTER (P11a lesson — do not remove
+        # the jitter): a bare `2**n * 5` gives every concurrent CI job identical
         # waits, so they retry in lockstep and re-saturate the provider's
         # rate window together (observed live against Groq's 30 RPM free
         # tier). random.uniform(0, 3) de-synchronizes them.
         # Waits: ~10–13s, ~20–23s, ~40–43s across the 3 retries (4 attempts).
+        # Which statuses qualify, and why 500 does not: _RETRYABLE_STATUSES.
         import random
         import time as _time
 
         max_attempts = 4
         for attempt in range(1, max_attempts + 1):
             resp = httpx.post(url, json=body, headers=headers, timeout=120.0)
-            if resp.status_code == 429 and attempt < max_attempts:
+            if resp.status_code in _RETRYABLE_STATUSES and attempt < max_attempts:
                 wait = (2**attempt) * 5 + random.uniform(0, 3)
                 _time.sleep(wait)
                 continue

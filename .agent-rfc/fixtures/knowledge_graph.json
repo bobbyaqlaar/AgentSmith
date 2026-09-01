@@ -917,7 +917,7 @@
         "__init__",
         "__repr__"
       ],
-      "last_modified": "2026-08-28T22:06:10Z",
+      "last_modified": "2026-08-31T20:37:14Z",
       "id": "scripts/cost_router.py"
     },
     {
@@ -1645,6 +1645,9 @@
         "_stub_transport",
         "test_429_retry_full_jitter_formula",
         "test_429_exhaustion_raises_and_records_failure",
+        "test_transient_5xx_is_retried",
+        "test_500_is_not_retried",
+        "test_persistent_503_raises_without_claiming_exhaustion",
         "test_success_resets_failure_counter",
         "test_forced_model_honours_a_registry_role_api_key_env",
         "test_declared_key_wins_over_the_provider_default",
@@ -1667,7 +1670,7 @@
         "_trip",
         "_boom"
       ],
-      "last_modified": "2026-08-28T19:52:08Z",
+      "last_modified": "2026-08-31T20:36:30Z",
       "id": "scripts/test/test_cost_router.py"
     },
     {

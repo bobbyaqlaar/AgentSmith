@@ -149,6 +149,46 @@ def test_429_exhaustion_raises_and_records_failure(monkeypatch):
     assert cost_router._consecutive_failures["llama-3.3-70b-versatile"] == 1
 
 
+# ── 503 and friends retry too ────────────────────────────────────────────────
+#
+# Only 429 was retryable until 2026-08-31, when the first call of KYC
+# Sentinel's hallucination suite took a Gemini 503 ("Spikes in demand are
+# usually temporary. Please try again later."). The other six cases graded
+# cleanly, the planted control was caught — and the suite still reported NO
+# VERDICT, because the quorum rule needs every case. One un-retried transient
+# cost a daily window on a ~20-call free tier.
+
+
+@pytest.mark.parametrize("status", [502, 503, 504])
+def test_transient_5xx_is_retried(monkeypatch, status):
+    sleeps, uniform_calls = _stub_transport(monkeypatch, [_Resp(status), _Resp(200)])
+    assert cost_router.call("hi") == "ok"
+    assert sleeps == [2 * 5 + 1.25]          # same backoff as 429
+    assert uniform_calls == [(0, 3)]         # same full jitter
+
+
+def test_500_is_not_retried(monkeypatch):
+    """A 500 is what several providers return for a request they will reject
+    identically every time. Retrying spends three more calls from the same
+    daily allowance to reach the same error."""
+    sleeps, _ = _stub_transport(monkeypatch, [_Resp(500)])
+    with pytest.raises(RuntimeError, match="HTTP 500"):
+        cost_router.call("hi")
+    assert sleeps == []
+
+
+def test_persistent_503_raises_without_claiming_exhaustion(monkeypatch):
+    """A provider that stays unavailable is NOT a billing or quota problem, and
+    must not be reported as one — `_exhausted` drives the message the scorecard
+    prints when a gate steps aside, and "provider exhausted" sends the operator
+    to the wrong console."""
+    sleeps, _ = _stub_transport(monkeypatch, [_Resp(503)] * 4)
+    with pytest.raises(RuntimeError, match="LLM call failed") as excinfo:
+        cost_router.call("hi")
+    assert len(sleeps) == 3                  # 3 backoffs across 4 attempts
+    assert "exhausted" not in str(excinfo.value).lower()
+
+
 def test_success_resets_failure_counter(monkeypatch):
     cost_router.record_failure("llama-3.3-70b-versatile")
     _stub_transport(monkeypatch, [_Resp(200)])
@@ -277,12 +317,20 @@ def test_http_error_surfaces_the_provider_response_body(monkeypatch) -> None:
 
 def test_http_error_without_a_body_still_reports_the_status(monkeypatch) -> None:
     """Response doubles and bodiless errors must not turn into an
-    AttributeError that masks the real status code."""
+    AttributeError that masks the real status code.
+
+    503 is retryable as of 2026-08-31, so this now exhausts the attempts before
+    raising — and `time.sleep` must be stubbed or the test spends ~70s of real
+    backoff proving something about a status code.
+    """
+    import time as time_mod
+
     import httpx
 
     class _BodilessResp:
         status_code = 503
 
+    monkeypatch.setattr(time_mod, "sleep", lambda s: None)
     monkeypatch.setattr(httpx, "post", lambda *a, **k: _BodilessResp())
     monkeypatch.setenv("GROQ_API_KEY", "gsk-test")
 
