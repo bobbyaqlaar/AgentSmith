@@ -183,6 +183,31 @@ Small, specific, and deliberately not fixed in that release.
 
 ## Future Phases — confirmed gaps, not yet scheduled
 
+### Team-shared RFC store (`AGENT_SHARED_RFC_DIR`) — specified, never built
+
+Found 2026-09-01 during a documentation audit. `AGENT_SHARED_RFC_DIR` was
+documented in **UserManual.md** with two copy-pasteable `export` lines and the
+claim that "agents and `run-evals.py` also read from this directory", and in
+**SPECS.md** in three places including a security boundary for it. Nothing in
+the codebase has ever read the variable, and there is no shared-RFC concept in
+any module.
+
+Both documents now say so. What is worth keeping from the old text is the
+constraint, which was the considered part: sharing is **within one
+organisation's workspace only** — shared RFC edges must not span tenant
+repositories, and this must never become a path for cross-tenant production
+data linkage. The Knowledge Graph stays strictly per-repo regardless.
+
+**Trigger:** a team asks for RFC specs visible across their repositories. Until
+then a symlink into each repo's `.agent-rfc/` does the job and does not pretend
+to be a feature.
+
+**Lesson, which is the general one from that audit:** a variable that is read by
+nothing fails silently by construction. There is no error to see, so the only
+thing standing between a user and a false belief is whether the documentation is
+true. `scripts/test/test_documented_env_vars_exist.py` now checks that every
+environment variable named in the docs is read somewhere.
+
 ### Compliance gap status boards (pointers, not copies)
 
 Live status for the two compliance tracks is maintained in one place each — do

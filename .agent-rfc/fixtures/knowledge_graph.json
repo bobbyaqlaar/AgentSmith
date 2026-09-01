@@ -4153,6 +4153,19 @@
       ],
       "last_modified": "2026-09-01T19:36:38Z",
       "id": "scripts/test/test_verify_system_modes.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_docs",
+        "_code_blob",
+        "test_the_scan_finds_candidates",
+        "test_every_documented_env_var_is_read_somewhere",
+        "test_allowlist_entries_are_still_orphans"
+      ],
+      "last_modified": "2026-09-01T19:59:16Z",
+      "id": "scripts/test/test_documented_env_vars_exist.py"
     }
   ],
   "edges": [

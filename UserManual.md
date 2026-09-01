@@ -555,18 +555,20 @@ my-monorepo/
 
 When an agent works on a file in `apps/api/`, it reads the API-level `.agent-rfc/` first, then falls back to the root `.agent-rfc/` for cross-cutting rules.
 
-### Shared RFC Store Across Repositories (Optional)
+### Shared RFC Store Across Repositories — NOT IMPLEMENTED
 
-For teams wanting RFC specs visible across multiple repos:
+This section used to tell you to `export AGENT_SHARED_RFC_DIR` and said that
+"agents and `run-evals.py` also read from this directory". They do not. Nothing
+in the framework reads that variable, and there is no shared-RFC store.
 
-```bash
-# In ~/.zshrc
-export AGENT_SHARED_RFC_DIR="$HOME/team-shared-rfcs"
-# or a network path
-export AGENT_SHARED_RFC_DIR="/mnt/team-storage/agent-rfcs"
-```
+The instructions are removed rather than corrected because there is nothing to
+correct them to. Setting the variable did exactly nothing and reported exactly
+nothing, which is the worst way for a documented feature to be absent — you
+would conclude your RFCs were being shared and never see a signal otherwise.
 
-When set, agents and `run-evals.py` also read from this directory alongside the local `.agent-rfc/`.
+If you need RFC specs visible across repositories today, a symlink into each
+repo's `.agent-rfc/` works and is honest about what it is. The feature is
+tracked in FIXES_AND_CLEANUP.md.
 
 ---
 

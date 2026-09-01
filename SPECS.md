@@ -716,8 +716,7 @@ For internal registries, the installer supports fetching from a private artifact
 | `TRACE_TOOL_PAYLOADS` | Overrides `security.trace_tool_payloads` — put tool arguments and results on the span. Off by default: a new egress channel. When on they use `input.value`/`output.value`, which `trace_redactor` already scrubs | `false` |
 | `AGENT_TENANT_ID` | Tenant this process serves. Second in `runtime/tenancy.py:resolve_tenant_id`'s order — after an explicit argument, before `.agenticframework/tenant.yaml`'s `tenant.id`. Set it on a **dedicated** worker pool; leave it unset on a shared pool, where the tenant varies per request and is passed explicitly. Unresolved raises rather than defaulting: this id partitions the budget ledger, the audit log and cross-tenant isolation | *(from tenant.yaml)* |
 | `AGENT_PROJECT_NAME` | `service.name` / `project.name` on the OTel Resource. Defaults to the repo directory name — the one identifier a repo-derived value is right for, since nothing partitions on it | *(repo name)* |
-| `AI_STACK_SLACK_WEBHOOK` | Optional Slack alert webhook | `https://hooks.slack.com/...` |
-| `AGENT_NOTIFY_WEBHOOK` | Generic notification webhook | `https://...` |
+| `AGENT_NOTIFY_WEBHOOK` | Notification webhook — Slack, Teams or custom. `scripts/notifier.py` POSTs to it from a daemon thread, so a notification never stalls an agent. This row used to sit under a second, Slack-specific webhook variable (AI&#95;STACK&#95;SLACK&#95;WEBHOOK, removed 2026-09-01) that nothing read; a reader wiring up Slack had even odds of picking the one with no implementation behind it | `https://...` |
 
 ---
 
@@ -895,7 +894,7 @@ All Knowledge Graph data persists at `.agent-rfc/fixtures/knowledge_graph.json`.
 
 ### Tenant Scope
 
-The Knowledge Graph is strictly per-repository. There is no cross-tenant graph federation. `AGENT_SHARED_RFC_DIR` is for documentation sharing within a single organisation's workspace only — shared RFC edges do not span tenant repositories.
+The Knowledge Graph is strictly per-repository. There is no cross-tenant graph federation, and no shared RFC store either — `AGENT_SHARED_RFC_DIR` is specified but unimplemented (see "Team-Shared RFC Store" below). Should it be built, it is for documentation sharing within a single organisation's workspace only: shared RFC edges must not span tenant repositories.
 
 ### Context Extraction
 
@@ -1110,13 +1109,18 @@ grader is rebound.
 | Tenant budget | LLM Gateway store | Production enforcement |
 | Knowledge Graph | Tenant repo | Strictly per-repo |
 
-### Team-Shared RFC Store (Within-Org Documentation Sharing)
+### Team-Shared RFC Store — NOT IMPLEMENTED
 
-`AGENT_SHARED_RFC_DIR` enables sharing RFC documentation within one organisation. It is not for cross-tenant production data linkage.
+`AGENT_SHARED_RFC_DIR` was specified here, and in UserManual.md with two
+copy-pasteable `export` lines, as a way to share RFC documentation across a
+team's repositories. **Nothing reads it.** There is no shared-RFC concept
+anywhere in the codebase; the variable has never had an implementation.
 
-```bash
-export AGENT_SHARED_RFC_DIR="$HOME/team-shared-rfcs"
-```
+Recorded rather than deleted, because the surrounding text reasoned about its
+security boundary — "not for cross-tenant production data linkage" — which is
+the kind of sentence that makes a reader confident a feature exists. Setting
+the variable did nothing, and said nothing. Tracked in FIXES_AND_CLEANUP.md;
+if it is built, the boundary above is the constraint it must honour.
 
 ### Monorepo Sub-Package Scoping
 
