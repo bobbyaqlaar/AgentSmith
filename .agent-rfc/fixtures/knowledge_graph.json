@@ -714,7 +714,7 @@
         "_resolve_exit",
         "main"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-01T20:32:48Z",
       "id": "scripts/run-security-checks.py"
     },
     {
@@ -1243,7 +1243,7 @@
         "test_an_undeclared_gap_fails_strict_but_a_declared_one_does_not",
         "test_scripts_has_exactly_one_script_loader"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-01T20:34:26Z",
       "id": "scripts/test/test_security_registry.py"
     },
     {

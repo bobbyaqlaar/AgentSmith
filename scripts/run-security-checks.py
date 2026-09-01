@@ -137,8 +137,22 @@ def main(argv: list[str] | None = None) -> int:
             # Declared and tracked. Visible in every report, but it does not
             # block: a repo honest about its gaps must still be able to pass a
             # strict run, or the only way to go green is to relabel them `met`.
+            #
+            # The message says "no runner here", not "not yet implemented",
+            # because the second is a claim this harness is not in a position
+            # to make. It knows only that nothing in THIS run verified the
+            # control. SEC-AUDIT-002 — currently the registry's only gap — is
+            # implemented (append-only triggers in portal/db/schema.sql) and
+            # verified on every push by self-test.yml's Ops Portal job against
+            # a live Postgres. It is a gap *here* because this harness runs
+            # offline and cannot reach a database. Reporting that as "not yet
+            # implemented" understated a shipped control, which is the same
+            # class of error as overstating one — read the control's own
+            # `mechanism` for what is actually true of it.
             results.append(
-                ControlResult(control.id, "warn", f"{DECLARED_GAP} — not yet implemented", {})
+                ControlResult(
+                    control.id, "warn", f"{DECLARED_GAP} — no runner in this harness", {}
+                )
             )
             continue
         runner = RUNNERS.get(control.runner)

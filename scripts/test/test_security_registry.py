@@ -149,7 +149,7 @@ def test_an_undeclared_gap_fails_strict_but_a_declared_one_does_not() -> None:
     from security.report import ControlResult
     from security.runners._shared import DECLARED_GAP, NOT_APPLICABLE
 
-    declared = ControlResult("SEC-X", "warn", f"{DECLARED_GAP} — not yet implemented", {})
+    declared = ControlResult("SEC-X", "warn", f"{DECLARED_GAP} — no runner in this harness", {})
     undeclared = ControlResult("SEC-Y", "warn", "declared 'met' but runner missing", {})
     n_a = ControlResult("SEC-Z", "skip", f"{NOT_APPLICABLE} — no dataset here", {})
 
