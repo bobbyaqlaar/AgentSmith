@@ -4166,6 +4166,18 @@
       ],
       "last_modified": "2026-09-01T20:06:55Z",
       "id": "scripts/test/test_documented_env_vars_exist.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_registries",
+        "test_there_is_a_registry_to_check",
+        "test_a_decommissioned_entry_is_actually_marked",
+        "test_no_profile_binds_a_decommissioned_model"
+      ],
+      "last_modified": "2026-09-01T20:22:08Z",
+      "id": "runtime/test/test_no_role_binds_a_dead_model.py"
     }
   ],
   "edges": [

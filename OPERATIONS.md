@@ -2142,7 +2142,7 @@ gcloud run services describe YOUR_UI_SERVICE \
 3. Status auto-refreshes — when the workflow halts for HITL approval, an
    **Approve / Reject** panel appears
 4. Clicking Approve/Reject sends `handle.signal("hitl_approved", True/False)` —
-   identical to what `scripts/resolve_hitl.py` does from the CLI
+   identical to what `resolve_hitl.py` does from the CLI
 5. The workflow completes; the result (prediction, confidence, anomaly flag) is
    displayed in the run history table
 
@@ -2291,8 +2291,13 @@ Full detail: `templates/onprem-deploy/README.md`,
 3. Status refreshes automatically — workflow pauses at HITL gate
 4. Click **Approve** → workflow completes → result (prediction, confidence, anomaly=True) appears in run history
 
-**CLI alternative (no UI):** `scripts/resolve_hitl.py` in the oil-price-demo repo does
-the same HITL signal from the terminal — useful for scripting or when the UI isn't deployed yet.
+**CLI alternative (no UI):** `resolve_hitl.py` at the root of the oil-price-demo
+repo does the same HITL signal from the terminal — useful for scripting or when
+the UI isn't deployed yet. Both mentions used to say `scripts/resolve_hitl.py`,
+which contradicted this document's own §"Run the demo", where it is copied from
+`$AGENTSMITH_DIR/examples/oil-price-agent/resolve_hitl.py` to the repo root and
+run as `python3 resolve_hitl.py`. The framework's own copy is the one under
+`examples/`; there is no `scripts/resolve_hitl.py` anywhere.
 
 Day-to-day operational tasks (rotating tokens/keys, checking unresolved
 issues, upgrading the framework version) are in [§9 — Maintain](#9--maintain-day-2-operations).
