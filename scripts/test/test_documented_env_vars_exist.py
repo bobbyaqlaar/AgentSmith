@@ -68,16 +68,31 @@ def _docs() -> list[str]:
 
 
 def _code_blob() -> str:
+    """Every tracked source file EXCEPT this one.
+
+    This file names AGENT_SHARED_RFC_DIR and the removed Slack variable — in
+    ALLOWED and in the docstring — so including it would make every orphan
+    "appear in code" and both checks below vacuous. It found that out the
+    embarrassing way: the suite passed locally, where this file was still
+    untracked and therefore invisible to `git ls-files`, and failed on the
+    first CI run after it was committed.
+
+    Which is the same lesson as `test_standalone_without_runtime.py`: a check
+    whose result depends on the state of the checkout is not checking what it
+    claims to.
+    """
+    self_path = str(Path(__file__).resolve().relative_to(REPO))
     files = subprocess.check_output(
         ["git", "-C", str(REPO), "ls-files"], text=True
     ).split()
     parts = []
     for f in files:
-        if f.endswith(CODE_SUFFIXES):
-            try:
-                parts.append((REPO / f).read_text(errors="replace"))
-            except OSError:
-                pass
+        if f == self_path or not f.endswith(CODE_SUFFIXES):
+            continue
+        try:
+            parts.append((REPO / f).read_text(errors="replace"))
+        except OSError:
+            pass
     return "\n".join(parts)
 
 

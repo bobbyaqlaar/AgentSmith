@@ -4164,7 +4164,7 @@
         "test_every_documented_env_var_is_read_somewhere",
         "test_allowlist_entries_are_still_orphans"
       ],
-      "last_modified": "2026-09-01T19:59:16Z",
+      "last_modified": "2026-09-01T20:06:55Z",
       "id": "scripts/test/test_documented_env_vars_exist.py"
     }
   ],
