@@ -1165,7 +1165,47 @@ def check_delivery_model() -> bool:
     return True  # soft gate — never hard-fail
 
 
+MODES = [
+    ("--check-security", "security harness registry + control coverage"),
+    ("--check-redaction", "trace redaction profile for $ENVIRONMENT"),
+    ("--check-idempotency", "idempotency store round-trip"),
+    ("--check-dlq", "dead-letter queue replay path"),
+    ("--check-history-sync", "agent history ↔ portal sync state"),
+    ("--check-hooks", "hook opt-in / enterprise RFC gate"),
+    ("--check-onprem-deploy", "on-prem bundle renders and self-checks"),
+    ("--check-kg", "Knowledge Graph freshness (drift gate)"),
+    ("--check-delivery-model", "delivery-model evidence soft gate"),
+]
+
+
+def _usage() -> None:
+    """`--help` used to fall through to the full verification run.
+
+    Every other entry point in scripts/ uses argparse and answers `--help` in
+    the ordinary way. This one dispatches on `sys.argv` — nine `in sys.argv`
+    tests — so `--help` matched none of them, fell through to `run_checks()`,
+    and printed a multi-second system scan. Exit 0, no usage, and the nine
+    modes below documented in five different .md files and discoverable from
+    the tool itself nowhere.
+
+    Which is the same shape as the rest of this file's subject matter: a
+    command that quietly does something other than what it was asked, and
+    reports success.
+    """
+    print("usage: verify_system.py [MODE]\n")
+    print("Runs the full system verification when given no mode.\n")
+    print("Modes (each runs exactly one check and exits non-zero on failure):")
+    width = max(len(f) for f, _ in MODES)
+    for flag, what in MODES:
+        print(f"  {flag:<{width}}  {what}")
+    print("\nThese are single-purpose CI entry points, not composable flags:")
+    print("the first one matched wins and the rest are ignored.")
+
+
 if __name__ == "__main__":
+    if "--help" in sys.argv or "-h" in sys.argv:
+        _usage()
+        sys.exit(0)
     if "--check-redaction" in sys.argv:
         sys.exit(0 if check_redaction() else 1)
     if "--check-security" in sys.argv:

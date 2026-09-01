@@ -1040,10 +1040,11 @@
         "check_kg",
         "check_onprem_deploy",
         "check_delivery_model",
+        "_usage",
         "_run",
         "_git_repo"
       ],
-      "last_modified": "2026-08-25T22:00:39Z",
+      "last_modified": "2026-09-01T19:37:42Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -4137,6 +4138,21 @@
       ],
       "last_modified": "2026-08-31T19:42:10Z",
       "id": "scripts/test/test_standalone_without_runtime.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_dispatched_flags",
+        "_declared_flags",
+        "test_the_parse_finds_something",
+        "test_every_dispatched_mode_is_documented_in_help",
+        "test_help_does_not_advertise_a_mode_that_does_not_exist",
+        "test_help_exits_zero_and_prints_usage_rather_than_running_the_scan",
+        "test_docs_do_not_reference_an_unknown_check_mode"
+      ],
+      "last_modified": "2026-09-01T19:36:38Z",
+      "id": "scripts/test/test_verify_system_modes.py"
     }
   ],
   "edges": [
