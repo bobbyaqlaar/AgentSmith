@@ -7,7 +7,7 @@
 ## Goals
 
 1. **Single reusable test harness** that every AgentSmith tenant app runs in CI and exports for auditors.
-2. **Explicit crosswalk** across OWASP LLM Top 10, NIST AI RMF, MITRE ATLAS, and ISO/IEC 42001 (see [`docs/security-framework-map.md`](../security-framework-map.md)).
+2. **Explicit crosswalk** across OWASP LLM Top 10, NIST AI RMF, MITRE ATLAS, and ISO/IEC 42001 (see [`docs/security-framework-map.md`](../../security-framework-map.md)).
 3. **Close documented security gaps** so strict mode (`SECURITY_STRICT=1`) can pass without waivers.
 4. **Zero duplicate compliance docs** — ISO map remains canonical for themes; security map adds multi-framework IDs + harness contract.
 
