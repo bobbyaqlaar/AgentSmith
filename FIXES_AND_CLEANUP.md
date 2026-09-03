@@ -183,6 +183,38 @@ Small, specific, and deliberately not fixed in that release.
 
 ## Future Phases — confirmed gaps, not yet scheduled
 
+### A score records its judge but not its rubric version
+
+Raised 2026-09-03 by an outside critique of LLM-judge practice, and it lands.
+
+`scripts/run-evals.py` stores `"criteria": criteria.get("name", "default")` — a
+static NAME. Meanwhile `scripts/promote-learning.py` appends to
+`historical_learnings`, and `scripts/eval_judge.py` injects those into every
+judge prompt. **The rubric mutates and the score does not record which version
+graded it.** Two runs both stamped `criteria: "default"` may have been graded
+under materially different criteria, and nothing downstream can tell.
+
+What makes this worth fixing rather than noting is that **this codebase already
+makes the argument, for the judge**. `eval_judge.run_judge` records `judged_by`
+AND `judged_by_route` on every row, with the reasoning written out: a score is
+not portable across graders, so "who graded this belongs with the score, not in
+a single run-level field a substitution would silently falsify." That is exactly
+the rubric's situation. The principle was established and applied to one of the
+two inputs.
+
+**Fix:** hash the resolved criteria (instructions + historical_learnings, after
+merge) and store the digest per row beside `judged_by`; surface it in the
+scorecard; refuse to compare scores across differing digests. Small, additive,
+and it closes the half of the argument that is already written down.
+
+**Related gaps from the same critique, deliberately NOT scheduled** — recorded so
+the boundary is explicit rather than accidental: no confidence interval per score
+(variance informs where a bar sits, but is not reported per run); no coverage or
+decay measurement of the golden set against production traffic; case selection is
+failure-driven rather than uncertainty-driven (no active learning); no linkage
+from eval scores to business outcomes. The first is cheap and worth doing; the
+last needs holdouts and traffic volume this project does not have.
+
 ### Team-shared RFC store (`AGENT_SHARED_RFC_DIR`) — specified, never built
 
 Found 2026-09-01 during a documentation audit. `AGENT_SHARED_RFC_DIR` was
