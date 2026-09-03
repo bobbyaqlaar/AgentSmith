@@ -225,6 +225,45 @@ def _as_context(raw: Any) -> str:
     return ""
 
 
+def criteria_digest(criteria: dict) -> str:
+    """A short content hash of the rubric that will actually reach the judge.
+
+    A score is not portable across RUBRICS for the same reason it is not
+    portable across graders, and this module already argues the second half of
+    that: `run_judge` records `judged_by` per row because "who graded this
+    belongs with the score, not in a single run-level field a substitution
+    would silently falsify." The rubric is the other input to the same verdict
+    and it was recorded only as a NAME.
+
+    That is not a theoretical gap here. `promote-learning.py` APPENDS to
+    `historical_learnings`, and `judge_prompt` injects those into every prompt
+    it builds — so the criteria mutate as production failures are promoted,
+    while the stored scorecard keeps saying `criteria: "default"`. Two runs
+    carrying that same string can have been graded under materially different
+    instructions, and nothing downstream could tell them apart.
+
+    Hashed over the fields that change what the judge is ASKED, not the whole
+    file: a comment or a reordered key is not a different rubric, and a digest
+    that churns on cosmetic edits would be ignored within a week. Sorted and
+    JSON-encoded so key order cannot move it.
+    """
+    import hashlib
+
+    payload = {
+        "name": criteria.get("name", "default"),
+        "instructions": criteria.get("instructions", ""),
+        # Order matters here — these are injected as a numbered list, so a
+        # reordering genuinely changes the prompt.
+        "historical_learnings": list(criteria.get("historical_learnings", [])),
+        # Flags that switch whole scoring dimensions on or off.
+        "score_fairness": bool(criteria.get("score_fairness")),
+        "score_hallucination": bool(criteria.get("score_hallucination")),
+        "score_adversarial": bool(criteria.get("score_adversarial")),
+    }
+    blob = json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()[:12]
+
+
 def judge_case(
     case: dict,
     criteria: dict,
@@ -259,4 +298,9 @@ def judge_case(
         # by hand tend to use a list of documents, generated ones a blob.
         retrieved_context=case.get("retrieved_context"),
     )
-    return run_judge(prompt, judge_model)
+    scored = run_judge(prompt, judge_model)
+    # Stamped here rather than by the caller, for the same reason `judged_by` is
+    # stamped inside run_judge: the verdict and the rubric that produced it
+    # should not be joinable only by hoping two code paths agree.
+    scored["criteria_digest"] = criteria_digest(criteria)
+    return scored

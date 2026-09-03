@@ -425,6 +425,11 @@ def _judge_case(
         "pipeline_ran": pipeline_ran,
         "judged_by": scored.get("judged_by"),
         "judged_by_route": scored.get("judged_by_route"),
+        # ...and under WHICH RUBRIC. The rubric is the second input to a verdict
+        # and it mutates: promote-learning appends to `historical_learnings`,
+        # which are injected into every prompt. A run-level name cannot
+        # distinguish two scorecards graded under different instructions.
+        "criteria_digest": scored.get("criteria_digest"),
         "error": scored.get("error"),
     }
     if "fairness" in scored:
@@ -736,6 +741,14 @@ def run_scorecard(
     # show a misroute — an unrecognised id used to fall through to localhost
     # Ollama while still being reported under its own name.
     judge_routes = sorted({r["judged_by_route"] for r in results if r.get("judged_by_route")})
+    # Which RUBRIC each verdict was produced under. Computed here, beside its two
+    # siblings and BEFORE `_write_results` is defined, because that closure is
+    # called on both exit paths — including the NO VERDICT one above the gate
+    # checks. Defined later, next to the guard that reads it, the no-verdict path
+    # would raise UnboundLocalError while writing the artifact.
+    from eval_judge import criteria_digest
+
+    digests_used = sorted({r["criteria_digest"] for r in results if r.get("criteria_digest")})
 
     def _write_results(verdict: str, passed_value: Optional[bool]) -> None:
         """Persist the scorecard artifact and say where it went.
@@ -758,6 +771,12 @@ def run_scorecard(
             "judge_models_used": judges_used,
             "judge_routes_used": judge_routes,
             "criteria": criteria.get("name", "default"),
+            # The name is a label a human chose; the digest is what the judge was
+            # actually asked. Compare scorecards on this, not on the name — two
+            # runs both saying "default" can have been graded under different
+            # instructions once the promotion loop has appended a learning.
+            "criteria_digest": criteria_digest(criteria),
+            "criteria_digests_used": digests_used,
             "total_cases": len(cases),
             "avg_score": avg_score,
             "avg_correctness": avg_correctness,
@@ -971,6 +990,24 @@ def run_scorecard(
             f"      Scores are calibrated per grader, so a mixed scorecard cannot "
             f"be compared\n"
             f"      against a single threshold. Pin the judge role and re-run."
+        )
+        return 1
+
+    # The same argument, for the other input to a verdict. A rubric change is a
+    # metric change: `promote-learning.py` appends to `historical_learnings` and
+    # those go into every prompt, so a suite graded half under one set of
+    # instructions and half under another is not one scorecard either. Unreachable
+    # while criteria are loaded once per run — which is exactly why it is here, so
+    # that a future per-case or mid-run reload fails loudly instead of silently
+    # changing what the average means.
+    if len(digests_used) > 1:
+        print(
+            f"\n  ❌ {suite} gate failed: verdicts were graded under more than one "
+            f"rubric {digests_used}.\n"
+            f"      A rubric change is a metric change — scores from different "
+            f"criteria are not\n"
+            f"      comparable to each other or to a threshold measured under one "
+            f"of them."
         )
         return 1
 

@@ -231,8 +231,20 @@ def test_a_case_carries_its_context_through_judge_case(monkeypatch) -> None:
     import eval_judge
 
     seen = {}
-    monkeypatch.setattr(eval_judge, "run_judge",
-                        lambda prompt, model: seen.setdefault("prompt", prompt) or {})
+
+    # Returns a dict, which is `run_judge`'s actual contract. The previous
+    # one-liner was `seen.setdefault("prompt", prompt) or {}` — and setdefault
+    # returns the value it just stored, so that expression evaluated to the
+    # PROMPT STRING and the `or {}` never fired. It passed only because nothing
+    # downstream touched the result; the moment judge_case started stamping
+    # `criteria_digest` onto it, the double failed with "'str' object does not
+    # support item assignment". A test double that violates the contract of the
+    # thing it replaces will pass until the real caller does something ordinary.
+    def _fake_run_judge(prompt, model):
+        seen["prompt"] = prompt
+        return {}
+
+    monkeypatch.setattr(eval_judge, "run_judge", _fake_run_judge)
     eval_judge.judge_case(
         {"id": "c", "input": "in", "score_hallucination": True,
          "actual_output": "out",

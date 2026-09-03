@@ -701,7 +701,7 @@
         "_resolve_fail_below",
         "_write_results"
       ],
-      "last_modified": "2026-08-28T13:21:28Z",
+      "last_modified": "2026-09-03T06:22:47Z",
       "id": "scripts/run-evals.py"
     },
     {
@@ -1017,9 +1017,10 @@
         "judge_prompt",
         "run_judge",
         "_as_context",
+        "criteria_digest",
         "judge_case"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-03T06:21:48Z",
       "id": "scripts/eval_judge.py"
     },
     {
@@ -1190,10 +1191,11 @@
         "test_no_annotation_outside_github_actions",
         "test_a_failing_gate_prints_the_reason_it_failed",
         "fake_judge_case",
+        "_fake_run_judge",
         "_judge",
         "erroring_judge"
       ],
-      "last_modified": "2026-08-28T13:16:20Z",
+      "last_modified": "2026-09-03T06:23:44Z",
       "id": "scripts/test/test_hallucination_evals.py"
     },
     {
@@ -4178,6 +4180,23 @@
       ],
       "last_modified": "2026-09-01T20:22:08Z",
       "id": "runtime/test/test_no_role_binds_a_dead_model.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_digest_is_stable_and_short",
+        "test_key_order_does_not_change_the_digest",
+        "test_promoting_a_learning_changes_the_digest",
+        "test_reordering_learnings_changes_the_digest",
+        "test_changing_instructions_changes_the_digest",
+        "test_toggling_a_scoring_dimension_changes_the_digest",
+        "test_judge_case_stamps_the_digest_on_the_verdict",
+        "test_the_stored_row_carries_the_digest",
+        "test_a_mixed_rubric_scorecard_is_rejected"
+      ],
+      "last_modified": "2026-09-03T06:27:51Z",
+      "id": "scripts/test/test_criteria_digest.py"
     }
   ],
   "edges": [
