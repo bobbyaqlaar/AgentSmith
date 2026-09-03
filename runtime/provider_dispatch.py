@@ -341,6 +341,47 @@ def is_provider_exhausted(exc: Exception) -> bool:
     return any(k in msg for k in _EXHAUSTION_MARKERS)
 
 
+# A model id the provider no longer serves. Phrases, not bare status codes:
+# "404" appears in request ids and token counts, which is the mistake
+# _EXHAUSTION_MARKERS documents above.
+_MODEL_GONE_MARKERS = (
+    "model_not_found",          # OpenAI / Groq / OpenRouter
+    "model not found",
+    "does not exist",           # Groq: "The model `x` does not exist"
+    "is not available",
+    "has been deprecated",      # OpenAI sunset wording
+    "has been decommissioned",
+    "no longer available",
+    "unknown model",
+)
+
+
+def is_model_gone(exc: object) -> bool:
+    """True when the configured model itself is the problem — retired, renamed,
+    or never existed for this key.
+
+    Distinct from `is_provider_exhausted`, and the distinction is the whole
+    point: exhaustion is weather and clears on its own, a withdrawn model is a
+    broken configuration in the repo and no later run will fix it. Treating
+    them alike is what let Groq's Llama retirement read as a rate limit.
+
+    Both are needed because neither implies the other. A 404 is not exhaustion
+    — `is_provider_exhausted` returns False for it, so a decommissioned model
+    fell into the generic "judge unreachable" bucket alongside quota errors and
+    was reported with quota advice.
+
+    Accepts an exception or a plain string: callers on the eval path hold error
+    TEXT read back from a stored scorecard row, not a live exception.
+    """
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    msg = str(exc).lower()
+    # 404 alone is not sufficient — a wrong base URL 404s too — but a 404 whose
+    # body talks about the model is decisive.
+    if status == 404 and "model" in msg:
+        return True
+    return any(m in msg for m in _MODEL_GONE_MARKERS)
+
+
 def supports_streaming(provider: str) -> bool:
     """True when complete_stream can measure TTFT for this provider.
 

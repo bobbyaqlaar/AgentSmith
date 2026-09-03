@@ -548,6 +548,7 @@
         "default_api_key_env",
         "credential_env_for_model",
         "is_provider_exhausted",
+        "is_model_gone",
         "supports_streaming",
         "parse_stream_delta",
         "CloudProviderAdapter",
@@ -563,7 +564,7 @@
         "parse_cloud_response",
         "_get_access_token"
       ],
-      "last_modified": "2026-08-25T21:47:10Z",
+      "last_modified": "2026-09-03T21:11:20Z",
       "id": "runtime/provider_dispatch.py"
     },
     {
@@ -691,6 +692,7 @@
         "_warn_generic_pipeline_fallback",
         "_judge_case",
         "_github_warning",
+        "_github_annotation",
         "run_scorecard",
         "_missing_judge_credential",
         "hallucination_flag_rate",
@@ -699,9 +701,10 @@
         "_registry_fail_below",
         "_resolve_parity_fail_below",
         "_resolve_fail_below",
-        "_write_results"
+        "_write_results",
+        "is_model_gone"
       ],
-      "last_modified": "2026-09-03T06:22:47Z",
+      "last_modified": "2026-09-03T21:16:19Z",
       "id": "scripts/run-evals.py"
     },
     {
@@ -4197,6 +4200,20 @@
       ],
       "last_modified": "2026-09-03T06:27:51Z",
       "id": "scripts/test/test_criteria_digest.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_row",
+        "_run",
+        "test_classifier_separates_the_two",
+        "test_a_withdrawn_model_fails_the_gate",
+        "test_an_exhausted_quota_still_does_not_block",
+        "test_the_annotation_level_matches_the_verdict"
+      ],
+      "last_modified": "2026-09-03T21:17:52Z",
+      "id": "scripts/test/test_retired_judge_fails_loudly.py"
     }
   ],
   "edges": [
@@ -4848,6 +4865,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_testing_double_parity.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_retired_judge_fails_loudly.py",
       "target": "runtime/__init__.py"
     }
   ]

@@ -471,17 +471,29 @@ def _github_warning(title: str, message: str) -> None:
     line lands in the job summary, which is where someone scanning a green
     build would actually see it. No-ops off CI.
     """
+    _github_annotation("warning", title, message)
+
+
+def _github_annotation(level: str, title: str, message: str) -> None:
+    """As above, at `warning` or `error`.
+
+    The level is not cosmetic. A withdrawn judge model already fails the gate,
+    and an annotation that still said "warning" next to a red check would be
+    the report disagreeing with the result — which is the class of defect this
+    file spends most of its comments on.
+    """
     if not os.environ.get("GITHUB_ACTIONS"):
         return
     # Annotations are single-line; the workflow-command encoding for a newline
     # is %0A. Left un-escaped, everything after the first newline is dropped.
     one_line = message.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
-    print(f"::warning title={title}::{one_line}")
+    print(f"::{level} title={title}::{one_line}")
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
+        icon = "❌" if level == "error" else "⚠️"
         try:
             with open(summary, "a", encoding="utf-8") as fh:
-                fh.write(f"### ⚠️ {title}\n\n{message}\n\n")
+                fh.write(f"### {icon} {title}\n\n{message}\n\n")
         except OSError:  # fail-open: visibility is not worth failing a run over
             pass
 
@@ -940,6 +952,23 @@ def run_scorecard(
     # graded fine — hence a trailing "None" where the cause should be.
     if judge_unreachable:
         first_error = next((r["error"] for r in results if r.get("error")), None)
+
+        # Is the configured MODEL the problem, rather than the provider's mood?
+        # These are opposite facts and only one of them clears on its own:
+        # a quota resets overnight, a withdrawn model never comes back. They
+        # were reported identically — with quota advice — which is how Groq's
+        # Llama retirement presented as a rate limit for days.
+        _root = str(Path(__file__).resolve().parent.parent)
+        if _root not in sys.path:
+            sys.path.insert(0, _root)
+        try:
+            from runtime.provider_dispatch import is_model_gone
+        except Exception:  # fail-open: without runtime, fall back to the old
+            def is_model_gone(_exc):  # type: ignore[misc]
+                return False
+
+        model_gone = any(is_model_gone(r["error"]) for r in results if r.get("error"))
+
         if graded:
             reason = (
                 f"graded {len(graded)} of {len(results)} — a pass needs every case, "
@@ -947,12 +976,25 @@ def run_scorecard(
             )
         else:
             reason = "no case received a verdict — the judge was unreachable"
-        print(
-            f"\n  ⏭️  Skipping {suite} gate: {reason}.\n"
-            f"      This is an infrastructure failure, not a quality result, so it "
-            f"does not block."
-            + (f"\n      First error: {first_error}" if first_error else "")
-        )
+        if model_gone:
+            print(
+                f"\n  ❌ {suite} gate FAILED: the configured judge model is gone.\n"
+                f"      {reason}.\n"
+                f"      This is NOT a quota or rate problem and no later run will "
+                f"clear it —\n"
+                f"      `{judge}` is not served any more. Repoint the `judge` role "
+                f"in models.yaml,\n"
+                f"      then RECALIBRATE: thresholds belong to the grader that "
+                f"measured them.\n"
+                + (f"      First error: {first_error}\n" if first_error else "")
+            )
+        else:
+            print(
+                f"\n  ⏭️  Skipping {suite} gate: {reason}.\n"
+                f"      This is an infrastructure failure, not a quality result, so it "
+                f"does not block."
+                + (f"\n      First error: {first_error}" if first_error else "")
+            )
         # Write the artifact on this path too. Returning early left the previous
         # run's file on disk with no indication it was stale, so anything reading
         # eval_results.json — promotion tooling, the portal, a dashboard — saw an
@@ -962,7 +1004,30 @@ def run_scorecard(
         # credentials returns long before this when no credential is set. So
         # this is never the benign "tenant has no judge yet" case — it is a gate
         # that was asked to grade and could not.
-        _github_warning(
+        if model_gone:
+            # RED, unlike every other no-verdict shape. A withdrawn model is a
+            # broken configuration in this repo — models.yaml names something
+            # that is not served — not infrastructure weather. Exiting 0 here
+            # would leave the repo pointing at a dead grader indefinitely, with
+            # every subsequent run green and ungraded. That is the failure this
+            # whole file is arranged around, and it is the one case where the
+            # honest answer is to go red.
+            _github_annotation(
+                "error",
+                f"{suite} gate failed — the configured judge model is gone",
+                f"{reason}.\n\n"
+                f"`{judge}` is no longer served. This is a **configuration** "
+                f"fault, not a quota one: retrying, waiting for a reset, or "
+                f"pacing with `EVAL_RPM` will not clear it.\n\n"
+                + (f"First error: `{first_error}`\n\n" if first_error else "")
+                + "Repoint the `judge` role in `models.yaml`, then **recalibrate** "
+                "— a threshold is only meaningful against the grader it was "
+                "measured on.",
+            )
+            return 1
+
+        _github_annotation(
+            "warning",
             f"{suite} gate did not grade — the check is green but proves nothing",
             f"{reason}.\n\n"
             f"This did not fail the build, by design: an unreachable judge is an "
@@ -971,7 +1036,8 @@ def run_scorecard(
             + (f"First error: `{first_error}`\n\n" if first_error else "")
             + "On a free-tier judge the usual cause is the daily request quota, "
             "which pacing (`EVAL_RPM`) cannot stretch — it limits calls per "
-            "minute, not per day.",
+            "minute, not per day. If instead the model itself has been "
+            "withdrawn, this run would have gone red rather than green.",
         )
         return 0
 
