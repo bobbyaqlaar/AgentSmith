@@ -9,6 +9,7 @@ hit the same `cost_router.call()` LLM dispatch.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from typing import Any, Optional
@@ -249,7 +250,7 @@ def criteria_digest(criteria: dict) -> str:
     """
     import hashlib
 
-    payload = {
+    payload: dict[str, Any] = {
         "name": criteria.get("name", "default"),
         "instructions": criteria.get("instructions", ""),
         # Order matters here — these are injected as a numbered list, so a
@@ -303,4 +304,13 @@ def judge_case(
     # stamped inside run_judge: the verdict and the rubric that produced it
     # should not be joinable only by hoping two code paths agree.
     scored["criteria_digest"] = criteria_digest(criteria)
+    # A hash of the text that was actually GRADED — the pinned fixture output,
+    # or the generated response when a pipeline produced one. Two cases sharing
+    # this digest were scored on identical text, which is what makes a score
+    # difference between them impossible to explain as a quality difference.
+    # Fairness pairs rely on that: `kyc_fair_002_a` and `_b` carry the same
+    # output and differ only in a protected attribute.
+    scored["output_digest"] = hashlib.sha256(
+        (actual or "").encode("utf-8")
+    ).hexdigest()[:12]
     return scored

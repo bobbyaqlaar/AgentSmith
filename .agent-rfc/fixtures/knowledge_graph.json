@@ -354,9 +354,10 @@
         "pair_parity",
         "judge_independence_warning",
         "warn_if_judge_not_independent",
-        "parity_violation"
+        "parity_violation",
+        "pair_score_spread"
       ],
-      "last_modified": "2026-08-27T22:44:45Z",
+      "last_modified": "2026-09-04T04:39:05Z",
       "id": "runtime/judging.py"
     },
     {
@@ -689,6 +690,7 @@
         "_resolve_fail_above",
         "_resolve_adversarial_fail_above",
         "_pair_parity",
+        "_pair_score_spread",
         "_warn_generic_pipeline_fallback",
         "_judge_case",
         "_github_warning",
@@ -700,11 +702,12 @@
         "_resolve_hallucination_fail_above",
         "_registry_fail_below",
         "_resolve_parity_fail_below",
+        "_resolve_score_spread_fail_above",
         "_resolve_fail_below",
         "_write_results",
         "is_model_gone"
       ],
-      "last_modified": "2026-09-03T21:16:19Z",
+      "last_modified": "2026-09-04T06:17:35Z",
       "id": "scripts/run-evals.py"
     },
     {
@@ -1023,7 +1026,7 @@
         "criteria_digest",
         "judge_case"
       ],
-      "last_modified": "2026-09-03T06:21:48Z",
+      "last_modified": "2026-09-04T05:45:31Z",
       "id": "scripts/eval_judge.py"
     },
     {
@@ -1359,9 +1362,15 @@
         "test_failing_pairs_are_reported_against_the_floor_that_failed_them",
         "test_a_diverging_pair_is_named_in_the_output",
         "test_the_pairs_report_uses_the_floor_that_failed_them",
+        "_digest_row",
+        "test_a_score_gap_on_identical_output_fails_even_at_perfect_parity",
+        "test_the_same_gap_on_differing_output_still_passes",
+        "test_a_small_gap_on_identical_output_is_tolerated",
+        "test_rows_without_an_output_digest_are_not_gated",
+        "test_an_unparseable_spread_ceiling_stays_strict",
         "fake_judge_case"
       ],
-      "last_modified": "2026-08-28T13:21:05Z",
+      "last_modified": "2026-09-04T10:50:32Z",
       "id": "scripts/test/test_fairness_evals.py"
     },
     {
@@ -4214,6 +4223,20 @@
       ],
       "last_modified": "2026-09-03T21:17:52Z",
       "id": "scripts/test/test_retired_judge_fails_loudly.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_the_old_check_saw_nothing",
+        "test_the_score_divergence_is_visible",
+        "test_a_clean_run_reports_no_spread",
+        "test_a_missing_score_is_not_read_as_zero",
+        "test_rows_without_a_pair_are_ignored",
+        "test_more_than_two_members_uses_the_full_range"
+      ],
+      "last_modified": "2026-09-04T04:39:44Z",
+      "id": "runtime/test/test_pair_score_spread.py"
     }
   ],
   "edges": [
@@ -4870,6 +4893,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_retired_judge_fails_loudly.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_pair_score_spread.py",
       "target": "runtime/__init__.py"
     }
   ]
