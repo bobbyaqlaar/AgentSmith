@@ -213,9 +213,18 @@ def pair_score_spread(
 
     out: dict[str, float] = {}
     for pid, members in by_pair.items():
-        values = [m.get(score_key) for m in members]
-        values = [float(v) for v in values if isinstance(v, (int, float))]
-        if len(values) < 2:
+        # A fresh name rather than reassigning: narrowing a list in place leaves
+        # the checker holding the original `Any | None` element type, and
+        # `max()` over that is exactly the shape of bug this function exists to
+        # catch elsewhere — an absent value treated as a comparable one.
+        scores: list[float] = [
+            float(v)
+            for v in (m.get(score_key) for m in members)
+            # bool is an int subclass and is not a score; excluded so a stray
+            # True cannot read as 1.0.
+            if isinstance(v, (int, float)) and not isinstance(v, bool)
+        ]
+        if len(scores) < 2:
             continue
-        out[pid] = max(values) - min(values)
+        out[pid] = max(scores) - min(scores)
     return out
