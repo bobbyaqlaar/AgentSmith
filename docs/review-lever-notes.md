@@ -233,6 +233,48 @@ group already says `self-test.yml` is the definitive list.*
 query worked and read one page of a paginated endpoint. One screen, two ways
 to claim a clean result you do not have.*
 
+### `irreversible-needs-confirmation` — An action that cannot be undone says so before it fires
+
+**Why.** DLQ discard and replay are live actions in the Ops Portal today, and a HITL approve/reject screen is about to join them — each is effectively one-way once the discard or the Temporal signal has gone out. A control that fires on a single click gives an operator no chance to notice they picked the wrong row before it is gone.
+
+*Not yet caught — added ahead of the HITL approve/reject build rather than after it ships without one. `(unevidenced)`.*
+
+### `no-double-submit` — A write-triggering control cannot be fired twice by its own UI
+
+**Why.** Group 2's `out-of-order-and-repeated` already asks what a row looks like when a write arrives twice or reversed at the backend; nothing asks the same question of the button that sends it. An approve/reject action is a Temporal signal, and a second click landing before the first response returns is the UI manufacturing the exact race that lever exists to catch.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `denied-vs-missing` — "Not authorized" and "not found" are different screens
+
+**Why.** The portal is multi-tenant with RBAC and optional SSO. `ambiguous-signals` (Group 6) already says one value must not mean two things; this is that rule asked of an auth screen. "You cannot see this" and "this does not exist" read identically to an operator and point to opposite next actions — request access, or conclude the record was never there.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `stale-data-is-labelled` — A number an operator could act on names when it was last measured
+
+**Why.** Cost-vs-cap and run history are exactly the kind of number an ops team acts on — pausing a tenant, approving spend. This entire lever set exists because green does not always mean measured now; that principle has a UI half nobody had written down.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `keyboard-and-screen-reader-operable` — Every control reachable without a mouse or sight
+
+**Why.** An ops console only one kind of operator can drive is a console the team cannot fully staff, and it is the most honestly unevidenced entry on this list — no portal screen has been reviewed against it yet. Said plainly rather than implied otherwise, which is the entire point of marking it `(unevidenced)` instead of writing it up as something it caught.
+
+*Not yet caught — added on request, ahead of the HITL screens, so review works down this list from the first build instead of retrofitting it later.*
+
+### `works-at-real-viewport-sizes` — No control clipped, overlapped or scroll-trapped at the sizes people actually run
+
+**Why.** Ops staff run this at whatever window size their day has, not a design canvas. A control trapped behind a scrollbar or clipped by a narrow pane is unusable, which is a different failure from merely looking cramped.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `matches-the-existing-component-language` — A new screen reuses the app's existing components, not a one-off
+
+**Why.** `one-catalog` and `single-source-of-truth` (Groups 1 and 3) already say a concept belongs in one place; a new screen inventing its own spacing and button style is the UI version of a second implementation of "what a button looks like here," and it will drift from the first one the same way any duplicated logic does.
+
+*Not yet caught. `(unevidenced)`.*
+
 ## Group 6 · Signal integrity — does green mean green?
 
 ---

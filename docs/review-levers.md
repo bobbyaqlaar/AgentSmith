@@ -6,7 +6,10 @@ for reading, so levers can be reordered or regrouped without breaking a citation
 Why each one exists, and the defect it caught:
 [`review-lever-notes.md`](./review-lever-notes.md). `(legacy)` marks the original
 standing list — kept for hygiene, exempt from needing evidence. Other marks date
-an item's arrival. Cite one from code as `review-levers: grep-for-siblings`.
+an item's arrival. `(unevidenced)` marks a lever added ahead of a caught
+defect, on purpose — unlike `(legacy)` it still needs a note saying why, and it
+drops the mark the day it catches something. Cite one from code as
+`review-levers: grep-for-siblings`.
 
 ---
 
@@ -56,6 +59,13 @@ an item's arrival. Cite one from code as `review-levers: grep-for-siblings`.
 
 - `intuitive-journey` — **(legacy)** The journey stays intuitive and product-shippable; no auth-mode chrome.
 - `failure-is-not-a-result` — **(+)** Empty, zero and unavailable are three different things on a screen.
+- `irreversible-needs-confirmation` — **(2026-09-11, unevidenced)** An action that cannot be undone — discard, reject, revoke — says so before it fires, not after.
+- `no-double-submit` — **(2026-09-11, unevidenced)** A control that triggers a write is disabled, or its effect is idempotent, between click and response.
+- `denied-vs-missing` — **(2026-09-11, unevidenced)** "You cannot see this" and "this does not exist" are different screens.
+- `stale-data-is-labelled` — **(2026-09-11, unevidenced)** A number an operator could act on states when it was last measured.
+- `keyboard-and-screen-reader-operable` — **(2026-09-11, unevidenced)** Every control reachable and usable without a mouse, and every icon-only control carries a label something can read aloud.
+- `works-at-real-viewport-sizes` — **(2026-09-11, unevidenced)** No control clipped, overlapped or scroll-trapped at the sizes this screen's actual users run.
+- `matches-the-existing-component-language` — **(2026-09-11, unevidenced)** A new screen reuses this app's existing spacing, type and components rather than inventing a one-off pattern.
 
 ## 6 · Signal integrity — does green mean green? **(+ new group)**
 
