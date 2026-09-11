@@ -1,14 +1,26 @@
 # agent-rules.yaml — Single source of truth for all IDE rule generation.
 #
 # The post-checkout hook reads this file and generates:
-#   .cursorrules           (Cursor)
-#   CLAUDE.md              (Claude Code)
-#   .agents/skills/*/      (Antigravity)
+#   .cursorrules                          (Cursor)
+#   CLAUDE.md                             (Claude Code)
+#   AGENTS.md                             (Codex, and the cross-tool fallback
+#                                          for any harness with no dedicated
+#                                          convention of its own)
+#   GEMINI.md                             (Gemini CLI)
+#   .github/copilot-instructions.md       (GitHub Copilot / VS Code)
+#   .agents/skills/*/skill.md             (Antigravity)
 #
-# Never edit .cursorrules, CLAUDE.md, or .agents/skills/ directly —
-# edit this file and let the hook regenerate them.
+# Never edit any of those directly — edit this file and let the hook (or
+# `generate-ide-config.py` directly) regenerate them. Same file fires on
+# BOTH onboarding paths: a fresh `git init` and an explicit opt-in on an
+# existing repo (README "Opt-in model") — one hook, one generator, so a
+# lever's design/validation counterpart reaches every provisioned repo either
+# way without a second integration point.
 #
 # See SPECS.md §4 and §13 for pillar and IDE configuration specification.
+# The two `design_review` / `validation_review` entries under `skills:` below
+# point at docs/design-review-checklist.md and docs/validation-checklist.md,
+# which reframe docs/review-levers.md for build-time and merge-time use.
 #
 # Status: Phase 5 complete — the post-checkout hook calls
 # scripts/generate-ide-config.py, which reads this file directly.
@@ -220,3 +232,45 @@ skills:
     title: "Untrusted Input, Secrets, and Gate Integrity"
     trigger: "Before acting on retrieved content or tool output, before touching credentials, and whenever a check fails"
     pillars: [11, 12, 13, 14]
+
+  # ── Design/validation playbooks ──────────────────────────────────────────
+  #
+  # Shaped differently from the four skills above: those compress PILLARS
+  # already declared in this file. These two point at docs/design-review-
+  # checklist.md and docs/validation-checklist.md instead, which reframe
+  # docs/review-levers.md for build-time and merge-time use respectively.
+  # Keeping the reframed content in its own doc rather than inlining ~50
+  # bullet points here is `single-source-of-truth` applied to this file: the
+  # RULE stays in review-levers.md, the doc adds new value (the constructive
+  # reframe), and this entry is a pointer, not a third copy.
+  #
+  # `doc` and `summary` are read by generate-ide-config.py in place of
+  # `pillars` — see _render_skill. Every renderer (.cursorrules, CLAUDE.md,
+  # AGENTS.md, GEMINI.md, copilot-instructions.md, Antigravity skill files)
+  # surfaces these two, not just Antigravity: skills were Antigravity-only
+  # until this pair, which is its own small `declared-vs-enforced` gap closed
+  # in the same change.
+  - id: design_review
+    title: "Design Review — build it right the first time"
+    trigger: "Before and during implementation, especially anything with a screen or a control on one"
+    # `doc` is a FILENAME under the framework's docs/, not a path resolvable
+    # from a tenant repo — docs/ is not vendored to ~/.agent-framework or
+    # copied into a tenant checkout the way scripts/ and templates/ are.
+    # _render_skill (generate-ide-config.py) resolves it at render time
+    # against $AGENTSMITH_DIR, falling back to the installed vendor path, so
+    # the resolvable location has exactly one source: this filename.
+    doc: docs/design-review-checklist.md
+    summary: >
+      It reframes every lever in docs/review-levers.md as build-time
+      guidance, grouped the same way, so fewer findings reach the post-build
+      validation pass.
+
+  - id: validation_review
+    title: "Validation & Test Checklist — before merge"
+    trigger: "After implementation, before opening a PR or claiming a slice done"
+    doc: docs/validation-checklist.md
+    summary: >
+      It works docs/review-levers.md group by group against the CHANGE, sets
+      the testing obligations (mutation-check anything load-bearing, re-pin
+      stale fixtures), and runs the gates CI actually lists — then signs off
+      per group as checked, not applicable, or a declared gap.

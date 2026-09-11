@@ -442,6 +442,13 @@ checkout) — see README "Opt-in model".
 > | `.env` | You create from the §0 tenant-app `.env` template |
 > | `runtime/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — accessed via `$AGENTSMITH_DIR/runtime` at run time |
 >
+> Every file in the first row above is a `templates/agent-rules.yaml` render,
+> including the design/validation playbooks (below) — one hook, one
+> generator, so both onboarding paths get them: a fresh `git init` and an
+> explicit opt-in on a pre-existing repo (`mkdir -p .agenticframework &&
+> touch .agenticframework/enabled`, then any checkout) run the identical
+> `generate-ide-config.py` call.
+>
 > What you write yourself: `worker.py`, `workflows/`, `workflows/activities.py`
 > — use `examples/oil-price-agent/` as a structural reference only.
 >
@@ -451,6 +458,35 @@ checkout) — see README "Opt-in model".
 > ai-tenant-init my-app --stack python-fastapi   # scaffolds tenant.yaml + CI/CD
 > # create .env from the §0 tenant-app template, then write your worker.py and workflows/
 > ```
+
+### Design & validation playbooks (all onboarding paths)
+
+Two `agent-rules.yaml` skill entries — `design_review` and
+`validation_review` — reach every target `generate-ide-config.py` writes
+(`.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`,
+`.github/copilot-instructions.md`, `.agents/skills/*/skill.md`), not only
+Antigravity's skill files. They point at
+`docs/design-review-checklist.md` (read before and during a build — a
+Definition-of-Ready equivalent, reframing every `docs/review-levers.md`
+lever as build-time guidance) and `docs/validation-checklist.md` (read
+before merge — a Definition-of-Done equivalent that works the levers group
+by group against the change and sets the testing/gate obligations).
+
+Both docs live under the FRAMEWORK's `docs/`, which — unlike `scripts/` and
+`templates/` — is not vendored into a tenant repo by the post-checkout hook.
+`install-ai-stack.sh` copies these two specific files (not all of `docs/`)
+into `~/.agent-framework/docs/`, so every generated pointer resolves two
+ways: `$AGENTSMITH_DIR/docs/<file>` on a live checkout, or
+`~/.agent-framework/docs/<file>` on the installed package. Both paths are
+printed in the generated text — see `_playbook_location` in
+`generate-ide-config.py` — because generation happens once, at provisioning
+time, and which of the two applies later is not knowable then.
+
+If your IDE or agent harness isn't in that list (this framework's own set
+of named targets is Cursor, Claude Code, Codex, Gemini CLI, Antigravity and
+GitHub Copilot/VS Code), `AGENTS.md` is the documented cross-tool fallback —
+see its own header comment for why it's self-contained rather than a
+pointer to `.cursorrules`.
 
 ### Scaffold a new tenant repo (`ai-tenant-init`)
 

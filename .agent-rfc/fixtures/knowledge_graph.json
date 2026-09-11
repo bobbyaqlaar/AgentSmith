@@ -956,6 +956,8 @@
       "language": "python",
       "symbols": [
         "_load_rules",
+        "_playbook_skills",
+        "_playbook_location",
         "_render_cursorrules",
         "_render_claude_md",
         "_render_agents_md",
@@ -967,7 +969,7 @@
         "main",
         "_check_drift"
       ],
-      "last_modified": "2026-08-25T21:41:51Z",
+      "last_modified": "2026-09-11T09:29:02Z",
       "id": "scripts/generate-ide-config.py"
     },
     {
@@ -4237,6 +4239,22 @@
       ],
       "last_modified": "2026-09-04T04:39:44Z",
       "id": "runtime/test/test_pair_score_spread.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_lever_slugs",
+        "test_the_source_files_exist_and_are_substantial",
+        "test_every_lever_has_a_design_phase_counterpart",
+        "test_design_doc_does_not_cite_an_unknown_slug",
+        "test_validation_doc_points_at_review_levers_rather_than_restating_it",
+        "test_agent_rules_yaml_declares_both_playbooks",
+        "test_generator_renders_both_playbooks_into_every_target",
+        "test_installer_vendors_the_two_docs"
+      ],
+      "last_modified": "2026-09-11T09:30:42Z",
+      "id": "scripts/test/test_design_and_validation_docs.py"
     }
   ],
   "edges": [

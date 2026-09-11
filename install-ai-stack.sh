@@ -321,6 +321,25 @@ else
   fi
 fi
 
+# Design/validation playbook docs — agent-rules.yaml's design_review and
+# validation_review skill entries point every generated IDE-rule file
+# (.cursorrules, CLAUDE.md, AGENTS.md, GEMINI.md, copilot-instructions.md,
+# Antigravity skill files) at these two. docs/ is not vendored wholesale —
+# only these two files are, the same narrow-copy pattern already used above
+# for agent-rules.yaml itself rather than all of templates/. Without this
+# step the pointer resolves against $AGENTSMITH_DIR only, which is unset for
+# any tenant running on the installed package rather than a live checkout —
+# `declared-vs-enforced`, applied to this framework's own installer.
+mkdir -p "$FRAMEWORK_DIR/docs"
+if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/docs/design-review-checklist.md" ]; then
+  cp "$INSTALLER_DIR/docs/design-review-checklist.md" "$INSTALLER_DIR/docs/validation-checklist.md" "$FRAMEWORK_DIR/docs/"
+  success "design/validation playbook docs copied from local repo"
+elif [ -f "$FRAMEWORK_DIR/docs/design-review-checklist.md" ]; then
+  success "design/validation playbook docs already present in ~/.agent-framework/docs/"
+else
+  warn "No design-review-checklist.md/validation-checklist.md found locally — generated IDE rules will point at \$AGENTSMITH_DIR only. Set AGENTSMITH_DIR to a live framework checkout, or copy these two files into ~/.agent-framework/docs/ yourself."
+fi
+
 # On-prem/air-gapped deployment template (Docker Compose + Traefik/Envoy
 # canary+shadow routing, Helm chart for K8s) — opt-in, vendored like
 # agent-rules.yaml above but only ever copied into a tenant repo on
