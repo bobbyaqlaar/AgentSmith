@@ -75,35 +75,46 @@ version table being consulted.
 
 ## [Unreleased]
 
-### `agentsmith-runtime` was never pip-installed by the workflow templates that need it
+### `eval-security.yml`'s `pip install -r requirements.txt` now guarded — and a reverted attempt to fix the real `runtime` import gap, left open
 
-Found immediately after the `eval-security.yml` fix above got
-`ci-python-fastapi.yml` actually running jobs on `AqlaarTeleologyStudio`:
-`eval-scorecard.yml` and `cd-production.yml` both failed with
-`ModuleNotFoundError: No module named 'runtime'` — `scripts/run-evals.py`'s
-`_pair_score_spread` imports `runtime.judging`, `scripts/verify_system.py
---check-redaction` imports `runtime.trace_redactor`, and nothing in either
-workflow, or their siblings, ever installed the `agentsmith-runtime` package
-those imports need. It only worked inside the framework's OWN self-test
+`eval-scorecard.yml` and `cd-production.yml` failed on `AqlaarTeleologyStudio`
+with `ModuleNotFoundError: No module named 'runtime'` —
+`scripts/run-evals.py`'s `_pair_score_spread` imports `runtime.judging`,
+`scripts/verify_system.py --check-redaction` imports
+`runtime.trace_redactor`, and no workflow template installs the package
+those imports need. It only works inside the framework's OWN self-test
 because `runtime/` is a live local package there, importable straight off
-`PYTHONPATH` — every tenant instead depends on the published package.
+`PYTHONPATH`.
 
-Added `"agentsmith-runtime"` to the pip-install list in every
-workflow-template that calls `scripts/run-evals.py` or
-`scripts/verify_system.py`: `eval-scorecard.yml`, `eval-fairness.yml`,
-`eval-hallucination.yml`, `cd-staging.yml`, `cd-production.yml`,
-`ci-python-fastapi.yml`, `ci-go.yml`, `ci-ts-react.yml` — fixed everywhere
-the gap exists, not just the two that happened to fail on this particular
-push (`eval-fairness.yml`'s run step skips when no fixture exists yet, which
-is what kept it from failing too, this time).
+**First attempt, reverted**: added `"agentsmith-runtime"` to the pip-install
+list in every affected template. Wrong — `pip install agentsmith-runtime`
+fails outright (`ERROR: Could not find a version that satisfies the
+requirement... No matching distribution found`; confirmed directly against
+PyPI's API too: no such project exists there). `ai-tenant-init`'s own error
+message and this file's Compatibility Matrix both describe tenants pinning
+and pip-installing this package as if it were a live, published thing — it
+is not, at least not anywhere this pip could reach. Worse than the
+`ModuleNotFoundError` it was meant to fix: one bad requirement fails the
+WHOLE `pip install` line, so every other dependency on that line (Phoenix,
+LangChain, networkx, …) stopped installing too. Reverted in full; verified
+against the commit before either fix that the net diff is exactly the guard
+below and nothing else.
 
-Also: `eval-security.yml`'s `pip install -r requirements.txt` step had no
+**Left open, deliberately**: how a tenant is actually supposed to obtain
+`runtime/` at all — a private index, a `git+https://` pip target, vendoring
+it the way `scripts/` now is, or something else — is unresolved. Whatever it
+turns out to be, it needs to actually work before landing in a workflow
+template that runs unattended, so this needs its own decision rather than
+another guess landing here.
+
+**Landed**: `eval-security.yml`'s `pip install -r requirements.txt` had no
 `[ -f requirements.txt ]` guard, unlike `ci-python-fastapi.yml`'s own
 install step — hard-failed outright for `AqlaarTeleologyStudio`, a
 uv/pyproject.toml tenant with no `requirements.txt` at all. Guarded to
-match. The framework's own `.github/workflows/eval-security.yml` copy
-re-synced to match (`test_reusable_security_workflow_matches_its_tenant_
-template` enforces byte-for-byte parity between the two).
+match; doesn't depend on the `runtime` question above. The framework's own
+`.github/workflows/eval-security.yml` copy re-synced to match
+(`test_reusable_security_workflow_matches_its_tenant_template` enforces
+byte-for-byte parity between the two).
 
 ### `post-checkout`'s workflow-copy array now matches `runtime/cli.py`'s WORKFLOWS — `eval-security.yml` was silently missing
 

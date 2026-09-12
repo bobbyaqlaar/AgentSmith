@@ -71,7 +71,6 @@ jobs:
       - name: Install framework dependencies
         run: |
           pip install \
-            "agentsmith-runtime" \
             "arize-phoenix>=4.0" \
             "openinference-instrumentation-openai>=0.1.4" \
             "opentelemetry-sdk>=1.20" \

@@ -32,7 +32,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Python dependencies
-        run: pip install pyyaml networkx agentsmith-runtime
+        run: pip install pyyaml networkx
 
       - name: Install dependencies
         run: npm ci
