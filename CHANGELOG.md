@@ -75,6 +75,29 @@ version table being consulted.
 
 ## [Unreleased]
 
+### `post-checkout`'s workflow-copy array now matches `runtime/cli.py`'s WORKFLOWS — `eval-security.yml` was silently missing
+
+Caught checking CI on `AqlaarTeleologyStudio` after pushing the `scripts/`
+vendoring fix above: its `ci-python-fastapi.yml` was rejected by GitHub
+outright ("workflow file issue", zero jobs) because it `uses:
+./.github/workflows/eval-security.yml`, a file `hooks/post-checkout` never
+copied in. `scripts/test/test_workflow_template_wiring.py`'s own docstring
+already documented this exact failure mode as fixed — "which is how
+eval-security.yml went out broken for every Python/FastAPI tenant" — but the
+fix only touched `runtime/cli.py`'s `WORKFLOWS` tuple (what `agentsmith
+tenant init` copies); `hooks/post-checkout`'s own, separate `for wf in ...`
+bash array (what actually fires on `git checkout` after opt-in) was never
+updated to match, and nothing checked that it should be.
+
+`eval-security.yml` added to the hook's array. New:
+`test_hooks_workflow_array_matches_cli_workflows` pins the two lists against
+each other in both directions, and
+`test_hook_actually_writes_every_callee_into_a_fresh_tenant` runs the real
+hook end-to-end in a scratch repo and asserts every callee
+`ci-python-fastapi.yml` references actually lands. Mutation-checked: both
+fail without the array fix (confirmed by reverting just `hooks/post-checkout`
+and re-running).
+
 ### `post-checkout` vendors `scripts/` — every generated CI workflow was calling files that were never copied
 
 Also found onboarding `AqlaarTeleologyStudio`, and the more consequential of

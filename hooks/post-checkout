@@ -189,12 +189,22 @@ fi
 
 if [ -d "$TMPL_DIR" ] && [ -n "$WF_CI" ]; then
   mkdir -p "$GITHUB_WF"
-  # eval-fairness/eval-hallucination/eval-ttft-live are referenced by every
-  # ci-<stack>.yml as `uses: ./.github/workflows/<name>` — a missing callee
-  # makes GitHub reject the whole CI workflow as invalid, so they ship
-  # together with the caller.
+  # eval-fairness/eval-hallucination/eval-ttft-live/eval-security are
+  # referenced by every ci-<stack>.yml as `uses: ./.github/workflows/<name>`
+  # — a missing callee makes GitHub reject the whole CI workflow as invalid,
+  # so they ship together with the caller.
+  #
+  # This list must match runtime/cli.py's WORKFLOWS tuple exactly (that
+  # Python implementation is the one `agentsmith tenant init` delegates to;
+  # this bash array is what actually fires for a checkout). eval-security.yml
+  # was added to WORKFLOWS and to ci-python-fastapi.yml's job list without
+  # being added here — found onboarding AqlaarTeleologyStudio, whose
+  # ci-python-fastapi.yml GitHub rejected outright as an invalid workflow
+  # because of it. scripts/test/test_workflow_template_parity.py pins the two
+  # lists against each other so this can't drift silently again.
   for wf in "$WF_CI" "cd-staging.yml" "cd-production.yml" "eval-scorecard.yml" \
-            "eval-fairness.yml" "eval-hallucination.yml" "eval-ttft-live.yml"; do
+            "eval-fairness.yml" "eval-hallucination.yml" "eval-ttft-live.yml" \
+            "eval-security.yml"; do
     src="$TMPL_DIR/$wf"
     dest="$GITHUB_WF/$wf"
     if [ ! -f "$src" ]; then
