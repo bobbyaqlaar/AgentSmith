@@ -38,7 +38,9 @@ Two levers govern HOW you run this step, not just what it checks:
 
 If the change touches a screen or a control, Group 5 (Intuitive UI) is not
 optional — walk every lever in it against the actual rendered screen, not
-just the component source.
+just the component source. If the change touches a cookie, bearer token, or
+any client/server session, Group 7 (Auth & session integrity) is equally not
+optional.
 
 ## Step 2 — Testing obligations
 
@@ -110,6 +112,7 @@ Group 3 · Architecture / hygiene      [ ] checked  [ ] n/a  [ ] gap: ____
 Group 4 · Process                     [ ] checked  [ ] n/a  [ ] gap: ____
 Group 5 · Intuitive UI                [ ] checked  [ ] n/a  [ ] gap: ____
 Group 6 · Signal integrity            [ ] checked  [ ] n/a  [ ] gap: ____
+Group 7 · Auth & session integrity    [ ] checked  [ ] n/a  [ ] gap: ____
 
 Tests added/updated:      ____
 Mutation-checked:          yes / no — why not, if not

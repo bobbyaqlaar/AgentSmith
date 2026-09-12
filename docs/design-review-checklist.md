@@ -21,12 +21,12 @@ new content here — the RULE lives in one place.
 ## How to use it
 
 1. Skim the group headers below before starting. They mirror
-   `review-levers.md`'s six groups exactly, so a lever you already know by
+   `review-levers.md`'s groups exactly, so a lever you already know by
    slug is easy to find.
 2. While designing, work the groups that bear on what you're building — Group
    5 for anything with a screen, Group 2 and 6 for anything that writes data
-   or reports a result, Group 1 and 3 before you create a new file or a new
-   abstraction.
+   or reports a result, Group 7 for anything with a cookie or bearer session,
+   Group 1 and 3 before you create a new file or a new abstraction.
 3. This is a design aid, not a gate. The gate is
    [`validation-checklist.md`](./validation-checklist.md) and the CI run —
    this document exists so fewer findings reach that stage in the first
@@ -236,6 +236,38 @@ on one.
   justification is "this is how it's always behaved" rather than a stated
   requirement, design the requirement first. A test with no requirement
   behind it locks in whatever the code currently does, defect included.
+- **`fixture-truth`** — Before writing a "not mock" assertion, check whether
+  the real seed data or a shared fixture uses the same string you're about to
+  forbid. Design the assertion around a positive signal — a uniquely created
+  name, an auth header, the signed-in chrome — not the absence of a string
+  that a correct page and an empty one can both satisfy.
+
+## Group 7 · Auth & session integrity — any cookie, bearer, or dual client/server session
+
+Skip this group if the slice has no auth. Walk it before writing the first
+line that touches a token, a cookie, or a session check.
+
+- **`channel-precedence`** — Before writing the first auth check, list every
+  identity channel this slice can see — storage, httpOnly cookie, demo
+  header, a forwarded internal header — and decide which one wins when two
+  disagree. Deciding this after the code exists means reverse-engineering the
+  precedence from whichever `if` happened to run first.
+- **`untrusted-headers-are-not-a-session`** — If this design forwards an
+  internal header for same-request server-to-server use, design where it gets
+  stripped BEFORE writing where it gets set. A header a client can set is not
+  a session, however it is used internally.
+- **`same-request-cookie-invisibility`** — If a later step in this same
+  request needs a cookie this request is about to set, design that value as
+  an explicit forward, not a re-read through `cookies()` — a `Set-Cookie` in
+  this response is not visible to this render.
+- **`in-flight-must-not-undo-logout`** — For every logout or navigation call
+  that races an in-flight refresh or fetch, design the ordering guarantee
+  (keepalive, await, or a generation/cancelled flag) in the same change as
+  the call itself — not after a late response is observed reviving a session.
+- **`retry-bounds`** — Design the refresh-and-retry path with an explicit
+  bound (at most one retry) and an explicit failure branch that clears the
+  session — before writing the happy path, so "then what" already has an
+  answer.
 
 ---
 

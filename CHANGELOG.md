@@ -91,6 +91,33 @@ it indexes whichever exist so which one is a given repo's actual spec
 authority is a queryable graph fact instead of a static editorial call
 baked into a generated `CLAUDE.md`.
 
+### Group 7 · Auth & session integrity, and `fixture-truth` — merged in from a tenant, not invented here
+
+While onboarding `AqlaarTeleologyStudio` (a pre-existing, already-tooled repo)
+onto the framework, its own independently-evolved `docs/review-levers.md`
+turned out to be more than a naming collision worth a redirect: six of its
+levers had no equivalent here at all, each carrying its own `Caught:` — the
+same evidence bar this framework already holds every non-legacy lever to.
+Rather than leave AgentSmith's canonical list worse than a tenant's local
+fork, they're merged upstream, slug-ified, and attributed in
+`review-lever-notes.md` as `(from AqlaarTeleologyStudio)`: a new **Group 7 ·
+Auth & session integrity** (`channel-precedence`,
+`untrusted-headers-are-not-a-session`, `same-request-cookie-invisibility`,
+`in-flight-must-not-undo-logout`, `retry-bounds`) and one addition to Group 6,
+`fixture-truth` (a "not mock" assertion that forbids a string real seed data
+also uses passes on an empty skeleton exactly as readily as on a correct
+page).
+
+This is the reconciliation policy going forward, not a one-off: AgentSmith's
+review-levers.md is the parent a tenant's copy inherits from and may extend
+locally, but a tenant addition backed by a real `Caught:` is a candidate for
+merging back up, not something left to drift in a fork forever. `docs/design-
+review-checklist.md` and `docs/validation-checklist.md` gained the matching
+Group 7 build-time and sign-off coverage in the same change —
+`test_lever_notes.py` and `test_design_and_validation_docs.py` both still
+pass, unchanged, because the new slugs satisfy the same mechanical checks
+every earlier lever does.
+
 ### Design-phase and validation-phase playbooks, wired to every IDE target
 
 Two new documents, both derived from `docs/review-levers.md` rather than

@@ -78,3 +78,14 @@ drops the mark the day it catches something. Cite one from code as
 - `early-exit-keeps-the-record` — **(+++)** A raise or return between recording and deciding skips the record.
 - `check-that-fires-on-everything` — **(2026-08-28)** A result too large to match the code is a broken query, not a discovery.
 - `test-that-pins-a-defect` — **(2026-08-28)** A docstring justifying behaviour by history rather than a requirement is a lock, not diligence.
+- `fixture-truth` — **(2026-09-12, from AqlaarTeleologyStudio)** Do not prove "not mock" by forbidding strings that real seed or shared fixtures also use — assert a unique created name, an auth header, or the signed-in chrome.
+
+## 7 · Auth & session integrity **(+ new group, 2026-09-12, from AqlaarTeleologyStudio)**
+
+For any cookie, bearer, or dual client/server session. Skip if the slice has no auth.
+
+- `channel-precedence` — List every identity channel (storage, httpOnly cookie, demo headers, forwarded internal headers). Which wins, and can a weaker channel impersonate a stronger one? Write it down if two exist.
+- `untrusted-headers-are-not-a-session` — Anything the browser can set is not equivalent to an httpOnly cookie. Internal headers used for same-request forwarding must be stripped on every continue path and set only after a successful server-side exchange.
+- `same-request-cookie-invisibility` — `Set-Cookie` in middleware or a route is not visible to `cookies()` / the app server in that same render. If a later step in the same request must see the new value, forward it explicitly.
+- `in-flight-must-not-undo-logout` — Cookie-clear and token refresh racing navigation or sign-out must not restore a session the user just ended. Use keepalive, await, or a generation/cancelled flag.
+- `retry-bounds` — At most one refresh-and-retry on 401. No retry storm. A failed refresh clears the session; do not treat 401 as offline (`no-fake-offline-fallback`).
