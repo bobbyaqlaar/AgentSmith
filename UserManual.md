@@ -170,7 +170,7 @@ provisioned by opting in once and checking out:
 ```bash
 git init && git add -A && git commit -m "init"
 mkdir -p .agenticframework && touch .agenticframework/enabled
-git checkout .          # hook fires here
+git checkout            # hook fires here
 ```
 
 The hook prints these instructions itself when it declines to provision. Once
@@ -199,8 +199,12 @@ opt in explicitly, then re-fire the hook:
 ```bash
 cd /path/to/existing-project
 mkdir -p .agenticframework && touch .agenticframework/enabled
-git checkout .   # post-checkout now provisions — only writes missing files, never overwrites
+git checkout     # post-checkout now provisions — only writes missing files, never overwrites
 ```
+
+Plain `git checkout`, with no path. `git checkout .` also fires the hook, but it
+first reverts every uncommitted change in the working tree — in an existing
+project, that is your work.
 
 ### Public vs. Private Repositories
 
