@@ -75,6 +75,25 @@ version table being consulted.
 
 ## [Unreleased]
 
+### `runtime/.hitl_blobs/` excluded from vendoring — caught it landing in a real tenant
+
+Immediately after the `runtime/` vendoring below, applying it to
+`AqlaarTeleologyStudio` by hand copied `runtime/.hitl_blobs/` along with the
+real source — local HITL-gate test-run scratch data (encrypted blobs),
+gitignored in this framework's own checkout, but a plain `cp -r` from a live
+working tree doesn't consult `.gitignore`. Committed once into that tenant's
+history, caught immediately, and removed in a follow-up commit there.
+
+Fixed at the source in all three places `runtime/` gets copied:
+`install-ai-stack.sh`'s vendoring into `~/.agent-framework/`, the same
+script's `ai-stack-upgrade`, and `hooks/post-checkout`'s vendoring into a
+fresh tenant — each now `rm -rf`s `.hitl_blobs` immediately after the copy,
+same pattern already used for `__pycache__`.
+`test_runtime_and_security_fixtures_vendoring.py` extended with a fake
+`.hitl_blobs` entry in its vendor-source fixture and an assertion it never
+reaches the tenant; mutation-checked by removing just the new exclusion
+line.
+
 ### `runtime/` and `fixtures/security/` vendored — the real answer to the `agentsmith-runtime` question
 
 Resolves the question left open two entries below: how does a tenant's CI

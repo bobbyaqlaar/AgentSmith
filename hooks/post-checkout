@@ -146,6 +146,10 @@ if [ ! -d "$REPO_ROOT/runtime" ]; then
     mkdir -p "$REPO_ROOT/runtime"
     cp -r "$RUNTIME_DIR/." "$REPO_ROOT/runtime/"
     find "$REPO_ROOT/runtime" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    # Local HITL-gate test-run scratch data — gitignored at the source, but a
+    # plain `cp -r` doesn't know that. Committed once into a real tenant
+    # before this exclusion existed; never again.
+    rm -rf "$REPO_ROOT/runtime/.hitl_blobs"
     echo "✅ Vendored runtime/ from $RUNTIME_DIR"
   else
     echo "⚠️  ~/.agent-framework/runtime/ missing — runtime/ not vendored. Any script importing runtime.* will fail with ModuleNotFoundError. Re-run install-ai-stack.sh."

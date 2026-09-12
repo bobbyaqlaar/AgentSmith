@@ -49,6 +49,12 @@ def tenant(tmp_path, monkeypatch):
     (fw_runtime / "test" / "test_hitl_gate.py").write_text("# hitl gate test\n")
     (fw_runtime / "__pycache__").mkdir()
     (fw_runtime / "__pycache__" / "judging.cpython-311.pyc").write_bytes(b"\x00")
+    # Local HITL-gate test-run scratch data — gitignored in the framework's
+    # own checkout, but a plain `cp -r` from a live working tree doesn't
+    # know that. Committed once into a real tenant before this exclusion
+    # existed (AqlaarTeleologyStudio 85c0d1e, cleaned up in d892dff).
+    (fw_runtime / ".hitl_blobs" / "acme").mkdir(parents=True)
+    (fw_runtime / ".hitl_blobs" / "acme" / "some-blob.json").write_text('{"ciphertext": "x"}\n')
 
     fw_fixtures_security = fw / "fixtures" / "security"
     fw_fixtures_security.mkdir(parents=True)
@@ -86,6 +92,11 @@ def test_vendors_runtime_including_its_test_suite(tenant):
         "verify the library's own correctness"
     )
     assert not any((tenant / "runtime").rglob("__pycache__"))
+    assert not (tenant / "runtime" / ".hitl_blobs").exists(), (
+        "local HITL-gate test-run scratch data must never be vendored into a "
+        "tenant — a plain `cp -r` doesn't respect the framework's own "
+        ".gitignore, so this needs its own explicit exclusion"
+    )
     assert "Vendored runtime/" in result.stdout
 
 

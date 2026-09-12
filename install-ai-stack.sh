@@ -279,6 +279,11 @@ if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/runtime" ]; then
   mkdir -p "$RUNTIME_DIR"
   cp -r "$INSTALLER_DIR/runtime/." "$RUNTIME_DIR/"
   find "$RUNTIME_DIR" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+  # Local HITL-gate test-run scratch data (gitignored in the framework's own
+  # checkout, .gitignore:runtime/.hitl_blobs/) — a plain `cp -r` from a live
+  # working tree doesn't know that. Committed once into a real tenant before
+  # this exclusion existed; never again.
+  rm -rf "$RUNTIME_DIR/.hitl_blobs"
   success "runtime/ copied from local repo"
 elif [ -d "$RUNTIME_DIR" ] && [ "$(ls -A "$RUNTIME_DIR" 2>/dev/null)" ]; then
   success "runtime/ already present in ~/.agent-framework/runtime/"
@@ -1290,6 +1295,7 @@ function ai-stack-upgrade() {
     mkdir -p "runtime"
     cp -r "$runtime_src/." "runtime/"
     find "runtime" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    rm -rf "runtime/.hitl_blobs"
     echo "✅ Copied vendored runtime/ from $runtime_src"
   else
     echo "⚠️  No vendored runtime/ found at $runtime_src — skipping. Re-run"
