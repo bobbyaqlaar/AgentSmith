@@ -156,3 +156,38 @@ def test_upgrade_without_base_fixtures_installed_still_completes(tmp_path, monke
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "scripts/run-evals.py" in _git(repo, "ls-files"), result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("shell", SHELLS)
+def test_upgrade_prunes_framework_internal_runtime_tests(tmp_path, monkeypatch, shell):
+    """Tenants vendored before the allowlist carry all of runtime/test/. The
+    upgrade must leave only the harness's suites, or the tenant's pytest keeps
+    failing on the framework's own tests."""
+    fw = tmp_path / "home" / ".agent-framework"
+    (fw / "scripts").mkdir(parents=True)
+    (fw / "scripts" / "run-evals.py").write_text("# run-evals\n")
+    (fw / "runtime" / "test").mkdir(parents=True)
+    (fw / "runtime" / "llm_gateway.py").write_text("# llm_gateway\n")
+    (fw / "runtime" / "test" / "test_hitl_gate.py").write_text("# kept\n")
+    (fw / "runtime" / "test" / "test_framework_version.py").write_text("# framework-internal\n")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("DISABLE_AI_STACK", "true")
+
+    repo = tmp_path / "tenant"
+    subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(repo)], check=True)
+    (repo / ".agenticframework").mkdir()
+    (repo / ".agenticframework" / "tenant.yaml").write_text('tenant:\n  id: t\nframework:\n  version: "1.0.0"\n')
+    (repo / "runtime" / "test").mkdir(parents=True)
+    (repo / "runtime" / "llm_gateway.py").write_text("# llm_gateway\n")
+    (repo / "runtime" / "test" / "test_framework_version.py").write_text("# vendored whole, earlier\n")
+    (repo / "runtime" / "test" / "test_pg_pool.py").write_text("# vendored whole, earlier\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "initial")
+
+    result = _run_upgrade(shell, repo, tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert sorted(p.name for p in (repo / "runtime" / "test").iterdir()) == ["test_hitl_gate.py"]
+    tracked = _git(repo, "ls-files")
+    assert "runtime/test/test_pg_pool.py" not in tracked
+    assert "runtime/test/test_hitl_gate.py" in tracked

@@ -208,11 +208,17 @@ fi
 # `pip install agentsmith-runtime` is not a working substitute: confirmed
 # against PyPI's own API, no such project is published there.
 #
-# Unlike scripts/test/ (excluded — tests the framework's OWN provisioning
-# mechanics), runtime/test/ is vendored WHOLE: test_hitl_gate.py,
-# test_dead_letter.py, test_llm_gateway_budget.py and test_self_correction.py
-# verify the LIBRARY's own correctness, which is genuine evidence for any
-# tenant depending on it, not framework navel-gazing.
+# runtime/test/ is vendored ONLY as far as the security harness needs it: the
+# suites its controls delegate to (SEC-HITL/DLQ/BUDGET/SELF-001) and the
+# conftest.py they run under. It used to be vendored whole, on the reasoning
+# that those suites are infra-free library evidence. The other 50-odd files
+# are not: a scratch python-fastapi tenant's template `pytest` collected them
+# and went red on 36 failures — framework-relative paths (pyproject.toml,
+# examples/, the framework-root guard), psycopg2, and the tenant's own posture
+# leaking into tests written for the framework's. Those suites run in
+# AgentSmith's own CI. TENANT_RUNTIME_TESTS is pinned to the harness's
+# pytest_suite() bindings by scripts/test/test_workflow_template_wiring.py.
+TENANT_RUNTIME_TESTS=(conftest.py test_hitl_gate.py test_dead_letter.py test_llm_gateway_budget.py test_self_correction.py)
 if [ -d "$REPO_ROOT/runtime" ] && [ ! -f "$REPO_ROOT/runtime/llm_gateway.py" ]; then
   # `runtime` is a generic package name (pyproject.toml says as much). A
   # tenant's OWN runtime/ is never merged into: framework modules would import
@@ -230,6 +236,11 @@ elif [ ! -d "$REPO_ROOT/runtime" ]; then
     # plain `cp -r` doesn't know that. Committed once into a real tenant
     # before this exclusion existed; never again.
     rm -rf "$REPO_ROOT/runtime/.hitl_blobs"
+    rm -rf "$REPO_ROOT/runtime/test"
+    mkdir -p "$REPO_ROOT/runtime/test"
+    for SUITE in "${TENANT_RUNTIME_TESTS[@]}"; do
+      [ -f "$RUNTIME_DIR/test/$SUITE" ] && cp "$RUNTIME_DIR/test/$SUITE" "$REPO_ROOT/runtime/test/$SUITE"
+    done
     (cd "$REPO_ROOT/runtime" && find . -type f | sed 's|^\./||') | write_vendored_ruff_config runtime
     echo "✅ Vendored runtime/ from $RUNTIME_DIR"
   else

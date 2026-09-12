@@ -1297,13 +1297,13 @@ function ai-stack-upgrade() {
   rm -rf "$stage"
   echo "✅ Copied vendored scripts from $vendor_src"
 
-  # runtime/ and fixtures/security/ — unlike scripts/test/, runtime/test/ is
-  # NOT excluded: those suites (test_hitl_gate.py, test_dead_letter.py,
-  # test_llm_gateway_budget.py, test_self_correction.py) verify the LIBRARY's
-  # own correctness, which is genuinely relevant to a tenant depending on it,
-  # not framework provisioning mechanics the way scripts/test/ is. Optional —
-  # an install predating this step should not block an otherwise-working
-  # scripts/ upgrade.
+  # runtime/ and fixtures/security/. runtime/test/ is pruned to the suites the
+  # security harness delegates to — the same list, and the same reason, as
+  # TENANT_RUNTIME_TESTS in hooks/post-checkout; an upgrade also removes the
+  # rest from a tenant that was vendored the whole directory. Optional — an
+  # install predating this step should not block an otherwise-working scripts/
+  # upgrade.
+  local tenant_runtime_tests="conftest.py test_hitl_gate.py test_dead_letter.py test_llm_gateway_budget.py test_self_correction.py"
   local runtime_src="$HOME/.agent-framework/runtime"
   if [ -d "runtime" ] && [ ! -f "runtime/llm_gateway.py" ]; then
     # Same guard as hooks/post-checkout: a tenant's own `runtime` package is
@@ -1315,6 +1315,12 @@ function ai-stack-upgrade() {
     cp -r "$runtime_src/." "runtime/"
     find "runtime" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
     rm -rf "runtime/.hitl_blobs"
+    rm -rf "runtime/test"
+    mkdir -p "runtime/test"
+    local suite
+    for suite in $(echo "$tenant_runtime_tests"); do
+      [ -f "$runtime_src/test/$suite" ] && cp "$runtime_src/test/$suite" "runtime/test/$suite"
+    done
     echo "✅ Copied vendored runtime/ from $runtime_src"
   else
     echo "⚠️  No vendored runtime/ found at $runtime_src — skipping. Re-run"

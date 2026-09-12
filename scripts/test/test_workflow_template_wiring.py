@@ -158,6 +158,25 @@ def test_security_workflow_installs_the_runtimes_core_dependencies() -> None:
     assert not missing, f"eval-security.yml does not install runtime core deps: {missing}"
 
 
+def test_vendored_runtime_tests_are_exactly_what_the_security_harness_runs() -> None:
+    """runtime/test/ is vendored only as far as scripts/security's pytest_suite()
+    bindings need (plus their conftest.py). Too few and a SEC control fails on a
+    missing suite; too many and a tenant's `pytest` collects framework-internal
+    tests (36 failures in a scratch python-fastapi tenant). Both vendoring
+    paths carry the list, so both are pinned to the bindings."""
+    bound = set()
+    for runner in (REPO / "scripts" / "security" / "runners").glob("*.py"):
+        bound |= set(re.findall(r'"runtime/test/(test_\w+\.py)"', runner.read_text(encoding="utf-8")))
+    assert bound, "no pytest_suite bindings found — has the harness moved?"
+    expected = bound | {"conftest.py"}
+
+    hook = re.search(r"^TENANT_RUNTIME_TESTS=\(([^)]*)\)", HOOK.read_text(encoding="utf-8"), re.M)
+    installer = re.search(r'local tenant_runtime_tests="([^"]*)"', INSTALLER.read_text(encoding="utf-8"))
+    assert hook and installer
+    assert set(hook.group(1).split()) == expected, "hooks/post-checkout TENANT_RUNTIME_TESTS"
+    assert set(installer.group(1).split()) == expected, "ai-stack-upgrade tenant_runtime_tests"
+
+
 def test_python_template_pins_ruff_to_the_frameworks_own_version() -> None:
     """An unpinned linter is a gate that changes without a commit."""
     pin = re.search(r"^ruff==([\d.]+)", (REPO / "requirements-lint.txt").read_text(encoding="utf-8"), re.M)

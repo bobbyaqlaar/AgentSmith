@@ -12,10 +12,10 @@ tenant it resolves against the TENANT's own root, not the framework's.
 `pip install agentsmith-runtime` is not a substitute: confirmed against
 PyPI's own API, no such project is published there.
 
-Unlike scripts/test/ (excluded — tests the framework's own provisioning
-mechanics), runtime/test/ is vendored WHOLE: those suites verify the
-LIBRARY's own correctness, which is genuine evidence for any tenant
-depending on it.
+runtime/test/ is vendored only as far as the security harness delegates to
+it (TENANT_RUNTIME_TESTS in the hook). It was vendored whole until a scratch
+python-fastapi tenant's `pytest` collected the rest and failed 36 tests on
+framework-relative paths, missing infra drivers and tenant posture.
 """
 
 from __future__ import annotations
@@ -47,6 +47,8 @@ def tenant(tmp_path, monkeypatch):
     (fw_runtime / "judging.py").write_text("# runtime.judging\n")
     (fw_runtime / "test").mkdir()
     (fw_runtime / "test" / "test_hitl_gate.py").write_text("# hitl gate test\n")
+    (fw_runtime / "test" / "conftest.py").write_text("# shared fixtures\n")
+    (fw_runtime / "test" / "test_framework_version.py").write_text("# reads the framework's pyproject.toml\n")
     (fw_runtime / "__pycache__").mkdir()
     (fw_runtime / "__pycache__" / "judging.cpython-311.pyc").write_bytes(b"\x00")
     # Local HITL-gate test-run scratch data — gitignored in the framework's
@@ -90,8 +92,12 @@ def test_vendors_runtime_including_its_test_suite(tenant):
     assert result.returncode == 0, result.stderr
     assert (tenant / "runtime" / "judging.py").exists()
     assert (tenant / "runtime" / "test" / "test_hitl_gate.py").exists(), (
-        "runtime/test/ must be vendored, unlike scripts/test/ — these suites "
-        "verify the library's own correctness"
+        "the suites the security harness delegates to must be vendored"
+    )
+    assert (tenant / "runtime" / "test" / "conftest.py").exists()
+    assert not (tenant / "runtime" / "test" / "test_framework_version.py").exists(), (
+        "framework-internal runtime tests must not reach a tenant — a stock "
+        "python-fastapi tenant's `pytest` collected them and failed 36"
     )
     assert not any((tenant / "runtime").rglob("__pycache__"))
     assert not (tenant / "runtime" / ".hitl_blobs").exists(), (
