@@ -982,10 +982,11 @@
         "_parse_go",
         "_extract_guardrails_from_cursorrules",
         "_extract_guardrails_from_rfc",
+        "_extract_guardrails_from_superpowers",
         "_resolve_local_import",
         "run_map"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-12T14:55:34Z",
       "id": "scripts/map_codebase.py"
     },
     {
@@ -1704,9 +1705,10 @@
         "test_walker_upserts_symbols_and_edges",
         "test_walker_incremental_skip_and_purge",
         "test_walker_ignores_vendor_dirs",
-        "test_walker_extracts_guardrails"
+        "test_walker_extracts_guardrails",
+        "test_walker_extracts_superpowers_guardrails_alongside_rfc"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-12T14:55:48Z",
       "id": "scripts/test/test_knowledge_graph.py"
     },
     {
@@ -4255,6 +4257,53 @@
       ],
       "last_modified": "2026-09-11T09:30:42Z",
       "id": "scripts/test/test_design_and_validation_docs.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "tenant",
+        "_run_post_checkout",
+        "test_vendors_scripts_when_missing",
+        "test_excludes_frameworks_own_test_suite_and_pycache",
+        "test_never_overwrites_an_existing_scripts_dir",
+        "test_no_framework_scripts_installed_is_not_fatal",
+        "test_unopted_repo_is_not_vendored"
+      ],
+      "last_modified": "2026-09-12T15:13:44Z",
+      "id": "scripts/test/test_scripts_vendoring.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Security Compliance Harness \u2014 Design Spec",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/docs/superpowers/specs/2026-07-15-security-compliance-harness-design.md",
+      "pillar": null,
+      "created_at": "2026-09-12T20:02:31Z",
+      "id": "superpowers:spec:specs/2026-07-15-security-compliance-harness-design.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Reliability pack v1 \u2014 hallucination rate, TTFT, self-correction",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/docs/superpowers/specs/2026-07-10-reliability-pack-v1-design.md",
+      "pillar": null,
+      "created_at": "2026-09-12T20:02:31Z",
+      "id": "superpowers:spec:specs/2026-07-10-reliability-pack-v1-design.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Security Compliance Harness Implementation Plan",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/docs/superpowers/plans/2026-07-15-security-compliance-harness.md",
+      "pillar": null,
+      "created_at": "2026-09-12T20:02:31Z",
+      "id": "superpowers:plan:plans/2026-07-15-security-compliance-harness.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Reliability Pack v1 Implementation Plan",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/docs/superpowers/plans/2026-07-10-reliability-pack-v1.md",
+      "pillar": null,
+      "created_at": "2026-09-12T20:02:31Z",
+      "id": "superpowers:plan:plans/2026-07-10-reliability-pack-v1.md"
     }
   ],
   "edges": [
