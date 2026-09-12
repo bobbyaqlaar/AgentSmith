@@ -75,6 +75,299 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Design-phase and validation-phase playbooks, wired to every IDE target
+
+Two new documents, both derived from `docs/review-levers.md` rather than
+duplicating it: **`docs/design-review-checklist.md`** (a Definition-of-Ready
+equivalent — every lever reframed as build-time guidance, "here is how you
+avoid X" instead of "did you avoid X") and **`docs/validation-checklist.md`**
+(a Definition-of-Done equivalent — works the levers group by group against
+the change, sets the testing/gate obligations, closes with a per-group
+checked/n-a/declared-gap sign-off). Neither restates a lever's rule text;
+`design-review-checklist.md` cites every slug (legacy included — a legacy
+lever still needs a build-time reframe even though it is exempt from
+`review-lever-notes.md`'s evidence requirement) and `validation-checklist.md`
+points at `review-levers.md` rather than re-deriving it.
+
+Wired into `templates/agent-rules.yaml` as two `skills:` entries carrying
+`doc` + `summary` instead of a `pillars` list. Every renderer in
+`generate-ide-config.py` — `.cursorrules`, `CLAUDE.md`, `AGENTS.md`,
+`GEMINI.md`, `.github/copilot-instructions.md`, not only the Antigravity
+skill files — now surfaces a Design & Validation Playbooks section; skills
+were Antigravity-only before this pair, itself a small `declared-vs-enforced`
+gap closed in the same change.
+
+**Caught before shipping, not after:** `docs/` is not vendored into
+`~/.agent-framework/` or copied by the post-checkout hook the way `scripts/`
+and `templates/` are — only `agent-rules.yaml` makes that trip individually.
+A bare `docs/design-review-checklist.md` pointer would have resolved to
+nothing in every tenant repo except this one.
+`install-ai-stack.sh` now vendors these two files specifically, and every
+generated pointer names both resolvable locations
+(`$AGENTSMITH_DIR/docs/...` for a live checkout, `~/.agent-framework/docs/...`
+for the installed package) rather than one, because generation happens once
+at provisioning time and which applies later isn't knowable then.
+
+`scripts/test/test_design_and_validation_docs.py` checks slug coverage in
+both directions, that the YAML declares both playbooks with a doc path that
+exists, that the generator actually renders both into every target (run
+against a scratch repo, not inferred from the pieces), and that a
+`--check-only` pass on freshly generated output reports clean. Mutation-tested.
+
+### Seven new Intuitive UI review levers, ahead of the Ops Portal HITL build
+
+Group 5 of `review-levers.md` (Intuitive UI) had two levers against six to
+nine in every other group — and one of the two, `intuitive-journey`, is
+legacy and unevidenced. `TestCoverageReview-2026-07-21` already named the gap
+this leaves: the HITL loop through the Ops Portal UI has never been reviewed,
+because there has never been a HITL screen to review. One is about to be
+built.
+
+Four levers are grounded in what the portal specifically does or is about to
+do — not generic checklist import: `irreversible-needs-confirmation` (DLQ
+discard/replay exist today, HITL approve/reject is next, all three are
+one-way once fired), `no-double-submit` (the UI-side twin of
+`out-of-order-and-repeated`), `denied-vs-missing` (`ambiguous-signals` applied
+to an auth screen, given the portal's RBAC/SSO), and `stale-data-is-labelled`
+(cost-vs-cap and run history are exactly what an ops team acts on).
+
+Three more — accessibility, viewport sizing, component consistency — were
+added on request despite carrying no caught defect, because the ask was to
+get a first-time build right rather than backfill after it ships wrong. None
+of the seven carries a fabricated "Caught:" story — a new `(unevidenced)`
+mark says so on the record, distinct from `(legacy)`: it still requires the
+note explaining why the lever exists, and drops the mark the day it actually
+catches something. Writing an invented catch would have been the exact
+failure this lever set exists to prevent, aimed at itself.
+
+### A withdrawn judge model now fails the gate instead of going green
+
+Answering a direct question about the Groq incident: would it recur silently
+today? Partially fixed already — `run-evals.py` had gained an annotation that
+marks a no-verdict run "green but proves nothing" — but the annotation's own
+advice pointed at the daily-quota console, which is the wrong diagnosis for a
+model the provider retired. `is_provider_exhausted` returns `False` for a 404,
+so a decommissioned model landed in the generic "judge unreachable" bucket
+next to rate limits, and a repo could sit pointing at a dead grader
+indefinitely, every run green and ungraded — exactly what happened for five
+days in August.
+
+`runtime.provider_dispatch.is_model_gone` classifies the two apart. Quota
+exhaustion clears itself overnight and stays a warning; a withdrawn model
+never clears and now **fails the gate outright** (exit 1, `::error::`), naming
+the model and pointing at recalibration rather than the quota console.
+Verified against seven real provider messages: Groq 404, Gemini 429 quota,
+Gemini 503 demand spike, Anthropic credit exhaustion, a context-length error
+containing the digits "14290" (the exact trap `is_provider_exhausted`'s own
+marker list already documents), an OpenAI deprecation notice, and a 404 from
+a wrong base URL. Mutation-tested by forcing the classification to always
+report `False`, which fails two tests.
+
+Testing it required a workaround worth recording: the registry deliberately
+ignores `AGENT_JUDGE_MODEL` ("an ambient variable must not be able to regrade
+a repo"), so there is no cheap way to point a real run at a dead model — the
+tests drive `run_scorecard` through a stubbed judge instead of a live call.
+
+### A score now records the rubric that produced it, not just the judge
+
+Raised by an outside critique of LLM-judge practice — "version your rubric
+like code, and refuse to compare scores across versions" — and it landed,
+because the codebase already made the identical argument for the OTHER input
+to a verdict. `eval_judge.run_judge` records `judged_by` per row: "who graded
+this belongs with the score, not in a single run-level field a substitution
+would silently falsify." The rubric is the other input, and it was recorded
+only as a NAME (`criteria: "default"`) while `promote-learning.py` appends to
+`historical_learnings` — injected into every judge prompt — with no
+version-bump anywhere in that path. Two runs both stamped `"default"` could
+have been graded under materially different instructions, and nothing
+downstream could tell.
+
+`eval_judge.criteria_digest()` hashes what the judge is actually asked: name,
+instructions, `historical_learnings` (order-sensitive — injected as a
+numbered list), and the three `score_*` dimension flags. Not the whole file —
+a comment or a reordered key is not a different rubric, and a digest that
+churns on cosmetic edits gets ignored within a week. Stamped on every row
+beside `judged_by`, on the run-level summary beside `judge_model`, and gated
+the same way: a scorecard graded under more than one digest **fails** rather
+than averaging. SPECS.md §9 previously specified a hand-bumped `"version"`
+field for this schema; it was never implemented, and is now documented as
+what actually shipped.
+
+Exposed a latent bug in its own test double along the way:
+`test_hallucination_evals.py` stubbed `run_judge` as
+`seen.setdefault("prompt", prompt) or {}` — `setdefault` returns the value it
+just stored, so that expression evaluated to the prompt STRING, not `{}`, and
+the `or` branch never fired. It passed for as long as nothing downstream
+touched the result; the moment `judge_case` started stamping a field onto it,
+it failed with `'str' object does not support item assignment`. A test double
+that violates the contract of the thing it replaces passes until the real
+caller does something ordinary.
+
+### The fairness gate could not see a score diverge within a pair
+
+`runtime.judging.pair_parity` compares one dimension — the `fairness` flag —
+which is the hole this closes. Observed live: two fairness-pair members with
+BYTE-IDENTICAL `actual_output` (verified by sha256) and inputs differing in
+one protected-attribute word, scored 1.00 and 0.33 by the same judge on the
+same text, in two runs of three. Every one of those runs reported
+`fairness=1` and `worst_pair_parity=1.000` — the divergence was in the
+overall score, on a bias suite, and the control watching one field never saw
+it.
+
+`runtime.judging.pair_score_spread` (max-minus-min per pair, delegated
+exactly like its sibling so a tenant's own check cannot drift from the CI
+gate) is gated **only where both pair members were graded on identical
+text** — `eval_judge` now stamps an `output_digest` alongside `judged_by` and
+`criteria_digest` for exactly this comparison. That narrowing is the design,
+not a caveat: where outputs differ, a score gap is a QUALITY signal and
+belongs to `FAIRNESS_FAIL_BELOW`, not this gate — a decision already recorded
+against a real prior incident (CI run `32245372194`), and failing that case
+here would have been wrong. Identical text removes the quality explanation
+entirely: nothing about the output can account for the gap, so whatever moved
+it acted on the prompt, and the prompt differs only in the protected
+attribute.
+
+Third threshold, `FAIRNESS_SCORE_SPREAD_FAIL_ABOVE` (default `0.25`), not a
+reuse of the other two — `FAIRNESS_FAIL_BELOW` is a floor on quality that
+moves with the judge, `FAIRNESS_PARITY_FAIL_BELOW` is a floor on a rating,
+this is a ceiling on differential treatment within one pair. Provisional:
+observed spreads were `0.0` (four times) or `0.67` (twice), nothing between.
+Not `0.0` — a grader is entitled to minor wobble between two different
+prompts, and a zero-tolerance ceiling fires on noise, and a bias gate that
+cries wolf gets switched off. `runtime/test/test_pair_score_spread.py`
+validates against the real stored rows from both incident dates, including a
+test that asserts the OLD check saw nothing on that exact data — the premise,
+shown rather than claimed.
+
+The tenant investigation that surfaced this also found the root cause the
+gate was reacting to: the fixture's own case input demanded "a one-sentence
+reason based only on the screening evidence," which the tenant's rendered
+output has never satisfied — four sentences, citing a registry lookup and an
+auto-approval clause absent from the input. That is a tenant-side fixture
+defect, not a framework one, fixed in KYC Sentinel's own repo; the framework
+change here is the gate that would have caught the resulting bias-relevant
+score divergence regardless of which side of the pair the defect happened to
+land on.
+
+### One transient 503 could still cost a whole judged suite
+
+Only `429` was retried in `cost_router.py`. `502`/`503`/`504` are the
+provider being transiently unavailable — a different failure from
+exhaustion, since the tier still has budget and the endpoint simply did not
+serve this request — and Gemini's own 503 body says as much ("Spikes in
+demand are usually temporary. Please try again later."). Under the
+100%-graded quorum rule, one un-retried transient on any of a suite's calls
+costs the whole run; on a ~20-call daily free tier that is not a rare event.
+`_RETRYABLE_STATUSES` now includes all four, same full-jitter backoff. `500`
+is deliberately excluded — several providers return it for a request they
+will reject identically every time, and retrying just spends more of the
+same daily allowance to reach the same error.
+
+### `verify_system.py --help` ran the full system scan instead of printing usage
+
+Dispatches on `sys.argv` — nine `if "--check-x" in sys.argv` tests — rather
+than argparse, so `--help` matched none of them and fell through to
+`run_checks()`: a multi-second scan, exit 0, no usage. The nine modes were
+documented across five `.md` files and discoverable from the tool itself
+nowhere. `scripts/test/test_verify_system_modes.py` compares the dispatched
+set against a hand-written `MODES` list, both read out of the source with
+`ast`, in both directions, so a tenth mode added without updating `MODES`
+fails loudly instead of becoming invisible the same way.
+
+### Two environment variables that nothing read
+
+`AGENT_SHARED_RFC_DIR` was specified in `UserManual.md` with two
+copy-pasteable `export` lines and the claim that "agents and `run-evals.py`
+also read from this directory," and in `SPECS.md` in three places including a
+stated security boundary ("not for cross-tenant production data linkage").
+Nothing in the codebase has ever read the variable — there is no shared-RFC
+concept anywhere in the framework. Reasoning publicly about a feature's
+security properties is exactly what convinces a reader it exists, and it is
+not the kind of sentence anyone writes about a stub. Both documents now say
+NOT IMPLEMENTED; the boundary itself is preserved in `FIXES_AND_CLEANUP.md`
+as the requirement any future implementation must honour.
+
+`AI_STACK_SLACK_WEBHOOK` sat in `SPECS.md`'s environment table directly above
+`AGENT_NOTIFY_WEBHOOK` — the one `scripts/notifier.py` actually reads. Two
+adjacent rows, one real; removed.
+
+This class fails silently by construction: a misspelled flag gets an
+argparse error, a bad path gets `ENOENT`, but `os.environ.get` on a name
+nobody queries is indistinguishable from a name nobody set. The only thing
+between a user and a false belief is whether the doc is true.
+`scripts/test/test_documented_env_vars_exist.py` now checks every documented
+variable is referenced somewhere in code — and caught a defect in its own
+first commit: `_code_blob()` included the test file itself, which names both
+dead variables in its own allowlist and docstring, so every orphan appeared
+"referenced" by the test checking for orphans. Passed locally only because
+the file was untracked when first run; failed the moment `git ls-files`
+could see it. Fixed by excluding the test's own path from the scan.
+
+### A decommissioned model was still on offer in the catalog
+
+`llama-3.3-70b-versatile` sat in `runtime/models.yaml`'s catalog with
+live-looking cost figures and no marker, three months after Groq retired the
+model it names. No profile binds it today, but the catalog is an offer —
+"these stay available to any tenant that wants them" — and the retirement was
+recorded only in a comment beside the REPLACEMENT binding, 110 lines away. A
+tenant shopping for a cheap 70B saw a priced, plausible option that 404s on
+every call. Now marked `decommissioned: true`, and
+`runtime/test/test_no_role_binds_a_dead_model.py` fails if any profile's
+`use` names a marked entry — `degrade_to` is exempt, since it names a role,
+not a model. Mutation-tested by rebinding a role to the dead id, which is the
+exact configuration this framework shipped in August.
+
+### The security harness understated a control it does not run itself
+
+Every report on `SEC-AUDIT-002` (the registry's only declared gap) read
+`gap (declared) — not yet implemented`. Both halves were false: append-only
+IS implemented (`audit_log_no_update` / `audit_log_no_delete` triggers in
+`portal/db/schema.sql`) and IS verified on every push (`self-test.yml`'s Ops
+Portal job provisions a live Postgres and runs the two cases asserting UPDATE
+and DELETE are rejected). The control's own `mechanism` text said "UNVERIFIED
+in CI ... verify at deploy time" — true when written, and stale since the
+portal job gained its Postgres service. The gap itself is correct: this
+harness runs offline and cannot reach a database, and binding the control to
+a suite that dies without `DATABASE_URL` would fail it whenever Postgres is
+down, which is why it is a gap rather than wired to something unrunnable. The
+message now says only what this harness can know — `no runner in this
+harness` — rather than a claim about the control's existence it has no way to
+verify. A repo that understates a shipped control is the same class of error
+as one that overstates a missing one; this one happened to be wrong in the
+direction that looks modest.
+
+### A standalone script died before it could load `.env`
+
+`scripts/_shared._load_dotenv` acquired an unconditional
+`from runtime.config import load_env_file`. `scripts/` is machine-installed
+and `runtime/` ships as a pip package, so the normal invocation —
+`python3 <install>/scripts/run-evals.py` from a tenant directory — had no
+`runtime` on `sys.path` and died with `ModuleNotFoundError` before doing any
+work. It took out KYC Sentinel's judged-eval split run for five consecutive
+daily windows: the driver read the crash as "judge unreachable" and logged
+`NO VERDICT — will retry in a later window`, debiting the daily call budget
+for calls never made. `agent_logger._owner` carried the identical defect and
+killed `AgentLogger.__init__` outright.
+
+An earlier fix (`2f3edac`) closed this exact bug class for `_repo_root` and
+left `_load_dotenv` three lines below it untouched — its own docstring
+describes the failure this caused, verbatim. A docstring warning is not a
+guard. Both imports are now guarded with a fallback that mirrors the
+`os.environ` half of the real loader (or, for `_owner`, the ambient
+environment then git — deliberately NOT a hand-reconstruction of `resolve`'s
+four-layer precedence, since getting `.env` and `tenant.yaml` the wrong way
+round would silently reintroduce the exact ambient-outranks-declaration bug
+`_owner`'s own docstring is about).
+
+`scripts/test/test_standalone_without_runtime.py` shells out with
+`PYTHONPATH` cleared, which is the only way to catch this: pytest puts the
+repo root on `sys.path`, so an in-process test imports `runtime` successfully
+no matter what and is structurally incapable of failing here — which is
+exactly how this shipped and stayed green through the whole incident. One of
+the five tests asserts `runtime` really is absent in a clean subprocess, so
+an editable install or a stray `.pth` cannot silently make the other four
+vacuous.
+
 ### Four ways past the injection guard, three of them one character wide
 
 `grep-for-siblings` pointed here: the previous pass fixed a normalisation gap in

@@ -1175,7 +1175,9 @@ python3 scripts/run-evals.py --fail-below 0.80
 
 A judge-backed gate can only block on a *quality* signal. Four situations are
 infrastructure problems wearing a failing score, and each exits 0 with a
-message rather than turning the build red:
+message rather than turning the build red. A fifth looks identical to those
+four from the outside — every case errors — and is deliberately the one
+exception: it turns the build red, because it is not infrastructure weather.
 
 | Situation | Behaviour |
 |---|---|
@@ -1183,6 +1185,19 @@ message rather than turning the build red:
 | The suite has fewer cases than the minimum | Skips — too few cases to mean anything. |
 | **Every** case errored — no case got a verdict | `NO VERDICT (judge unreachable)`, printing the provider's error. |
 | **Some** cases errored and the rest would pass | `NO VERDICT (graded N/M — a pass needs every case)`. |
+| **The configured judge model has been withdrawn by the provider** | **FAILS (exit 1, `::error::`)** — names the model, says no later run will clear it, points at `models.yaml`'s `judge` role and at recalibration. |
+
+That fifth row exists because the first four used to be the only shapes, and a
+withdrawn model does not throw — it 404s, which reached the same `NO VERDICT
+(judge unreachable)` path as an exhausted quota. Reported identically, the two
+are opposite facts: a quota clears itself overnight, a withdrawn model never
+clears and the repo is pointing at a config error. Groq's 2026-08-17 Llama
+retirement lived there for days, every run green-with-a-warning, before this
+distinction existed. `runtime.provider_dispatch.is_model_gone` classifies it —
+phrase-based (`model_not_found`, `does not exist`, `has been deprecated`, …)
+rather than a bare status code, for the same reason `is_provider_exhausted`
+is: "404" appears in request IDs and token counts, and a 404 only counts here
+when the body names the model.
 
 **Errored cases are excluded from the averages.** A call that never returned has
 no verdict to average; scoring it 0.00 reports an infrastructure failure as a
@@ -1270,6 +1285,24 @@ you something the constrained one could not: a variance measurement, which is
 what tells you whether a threshold has real headroom or is one noisy verdict
 from a false failure.
 
+**When the OLD provider retires the model you're moving away from** — mark it
+in `models.yaml`'s `catalog:`, don't delete it:
+
+```yaml
+llama-3.3-70b-versatile:
+  provider: groq
+  decommissioned: true   # HTTP 404 model_not_found on every call as of 2026-08-17
+  cost_per_input_token: 0.00000059
+  cost_per_output_token: 0.00000079
+```
+
+The catalog is an offer to any tenant that wants an entry — deleting it just
+means the next person shopping for a cheap model doesn't see it; leaving it
+unmarked, with live-looking cost figures, means they see it and pick it.
+`runtime/test/test_no_role_binds_a_dead_model.py` fails if any profile's `use`
+still names a `decommissioned: true` entry — `degrade_to` is exempt, since it
+names a role, not a model.
+
 #### Why the judge never falls back to another model
 
 There are two provider-calling paths, and they behave differently on purpose:
@@ -1291,9 +1324,14 @@ Scores are only comparable against the grader they were calibrated for. So the
 eval path reports exhaustion rather than substituting a model, and the gate
 skips with a cause.
 
-Two guards back this. Every result row carries `judged_by`, and a scorecard
+Three guards back this. Every result row carries `judged_by`, and a scorecard
 whose verdicts came from more than one model **fails** rather than averaging
-them. `scripts/test/test_exhaustion_classification.py` asserts `cost_router`
+them. Every row also carries `criteria_digest` — a hash of the rubric text
+actually sent to the judge (SPECS.md §9) — and a scorecard graded under more
+than one rubric fails the same way: a threshold is calibrated against one
+grader reading one set of instructions, and the rubric mutates on its own as
+`promote-learning.py` appends production failures to it.
+`scripts/test/test_exhaustion_classification.py` asserts `cost_router`
 never references `degrade_to`, so adding a fallback there fails a test that
 explains why before it silently changes what every stored score means.
 
@@ -1323,7 +1361,13 @@ different thresholds, separate CI workflows:
 # calibrated per judge; CLI --fail-below overrides it. FAIRNESS_PARITY_FAIL_BELOW
 # (default 1.0) gates the WORST protected-attribute pair and is deliberately not
 # the same knob — a judge swap that loosens the quality bar must not loosen the
-# bias control with it.
+# bias control with it. FAIRNESS_SCORE_SPREAD_FAIL_ABOVE (default 0.25) is a
+# third, narrower bar: pair_parity only compares the `fairness` flag, so two
+# pair members graded on BYTE-IDENTICAL output can still diverge in overall
+# score — observed live, 1.00 vs 0.33 on the same text, with parity reporting
+# 1.000 throughout. Gated only where both members share an output hash; where
+# the outputs differ, a score gap is a quality signal and belongs to the bar
+# above, not this one.
 python3 scripts/run-evals.py --suite fairness
 
 # Hallucination — dedicated judge dimension (0.0–1.0, flagged at ≥ 0.5).
@@ -1394,9 +1438,10 @@ GitHub reject the whole CI workflow as invalid.
 **Tenant `.env` knobs (reliability pack):**
 
 ```bash
-FAIRNESS_FAIL_BELOW=0.80          # rationale quality only (calibrated per judge)
-FAIRNESS_PARITY_FAIL_BELOW=1.0    # worst protected-attribute pair; do not lower to fix a noisy grader
-HALLUCINATION_FAIL_ABOVE=0.05     # max tolerated flagged-case rate
+FAIRNESS_FAIL_BELOW=0.80              # rationale quality only (calibrated per judge)
+FAIRNESS_PARITY_FAIL_BELOW=1.0        # worst protected-attribute pair; do not lower to fix a noisy grader
+FAIRNESS_SCORE_SPREAD_FAIL_ABOVE=0.25 # same-text pair only — see the fairness suite comment above
+HALLUCINATION_FAIL_ABOVE=0.05         # max tolerated flagged-case rate
 TTFT_FAIL_ABOVE_MS=2000           # live TTFT budget (verify_ttft.py)
 ```
 

@@ -813,21 +813,42 @@ LLM Judge (QAEvaluator + custom_judge_criteria.json)
 Phoenix /experiments + eval_results.json
 ```
 
-### LLM Judge Criteria (Versioned)
+### LLM Judge Criteria (Content-Addressed, Not Hand-Versioned)
 
 `custom_judge_criteria.json` schema:
 
 ```json
 {
   "name": "string",
-  "version": "1.0.0",
   "instructions": "string",
   "historical_learnings": ["string"]
 }
 ```
 
+This table used to specify a hand-maintained `"version"` string, bumped on
+every criteria change — never implemented; no code anywhere reads or writes
+that field. What shipped instead is `scripts/eval_judge.criteria_digest()`: a
+SHA-256 over the fields that change what the judge is actually asked (`name`,
+`instructions`, `historical_learnings` — order-sensitive, since they're
+injected as a numbered list — and the `score_fairness` / `score_hallucination`
+/ `score_adversarial` dimension flags), truncated to 12 hex characters.
+
+The reason a hand-bumped version could not have done this job: the rubric
+mutates on its own. `promote-learning.py` appends to `historical_learnings`
+on every promotion, with no version-bump step in that path — so a manually
+maintained version would have gone stale the first time a production failure
+was promoted into the criteria, which is the routine case this schema exists
+to support, not an edge case.
+
+`criteria_digest` is stamped on every judge verdict (`eval_judge.judge_case`,
+alongside `judged_by`) and on the run-level scorecard (alongside
+`judge_model`), the same provenance treatment the grader already gets — a
+score is not portable across criteria for the same reason it is not portable
+across judges. A scorecard whose rows carry more than one digest **fails**
+rather than averaging them, mirroring the existing mixed-judge guard
+(`scripts/test/test_criteria_digest.py`).
+
 Rules:
-- Version is bumped on every criteria change
 - Semantic deduplication before append — no duplicate rules
 - When the learnings list grows beyond a project-defined cap, evicted rules are archived to `custom_judge_criteria.archive.json` with timestamp and eviction reason — **never silently discarded**
 

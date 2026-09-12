@@ -51,6 +51,11 @@ ALLOWED = {
     "EXECUTION_SUCCEEDED",
     # Node/OpenSSL error string quoted from a real incident.
     "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+    # Removed from SPECS.md's env table (never implemented — see CHANGELOG).
+    # CHANGELOG.md narrates it as history, same as any other removed
+    # identifier a changelog legitimately names; that citation is not a
+    # documentation claim that the variable works.
+    "AI_STACK_SLACK_WEBHOOK",
 }
 
 # Placeholders a reader is meant to substitute (YOUR_GCP_PROJECT_ID, ...).
