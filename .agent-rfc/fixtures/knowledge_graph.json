@@ -969,7 +969,7 @@
         "main",
         "_check_drift"
       ],
-      "last_modified": "2026-09-11T09:29:02Z",
+      "last_modified": "2026-09-12T22:40:29Z",
       "id": "scripts/generate-ide-config.py"
     },
     {
@@ -1115,9 +1115,14 @@
         "_hook_workflow_array",
         "test_hooks_workflow_array_matches_cli_workflows",
         "test_reusable_security_workflow_matches_its_tenant_template",
+        "test_stack_agnostic_templates_do_not_cache_pip_on_tenant_manifests",
+        "test_security_workflow_installs_the_runtimes_core_dependencies",
+        "test_python_template_pins_ruff_to_the_frameworks_own_version",
+        "test_cd_deploys_only_what_ci_passed",
+        "test_ts_react_template_assumes_no_particular_test_runner_or_script_names",
         "test_hook_actually_writes_every_callee_into_a_fresh_tenant"
       ],
-      "last_modified": "2026-09-12T20:04:42Z",
+      "last_modified": "2026-09-12T23:04:40Z",
       "id": "scripts/test/test_workflow_template_wiring.py"
     },
     {
@@ -1849,7 +1854,7 @@
         "agency_manifest",
         "gateway_static"
       ],
-      "last_modified": "2026-09-12T21:26:48Z",
+      "last_modified": "2026-09-12T22:44:31Z",
       "id": "scripts/security/runners/delegating.py"
     },
     {
@@ -1858,7 +1863,7 @@
       "symbols": [
         "run"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-12T22:44:31Z",
       "id": "scripts/security/runners/sso_revocation.py"
     },
     {
@@ -1876,10 +1881,11 @@
         "passed",
         "failed",
         "not_applicable",
+        "framework_component_absent",
         "security_fixture",
         "node_suite"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-12T22:44:31Z",
       "id": "scripts/security/runners/_shared.py"
     },
     {
@@ -2362,6 +2368,9 @@
         "test_a_rejection_does_not_carry_over_either",
         "test_an_addressed_approval_answers_only_its_own_gate",
         "test_no_workflow_waits_on_the_approval_field_directly",
+        "_approval_wait_sources",
+        "_approval_wait_offenders",
+        "test_the_sweep_reads_a_vendored_tenants_own_workflows",
         "__init__",
         "execute_activity",
         "wait_condition",
@@ -2370,7 +2379,7 @@
         "_install",
         "_Info"
       ],
-      "last_modified": "2026-08-25T14:35:10Z",
+      "last_modified": "2026-09-12T22:45:25Z",
       "id": "runtime/test/test_hitl_gate.py"
     },
     {
@@ -3444,6 +3453,8 @@
         "FrameworkRootError",
         "looks_like_framework",
         "init_tenant",
+        "_actions_dir",
+        "_copy_composite_actions",
         "_cmd_tenant_init",
         "_cmd_doctor",
         "_cmd_shellenv",
@@ -3452,7 +3463,7 @@
         "build_parser",
         "main"
       ],
-      "last_modified": "2026-08-30T11:54:45Z",
+      "last_modified": "2026-09-12T23:03:17Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3467,6 +3478,7 @@
         "test_init_writes_the_config",
         "test_init_never_overwrites_without_force",
         "test_ci_callees_ship_with_their_caller",
+        "test_composite_actions_ship_with_the_workflows_that_use_them",
         "test_unknown_stack_and_isolation_are_refused",
         "test_parser_covers_the_shell_functions_being_replaced",
         "test_every_subcommand_dispatches_somewhere",
@@ -3489,7 +3501,7 @@
         "test_the_declared_version_follows_the_module_not_a_literal",
         "test_the_declared_version_carries_no_source_marker"
       ],
-      "last_modified": "2026-08-30T11:54:05Z",
+      "last_modified": "2026-09-12T23:03:00Z",
       "id": "runtime/test/test_cli.py"
     },
     {
@@ -4269,11 +4281,12 @@
         "_run_post_checkout",
         "test_vendors_scripts_when_missing",
         "test_excludes_frameworks_own_test_suite_and_pycache",
-        "test_never_overwrites_an_existing_scripts_dir",
+        "test_never_overwrites_an_already_vendored_scripts_dir",
+        "test_a_tenants_own_scripts_dir_is_merged_into_not_skipped",
         "test_no_framework_scripts_installed_is_not_fatal",
         "test_unopted_repo_is_not_vendored"
       ],
-      "last_modified": "2026-09-12T15:13:44Z",
+      "last_modified": "2026-09-12T22:50:39Z",
       "id": "scripts/test/test_scripts_vendoring.py"
     },
     {
@@ -4316,12 +4329,57 @@
         "_run_post_checkout",
         "test_vendors_runtime_including_its_test_suite",
         "test_vendors_fixtures_security",
-        "test_never_overwrites_an_existing_runtime_dir",
+        "test_vendors_base_eval_fixtures_run_evals_falls_back_to",
+        "test_base_fixtures_are_per_file_and_leave_a_tenants_own_fixtures_alone",
+        "test_never_overwrites_an_already_vendored_runtime_dir",
+        "test_a_tenants_own_runtime_package_is_never_merged_into_and_says_so",
         "test_never_overwrites_an_existing_fixtures_security_dir",
         "test_no_framework_runtime_or_fixtures_installed_is_not_fatal"
       ],
-      "last_modified": "2026-09-12T21:39:29Z",
+      "last_modified": "2026-09-12T22:50:39Z",
       "id": "scripts/test/test_runtime_and_security_fixtures_vendoring.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_function_source",
+        "_run_upgrade",
+        "_git",
+        "test_first_time_vendored_files_are_committed",
+        "test_upgrade_spares_a_tenants_own_scripts_test_and_runtime_package",
+        "test_upgrade_without_base_fixtures_installed_still_completes"
+      ],
+      "last_modified": "2026-09-12T22:57:26Z",
+      "id": "scripts/test/test_ai_stack_upgrade.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "tenant",
+        "_hook",
+        "_flagged",
+        "test_vendored_files_are_excluded_but_the_tenants_own_files_in_the_same_dir_are_not",
+        "test_an_existing_directory_config_is_never_overwritten",
+        "test_the_framework_itself_carries_no_such_config"
+      ],
+      "last_modified": "2026-09-12T22:55:18Z",
+      "id": "scripts/test/test_vendored_lint_isolation.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_control",
+        "_ctx",
+        "vendored_tenant",
+        "gutted_framework",
+        "test_framework_component_controls_are_not_applicable_in_a_vendored_tenant",
+        "test_the_same_absence_still_fails_in_the_framework_checkout"
+      ],
+      "last_modified": "2026-09-12T22:44:14Z",
+      "id": "scripts/test/test_security_vendored_install.py"
     }
   ],
   "edges": [
@@ -4503,6 +4561,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/security/runners/tool_allowlist.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/_shared.py",
       "target": "runtime/__init__.py"
     },
     {
