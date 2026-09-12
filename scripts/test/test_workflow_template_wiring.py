@@ -158,6 +158,14 @@ def test_security_workflow_installs_the_runtimes_core_dependencies() -> None:
     assert not missing, f"eval-security.yml does not install runtime core deps: {missing}"
 
 
+def test_python_template_pins_ruff_to_the_frameworks_own_version() -> None:
+    """An unpinned linter is a gate that changes without a commit."""
+    pin = re.search(r"^ruff==([\d.]+)", (REPO / "requirements-lint.txt").read_text(encoding="utf-8"), re.M)
+    assert pin, "requirements-lint.txt no longer pins ruff"
+    template = (TEMPLATES / "ci-python-fastapi.yml").read_text(encoding="utf-8")
+    assert f'"ruff=={pin.group(1)}"' in template
+
+
 def test_cd_deploys_only_what_ci_passed() -> None:
     """cd-staging/cd-production ran `on: push` in parallel with CI and nothing
     made them wait — AqlaarTeleologyStudio's production deploy went green on

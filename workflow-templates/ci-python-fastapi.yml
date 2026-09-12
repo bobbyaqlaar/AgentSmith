@@ -46,8 +46,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # ruff PINNED, to the framework's own requirements-lint.txt. Unpinned,
+          # a ruff release changed this gate with no commit: AqlaarTeleologyStudio
+          # resolved 0.16.7, whose defaults grade far more rules than 0.15.x.
+          # Bump deliberately, in this line and your own lock together.
           pip install \
-            pytest pytest-asyncio pytest-cov httpx ruff \
+            pytest pytest-asyncio pytest-cov httpx "ruff==0.15.20" \
             "arize-phoenix>=4.0" \
             "openinference-instrumentation-openai>=0.1.4" \
             "opentelemetry-sdk>=1.20" \
