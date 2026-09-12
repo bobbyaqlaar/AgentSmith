@@ -75,6 +75,48 @@ version table being consulted.
 
 ## [Unreleased]
 
+### `eval-security.yml` no longer runs the framework's own internal security tests against a tenant
+
+`PYTHONPATH=scripts:. pytest scripts/test/test_security_*.py -q` was a step
+in the reusable, tenant-facing `eval-security.yml` — but all 8 of those files
+turned out to be framework-internal, found and confirmed one by one while
+onboarding `AqlaarTeleologyStudio`: `test_security_registry.py` and
+`test_security_evidence_pack.py` read `fixtures/security/control_registry.json`
+off the FRAMEWORK's own repo root (never vendored into a tenant, nor should
+it be); `test_security_pack_seeding.py` runs `hooks/post-checkout` directly;
+`test_security_harness_roots.py` tests that the harness resolves the
+framework's OWN checkout root correctly; `test_security_moderation_declared.py`
+and `test_security_prompt_guard_enforcement.py` fabricate a synthetic tenant
+in `tmp_path` to unit-test the runners' logic, never reading the real repo
+they run in (the former also imports `runtime.moderation`, hitting the same
+`ModuleNotFoundError` as the reverted fix above); `test_security_harness.py`
+just re-invokes `run-security-checks.py --mode smoke`, which the workflow's
+own next step already does directly. None of the 8 produce tenant-specific
+signal — every one either hard-fails on a framework-only path, hits the
+still-open `runtime` gap, or merely re-proves the runners' own logic in the
+abstract.
+
+Confirmed zero coverage loss to the framework's own CI: `self-test.yml`
+already runs `pytest scripts/test/ -v` as an entirely separate step, so
+removing the redundant copy from `eval-security.yml` doesn't drop anything
+there either.
+
+The comment justifying "full requirements, not a minimal four" for the pip
+install step was itself wrong about *why* — it named this same
+`test_security_*.py` glob, when the real dependency is the delegating
+runners in `security/runners/delegating.py` (`SEC-HITL-001` ->
+`runtime/test/test_hitl_gate.py`, `SEC-BUDGET-001` ->
+`runtime/test/test_llm_gateway_budget.py`, `SEC-SELF-001` ->
+`scripts/test/test_workflow_template_wiring.py`), which `run-security-checks.py
+--mode ci --strict` shells out to. Corrected. Those delegate files don't
+exist in a tenant either (same open `runtime`/`scripts/test` vendoring
+question) — `pytest_suite()` in `security/runners/_shared.py` handles a
+missing target file gracefully (`status="fail"`, "is missing — nothing
+verifies this control"), so those specific controls will keep failing
+`--strict` honestly rather than crashing, until that question is resolved.
+This change makes the Security harness fail for the right, already-known
+reason instead of a bogus one — not fully green on its own.
+
 ### `eval-security.yml`'s `pip install -r requirements.txt` now guarded — and a reverted attempt to fix the real `runtime` import gap, left open
 
 `eval-scorecard.yml` and `cd-production.yml` failed on `AqlaarTeleologyStudio`
