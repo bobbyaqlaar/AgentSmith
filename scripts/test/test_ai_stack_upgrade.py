@@ -1,0 +1,83 @@
+"""
+scripts/test/test_ai_stack_upgrade.py — `ai-stack-upgrade` commits what it
+vendors, including files the tenant has never had.
+
+Its "anything to commit?" check was `git diff --quiet`, which ignores untracked
+files. A first-time vendor — runtime/ on a tenant onboarded before runtime/ was
+vendored (KYC Sentinel, AqlaarTeleologyStudio's first pass), or a newly shipped
+base fixture — copied the files, printed "No changes", and committed nothing.
+
+The function lives inside install-ai-stack.sh; it is extracted and sourced on
+its own so the test does not run the installer.
+"""
+
+from __future__ import annotations
+
+import re
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).resolve().parents[2]
+
+pytestmark = pytest.mark.skipif(
+    shutil.which("git") is None or shutil.which("bash") is None,
+    reason="git and bash required",
+)
+
+
+def _function_source() -> str:
+    text = (REPO / "install-ai-stack.sh").read_text(encoding="utf-8")
+    m = re.search(r"^function ai-stack-upgrade\(\) \{\n.*?^\}\n", text, re.S | re.M)
+    assert m, "ai-stack-upgrade not found in install-ai-stack.sh"
+    return m.group(0)
+
+
+def _git(repo: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(repo), "-c", "user.email=t@e.com", "-c", "user.name=T", *args],
+        check=True, capture_output=True, text=True,
+    ).stdout
+
+
+@pytest.mark.parametrize("current_version", ["1.0.0", "9.9.9"])
+def test_first_time_vendored_files_are_committed(tmp_path, monkeypatch, current_version):
+    """9.9.9 = already on the target version, so tenant.yaml is unchanged and
+    the ONLY changes are untracked files — the case `git diff --quiet` missed."""
+    home = tmp_path / "home"
+    fw = home / ".agent-framework"
+    (fw / "scripts").mkdir(parents=True)
+    (fw / "scripts" / "run-evals.py").write_text("# run-evals\n")
+    (fw / "runtime").mkdir()
+    (fw / "runtime" / "judging.py").write_text("# judging\n")
+    (fw / "fixtures" / "security").mkdir(parents=True)
+    (fw / "fixtures" / "security" / "control_registry.json").write_text("[]\n")
+    (fw / "fixtures" / "rag_poison_base.json").write_text("[]\n")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("DISABLE_AI_STACK", "true")
+
+    repo = tmp_path / "tenant"
+    subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(repo)], check=True)
+    (repo / ".agenticframework").mkdir()
+    (repo / ".agenticframework" / "tenant.yaml").write_text(
+        f'tenant:\n  id: t\nframework:\n  version: "{current_version}"\n'
+    )
+    (repo / "scripts").mkdir()
+    (repo / "scripts" / "run-evals.py").write_text("# run-evals\n")  # already current
+    (repo / "fixtures").mkdir()
+    (repo / "fixtures" / "applicants.json").write_text("[]\n")  # tenant-owned
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "initial")
+
+    script = tmp_path / "upgrade.sh"
+    script.write_text(_function_source() + '\nai-stack-upgrade --to 9.9.9\n')
+    result = subprocess.run(["bash", str(script)], cwd=repo, capture_output=True, text=True, check=False)
+
+    assert "No changes" not in result.stdout, result.stdout
+    tracked = set(_git(repo, "ls-files").split())
+    assert "runtime/judging.py" in tracked, result.stdout + result.stderr
+    assert "fixtures/security/control_registry.json" in tracked
+    assert "fixtures/rag_poison_base.json" in tracked
+    assert _git(repo, "status", "--porcelain") == ""

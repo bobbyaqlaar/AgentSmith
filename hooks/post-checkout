@@ -167,6 +167,27 @@ if [ ! -d "$REPO_ROOT/fixtures/security" ]; then
   fi
 fi
 
+# ── Vendor fixtures/*_base.json ───────────────────────────────────────────────
+# run-evals.py falls back to these (file-relative, like control_registry.json)
+# when a tenant has no suite file of its own, "so a fresh tenant gates on
+# something rather than skipping". Never vendored, so in a tenant that fallback
+# found nothing: SEC-RAG-001 failed `need ≥3 rag_poison cases, found 0`
+# (AqlaarTeleologyStudio), and the fairness/hallucination suites loaded zero
+# cases and skipped. Per FILE and never overwritten, not a directory copy: a
+# tenant's own fixtures/ (KYC Sentinel keeps applicants.json there) is theirs.
+if ls "$FRAMEWORK_DIR"/fixtures/*_base.json >/dev/null 2>&1; then
+  SEEDED_BASE=0
+  for BASE in "$FRAMEWORK_DIR"/fixtures/*_base.json; do
+    TARGET="$REPO_ROOT/fixtures/$(basename "$BASE")"
+    if [ ! -f "$TARGET" ]; then
+      mkdir -p "$REPO_ROOT/fixtures"
+      cp "$BASE" "$TARGET"
+      SEEDED_BASE=$((SEEDED_BASE + 1))
+    fi
+  done
+  [ "$SEEDED_BASE" -gt 0 ] && echo "✅ Vendored $SEEDED_BASE base eval fixture(s) into fixtures/"
+fi
+
 # ── Resolve project name and owner ────────────────────────────────────────────
 PROJECT_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$REPO_ROOT")
 OWNER_ID="${AGENT_OWNER_ID:-unknown@unknown}"

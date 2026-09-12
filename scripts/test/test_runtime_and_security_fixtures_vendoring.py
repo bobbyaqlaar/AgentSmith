@@ -61,6 +61,8 @@ def tenant(tmp_path, monkeypatch):
     (fw_fixtures_security / "control_registry.json").write_text("[]\n")
     (fw_fixtures_security / "templates").mkdir()
     (fw_fixtures_security / "templates" / "risk_register.yaml").write_text("entries: []\n")
+    (fw / "fixtures" / "rag_poison_base.json").write_text('[{"id": "framework"}]\n')
+    (fw / "fixtures" / "fairness_evals_base.json").write_text("[]\n")
 
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.delenv("DISABLE_AI_STACK", raising=False)
@@ -106,6 +108,31 @@ def test_vendors_fixtures_security(tenant):
     assert (tenant / "fixtures" / "security" / "control_registry.json").exists()
     assert (tenant / "fixtures" / "security" / "templates" / "risk_register.yaml").exists()
     assert "Vendored fixtures/security/" in result.stdout
+
+
+def test_vendors_base_eval_fixtures_run_evals_falls_back_to(tenant):
+    """run-evals.py reads fixtures/<suite>_base.json file-relative when a tenant
+    has no suite file. Unvendored, SEC-RAG-001 failed `found 0` in
+    AqlaarTeleologyStudio and the fairness/hallucination suites loaded nothing."""
+    result = _run_post_checkout(tenant)
+    assert result.returncode == 0, result.stderr
+    assert (tenant / "fixtures" / "rag_poison_base.json").exists()
+    assert (tenant / "fixtures" / "fairness_evals_base.json").exists()
+
+
+def test_base_fixtures_are_per_file_and_leave_a_tenants_own_fixtures_alone(tenant):
+    """KYC Sentinel keeps its own data in fixtures/. Vendoring must add the
+    missing base files beside it and overwrite nothing."""
+    own = tenant / "fixtures"
+    own.mkdir()
+    (own / "applicants.json").write_text('["tenant data"]\n')
+    (own / "rag_poison_base.json").write_text('[{"id": "tenant-edited"}]\n')
+
+    _run_post_checkout(tenant)
+
+    assert (own / "applicants.json").read_text() == '["tenant data"]\n'
+    assert (own / "rag_poison_base.json").read_text() == '[{"id": "tenant-edited"}]\n'
+    assert (own / "fairness_evals_base.json").exists()
 
 
 def test_never_overwrites_an_existing_runtime_dir(tenant):

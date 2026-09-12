@@ -296,8 +296,14 @@ fi
 
 FIXTURES_SECURITY_DIR="$FRAMEWORK_DIR/fixtures/security"
 if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/fixtures/security" ]; then
-  mkdir -p "$FRAMEWORK_DIR/fixtures"
-  cp -r "$INSTALLER_DIR/fixtures/security" "$FIXTURES_SECURITY_DIR"
+  # `security/.`, not `security`: when the destination already exists — any
+  # re-install — `cp -r src dest` nests the copy at dest/security/ and leaves
+  # the real one stale.
+  mkdir -p "$FIXTURES_SECURITY_DIR"
+  cp -r "$INSTALLER_DIR/fixtures/security/." "$FIXTURES_SECURITY_DIR/"
+  # The base eval fixtures run-evals.py falls back to (file-relative) — the
+  # hook vendors these into tenants per file; see hooks/post-checkout.
+  cp "$INSTALLER_DIR"/fixtures/*_base.json "$FRAMEWORK_DIR/fixtures/" 2>/dev/null || true
   success "fixtures/security/ copied from local repo"
 elif [ -d "$FIXTURES_SECURITY_DIR" ] && [ "$(ls -A "$FIXTURES_SECURITY_DIR" 2>/dev/null)" ]; then
   success "fixtures/security/ already present in ~/.agent-framework/fixtures/security/"
@@ -1310,6 +1316,12 @@ function ai-stack-upgrade() {
   else
     echo "⚠️  No vendored fixtures/security/ found at $fixtures_security_src — skipping."
   fi
+  local base_fixture
+  for base_fixture in "$HOME"/.agent-framework/fixtures/*_base.json; do
+    [ -f "$base_fixture" ] || continue
+    mkdir -p "fixtures"
+    cp "$base_fixture" "fixtures/"
+  done
 
   sed -i.af-upgrade-bak "s/^  version: .*/  version: \"${target_version}\"/" ".agenticframework/tenant.yaml"
   rm -f ".agenticframework/tenant.yaml.af-upgrade-bak"
@@ -1321,8 +1333,14 @@ function ai-stack-upgrade() {
   local vendor_paths=(scripts .agenticframework/tenant.yaml)
   [ -d "runtime" ] && vendor_paths+=(runtime)
   [ -d "fixtures/security" ] && vendor_paths+=(fixtures/security)
+  # A quoted glob is a git pathspec — the base fixtures only, never the rest of
+  # a tenant's own fixtures/.
+  ls fixtures/*_base.json >/dev/null 2>&1 && vendor_paths+=("fixtures/*_base.json")
 
-  if git diff --quiet -- "${vendor_paths[@]}" && git diff --cached --quiet -- "${vendor_paths[@]}"; then
+  # `git status --porcelain`, not `git diff --quiet`: diff ignores untracked
+  # files, so a first-time vendor (runtime/ on an install that predated it, a
+  # new base fixture) reported "No changes" and was never committed.
+  if [ -z "$(git status --porcelain -- "${vendor_paths[@]}")" ]; then
     echo "ℹ️  No changes — ${vendor_paths[*]} already match v${target_version}"
     return 0
   fi
