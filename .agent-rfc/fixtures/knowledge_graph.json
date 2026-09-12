@@ -1117,12 +1117,13 @@
         "test_reusable_security_workflow_matches_its_tenant_template",
         "test_stack_agnostic_templates_do_not_cache_pip_on_tenant_manifests",
         "test_security_workflow_installs_the_runtimes_core_dependencies",
+        "test_vendored_runtime_tests_are_exactly_what_the_security_harness_runs",
         "test_python_template_pins_ruff_to_the_frameworks_own_version",
         "test_cd_deploys_only_what_ci_passed",
         "test_ts_react_template_assumes_no_particular_test_runner_or_script_names",
         "test_hook_actually_writes_every_callee_into_a_fresh_tenant"
       ],
-      "last_modified": "2026-09-12T23:04:40Z",
+      "last_modified": "2026-09-12T23:16:12Z",
       "id": "scripts/test/test_workflow_template_wiring.py"
     },
     {
@@ -4284,9 +4285,10 @@
         "test_never_overwrites_an_already_vendored_scripts_dir",
         "test_a_tenants_own_scripts_dir_is_merged_into_not_skipped",
         "test_no_framework_scripts_installed_is_not_fatal",
-        "test_unopted_repo_is_not_vendored"
+        "test_unopted_repo_is_not_vendored",
+        "test_the_hook_leaves_no_bytecode_in_the_tenant"
       ],
-      "last_modified": "2026-09-12T22:50:39Z",
+      "last_modified": "2026-09-12T23:08:11Z",
       "id": "scripts/test/test_scripts_vendoring.py"
     },
     {
@@ -4336,7 +4338,7 @@
         "test_never_overwrites_an_existing_fixtures_security_dir",
         "test_no_framework_runtime_or_fixtures_installed_is_not_fatal"
       ],
-      "last_modified": "2026-09-12T22:50:39Z",
+      "last_modified": "2026-09-12T23:17:02Z",
       "id": "scripts/test/test_runtime_and_security_fixtures_vendoring.py"
     },
     {
@@ -4348,9 +4350,11 @@
         "_git",
         "test_first_time_vendored_files_are_committed",
         "test_upgrade_spares_a_tenants_own_scripts_test_and_runtime_package",
-        "test_upgrade_without_base_fixtures_installed_still_completes"
+        "test_upgrade_without_base_fixtures_installed_still_completes",
+        "test_upgrade_prunes_framework_internal_runtime_tests",
+        "test_upgrade_refuses_to_vendor_into_a_package_consumer"
       ],
-      "last_modified": "2026-09-12T22:57:26Z",
+      "last_modified": "2026-09-12T23:24:22Z",
       "id": "scripts/test/test_ai_stack_upgrade.py"
     },
     {
@@ -4380,6 +4384,19 @@
       ],
       "last_modified": "2026-09-12T22:44:14Z",
       "id": "scripts/test/test_security_vendored_install.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "framework_home",
+        "_tenant",
+        "_run",
+        "test_a_package_consumer_is_not_vendored_into",
+        "test_a_vendored_tenant_is_still_vendored"
+      ],
+      "last_modified": "2026-09-12T23:23:03Z",
+      "id": "scripts/test/test_installed_runtime_tenant.py"
     }
   ],
   "edges": [
