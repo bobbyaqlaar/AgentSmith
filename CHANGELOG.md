@@ -75,6 +75,37 @@ version table being consulted.
 
 ## [Unreleased]
 
+### `post-checkout` vendors `scripts/` — every generated CI workflow was calling files that were never copied
+
+Also found onboarding `AqlaarTeleologyStudio`, and the more consequential of
+the two gaps that onboarding surfaced. `hooks/post-checkout` has always
+fallen back to `~/.agent-framework/scripts` for its OWN calls
+(`generate-ide-config.py`, `map_codebase.py`) when `$REPO_ROOT/scripts`
+doesn't have them — but that fallback covers only this one invocation.
+Nothing ever copied `scripts/` itself into a tenant, and every generated CI
+workflow (`ci-<stack>.yml`, both `cd-*.yml`, all four `eval-*.yml`) calls
+`python3 scripts/<name>.py` directly from the tenant's own checkout. On a
+GitHub Actions runner — or a collaborator's machine with no
+`~/.agent-framework` — every one of those steps failed with "No such file",
+mostly silently, since most are `continue-on-error` or `|| true`: green CI,
+running nothing.
+
+The only place that ever vendored `scripts/` was `ai-stack-upgrade`, a
+manually-invoked command gated on `.agenticframework/tenant.yaml` already
+existing — never called automatically by either `hooks/post-checkout` or
+`runtime/cli.py`'s `tenant init`. `post-checkout` now vendors `scripts/`
+itself the first time a tenant has none, using the same `$SCRIPTS_DIR`
+source `ai-stack-upgrade` already used, excluding the framework's own
+`scripts/test/` (~2MB of AgentSmith's own fixtures a tenant has no use for)
+and any `__pycache__` — a new exclusion `ai-stack-upgrade` now matches too,
+so the two vendoring paths agree. Seeded once, never overwritten, same
+seed-once pattern as the golden dataset and security pack above: a tenant
+may patch a vendored script, and a routine `git checkout` must not clobber
+it. Pulling in a newer framework version stays `ai-stack-upgrade`'s job.
+
+`scripts/test/test_scripts_vendoring.py` pins this against the real hook in
+a scratch repo, mirroring `test_security_pack_seeding.py`'s approach.
+
 ### Knowledge Graph indexes `docs/superpowers/{specs,plans}/`, not only `.agent-rfc/`
 
 Found onboarding `AqlaarTeleologyStudio`: a repo that adopted Anthropic's

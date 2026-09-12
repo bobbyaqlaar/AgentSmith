@@ -1233,6 +1233,10 @@ function ai-stack-upgrade() {
   echo "📦 Upgrading vendored scripts to v${target_version}..."
   mkdir -p "scripts"
   cp -r "$vendor_src/." "scripts/"
+  # The framework's own test suite and fixtures (~2MB) — a tenant runs its
+  # own tests, not AgentSmith's, and has no use for them. Same exclusion
+  # hooks/post-checkout applies on first vendor, so the two paths agree.
+  rm -rf "scripts/test"
   find "scripts" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
   echo "✅ Copied vendored scripts from $vendor_src"
 

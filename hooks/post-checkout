@@ -94,6 +94,37 @@ if [ -d "$SECURITY_TEMPLATES" ]; then
   fi
 fi
 
+# ── Vendor scripts/ from the framework ────────────────────────────────────────
+# Found onboarding AqlaarTeleologyStudio: every generated CI workflow calls
+# `python3 scripts/<name>.py` directly from the tenant's OWN repo — not
+# through this hook's own fallback-to-$SCRIPTS_DIR logic below, which only
+# covers this invocation's own calls (generate-ide-config.py, map_codebase.py)
+# and nothing a GitHub Actions runner or a collaborator's machine with no
+# ~/.agent-framework does later. Nothing ever copied scripts/ itself into the
+# tenant, so every one of those calls failed with "No such file" — mostly
+# silently, since most of those CI steps are non-blocking.
+#
+# Seeded once, like the other tenant-owned artifacts above: a tenant may
+# patch a vendored script, and a routine `git checkout` firing this hook must
+# not silently clobber that. Pulling in newer framework scripts later is
+# `ai-stack-upgrade`'s job, deliberately (same $SCRIPTS_DIR source, same
+# test/-and-__pycache__ exclusion as of this change) — this only covers the
+# case where scripts/ has never existed in the tenant at all.
+if [ ! -d "$REPO_ROOT/scripts" ]; then
+  if [ -d "$SCRIPTS_DIR" ] && [ -n "$(ls -A "$SCRIPTS_DIR" 2>/dev/null)" ]; then
+    mkdir -p "$REPO_ROOT/scripts"
+    cp -r "$SCRIPTS_DIR/." "$REPO_ROOT/scripts/"
+    # The framework's own test suite and fixtures (~2MB) — a tenant runs its
+    # own tests, not AgentSmith's, and has no use for them.
+    rm -rf "$REPO_ROOT/scripts/test"
+    find "$REPO_ROOT/scripts" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    VENDORED_COUNT=$(find "$REPO_ROOT/scripts" -name "*.py" | wc -l | tr -d ' ')
+    echo "✅ Vendored scripts/ from $SCRIPTS_DIR ($VENDORED_COUNT files)"
+  else
+    echo "⚠️  ~/.agent-framework/scripts/ missing — scripts/ not vendored. Every scripts/*.py call in .github/workflows/*.yml will fail. Re-run install-ai-stack.sh."
+  fi
+fi
+
 # ── Resolve project name and owner ────────────────────────────────────────────
 PROJECT_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$REPO_ROOT")
 OWNER_ID="${AGENT_OWNER_ID:-unknown@unknown}"
