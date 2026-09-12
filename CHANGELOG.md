@@ -75,6 +75,22 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Knowledge Graph indexes `docs/superpowers/{specs,plans}/`, not only `.agent-rfc/`
+
+Found onboarding `AqlaarTeleologyStudio`: a repo that adopted Anthropic's
+superpowers skill before AgentSmith has its spec-before-code history in
+`docs/superpowers/{specs,plans}/`, and `map_codebase.py` only ever wired
+`.agent-rfc/` into the graph — so a freshly provisioned `.agent-rfc/`
+(fixtures/security placeholders, no design docs) made the repo's REAL spec
+history invisible to the graph, while its actual design authority sat one
+directory over, unindexed. `_extract_guardrails_from_superpowers()` mirrors
+the existing `.agent-rfc/` extractor and both now run unconditionally,
+keyed by a source-tagged `rule_id` (`rfc:*` vs `superpowers:spec:*` /
+`superpowers:plan:*`) — the walker does not pick a convention for a repo;
+it indexes whichever exist so which one is a given repo's actual spec
+authority is a queryable graph fact instead of a static editorial call
+baked into a generated `CLAUDE.md`.
+
 ### Design-phase and validation-phase playbooks, wired to every IDE target
 
 Two new documents, both derived from `docs/review-levers.md` rather than

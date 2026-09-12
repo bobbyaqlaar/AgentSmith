@@ -5,7 +5,15 @@ Walks .py, .ts, .tsx, .js, .jsx, and .go files in the repo root.
 Extracts top-level symbols (functions, classes, exports, interfaces).
 Detects import relationships and writes edges to the graph.
 Purges stale CodebaseFile nodes for deleted files.
-Wires Guardrail nodes from .cursorrules and .agent-rfc/ markdown files.
+Wires Guardrail nodes from .cursorrules and .agent-rfc/ markdown files, and
+from docs/superpowers/{specs,plans}/ when a repo uses Anthropic's superpowers
+skill for its spec-before-code artifacts instead of (or alongside) .agent-rfc/
+— see _extract_guardrails_from_superpowers. Both sources are indexed
+unconditionally, keyed by a source-tagged rule_id (`rfc:*` vs
+`superpowers:*`), rather than the walker picking one convention for a repo:
+which one is a given repo's actual spec authority is a fact about that repo
+(often "whichever directory has content"), not something this script should
+decide on its own.
 
 Called by the post-commit and post-checkout hooks automatically.
 Also runnable directly: python3 scripts/map_codebase.py
@@ -217,6 +225,36 @@ def _extract_guardrails_from_rfc(rfc_dir: Path) -> list[dict]:
     return guardrails
 
 
+def _extract_guardrails_from_superpowers(superpowers_dir: Path) -> list[dict]:
+    """Mirror of `_extract_guardrails_from_rfc` for the superpowers skill's own
+    spec-before-code convention (`docs/superpowers/specs/`,
+    `docs/superpowers/plans/`). A repo that adopted superpowers before — or
+    instead of — AgentSmith's `.agent-rfc/` still has its design history
+    somewhere; this makes it visible in the graph rather than invisible next
+    to an empty `.agent-rfc/`."""
+    guardrails = []
+    for kind in ("specs", "plans"):
+        kind_dir = superpowers_dir / kind
+        if not kind_dir.exists():
+            continue
+        for md_file in kind_dir.glob("**/*.md"):
+            try:
+                text = md_file.read_text(encoding="utf-8", errors="replace")
+                m = re.search(r"^#{1,2}\s+(.+)$", text, re.MULTILINE)
+                title = m.group(1).strip() if m else md_file.stem
+                guardrails.append(
+                    {
+                        "rule_id": f"superpowers:{kind[:-1]}:{md_file.relative_to(superpowers_dir)}",
+                        "title": title,
+                        "pillar": None,
+                        "source_file": str(md_file),
+                    }
+                )
+            except Exception:  # fail-open, same as the RFC extractor above
+                pass
+    return guardrails
+
+
 # ── Resolve local import to file path ─────────────────────────────────────────
 
 
@@ -372,6 +410,15 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
     rfc_dir = root / ".agent-rfc"
     if rfc_dir.exists():
         for gr in _extract_guardrails_from_rfc(rfc_dir):
+            kg.upsert_guardrail(
+                gr["rule_id"], gr["title"], gr["source_file"], gr["pillar"]
+            )
+            stats["guardrails"] += 1
+
+    # ── Extract guardrails from docs/superpowers/ (specs + plans) ─────────────
+    superpowers_dir = root / "docs" / "superpowers"
+    if superpowers_dir.exists():
+        for gr in _extract_guardrails_from_superpowers(superpowers_dir):
             kg.upsert_guardrail(
                 gr["rule_id"], gr["title"], gr["source_file"], gr["pillar"]
             )

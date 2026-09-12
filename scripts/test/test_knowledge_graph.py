@@ -151,3 +151,28 @@ def test_walker_extracts_guardrails(repo):
     (rfc / "001-auth.md").write_text("# RFC 001 — Auth\n")
     stats = map_codebase.run_map()
     assert stats["guardrails"] == 2
+
+
+def test_walker_extracts_superpowers_guardrails_alongside_rfc(repo):
+    """A repo using the superpowers skill's docs/superpowers/{specs,plans}
+    instead of (or alongside) .agent-rfc/ must not go invisible to the graph
+    just because .agent-rfc/ is empty or absent — see AqlaarTeleologyStudio,
+    the tenant this was found against."""
+    _write_sample(repo)
+    specs = repo / "docs" / "superpowers" / "specs"
+    plans = repo / "docs" / "superpowers" / "plans"
+    specs.mkdir(parents=True)
+    plans.mkdir(parents=True)
+    (specs / "001-ingest.md").write_text("# Spec 001 — Ingest pipeline\n")
+    (plans / "001-ingest.md").write_text("# Plan 001 — Ingest pipeline\n")
+    stats = map_codebase.run_map()
+    assert stats["guardrails"] == 2
+
+    kg = AgentKnowledgeGraph()
+    rule_ids = {
+        n
+        for n, d in kg._g.nodes(data=True)
+        if d.get("node_type") == "Guardrail"
+    }
+    assert "superpowers:spec:specs/001-ingest.md" in rule_ids
+    assert "superpowers:plan:plans/001-ingest.md" in rule_ids
