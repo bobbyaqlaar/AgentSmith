@@ -75,6 +75,46 @@ version table being consulted.
 
 ## [Unreleased]
 
+### `runtime/` and `fixtures/security/` vendored — the real answer to the `agentsmith-runtime` question
+
+Resolves the question left open two entries below: how does a tenant's CI
+runner — which only ever has its own checked-out repo, no `$AGENTSMITH_DIR`,
+no `~/.agent-framework/` — reach framework-owned assets? Verified before
+committing to this: `runtime.judging`, `runtime.trace_redactor` and
+`runtime.moderation` (the three modules actually failing) form a pure-stdlib
+import graph, zero third-party dependencies — vendoring is lightweight, not
+"ship a production worker into every tenant." Neither `runtime/` nor
+`fixtures/security/` was vendored anywhere before this, not even into
+`~/.agent-framework/` — the pip-install story was aspirational from the
+start.
+
+`install-ai-stack.sh` now vendors both into `~/.agent-framework/` (local
+checkout only, same as the design/validation playbook docs — no
+GitHub-release tarball for either yet). `hooks/post-checkout` vendors both
+into a fresh tenant the same way `scripts/` now is: seeded once, never
+overwritten. `ai-stack-upgrade` extended to match, pathspec-safe when either
+was skipped by an install predating this step.
+
+One asymmetry, deliberate: unlike `scripts/test/` (excluded — tests the
+framework's own provisioning mechanics), `runtime/test/` is vendored WHOLE.
+`test_hitl_gate.py`, `test_dead_letter.py`, `test_llm_gateway_budget.py` and
+`test_self_correction.py` verify the LIBRARY's own correctness — genuine
+evidence for any tenant depending on it, not framework navel-gazing. All
+four are explicitly infra-free by design (fakes, no Temporal/Postgres).
+
+Found in the process, and fixed in the same pass: `SEC-SELF-001` was bound
+to `scripts/test/test_workflow_template_wiring.py` — a workflow-YAML
+consistency check, unrelated to self-correction, and (being
+framework-provisioning-relative) unable to even resolve in a tenant. It
+never evidenced this control at all, anywhere, including the framework's own
+self-test. Rebound to `runtime/test/test_self_correction.py`, the suite that
+actually exists for this. Verified directly: `pass`.
+
+`scripts/test/test_runtime_and_security_fixtures_vendoring.py` pins the new
+vendoring against the real hook, mirroring
+`test_scripts_vendoring.py`. Mutation-checked: 3 of 5 fail without the hook
+change (confirmed by reverting `hooks/post-checkout` alone and re-running).
+
 ### `eval-security.yml` no longer runs the framework's own internal security tests against a tenant
 
 `PYTHONPATH=scripts:. pytest scripts/test/test_security_*.py -q` was a step

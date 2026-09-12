@@ -74,9 +74,21 @@ def dlq_check(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
 
 
 def self_correction(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
-    """SEC-SELF-001 — the recoverable-step / self-correction wrappers are
-    asserted by the workflow-template suite."""
-    return pytest_suite(control, ctx, "scripts/test/test_workflow_template_wiring.py")
+    """SEC-SELF-001 — the recoverable-step / self-correction wrappers.
+
+    Was bound to scripts/test/test_workflow_template_wiring.py — a check of
+    workflow YAML consistency (callee references, the hooks/post-checkout
+    array matching runtime/cli.py's WORKFLOWS), unrelated to self-correction
+    and, being framework-provisioning-relative, unable to even resolve in a
+    tenant (it reads workflow-templates/ and hooks/ off its own REPO,
+    file-relative — those don't exist in a tenant either). Found while
+    working through why SEC-SELF-001 couldn't be vendored into
+    AqlaarTeleologyStudio: it never evidenced this control at all, in the
+    framework's own self-test or anywhere else. test_self_correction.py
+    is the real evidence — infra-free (fakes the gateway, no Temporal), same
+    design as test_hitl_gate.py and test_dead_letter.py above.
+    """
+    return pytest_suite(control, ctx, "runtime/test/test_self_correction.py")
 
 
 def budget_caps(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:

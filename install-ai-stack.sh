@@ -265,6 +265,44 @@ else
   fi
 fi
 
+# runtime/ (the production runtime library, `pip install agentsmith-runtime`
+# nowhere actually resolves — confirmed against PyPI's own API: no such
+# project exists there) and fixtures/security/ (the control registry
+# run-security-checks.py's --mode ci/--strict needs — _install_root() only
+# ever looks file-relative, never at $AGENTSMITH_DIR, so it crashed outright
+# in any tenant). Found onboarding AqlaarTeleologyStudio. Vendored the same
+# way scripts/ now is: no GitHub-release tarball for either yet, so this
+# copies from a local checkout only and warns rather than downloads — same
+# as the design/validation playbook docs step below.
+RUNTIME_DIR="$FRAMEWORK_DIR/runtime"
+if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/runtime" ]; then
+  mkdir -p "$RUNTIME_DIR"
+  cp -r "$INSTALLER_DIR/runtime/." "$RUNTIME_DIR/"
+  find "$RUNTIME_DIR" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+  success "runtime/ copied from local repo"
+elif [ -d "$RUNTIME_DIR" ] && [ "$(ls -A "$RUNTIME_DIR" 2>/dev/null)" ]; then
+  success "runtime/ already present in ~/.agent-framework/runtime/"
+else
+  warn "Not running from a local checkout — runtime/ not vendored. Any tenant"
+  warn "script that imports runtime.* (run-evals.py, verify_system.py"
+  warn "--check-redaction) will fail with ModuleNotFoundError until this machine"
+  warn "clones the repo and re-runs install-ai-stack.sh."
+fi
+
+FIXTURES_SECURITY_DIR="$FRAMEWORK_DIR/fixtures/security"
+if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/fixtures/security" ]; then
+  mkdir -p "$FRAMEWORK_DIR/fixtures"
+  cp -r "$INSTALLER_DIR/fixtures/security" "$FIXTURES_SECURITY_DIR"
+  success "fixtures/security/ copied from local repo"
+elif [ -d "$FIXTURES_SECURITY_DIR" ] && [ "$(ls -A "$FIXTURES_SECURITY_DIR" 2>/dev/null)" ]; then
+  success "fixtures/security/ already present in ~/.agent-framework/fixtures/security/"
+else
+  warn "Not running from a local checkout — fixtures/security/ not vendored."
+  warn "run-security-checks.py --mode ci/--strict will crash on a missing"
+  warn "control_registry.json in any tenant until this machine clones the repo"
+  warn "and re-runs install-ai-stack.sh."
+fi
+
 if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/workflow-templates" ]; then
   cp -r "$INSTALLER_DIR/workflow-templates/." "$WORKFLOW_TEMPLATES_DIR/"
   success "Workflow templates copied from local repo"
@@ -1240,16 +1278,50 @@ function ai-stack-upgrade() {
   find "scripts" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
   echo "✅ Copied vendored scripts from $vendor_src"
 
+  # runtime/ and fixtures/security/ — unlike scripts/test/, runtime/test/ is
+  # NOT excluded: those suites (test_hitl_gate.py, test_dead_letter.py,
+  # test_llm_gateway_budget.py, test_self_correction.py) verify the LIBRARY's
+  # own correctness, which is genuinely relevant to a tenant depending on it,
+  # not framework provisioning mechanics the way scripts/test/ is. Optional —
+  # an install predating this step should not block an otherwise-working
+  # scripts/ upgrade.
+  local runtime_src="$HOME/.agent-framework/runtime"
+  if [ -d "$runtime_src" ] && [ -n "$(ls -A "$runtime_src" 2>/dev/null)" ]; then
+    mkdir -p "runtime"
+    cp -r "$runtime_src/." "runtime/"
+    find "runtime" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    echo "✅ Copied vendored runtime/ from $runtime_src"
+  else
+    echo "⚠️  No vendored runtime/ found at $runtime_src — skipping. Re-run"
+    echo "   install-ai-stack.sh from a live checkout to pick it up."
+  fi
+
+  local fixtures_security_src="$HOME/.agent-framework/fixtures/security"
+  if [ -d "$fixtures_security_src" ] && [ -n "$(ls -A "$fixtures_security_src" 2>/dev/null)" ]; then
+    mkdir -p "fixtures/security"
+    cp -r "$fixtures_security_src/." "fixtures/security/"
+    echo "✅ Copied vendored fixtures/security/ from $fixtures_security_src"
+  else
+    echo "⚠️  No vendored fixtures/security/ found at $fixtures_security_src — skipping."
+  fi
+
   sed -i.af-upgrade-bak "s/^  version: .*/  version: \"${target_version}\"/" ".agenticframework/tenant.yaml"
   rm -f ".agenticframework/tenant.yaml.af-upgrade-bak"
   echo "✅ Updated .agenticframework/tenant.yaml -> framework.version: \"${target_version}\""
 
-  if git diff --quiet -- scripts .agenticframework/tenant.yaml && git diff --cached --quiet -- scripts .agenticframework/tenant.yaml; then
-    echo "ℹ️  No changes — scripts/ and tenant.yaml already match v${target_version}"
+  # Built conditionally: `git add`/`git diff` on a pathspec that matched
+  # nothing (runtime/ or fixtures/security/ skipped above, e.g. an install
+  # predating this step) aborts the WHOLE command rather than just that path.
+  local vendor_paths=(scripts .agenticframework/tenant.yaml)
+  [ -d "runtime" ] && vendor_paths+=(runtime)
+  [ -d "fixtures/security" ] && vendor_paths+=(fixtures/security)
+
+  if git diff --quiet -- "${vendor_paths[@]}" && git diff --cached --quiet -- "${vendor_paths[@]}"; then
+    echo "ℹ️  No changes — ${vendor_paths[*]} already match v${target_version}"
     return 0
   fi
 
-  git add scripts .agenticframework/tenant.yaml
+  git add "${vendor_paths[@]}"
   if ! git commit -m "chore(framework): upgrade AgentSmith to v${target_version}"; then
     echo "❌ git commit failed (blocked by a hook, GPG-sign required and unavailable, etc.) —"
     echo "   scripts/ and tenant.yaml were updated and staged but NOT committed. Fix the issue and re-run:"

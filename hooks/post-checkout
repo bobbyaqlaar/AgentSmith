@@ -125,6 +125,44 @@ if [ ! -d "$REPO_ROOT/scripts" ]; then
   fi
 fi
 
+# ── Vendor runtime/ and fixtures/security/ from the framework ────────────────
+# Same gap as scripts/ above, found in the same pass: `run-evals.py` and
+# `verify_system.py --check-redaction` import `runtime.*`, and
+# `run-security-checks.py --mode ci/--strict` reads
+# `fixtures/security/control_registry.json` via `_install_root()`, which is
+# file-relative and never consults $AGENTSMITH_DIR — so once vendored into a
+# tenant, it resolves against the TENANT's own root, not the framework's.
+# `pip install agentsmith-runtime` is not a working substitute: confirmed
+# against PyPI's own API, no such project is published there.
+#
+# Unlike scripts/test/ (excluded — tests the framework's OWN provisioning
+# mechanics), runtime/test/ is vendored WHOLE: test_hitl_gate.py,
+# test_dead_letter.py, test_llm_gateway_budget.py and test_self_correction.py
+# verify the LIBRARY's own correctness, which is genuine evidence for any
+# tenant depending on it, not framework navel-gazing.
+if [ ! -d "$REPO_ROOT/runtime" ]; then
+  RUNTIME_DIR="$FRAMEWORK_DIR/runtime"
+  if [ -d "$RUNTIME_DIR" ] && [ -n "$(ls -A "$RUNTIME_DIR" 2>/dev/null)" ]; then
+    mkdir -p "$REPO_ROOT/runtime"
+    cp -r "$RUNTIME_DIR/." "$REPO_ROOT/runtime/"
+    find "$REPO_ROOT/runtime" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    echo "✅ Vendored runtime/ from $RUNTIME_DIR"
+  else
+    echo "⚠️  ~/.agent-framework/runtime/ missing — runtime/ not vendored. Any script importing runtime.* will fail with ModuleNotFoundError. Re-run install-ai-stack.sh."
+  fi
+fi
+
+if [ ! -d "$REPO_ROOT/fixtures/security" ]; then
+  FIXTURES_SECURITY_DIR="$FRAMEWORK_DIR/fixtures/security"
+  if [ -d "$FIXTURES_SECURITY_DIR" ] && [ -n "$(ls -A "$FIXTURES_SECURITY_DIR" 2>/dev/null)" ]; then
+    mkdir -p "$REPO_ROOT/fixtures"
+    cp -r "$FIXTURES_SECURITY_DIR" "$REPO_ROOT/fixtures/security"
+    echo "✅ Vendored fixtures/security/ from $FIXTURES_SECURITY_DIR"
+  else
+    echo "⚠️  ~/.agent-framework/fixtures/security/ missing — fixtures/security/ not vendored. run-security-checks.py --mode ci/--strict will crash on a missing control_registry.json. Re-run install-ai-stack.sh."
+  fi
+fi
+
 # ── Resolve project name and owner ────────────────────────────────────────────
 PROJECT_NAME=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || basename "$REPO_ROOT")
 OWNER_ID="${AGENT_OWNER_ID:-unknown@unknown}"
