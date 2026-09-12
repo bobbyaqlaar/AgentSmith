@@ -141,6 +141,23 @@ def test_stack_agnostic_templates_do_not_cache_pip_on_tenant_manifests() -> None
     )
 
 
+def test_security_workflow_installs_the_runtimes_core_dependencies() -> None:
+    """eval-security.yml delegates controls to runtime/test/ suites, which import
+    the runtime — so it must install what the runtime itself requires. It
+    didn't: SEC-BUDGET-001 failed in AqlaarTeleologyStudio on `No module named
+    'httpx'`, a missing dependency reported as a control violation."""
+    import tomllib
+
+    deps = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))["project"]["dependencies"]
+    names = {re.split(r"[<>=!~\[ ]", d, maxsplit=1)[0].lower() for d in deps}
+    installs = " ".join(
+        ln for ln in (TEMPLATES / "eval-security.yml").read_text(encoding="utf-8").splitlines()
+        if "pip install" in ln
+    ).lower()
+    missing = {n for n in names if not re.search(rf'(^|[\s"]){re.escape(n)}([<>=\s"]|$)', installs)}
+    assert not missing, f"eval-security.yml does not install runtime core deps: {missing}"
+
+
 def test_ts_react_template_assumes_no_particular_test_runner_or_script_names() -> None:
     """A stock `create-vite` react-ts scaffold defines neither a `tsc` script
     nor Jest: `npm run tsc` failed with `Missing script`, and Vitest rejects
