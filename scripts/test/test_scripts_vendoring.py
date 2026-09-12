@@ -159,3 +159,32 @@ def test_unopted_repo_is_not_vendored(tenant):
 
     assert "not opted in" in result.stdout
     assert not (tenant / "scripts").exists()
+
+
+def test_the_hook_leaves_no_bytecode_in_the_tenant(tenant, tmp_path, monkeypatch):
+    """The hook runs Python from the scripts/ it just vendored; unguarded, that
+    wrote scripts/__pycache__/*.pyc, and a Go or TS tenant with no Python
+    .gitignore committed it (a scratch Go tenant's first commit did).
+
+    `python3` is pinned to this interpreter: macOS's /usr/bin/python3 sets a
+    pycache_prefix under ~/Library/Caches, which hides the defect locally while
+    every Linux CI runner writes the bytecode into the tree."""
+    import os
+    import sys
+
+    shim = tmp_path / "bin"
+    shim.mkdir()
+    (shim / "python3").symlink_to(sys.executable)
+    monkeypatch.setenv("PATH", f"{shim}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.delenv("PYTHONPYCACHEPREFIX", raising=False)
+    monkeypatch.delenv("PYTHONDONTWRITEBYTECODE", raising=False)
+    home_scripts = Path(os.environ["HOME"]) / ".agent-framework" / "scripts"
+    (home_scripts / "map_codebase.py").write_text("import _shared  # noqa: F401\n")
+    (home_scripts / "_shared.py").write_text("X = 1\n")
+
+    result = _run_post_checkout(tenant)
+
+    assert result.returncode == 0, result.stderr
+    assert (tenant / "scripts" / "_shared.py").exists()
+    assert not list(tenant.rglob("*.pyc")), "the hook left bytecode for the tenant to commit"
+

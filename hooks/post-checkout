@@ -32,6 +32,13 @@ fi
 FRAMEWORK_DIR="$HOME/.agent-framework"
 SCRIPTS_DIR="$FRAMEWORK_DIR/scripts"
 
+# This hook runs Python out of the scripts/ it has just vendored
+# (generate-ide-config.py, map_codebase.py), and Python writes
+# scripts/__pycache__/*.pyc beside them. A tenant whose .gitignore does not
+# already cover Python — any Go or TS repo — then commits bytecode: found in a
+# scratch Go tenant's very first commit. Same class as runtime/.hitl_blobs.
+export PYTHONDONTWRITEBYTECODE=1
+
 # Keep vendored framework code out of the TENANT's lint/format gates.
 #
 # ci-python-fastapi.yml runs `ruff check .` and `ruff format --check .` with
