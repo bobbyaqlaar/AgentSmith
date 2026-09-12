@@ -4,7 +4,7 @@ from typing import Any
 
 from security.registry import ControlSpec
 from security.report import ControlResult
-from security.runners._shared import failed, framework_root, node_suite
+from security.runners._shared import failed, framework_component_absent, framework_root, node_suite
 
 
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
@@ -16,6 +16,9 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     exercising an implementation that has been gutted. Running the portal test
     is the part three controls now share, and lives in `node_suite`.
     """
+    absent = framework_component_absent(control, ctx, "portal")
+    if absent is not None:
+        return absent
     portal = framework_root(ctx) / "portal"
     mode_file = portal / "lib" / "ssoRevocationMode.ts"
     middleware = portal / "middleware.ts"

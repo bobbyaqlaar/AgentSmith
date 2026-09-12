@@ -29,6 +29,7 @@ from security.report import ControlResult
 from security.runners._shared import (
     eval_suite_gateable,
     failed,
+    framework_component_absent,
     guard_suite,
     node_suite,
     passed,
@@ -106,7 +107,16 @@ def budget_caps(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
 
 
 def change_gates(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
-    """SEC-CHANGE-001 — the hooks that enforce RFC/commit discipline."""
+    """SEC-CHANGE-001 — the hooks that enforce RFC/commit discipline.
+
+    `--check-hooks` runs the framework's own `hooks/pre-commit` and
+    `hooks/commit-msg` in throwaway repos. A vendored tenant has no `hooks/`,
+    so without the guard every tenant failed this control on
+    `bash: …/hooks/pre-commit: No such file` — a missing framework file, not a
+    tenant's change discipline."""
+    absent = framework_component_absent(control, ctx, "hooks")
+    if absent is not None:
+        return absent
     return verify_system(control, ctx, "--check-hooks")
 
 

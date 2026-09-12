@@ -324,6 +324,41 @@ def not_applicable(control: ControlSpec, message: str, **evidence: str) -> Contr
     )
 
 
+def framework_component_absent(
+    control: ControlSpec, ctx: dict[str, Any], component: str
+) -> Optional[ControlResult]:
+    """`not applicable` when a VENDORED install lacks a framework-only component.
+
+    Some controls verify AgentSmith's own components — the Ops Portal
+    (`portal/`), the git hooks (`hooks/`) — rather than anything a tenant
+    owns. A tenant receives `scripts/`, `runtime/` and `fixtures/security/`
+    vendored into its own tree, never those, so the install root there is the
+    tenant's and the component is structurally absent. Reporting that as
+    `fail: missing portal files` told AqlaarTeleologyStudio its compliance was
+    broken when its repo had nothing to do with it: three of its nine strict
+    failures were this.
+
+    Returns None — run the check — whenever the component exists OR the
+    install root is the framework's own checkout. The second condition is the
+    point: in the framework, a missing portal file is exactly what these
+    controls exist to catch, and must keep failing.
+    """
+    root = framework_root(ctx)
+    if (root / component).exists():
+        return None
+    try:
+        from runtime.cli import looks_like_framework
+    except ImportError:  # fail-open: no runtime to ask, so run the real check
+        return None
+    if looks_like_framework(root):
+        return None
+    return not_applicable(
+        control,
+        f"verifies AgentSmith's own {component}/, which is not vendored into a "
+        f"tenant — evidenced by the framework's self-test, not by this repo",
+    )
+
+
 def security_fixture(
     control: ControlSpec, ctx: dict[str, Any], name: str
 ) -> tuple[list | None, ControlResult | None]:
@@ -368,6 +403,9 @@ def node_suite(
     import. Same lesson as `return 2` for graceful skip: the fix landed at one
     call site and not its siblings.
     """
+    absent = framework_component_absent(control, ctx, "portal")
+    if absent is not None:
+        return absent
     root = framework_root(ctx)
     portal = root / "portal"
     target = portal / rel_path
