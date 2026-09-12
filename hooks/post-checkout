@@ -86,6 +86,27 @@ fi
 
 echo "🔧 AgentSmith: Detected stack [$STACK]"
 
+# ── Installed-runtime tenants are not vendored into ───────────────────────────
+# Two ways to consume AgentSmith, and this hook used to assume only one. A
+# tenant that declares `agentsmith-runtime` as a dependency (KYC Sentinel pins
+# `agentsmith-runtime @ git+https://…@v1.3.0`) runs the harness from a
+# framework checkout in its own CI and imports the runtime it pinned. Vendoring
+# into it does damage, verified on a hook-free clone of KYC Sentinel: runtime/
+# at the repo root SHADOWS the pinned package for every script run from there
+# (demo.py, worker.py), silently replacing v1.3.0 with whatever this machine
+# has installed; 44 framework scripts land in its own scripts/; and seven
+# generated workflows appear — cd-production.yml among them — built for the
+# vendored layout it does not have. Such a tenant gets IDE rules, the security
+# pack and the Knowledge Graph, and nothing that assumes vendoring.
+INSTALLED_RUNTIME=0
+if grep -qsE '^[[:space:]"'"'"']*agentsmith-runtime' "$REPO_ROOT"/requirements*.txt "$REPO_ROOT/pyproject.toml" 2>/dev/null \
+   && ! grep -qs '^name = "agentsmith-runtime"' "$REPO_ROOT/pyproject.toml"; then
+  INSTALLED_RUNTIME=1
+  echo "ℹ️  This repo depends on agentsmith-runtime as a package — installed mode:"
+  echo "   scripts/, runtime/ and fixtures/ are NOT vendored, and the generated CI/CD workflows are NOT written"
+  echo "   (they assume vendored scripts/). Run the harness from a framework checkout, as KYC Sentinel's ci.yml does."
+fi
+
 # ── Create .agent-rfc/ structure ─────────────────────────────────────────────
 mkdir -p "$REPO_ROOT/.agent-rfc/fixtures"
 
@@ -158,7 +179,7 @@ fi
 # SILENTLY, leaving every scripts/*.py CI call to fail. Such a directory is
 # merged into without overwriting anything, from a pruned staging copy: pruning
 # test/ AFTER copying would delete the tenant's own scripts/test/.
-if [ ! -f "$REPO_ROOT/scripts/run-security-checks.py" ]; then
+if [ "$INSTALLED_RUNTIME" -eq 0 ] && [ ! -f "$REPO_ROOT/scripts/run-security-checks.py" ]; then
   if [ -d "$SCRIPTS_DIR" ] && [ -n "$(ls -A "$SCRIPTS_DIR" 2>/dev/null)" ]; then
     PRE_EXISTING_SCRIPTS=0
     [ -d "$REPO_ROOT/scripts" ] && PRE_EXISTING_SCRIPTS=1
@@ -219,7 +240,9 @@ fi
 # AgentSmith's own CI. TENANT_RUNTIME_TESTS is pinned to the harness's
 # pytest_suite() bindings by scripts/test/test_workflow_template_wiring.py.
 TENANT_RUNTIME_TESTS=(conftest.py test_hitl_gate.py test_dead_letter.py test_llm_gateway_budget.py test_self_correction.py)
-if [ -d "$REPO_ROOT/runtime" ] && [ ! -f "$REPO_ROOT/runtime/llm_gateway.py" ]; then
+if [ "$INSTALLED_RUNTIME" -eq 1 ]; then
+  :  # see "Installed-runtime tenants" above
+elif [ -d "$REPO_ROOT/runtime" ] && [ ! -f "$REPO_ROOT/runtime/llm_gateway.py" ]; then
   # `runtime` is a generic package name (pyproject.toml says as much). A
   # tenant's OWN runtime/ is never merged into: framework modules would import
   # the tenant's same-named ones and both would break. Said loudly, because
@@ -248,7 +271,7 @@ elif [ ! -d "$REPO_ROOT/runtime" ]; then
   fi
 fi
 
-if [ ! -d "$REPO_ROOT/fixtures/security" ]; then
+if [ "$INSTALLED_RUNTIME" -eq 0 ] && [ ! -d "$REPO_ROOT/fixtures/security" ]; then
   FIXTURES_SECURITY_DIR="$FRAMEWORK_DIR/fixtures/security"
   if [ -d "$FIXTURES_SECURITY_DIR" ] && [ -n "$(ls -A "$FIXTURES_SECURITY_DIR" 2>/dev/null)" ]; then
     mkdir -p "$REPO_ROOT/fixtures"
@@ -267,7 +290,7 @@ fi
 # (AqlaarTeleologyStudio), and the fairness/hallucination suites loaded zero
 # cases and skipped. Per FILE and never overwritten, not a directory copy: a
 # tenant's own fixtures/ (KYC Sentinel keeps applicants.json there) is theirs.
-if ls "$FRAMEWORK_DIR"/fixtures/*_base.json >/dev/null 2>&1; then
+if [ "$INSTALLED_RUNTIME" -eq 0 ] && ls "$FRAMEWORK_DIR"/fixtures/*_base.json >/dev/null 2>&1; then
   SEEDED_BASE=0
   for BASE in "$FRAMEWORK_DIR"/fixtures/*_base.json; do
     TARGET="$REPO_ROOT/fixtures/$(basename "$BASE")"
@@ -342,7 +365,7 @@ if [ -f "$GITHUB_WF/cd-deploy.yml" ]; then
   echo "⚠️  Legacy cd-deploy.yml found — remove it and use cd-staging.yml + cd-production.yml (OPERATIONS.md §C)."
 fi
 
-if [ -d "$TMPL_DIR" ] && [ -n "$WF_CI" ]; then
+if [ "$INSTALLED_RUNTIME" -eq 0 ] && [ -d "$TMPL_DIR" ] && [ -n "$WF_CI" ]; then
   mkdir -p "$GITHUB_WF"
   # eval-fairness/eval-hallucination/eval-ttft-live/eval-security are
   # referenced by every ci-<stack>.yml as `uses: ./.github/workflows/<name>`

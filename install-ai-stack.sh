@@ -1273,6 +1273,17 @@ function ai-stack-upgrade() {
     return 1
   fi
 
+  # Same guard as hooks/post-checkout's "installed mode": a tenant that depends
+  # on agentsmith-runtime as a package upgrades by bumping that pin. Vendoring
+  # runtime/ into its root would shadow the pinned package.
+  # `find -exec`, not a `requirements*.txt` glob: unmatched, zsh aborts the function.
+  if find . -maxdepth 1 \( -name 'requirements*.txt' -o -name pyproject.toml \) \
+       -exec grep -qsE '^[[:space:]"'"'"']*agentsmith-runtime' {} \; -print 2>/dev/null | grep -q .; then
+    echo "ℹ️  This repo depends on agentsmith-runtime as a package — nothing to vendor."
+    echo "   Upgrade by bumping the agentsmith-runtime pin (and framework.version in tenant.yaml) instead."
+    return 0
+  fi
+
   local vendor_src="$HOME/.agent-framework/scripts"
   if [ ! -d "$vendor_src" ] || [ -z "$(ls -A "$vendor_src" 2>/dev/null)" ]; then
     echo "❌ No vendored scripts found at $vendor_src — run install-ai-stack.sh on this machine first"

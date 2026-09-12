@@ -4,8 +4,8 @@ vendors, including files the tenant has never had.
 
 Its "anything to commit?" check was `git diff --quiet`, which ignores untracked
 files. A first-time vendor — runtime/ on a tenant onboarded before runtime/ was
-vendored (KYC Sentinel, AqlaarTeleologyStudio's first pass), or a newly shipped
-base fixture — copied the files, printed "No changes", and committed nothing.
+vendored, or a newly shipped base fixture — copied the files, printed
+"No changes", and committed nothing.
 
 The function lives inside install-ai-stack.sh; it is extracted and sourced on
 its own so the test does not run the installer.
@@ -134,7 +134,6 @@ def test_upgrade_spares_a_tenants_own_scripts_test_and_runtime_package(tmp_path,
     assert "runtime/wip.py" not in _git(repo, "ls-files"), "a tenant's own runtime/ was swept into the commit"
 
 
-
 @pytest.mark.parametrize("shell", SHELLS)
 def test_upgrade_without_base_fixtures_installed_still_completes(tmp_path, monkeypatch, shell):
     """An install that predates base-fixture vendoring has none. Under zsh a
@@ -191,3 +190,38 @@ def test_upgrade_prunes_framework_internal_runtime_tests(tmp_path, monkeypatch, 
     tracked = _git(repo, "ls-files")
     assert "runtime/test/test_pg_pool.py" not in tracked
     assert "runtime/test/test_hitl_gate.py" in tracked
+
+
+@pytest.mark.parametrize("shell", SHELLS)
+@pytest.mark.parametrize("has_requirements", [True, False])
+def test_upgrade_refuses_to_vendor_into_a_package_consumer(tmp_path, monkeypatch, shell, has_requirements):
+    """KYC Sentinel pins agentsmith-runtime; vendored runtime/ at its root would
+    shadow the pin. `has_requirements=False` (pyproject only) is the zsh case:
+    a `requirements*.txt` glob with no match aborts the function there."""
+    fw = tmp_path / "home" / ".agent-framework"
+    (fw / "scripts").mkdir(parents=True)
+    (fw / "scripts" / "run-evals.py").write_text("# run-evals\n")
+    (fw / "runtime").mkdir()
+    (fw / "runtime" / "llm_gateway.py").write_text("# llm_gateway\n")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("DISABLE_AI_STACK", "true")
+
+    repo = tmp_path / "tenant"
+    subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(repo)], check=True)
+    (repo / ".agenticframework").mkdir()
+    (repo / ".agenticframework" / "tenant.yaml").write_text('tenant:\n  id: t\nframework:\n  version: "1.0.0"\n')
+    dep = "agentsmith-runtime @ git+https://github.com/bobbyaqlaar/AgentSmith@v1.3.0"
+    if has_requirements:
+        (repo / "requirements.txt").write_text(dep + "\n")
+    else:
+        (repo / "pyproject.toml").write_text(f'[project]\nname = "t"\ndependencies = [\n  "{dep}",\n]\n')
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "initial")
+
+    result = _run_upgrade(shell, repo, tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "depends on agentsmith-runtime as a package" in result.stdout, result.stdout + result.stderr
+    assert not (repo / "runtime").exists()
+    assert not (repo / "scripts").exists()
+
