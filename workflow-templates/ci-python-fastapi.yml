@@ -46,6 +46,7 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install \
             pytest pytest-asyncio pytest-cov httpx ruff \
+            "agentsmith-runtime" \
             "arize-phoenix>=4.0" \
             "openinference-instrumentation-openai>=0.1.4" \
             "opentelemetry-sdk>=1.20" \

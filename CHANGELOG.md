@@ -75,6 +75,36 @@ version table being consulted.
 
 ## [Unreleased]
 
+### `agentsmith-runtime` was never pip-installed by the workflow templates that need it
+
+Found immediately after the `eval-security.yml` fix above got
+`ci-python-fastapi.yml` actually running jobs on `AqlaarTeleologyStudio`:
+`eval-scorecard.yml` and `cd-production.yml` both failed with
+`ModuleNotFoundError: No module named 'runtime'` — `scripts/run-evals.py`'s
+`_pair_score_spread` imports `runtime.judging`, `scripts/verify_system.py
+--check-redaction` imports `runtime.trace_redactor`, and nothing in either
+workflow, or their siblings, ever installed the `agentsmith-runtime` package
+those imports need. It only worked inside the framework's OWN self-test
+because `runtime/` is a live local package there, importable straight off
+`PYTHONPATH` — every tenant instead depends on the published package.
+
+Added `"agentsmith-runtime"` to the pip-install list in every
+workflow-template that calls `scripts/run-evals.py` or
+`scripts/verify_system.py`: `eval-scorecard.yml`, `eval-fairness.yml`,
+`eval-hallucination.yml`, `cd-staging.yml`, `cd-production.yml`,
+`ci-python-fastapi.yml`, `ci-go.yml`, `ci-ts-react.yml` — fixed everywhere
+the gap exists, not just the two that happened to fail on this particular
+push (`eval-fairness.yml`'s run step skips when no fixture exists yet, which
+is what kept it from failing too, this time).
+
+Also: `eval-security.yml`'s `pip install -r requirements.txt` step had no
+`[ -f requirements.txt ]` guard, unlike `ci-python-fastapi.yml`'s own
+install step — hard-failed outright for `AqlaarTeleologyStudio`, a
+uv/pyproject.toml tenant with no `requirements.txt` at all. Guarded to
+match. The framework's own `.github/workflows/eval-security.yml` copy
+re-synced to match (`test_reusable_security_workflow_matches_its_tenant_
+template` enforces byte-for-byte parity between the two).
+
 ### `post-checkout`'s workflow-copy array now matches `runtime/cli.py`'s WORKFLOWS — `eval-security.yml` was silently missing
 
 Caught checking CI on `AqlaarTeleologyStudio` after pushing the `scripts/`

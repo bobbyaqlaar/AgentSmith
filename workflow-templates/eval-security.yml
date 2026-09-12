@@ -22,7 +22,11 @@ jobs:
       # the job needs what those suites import. With the minimal set they fail
       # on a missing dev dependency and report it as a compliance violation —
       # a hollow job is not a light one.
-      - run: pip install -r requirements.txt
+      # Guarded like ci-python-fastapi.yml's own install step — a tenant on
+      # uv/poetry with no requirements.txt (AqlaarTeleologyStudio, found
+      # checking CI after onboarding) must not hard-fail this step just
+      # because the file doesn't exist.
+      - run: if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - run: pip install pytest pytest-asyncio pyyaml pydantic jsonschema
       - run: PYTHONPATH=scripts:. pytest scripts/test/test_security_*.py -q
       - run: python3 scripts/run-security-checks.py --mode ci ${{ inputs.strict && '--strict' || '' }}
