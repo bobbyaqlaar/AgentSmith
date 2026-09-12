@@ -122,6 +122,25 @@ def test_reusable_security_workflow_matches_its_tenant_template() -> None:
     )
 
 
+def test_stack_agnostic_templates_do_not_cache_pip_on_tenant_manifests() -> None:
+    """`setup-python` with `cache: pip` and no `cache-dependency-path` globs
+    for **/requirements.txt|pyproject.toml and FAILS the step when neither
+    exists. Every template except ci-python-fastapi.yml runs in Go and TS
+    tenants too, which have neither — found onboarding scratch ts-react and go
+    tenants, where every eval job and both CD jobs died at "Setup Python"."""
+    offenders = []
+    for path in sorted(TEMPLATES.glob("*.yml")):
+        if path.name == "ci-python-fastapi.yml":
+            continue
+        text = path.read_text(encoding="utf-8")
+        if re.search(r'cache:\s*"?pip"?', text) and "cache-dependency-path:" not in text:
+            offenders.append(path.name)
+    assert not offenders, (
+        f"these templates cache pip without cache-dependency-path, which fails on a "
+        f"tenant with no requirements.txt/pyproject.toml: {offenders}"
+    )
+
+
 def test_hook_actually_writes_every_callee_into_a_fresh_tenant(tmp_path, monkeypatch):
     """End to end, against the real hook — this is the test that would have
     caught AqlaarTeleologyStudio's broken ci-python-fastapi.yml: a scratch
