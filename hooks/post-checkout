@@ -36,7 +36,7 @@ STACK="GENERIC"
 TEST_CMD="echo 'No test command configured'"
 
 if [ -f "$REPO_ROOT/package.json" ]; then
-  STACK="TS_REACT"; TEST_CMD="npm test -- --watchAll=false --ci"
+  STACK="TS_REACT"; TEST_CMD="CI=true npm test"
 elif [ -f "$REPO_ROOT/requirements.txt" ] || [ -f "$REPO_ROOT/pyproject.toml" ] || [ -f "$REPO_ROOT/Pipfile" ]; then
   STACK="PYTHON_FASTAPI"; TEST_CMD="pytest"
 elif [ -f "$REPO_ROOT/go.mod" ]; then

@@ -141,6 +141,19 @@ def test_stack_agnostic_templates_do_not_cache_pip_on_tenant_manifests() -> None
     )
 
 
+def test_ts_react_template_assumes_no_particular_test_runner_or_script_names() -> None:
+    """A stock `create-vite` react-ts scaffold defines neither a `tsc` script
+    nor Jest: `npm run tsc` failed with `Missing script`, and Vitest rejects
+    `--watchAll`. The template may call only scripts every npm project has, or
+    guard the rest with `--if-present` / an explicit existence check."""
+    text = (TEMPLATES / "ci-ts-react.yml").read_text(encoding="utf-8")
+    runs = [ln.strip() for ln in text.splitlines() if not ln.strip().startswith("#")]
+    body = "\n".join(runs)
+    assert "npm run tsc" not in body
+    for jest_only in ("--watchAll", "--ci"):
+        assert jest_only not in body, f"{jest_only} is a Jest-only flag; Vitest exits on it"
+
+
 def test_hook_actually_writes_every_callee_into_a_fresh_tenant(tmp_path, monkeypatch):
     """End to end, against the real hook — this is the test that would have
     caught AqlaarTeleologyStudio's broken ci-python-fastapi.yml: a scratch

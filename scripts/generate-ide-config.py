@@ -345,7 +345,7 @@ def _render_skill(skill: dict, rules: dict, ctx: dict[str, str]) -> str:
 def _detect_stack(repo_root: Path) -> tuple[str, str]:
     """Mirror hooks/post-checkout's bash stack detection. Returns (stack, default_test_cmd)."""
     if (repo_root / "package.json").exists():
-        return "ts-react", "npm test -- --watchAll=false --ci"
+        return "ts-react", "CI=true npm test"
     if (
         (repo_root / "requirements.txt").exists()
         or (repo_root / "pyproject.toml").exists()
