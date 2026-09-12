@@ -1112,9 +1112,12 @@
         "_provisioned_workflows",
         "test_every_referenced_callee_exists_as_a_template",
         "test_every_referenced_callee_is_provisioned_into_tenants",
-        "test_reusable_security_workflow_matches_its_tenant_template"
+        "_hook_workflow_array",
+        "test_hooks_workflow_array_matches_cli_workflows",
+        "test_reusable_security_workflow_matches_its_tenant_template",
+        "test_hook_actually_writes_every_callee_into_a_fresh_tenant"
       ],
-      "last_modified": "2026-08-24T20:35:55Z",
+      "last_modified": "2026-09-12T20:04:42Z",
       "id": "scripts/test/test_workflow_template_wiring.py"
     },
     {
