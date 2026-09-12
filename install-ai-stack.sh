@@ -1292,6 +1292,8 @@ function ai-stack-upgrade() {
   rm -rf "$stage/test"
   find "$stage" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
   cp -r "$stage/." "scripts/"
+  local vendored_scripts
+  vendored_scripts="$(cd "$stage" && find . -type f | sed 's|^\./||')"
   rm -rf "$stage"
   echo "✅ Copied vendored scripts from $vendor_src"
 
@@ -1319,6 +1321,37 @@ function ai-stack-upgrade() {
     echo "   install-ai-stack.sh from a live checkout to pick it up."
   fi
 
+  # Regenerate the lint-isolation config hooks/post-checkout writes (see
+  # write_vendored_ruff_config there), so newly vendored files are excluded
+  # too. Only a file AgentSmith wrote, or none: a tenant's own directory
+  # config is never touched.
+  local af_dir af_list af_extend
+  for af_dir in scripts runtime; do
+    [ -d "$af_dir" ] || continue
+    if [ "$af_dir" = "scripts" ]; then
+      af_list="$vendored_scripts"
+    else
+      [ -f "runtime/llm_gateway.py" ] || continue
+      af_list="$(cd runtime && find . -type f ! -name ruff.toml | sed 's|^\./||')"
+    fi
+    if [ -f "$af_dir/ruff.toml" ] && ! grep -q '^# Written by AgentSmith' "$af_dir/ruff.toml"; then continue; fi
+    if [ -f "$af_dir/.ruff.toml" ] || [ -f "$af_dir/pyproject.toml" ]; then continue; fi
+    af_extend=""
+    if [ -f "ruff.toml" ]; then af_extend='extend = "../ruff.toml"'
+    elif [ -f ".ruff.toml" ]; then af_extend='extend = "../.ruff.toml"'
+    elif [ -f "pyproject.toml" ] && grep -q '^\[tool\.ruff' pyproject.toml; then af_extend='extend = "../pyproject.toml"'
+    fi
+    {
+      echo "# Written by AgentSmith when it vendored $af_dir/ — see hooks/post-checkout."
+      echo "# Excludes the vendored files from this repo's ruff check/format; your own"
+      echo "# files here keep your rules. ai-stack-upgrade regenerates this file."
+      [ -n "$af_extend" ] && echo "$af_extend"
+      echo "extend-exclude = ["
+      printf '%s\n' "$af_list" | grep -v '^$' | sort | sed 's/"/\\"/g; s/.*/  "&",/'
+      echo "]"
+    } > "$af_dir/ruff.toml"
+  done
+
   local fixtures_security_src="$HOME/.agent-framework/fixtures/security"
   if [ -d "$fixtures_security_src" ] && [ -n "$(ls -A "$fixtures_security_src" 2>/dev/null)" ]; then
     mkdir -p "fixtures/security"
@@ -1327,12 +1360,15 @@ function ai-stack-upgrade() {
   else
     echo "⚠️  No vendored fixtures/security/ found at $fixtures_security_src — skipping."
   fi
+  # `find`, not a glob: this function runs in the user's zsh, where an
+  # unmatched glob in a `for` aborts the whole function — an install without
+  # base fixtures would have stopped the upgrade before it committed.
   local base_fixture
-  for base_fixture in "$HOME"/.agent-framework/fixtures/*_base.json; do
-    [ -f "$base_fixture" ] || continue
-    mkdir -p "fixtures"
-    cp "$base_fixture" "fixtures/"
-  done
+  find "$HOME/.agent-framework/fixtures" -maxdepth 1 -type f -name '*_base.json' 2>/dev/null |
+    while IFS= read -r base_fixture; do
+      mkdir -p "fixtures"
+      cp "$base_fixture" "fixtures/"
+    done
 
   sed -i.af-upgrade-bak "s/^  version: .*/  version: \"${target_version}\"/" ".agenticframework/tenant.yaml"
   rm -f ".agenticframework/tenant.yaml.af-upgrade-bak"
@@ -1346,7 +1382,7 @@ function ai-stack-upgrade() {
   [ -d "fixtures/security" ] && vendor_paths+=(fixtures/security)
   # A quoted glob is a git pathspec — the base fixtures only, never the rest of
   # a tenant's own fixtures/.
-  ls fixtures/*_base.json >/dev/null 2>&1 && vendor_paths+=("fixtures/*_base.json")
+  [ -n "$(find fixtures -maxdepth 1 -type f -name '*_base.json' 2>/dev/null)" ] && vendor_paths+=("fixtures/*_base.json")
 
   # `git status --porcelain`, not `git diff --quiet`: diff ignores untracked
   # files, so a first-time vendor (runtime/ on an install that predated it, a

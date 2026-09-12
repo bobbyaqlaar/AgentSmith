@@ -35,6 +35,18 @@ def _function_source() -> str:
     return m.group(0)
 
 
+# The function ships inside the managed block written to ~/.zshrc, so zsh is the
+# shell it actually runs in. Its glob semantics differ in a way that matters: an
+# unmatched glob in a `for` aborts the whole function.
+SHELLS = [s for s in ("bash", "zsh") if shutil.which(s)]
+
+
+def _run_upgrade(shell: str, repo: Path, tmp_path: Path) -> subprocess.CompletedProcess:
+    script = tmp_path / "upgrade.sh"
+    script.write_text(_function_source() + "\nai-stack-upgrade --to 9.9.9\n")
+    return subprocess.run([shell, str(script)], cwd=repo, capture_output=True, text=True, check=False)
+
+
 def _git(repo: Path, *args: str) -> str:
     return subprocess.run(
         ["git", "-C", str(repo), "-c", "user.email=t@e.com", "-c", "user.name=T", *args],
@@ -42,8 +54,9 @@ def _git(repo: Path, *args: str) -> str:
     ).stdout
 
 
+@pytest.mark.parametrize("shell", SHELLS)
 @pytest.mark.parametrize("current_version", ["1.0.0", "9.9.9"])
-def test_first_time_vendored_files_are_committed(tmp_path, monkeypatch, current_version):
+def test_first_time_vendored_files_are_committed(tmp_path, monkeypatch, current_version, shell):
     """9.9.9 = already on the target version, so tenant.yaml is unchanged and
     the ONLY changes are untracked files — the case `git diff --quiet` missed."""
     home = tmp_path / "home"
@@ -72,9 +85,7 @@ def test_first_time_vendored_files_are_committed(tmp_path, monkeypatch, current_
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "initial")
 
-    script = tmp_path / "upgrade.sh"
-    script.write_text(_function_source() + '\nai-stack-upgrade --to 9.9.9\n')
-    result = subprocess.run(["bash", str(script)], cwd=repo, capture_output=True, text=True, check=False)
+    result = _run_upgrade(shell, repo, tmp_path)
 
     assert "No changes" not in result.stdout, result.stdout
     tracked = set(_git(repo, "ls-files").split())
@@ -82,9 +93,13 @@ def test_first_time_vendored_files_are_committed(tmp_path, monkeypatch, current_
     assert "fixtures/security/control_registry.json" in tracked
     assert "fixtures/rag_poison_base.json" in tracked
     assert _git(repo, "status", "--porcelain") == ""
+    # The lint-isolation config is regenerated to cover what was vendored.
+    assert '"judging.py"' in (repo / "runtime" / "ruff.toml").read_text()
+    assert '"run-evals.py"' in (repo / "scripts" / "ruff.toml").read_text()
 
 
-def test_upgrade_spares_a_tenants_own_scripts_test_and_runtime_package(tmp_path, monkeypatch):
+@pytest.mark.parametrize("shell", SHELLS)
+def test_upgrade_spares_a_tenants_own_scripts_test_and_runtime_package(tmp_path, monkeypatch, shell):
     """The upgrade pruned scripts/test AFTER copying into the tenant's scripts/,
     deleting the tenant's own tests; and it merged into, then `git add`-ed, any
     runtime/ — including a tenant's own package of that name."""
@@ -110,12 +125,34 @@ def test_upgrade_spares_a_tenants_own_scripts_test_and_runtime_package(tmp_path,
     _git(repo, "commit", "-q", "-m", "initial")
     (repo / "runtime" / "wip.py").write_text("# uncommitted tenant work\n")
 
-    script = tmp_path / "upgrade.sh"
-    script.write_text(_function_source() + "\nai-stack-upgrade --to 9.9.9\n")
-    result = subprocess.run(["bash", str(script)], cwd=repo, capture_output=True, text=True, check=False)
+    result = _run_upgrade(shell, repo, tmp_path)
 
     assert (repo / "scripts" / "test" / "test_release.py").exists(), result.stdout
     assert not (repo / "scripts" / "test" / "test_framework.py").exists()
     assert not (repo / "runtime" / "llm_gateway.py").exists()
     assert "not AgentSmith's" in result.stdout
     assert "runtime/wip.py" not in _git(repo, "ls-files"), "a tenant's own runtime/ was swept into the commit"
+
+
+
+@pytest.mark.parametrize("shell", SHELLS)
+def test_upgrade_without_base_fixtures_installed_still_completes(tmp_path, monkeypatch, shell):
+    """An install that predates base-fixture vendoring has none. Under zsh a
+    glob over them aborted the function before it committed anything."""
+    fw = tmp_path / "home" / ".agent-framework"
+    (fw / "scripts").mkdir(parents=True)
+    (fw / "scripts" / "run-evals.py").write_text("# run-evals\n")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("DISABLE_AI_STACK", "true")
+
+    repo = tmp_path / "tenant"
+    subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(repo)], check=True)
+    (repo / ".agenticframework").mkdir()
+    (repo / ".agenticframework" / "tenant.yaml").write_text('tenant:\n  id: t\nframework:\n  version: "1.0.0"\n')
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "initial")
+
+    result = _run_upgrade(shell, repo, tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "scripts/run-evals.py" in _git(repo, "ls-files"), result.stdout + result.stderr

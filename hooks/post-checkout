@@ -31,6 +31,39 @@ fi
 FRAMEWORK_DIR="$HOME/.agent-framework"
 SCRIPTS_DIR="$FRAMEWORK_DIR/scripts"
 
+# Keep vendored framework code out of the TENANT's lint/format gates.
+#
+# ci-python-fastapi.yml runs `ruff check .` and `ruff format --check .` with
+# the tenant's config. Vendored runtime/ and scripts/ are held to the
+# framework's rules, not the tenant's, and are not the tenant's to fix:
+# AqlaarTeleologyStudio's lint step went red on 746 findings, 609 of them in
+# vendored code. A nested ruff.toml that `extend`s the tenant's root config and
+# `extend-exclude`s exactly the vendored files drops them from both commands
+# while the tenant's own files in the same directory keep the tenant's rules —
+# verified under ruff 0.15.20 and 0.16.7 with pyproject.toml, ruff.toml and no
+# root config. Never written over a config the directory already has.
+#   $1 = directory name under the repo root; stdin = vendored paths relative to it
+write_vendored_ruff_config() {
+  local dir="$REPO_ROOT/$1" extend="" cfg
+  for cfg in ruff.toml .ruff.toml pyproject.toml; do
+    [ -f "$dir/$cfg" ] && return 0
+  done
+  if [ -f "$REPO_ROOT/ruff.toml" ]; then extend='extend = "../ruff.toml"'
+  elif [ -f "$REPO_ROOT/.ruff.toml" ]; then extend='extend = "../.ruff.toml"'
+  elif [ -f "$REPO_ROOT/pyproject.toml" ] && grep -q '^\[tool\.ruff' "$REPO_ROOT/pyproject.toml"; then
+    extend='extend = "../pyproject.toml"'
+  fi
+  {
+    echo "# Written by AgentSmith when it vendored $1/ — see hooks/post-checkout."
+    echo "# Excludes the vendored files from this repo's ruff check/format; your own"
+    echo "# files here keep your rules. ai-stack-upgrade regenerates this file."
+    [ -n "$extend" ] && echo "$extend"
+    echo "extend-exclude = ["
+    sort | sed 's/"/\\"/g; s/.*/  "&",/'
+    echo "]"
+  } > "$dir/ruff.toml"
+}
+
 # ── Detect stack ──────────────────────────────────────────────────────────────
 STACK="GENERIC"
 TEST_CMD="echo 'No test command configured'"
@@ -129,6 +162,7 @@ if [ ! -f "$REPO_ROOT/scripts/run-security-checks.py" ]; then
     find "$STAGE" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
     mkdir -p "$REPO_ROOT/scripts"
     CLASHES=""
+    WRITTEN=""
     while IFS= read -r REL; do
       REL="${REL#./}"
       if [ -e "$REPO_ROOT/scripts/$REL" ]; then
@@ -136,9 +170,11 @@ if [ ! -f "$REPO_ROOT/scripts/run-security-checks.py" ]; then
       else
         mkdir -p "$(dirname "$REPO_ROOT/scripts/$REL")"
         cp "$STAGE/$REL" "$REPO_ROOT/scripts/$REL"
+        WRITTEN="$WRITTEN$REL"$'\n'
       fi
     done < <(cd "$STAGE" && find . -type f)
     rm -rf "$STAGE"
+    printf '%s' "$WRITTEN" | grep -v '^$' | write_vendored_ruff_config scripts
     VENDORED_COUNT=$(find "$REPO_ROOT/scripts" -name "*.py" | wc -l | tr -d ' ')
     if [ "$PRE_EXISTING_SCRIPTS" -eq 1 ]; then
       echo "✅ Vendored scripts/ from $SCRIPTS_DIR into the existing scripts/ ($VENDORED_COUNT .py files; nothing of yours overwritten)"
@@ -186,6 +222,7 @@ elif [ ! -d "$REPO_ROOT/runtime" ]; then
     # plain `cp -r` doesn't know that. Committed once into a real tenant
     # before this exclusion existed; never again.
     rm -rf "$REPO_ROOT/runtime/.hitl_blobs"
+    (cd "$REPO_ROOT/runtime" && find . -type f | sed 's|^\./||') | write_vendored_ruff_config runtime
     echo "✅ Vendored runtime/ from $RUNTIME_DIR"
   else
     echo "⚠️  ~/.agent-framework/runtime/ missing — runtime/ not vendored. Any script importing runtime.* will fail with ModuleNotFoundError. Re-run install-ai-stack.sh."
