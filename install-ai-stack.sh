@@ -1281,12 +1281,18 @@ function ai-stack-upgrade() {
 
   echo "📦 Upgrading vendored scripts to v${target_version}..."
   mkdir -p "scripts"
-  cp -r "$vendor_src/." "scripts/"
   # The framework's own test suite and fixtures (~2MB) — a tenant runs its
   # own tests, not AgentSmith's, and has no use for them. Same exclusion
   # hooks/post-checkout applies on first vendor, so the two paths agree.
-  rm -rf "scripts/test"
-  find "scripts" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+  # Pruned in a staging copy, NOT after copying into scripts/: `rm -rf
+  # scripts/test` there deleted a tenant's OWN scripts/test/ on every upgrade.
+  local stage
+  stage="$(mktemp -d)"
+  cp -r "$vendor_src/." "$stage/"
+  rm -rf "$stage/test"
+  find "$stage" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+  cp -r "$stage/." "scripts/"
+  rm -rf "$stage"
   echo "✅ Copied vendored scripts from $vendor_src"
 
   # runtime/ and fixtures/security/ — unlike scripts/test/, runtime/test/ is
@@ -1297,7 +1303,12 @@ function ai-stack-upgrade() {
   # an install predating this step should not block an otherwise-working
   # scripts/ upgrade.
   local runtime_src="$HOME/.agent-framework/runtime"
-  if [ -d "$runtime_src" ] && [ -n "$(ls -A "$runtime_src" 2>/dev/null)" ]; then
+  if [ -d "runtime" ] && [ ! -f "runtime/llm_gateway.py" ]; then
+    # Same guard as hooks/post-checkout: a tenant's own `runtime` package is
+    # never merged into.
+    echo "⚠️  runtime/ exists and is not AgentSmith's — NOT upgraded. Rename yours, or install"
+    echo "   AgentSmith's runtime as a package; scripts/ will import YOUR runtime.* meanwhile."
+  elif [ -d "$runtime_src" ] && [ -n "$(ls -A "$runtime_src" 2>/dev/null)" ]; then
     mkdir -p "runtime"
     cp -r "$runtime_src/." "runtime/"
     find "runtime" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
@@ -1331,7 +1342,7 @@ function ai-stack-upgrade() {
   # nothing (runtime/ or fixtures/security/ skipped above, e.g. an install
   # predating this step) aborts the WHOLE command rather than just that path.
   local vendor_paths=(scripts .agenticframework/tenant.yaml)
-  [ -d "runtime" ] && vendor_paths+=(runtime)
+  [ -f "runtime/llm_gateway.py" ] && vendor_paths+=(runtime)  # never a tenant's own runtime/
   [ -d "fixtures/security" ] && vendor_paths+=(fixtures/security)
   # A quoted glob is a git pathspec — the base fixtures only, never the rest of
   # a tenant's own fixtures/.

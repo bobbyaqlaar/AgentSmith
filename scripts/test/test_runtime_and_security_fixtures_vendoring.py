@@ -135,15 +135,31 @@ def test_base_fixtures_are_per_file_and_leave_a_tenants_own_fixtures_alone(tenan
     assert (own / "fairness_evals_base.json").exists()
 
 
-def test_never_overwrites_an_existing_runtime_dir(tenant):
+def test_never_overwrites_an_already_vendored_runtime_dir(tenant):
     runtime_dir = tenant / "runtime"
     runtime_dir.mkdir()
+    (runtime_dir / "llm_gateway.py").write_text("# vendored earlier\n")
     (runtime_dir / "judging.py").write_text("# tenant's own patched copy\n")
 
     result = _run_post_checkout(tenant)
 
     assert (runtime_dir / "judging.py").read_text() == "# tenant's own patched copy\n"
     assert "Vendored runtime/" not in result.stdout
+    assert "not AgentSmith's" not in result.stdout
+
+
+def test_a_tenants_own_runtime_package_is_never_merged_into_and_says_so(tenant):
+    """`runtime` is a generic name. Merging framework modules into a tenant's own
+    package breaks both, and scripts/ would import the wrong one — so the hook
+    must refuse, and say why, rather than skip silently."""
+    runtime_dir = tenant / "runtime"
+    runtime_dir.mkdir()
+    (runtime_dir / "__init__.py").write_text("# tenant's own package\n")
+
+    result = _run_post_checkout(tenant)
+
+    assert sorted(p.name for p in runtime_dir.iterdir()) == ["__init__.py"]
+    assert "not AgentSmith's" in result.stdout
 
 
 def test_never_overwrites_an_existing_fixtures_security_dir(tenant):

@@ -42,6 +42,7 @@ def tenant(tmp_path, monkeypatch):
     fw_scripts.mkdir(parents=True)
     (fw_scripts / "map_codebase.py").write_text("# map_codebase\n")
     (fw_scripts / "_shared.py").write_text("# shared helpers\n")
+    (fw_scripts / "run-security-checks.py").write_text("# harness — the 'already vendored' marker\n")
     (fw_scripts / "test").mkdir()
     (fw_scripts / "test" / "test_map_codebase.py").write_text("# framework's own test\n")
     (fw_scripts / "__pycache__").mkdir()
@@ -83,12 +84,13 @@ def test_excludes_frameworks_own_test_suite_and_pycache(tenant):
     assert not any((tenant / "scripts").rglob("__pycache__"))
 
 
-def test_never_overwrites_an_existing_scripts_dir(tenant):
+def test_never_overwrites_an_already_vendored_scripts_dir(tenant):
     """A tenant may have patched a vendored script — a routine `git checkout`
     firing this hook must not silently clobber that. Pulling in newer
     framework scripts is ai-stack-upgrade's job, deliberately."""
     scripts_dir = tenant / "scripts"
     scripts_dir.mkdir()
+    (scripts_dir / "run-security-checks.py").write_text("# vendored earlier\n")
     (scripts_dir / "map_codebase.py").write_text("# tenant's own patched copy\n")
 
     result = _run_post_checkout(tenant)
@@ -96,6 +98,31 @@ def test_never_overwrites_an_existing_scripts_dir(tenant):
     assert (scripts_dir / "map_codebase.py").read_text() == "# tenant's own patched copy\n"
     assert not (scripts_dir / "_shared.py").exists()
     assert "Vendored scripts/" not in result.stdout
+
+
+def test_a_tenants_own_scripts_dir_is_merged_into_not_skipped(tenant):
+    """A scripts/ directory is ordinary in a JS or Go repo. Onboarding a scratch
+    create-vite tenant, its scripts/release.mjs made this step skip with no
+    message, and every `python3 scripts/*.py` CI step then failed. Framework
+    files must be added; the tenant's own files — including its own
+    scripts/test/, which the old prune-after-copy would have deleted — kept."""
+    scripts_dir = tenant / "scripts"
+    (scripts_dir / "test").mkdir(parents=True)
+    (scripts_dir / "release.mjs").write_text("// tenant\n")
+    (scripts_dir / "test" / "release.test.mjs").write_text("// tenant's own test\n")
+    (scripts_dir / "_shared.py").write_text("# tenant's unrelated helper\n")
+
+    result = _run_post_checkout(tenant)
+
+    assert result.returncode == 0, result.stderr
+    assert (scripts_dir / "run-security-checks.py").exists()
+    assert (scripts_dir / "map_codebase.py").exists()
+    assert (scripts_dir / "release.mjs").read_text() == "// tenant\n"
+    assert (scripts_dir / "test" / "release.test.mjs").exists()
+    assert not (scripts_dir / "test" / "test_map_codebase.py").exists()
+    assert (scripts_dir / "_shared.py").read_text() == "# tenant's unrelated helper\n"
+    assert "Vendored scripts/" in result.stdout
+    assert "_shared.py" in result.stdout, "a name clash must be reported, not swallowed"
 
 
 def test_no_framework_scripts_installed_is_not_fatal(tmp_path, monkeypatch):

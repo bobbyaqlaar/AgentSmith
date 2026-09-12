@@ -110,16 +110,45 @@ fi
 # `ai-stack-upgrade`'s job, deliberately (same $SCRIPTS_DIR source, same
 # test/-and-__pycache__ exclusion as of this change) — this only covers the
 # case where scripts/ has never existed in the tenant at all.
-if [ ! -d "$REPO_ROOT/scripts" ]; then
+#
+# "Already vendored" is decided by a framework file, not by scripts/ existing.
+# A scripts/ directory is ordinary in JS and Go repos — found onboarding a
+# scratch create-vite tenant whose scripts/release.mjs made this step skip
+# SILENTLY, leaving every scripts/*.py CI call to fail. Such a directory is
+# merged into without overwriting anything, from a pruned staging copy: pruning
+# test/ AFTER copying would delete the tenant's own scripts/test/.
+if [ ! -f "$REPO_ROOT/scripts/run-security-checks.py" ]; then
   if [ -d "$SCRIPTS_DIR" ] && [ -n "$(ls -A "$SCRIPTS_DIR" 2>/dev/null)" ]; then
-    mkdir -p "$REPO_ROOT/scripts"
-    cp -r "$SCRIPTS_DIR/." "$REPO_ROOT/scripts/"
+    PRE_EXISTING_SCRIPTS=0
+    [ -d "$REPO_ROOT/scripts" ] && PRE_EXISTING_SCRIPTS=1
+    STAGE=$(mktemp -d)
+    cp -r "$SCRIPTS_DIR/." "$STAGE/"
     # The framework's own test suite and fixtures (~2MB) — a tenant runs its
     # own tests, not AgentSmith's, and has no use for them.
-    rm -rf "$REPO_ROOT/scripts/test"
-    find "$REPO_ROOT/scripts" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    rm -rf "$STAGE/test"
+    find "$STAGE" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    mkdir -p "$REPO_ROOT/scripts"
+    CLASHES=""
+    while IFS= read -r REL; do
+      REL="${REL#./}"
+      if [ -e "$REPO_ROOT/scripts/$REL" ]; then
+        CLASHES="$CLASHES $REL"
+      else
+        mkdir -p "$(dirname "$REPO_ROOT/scripts/$REL")"
+        cp "$STAGE/$REL" "$REPO_ROOT/scripts/$REL"
+      fi
+    done < <(cd "$STAGE" && find . -type f)
+    rm -rf "$STAGE"
     VENDORED_COUNT=$(find "$REPO_ROOT/scripts" -name "*.py" | wc -l | tr -d ' ')
-    echo "✅ Vendored scripts/ from $SCRIPTS_DIR ($VENDORED_COUNT files)"
+    if [ "$PRE_EXISTING_SCRIPTS" -eq 1 ]; then
+      echo "✅ Vendored scripts/ from $SCRIPTS_DIR into the existing scripts/ ($VENDORED_COUNT .py files; nothing of yours overwritten)"
+    else
+      echo "✅ Vendored scripts/ from $SCRIPTS_DIR ($VENDORED_COUNT files)"
+    fi
+    if [ -n "$CLASHES" ]; then
+      echo "⚠️  scripts/ already had files with framework names — kept yours, framework copies NOT written:$CLASHES"
+      echo "   CI steps that call these expect AgentSmith's versions. Rename yours if they are unrelated."
+    fi
   else
     echo "⚠️  ~/.agent-framework/scripts/ missing — scripts/ not vendored. Every scripts/*.py call in .github/workflows/*.yml will fail. Re-run install-ai-stack.sh."
   fi
@@ -140,7 +169,14 @@ fi
 # test_dead_letter.py, test_llm_gateway_budget.py and test_self_correction.py
 # verify the LIBRARY's own correctness, which is genuine evidence for any
 # tenant depending on it, not framework navel-gazing.
-if [ ! -d "$REPO_ROOT/runtime" ]; then
+if [ -d "$REPO_ROOT/runtime" ] && [ ! -f "$REPO_ROOT/runtime/llm_gateway.py" ]; then
+  # `runtime` is a generic package name (pyproject.toml says as much). A
+  # tenant's OWN runtime/ is never merged into: framework modules would import
+  # the tenant's same-named ones and both would break. Said loudly, because
+  # the consequence is every `runtime.*` import in scripts/ resolving to the
+  # wrong package.
+  echo "⚠️  runtime/ exists and is not AgentSmith's — NOT vendored. scripts/ imports runtime.* (run-evals.py, the security harness) and will load YOUR package instead. Rename yours, or install AgentSmith's runtime as a package."
+elif [ ! -d "$REPO_ROOT/runtime" ]; then
   RUNTIME_DIR="$FRAMEWORK_DIR/runtime"
   if [ -d "$RUNTIME_DIR" ] && [ -n "$(ls -A "$RUNTIME_DIR" 2>/dev/null)" ]; then
     mkdir -p "$REPO_ROOT/runtime"
