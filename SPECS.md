@@ -1429,8 +1429,8 @@ Each tenant repo receives seven workflow files:
 | `eval-fairness.yml` | `workflow_call` from `ci-<stack>.yml` | — | fairness suite (`FAIRNESS_FAIL_BELOW`, default 0.80); warn-only unless repo variable `FAIRNESS_EVALS=required` |
 | `eval-hallucination.yml` | `workflow_call` from `ci-<stack>.yml` | — | hallucination rate hard-fail (`HALLUCINATION_FAIL_ABOVE`, default 0.05) |
 | `eval-ttft-live.yml` | `workflow_call` from `ci-<stack>.yml` | — | live Ollama TTFT budget (`TTFT_FAIL_ABOVE_MS`); no-op unless repo variable `TTFT_LIVE=required` |
-| `cd-staging.yml` | Push to `develop` | staging | eval fail below 0.75 + smoke |
-| `cd-production.yml` | Push to `main` | production | eval fail below 0.80 + smoke; **no `continue-on-error`** |
+| `cd-staging.yml` | Stack CI succeeded on a push to `develop` (`workflow_run`) | staging | eval fail below 0.75 + smoke |
+| `cd-production.yml` | Stack CI succeeded on a push to `main` (`workflow_run`) | production | eval fail below 0.80 + smoke; **no `continue-on-error`** |
 
 All three reusable eval workflows must exist in the tenant repo — a missing
 `workflow_call` callee makes GitHub reject the calling `ci-<stack>.yml` as

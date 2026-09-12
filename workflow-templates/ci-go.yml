@@ -4,7 +4,9 @@ on:
   pull_request:
     branches: ["main", "develop"]
   push:
-    branches: ["main"]
+    # develop too: cd-staging.yml deploys only after THIS workflow succeeds on
+    # a push to develop, so without it staging never deploys.
+    branches: ["main", "develop"]
 
 concurrency:
   group: ci-go-${{ github.ref }}

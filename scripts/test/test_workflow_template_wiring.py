@@ -158,6 +158,34 @@ def test_security_workflow_installs_the_runtimes_core_dependencies() -> None:
     assert not missing, f"eval-security.yml does not install runtime core deps: {missing}"
 
 
+def test_cd_deploys_only_what_ci_passed() -> None:
+    """cd-staging/cd-production ran `on: push` in parallel with CI and nothing
+    made them wait — AqlaarTeleologyStudio's production deploy went green on
+    commits whose CI was red. They must trigger on the stack CI completing,
+    proceed only on success, deploy the commit CI ran against, and name every
+    stack's CI workflow exactly (a renamed CI silently disconnects CD)."""
+    import yaml
+
+    ci_names = {
+        yaml.safe_load(p.read_text(encoding="utf-8"))["name"] for p in TEMPLATES.glob("ci-*.yml")
+    }
+    for env, branch in (("staging", "develop"), ("production", "main")):
+        doc = yaml.safe_load((TEMPLATES / f"cd-{env}.yml").read_text(encoding="utf-8"))
+        on = doc.get("on", doc.get(True))  # PyYAML 1.1 reads a bare `on` key as True
+        assert set(on) == {"workflow_run"}, f"cd-{env}.yml must not also trigger on {set(on) - {'workflow_run'}}"
+        run = on["workflow_run"]
+        assert set(run["workflows"]) == ci_names, f"cd-{env}.yml waits on {run['workflows']}, CI is named {ci_names}"
+        assert run["branches"] == [branch] and run["types"] == ["completed"]
+        job = doc["jobs"]["deploy"]
+        assert "workflow_run.conclusion == 'success'" in job["if"]
+        checkout = next(s for s in job["steps"] if str(s.get("uses", "")).startswith("actions/checkout"))
+        assert checkout["with"]["ref"] == "${{ github.event.workflow_run.head_sha }}"
+    for path in TEMPLATES.glob("ci-*.yml"):
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+        on = doc.get("on", doc.get(True))
+        assert {"main", "develop"} <= set(on["push"]["branches"]), f"{path.name}: staging CD needs CI on develop"
+
+
 def test_ts_react_template_assumes_no_particular_test_runner_or_script_names() -> None:
     """A stock `create-vite` react-ts scaffold defines neither a `tsc` script
     nor Jest: `npm run tsc` failed with `Missing script`, and Vitest rejects
