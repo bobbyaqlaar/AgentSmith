@@ -42,10 +42,13 @@ jobs:
           fi
           # pnpm/action-setup reads the version from package.json's
           # `packageManager` and refuses a second one given here, so pass a
-          # version only when the project does not pin one.
+          # version only when the project does not pin one. The fallback is
+          # the pnpm the agentsmith-scratch-ts-react-pnpm tenant proves green
+          # in real CI (test_ci_package_managers.py keeps the two equal);
+          # bump both together.
           version=""
           if [ "$pm" = pnpm ] && ! node -e 'process.exit(require("./package.json").packageManager ? 0 : 1)'; then
-            version=10
+            version=12.4.1
           fi
           echo "pm=$pm" >> "$GITHUB_OUTPUT"
           echo "pnpm_version=$version" >> "$GITHUB_OUTPUT"

@@ -132,6 +132,51 @@ whether the trigger has fired instead of re-litigating whether the gap matters.
 
 ---
 
+## Open from the onboarding audit (2026-09-13/14)
+
+Found running every stack through a real scratch tenant's CI
+(`docs/scratch-tenants.md`); fixed items are in `CHANGELOG.md` [Unreleased]
+and `Product_Archive.md`. Each was checked still open on 2026-09-14.
+
+- **A day-one tenant's CI is red on every stack.** The strict harness fails on
+  the shipped placeholder `risk_register.yaml` / `agency_manifest.yaml` (even
+  non-strict fails on the manifest), and since 2026-09-14 Go and TS run it
+  too. Deliberate — a placeholder is not a declaration — but the onboarding
+  message is the only thing telling a new tenant. **Trigger:** the first
+  external tenant onboards, or someone proposes relaxing strict to get green.
+- **`rollback-notify` names the wrong commit under `workflow_run`.**
+  `.github/actions/rollback-notify/action.yml` reports `github.sha`, which
+  for a `workflow_run`-triggered CD is the branch head when CD started, not
+  `workflow_run.head_sha`, the commit being deployed. **Trigger:** before any
+  tenant sets a real `DEPLOY_COMMAND`.
+- **KYC Sentinel's CI tests framework HEAD while it deploys v1.3.0.** Its
+  `ci.yml` checks out `bobbyaqlaar/AgentSmith` with no `ref`, but its
+  requirements pin `agentsmith-runtime @ …@v1.3.0`. **Trigger:** the next
+  framework change that breaks compatibility with a pinned version.
+- **KYC Sentinel's `cd-staging.yml` image build/push/deploy is unverified.**
+  Rewritten for the private framework (BuildKit secret, `--image`), never run:
+  GCP promotion is suspended. **Trigger:** promotion resumes.
+- **`ai-stack-upgrade` may overwrite a tenant file that shares a vendored
+  file's name.** The hook merges `scripts/` without clobbering and reports
+  clashes; the upgrade path refreshes vendored files by name. Unverified
+  against a real clash. **Trigger:** a tenant reports a lost script, or the
+  next change to `ai-stack-upgrade`.
+- **`install-ai-stack.sh --force` adds one blank line to `~/.zshrc` per run.**
+  Cosmetic. **Trigger:** the next change to the managed block.
+- **The TS template supports npm and pnpm only; the Python install, pip and
+  uv only.** Yarn/bun fail by name; Poetry/Pipenv get a warning and no
+  dependencies. **Trigger:** a tenant on one of them — add a scratch app for it
+  first (`docs/scratch-tenants.md` § Changing the tenants).
+- **Local gates do not match Self-Test.** On a Python 3.14 venv, `mypy` fails
+  on numpy's stubs; `verify_system.py --check-idempotency`/`--check-dlq` need
+  `DATABASE_URL`; `mutation_check.py` reports a `tenant_scaffold` survivor that
+  Self-Test catches. **Trigger:** a local gate is trusted as the pre-push
+  check again.
+- **Actions minutes.** With AgentSmith private, Self-Test alone is ≈1,900
+  job-minutes/30 days against GitHub Free's 2,000, before the five scratch
+  tenants' weekly and per-change runs. **Trigger:** the first month a
+  run is queued for lack of minutes.
+
 ## Known gaps carried forward from the 1.1.0 review
 
 Small, specific, and deliberately not fixed in that release.

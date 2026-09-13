@@ -77,13 +77,24 @@ STACK="GENERIC"
 TEST_CMD="echo 'No test command configured'"
 
 # TEST_CMD goes into the generated agent rules, so it names the tool the
-# project actually uses — the lockfile says which, as in the CI templates.
+# project actually uses — the lockfile says which, in the SAME precedence as
+# ci-ts-react.yml's "Detect package manager" step and the install-python-deps
+# action (scripts/test/test_ci_package_managers.py runs both sides and pins
+# them). Yarn and bun get their own tool here even though the TS template
+# rejects them: this line tells an agent how to run tests locally.
 if [ -f "$REPO_ROOT/package.json" ]; then
-  STACK="TS_REACT"; TEST_CMD="CI=true npm test"
-  [ -f "$REPO_ROOT/pnpm-lock.yaml" ] && TEST_CMD="CI=true pnpm test"
+  STACK="TS_REACT"
+  if [ -f "$REPO_ROOT/pnpm-lock.yaml" ]; then js=pnpm
+  elif [ -f "$REPO_ROOT/package-lock.json" ] || [ -f "$REPO_ROOT/npm-shrinkwrap.json" ]; then js=npm
+  elif [ -f "$REPO_ROOT/yarn.lock" ]; then js=yarn
+  elif [ -f "$REPO_ROOT/bun.lock" ] || [ -f "$REPO_ROOT/bun.lockb" ]; then js=bun
+  else js=npm
+  fi
+  # `bun test` is bun's own runner, not the package's test script.
+  if [ "$js" = bun ]; then TEST_CMD="CI=true bun run test"; else TEST_CMD="CI=true $js test"; fi
 elif [ -f "$REPO_ROOT/requirements.txt" ] || [ -f "$REPO_ROOT/pyproject.toml" ] || [ -f "$REPO_ROOT/Pipfile" ]; then
   STACK="PYTHON_FASTAPI"; TEST_CMD="pytest"
-  [ -f "$REPO_ROOT/uv.lock" ] && TEST_CMD="uv run pytest"
+  if [ ! -f "$REPO_ROOT/requirements.txt" ] && [ -f "$REPO_ROOT/uv.lock" ]; then TEST_CMD="uv run pytest"; fi
 elif [ -f "$REPO_ROOT/go.mod" ]; then
   STACK="GO"; TEST_CMD="go test -race ./..."
 fi
@@ -158,6 +169,10 @@ if [ -d "$SECURITY_TEMPLATES" ]; then
     echo "      nist_profile.yaml    your org name and control owners"
     echo "   Verify with: python3 scripts/run-security-checks.py --mode ci --strict"
   fi
+else
+  # Silently skipping left a tenant with no pack and a harness that fails
+  # SEC-TOOL-001/SEC-RISK-001 on files nobody said were missing.
+  echo "⚠️  $SECURITY_TEMPLATES missing — .agent-rfc/security/ was not seeded. Re-run install-ai-stack.sh."
 fi
 
 # ── Vendor scripts/ from the framework ────────────────────────────────────────

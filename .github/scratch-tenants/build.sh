@@ -9,12 +9,12 @@
 #                python-fastapi, python-uv). One stack can have several apps,
 #                one per scenario; the hook detects the stack from the files.
 #
-# A scratch tenant is a pure OUTPUT: everything in it is either a verbatim copy
-# of .github/scratch-tenants/apps/<app>/ or produced by the post-checkout
-# hook. So the build empties the target (keeping .git and its history), copies
-# the app in, and fires the installed hook exactly as a checkout would. There
-# is no list of "provisioned" vs "tenant-owned" paths to keep in step with the
-# hook — the app source is the whole of what the tenant owns.
+# A scratch tenant is a pure OUTPUT: everything in it is a verbatim copy of
+# .github/scratch-tenants/apps/<app>/, of the shared security-pack/ and
+# SCRATCH_TENANT.md beside this script, or produced by the post-checkout hook.
+# So the build empties the target (keeping .git and its history), copies those
+# in, and fires the installed hook exactly as a checkout would. There is no
+# list of "provisioned" vs "tenant-owned" paths to keep in step with the hook.
 #
 # <target-dir> may be an existing clone of the scratch repo (the workflow) or
 # any directory (local use: it is git-initialised if needed).
@@ -59,6 +59,11 @@ fi
 find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 cp -R "$APP/." .
 cp "$HERE/SCRATCH_TENANT.md" SCRATCH_TENANT.md
+# The authored security pack, one copy for every app — every stack's CI runs
+# the strict harness, which fails on the shipped placeholders. Copied BEFORE
+# the hook, so the hook's never-overwrite rule for the pack stays exercised.
+mkdir -p .agent-rfc/security
+cp "$HERE/security-pack/"*.yaml .agent-rfc/security/
 mkdir -p .agenticframework
 touch .agenticframework/enabled
 

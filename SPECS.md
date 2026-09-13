@@ -1355,8 +1355,8 @@ AgentSmith/
 │   └── superpowers/             # Design specs + implementation plans
 ├── .github/
 │   ├── actions/                 # Composite actions copied into tenant repos (§17): gcp-auth,
-│   │                            #   build-push-ghcr, deploy-placeholder, rollback-notify
-│   ├── scratch-tenants/         # apps/<app>/ source + build.sh for the scratch tenant repos (docs/scratch-tenants.md)
+│   │                            #   build-push-ghcr, deploy-placeholder, rollback-notify, install-python-deps
+│   ├── scratch-tenants/         # apps/<app>/ source, shared security-pack/ + build.sh for the scratch tenant repos (docs/scratch-tenants.md)
 │   └── workflows/
 │       ├── self-test.yml        # py_compile/shellcheck/portal/widget tests on the framework itself
 │       ├── release.yml          # Builds + optionally signs release tarballs (§28)
@@ -1441,7 +1441,10 @@ All three reusable eval workflows must exist in the tenant repo — a missing
 an invalid workflow. `post-checkout` and `ai-tenant-init` copy them
 alongside the callers, plus the composite actions the CD workflows
 reference as `uses: ./.github/actions/<name>` (`gcp-auth`,
-`build-push-ghcr`, `deploy-placeholder`, `rollback-notify`) — the `./`
+`build-push-ghcr`, `deploy-placeholder`, `rollback-notify`), and
+`install-python-deps`, through which `ci-python-fastapi.yml` and
+`eval-security.yml` install a project's own dependencies (`requirements.txt`,
+else `uv.lock` via `uv export --locked`, else a warning) — the `./`
 form resolves inside the *tenant* repo, so the actions are copied in from
 `~/.agent-framework/github-actions/` (vendored by `install-ai-stack.sh`,
 released as `github-actions.tar.gz`).

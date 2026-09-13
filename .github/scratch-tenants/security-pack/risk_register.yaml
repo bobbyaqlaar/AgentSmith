@@ -1,11 +1,15 @@
-# Risk register (SEC-RISK-001) for agentsmith-scratch-python.
+# Risk register (SEC-RISK-001) for an AgentSmith scratch tenant.
 #
-# This repo is a TEST FIXTURE, not a product: a minimal FastAPI app that
-# AgentSmith's scratch-tenants workflow re-provisions so the framework's
-# onboarding path runs through real CI (AgentSmith docs/scratch-tenants.md).
-# The entries below describe the fixture's actual residual risks. They are
-# filled in so the strict security harness is expected green here, which lets
-# any red run mean a framework regression rather than an un-edited template.
+# This repo is a TEST FIXTURE, not a product: a minimal app that AgentSmith's
+# scratch-tenants workflow rebuilds so the framework's onboarding path runs
+# through real CI (AgentSmith docs/scratch-tenants.md). The entries below
+# describe the fixture's actual residual risks. They are filled in so the
+# strict security harness is expected green here, which lets any red run mean
+# a framework regression rather than an un-edited template.
+#
+# ONE copy serves every scratch tenant: AgentSmith's
+# .github/scratch-tenants/security-pack/, which build.sh copies in. Edit it
+# there, not in a scratch repo.
 version: 1
 entries:
   - id: RISK-SCRATCH-001

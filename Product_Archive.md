@@ -7,6 +7,26 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — onboarding audit through real scratch-tenant CI (2026-09-13/14)
+
+Every stack onboarded into a private scratch repo and run through its own CI
+on GitHub, then kept that way by `.github/workflows/scratch-tenants.yml`.
+Release notes: `CHANGELOG.md` [Unreleased]; still open: `FIXES_AND_CLEANUP.md`.
+
+| Finding | Evidence | Fix |
+|---|---|---|
+| Pip cache failed every Go/TS eval job at `setup-python` | first scratch go/ts CI run | cache keyed on the workflow file |
+| `ci-ts-react.yml` assumed Jest and a `tsc` script | stock `create-vite` tenant red | runner-agnostic test, `tsc -b` fallback |
+| 36 framework-internal tests failed in a stock Python tenant | scratch python CI | vendor only the 5 harness-delegated tests |
+| Vendored code failed the tenant's ruff gates (609 of 746 findings in OTS) | AqlaarTeleologyStudio CI | nested `ruff.toml` excludes |
+| CD could deploy commits whose CI failed (ran in parallel on `push`) | template reading | `workflow_run`, success only |
+| `.pyc` committed into a fresh Go tenant | scratch go first commit | `PYTHONDONTWRITEBYTECODE` in the hook |
+| Vendoring shadowed KYC Sentinel's pinned runtime | hook-free clone of KYC | installed mode |
+| Hook appended its `.gitignore` block on every checkout | scratch repos had it up to 3× | idempotent |
+| pnpm tenant failed at setup-node; uv tenant's tests failed at import | new scratch apps | lockfile-driven install; green on GitHub |
+| Go/TS CI never ran the security harness | template reading | strict harness on every stack |
+| Stale `uv.lock` passed; the security job's install lacked uv; hook and templates disagreed on lockfile precedence | review-levers pass, each reproduced | `install-python-deps` action, `--locked`, pinned precedence test |
+
 ## Completed — review pass 13, three repos (2026-08-25)
 
 Run across AgentSmith, KYC Sentinel and `examples/oil-price-agent` together,

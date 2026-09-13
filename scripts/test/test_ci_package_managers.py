@@ -158,18 +158,25 @@ def test_setup_node_caches_for_the_detected_manager_after_pnpm_is_on_path():
 
 # ── Python ───────────────────────────────────────────────────────────────────
 
+ACTION = REPO / ".github" / "actions" / "install-python-deps" / "action.yml"
 
-def _py_calls(tmp_path: Path, files: list[str]) -> list[str]:
-    project = tmp_path / "project"
-    project.mkdir()
-    for name in files:
-        (project / name).write_text("")
-    runner = Runner(project, tmp_path)
-    result, _ = runner.run(_step("ci-python-fastapi.yml", "Install dependencies")["run"])
-    assert result.returncode == 0, result.stdout + result.stderr
-    # `python -m pip install --upgrade pip` is not a shim call; the tool
-    # installs at the end are the same in every case.
-    return [c for c in runner.calls() if not c.startswith("pip install pytest ")]
+
+def _action_script() -> str:
+    steps = yaml.safe_load(ACTION.read_text(encoding="utf-8"))["runs"]["steps"]
+    assert len(steps) == 1
+    return steps[0]["run"]
+
+
+def test_both_python_callers_install_through_the_one_action():
+    """ci-python-fastapi.yml and eval-security.yml each carried a copy of the
+    install guard, and only one learned about uv."""
+    ci = _steps("ci-python-fastapi.yml")
+    assert any(s.get("uses") == "./.github/actions/install-python-deps" for s in ci)
+    for path in (TEMPLATES / "eval-security.yml", REPO / ".github" / "workflows" / "eval-security.yml"):
+        steps = yaml.safe_load(path.read_text(encoding="utf-8"))["jobs"]["security"]["steps"]
+        assert any(s.get("uses") == "./.github/actions/install-python-deps" for s in steps), path
+    for text in (s.get("run", "") for s in ci):
+        assert "requirements.txt" not in text and "uv export" not in text, "a second copy of the install"
 
 
 @pytest.fixture()
@@ -182,19 +189,118 @@ def no_real_pip_upgrade(tmp_path, monkeypatch):
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
 
 
-def test_a_uv_tenant_installs_its_locked_dependencies(tmp_path, no_real_pip_upgrade):
-    calls = _py_calls(tmp_path, ["pyproject.toml", "uv.lock"])
+def _install(tmp_path: Path, files: list[str]) -> tuple[subprocess.CompletedProcess, list[str]]:
+    project = tmp_path / "project"
+    project.mkdir()
+    for name in files:
+        (project / name).write_text("")
+    runner = Runner(project, tmp_path)
+    result, _ = runner.run(_action_script())
+    assert result.returncode == 0, result.stdout + result.stderr
+    return result, runner.calls()
 
-    assert calls == [
-        "pip install uv",
-        f"uv export --frozen --no-hashes --format requirements-txt -o {tmp_path}/uv-requirements.txt",
-        f"pip install -r {tmp_path}/uv-requirements.txt",
-    ]
+
+def test_a_uv_tenant_installs_its_lock_and_a_stale_lock_fails(tmp_path, no_real_pip_upgrade):
+    _, calls = _install(tmp_path, ["pyproject.toml", "uv.lock"])
+
+    pin, export, install = calls
+    assert pin.startswith("pip install uv=="), "uv must be pinned, like ruff"
+    # --locked fails when uv.lock no longer matches pyproject.toml; --frozen
+    # exported the stale lock and silently dropped the new dependency.
+    assert export == f"uv export --locked --no-hashes --format requirements-txt -o {tmp_path}/uv-requirements.txt"
+    assert install == f"pip install -r {tmp_path}/uv-requirements.txt"
 
 
 def test_requirements_txt_wins_and_uv_is_not_touched(tmp_path, no_real_pip_upgrade):
-    assert _py_calls(tmp_path, ["requirements.txt", "pyproject.toml", "uv.lock"]) == ["pip install -r requirements.txt"]
+    _, calls = _install(tmp_path, ["requirements.txt", "pyproject.toml", "uv.lock"])
+    assert calls == ["pip install -r requirements.txt"]
 
 
-def test_a_project_with_neither_installs_only_the_tools(tmp_path, no_real_pip_upgrade):
-    assert _py_calls(tmp_path, ["pyproject.toml"]) == []
+@pytest.mark.parametrize("manifest", ["pyproject.toml", "Pipfile"])
+def test_a_project_whose_dependencies_cannot_be_installed_is_told_so(tmp_path, no_real_pip_upgrade, manifest):
+    """Requirement: a Python project CI cannot install must not look installed.
+    It still passes — the tools alone may be enough — but the run says so."""
+    result, calls = _install(tmp_path, [manifest])
+    assert calls == []
+    assert "::warning title=Project dependencies not installed::" in result.stdout
+
+
+def test_a_repo_with_no_python_manifest_gets_no_warning(tmp_path, no_real_pip_upgrade):
+    """eval-security.yml runs on Go and TS tenants too; they have nothing to install."""
+    result, calls = _install(tmp_path, ["go.mod"])
+    assert calls == [] and "::warning" not in result.stdout
+
+
+# ── The hook's test command and the CI install agree on the tool ─────────────
+#
+# The same lockfile precedence lives in bash (hooks/post-checkout, which writes
+# the agent rules' test command) and in the CI templates. Neither can import
+# the other, so this RUNS both sides over the same projects.
+
+HOOK = REPO / "hooks" / "post-checkout"
+
+
+def _hook_test_cmd(project: Path) -> str:
+    text = HOOK.read_text(encoding="utf-8")
+    block = text[text.index("# ── Detect stack"):text.index('echo "🔧 AgentSmith: Detected stack')]
+    result = subprocess.run(
+        ["bash", "-c", f'REPO_ROOT="{project}"\n{block}\nprintf "%s" "$TEST_CMD"'],
+        capture_output=True, text=True, check=True,
+    )
+    return result.stdout
+
+
+def _project(tmp_path: Path, files: list[str]) -> Path:
+    project = tmp_path / "project"
+    project.mkdir()
+    for name in files:
+        (project / name).write_text("{}" if name == "package.json" else "")
+    return project
+
+
+@needs_node
+@pytest.mark.parametrize(
+    ("files", "tool"),
+    [
+        (["package.json", "package-lock.json"], "npm"),
+        (["package.json", "pnpm-lock.yaml"], "pnpm"),
+        (["package.json", "pnpm-lock.yaml", "package-lock.json"], "pnpm"),
+        (["package.json", "package-lock.json", "yarn.lock"], "npm"),
+        (["package.json", "yarn.lock"], None),
+        (["package.json", "bun.lockb"], None),
+    ],
+)
+def test_hook_and_ts_template_pick_the_same_package_manager(tmp_path, files, tool):
+    project = _project(tmp_path, files)
+    hook = _hook_test_cmd(project)
+    result, outputs = Runner(project, tmp_path).run(_step("ci-ts-react.yml", "Detect package manager")["run"])
+    if tool is None:
+        assert result.returncode == 1, "the template must refuse an unsupported lockfile"
+        assert hook.split()[1] in {"yarn", "bun"}, f"the hook claims {hook!r} for a {files[-1]} project"
+    else:
+        assert outputs["pm"] == tool
+        assert hook == f"CI=true {tool} test"
+
+
+@pytest.mark.parametrize(
+    ("files", "uses_uv"),
+    [
+        (["pyproject.toml", "uv.lock"], True),
+        (["requirements.txt", "uv.lock"], False),
+        (["requirements.txt"], False),
+        (["pyproject.toml"], False),
+    ],
+)
+def test_hook_and_python_install_agree_on_uv(tmp_path, no_real_pip_upgrade, files, uses_uv):
+    project = _project(tmp_path, files)
+    runner = Runner(project, tmp_path)
+    runner.run(_action_script())
+    assert any(c.startswith("uv ") for c in runner.calls()) is uses_uv
+    assert (_hook_test_cmd(project) == "uv run pytest") is uses_uv
+
+
+def test_the_pnpm_fallback_is_the_version_the_scratch_tenant_proves():
+    pkg = json.loads((REPO / ".github/scratch-tenants/apps/ts-react-pnpm/package.json").read_text(encoding="utf-8"))
+    proven = pkg["packageManager"].removeprefix("pnpm@")
+    detect = _step("ci-ts-react.yml", "Detect package manager")["run"]
+    assert f"version={proven}" in detect, f"the template's fallback pnpm is not the proven {proven}"

@@ -11,7 +11,7 @@ can have several, one per scenario the templates must handle.
 | [agentsmith-scratch-ts-react](https://github.com/bobbyaqlaar/agentsmith-scratch-ts-react) | `ts-react` | `apps/ts-react/` — stock `create-vite` react-ts + Vitest, npm | Jest-free test command, `tsc` fallback, **a pre-existing `scripts/`** (`release.mjs`) the hook must merge into |
 | [agentsmith-scratch-ts-react-pnpm](https://github.com/bobbyaqlaar/agentsmith-scratch-ts-react-pnpm) | `ts-react` | `apps/ts-react-pnpm/` — the same Vite app on **pnpm** (`pnpm-lock.yaml`, `packageManager`), no `package-lock.json` | the template picks the package manager from the lockfile: `pnpm/action-setup`, pnpm cache, `pnpm install --frozen-lockfile`, `pnpm exec tsc` |
 | [agentsmith-scratch-go](https://github.com/bobbyaqlaar/agentsmith-scratch-go) | `go` | `apps/go/` — one module, one tested package, **no `.gitignore`** | eval/CD workflows on a repo with no Python manifest; nothing masking stray files |
-| [agentsmith-scratch-python](https://github.com/bobbyaqlaar/agentsmith-scratch-python) | `python-fastapi` | `apps/python-fastapi/` — FastAPI `/healthz` + one test, `requirements.txt`, authored security pack | vendored `runtime/test` suites under the template's bare `pytest`, ruff isolation, **strict security harness** |
+| [agentsmith-scratch-python](https://github.com/bobbyaqlaar/agentsmith-scratch-python) | `python-fastapi` | `apps/python-fastapi/` — FastAPI `/healthz` + one test, `requirements.txt` | vendored `runtime/test` suites under the template's bare `pytest`, ruff isolation, **strict security harness** |
 | [agentsmith-scratch-python-uv](https://github.com/bobbyaqlaar/agentsmith-scratch-python-uv) | `python-fastapi` | `apps/python-uv/` — the same app as a **uv** project (`pyproject.toml` + `uv.lock`, dev dependency group, `[tool.ruff]`), no `requirements.txt` | the template installs the exported lock; the vendored `ruff.toml` files `extend` the project's `pyproject.toml` |
 
 ## Why they exist
@@ -29,17 +29,17 @@ a `requirements.txt`, so a pnpm tenant failed before its first check and a uv
 tenant's tests failed at import. None showed up in `pytest`, and none in
 AqlaarTeleologyStudio, whose customised test step hid them.
 
-**Expected state: every tenant's CI fully green.** Every app's security pack
-is filled in (as a labelled fixture) precisely so that the strict harness, which
-every stack's CI runs, passes — a red run anywhere means a framework regression, never "the
-placeholders again".
+**Expected state: every tenant's CI fully green.** Every tenant gets the same
+filled-in security pack (a labelled fixture, `security-pack/`) precisely so
+that the strict harness, which every stack's CI runs, passes — a red run
+anywhere means a framework regression, never "the placeholders again".
 
 ## Two layers of checking
 
 | Layer | Where | Runs | Proves |
 |---|---|---|---|
-| **Offline build** | `scripts/test/test_scratch_tenants.py`, in Self-Test | every AgentSmith push, seconds | each app builds with the real hook into a complete tenant: detected as its stack, no hook warnings, the app verbatim, the stack's workflows and actions, pruned `runtime/test`, the right test command in `CLAUDE.md`, no `.pyc` |
-| **Template scripts** | `scripts/test/test_ci_package_managers.py`, in Self-Test | every AgentSmith push, seconds | the CI templates' own `run:` scripts, executed with shimmed npm/pnpm/pip/uv, call the package manager the lockfile names |
+| **Offline build** | `scripts/test/test_scratch_tenants.py`, in Self-Test | every AgentSmith push, ~2 min | each app builds with the real hook into a complete tenant: detected as its stack, no hook warnings, the app and shared pack verbatim, the stack's workflows and actions, pruned `runtime/test`, the right test command in `CLAUDE.md`, no `.pyc` — and the **strict security harness passes** in it. Scenario apps are pinned to their base app: they may differ only in their manifest and lockfile |
+| **Template scripts** | `scripts/test/test_ci_package_managers.py`, in Self-Test | every AgentSmith push, seconds | the CI templates' own `run:` scripts and the `install-python-deps` action, executed with shimmed npm/pnpm/pip/uv, call the package manager the lockfile names — the same one the hook names in the agent rules |
 | **Real CI** | `.github/workflows/scratch-tenants.yml` | weekly + provisioning pushes, minutes | the built tenant's own CI goes green on GitHub, and its CD fires off it |
 
 The first layer catches most breaks before anything is pushed anywhere; the
@@ -141,18 +141,23 @@ not made by the workflow.
   rebuilds that tenant. Editing a scratch repo directly fails the next build.
 - **A template change that needs an app change** lands as one AgentSmith
   commit; the offline test checks both together before anything is pushed.
-- **The security packs** (`apps/<app>/.agent-rfc/security/`, one per app)
-  hold only the two authored files; the hook seeds the other two, and its
-  "never overwrite" rule stays under test because the authored ones are copied
-  in first. They are labelled fixtures, not real risk assessments.
+- **The security pack** is ONE copy for every tenant,
+  `.github/scratch-tenants/security-pack/`, which `build.sh` copies in; apps
+  must not carry their own. It holds only the two authored files; the hook
+  seeds the other two, and its "never overwrite" rule stays under test because
+  the authored ones are copied in first. It is a labelled fixture, not a real
+  risk assessment.
+- **A scenario app** (`ts-react-pnpm`, `python-uv`) is a deliberate copy of
+  its base app with one thing changed, so each scratch repo stays a realistic
+  standalone project. A fix to the base's source must land in the copy too —
+  `test_scratch_tenants.py` fails on any other difference.
 - **A new app** — a new stack in `runtime/cli.py`'s `STACKS`, or another
   scenario for an existing one (a yarn TS app, a Poetry Python app) — needs
   `apps/<app>/`, a matrix entry naming its `stack` and repo, an entry in
   `test_scratch_tenants.py`'s `SCENARIOS` saying what makes it that scenario,
   and a new private scratch repo **selected on the token**.
   `test_scratch_tenants.py` fails until the directory, matrix entry and
-  scenario agree, until every stack has an app, and until the app has its own
-  authored security pack. Create the repo and update
+  scenario agree, and until every stack has an app. Create the repo and update
   the token *before* pushing the matrix entry, or that job fails at checkout.
 
 ## Cost
@@ -161,6 +166,7 @@ Private repos, ~600 KB each, no secrets of their own; the app sources add
 ~260 KB to AgentSmith (mostly the TS apps' lockfiles, which a frozen install
 needs). Per workflow run: five AgentSmith jobs (~3–5 min each) plus each
 tenant's CI (~1–4 min), weekly plus provisioning-change pushes. The offline test
-adds seconds to Self-Test. Eval jobs skip rather than grade — the scratch repos
+adds about two minutes to Self-Test, nearly all of it the five strict harness
+runs. Eval jobs skip rather than grade — the scratch repos
 hold no API keys — so a green eval there proves the workflow runs, not model
 quality.

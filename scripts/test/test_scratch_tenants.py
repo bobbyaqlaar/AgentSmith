@@ -19,6 +19,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -82,31 +83,65 @@ def test_every_app_is_the_scenario_it_claims():
     assert "[tool.ruff]" in (APPS / "python-uv" / "pyproject.toml").read_text(encoding="utf-8")
 
 
-def test_every_app_declares_its_own_security_pack():
-    """Every stack's CI runs the strict harness, which fails on the shipped
-    placeholder pack. An app without an authored pack would make its tenant red
-    for a reason that is not a framework regression."""
-    for app in (p for p in APPS.iterdir() if p.is_dir()):
-        pack = app / ".agent-rfc" / "security"
-        register = yaml.safe_load((pack / "risk_register.yaml").read_text(encoding="utf-8"))
-        manifest = yaml.safe_load((pack / "agency_manifest.yaml").read_text(encoding="utf-8"))
-        assert register["entries"] and not [e for e in register["entries"] if "EXAMPLE" in e["id"]], app.name
-        assert manifest["actions"], app.name
+# A scenario app is its base app with ONE thing changed. Everything else is a
+# deliberate copy — each scratch repo must be a realistic standalone project —
+# so it is pinned here instead: a fix to one copy that misses the other fails.
+SCENARIO_BASE = {"ts-react-pnpm": "ts-react", "python-uv": "python-fastapi"}
+SCENARIO_ONLY = {
+    # What each scenario may legitimately differ in, besides its manifest.
+    "ts-react-pnpm": {"package-lock.json", "pnpm-lock.yaml", "package.json", "scripts/release.mjs"},
+    "python-uv": {"requirements.txt", "pyproject.toml", "uv.lock"},
+}
+
+
+def _files(root: Path) -> dict[str, bytes]:
+    """Tracked files only: what CI checks out and a push publishes. A local
+    tool cache in an app directory is not part of the app."""
+    listed = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard", "."],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    return {name: (root / name).read_bytes() for name in listed.split("\0") if name and (root / name).is_file()}
+
+
+@pytest.mark.parametrize("scenario", sorted(SCENARIO_BASE))
+def test_a_scenario_app_differs_from_its_base_only_where_the_scenario_does(scenario):
+    base, mine = _files(APPS / SCENARIO_BASE[scenario]), _files(APPS / scenario)
+    shared = (set(base) | set(mine)) - SCENARIO_ONLY[scenario]
+    drifted = sorted(f for f in shared if base.get(f) != mine.get(f))
+    assert not drifted, f"apps/{scenario} has drifted from apps/{SCENARIO_BASE[scenario]}: {drifted}"
+
+
+def test_the_pnpm_app_declares_what_the_npm_app_declares():
+    base = json.loads((APPS / "ts-react" / "package.json").read_text(encoding="utf-8"))
+    pnpm = json.loads((APPS / "ts-react-pnpm" / "package.json").read_text(encoding="utf-8"))
+    for key in ("scripts", "dependencies", "devDependencies", "type", "private"):
+        assert pnpm.get(key) == base.get(key), f"package.json {key} differs between the npm and pnpm apps"
+
+
+def test_the_uv_app_declares_what_the_requirements_app_declares():
+    requirements = {
+        ln.strip() for ln in (APPS / "python-fastapi" / "requirements.txt").read_text(encoding="utf-8").splitlines()
+        if ln.strip() and not ln.startswith("#")
+    }
+    project = tomllib.loads((APPS / "python-uv" / "pyproject.toml").read_text(encoding="utf-8"))
+    declared = set(project["project"]["dependencies"]) | set(project["dependency-groups"]["dev"])
+    assert declared == requirements
 
 
 def test_apps_carry_nothing_provisioning_generates():
     """App source is only what a tenant writes. Generated files here would mask
     the hook failing to produce them."""
+    # .agent-rfc too: the hook creates it, and the security pack inside it
+    # comes from the ONE shared security-pack/ — an app-local copy would be a
+    # second pack to drift.
     generated = {
         ".github", "runtime", "fixtures", ".agents", ".cursorrules", "CLAUDE.md", "AGENTS.md",
-        "GEMINI.md", ".agenticframework", "SCRATCH_TENANT.md", ".agent-history.log",
+        "GEMINI.md", ".agenticframework", "SCRATCH_TENANT.md", ".agent-history.log", ".agent-rfc",
     }
     for app in (p for p in APPS.iterdir() if p.is_dir()):
         present = {p.name for p in app.iterdir()} & generated
         assert not present, f"apps/{app.name} contains generated paths: {present}"
-        rfc = app / ".agent-rfc"
-        if rfc.exists():
-            assert {p.name for p in rfc.iterdir()} == {"security"}, f"apps/{app.name}/.agent-rfc beyond security/"
 
 
 def test_the_commit_step_disarms_hooks_and_uses_the_author_build_sh_expects():
@@ -129,6 +164,7 @@ def install(tmp_path, monkeypatch):
     shutil.copytree(REPO / "scripts", fw / "scripts", ignore=ignore)
     shutil.copytree(REPO / "runtime", fw / "runtime", ignore=ignore)
     shutil.copytree(REPO / "fixtures" / "security", fw / "fixtures" / "security")
+    shutil.copytree(REPO / "fixtures" / "security" / "templates", fw / "shared" / "security")
     for base in (REPO / "fixtures").glob("*_base.json"):
         shutil.copy(base, fw / "fixtures" / base.name)
     shutil.copytree(REPO / "workflow-templates", fw / "workflow-templates")
@@ -206,6 +242,16 @@ def test_each_app_builds_into_a_complete_tenant_offline(app, stack, install, tmp
     assert re.search(r"## Test Command\n```\n(.*)\n```", claude_md).group(1) == TEST_CMD[app]
     assert (target / "SCRATCH_TENANT.md").is_file()
     assert not list(target.rglob("*.pyc"))
+    for pack_file in (SCRATCH / "security-pack").iterdir():
+        assert (target / ".agent-rfc" / "security" / pack_file.name).read_bytes() == pack_file.read_bytes()
+    # The harness's own verdict, not a re-derivation of "is this a placeholder":
+    # strict, with the moderation default eval-security.yml sets.
+    harness = subprocess.run(
+        [sys.executable, "scripts/run-security-checks.py", "--mode", "ci", "--strict"],
+        cwd=target, capture_output=True, text=True, check=False,
+        env={**os.environ, "MODERATION_HOOK": "optional"},
+    )
+    assert harness.returncode == 0, harness.stdout + harness.stderr
     if (target / "pyproject.toml").is_file():
         # The project's own ruff settings must still reach the vendored code.
         assert 'extend = "../pyproject.toml"' in (target / "runtime" / "ruff.toml").read_text(encoding="utf-8")
@@ -242,8 +288,11 @@ def test_a_hand_edit_in_the_scratch_repo_fails_the_build(install, tmp_path):
 
 
 @needs_git
-def test_the_build_fails_when_the_install_cannot_provision(install, tmp_path):
-    shutil.rmtree(install / ".agent-framework" / "runtime")
+@pytest.mark.parametrize("missing", ["runtime", "shared/security"])
+def test_the_build_fails_when_the_install_cannot_provision(install, tmp_path, missing):
+    """shared/security used to be skipped without a word, leaving the pack
+    half-seeded and the harness failing on files nobody said were missing."""
+    shutil.rmtree(install / ".agent-framework" / missing)
 
     result = _build("python-fastapi", tmp_path / "tenant")
 

@@ -75,6 +75,110 @@ version table being consulted.
 
 ## [Unreleased]
 
+Entries from here down to `runtime/.hitl_blobs/` cover the 2026-09-13/14
+onboarding audit, which ran each stack through a real scratch tenant's CI.
+**Tenant-facing changes to read before re-provisioning:** CD is now triggered
+by CI (`workflow_run`), Go and TS CI now run the strict security harness, and
+`hooks/post-checkout` changed behaviour in five places (called out below, as
+this file's header requires for hook-interface changes). Existing tenants keep
+the workflow files they have: the hook never overwrites one.
+
+### One Python install for CI and the security harness; stale uv locks fail; the review-levers pass
+
+A review of the entries below against `docs/review-levers.md` found:
+
+- **A stale `uv.lock` passed CI.** `uv export --frozen` exports a lock that no
+  longer matches `pyproject.toml` without a word, dropping a newly added
+  dependency (verified). Now `--locked`, which fails on it as pnpm's
+  `--frozen-lockfile` does, and uv is pinned (`uv==0.12.13`) like ruff.
+- **Two copies of the Python install, one missing uv.** `eval-security.yml`
+  still installed only `requirements.txt`. Both now use one composite action,
+  `.github/actions/install-python-deps` (copied into tenants with the others).
+  A `pyproject.toml` or `Pipfile` project it cannot install now gets a
+  `::warning::` instead of silently installing nothing.
+- **The hook and the templates disagreed on lockfile precedence.** Hook
+  interface change: the agent rules' test command now follows the templates'
+  order (pnpm, then npm, then yarn/bun; `uv run pytest` only when there is no
+  `requirements.txt`). `test_ci_package_managers.py` runs both sides over the
+  same projects. The TS template's pnpm fallback is the version the pnpm
+  scratch tenant proves (12.4.1), pinned by test.
+- **Hook interface change:** a missing `~/.agent-framework/shared/security/`
+  now prints a `⚠️` instead of silently leaving the pack unseeded.
+- **A test that re-derived the harness's verdict could not fail** on the
+  shipped placeholder manifest. The offline scratch build now runs the real
+  strict harness in each built tenant instead.
+- Scratch tenants share one security pack (`.github/scratch-tenants/security-pack/`),
+  and the pnpm and uv apps are pinned to their base apps by a drift test that
+  parses both `package.json`s and `requirements.txt` against `pyproject.toml`.
+
+### Go and TS tenant CI run the strict security harness — **a new Go/TS tenant is red until it fills in its pack**
+
+`ci-go.yml` and `ci-ts-react.yml` never called `eval-security.yml`, although
+every stack is provisioned with it and none of its controls is
+Python-specific, so Go and TS tenants were never graded. Both now call it with
+`strict: true`, as `ci-python-fastapi.yml` does. The harness fails on the
+shipped placeholder `risk_register.yaml` and `agency_manifest.yaml` even
+without `--strict`, so a day-one Go or TS tenant now fails CI until those two
+files are filled in — the state a day-one Python tenant was already in.
+
+### pnpm and uv tenants — templates install with the tool the lockfile names
+
+`ci-ts-react.yml` assumed npm (`cache: npm`, `npm ci`): a pnpm tenant failed
+setup-node before any check ran. It now detects npm or pnpm from the lockfile,
+runs `pnpm/action-setup` when needed, and installs, type-checks, lints and
+tests through that tool; a yarn or bun lockfile, or none, fails by name.
+`ci-python-fastapi.yml` installed only `requirements.txt`, so a uv tenant's
+tests failed at import; it now installs the exported `uv.lock`. Hook interface
+change: the generated test command names pnpm or uv when the lockfile does.
+Proven by two new scratch tenants, `agentsmith-scratch-ts-react-pnpm` and
+`agentsmith-scratch-python-uv`.
+
+### Scratch tenants — onboarding verified through real CI, weekly and on every provisioning change
+
+`.github/workflows/scratch-tenants.yml` runs the real installer, builds each
+private `agentsmith-scratch-*` repo from app source kept in
+`.github/scratch-tenants/apps/<app>/` with the installed hook
+(`build.sh`), pushes it, and fails unless that tenant's own CI goes green.
+`test_scratch_tenants.py` builds every app offline in Self-Test. Setup (a
+fine-grained token with Contents and Workflows read/write and Actions read)
+and triage: `docs/scratch-tenants.md`. Found on the way: the hook appended its
+IDE-config `.gitignore` block on every checkout — now once.
+
+### CD deploys only commits whose CI passed
+
+`cd-staging.yml` and `cd-production.yml` triggered on `push`, in parallel
+with CI, so a commit with red CI deployed (a no-op only while
+`DEPLOY_COMMAND` was unset). Both now trigger on `workflow_run` of the three
+CI workflows, require `conclusion == 'success'` on a push, and check out
+`workflow_run.head_sha`. The `ci-*` templates now also run on `develop`, which
+staging CD needs.
+
+### Onboarding fixes from running each stack's CI for real
+
+All found in the first real CI run of a scratch tenant, none visible to this
+repo's tests:
+
+- The eval/CD templates' pip cache hard-failed `setup-python` on Go and TS
+  tenants (no Python manifest to key on); now keyed on the workflow file.
+- `ci-ts-react.yml` assumed Jest flags and a `tsc` script; now runner-agnostic
+  (`CI=true`), a `typecheck` script if present else `tsc -b --noEmit`.
+- `eval-security.yml` now installs the runtime's core dependencies
+  (`httpx`, `tenacity`), which delegated controls import.
+- Framework-only controls (portal, hooks) report not applicable in a vendored
+  tenant instead of failing.
+- ruff pinned (`0.15.20`) in `ci-python-fastapi.yml`.
+- `agentsmith tenant init` writes the composite actions its CD workflows use.
+- Hook interface changes: base eval fixtures are vendored; a pre-existing
+  `scripts/` is merged without clobbering (clashes reported) and a foreign
+  `runtime/` is refused with a warning; vendored `scripts/` and `runtime/` get
+  a nested `ruff.toml` excluding them from the tenant's lint gates; only the
+  five runtime test files the harness delegates to are vendored (36
+  framework-internal tests failed in a stock tenant); no `.pyc` is left
+  behind; and a tenant that depends on `agentsmith-runtime` as a package is
+  not vendored into at all ("installed mode").
+- `ai-stack-upgrade` applies the same rules; `install-ai-stack.sh --force`
+  refreshes the managed shell-function block, and uninstall removes all of it.
+
 ### `runtime/.hitl_blobs/` excluded from vendoring — caught it landing in a real tenant
 
 Immediately after the `runtime/` vendoring below, applying it to
