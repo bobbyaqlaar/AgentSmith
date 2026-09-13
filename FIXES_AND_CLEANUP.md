@@ -141,8 +141,10 @@ and `Product_Archive.md`. Each was checked still open on 2026-09-14.
 - **A day-one tenant's CI is red on every stack.** The strict harness fails on
   the shipped placeholder `risk_register.yaml` / `agency_manifest.yaml` (even
   non-strict fails on the manifest), and since 2026-09-14 Go and TS run it
-  too. Deliberate — a placeholder is not a declaration — but the onboarding
-  message is the only thing telling a new tenant. **Trigger:** the first
+  too. Deliberate — a placeholder is not a declaration — and now said in the
+  hook's onboarding message and OPERATIONS.md's `tenant init` steps. The red
+  run names the placeholder file, but not that this is the expected day-one
+  state. **Trigger:** the first
   external tenant onboards, or someone proposes relaxing strict to get green.
 - **`rollback-notify` names the wrong commit under `workflow_run`.**
   `.github/actions/rollback-notify/action.yml` reports `github.sha`, which
@@ -172,9 +174,11 @@ and `Product_Archive.md`. Each was checked still open on 2026-09-14.
   `DATABASE_URL`; `mutation_check.py` reports a `tenant_scaffold` survivor that
   Self-Test catches. **Trigger:** a local gate is trusted as the pre-push
   check again.
-- **Actions minutes.** With AgentSmith private, Self-Test alone is ≈1,900
-  job-minutes/30 days against GitHub Free's 2,000, before the five scratch
-  tenants' weekly and per-change runs. **Trigger:** the first month a
+- **Actions minutes.** With AgentSmith private, Self-Test alone was ≈1,900
+  job-minutes/30 days (measured 2026-09-13) against GitHub Free's 2,000 —
+  before the offline scratch build's strict harness runs added ~2 minutes to
+  every Self-Test (2026-09-14), and before the five scratch tenants' weekly and
+  per-change runs. **Trigger:** the first month a
   run is queued for lack of minutes.
 
 ## Known gaps carried forward from the 1.1.0 review

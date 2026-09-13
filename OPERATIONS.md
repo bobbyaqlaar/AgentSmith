@@ -500,9 +500,9 @@ Stack options: `python-fastapi` (default), `go`, `ts-react`. Add
 
 This writes:
 - `.agenticframework/tenant.yaml` — tenant id, isolation tier, framework version pin, per-environment Phoenix namespaces and eval thresholds
-- `.github/workflows/ci-<stack>.yml`, `cd-staging.yml`, `cd-production.yml`, plus the reusable eval / security workflows the CI file calls (`eval-scorecard.yml`, `eval-fairness.yml`, `eval-hallucination.yml`, `eval-ttft-live.yml`, `eval-security.yml` with `strict: true` on the Python FastAPI template)
-- `.github/actions/{gcp-auth,build-push-ghcr,deploy-placeholder,rollback-notify}` — composite actions the CD workflows reference as `uses: ./.github/actions/<name>` (resolved inside this repo)
-- Copy security templates from `fixtures/security/templates/` into `.agent-rfc/security/` (risk register, agency manifest, tool allowlist, NIST profile) — see [docs/security-framework-map.md](./docs/security-framework-map.md)
+- `.github/workflows/ci-<stack>.yml`, `cd-staging.yml`, `cd-production.yml`, plus the reusable eval / security workflows the CI file calls (`eval-scorecard.yml`, `eval-fairness.yml`, `eval-hallucination.yml`, `eval-ttft-live.yml`, `eval-security.yml`, called with `strict: true` by every stack's CI template)
+- `.github/actions/{gcp-auth,build-push-ghcr,deploy-placeholder,rollback-notify,install-python-deps}` — composite actions the workflows reference as `uses: ./.github/actions/<name>` (resolved inside this repo)
+- Copy security templates from `fixtures/security/templates/` into `.agent-rfc/security/` (risk register, agency manifest, tool allowlist, NIST profile) — see [docs/security-framework-map.md](./docs/security-framework-map.md). **CI is red until you edit two of them:** the strict harness fails on the shipped placeholder `risk_register.yaml` and `agency_manifest.yaml`, on every stack
 
 Re-running is idempotent — existing files are never overwritten.
 

@@ -189,12 +189,12 @@ The operational guardrails AgentSmith enforces on every project it touches
 
 ## Supported Stacks & Execution Modes
 
-| Stack | Detected by | CI workflow |
-|---|---|---|
-| TypeScript / React | `package.json` | `ci-ts-react.yml` |
-| Python / FastAPI | `requirements.txt` / `pyproject.toml` | `ci-python-fastapi.yml` |
-| Go | `go.mod` | `ci-go.yml` |
-| Generic | *(fallback)* | *(hooks only, no CI workflow)* |
+| Stack | Detected by | CI workflow | CI installs from |
+|---|---|---|---|
+| TypeScript / React | `package.json` | `ci-ts-react.yml` | `package-lock.json` (npm) or `pnpm-lock.yaml` (pnpm) — yarn, bun or no lockfile fails CI by name |
+| Python / FastAPI | `requirements.txt` / `pyproject.toml` | `ci-python-fastapi.yml` | `requirements.txt`, else `uv.lock` (must match `pyproject.toml`) — anything else installs only CI tooling, with a warning |
+| Go | `go.mod` | `ci-go.yml` | `go.mod` |
+| Generic | *(fallback)* | *(hooks only, no CI workflow)* | — |
 
 **Local offline** — everything on your machine via Ollama, zero API cost; the
 shipped registry routes four roles (`architect` → `developer` → `validator` →

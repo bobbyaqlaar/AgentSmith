@@ -6,10 +6,11 @@ ci-ts-react.yml assumed npm (`cache: npm`, `npm ci`), so a pnpm tenant failed
 setup-node before any check ran; ci-python-fastapi.yml installed only a
 requirements.txt, so a uv tenant's tests failed at import. The scratch apps
 ts-react-pnpm and python-uv (docs/scratch-tenants.md) prove the fix on GitHub.
-This file is the cheap layer: it runs the templates' OWN `run:` scripts, in
-order, against a stub project with every package-manager binary replaced by a
-shim that records its arguments — so what is asserted is what the runner would
-execute, not a regex over the YAML.
+This file is the cheap layer: it runs the templates' OWN `run:` scripts, the
+install-python-deps composite action's script, and the hook's stack-detection
+block, against stub projects with every package-manager binary replaced by a
+shim that records its arguments — so what is asserted is what the runner
+would execute, and that the hook's test command names the same tool.
 """
 
 from __future__ import annotations
