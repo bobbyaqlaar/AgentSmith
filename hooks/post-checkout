@@ -448,6 +448,15 @@ if echo "$REMOTE_URL" | grep -q "github.com"; then
   fi
 fi
 
+# Once per repo, not once per checkout. This block had no "already there?"
+# check, so every checkout of a repo whose visibility could not be confirmed
+# appended another copy — and prompted again. Found in the scratch tenants:
+# their .gitignore files carried the block up to three times over.
+IDE_IGNORE_MARKER="# AgentSmith — IDE configs (system prompt content)"
+if [ "$IS_PUBLIC" -eq 1 ] && grep -qxF "$IDE_IGNORE_MARKER" "$REPO_ROOT/.gitignore" 2>/dev/null; then
+  IS_PUBLIC=0   # already handled for this repo; nothing to ask or append
+fi
+
 if [ "$IS_PUBLIC" -eq 1 ] && [ -t 1 ]; then
   echo ""
   echo "⚠️  This repository appears to be public."
@@ -470,8 +479,10 @@ if [ "$IS_PUBLIC" -eq 1 ] && [ -t 1 ]; then
     echo "✅ Added IDE config files to .gitignore"
   fi
 elif [ "$IS_PUBLIC" -eq 1 ]; then
-  # Non-interactive (CI): auto-add to .gitignore
+  # Non-interactive (CI): auto-add to .gitignore — and say so; this used to be
+  # entirely silent, so a repo could stop tracking CLAUDE.md with no trace.
   GITIGNORE="$REPO_ROOT/.gitignore"
+  echo "ℹ️  Could not confirm this repo is private — added IDE config files to .gitignore"
   {
     echo ""
     echo "# AgentSmith — IDE configs (system prompt content)"
