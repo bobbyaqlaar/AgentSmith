@@ -1,8 +1,9 @@
 name: "Scratch tenants"
 
-# Re-provisions the three scratch tenants (docs/scratch-tenants.md) from THIS
-# commit of AgentSmith, pushes them, and fails unless each tenant's own CI goes
-# green on GitHub.
+# Rebuilds the three scratch tenants (docs/scratch-tenants.md) from THIS commit
+# of AgentSmith — app source from .github/scratch-tenants/apps/<stack>/, then
+# the provisioning hook — pushes them, and fails unless each tenant's own CI
+# goes green on GitHub.
 #
 # Why it exists: onboarding bugs are invisible from inside this repo. The
 # 2026-09-13 audit found a pip cache that broke every Go/TS eval job, a
@@ -13,7 +14,7 @@ name: "Scratch tenants"
 #
 # What it exercises is the REAL path, not a copy of it: install-ai-stack.sh
 # from this checkout, then the post-checkout hook that installer wrote to
-# ~/.git_templates, run over each tenant by .github/scratch-tenants/reprovision.sh.
+# ~/.git_templates, run over each tenant by .github/scratch-tenants/build.sh.
 #
 # Requires the SCRATCH_TENANTS_TOKEN secret: a fine-grained PAT scoped to the
 # three agentsmith-scratch-* repos with Contents: read/write and Actions: read
@@ -47,7 +48,7 @@ permissions:
   contents: read
 
 jobs:
-  reprovision:
+  build:
     name: "Scratch tenant — ${{ matrix.stack }}"
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -72,13 +73,13 @@ jobs:
     env:
       # gh needs it for the run lookups below, and the HOOK needs it too: with
       # gh unauthenticated it cannot confirm the repo is private and rewrites
-      # .gitignore (reprovision.sh fails loudly if that happens).
+      # .gitignore (build.sh fails loudly if that happens).
       GH_TOKEN: ${{ secrets.SCRATCH_TENANTS_TOKEN }}
     steps:
       - name: Require the token
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::error::SCRATCH_TENANTS_TOKEN is not set — see docs/scratch-tenants.md § Setup. Nothing was re-provisioned."
+            echo "::error::SCRATCH_TENANTS_TOKEN is not set — see docs/scratch-tenants.md § Setup. Nothing was built."
             exit 1
           fi
 
@@ -105,8 +106,10 @@ jobs:
       - name: Install AgentSmith from this commit
         run: bash agentsmith/install-ai-stack.sh < /dev/null
 
-      - name: Re-provision the tenant with the installed hook
-        run: bash agentsmith/.github/scratch-tenants/reprovision.sh "${{ matrix.stack }}" "$GITHUB_WORKSPACE/tenant"
+      # Fails if the scratch repo was edited directly (its last commit is not
+      # this workflow's): the change belongs in apps/<stack>/.
+      - name: Build the tenant from apps/${{ matrix.stack }} with the installed hook
+        run: bash agentsmith/.github/scratch-tenants/build.sh "${{ matrix.stack }}" "$GITHUB_WORKSPACE/tenant"
 
       - name: Push
         id: push
@@ -120,7 +123,7 @@ jobs:
           # hooksPath=/dev/null: the installer armed ~/.git_templates hooks, and
           # post-commit pushes and tags on its own.
           git -c core.hooksPath=/dev/null commit -q --allow-empty \
-            -m "chore: re-provision from AgentSmith ${GITHUB_SHA::7} (${{ github.event_name }})"
+            -m "chore: build from AgentSmith ${GITHUB_SHA::7} (${{ github.event_name }})"
           git push -q origin HEAD
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 

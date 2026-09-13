@@ -1350,13 +1350,13 @@ AgentSmith/
 │   ├── design-review-checklist.md   # review-levers.md reframed as build-time guidance
 │   ├── validation-checklist.md      # review-levers.md worked group-by-group, pre-merge
 │   ├── testbed-tenant-spec.md   # Proposed "KYC Sentinel" E2E testbed tenant (multi-LLM, multi-agent)
-│   ├── scratch-tenants.md       # The 3 scratch tenant repos + the workflow that re-provisions them
+│   ├── scratch-tenants.md       # The 3 scratch tenants: apps built here, CI run in their own repos
 │   ├── session-handoff/         # Cross-session working notes
 │   └── superpowers/             # Design specs + implementation plans
 ├── .github/
 │   ├── actions/                 # Composite actions copied into tenant repos (§17): gcp-auth,
 │   │                            #   build-push-ghcr, deploy-placeholder, rollback-notify
-│   ├── scratch-tenants/         # reprovision.sh — used by scratch-tenants.yml (docs/scratch-tenants.md)
+│   ├── scratch-tenants/         # apps/<stack>/ source + build.sh for the scratch tenant repos (docs/scratch-tenants.md)
 │   └── workflows/
 │       ├── self-test.yml        # py_compile/shellcheck/portal/widget tests on the framework itself
 │       ├── release.yml          # Builds + optionally signs release tarballs (§28)

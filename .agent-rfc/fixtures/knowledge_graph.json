@@ -4415,15 +4415,32 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "test_the_matrix_covers_every_stack_and_waits_on_its_real_ci_name",
-        "test_the_commit_step_disarms_the_installed_hooks",
-        "_install",
-        "_stale_ts_tenant",
-        "test_reprovision_replaces_what_provisioning_owns_and_keeps_the_tenants",
-        "test_reprovision_fails_when_the_install_cannot_provision"
+        "_matrix",
+        "test_every_stack_has_an_app_and_a_matrix_entry_waiting_on_its_real_ci",
+        "test_each_app_is_detected_as_its_own_stack",
+        "test_apps_carry_nothing_provisioning_generates",
+        "test_the_commit_step_disarms_hooks_and_uses_the_author_build_sh_expects",
+        "install",
+        "_build",
+        "_init",
+        "_commit",
+        "test_each_app_builds_into_a_complete_tenant_offline",
+        "test_a_stale_file_in_the_target_does_not_survive_a_build",
+        "test_a_hand_edit_in_the_scratch_repo_fails_the_build",
+        "test_the_build_fails_when_the_install_cannot_provision",
+        "test_the_build_fails_if_the_hook_rewrites_gitignore"
       ],
-      "last_modified": "2026-09-13T10:36:58Z",
+      "last_modified": "2026-09-13T13:58:36Z",
       "id": "scripts/test/test_scratch_tenants.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_repeated_checkouts_add_the_ide_block_once"
+      ],
+      "last_modified": "2026-09-13T13:51:13Z",
+      "id": "scripts/test/test_hook_gitignore_idempotent.py"
     }
   ],
   "edges": [
