@@ -146,14 +146,14 @@ and `Product_Archive.md`. Each was checked still open on 2026-09-14.
   run names the placeholder file, but not that this is the expected day-one
   state. **Trigger:** the first
   external tenant onboards, or someone proposes relaxing strict to get green.
-- **Existing tenants keep the old `rollback-notify`.** Fixed in the framework
-  2026-09-14 (it named the default branch's head, not the deployed commit,
-  under `workflow_run`), but the hook never overwrites a composite action a
-  tenant already has, and `ai-stack-upgrade` does not touch actions.
-  AqlaarTeleologyStudio carries the old copy and a `workflow_run`-triggered CD.
-  **Trigger:** before OTS, or any tenant provisioned before the fix, sets
-  `SLACK_WEBHOOK_URL`/`TEAMS_WEBHOOK_URL` or a real `DEPLOY_COMMAND` — copy
-  `.github/actions/rollback-notify/` over theirs.
+- **Tenants provisioned before 2026-09-14 keep the old `rollback-notify`.**
+  It named the default branch's head, not the deployed commit, under
+  `workflow_run`. The hook never overwrites a composite action a tenant already
+  has, and `ai-stack-upgrade` does not touch actions. AqlaarTeleologyStudio was
+  synced by hand (`a4589a8`); no other vendored tenant exists today (KYC
+  Sentinel does not use this action). **Trigger:** the next tenant onboarded
+  from an older install, or the next fix to any composite action — at that
+  point `ai-stack-upgrade` should refresh actions.
 - **KYC Sentinel's CI tests framework HEAD while it deploys v1.3.0.** Its
   `ci.yml` checks out `bobbyaqlaar/AgentSmith` with no `ref`, but its
   requirements pin `agentsmith-runtime @ …@v1.3.0`. **Trigger:** the next
