@@ -57,7 +57,7 @@ without some tool, a cache key that fails).
    - **fails if the scratch repo was edited directly** (its last commit is not
      by `AgentSmith scratch-tenants`) rather than silently discarding the edit;
    - empties the tree (keeping `.git` history), copies `apps/<app>/` in, adds
-     `SCRATCH_TENANT.md` and the opt-in marker;
+     the shared `security-pack/`, `SCRATCH_TENANT.md` and the opt-in marker;
    - fires the **installed** post-checkout hook;
    - fails on any hook warning (column-0 `⚠️`/`❌`), and if the hook changed or
      created `.gitignore` — which means it could not confirm the repo is private.

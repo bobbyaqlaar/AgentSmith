@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -268,6 +269,7 @@ def _project(tmp_path: Path, files: list[str]) -> Path:
         (["package.json", "package-lock.json", "yarn.lock"], "npm"),
         (["package.json", "yarn.lock"], None),
         (["package.json", "bun.lockb"], None),
+        (["package.json"], "no lockfile"),
     ],
 )
 def test_hook_and_ts_template_pick_the_same_package_manager(tmp_path, files, tool):
@@ -277,6 +279,11 @@ def test_hook_and_ts_template_pick_the_same_package_manager(tmp_path, files, too
     if tool is None:
         assert result.returncode == 1, "the template must refuse an unsupported lockfile"
         assert hook.split()[1] in {"yarn", "bun"}, f"the hook claims {hook!r} for a {files[-1]} project"
+    elif tool == "no lockfile":
+        # The one deliberate divergence: CI refuses to install unpinned
+        # dependencies, while the agent rules still say how to run tests.
+        assert result.returncode == 1
+        assert hook == "CI=true npm test"
     else:
         assert outputs["pm"] == tool
         assert hook == f"CI=true {tool} test"
@@ -303,4 +310,5 @@ def test_the_pnpm_fallback_is_the_version_the_scratch_tenant_proves():
     pkg = json.loads((REPO / ".github/scratch-tenants/apps/ts-react-pnpm/package.json").read_text(encoding="utf-8"))
     proven = pkg["packageManager"].removeprefix("pnpm@")
     detect = _step("ci-ts-react.yml", "Detect package manager")["run"]
-    assert f"version={proven}" in detect, f"the template's fallback pnpm is not the proven {proven}"
+    fallbacks = [v for v in re.findall(r"\bversion=(\S+)", detect) if v != '""']
+    assert fallbacks == [proven], f"the template's fallback pnpm {fallbacks} is not the proven {proven}"

@@ -4435,7 +4435,7 @@
         "test_the_build_fails_when_the_install_cannot_provision",
         "test_the_build_fails_if_the_hook_rewrites_gitignore"
       ],
-      "last_modified": "2026-09-13T21:30:50Z",
+      "last_modified": "2026-09-13T21:38:47Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -4478,7 +4478,7 @@
         "run",
         "calls"
       ],
-      "last_modified": "2026-09-13T21:25:27Z",
+      "last_modified": "2026-09-13T21:41:05Z",
       "id": "scripts/test/test_ci_package_managers.py"
     }
   ],

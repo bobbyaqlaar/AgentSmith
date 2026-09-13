@@ -79,8 +79,8 @@ Entries from here down to `runtime/.hitl_blobs/` cover the 2026-09-13/14
 onboarding audit, which ran each stack through a real scratch tenant's CI.
 **Tenant-facing changes to read before re-provisioning:** CD is now triggered
 by CI (`workflow_run`), Go and TS CI now run the strict security harness, and
-`hooks/post-checkout` changed behaviour in five places (called out below, as
-this file's header requires for hook-interface changes). Existing tenants keep
+`hooks/post-checkout` changed behaviour in several ways, each marked **Hook
+interface change** below, as this file's header requires. Existing tenants keep
 the workflow files they have: the hook never overwrites one.
 
 ### One Python install for CI and the security harness; stale uv locks fail; the review-levers pass
@@ -96,8 +96,8 @@ A review of the entries below against `docs/review-levers.md` found:
   `.github/actions/install-python-deps` (copied into tenants with the others).
   A `pyproject.toml` or `Pipfile` project it cannot install now gets a
   `::warning::` instead of silently installing nothing.
-- **The hook and the templates disagreed on lockfile precedence.** Hook
-  interface change: the agent rules' test command now follows the templates'
+- **The hook and the templates disagreed on lockfile precedence.** **Hook
+  interface change:** the agent rules' test command now follows the templates'
   order (pnpm, then npm, then yarn/bun; `uv run pytest` only when there is no
   `requirements.txt`). `test_ci_package_managers.py` runs both sides over the
   same projects. The TS template's pnpm fallback is the version the pnpm
@@ -128,8 +128,8 @@ setup-node before any check ran. It now detects npm or pnpm from the lockfile,
 runs `pnpm/action-setup` when needed, and installs, type-checks, lints and
 tests through that tool; a yarn or bun lockfile, or none, fails by name.
 `ci-python-fastapi.yml` installed only `requirements.txt`, so a uv tenant's
-tests failed at import; it now installs the exported `uv.lock`. Hook interface
-change: the generated test command names pnpm or uv when the lockfile does.
+tests failed at import; it now installs the exported `uv.lock`. **Hook interface
+change:** the generated test command names pnpm or uv when the lockfile does.
 Proven by two new scratch tenants, `agentsmith-scratch-ts-react-pnpm` and
 `agentsmith-scratch-python-uv`.
 
@@ -141,8 +141,9 @@ private `agentsmith-scratch-*` repo from app source kept in
 (`build.sh`), pushes it, and fails unless that tenant's own CI goes green.
 `test_scratch_tenants.py` builds every app offline in Self-Test. Setup (a
 fine-grained token with Contents and Workflows read/write and Actions read)
-and triage: `docs/scratch-tenants.md`. Found on the way: the hook appended its
-IDE-config `.gitignore` block on every checkout — now once.
+and triage: `docs/scratch-tenants.md`. **Hook interface change**, found on the
+way: the hook appended its IDE-config `.gitignore` block on every checkout —
+now once.
 
 ### CD deploys only commits whose CI passed
 
@@ -168,7 +169,7 @@ repo's tests:
   tenant instead of failing.
 - ruff pinned (`0.15.20`) in `ci-python-fastapi.yml`.
 - `agentsmith tenant init` writes the composite actions its CD workflows use.
-- Hook interface changes: base eval fixtures are vendored; a pre-existing
+- **Hook interface changes:** base eval fixtures are vendored; a pre-existing
   `scripts/` is merged without clobbering (clashes reported) and a foreign
   `runtime/` is refused with a warning; vendored `scripts/` and `runtime/` get
   a nested `ruff.toml` excluding them from the tenant's lint gates; only the

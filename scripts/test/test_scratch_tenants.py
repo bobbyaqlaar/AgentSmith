@@ -245,11 +245,13 @@ def test_each_app_builds_into_a_complete_tenant_offline(app, stack, install, tmp
     for pack_file in (SCRATCH / "security-pack").iterdir():
         assert (target / ".agent-rfc" / "security" / pack_file.name).read_bytes() == pack_file.read_bytes()
     # The harness's own verdict, not a re-derivation of "is this a placeholder":
-    # strict, with the moderation default eval-security.yml sets.
+    # strict, with the moderation default eval-security.yml sets, and without
+    # the framework's own job environment — Self-Test sets DATABASE_URL and a
+    # postgres idempotency backend that a tenant's security job does not have.
     harness = subprocess.run(
         [sys.executable, "scripts/run-security-checks.py", "--mode", "ci", "--strict"],
         cwd=target, capture_output=True, text=True, check=False,
-        env={**os.environ, "MODERATION_HOOK": "optional"},
+        env={"PATH": os.environ["PATH"], "HOME": os.environ["HOME"], "MODERATION_HOOK": "optional"},
     )
     assert harness.returncode == 0, harness.stdout + harness.stderr
     if (target / "pyproject.toml").is_file():
