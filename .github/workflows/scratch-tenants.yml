@@ -1,0 +1,152 @@
+name: "Scratch tenants"
+
+# Re-provisions the three scratch tenants (docs/scratch-tenants.md) from THIS
+# commit of AgentSmith, pushes them, and fails unless each tenant's own CI goes
+# green on GitHub.
+#
+# Why it exists: onboarding bugs are invisible from inside this repo. The
+# 2026-09-13 audit found a pip cache that broke every Go/TS eval job, a
+# ts-react template that assumed Jest, 36 framework tests failing in a stock
+# Python tenant, and a hook that silently skipped a pre-existing scripts/ —
+# none caught by this repo's tests or by the one real tenant, all caught the
+# first time a scratch tenant's CI actually ran.
+#
+# What it exercises is the REAL path, not a copy of it: install-ai-stack.sh
+# from this checkout, then the post-checkout hook that installer wrote to
+# ~/.git_templates, run over each tenant by .github/scratch-tenants/reprovision.sh.
+#
+# Requires the SCRATCH_TENANTS_TOKEN secret: a fine-grained PAT scoped to the
+# three agentsmith-scratch-* repos with Contents: read/write and Actions: read
+# (Metadata: read is implied). GITHUB_TOKEN cannot push to another repository.
+#
+# Logs of this public repo name the private scratch repos and show their CI
+# conclusions and provisioning output; they contain no secrets and no app code
+# beyond the fixture apps.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # Mondays 06:00 UTC — weekly, even with no framework change
+  workflow_dispatch:
+  push:
+    branches: [main]
+    # Only what can change what a tenant receives.
+    paths:
+      - "hooks/**"
+      - "install-ai-stack.sh"
+      - "workflow-templates/**"
+      - ".github/actions/**"
+      - "scripts/**"
+      - "!scripts/test/**"
+      - "runtime/**"
+      - "!runtime/test/**"
+      - "fixtures/**"
+      - "templates/agent-rules.yaml"
+      - ".github/scratch-tenants/**"
+      - ".github/workflows/scratch-tenants.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  reprovision:
+    name: "Scratch tenant — ${{ matrix.stack }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - stack: ts-react
+            repo: bobbyaqlaar/agentsmith-scratch-ts-react
+            ci: "CI: TypeScript/React Guardrails"
+          - stack: go
+            repo: bobbyaqlaar/agentsmith-scratch-go
+            ci: "CI: Go Guardrails"
+          - stack: python-fastapi
+            repo: bobbyaqlaar/agentsmith-scratch-python
+            ci: "CI: Python/FastAPI Guardrails"
+    # One run per tenant at a time: two runs pushing the same scratch repo
+    # would race, and the second's CI result would be read against the first's.
+    concurrency:
+      group: scratch-tenant-${{ matrix.stack }}
+      cancel-in-progress: false
+    env:
+      # gh needs it for the run lookups below, and the HOOK needs it too: with
+      # gh unauthenticated it cannot confirm the repo is private and rewrites
+      # .gitignore (reprovision.sh fails loudly if that happens).
+      GH_TOKEN: ${{ secrets.SCRATCH_TENANTS_TOKEN }}
+    steps:
+      - name: Require the token
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::SCRATCH_TENANTS_TOKEN is not set — see docs/scratch-tenants.md § Setup. Nothing was re-provisioned."
+            exit 1
+          fi
+
+      - name: Checkout AgentSmith
+        uses: actions/checkout@v4
+        with:
+          path: agentsmith
+
+      # Checked out BEFORE the installer runs: afterwards init.templateDir points
+      # at the framework hooks, and the post-commit hook pushes.
+      - name: Checkout ${{ matrix.repo }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.repo }}
+          token: ${{ secrets.SCRATCH_TENANTS_TOKEN }}
+          path: tenant
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: agentsmith/install-ai-stack.sh
+
+      - name: Install AgentSmith from this commit
+        run: bash agentsmith/install-ai-stack.sh < /dev/null
+
+      - name: Re-provision the tenant with the installed hook
+        run: bash agentsmith/.github/scratch-tenants/reprovision.sh "${{ matrix.stack }}" "$GITHUB_WORKSPACE/tenant"
+
+      - name: Push
+        id: push
+        working-directory: tenant
+        run: |
+          git config user.name  "AgentSmith scratch-tenants"
+          git config user.email "scratch-tenants@users.noreply.github.com"
+          git add -A
+          # --allow-empty: a scheduled run with no framework change must still
+          # re-run the tenant's CI, or "green last month" would be all it proves.
+          # hooksPath=/dev/null: the installer armed ~/.git_templates hooks, and
+          # post-commit pushes and tags on its own.
+          git -c core.hooksPath=/dev/null commit -q --allow-empty \
+            -m "chore: re-provision from AgentSmith ${GITHUB_SHA::7} (${{ github.event_name }})"
+          git push -q origin HEAD
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for the tenant's CI
+        run: |
+          set -uo pipefail
+          id=""
+          for _ in $(seq 1 60); do
+            id=$(gh run list -R "${{ matrix.repo }}" --commit "${{ steps.push.outputs.sha }}" \
+                   --workflow "${{ matrix.ci }}" --json databaseId --jq '.[0].databaseId // empty')
+            [ -n "$id" ] && break
+            sleep 10
+          done
+          if [ -z "$id" ]; then
+            echo "::error::no \"${{ matrix.ci }}\" run appeared for ${{ steps.push.outputs.sha }} within 10 minutes — the tenant's CI workflow may be invalid or renamed"
+            exit 1
+          fi
+          url="https://github.com/${{ matrix.repo }}/actions/runs/$id"
+          gh run watch "$id" -R "${{ matrix.repo }}" --exit-status > /dev/null
+          rc=$?
+          conclusion=$(gh run view "$id" -R "${{ matrix.repo }}" --json conclusion --jq .conclusion)
+          printf '| tenant | CI | run |\n|---|---|---|\n| %s | %s | [%s](%s) |\n' \
+            "${{ matrix.stack }}" "$conclusion" "$id" "$url" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$rc" -ne 0 ]; then
+            gh run view "$id" -R "${{ matrix.repo }}" --json jobs \
+              --jq '.jobs[] | select(.conclusion=="failure") | "::error::\(.name): " + ([.steps[] | select(.conclusion=="failure") | .name] | join(", "))'
+            exit 1
+          fi

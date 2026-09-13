@@ -4354,7 +4354,7 @@
         "test_upgrade_prunes_framework_internal_runtime_tests",
         "test_upgrade_refuses_to_vendor_into_a_package_consumer"
       ],
-      "last_modified": "2026-09-12T23:24:22Z",
+      "last_modified": "2026-09-13T10:09:11Z",
       "id": "scripts/test/test_ai_stack_upgrade.py"
     },
     {
@@ -4410,6 +4410,20 @@
       ],
       "last_modified": "2026-09-13T10:06:23Z",
       "id": "scripts/test/test_installer_force_shell_functions.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_the_matrix_covers_every_stack_and_waits_on_its_real_ci_name",
+        "test_the_commit_step_disarms_the_installed_hooks",
+        "_install",
+        "_stale_ts_tenant",
+        "test_reprovision_replaces_what_provisioning_owns_and_keeps_the_tenants",
+        "test_reprovision_fails_when_the_install_cannot_provision"
+      ],
+      "last_modified": "2026-09-13T10:36:58Z",
+      "id": "scripts/test/test_scratch_tenants.py"
     }
   ],
   "edges": [
@@ -5076,6 +5090,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_pair_score_spread.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_scratch_tenants.py",
       "target": "runtime/__init__.py"
     }
   ]
