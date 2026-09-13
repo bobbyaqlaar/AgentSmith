@@ -13,6 +13,7 @@ its own so the test does not run the installer.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -44,7 +45,15 @@ SHELLS = [s for s in ("bash", "zsh") if shutil.which(s)]
 def _run_upgrade(shell: str, repo: Path, tmp_path: Path) -> subprocess.CompletedProcess:
     script = tmp_path / "upgrade.sh"
     script.write_text(_function_source() + "\nai-stack-upgrade --to 9.9.9\n")
-    return subprocess.run([shell, str(script)], cwd=repo, capture_output=True, text=True, check=False)
+    # The function commits, and HOME is a fake with no ~/.gitconfig. macOS git
+    # then auto-detects an identity from the hostname; a Linux CI runner cannot,
+    # so the commit failed there and only there.
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "T", "GIT_AUTHOR_EMAIL": "t@e.com",
+        "GIT_COMMITTER_NAME": "T", "GIT_COMMITTER_EMAIL": "t@e.com",
+    }
+    return subprocess.run([shell, str(script)], cwd=repo, env=env, capture_output=True, text=True, check=False)
 
 
 def _git(repo: Path, *args: str) -> str:
