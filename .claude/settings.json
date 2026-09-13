@@ -1,5 +1,8 @@
 {
-  "commitCoAuthoredBy": false,
+  "attribution": {
+    "commit": ""
+  },
+  "includeCoAuthoredBy": false,
   "permissions": {
     "allow": [
       "Bash(python3 -m pytest:*)"
