@@ -4416,8 +4416,8 @@
       "language": "python",
       "symbols": [
         "_matrix",
-        "test_every_stack_has_an_app_and_a_matrix_entry_waiting_on_its_real_ci",
-        "test_each_app_is_detected_as_its_own_stack",
+        "test_every_app_has_a_matrix_entry_waiting_on_its_stacks_real_ci",
+        "test_every_app_is_the_scenario_it_claims",
         "test_apps_carry_nothing_provisioning_generates",
         "test_the_commit_step_disarms_hooks_and_uses_the_author_build_sh_expects",
         "install",
@@ -4430,7 +4430,7 @@
         "test_the_build_fails_when_the_install_cannot_provision",
         "test_the_build_fails_if_the_hook_rewrites_gitignore"
       ],
-      "last_modified": "2026-09-13T13:58:36Z",
+      "last_modified": "2026-09-13T20:11:21Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -4441,6 +4441,32 @@
       ],
       "last_modified": "2026-09-13T13:51:13Z",
       "id": "scripts/test/test_hook_gitignore_idempotent.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_steps",
+        "_step",
+        "Runner",
+        "_ts_project",
+        "_run_ts",
+        "test_a_pnpm_tenant_is_installed_checked_and_tested_with_pnpm_only",
+        "test_a_pnpm_tenant_without_packagemanager_gets_a_version",
+        "test_an_npm_tenant_still_uses_npm",
+        "test_an_unsupported_or_missing_lockfile_fails_by_name",
+        "test_setup_node_caches_for_the_detected_manager_after_pnpm_is_on_path",
+        "_py_calls",
+        "no_real_pip_upgrade",
+        "test_a_uv_tenant_installs_its_locked_dependencies",
+        "test_requirements_txt_wins_and_uv_is_not_touched",
+        "test_a_project_with_neither_installs_only_the_tools",
+        "__init__",
+        "run",
+        "calls"
+      ],
+      "last_modified": "2026-09-13T20:12:12Z",
+      "id": "scripts/test/test_ci_package_managers.py"
     }
   ],
   "edges": [

@@ -1,7 +1,7 @@
 name: "Scratch tenants"
 
-# Rebuilds the three scratch tenants (docs/scratch-tenants.md) from THIS commit
-# of AgentSmith — app source from .github/scratch-tenants/apps/<stack>/, then
+# Rebuilds the scratch tenants (docs/scratch-tenants.md) from THIS commit of
+# AgentSmith — app source from .github/scratch-tenants/apps/<app>/, then
 # the provisioning hook — pushes them, and fails unless each tenant's own CI
 # goes green on GitHub.
 #
@@ -17,9 +17,9 @@ name: "Scratch tenants"
 # ~/.git_templates, run over each tenant by .github/scratch-tenants/build.sh.
 #
 # Requires the SCRATCH_TENANTS_TOKEN secret: a fine-grained PAT scoped to the
-# three agentsmith-scratch-* repos with Contents: read/write and Actions: read
+# agentsmith-scratch-* repos (all five) with Contents: read/write and Actions: read
 # (Metadata: read is implied). GITHUB_TOKEN cannot push to another repository.
-# The token must SELECT those three repositories: a token set to "Public
+# The token must SELECT those repositories: a token set to "Public
 # repositories", or with a different selection, authenticates fine and then
 # gets 404 on every checkout.
 
@@ -49,26 +49,39 @@ permissions:
 
 jobs:
   build:
-    name: "Scratch tenant — ${{ matrix.stack }}"
+    name: "Scratch tenant — ${{ matrix.app }}"
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
+        # One entry per APP (apps/<app>/), not per stack: a stack can have
+        # several scenarios. `stack` is what the hook must detect it as.
         include:
-          - stack: ts-react
+          - app: ts-react
+            stack: ts-react
             repo: bobbyaqlaar/agentsmith-scratch-ts-react
             ci: "CI: TypeScript/React Guardrails"
-          - stack: go
+          - app: ts-react-pnpm
+            stack: ts-react
+            repo: bobbyaqlaar/agentsmith-scratch-ts-react-pnpm
+            ci: "CI: TypeScript/React Guardrails"
+          - app: go
+            stack: go
             repo: bobbyaqlaar/agentsmith-scratch-go
             ci: "CI: Go Guardrails"
-          - stack: python-fastapi
+          - app: python-fastapi
+            stack: python-fastapi
             repo: bobbyaqlaar/agentsmith-scratch-python
+            ci: "CI: Python/FastAPI Guardrails"
+          - app: python-uv
+            stack: python-fastapi
+            repo: bobbyaqlaar/agentsmith-scratch-python-uv
             ci: "CI: Python/FastAPI Guardrails"
     # One run per tenant at a time: two runs pushing the same scratch repo
     # would race, and the second's CI result would be read against the first's.
     concurrency:
-      group: scratch-tenant-${{ matrix.stack }}
+      group: scratch-tenant-${{ matrix.app }}
       cancel-in-progress: false
     env:
       # gh needs it for the run lookups below, and the HOOK needs it too: with
@@ -107,9 +120,9 @@ jobs:
         run: bash agentsmith/install-ai-stack.sh < /dev/null
 
       # Fails if the scratch repo was edited directly (its last commit is not
-      # this workflow's): the change belongs in apps/<stack>/.
-      - name: Build the tenant from apps/${{ matrix.stack }} with the installed hook
-        run: bash agentsmith/.github/scratch-tenants/build.sh "${{ matrix.stack }}" "$GITHUB_WORKSPACE/tenant"
+      # this workflow's): the change belongs in apps/<app>/.
+      - name: Build the tenant from apps/${{ matrix.app }} with the installed hook
+        run: bash agentsmith/.github/scratch-tenants/build.sh "${{ matrix.app }}" "$GITHUB_WORKSPACE/tenant"
 
       - name: Push
         id: push
@@ -156,7 +169,7 @@ jobs:
           rc=$?
           conclusion=$(gh run view "$id" -R "${{ matrix.repo }}" --json conclusion --jq .conclusion)
           printf '| tenant | CI | run |\n|---|---|---|\n| %s | %s | [%s](%s) |\n' \
-            "${{ matrix.stack }}" "$conclusion" "$id" "$url" >> "$GITHUB_STEP_SUMMARY"
+            "${{ matrix.app }}" "$conclusion" "$id" "$url" >> "$GITHUB_STEP_SUMMARY"
           if [ "$rc" -ne 0 ]; then
             gh run view "$id" -R "${{ matrix.repo }}" --json jobs \
               --jq '.jobs[] | select(.conclusion=="failure") | "::error::\(.name): " + ([.steps[] | select(.conclusion=="failure") | .name] | join(", "))'

@@ -4,11 +4,13 @@
 # (~/.agent-framework and ~/.git_templates/hooks, as install-ai-stack.sh
 # writes them).
 #
-#   usage: build.sh <stack> <target-dir>
-#          stack = ts-react | go | python-fastapi
+#   usage: build.sh <app> <target-dir>
+#          app = a directory under apps/ (ts-react, ts-react-pnpm, go,
+#                python-fastapi, python-uv). One stack can have several apps,
+#                one per scenario; the hook detects the stack from the files.
 #
 # A scratch tenant is a pure OUTPUT: everything in it is either a verbatim copy
-# of .github/scratch-tenants/apps/<stack>/ or produced by the post-checkout
+# of .github/scratch-tenants/apps/<app>/ or produced by the post-checkout
 # hook. So the build empties the target (keeping .git and its history), copies
 # the app in, and fires the installed hook exactly as a checkout would. There
 # is no list of "provisioned" vs "tenant-owned" paths to keep in step with the
@@ -20,7 +22,7 @@
 # Fails (exit 1) when:
 #   - the target's last commit was not made by the scratch-tenants workflow:
 #     the repo was edited directly, and this build would silently discard that.
-#     Move the change into apps/<stack>/ instead, or set
+#     Move the change into apps/<app>/ instead, or set
 #     SCRATCH_TENANTS_ALLOW_MANUAL_HEAD=1 to overwrite it deliberately.
 #   - the installed hook prints any column-0 warning (⚠️/❌): a tenant onboarded
 #     from this install would be broken the same way.
@@ -30,14 +32,14 @@
 
 set -euo pipefail
 
-STACK="${1:?usage: build.sh <stack> <target-dir>}"
-TARGET="${2:?usage: build.sh <stack> <target-dir>}"
+APP_NAME="${1:?usage: build.sh <app> <target-dir>}"
+TARGET="${2:?usage: build.sh <app> <target-dir>}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP="$HERE/apps/$STACK"
+APP="$HERE/apps/$APP_NAME"
 HOOK="$HOME/.git_templates/hooks/post-checkout"
 WORKFLOW_AUTHOR="AgentSmith scratch-tenants"
 
-[ -d "$APP" ] || { echo "::error::no app source for stack '$STACK' at $APP" >&2; exit 2; }
+[ -d "$APP" ] || { echo "::error::no app source '$APP_NAME' at $APP" >&2; exit 2; }
 [ -f "$HOOK" ] || { echo "::error::no installed hook at $HOOK — run install-ai-stack.sh first" >&2; exit 1; }
 
 mkdir -p "$TARGET"
@@ -48,7 +50,7 @@ cd "$TARGET"
 if git rev-parse --verify -q HEAD >/dev/null; then
   author="$(git log -1 --format=%an)"
   if [ "$author" != "$WORKFLOW_AUTHOR" ] && [ "${SCRATCH_TENANTS_ALLOW_MANUAL_HEAD:-0}" != "1" ]; then
-    echo "::error::the last commit in $TARGET is by '$author', not '$WORKFLOW_AUTHOR' — the scratch repo was edited directly. Move that change into .github/scratch-tenants/apps/$STACK/ (or set SCRATCH_TENANTS_ALLOW_MANUAL_HEAD=1 to discard it)."
+    echo "::error::the last commit in $TARGET is by '$author', not '$WORKFLOW_AUTHOR' — the scratch repo was edited directly. Move that change into .github/scratch-tenants/apps/$APP_NAME/ (or set SCRATCH_TENANTS_ALLOW_MANUAL_HEAD=1 to discard it)."
     exit 1
   fi
 fi
@@ -69,7 +71,7 @@ bash "$HOOK" 2>&1 | tee "$LOG"
 # security pack's "These are PLACEHOLDERS" reminder, is indented. Matching the
 # prefix, not a list of messages, covers warnings added to the hook later.
 if grep -E "^(⚠️|❌)" "$LOG"; then
-  echo "::error::the installed hook could not fully provision the $STACK tenant (see the lines above)"
+  echo "::error::the installed hook could not fully provision the $APP_NAME tenant (see the lines above)"
   exit 1
 fi
 # Both directions: an app with no .gitignore (the go tenant) must not come out
@@ -81,4 +83,4 @@ if { [ -f "$APP/.gitignore" ] && ! cmp -s "$APP/.gitignore" .gitignore; } \
   exit 1
 fi
 find . -name __pycache__ -type d -not -path './node_modules/*' -prune -exec rm -rf {} +
-echo "built $STACK tenant at $TARGET"
+echo "built $APP_NAME tenant at $TARGET"

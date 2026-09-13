@@ -13,7 +13,9 @@ safety checks and keeps the workflow matrix in step with the stacks.
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -45,25 +47,39 @@ def _matrix() -> list[dict]:
     return job["strategy"]["matrix"]["include"]
 
 
-def test_every_stack_has_an_app_and_a_matrix_entry_waiting_on_its_real_ci():
-    assert {m["stack"] for m in _matrix()} == set(STACKS)
-    assert {p.name for p in APPS.iterdir() if p.is_dir()} == set(STACKS)
-    for m in _matrix():
+def test_every_app_has_a_matrix_entry_waiting_on_its_stacks_real_ci():
+    """One entry per app, several apps per stack allowed; every stack covered."""
+    matrix = _matrix()
+    assert sorted(m["app"] for m in matrix) == sorted(p.name for p in APPS.iterdir() if p.is_dir())
+    assert {m["stack"] for m in matrix} == set(STACKS)
+    assert len({m["repo"] for m in matrix}) == len(matrix), "two apps would push to one scratch repo"
+    for m in matrix:
         template = REPO / "workflow-templates" / f"ci-{m['stack']}.yml"
         ci_name = yaml.safe_load(template.read_text(encoding="utf-8"))["name"]
-        assert m["ci"] == ci_name, f"{m['stack']}: the job would wait for {m['ci']!r}, CI is named {ci_name!r}"
+        assert m["ci"] == ci_name, f"{m['app']}: the job would wait for {m['ci']!r}, CI is named {ci_name!r}"
 
 
-@pytest.mark.parametrize(
-    ("stack", "marker"),
-    [("ts-react", "package.json"), ("go", "go.mod"), ("python-fastapi", "requirements.txt")],
-)
-def test_each_app_is_detected_as_its_own_stack(stack, marker):
-    """The hook picks the stack from root files, package.json first."""
-    root = APPS / stack
-    assert (root / marker).is_file()
-    others = {"package.json", "go.mod", "requirements.txt", "pyproject.toml", "Pipfile"} - {marker}
-    assert not [o for o in others if (root / o).exists()], f"{stack} app would be detected as another stack"
+# What makes each scenario the scenario it claims to be. Without these the
+# pnpm app could quietly regain a package-lock.json and prove nothing.
+SCENARIOS = {
+    "ts-react": {"has": ["package-lock.json", "scripts/release.mjs"], "lacks": ["pnpm-lock.yaml"]},
+    "ts-react-pnpm": {"has": ["pnpm-lock.yaml"], "lacks": ["package-lock.json"]},
+    "go": {"has": ["go.mod"], "lacks": [".gitignore"]},
+    "python-fastapi": {"has": ["requirements.txt"], "lacks": ["pyproject.toml", "uv.lock"]},
+    "python-uv": {"has": ["pyproject.toml", "uv.lock"], "lacks": ["requirements.txt"]},
+}
+
+
+def test_every_app_is_the_scenario_it_claims():
+    assert set(SCENARIOS) == {p.name for p in APPS.iterdir() if p.is_dir()}
+    for app, spec in SCENARIOS.items():
+        for rel in spec["has"]:
+            assert (APPS / app / rel).exists(), f"apps/{app} needs {rel}"
+        for rel in spec["lacks"]:
+            assert not (APPS / app / rel).exists(), f"apps/{app} must not have {rel}"
+    pkg = json.loads((APPS / "ts-react-pnpm" / "package.json").read_text(encoding="utf-8"))
+    assert pkg["packageManager"].startswith("pnpm@")
+    assert "[tool.ruff]" in (APPS / "python-uv" / "pyproject.toml").read_text(encoding="utf-8")
 
 
 def test_apps_carry_nothing_provisioning_generates():
@@ -123,9 +139,9 @@ def install(tmp_path, monkeypatch):
     return home
 
 
-def _build(stack: str, target: Path) -> subprocess.CompletedProcess:
+def _build(app: str, target: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["bash", str(BUILD), stack, str(target)],
+        ["bash", str(BUILD), app, str(target)],
         capture_output=True, text=True, check=False, stdin=subprocess.DEVNULL,
     )
 
@@ -144,17 +160,27 @@ def _commit(target: Path, author: str) -> None:
     )
 
 
+# How the hook names each stack, and the test command each app's generated
+# agent rules must carry (the lockfile decides the tool).
+STACK_LABEL = {"ts-react": "TS_REACT", "go": "GO", "python-fastapi": "PYTHON_FASTAPI"}
+TEST_CMD = {
+    "ts-react": "CI=true npm test", "ts-react-pnpm": "CI=true pnpm test", "go": "go test -race ./...",
+    "python-fastapi": "pytest", "python-uv": "uv run pytest",
+}
+
+
 @needs_git
-@pytest.mark.parametrize("stack", STACKS)
-def test_each_app_builds_into_a_complete_tenant_offline(stack, install, tmp_path):
+@pytest.mark.parametrize(("app", "stack"), [(m["app"], m["stack"]) for m in _matrix()])
+def test_each_app_builds_into_a_complete_tenant_offline(app, stack, install, tmp_path):
     target = tmp_path / "tenant"
 
-    result = _build(stack, target)
+    result = _build(app, target)
 
     assert result.returncode == 0, result.stdout + result.stderr
+    assert f"Detected stack [{STACK_LABEL[stack]}]" in result.stdout
     # The app, verbatim.
-    for src in (p for p in (APPS / stack).rglob("*") if p.is_file()):
-        rel = src.relative_to(APPS / stack)
+    for src in (p for p in (APPS / app).rglob("*") if p.is_file()):
+        rel = src.relative_to(APPS / app)
         assert (target / rel).read_bytes() == src.read_bytes(), f"{rel} differs from the app source"
     # What provisioning must have produced.
     assert (target / ".github" / "workflows" / f"ci-{stack}.yml").is_file()
@@ -164,9 +190,13 @@ def test_each_app_builds_into_a_complete_tenant_offline(stack, install, tmp_path
         "conftest.py", "test_hitl_gate.py", "test_dead_letter.py",
         "test_llm_gateway_budget.py", "test_self_correction.py",
     ])
-    assert (target / "CLAUDE.md").is_file()
+    claude_md = (target / "CLAUDE.md").read_text(encoding="utf-8")
+    assert re.search(r"## Test Command\n```\n(.*)\n```", claude_md).group(1) == TEST_CMD[app]
     assert (target / "SCRATCH_TENANT.md").is_file()
     assert not list(target.rglob("*.pyc"))
+    if (target / "pyproject.toml").is_file():
+        # The project's own ruff settings must still reach the vendored code.
+        assert 'extend = "../pyproject.toml"' in (target / "runtime" / "ruff.toml").read_text(encoding="utf-8")
 
 
 @needs_git
