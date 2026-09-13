@@ -34,8 +34,17 @@ set -uo pipefail
 #   vendors scripts/templates/shell functions, just without taking over
 #   every user's global git config on a machine it doesn't fully own.
 INSTALL_MODE="developer"
+FORCE_SHELL_FUNCTIONS=0
 while [ $# -gt 0 ]; do
   case "$1" in
+    --force)
+      # Replace the managed block in the shell profile. The skip message below
+      # advertised this flag for years while nothing read it, so a re-install
+      # could never update ai-stack-upgrade & co. — one machine was still
+      # running the v1.0.0 functions.
+      FORCE_SHELL_FUNCTIONS=1
+      shift
+      ;;
     --mode)
       INSTALL_MODE="${2:-developer}"
       shift 2
@@ -595,6 +604,22 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 
 header "Step 7: Installing Shell Functions → $SHELL_RC"
+
+if [ "$FORCE_SHELL_FUNCTIONS" -eq 1 ] && grep -q "^# >>> AgentSmith managed block" "$SHELL_RC" 2>/dev/null \
+   && grep -q "^# <<< AgentSmith managed block <<<$" "$SHELL_RC" 2>/dev/null; then
+  # Both markers present, so the block's extent is known; anything outside it
+  # is the user's and is kept. The previous profile is saved alongside.
+  cp "$SHELL_RC" "$SHELL_RC.agentsmith-bak"
+  # Markers anchored to whole lines: the block itself contains the marker text
+  # inside ai-stack-uninstall's sed pattern, and an unanchored range ended
+  # THERE, leaving the rest of the old block behind in the profile.
+  sed -i.af-force-tmp '/^# >>> AgentSmith managed block/,/^# <<< AgentSmith managed block <<<$/d' "$SHELL_RC"
+  rm -f "$SHELL_RC.af-force-tmp"
+  info "--force: removed the previous AgentSmith block from $SHELL_RC (backup: $SHELL_RC.agentsmith-bak)"
+elif [ "$FORCE_SHELL_FUNCTIONS" -eq 1 ] && grep -q "AI AGENT FRAMEWORK CONTROLLER" "$SHELL_RC" 2>/dev/null; then
+  warn "--force: $SHELL_RC has AgentSmith functions but no >>>/<<< managed-block markers — not editing it blind."
+  warn "Remove the old functions by hand, then re-run."
+fi
 
 if grep -q "AI AGENT FRAMEWORK CONTROLLER" "$SHELL_RC" 2>/dev/null; then
   info "Shell functions already present in $SHELL_RC — skipping (re-run with --force to overwrite)"
@@ -1234,8 +1259,10 @@ function ai-stack-uninstall() {
   [ -f "$shell_rc" ] || shell_rc="$HOME/.bashrc"
   [ -f "$shell_rc" ] || shell_rc="$HOME/.profile"
   if [ -f "$shell_rc" ] && grep -qE ">>> (AgentSmith|AgenticFramework) managed block" "$shell_rc" 2>/dev/null; then
-    sed -i.af-uninstall-bak '/>>> AgentSmith managed block/,/<<< AgentSmith managed block <<</d' "$shell_rc"
-    sed -i.af-uninstall-bak '/>>> AgenticFramework managed block/,/<<< AgenticFramework managed block <<</d' "$shell_rc"
+    # Anchored to whole lines — this very line contains the marker text, and an
+    # unanchored range stopped here, leaving the rest of the block installed.
+    sed -i.af-uninstall-bak '/^# >>> AgentSmith managed block/,/^# <<< AgentSmith managed block <<<$/d' "$shell_rc"
+    sed -i.af-uninstall-bak '/^# >>> AgenticFramework managed block/,/^# <<< AgenticFramework managed block <<<$/d' "$shell_rc"
     rm -f "${shell_rc}.af-uninstall-bak"
     echo "✅ Removed AgentSmith block from $shell_rc"
   else

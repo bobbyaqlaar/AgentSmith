@@ -4397,6 +4397,19 @@
       ],
       "last_modified": "2026-09-12T23:23:03Z",
       "id": "scripts/test/test_installed_runtime_tenant.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_step7",
+        "test_force_replaces_the_block_and_keeps_the_users_lines",
+        "test_without_force_an_existing_block_is_left_alone",
+        "test_force_will_not_edit_a_block_without_markers",
+        "test_uninstall_removes_the_whole_block_it_installed"
+      ],
+      "last_modified": "2026-09-13T10:06:23Z",
+      "id": "scripts/test/test_installer_force_shell_functions.py"
     }
   ],
   "edges": [
