@@ -61,7 +61,7 @@ The job pushes to other repositories, which `GITHUB_TOKEN` cannot do.
 1. Create a **fine-grained personal access token**
    (GitHub → Settings → Developer settings → Fine-grained tokens):
    - Resource owner: `bobbyaqlaar`
-   - Repository access: **only** the three `agentsmith-scratch-*` repos
+   - Repository access: **Only select repositories** → the three `agentsmith-scratch-*` repos. Not "Public repositories": that authenticates, then every checkout fails with `Not Found`
    - Permissions: **Contents: Read and write**, **Actions: Read** (Metadata: Read is added automatically)
    - Expiry: your choice. When it lapses, runs fail at **Checkout agentsmith-scratch-…** with an authentication error — renew it and update the secret
 2. Store it on AgentSmith:
@@ -82,6 +82,7 @@ Open the job summary's link to the tenant run, then:
 | **Install AgentSmith** | installer regression, or a pinned Python dependency no longer resolves |
 | **Re-provision** with a `⚠️` line | the installed hook could not vendor something — every new tenant is broken the same way |
 | **Re-provision**: `.gitignore` rewrite | `gh` is not authenticated in the job (token expired or lacks Metadata read) |
+| **Checkout agentsmith-scratch-…**: `Not Found` | the token does not have that repository selected (or has expired) — edit the token's Repository access |
 | **Wait for CI**: no run appeared | the tenant's CI YAML is invalid (GitHub rejected it) or a `ci-*.yml` `name:` changed |
 | **Wait for CI**: a tenant job failed | a template or vendored-code regression — reproduce locally, below |
 

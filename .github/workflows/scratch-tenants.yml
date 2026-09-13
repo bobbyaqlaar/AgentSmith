@@ -18,10 +18,9 @@ name: "Scratch tenants"
 # Requires the SCRATCH_TENANTS_TOKEN secret: a fine-grained PAT scoped to the
 # three agentsmith-scratch-* repos with Contents: read/write and Actions: read
 # (Metadata: read is implied). GITHUB_TOKEN cannot push to another repository.
-#
-# Logs of this public repo name the private scratch repos and show their CI
-# conclusions and provisioning output; they contain no secrets and no app code
-# beyond the fixture apps.
+# The token must SELECT those three repositories: a token set to "Public
+# repositories", or with a different selection, authenticates fine and then
+# gets 404 on every checkout.
 
 on:
   schedule:

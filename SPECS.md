@@ -1350,15 +1350,19 @@ AgentSmith/
 │   ├── design-review-checklist.md   # review-levers.md reframed as build-time guidance
 │   ├── validation-checklist.md      # review-levers.md worked group-by-group, pre-merge
 │   ├── testbed-tenant-spec.md   # Proposed "KYC Sentinel" E2E testbed tenant (multi-LLM, multi-agent)
+│   ├── scratch-tenants.md       # The 3 scratch tenant repos + the workflow that re-provisions them
 │   ├── session-handoff/         # Cross-session working notes
 │   └── superpowers/             # Design specs + implementation plans
 ├── .github/
 │   ├── actions/                 # Composite actions copied into tenant repos (§17): gcp-auth,
 │   │                            #   build-push-ghcr, deploy-placeholder, rollback-notify
+│   ├── scratch-tenants/         # reprovision.sh — used by scratch-tenants.yml (docs/scratch-tenants.md)
 │   └── workflows/
 │       ├── self-test.yml        # py_compile/shellcheck/portal/widget tests on the framework itself
 │       ├── release.yml          # Builds + optionally signs release tarballs (§28)
-│       └── cd-portal.yml        # CD for the framework's own Ops Portal (GHCR → AR → Cloud Run)
+│       ├── cd-portal.yml        # CD for the framework's own Ops Portal (GHCR → AR → Cloud Run)
+│       ├── eval-security.yml    # Reusable security harness (also shipped to tenants)
+│       └── scratch-tenants.yml  # Re-provisions the scratch tenants and waits for their CI to go green
 ├── caddy/
 │   └── Caddyfile                # Phoenix auth sidecar (§15) — used by docker-compose.auth.yml
 ├── assets/                      # Logo + static images used by the docs
