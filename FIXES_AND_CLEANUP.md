@@ -146,11 +146,14 @@ and `Product_Archive.md`. Each was checked still open on 2026-09-14.
   run names the placeholder file, but not that this is the expected day-one
   state. **Trigger:** the first
   external tenant onboards, or someone proposes relaxing strict to get green.
-- **`rollback-notify` names the wrong commit under `workflow_run`.**
-  `.github/actions/rollback-notify/action.yml` reports `github.sha`, which
-  for a `workflow_run`-triggered CD is the branch head when CD started, not
-  `workflow_run.head_sha`, the commit being deployed. **Trigger:** before any
-  tenant sets a real `DEPLOY_COMMAND`.
+- **Existing tenants keep the old `rollback-notify`.** Fixed in the framework
+  2026-09-14 (it named the default branch's head, not the deployed commit,
+  under `workflow_run`), but the hook never overwrites a composite action a
+  tenant already has, and `ai-stack-upgrade` does not touch actions.
+  AqlaarTeleologyStudio carries the old copy and a `workflow_run`-triggered CD.
+  **Trigger:** before OTS, or any tenant provisioned before the fix, sets
+  `SLACK_WEBHOOK_URL`/`TEAMS_WEBHOOK_URL` or a real `DEPLOY_COMMAND` — copy
+  `.github/actions/rollback-notify/` over theirs.
 - **KYC Sentinel's CI tests framework HEAD while it deploys v1.3.0.** Its
   `ci.yml` checks out `bobbyaqlaar/AgentSmith` with no `ref`, but its
   requirements pin `agentsmith-runtime @ …@v1.3.0`. **Trigger:** the next

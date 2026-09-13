@@ -4481,6 +4481,25 @@
       ],
       "last_modified": "2026-09-13T21:49:15Z",
       "id": "scripts/test/test_ci_package_managers.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_steps",
+        "_run_action",
+        "_context",
+        "_checkout_of",
+        "test_no_step_script_interpolates_an_expression",
+        "test_under_workflow_run_the_deployed_checkout_is_named_not_the_branch_head",
+        "test_without_a_checkout_the_triggering_ci_runs_commit_is_named",
+        "test_a_push_triggered_run_without_a_checkout_falls_back_to_the_event_commit",
+        "test_a_failure_context_with_quotes_newlines_and_backslashes_still_sends_valid_json",
+        "test_webhooks_left_unset_are_skipped_and_the_job_still_fails",
+        "test_a_configured_rollback_command_runs_and_can_read_the_failed_commit"
+      ],
+      "last_modified": "2026-09-13T22:10:56Z",
+      "id": "scripts/test/test_rollback_notify.py"
     }
   ],
   "edges": [

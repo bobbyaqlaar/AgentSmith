@@ -26,6 +26,7 @@ Release notes: `CHANGELOG.md` [Unreleased]; still open: `FIXES_AND_CLEANUP.md`.
 | pnpm tenant failed at setup-node; uv tenant's tests failed at import | new scratch apps | lockfile-driven install; green on GitHub |
 | Go/TS CI never ran the security harness | template reading | strict harness on every stack |
 | Stale `uv.lock` passed; the security job's install lacked uv; hook and templates disagreed on lockfile precedence | review-levers pass, each reproduced | `install-python-deps` action, `--locked`, pinned precedence test |
+| `rollback-notify` named the default branch's head, not the deployed commit, under `workflow_run`; an input with a quote or newline broke its payload | audit reading; reproduced by `test_rollback_notify.py` running the action's steps | checked-out HEAD → CI run's `head_sha` → `github.sha`; values via `env`, one message for both webhooks |
 
 ## Completed — review pass 13, three repos (2026-08-25)
 

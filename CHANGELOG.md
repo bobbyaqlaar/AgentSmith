@@ -83,6 +83,19 @@ by CI (`workflow_run`), Go and TS CI now run the strict security harness, and
 interface change** below, as this file's header requires. Existing tenants keep
 the workflow files they have: the hook never overwrites one.
 
+### `rollback-notify` names the commit that failed — replace an existing tenant's copy
+
+Since CD was gated on CI (below) it runs on `workflow_run`, where `github.sha`
+is the default branch's latest commit — so the Slack/Teams message named a
+different commit from the one whose deploy failed. The action now reports, most
+exact first, the job's checked-out `HEAD` (what was deployed), the triggering
+CI run's `head_sha`, then `github.sha`, and exports it to `ROLLBACK_COMMAND` as
+`$ROLLBACK_NOTIFY_COMMIT`. Inputs now reach its scripts through `env`, so a
+`failure_context` containing a quote or newline no longer breaks the JSON
+payload (or adds a line to `$GITHUB_ENV`). **Tenants provisioned before this
+keep their old copy** — the hook never overwrites a composite action — so copy
+`.github/actions/rollback-notify/` over it.
+
 ### One Python install for CI and the security harness; stale uv locks fail; the review-levers pass
 
 A review of the entries below against `docs/review-levers.md` found:

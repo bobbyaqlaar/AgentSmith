@@ -1995,7 +1995,9 @@ On a post-deploy smoke-test failure, `cd-production.yml` invokes
 (`SLACK_WEBHOOK_URL`/`TEAMS_WEBHOOK_URL` secrets, optional), runs
 `secrets.ROLLBACK_COMMAND` if set, then fails the job (red status
 preserved either way — notification/rollback never silently swallows the
-failure):
+failure). The notification names the commit that failed — the job's checked-out
+`HEAD`, which is the commit CI validated — and `ROLLBACK_COMMAND` can read it as
+`$ROLLBACK_NOTIFY_COMMIT`:
 
 ```bash
 ROLLBACK_COMMAND = "fly releases list && fly deploy --image <prev-image>"  # Fly.io
