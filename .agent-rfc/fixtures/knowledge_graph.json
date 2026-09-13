@@ -4498,7 +4498,7 @@
         "test_webhooks_left_unset_are_skipped_and_the_job_still_fails",
         "test_a_configured_rollback_command_runs_and_can_read_the_failed_commit"
       ],
-      "last_modified": "2026-09-13T22:10:56Z",
+      "last_modified": "2026-09-13T22:14:09Z",
       "id": "scripts/test/test_rollback_notify.py"
     }
   ],

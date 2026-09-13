@@ -71,7 +71,8 @@ runs:
         text="🛑 $ENVIRONMENT_LABEL deploy failed: $FAILURE_CONTEXT — $REPOSITORY@$commit ($RUN_URL)"
         # One line: a newline would start a new $GITHUB_ENV entry, and a raw
         # newline or tab is invalid inside a JSON string. Then JSON-escape
-        # the two characters that remain able to break it.
+        # backslash and quote. Other control characters are not handled: the
+        # inputs are labels the calling workflow writes, not external text.
         text="${text//$'\n'/ }"; text="${text//$'\r'/ }"; text="${text//$'\t'/ }"
         escaped="${text//\\/\\\\}"; escaped="${escaped//\"/\\\"}"
         echo "Failed commit: $commit ($source)"

@@ -74,7 +74,9 @@ def _run_action(
             key, _, value = line.partition("=")
             env[key] = value
         for key, value in (step.get("env") or {}).items():
-            env[key] = _EXPR.sub(lambda m: context.get(m.group(1), ""), str(value))
+            # context[...] not .get(): a misspelt context name in the action
+            # must fail here, not quietly become an empty string.
+            env[key] = _EXPR.sub(lambda m: context[m.group(1)], str(value))
         results.append(subprocess.run(
             ["bash", "-e", "-c", step["run"]], cwd=cwd, env=env, capture_output=True, text=True, check=False,
         ))
