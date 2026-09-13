@@ -4433,9 +4433,10 @@
         "test_a_stale_file_in_the_target_does_not_survive_a_build",
         "test_a_hand_edit_in_the_scratch_repo_fails_the_build",
         "test_the_build_fails_when_the_install_cannot_provision",
-        "test_the_build_fails_if_the_hook_rewrites_gitignore"
+        "test_the_build_fails_if_the_hook_rewrites_gitignore",
+        "test_the_build_copies_what_git_would_publish_not_local_junk"
       ],
-      "last_modified": "2026-09-13T21:38:47Z",
+      "last_modified": "2026-09-13T21:44:57Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -4478,7 +4479,7 @@
         "run",
         "calls"
       ],
-      "last_modified": "2026-09-13T21:41:05Z",
+      "last_modified": "2026-09-13T21:42:31Z",
       "id": "scripts/test/test_ci_package_managers.py"
     }
   ],

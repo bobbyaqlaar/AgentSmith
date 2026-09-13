@@ -57,7 +57,15 @@ fi
 
 # ── 2. Empty the tree, copy the app in ───────────────────────────────────────
 find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-cp -R "$APP/." .
+# Files git would publish (tracked, or new and not ignored), not the raw
+# directory: `cp -R` also copied a local node_modules/ or .ruff_cache/, so a
+# build on a developer machine differed from the workflow's clean checkout.
+git -C "$APP" ls-files -z --cached --others --exclude-standard . |
+  while IFS= read -r -d '' f; do
+    [ -f "$APP/$f" ] || continue   # deleted in the working tree, not yet committed
+    mkdir -p "$(dirname "$f")"
+    cp -p "$APP/$f" "$f"
+  done
 cp "$HERE/SCRATCH_TENANT.md" SCRATCH_TENANT.md
 # The authored security pack, one copy for every app — every stack's CI runs
 # the strict harness, which fails on the shipped placeholders. Copied BEFORE

@@ -88,15 +88,16 @@ def test_every_app_is_the_scenario_it_claims():
 # so it is pinned here instead: a fix to one copy that misses the other fails.
 SCENARIO_BASE = {"ts-react-pnpm": "ts-react", "python-uv": "python-fastapi"}
 SCENARIO_ONLY = {
-    # What each scenario may legitimately differ in, besides its manifest.
+    # The only paths each scenario may differ from its base in.
     "ts-react-pnpm": {"package-lock.json", "pnpm-lock.yaml", "package.json", "scripts/release.mjs"},
     "python-uv": {"requirements.txt", "pyproject.toml", "uv.lock"},
 }
 
 
 def _files(root: Path) -> dict[str, bytes]:
-    """Tracked files only: what CI checks out and a push publishes. A local
-    tool cache in an app directory is not part of the app."""
+    """The files git would publish: tracked, or new and not ignored — the same
+    list build.sh copies. A local tool cache in an app directory is not part
+    of the app."""
     listed = subprocess.run(
         ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard", "."],
         capture_output=True, text=True, check=True,
@@ -227,9 +228,8 @@ def test_each_app_builds_into_a_complete_tenant_offline(app, stack, install, tmp
     assert result.returncode == 0, result.stdout + result.stderr
     assert f"Detected stack [{STACK_LABEL[stack]}]" in result.stdout
     # The app, verbatim.
-    for src in (p for p in (APPS / app).rglob("*") if p.is_file()):
-        rel = src.relative_to(APPS / app)
-        assert (target / rel).read_bytes() == src.read_bytes(), f"{rel} differs from the app source"
+    for rel, content in _files(APPS / app).items():
+        assert (target / rel).read_bytes() == content, f"{rel} differs from the app source"
     # What provisioning must have produced.
     assert (target / ".github" / "workflows" / f"ci-{stack}.yml").is_file()
     assert (target / ".github" / "actions" / "gcp-auth" / "action.yml").is_file()
@@ -322,3 +322,28 @@ def test_the_build_fails_if_the_hook_rewrites_gitignore(install, tmp_path, monke
 
     assert result.returncode == 1
     assert "changed .gitignore" in result.stdout + result.stderr
+
+
+@needs_git
+def test_the_build_copies_what_git_would_publish_not_local_junk(install, tmp_path):
+    """`cp -R` carried an app directory's ignored node_modules/ or .ruff_cache/
+    into a local build, so it differed from the workflow's clean checkout."""
+    scratch = tmp_path / "scratch-tenants"
+    shutil.copytree(SCRATCH, scratch)
+    subprocess.run(["git", "init", "-q", "--template=", str(scratch)], check=True)
+    (scratch / ".gitignore").write_text(".ruff_cache/\n")
+    app = scratch / "apps" / "go"
+    (app / ".ruff_cache").mkdir()
+    (app / ".ruff_cache" / "junk").write_text("x")
+    (app / "notes.txt").write_text("new, not ignored\n")
+
+    target = tmp_path / "tenant"
+    result = subprocess.run(
+        ["bash", str(scratch / "build.sh"), "go", str(target)],
+        capture_output=True, text=True, check=False, stdin=subprocess.DEVNULL,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not (target / ".ruff_cache").exists()
+    assert (target / "notes.txt").read_text() == "new, not ignored\n"
+    assert (target / "calc").is_dir(), "the app itself must still arrive"

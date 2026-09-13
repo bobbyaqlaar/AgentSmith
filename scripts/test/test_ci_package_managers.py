@@ -301,7 +301,8 @@ def test_hook_and_ts_template_pick_the_same_package_manager(tmp_path, files, too
 def test_hook_and_python_install_agree_on_uv(tmp_path, no_real_pip_upgrade, files, uses_uv):
     project = _project(tmp_path, files)
     runner = Runner(project, tmp_path)
-    runner.run(_action_script())
+    result, _ = runner.run(_action_script())
+    assert result.returncode == 0, result.stdout + result.stderr
     assert any(c.startswith("uv ") for c in runner.calls()) is uses_uv
     assert (_hook_test_cmd(project) == "uv run pytest") is uses_uv
 

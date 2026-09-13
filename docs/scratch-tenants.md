@@ -34,16 +34,16 @@ filled-in security pack (a labelled fixture, `security-pack/`) precisely so
 that the strict harness, which every stack's CI runs, passes — a red run
 anywhere means a framework regression, never "the placeholders again".
 
-## Two layers of checking
+## Three layers of checking
 
 | Layer | Where | Runs | Proves |
 |---|---|---|---|
-| **Offline build** | `scripts/test/test_scratch_tenants.py`, in Self-Test | every AgentSmith push, ~2 min | each app builds with the real hook into a complete tenant: detected as its stack, no hook warnings, the app and shared pack verbatim, the stack's workflows and actions, pruned `runtime/test`, the right test command in `CLAUDE.md`, no `.pyc` — and the **strict security harness passes** in it. Scenario apps are pinned to their base app: they may differ only in their manifest and lockfile |
+| **Offline build** | `scripts/test/test_scratch_tenants.py`, in Self-Test | every AgentSmith push, ~2 min | each app builds with the real hook into a complete tenant: detected as its stack, no hook warnings, the app and shared pack verbatim, the stack's workflows and actions, pruned `runtime/test`, the right test command in `CLAUDE.md`, no `.pyc` — and the **strict security harness passes** in it. Scenario apps are pinned to their base app: they may differ only in their manifest and lockfile (and the pnpm app lacks the npm app's `scripts/` fixture) |
 | **Template scripts** | `scripts/test/test_ci_package_managers.py`, in Self-Test | every AgentSmith push, seconds | the CI templates' own `run:` scripts and the `install-python-deps` action, executed with shimmed npm/pnpm/pip/uv, call the package manager the lockfile names — the same one the hook names in the agent rules |
 | **Real CI** | `.github/workflows/scratch-tenants.yml` | weekly + provisioning pushes, minutes | the built tenant's own CI goes green on GitHub, and its CD fires off it |
 
-The first layer catches most breaks before anything is pushed anywhere; the
-second catches what only GitHub can show (a template GitHub rejects, a runner
+The first two catch most breaks before anything is pushed anywhere; the
+third catches what only GitHub can show (a template GitHub rejects, a runner
 without some tool, a cache key that fails).
 
 ## How the workflow works
@@ -112,6 +112,8 @@ Open the job summary's link to the tenant run, then:
 | **Checkout agentsmith-scratch-…**: `Not Found` | the token does not have that repository selected (or has expired) — edit the token's Repository access |
 | **Wait for CI**: `cannot read Actions … (HTTP 403)` | the token lacks **Actions: Read-only** — the push worked, the tenant's CI is running, the job just cannot see it |
 | **Wait for CI**: no run appeared | the tenant's CI YAML is invalid (GitHub rejected it) or a `ci-*.yml` `name:` changed |
+| **Wait for CI**: tenant step **Install project dependencies**, `needs to be updated, but --locked` | `apps/python-uv/uv.lock` no longer matches its `pyproject.toml` — run `uv lock` there and commit both |
+| **Wait for CI**: tenant step **Detect package manager** fails | the TS app has no lockfile, or one the template does not support (yarn, bun) |
 | **Wait for CI**: a tenant job failed | a template, vendored-code or app regression — reproduce locally, below |
 
 Reproduce locally against your own install — no clone needed:
