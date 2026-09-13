@@ -17,7 +17,8 @@ name: "Scratch tenants"
 # ~/.git_templates, run over each tenant by .github/scratch-tenants/build.sh.
 #
 # Requires the SCRATCH_TENANTS_TOKEN secret: a fine-grained PAT scoped to the
-# agentsmith-scratch-* repos (all five) with Contents: read/write and Actions: read
+# agentsmith-scratch-* repos (all five) with Contents: read/write, Workflows:
+# read/write (each build writes .github/workflows/) and Actions: read
 # (Metadata: read is implied). GITHUB_TOKEN cannot push to another repository.
 # The token must SELECT those repositories: a token set to "Public
 # repositories", or with a different selection, authenticates fine and then
@@ -137,7 +138,16 @@ jobs:
           # post-commit pushes and tags on its own.
           git -c core.hooksPath=/dev/null commit -q --allow-empty \
             -m "chore: build from AgentSmith ${GITHUB_SHA::7} (${{ github.event_name }})"
-          git push -q origin HEAD
+          # A token without Workflows: Read and write can push everything except
+          # a change to .github/workflows/ — so it works until the first
+          # template change. Name the cause instead of leaving a raw rejection.
+          if ! git push -q origin HEAD 2>push.err; then
+            cat push.err >&2
+            if grep -q "without .workflow. scope" push.err; then
+              echo "::error::SCRATCH_TENANTS_TOKEN lacks Workflows: Read and write — this build changes the tenant's workflow files"
+            fi
+            exit 1
+          fi
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Wait for the tenant's CI

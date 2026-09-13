@@ -86,7 +86,8 @@ The job pushes to other repositories, which `GITHUB_TOKEN` cannot do.
    (GitHub → Settings → Developer settings → Fine-grained tokens):
    - Resource owner: `bobbyaqlaar`
    - Repository access: **Only select repositories** → all five `agentsmith-scratch-*` repos (a new app's repo must be added here too). Not "Public repositories": that authenticates, then every checkout fails with `Not Found`
-   - Permissions: **Contents → Read and write**, **Actions → Read-only** (Metadata is added automatically)
+   - Permissions: **Contents → Read and write**, **Workflows → Read and write**, **Actions → Read-only** (Metadata is added automatically).
+     Workflows is needed because each build writes the tenant's `.github/workflows/`; without it GitHub rejects any push that changes a workflow file, and accepts the rest — so a token missing it works until the first template change
    - Expiry: your choice. When it lapses, runs fail at **Checkout agentsmith-scratch-…** with an authentication error — renew it and update the secret
 2. Store it on AgentSmith:
    ```bash
@@ -107,6 +108,7 @@ Open the job summary's link to the tenant run, then:
 | **Build**: `edited directly` | someone committed to the scratch repo. Move the change into `apps/<app>/`; to discard it instead, run once with `SCRATCH_TENANTS_ALLOW_MANUAL_HEAD=1` |
 | **Build** with a `⚠️` line | the installed hook could not vendor something — every new tenant is broken the same way. The offline test in Self-Test should have failed too |
 | **Build**: `changed .gitignore` | `gh` is not authenticated in the job (token expired), so the hook treated the repo as public |
+| **Push**: `without \`workflow\` scope` | the token lacks **Workflows: Read and write**. Only pushes that change a workflow file need it, so it surfaces on the first template change |
 | **Checkout agentsmith-scratch-…**: `Not Found` | the token does not have that repository selected (or has expired) — edit the token's Repository access |
 | **Wait for CI**: `cannot read Actions … (HTTP 403)` | the token lacks **Actions: Read-only** — the push worked, the tenant's CI is running, the job just cannot see it |
 | **Wait for CI**: no run appeared | the tenant's CI YAML is invalid (GitHub rejected it) or a `ci-*.yml` `name:` changed |
