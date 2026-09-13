@@ -129,8 +129,18 @@ jobs:
           set -uo pipefail
           id=""
           for _ in $(seq 1 60); do
-            id=$(gh run list -R "${{ matrix.repo }}" --commit "${{ steps.push.outputs.sha }}" \
-                   --workflow "${{ matrix.ci }}" --json databaseId --jq '.[0].databaseId // empty')
+            # stderr is kept, not discarded: a token without Actions: Read gets
+            # HTTP 403 here, and swallowing it made the step report "no run
+            # appeared … invalid or renamed" — a wrong diagnosis, found on the
+            # first real run.
+            if ! id=$(gh run list -R "${{ matrix.repo }}" --commit "${{ steps.push.outputs.sha }}" \
+                        --workflow "${{ matrix.ci }}" --json databaseId --jq '.[0].databaseId // empty' 2>err.txt); then
+              if grep -q "HTTP 403" err.txt; then
+                echo "::error::SCRATCH_TENANTS_TOKEN cannot read Actions on ${{ matrix.repo }} (HTTP 403) — add Actions: Read-only to the token"
+                exit 1
+              fi
+              cat err.txt >&2
+            fi
             [ -n "$id" ] && break
             sleep 10
           done

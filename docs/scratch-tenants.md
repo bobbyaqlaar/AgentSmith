@@ -83,6 +83,7 @@ Open the job summary's link to the tenant run, then:
 | **Re-provision** with a `⚠️` line | the installed hook could not vendor something — every new tenant is broken the same way |
 | **Re-provision**: `.gitignore` rewrite | `gh` is not authenticated in the job (token expired or lacks Metadata read) |
 | **Checkout agentsmith-scratch-…**: `Not Found` | the token does not have that repository selected (or has expired) — edit the token's Repository access |
+| **Wait for CI**: `cannot read Actions … (HTTP 403)` | the token lacks **Actions: Read-only** — the push worked, the tenant's CI is running, the job just cannot see it |
 | **Wait for CI**: no run appeared | the tenant's CI YAML is invalid (GitHub rejected it) or a `ci-*.yml` `name:` changed |
 | **Wait for CI**: a tenant job failed | a template or vendored-code regression — reproduce locally, below |
 
