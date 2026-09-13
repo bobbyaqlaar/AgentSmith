@@ -265,3 +265,16 @@ def test_hook_actually_writes_every_callee_into_a_fresh_tenant(tmp_path, monkeyp
     }
     missing = referenced - written
     assert not missing, f"ci-python-fastapi.yml references callees never written into the tenant: {missing}"
+
+
+def test_every_stacks_ci_runs_the_strict_security_harness() -> None:
+    """Go and TS tenants were never graded: only ci-python-fastapi.yml called
+    eval-security.yml, though every stack is provisioned with it and none of
+    its controls is Python-specific."""
+    import yaml
+
+    for path in sorted(TEMPLATES.glob("ci-*.yml")):
+        jobs = yaml.safe_load(path.read_text(encoding="utf-8"))["jobs"]
+        gate = jobs.get("security-checks", {})
+        assert gate.get("uses") == "./.github/workflows/eval-security.yml", f"{path.name} skips the security harness"
+        assert gate.get("with", {}).get("strict") is True, f"{path.name} runs the security harness non-strict"

@@ -29,9 +29,9 @@ a `requirements.txt`, so a pnpm tenant failed before its first check and a uv
 tenant's tests failed at import. None showed up in `pytest`, and none in
 AqlaarTeleologyStudio, whose customised test step hid them.
 
-**Expected state: every tenant's CI fully green.** The Python apps' security
-packs are filled in (as labelled fixtures) precisely so that their strict harness
-passes — a red run anywhere means a framework regression, never "the
+**Expected state: every tenant's CI fully green.** Every app's security pack
+is filled in (as a labelled fixture) precisely so that the strict harness, which
+every stack's CI runs, passes — a red run anywhere means a framework regression, never "the
 placeholders again".
 
 ## Two layers of checking
@@ -141,7 +141,7 @@ not made by the workflow.
   rebuilds that tenant. Editing a scratch repo directly fails the next build.
 - **A template change that needs an app change** lands as one AgentSmith
   commit; the offline test checks both together before anything is pushed.
-- **The Python apps' security packs** (`apps/python-*/.agent-rfc/security/`)
+- **The security packs** (`apps/<app>/.agent-rfc/security/`, one per app)
   hold only the two authored files; the hook seeds the other two, and its
   "never overwrite" rule stays under test because the authored ones are copied
   in first. They are labelled fixtures, not real risk assessments.
@@ -151,7 +151,8 @@ not made by the workflow.
   `test_scratch_tenants.py`'s `SCENARIOS` saying what makes it that scenario,
   and a new private scratch repo **selected on the token**.
   `test_scratch_tenants.py` fails until the directory, matrix entry and
-  scenario agree, and until every stack has an app. Create the repo and update
+  scenario agree, until every stack has an app, and until the app has its own
+  authored security pack. Create the repo and update
   the token *before* pushing the matrix entry, or that job fails at checkout.
 
 ## Cost

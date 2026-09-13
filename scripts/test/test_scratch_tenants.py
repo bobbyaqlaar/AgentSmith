@@ -82,6 +82,18 @@ def test_every_app_is_the_scenario_it_claims():
     assert "[tool.ruff]" in (APPS / "python-uv" / "pyproject.toml").read_text(encoding="utf-8")
 
 
+def test_every_app_declares_its_own_security_pack():
+    """Every stack's CI runs the strict harness, which fails on the shipped
+    placeholder pack. An app without an authored pack would make its tenant red
+    for a reason that is not a framework regression."""
+    for app in (p for p in APPS.iterdir() if p.is_dir()):
+        pack = app / ".agent-rfc" / "security"
+        register = yaml.safe_load((pack / "risk_register.yaml").read_text(encoding="utf-8"))
+        manifest = yaml.safe_load((pack / "agency_manifest.yaml").read_text(encoding="utf-8"))
+        assert register["entries"] and not [e for e in register["entries"] if "EXAMPLE" in e["id"]], app.name
+        assert manifest["actions"], app.name
+
+
 def test_apps_carry_nothing_provisioning_generates():
     """App source is only what a tenant writes. Generated files here would mask
     the hook failing to produce them."""

@@ -1,6 +1,6 @@
-# Risk register (SEC-RISK-001) for agentsmith-scratch-python-uv.
+# Risk register (SEC-RISK-001) for agentsmith-scratch-go.
 #
-# This repo is a TEST FIXTURE, not a product: a minimal FastAPI app that
+# This repo is a TEST FIXTURE, not a product: a minimal Go module that
 # AgentSmith's scratch-tenants workflow re-provisions so the framework's
 # onboarding path runs through real CI (AgentSmith docs/scratch-tenants.md).
 # The entries below describe the fixture's actual residual risks. They are

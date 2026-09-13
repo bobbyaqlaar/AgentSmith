@@ -2580,7 +2580,7 @@ Design + plan (P12, shipped 2026-07-15):
 | `scripts/run-security-checks.py` | Orchestrator + per-framework evidence pack |
 | `fixtures/security/control_registry.json` | Canonical SEC-* registry |
 | `.agent-rfc/security/` | Tenant risk register, agency manifest, tool allowlist, adversarial overlays |
-| `workflow-templates/eval-security.yml` | CI gate (`strict: true` in tenant Python template + framework self-test) |
+| `workflow-templates/eval-security.yml` | CI gate (`strict: true` in every tenant CI template — Go, Python, TS — + framework self-test) |
 | `runtime/prompt_guard.py` | Prompt injection heuristics (`PROMPT_GUARD`); retrieved-context scanning (`scan_documents`) |
 | `runtime/structured_output.py` | Pydantic JSON parse gate |
 | `runtime/tool_registry.py` | `@tool` + YAML allowlist |
