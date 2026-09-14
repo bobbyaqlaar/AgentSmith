@@ -4797,6 +4797,14 @@
       "pillar": null,
       "created_at": "2026-09-14T06:43:06Z",
       "id": "rfc:designs/process-gates-tenants.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 process gates for tenants (framework side)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/process-gates-tenants.md",
+      "pillar": null,
+      "created_at": "2026-09-14T06:43:42Z",
+      "id": "rfc:reviews/process-gates-tenants.md"
     }
   ],
   "edges": [
