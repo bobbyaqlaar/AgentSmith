@@ -54,3 +54,22 @@ no further findings.
 On commit, the commit gate itself blocked this change: the design's `scope` did not
 cover `.github/workflows/scratch-tenants.yml`, whose comment pass 1 rewrote. Added to
 the scope; it belongs to this work.
+
+## Pass 5 — findings: 1
+
+- `environment-parity` — the amend detection passed on macOS and failed on the
+  Linux runner (Self-Test `102aa15`: `test_amending_a_gated_commit_is_checked_like_the_commit_it_replaces`,
+  `assert 0 != 0`). Probable cause, not reproduced (no Linux host here —
+  Docker is not running, and macOS `ps` does not truncate even a 200-character
+  argv): procps limits `ps -o args=` width when piped, and the test's
+  `git -C <long tmp path> … commit --amend` puts `--amend` far past column 80.
+  Fixed for either cause: read `/proc/$PPID/cmdline` (exact, on Linux), else
+  `ps -ww` (unlimited width). The Self-Test run on the fix is the verification. The
+  pre-push gate list ran on macOS only — which is exactly the gap this lever
+  names; CI was the first Linux run.
+
+## Pass 6 — findings: 0
+
+Re-ran the commit-hook tests (macOS takes the `ps -ww` branch), shellcheck and
+`bash -n` on the new hook. The `/proc` branch runs only on Linux, so it is
+verified by Self-Test, not here.

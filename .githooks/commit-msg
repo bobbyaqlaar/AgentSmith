@@ -23,10 +23,19 @@ fi
 # `git commit --amend` compares the index with the commit being REPLACED, so an
 # amend that changes only the message looked like a commit with no changes and
 # passed without trailers. Git does not tell a hook it is amending; the parent
-# process's arguments do. (If ps is unavailable the check degrades to the plain
-# commit's view — CI still checks the amended commit in full.)
+# git process's arguments do. /proc gives them exactly on Linux; elsewhere
+# `ps -ww` (unlimited width — plain `ps` truncated them at 80 columns on the
+# Linux runner, dropping a trailing --amend). If neither works the check
+# degrades to the plain commit's view; CI still checks the amended commit.
+parent_args() {
+  if [ -r "/proc/$PPID/cmdline" ]; then
+    tr '\0' ' ' < "/proc/$PPID/cmdline"
+  else
+    ps -ww -o args= -p "$PPID" 2>/dev/null
+  fi
+}
 amend=()
-if ps -o args= -p "$PPID" 2>/dev/null | grep -qE '(^|[[:space:]])--amend([[:space:]]|$)'; then
+if parent_args | grep -qE '(^|[[:space:]])--amend([[:space:]]|$)'; then
   amend=(--amend)
 fi
 
