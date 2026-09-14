@@ -4750,6 +4750,14 @@
       "pillar": null,
       "created_at": "2026-09-14T05:04:16Z",
       "id": "rfc:designs/process-gates.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 process gates",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/process-gates.md",
+      "pillar": null,
+      "created_at": "2026-09-14T05:05:28Z",
+      "id": "rfc:reviews/process-gates.md"
     }
   ],
   "edges": [
