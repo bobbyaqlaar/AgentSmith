@@ -924,6 +924,7 @@ carrying their own copies.
 |---|---|
 | `DISABLE_AI_STACK=true` | All hooks exit immediately without running |
 | `SEMVER_LOOP_GUARD=true` | Prevents infinite loop in post-commit semver tagging |
+| `AGENTSMITH_AUTOPUSH=0` | post-commit still auto-tags but does not push (same as `git config agentsmith.autopush false` for one repo). Use it instead of `git -c core.hooksPath=/dev/null`, which also skips pre-commit and commit-msg |
 | `AI_BREAK_GLASS_TOKEN=<token>` | Required by `ai-stack-off` when the installed org policy sets `bypass_policy: break-glass` (enterprise pack, see OPERATIONS.md). Must be a real IT-issued, HMAC-signed token with an expiry — not just any non-empty string — validated against `BREAK_GLASS_HMAC_KEY` on the machine. |
 | `OPS_PORTAL_URL` / `AUDIT_LOG_WRITE_TOKEN` | When both are set, `ai-tenant-init` and `ai-tenant-promote` best-effort write signed events to the Ops Portal's audit log. If unset, or the write fails, the event is appended to `~/.agent-framework/local-audit-fallback.log` instead of being dropped. |
 

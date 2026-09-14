@@ -2804,6 +2804,7 @@ Dataset Commits".
 | Upgrade vendored scripts in a tenant repo | `ai-stack-upgrade --to <version>` |
 | Refresh this machine's shell functions after pulling the framework | `./install-ai-stack.sh --force` — without `--force` the installer keeps the existing `~/.zshrc` block, so `ai-stack-upgrade` and friends stay at whatever version was first installed |
 | Prove onboarding still works on every stack (and npm/pnpm, pip/uv) | The **Scratch tenants** workflow — weekly, on provisioning changes, or `gh workflow run scratch-tenants.yml`. See [docs/scratch-tenants.md](docs/scratch-tenants.md) |
+| Change code in the framework repo | Design note in `.agent-rfc/designs/` first, review record in `.agent-rfc/reviews/` after, `Design:`/`Review:` trailers on the commit. Enforced by Claude Code hooks, `.githooks/commit-msg` (`git config core.hooksPath .githooks` once per clone) and Self-Test `process-gates`. See [docs/process-gates.md](docs/process-gates.md) |
 | Promote staging → production | `ai-tenant-promote <id> --from staging --to production` |
 | Rotate a widget token | Mint a new one (`POST .../widget-token`) — old one keeps working until explicitly revoked |
 | Rotate the audit-log HMAC key | New events sign with the new key; old events will report `verified: false` against it — re-sign history or accept the discontinuity, document which |

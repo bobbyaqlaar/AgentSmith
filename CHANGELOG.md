@@ -83,6 +83,35 @@ by CI (`workflow_run`), Go and TS CI now run the strict security harness, and
 interface change** below, as this file's header requires. Existing tenants keep
 the workflow files they have: the hook never overwrites one.
 
+### Design before code and review before merge, enforced — and `post-commit` can tag without pushing
+
+`docs/design-review-checklist.md` and `docs/review-levers.md` were written down
+and skipped: no agent session in this repo had them in context, and nothing
+checked. `scripts/process_gate.py` now checks, from every place work happens
+(`docs/process-gates.md`):
+
+- **Claude Code** (`.claude/settings.json`): a session starts with the rules; an
+  edit to a gated path is denied unless an active, complete design note in
+  `.agent-rfc/designs/` covers it; ending a turn with gated changes that have no
+  clean review record newer than them is blocked once, then warned.
+- **Commits** (`.githooks/commit-msg`, armed with
+  `git config core.hooksPath .githooks`): a commit touching gated paths needs
+  `Design:` and `Review:` trailers; the design's scope must cover the change and
+  the review must be clean and changed in the same commit. `n/a: <reason>` only
+  for changes of at most 20 gated lines.
+- **CI** (Self-Test `process-gates`): the same check over every pushed commit,
+  plus a CHANGELOG entry whenever tenant-facing paths change. It cannot refuse a
+  push — branch protection needs GitHub Pro for a private repo — so a
+  non-compliant push turns Self-Test red.
+
+**Hook interface change:** `hooks/post-commit` keeps auto-tagging but skips the
+push when `git config agentsmith.autopush false` or `AGENTSMITH_AUTOPUSH=0`. The
+only way to commit without the push used to be `core.hooksPath=/dev/null`,
+which silently skipped `pre-commit` and `commit-msg` as well.
+
+Tenants do not get the design/review gates yet: `process_gate.py` is vendored
+with `scripts/`, but no template wires it (`FIXES_AND_CLEANUP.md`).
+
 ### `rollback-notify` names the commit that failed — replace an existing tenant's copy
 
 Since CD was gated on CI (below) it runs on `workflow_run`, where `github.sha`

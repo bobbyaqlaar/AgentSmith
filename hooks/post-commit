@@ -70,9 +70,15 @@ if [ "$BUMP" != "none" ]; then
   echo "$LOG_ENTRY" >> "$REPO_ROOT/.agent-history.log"
 
   # ── 4. Push to remote if tracked ───────────────────────────────────────────
+  # Opt out of the push, keep the tag: `git config agentsmith.autopush false`
+  # (per repo) or AGENTSMITH_AUTOPUSH=0. Without this the only way to commit
+  # without pushing was `-c core.hooksPath=/dev/null`, which also skipped
+  # pre-commit and commit-msg — every guardrail went with the push.
   CURRENT_BRANCH=$(git branch --show-current 2>/dev/null)
   TRACKED_REMOTE=$(git config --get "branch.${CURRENT_BRANCH}.remote" 2>/dev/null || true)
-  if [ -n "$TRACKED_REMOTE" ]; then
+  if [ "${AGENTSMITH_AUTOPUSH:-1}" = "0" ] || [ "$(git config --bool --get agentsmith.autopush 2>/dev/null)" = "false" ]; then
+    [ -n "$TRACKED_REMOTE" ] && echo "ℹ️  Auto-push off (agentsmith.autopush) — $NEW_TAG tagged locally; push when ready."
+  elif [ -n "$TRACKED_REMOTE" ]; then
     if git push "$TRACKED_REMOTE" "$CURRENT_BRANCH" --follow-tags --quiet 2>/dev/null; then
       echo "✅ Pushed $NEW_TAG to $TRACKED_REMOTE"
     else

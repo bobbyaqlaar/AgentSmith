@@ -12,6 +12,27 @@ on:
   pull_request:
 
 jobs:
+  # Design before code, review before merge — checked on every pushed commit
+  # (docs/process-gates.md). The local commit-msg hook runs the same function,
+  # but only in a clone that armed it; this is the check no clone can skip.
+  # It cannot REFUSE a push: branch protection on a private repo needs GitHub
+  # Pro, so a failing range is red after the fact, not blocked.
+  process-gates:
+    name: "Process gates (design + review)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: "Every gated commit has a design and a clean review"
+        env:
+          # A pull request's range is base..head; a push's is before..sha,
+          # where `before` is all zeros for a new branch (the script then
+          # checks the head commit only, and says so).
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 scripts/process_gate.py ci --base "$BASE" --head "$HEAD_SHA"
+
   python:
     name: "Python scripts/runtime/examples"
     runs-on: ubuntu-latest

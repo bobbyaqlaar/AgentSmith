@@ -134,8 +134,11 @@ jobs:
           git add -A
           # --allow-empty: a scheduled run with no framework change must still
           # re-run the tenant's CI, or "green last month" would be all it proves.
-          # hooksPath=/dev/null: the installer armed ~/.git_templates hooks, and
-          # post-commit pushes and tags on its own.
+          # hooksPath=/dev/null: the installer armed ~/.git_templates hooks.
+          # Not only to avoid post-commit's push (agentsmith.autopush=false
+          # would do that): this commit is machine-built tenant output, and the
+          # tenant guardrails in pre-commit/commit-msg are for authored code.
+          # What checks it is the tenant's own CI, which this job waits on.
           git -c core.hooksPath=/dev/null commit -q --allow-empty \
             -m "chore: build from AgentSmith ${GITHUB_SHA::7} (${{ github.event_name }})"
           # A token without Workflows: Read and write can push everything except

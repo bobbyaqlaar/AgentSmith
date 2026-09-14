@@ -190,3 +190,54 @@ def test_enterprise_requires_an_open_rfc_to_exist(repo, tmp_path):
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+# ── post-commit auto-push opt-out ────────────────────────────────────────────
+
+
+@pytest.fixture()
+def pushing_repo(repo, tmp_path, monkeypatch):
+    """The repo fixture plus post-commit, opted in, tracking a bare remote."""
+    monkeypatch.setenv("AGENT_KG_DEFER", "1")
+    monkeypatch.delenv("AGENTSMITH_AUTOPUSH", raising=False)
+    shutil.copy(HOOKS_DIR / "post-commit", repo / ".git" / "hooks" / "post-commit")
+    (repo / ".git" / "hooks" / "post-commit").chmod(0o755)
+    _opt_in(repo)
+    remote = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True)
+    assert _commit(repo, "a.txt", "1\n", "chore: base").returncode == 0
+    subprocess.run(["git", "-C", str(repo), "push", "-q", "-u", "origin", "main"], check=True, capture_output=True)
+    return repo, remote
+
+
+def _remote_head(remote: Path) -> str:
+    out = subprocess.run(["git", "-C", str(remote), "rev-parse", "main"], capture_output=True, text=True, check=True)
+    return out.stdout.strip()
+
+
+def test_post_commit_pushes_a_tagged_commit_by_default(pushing_repo):
+    repo, remote = pushing_repo
+    assert _commit(repo, "b.txt", "2\n", "feat: b").returncode == 0
+    local = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
+    local = local.stdout.strip()
+    assert _remote_head(remote) == local
+
+
+@pytest.mark.parametrize("opt_out", ["config", "env"])
+def test_post_commit_can_tag_without_pushing(pushing_repo, monkeypatch, opt_out):
+    """The only way to commit without the push used to be disabling every hook."""
+    repo, remote = pushing_repo
+    before = _remote_head(remote)
+    if opt_out == "config":
+        subprocess.run(["git", "-C", str(repo), "config", "agentsmith.autopush", "false"], check=True)
+    else:
+        monkeypatch.setenv("AGENTSMITH_AUTOPUSH", "0")
+
+    result = _commit(repo, "b.txt", "2\n", "feat: b")
+
+    assert result.returncode == 0
+    assert _remote_head(remote) == before, "the commit was pushed"
+    assert "Auto-push off" in result.stdout + result.stderr
+    tags = subprocess.run(["git", "-C", str(repo), "tag"], capture_output=True, text=True, check=True).stdout
+    assert tags.strip(), "tagging must still happen"

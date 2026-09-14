@@ -158,6 +158,18 @@ and `Product_Archive.md`. Each was checked still open on 2026-09-14.
   Sentinel does not use this action). **Trigger:** the next tenant onboarded
   from an older install, or the next fix to any composite action — at that
   point `ai-stack-upgrade` should refresh actions.
+- **The process gates report a bad push; they cannot refuse one.** Making
+  Self-Test's `process-gates` a required check on `main` (and merging through
+  pull requests) needs branch protection, which GitHub offers private repos only
+  on Pro — verified 2026-09-14. **Trigger:** upgrading to Pro or making the repo
+  public: then protect `main`, require `process-gates`, and stop pushing to it
+  directly.
+- **Tenants do not get the design/review gates.** `scripts/process_gate.py` is
+  vendored with `scripts/`, but no workflow template runs `ci`, no
+  `.claude/settings.json` or `.githooks/` is provisioned, and the gated-path
+  catalog is AgentSmith's own layout. **Trigger:** the first tenant (OTS or KYC)
+  that wants the same discipline — make the catalog configurable per repo
+  first, then provision the hooks and a template job.
 - **Every release-download install path is broken while AgentSmith is private.**
   The documented `curl …/releases/latest/download/install-ai-stack.sh | bash`
   returns 404 to everyone — curl sends no GitHub login — and exits 0 having

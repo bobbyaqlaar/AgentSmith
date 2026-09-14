@@ -464,8 +464,8 @@ design choice that's recorded here as settled.
 |---|---|---|
 | `pre-commit` | Before every commit | Blocks: unresolved AI markers, empty catch blocks (JS/TS), double blank identifiers (Go). Enterprise mode: also requires `RFC-NNN` reference in commit message or matching RFC file in `.agent-rfc/`. |
 | `commit-msg` | Commit message validation | Enforces Conventional Commits: `<type>(<scope>)?: <summary>` (max 72 chars) |
-| `post-commit` | After every commit | Runs `map_codebase.py`; auto-tags semver; appends to `.agent-history.log`; pushes tags if remote tracked; runs log rotation |
-| `post-checkout` | After branch switch / git init | **Opt-in gate first:** a pre-existing repo (has commit history) that carries no `.agenticframework/enabled`/`tenant.yaml` is skipped with a hint — cloning an unrelated repo is never provisioned. Otherwise: detects stack; creates `.agent-rfc/`; vendors `scripts/` from `~/.agent-framework/scripts` if the tenant has none yet (excludes the framework's own `scripts/test/` and any `__pycache__`; never overwrites an existing `scripts/`, matching the seed-once/never-clobber pattern below — see `ai-stack-upgrade` for pulling in a newer version later); generates IDE config from `agent-rules.yaml`; writes CI workflows + reusable eval workflows + `.github/actions/` composite actions; seeds golden dataset |
+| `post-commit` | After every commit | Runs `map_codebase.py`; auto-tags semver; appends to `.agent-history.log`; pushes tags if remote tracked — unless `git config agentsmith.autopush false` or `AGENTSMITH_AUTOPUSH=0`, which keep the tag and skip the push; runs log rotation |
+| `post-checkout` | After branch switch / git init | **Opt-in gate first:** a pre-existing repo (has commit history) that carries no `.agenticframework/enabled`/`tenant.yaml` is skipped with a hint — cloning an unrelated repo is never provisioned. Otherwise: detects stack; creates `.agent-rfc/`; vendors `scripts/`, `runtime/` (with only the five harness-delegated `runtime/test` suites), `fixtures/security/` and the base eval fixtures from `~/.agent-framework` (excludes `scripts/test/`, `__pycache__` and `runtime/.hitl_blobs`; merges into an existing `scripts/` without overwriting a tenant file and reports clashes; refuses to vendor over a `runtime/` that is not AgentSmith's; writes nested `ruff.toml` excludes so vendored code is outside the tenant's lint gates — see `ai-stack-upgrade` for pulling in a newer version later). A tenant that depends on `agentsmith-runtime` as a package ("installed mode") gets IDE config and the security pack only — nothing vendored, no generated workflows; generates IDE config from `agent-rules.yaml`; writes CI workflows + reusable eval workflows + `.github/actions/` composite actions; seeds golden dataset |
 
 ### 5.3 IDE Configuration Files (auto-generated per repo)
 
@@ -1254,6 +1254,7 @@ AgentSmith/
 │   ├── delivery_model.py        # Delivery Model soft gate (ok|warn|skip)
 │   ├── delivery_evidence.py     # Promote-time evidence pack (JSON + Markdown)
 │   ├── check_bare_except.py     # AST empty-handler detector (pre-commit Guardrail 2)
+│   ├── process_gate.py          # Design/review gates: Claude Code hooks, .githooks/commit-msg, Self-Test (docs/process-gates.md)
 │   ├── _shared.py               # Consolidated scripts/ helpers (repo root, Phoenix REST, judge model)
 │   ├── verify_ttft.py           # live Ollama TTFT smoke (`TTFT_FAIL_ABOVE_MS`)
 │   ├── verify_sovereign_endpoint.py  # Falcon 3 / HF sovereign smoke
@@ -1351,6 +1352,7 @@ AgentSmith/
 │   ├── validation-checklist.md      # review-levers.md worked group-by-group, pre-merge
 │   ├── testbed-tenant-spec.md   # Proposed "KYC Sentinel" E2E testbed tenant (multi-LLM, multi-agent)
 │   ├── scratch-tenants.md       # The scratch tenants: apps built here, CI run in their own repos
+│   ├── process-gates.md         # How design-before-code and review-before-merge are enforced here
 │   ├── session-handoff/         # Cross-session working notes
 │   └── superpowers/             # Design specs + implementation plans
 ├── .github/
@@ -1367,7 +1369,10 @@ AgentSmith/
 │   └── Caddyfile                # Phoenix auth sidecar (§15) — used by docker-compose.auth.yml
 ├── assets/                      # Logo + static images used by the docs
 ├── .agent-rfc/                  # The framework repo's own RFC dir + Knowledge Graph fixture
+│   ├── designs/                 # Design notes the edit and commit gates require (docs/process-gates.md)
+│   ├── reviews/                 # Review records, one pass per heading, clean when the last finds 0
 │   └── security/                # This repo's own agency manifest, NIST profile, risk register, tool allowlist
+├── .githooks/                   # This repo's OWN commit gate (git config core.hooksPath .githooks) — not the tenant hooks/
 ├── init-db/                     # Postgres bootstrap for docker-compose.yml (creates agenticframework DB)
 ├── pyproject.toml               # Packages runtime/ as `agentsmith-runtime` (§25) — pip-installable by tenants
 ├── requirements.txt

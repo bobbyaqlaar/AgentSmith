@@ -1504,9 +1504,13 @@
         "test_pre_commit_passes_clean_change",
         "_enable_enterprise",
         "test_enterprise_requires_rfc_reference_in_message",
-        "test_enterprise_requires_an_open_rfc_to_exist"
+        "test_enterprise_requires_an_open_rfc_to_exist",
+        "pushing_repo",
+        "_remote_head",
+        "test_post_commit_pushes_a_tagged_commit_by_default",
+        "test_post_commit_can_tag_without_pushing"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-14T04:43:35Z",
       "id": "scripts/test/test_hooks_behavior.py"
     },
     {
@@ -4500,6 +4504,252 @@
       ],
       "last_modified": "2026-09-13T22:14:09Z",
       "id": "scripts/test/test_rollback_notify.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "glob_match",
+        "_any",
+        "is_gated",
+        "is_tenant_facing",
+        "front_matter",
+        "_section",
+        "lever_slugs",
+        "check_design",
+        "design_scope",
+        "check_review",
+        "trailer",
+        "resolve_record",
+        "check_change",
+        "git",
+        "repo_root",
+        "known_slugs_at",
+        "_gated_lines",
+        "active_designs",
+        "cmd_pre_edit",
+        "_uncommitted_gated",
+        "stop_problems",
+        "cmd_stop",
+        "cmd_session_start",
+        "cmd_commit_msg",
+        "_range_commits",
+        "cmd_ci",
+        "main",
+        "na",
+        "read"
+      ],
+      "last_modified": "2026-09-14T04:59:15Z",
+      "id": "scripts/process_gate.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_what_is_gated",
+        "test_tenant_facing_paths_are_what_scratch_tenants_rebuilds_on",
+        "test_glob_semantics",
+        "test_runs_on_python_39_syntax",
+        "test_a_complete_design_passes",
+        "test_an_incomplete_design_fails",
+        "test_an_unclean_review_fails",
+        "test_a_clean_review_passes_with_any_dash",
+        "test_a_trailer_may_only_name_a_record_file",
+        "_check",
+        "test_a_commit_with_no_gated_paths_needs_nothing",
+        "test_a_complete_commit_passes",
+        "test_missing_trailers_are_named_separately",
+        "test_a_trailer_naming_a_missing_file_says_so",
+        "test_the_design_scope_must_cover_every_gated_file",
+        "test_a_review_not_changed_in_the_commit_cannot_vouch_for_it",
+        "test_an_unclean_review_blocks_the_commit",
+        "test_na_is_accepted_for_a_small_change_and_reported",
+        "test_na_is_refused_for_a_large_change",
+        "_git",
+        "gated_repo",
+        "_write",
+        "_commit",
+        "test_the_commit_hook_blocks_a_gated_commit_without_trailers",
+        "test_the_commit_hook_accepts_a_designed_and_reviewed_commit",
+        "test_amending_a_gated_commit_is_checked_like_the_commit_it_replaces",
+        "test_the_commit_hook_still_enforces_conventional_commits",
+        "_ci",
+        "test_ci_fails_a_pushed_range_containing_an_ungated_commit",
+        "test_ci_passes_a_compliant_range_and_requires_changelog_for_tenant_facing_paths",
+        "test_ci_lists_every_na_escape_in_its_summary",
+        "test_ci_with_no_base_checks_the_head_commit_and_says_so",
+        "_hook",
+        "_decision",
+        "test_pre_edit_denies_an_uncovered_gated_path_and_allows_a_covered_one",
+        "test_pre_edit_does_not_accept_a_stub_design",
+        "test_pre_edit_fails_closed_on_input_it_cannot_read",
+        "test_stop_blocks_unreviewed_changes_then_does_not_loop",
+        "test_stop_requires_the_review_to_be_newer_than_the_change",
+        "test_stop_catches_a_gated_change_no_design_covers",
+        "test_session_start_states_the_rules_and_an_unarmed_commit_gate",
+        "test_session_start_names_missing_agent_files_only_when_they_are_missing",
+        "_subcommands",
+        "test_claude_settings_wire_all_three_agent_hooks",
+        "test_the_edit_gate_fails_closed_when_the_gate_cannot_run",
+        "test_self_test_runs_the_ci_gate_over_the_pushed_range",
+        "test_the_commit_hook_calls_the_gate",
+        "edit",
+        "context"
+      ],
+      "last_modified": "2026-09-14T04:58:30Z",
+      "id": "scripts/test/test_process_gate.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "REQUIREMENTS & DESIGN",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 1,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:1"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "BUILD ARCHITECTURE (Ponytail Rules)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 2,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:2"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "TRACING & EVALUATIONS",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 3,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:3"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "TESTING GUARDRAILS",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 4,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:4"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "OPERATIONS & SELF-IMPROVEMENT",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 5,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:5"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "INTERFACE CONSTRAINTS (Caveman Compression)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 6,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:6"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "STACK-SPECIFIC RULES",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 7,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:7"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "OBSERVABILITY WIRE",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 8,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:8"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "MULTI-AGENT ORCHESTRATION",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 9,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:9"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "COST-OPTIMISATION ROUTING",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 10,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:10"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "UNTRUSTED CONTENT",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 11,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:11"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "SECRETS AND CREDENTIALS",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 12,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:12"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "GATE INTEGRITY",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 13,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:13"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "FIXTURE AND BASELINE DRIFT",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 14,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:14"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "AMBIGUOUS SIGNALS",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 15,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:15"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "RECOVERY PATHS",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 16,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:16"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "PYTHON-FASTAPI ADDENDUM",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 17,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:17"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "DESIGN & VALIDATION PLAYBOOKS",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.cursorrules",
+      "pillar": 18,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "cursorrules:pillar:18"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Process gates \u2014 design before code, review before merge, enforced",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/process-gates.md",
+      "pillar": null,
+      "created_at": "2026-09-14T05:04:16Z",
+      "id": "rfc:designs/process-gates.md"
     }
   ],
   "edges": [
