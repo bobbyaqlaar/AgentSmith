@@ -87,7 +87,7 @@ def test_excludes_frameworks_own_test_suite_and_pycache(tenant):
 def test_never_overwrites_an_already_vendored_scripts_dir(tenant):
     """A tenant may have patched a vendored script — a routine `git checkout`
     firing this hook must not silently clobber that. Pulling in newer
-    framework scripts is ai-stack-upgrade's job, deliberately."""
+    framework scripts is agentsmith upgrade's job, deliberately."""
     scripts_dir = tenant / "scripts"
     scripts_dir.mkdir()
     (scripts_dir / "run-security-checks.py").write_text("# vendored earlier\n")

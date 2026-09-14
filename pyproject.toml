@@ -92,7 +92,7 @@ Homepage = "https://github.com/bobbyaqlaar/AgentSmith"
 # Explicit list, not auto-discovery: the repo root also contains scripts/,
 # portal/, templates/, examples/ and fixtures/, none of which are Python
 # packages meant for distribution.
-packages = ["runtime", "runtime.workflows"]
+packages = ["runtime", "runtime.workflows", "runtime.machine"]
 
 [tool.setuptools.package-data]
 runtime = ["models.yaml", "requirements-runtime.txt"]

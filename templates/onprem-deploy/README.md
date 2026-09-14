@@ -15,8 +15,8 @@
 Opt-in deployment artifact for tenants whose customers run the agent app on
 their own hardware instead of a managed cloud platform — see
 `OPERATIONS.md` "On-premise / air-gapped deployment". This directory is
-copied into a tenant repo as `deploy/onprem/` by `ai-onprem-deploy-scaffold`
-(install-ai-stack.sh); it is never auto-written by `ai-tenant-init` the way
+copied into a tenant repo as `deploy/onprem/` by `agentsmith tenant onprem-scaffold`
+(runtime/machine/ops.py); it is never auto-written by `agentsmith tenant init` the way
 the CI/CD workflow templates are, because not every tenant needs it.
 
 ## The contract this template assumes

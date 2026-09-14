@@ -8,8 +8,8 @@
 #               dashboard, RBAC, SSO; see portal/README.md
 #
 # This is the machine-wide standing stack — vendored to
-# ~/.agent-framework/observability/ and managed via `ai-dashboard-start` /
-# `ai-dashboard-stop` (install-ai-stack.sh) so every repo on this machine
+# ~/.agent-framework/observability/ and managed via `agentsmith dashboard start` /
+# `agentsmith dashboard stop` (runtime/machine/ops.py) so every repo on this machine
 # shares one Phoenix + one Ops Portal rather than each spinning up its own.
 # A repo can opt out entirely with `touch .agenticframework/no-shared-infra`
 # (see hooks/post-checkout) — see OPERATIONS.md §0.

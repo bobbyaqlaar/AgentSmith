@@ -34,25 +34,42 @@ attempted with the wrong org's public key (refused, `No public key`).
 
 ## Bypass Policy Enforcement
 
-`agenticframework-org.yaml`'s `hooks.bypass_policy` is enforced by
-`ai-stack-off` (in `install-ai-stack.sh`), once the org policy file is
-installed at `~/.agent-framework/agenticframework-org.yaml`:
+`agenticframework-org.yaml`'s `hooks.bypass_policy` is enforced wherever a
+bypass can be asked for, once the org policy file is installed at
+`~/.agent-framework/agenticframework-org.yaml`: by **the git hooks themselves**
+when a commit or checkout runs with `DISABLE_AI_STACK=true` or the machine's
+mode is `disabled`, and by `agentsmith mode off` before it records that mode.
+One decision serves both (`runtime/machine/policy.py`); the hooks reach it
+through `agentsmith hooks bypass-check`.
 
-| `bypass_policy` | `ai-stack-off` behaviour |
+| `bypass_policy` | A requested bypass |
 |---|---|
-| (no policy file) | Unrestricted — default developer/solo mode |
-| `disabled` | Always refuses; prints `break_glass_approvers` contact |
-| `break-glass` | Refuses unless `AI_BREAK_GLASS_TOKEN` is set |
+| (no policy file) | Granted — default developer/solo mode |
+| `disabled` | Refused; prints the `break_glass_approvers` contact |
+| `break-glass` | Granted only with a valid, unexpired `AI_BREAK_GLASS_TOKEN` signed with `BREAK_GLASS_HMAC_KEY` |
+| (unset in a policy file) | Granted — the policy restricts nothing |
+| anything else (`disable`, `Disabled`, …) | Refused — an unrecognised value is not read as "no restriction" |
 
-Every `ai-stack-off` attempt under an enterprise policy — granted or denied
-— is written to the Ops Portal's immutable audit log (`hook_bypass` event,
-see `portal/lib/auditLog.ts`) when `OPS_PORTAL_URL` and
-`AUDIT_LOG_WRITE_TOKEN` are configured in the environment. Best-effort: never
-blocks the command if the portal is unreachable.
+Refused — or when the check cannot run at all (the command missing, the policy
+file unreadable) — the hook runs as normal and says so: a failed check is
+enforcement, never a bypass. A consequence for MDM-managed machines that get
+the signed hook bundle but not `install-ai-stack.sh`: without
+`~/.agent-framework/.venv/bin/agentsmith` there is nothing to validate a
+break-glass token, so every bypass is refused there. Install the framework on
+machines where break-glass must work. Before 2026-09-14 only `ai-stack-off` read the
+policy, and `DISABLE_AI_STACK=true git commit` skipped every hook whatever it
+said.
+
+Every bypass attempt under an enterprise policy — granted or denied, from a
+hook or from `agentsmith mode off` — is written to the Ops Portal's immutable
+audit log (`hook_bypass` event, see `portal/lib/auditLog.ts`) when
+`OPS_PORTAL_URL` and `AUDIT_LOG_WRITE_TOKEN` are configured in the environment,
+and to `~/.agent-framework/local-audit-fallback.log` when they are not or the
+write fails. Best-effort: never blocks the command if the portal is unreachable.
 
 ## SSO / Audit Log / Dedicated Worker Pool
 
 See `portal/README.md` for SSO/OIDC and the audit log (both live in the Ops
 Portal). Dedicated worker pool (`tenant.isolation: dedicated`) is documented
-in SPECS.md §23/§30 and scaffolded via `ai-tenant-init` + the example
+in SPECS.md §23/§30 and scaffolded via `agentsmith tenant init` + the example
 manifests — see the project root for the current state of that piece.

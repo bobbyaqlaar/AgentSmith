@@ -37,7 +37,7 @@ kubectl create secret generic agenticframework-secrets -n tenant-acme \
   --from-literal=AGENT_OWNER_ID="..."
 ```
 
-`ai-tenant-init <id> --isolation dedicated` (in `install-ai-stack.sh`) sets
+`agentsmith tenant init <id> --isolation dedicated` (`runtime/cli.py`) sets
 `isolation: dedicated` in `.agenticframework/tenant.yaml` and prints this
 `render.sh` command as the next step.
 

@@ -5,9 +5,20 @@
 # post-checkout for init, so the no-HEAD branch below is reached via the
 # first checkout of a fresh repo, not at init time. A new project is
 # provisioned by opting in and running `git checkout` (see the gate
-# message), or by `ai-tenant-init`.
+# message), or by `agentsmith tenant init`.
 
-if [ "${DISABLE_AI_STACK:-false}" = "true" ]; then exit 0; fi
+# ── Bypass ─────────────────────────────────────────────────────────────────────
+# Requested by DISABLE_AI_STACK=true for one command, or `agentsmith mode off`
+# for the machine. With no enterprise org policy it is granted. With one, the
+# policy decides (runtime/machine/policy.py) and records the attempt; refused —
+# or unable to ask — this hook runs as normal. Identical in all four hooks
+# (scripts/test/test_hook_bypass.py).
+AF_STATE_DIR="${AGENTSMITH_STATE_DIR:-$HOME/.agent-framework/state}"
+if [ "${DISABLE_AI_STACK:-false}" = "true" ] || [ "$(cat "$AF_STATE_DIR/mode" 2>/dev/null)" = "disabled" ]; then
+  [ -f "$HOME/.agent-framework/agenticframework-org.yaml" ] || exit 0
+  "$HOME/.agent-framework/.venv/bin/agentsmith" hooks bypass-check && exit 0
+  echo "AgentSmith: hook bypass refused by the org policy — this hook runs as normal." >&2
+fi
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 [ -z "$REPO_ROOT" ] && exit 0
@@ -72,7 +83,7 @@ write_vendored_ruff_config() {
   {
     echo "# Written by AgentSmith when it vendored $1/ — see hooks/post-checkout."
     echo "# Excludes the vendored files from this repo's ruff check/format; your own"
-    echo "# files here keep your rules. ai-stack-upgrade regenerates this file."
+    echo "# files here keep your rules. \`agentsmith upgrade\` regenerates this file."
     [ -n "$extend" ] && echo "$extend"
     echo "extend-exclude = ["
     sort | sed 's/"/\\"/g; s/.*/  "&",/'
@@ -196,7 +207,7 @@ fi
 # Seeded once, like the other tenant-owned artifacts above: a tenant may
 # patch a vendored script, and a routine `git checkout` firing this hook must
 # not silently clobber that. Pulling in newer framework scripts later is
-# `ai-stack-upgrade`'s job, deliberately (same $SCRIPTS_DIR source, same
+# `agentsmith upgrade`'s job, deliberately (same $SCRIPTS_DIR source, same
 # test/-and-__pycache__ exclusion as of this change) — this only covers the
 # case where scripts/ has never existed in the tenant at all.
 #
@@ -366,7 +377,7 @@ else
 fi
 
 # ── GitHub Actions — copy from workflow-templates (single source, SPECS.md §17) ─
-# Same templates ai-tenant-init uses — no inline heredocs here (they drifted).
+# Same templates `agentsmith tenant init` uses — no inline heredocs here (they drifted).
 TMPL_DIR="$FRAMEWORK_DIR/workflow-templates"
 GITHUB_WF="$REPO_ROOT/.github/workflows"
 

@@ -27,7 +27,7 @@ Workflow:
      the same span.
 
 Shadow evals never auto-promote to the golden dataset — that stays
-HITL-gated via `ai-stack-promote`. Failures are surfaced for a human to
+HITL-gated via `agentsmith promote`. Failures are surfaced for a human to
 review via portal/lib/promotions.ts's suggested-promotion queue, not
 applied automatically.
 

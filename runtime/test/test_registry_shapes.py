@@ -83,7 +83,7 @@ def test_profile_selection_precedence(monkeypatch) -> None:
     assert _active_profile_name(CATALOG_DOC) == "local"      # default_profile
 
     monkeypatch.setenv("AI_STACK_MODE", "hybrid")
-    assert _active_profile_name(CATALOG_DOC) == "hybrid"     # ai-mode-hybrid
+    assert _active_profile_name(CATALOG_DOC) == "hybrid"     # agentsmith mode hybrid
 
     monkeypatch.setenv("AGENT_MODEL_PROFILE", "router")
     assert _active_profile_name(CATALOG_DOC) == "router"     # explicit wins

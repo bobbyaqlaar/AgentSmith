@@ -33,7 +33,7 @@ Demonstrates:
 
 ```bash
 # Use the scaffolding command
-ai-tenant-init <your-tenant-id> --stack python-fastapi
+agentsmith tenant init <your-tenant-id> --stack python-fastapi
 
 # This creates:
 #   .agenticframework/tenant.yaml

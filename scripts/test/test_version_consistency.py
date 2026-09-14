@@ -8,7 +8,7 @@ SPECS.md's header claimed "**Version:** 1.0.0 (matches `install-ai-stack.sh`'s
 is what makes this worth a test rather than a one-off correction: the document
 told readers the invariant held, so nobody checked it.
 
-A wrong version here is not cosmetic — `ai-stack-upgrade --to <version>` and a
+A wrong version here is not cosmetic — `agentsmith upgrade --to <version>` and a
 tenant's pinned `agentsmith-runtime @ vX.Y.Z` both resolve against real tags.
 """
 

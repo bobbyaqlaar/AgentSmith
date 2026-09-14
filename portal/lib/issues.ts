@@ -70,7 +70,7 @@ export interface SyncEntryInput {
 
 /**
  * Idempotent upsert of .agent-history.log entries for a tenant. Called by
- * cd-staging.yml / cd-production.yml (or a local ai-stack-check push) with
+ * cd-staging.yml / cd-production.yml (or a local agentsmith check push) with
  * the tail of unresolved/changed entries since the last sync.
  */
 export async function syncHistoryEntries(tenantId: string, entries: SyncEntryInput[]): Promise<number> {

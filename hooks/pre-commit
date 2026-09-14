@@ -2,7 +2,18 @@
 # AgentSmith: pre-commit guardrail
 # Blocks unresolved AI markers, empty catch blocks, and unsafe Go patterns.
 
-if [ "${DISABLE_AI_STACK:-false}" = "true" ]; then exit 0; fi
+# ── Bypass ─────────────────────────────────────────────────────────────────────
+# Requested by DISABLE_AI_STACK=true for one command, or `agentsmith mode off`
+# for the machine. With no enterprise org policy it is granted. With one, the
+# policy decides (runtime/machine/policy.py) and records the attempt; refused —
+# or unable to ask — this hook runs as normal. Identical in all four hooks
+# (scripts/test/test_hook_bypass.py).
+AF_STATE_DIR="${AGENTSMITH_STATE_DIR:-$HOME/.agent-framework/state}"
+if [ "${DISABLE_AI_STACK:-false}" = "true" ] || [ "$(cat "$AF_STATE_DIR/mode" 2>/dev/null)" = "disabled" ]; then
+  [ -f "$HOME/.agent-framework/agenticframework-org.yaml" ] || exit 0
+  "$HOME/.agent-framework/.venv/bin/agentsmith" hooks bypass-check && exit 0
+  echo "AgentSmith: hook bypass refused by the org policy — this hook runs as normal." >&2
+fi
 
 # ── Developer opt-in gate ──────────────────────────────────────────────────────
 # git's global init.templateDir applies these hooks to EVERY `git init`/
@@ -118,7 +129,7 @@ fi
 if [ "$FAILED" -ne 0 ]; then
   echo "────────────────────────────────────────────────"
   echo "🛑 Pre-commit guardrail failed. Fix issues above."
-  echo "   Bypass (emergency only): DISABLE_AI_STACK=true git commit"
+  echo "   Bypass (emergency only): DISABLE_AI_STACK=true git commit — refused where an org policy forbids it"
   exit 1
 fi
 

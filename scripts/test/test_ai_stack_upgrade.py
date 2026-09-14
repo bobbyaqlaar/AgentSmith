@@ -1,59 +1,50 @@
 """
-scripts/test/test_ai_stack_upgrade.py — `ai-stack-upgrade` commits what it
-vendors, including files the tenant has never had.
+scripts/test/test_ai_stack_upgrade.py — `agentsmith upgrade` (formerly the
+`ai-stack-upgrade` shell function) commits what it vendors, including files the
+tenant has never had.
 
 Its "anything to commit?" check was `git diff --quiet`, which ignores untracked
 files. A first-time vendor — runtime/ on a tenant onboarded before runtime/ was
 vendored, or a newly shipped base fixture — copied the files, printed
 "No changes", and committed nothing.
 
-The function lives inside install-ai-stack.sh; it is extracted and sourced on
-its own so the test does not run the installer.
+The function lived in the shell profile, so these tests used to carve it out of
+install-ai-stack.sh and run it under bash and zsh. It is Python now
+(runtime/machine/upgrade.py); they run the real command, `agentsmith upgrade`,
+against a fake HOME.
 """
 
 from __future__ import annotations
 
 import os
-import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 
-pytestmark = pytest.mark.skipif(
-    shutil.which("git") is None or shutil.which("bash") is None,
-    reason="git and bash required",
-)
+pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git required")
 
 
-def _function_source() -> str:
-    text = (REPO / "install-ai-stack.sh").read_text(encoding="utf-8")
-    m = re.search(r"^function ai-stack-upgrade\(\) \{\n.*?^\}\n", text, re.S | re.M)
-    assert m, "ai-stack-upgrade not found in install-ai-stack.sh"
-    return m.group(0)
-
-
-# The function ships inside the managed block written to ~/.zshrc, so zsh is the
-# shell it actually runs in. Its glob semantics differ in a way that matters: an
-# unmatched glob in a `for` aborts the whole function.
-SHELLS = [s for s in ("bash", "zsh") if shutil.which(s)]
-
-
-def _run_upgrade(shell: str, repo: Path, tmp_path: Path) -> subprocess.CompletedProcess:
-    script = tmp_path / "upgrade.sh"
-    script.write_text(_function_source() + "\nai-stack-upgrade --to 9.9.9\n")
-    # The function commits, and HOME is a fake with no ~/.gitconfig. macOS git
+def _run_upgrade(repo: Path, tmp_path: Path) -> subprocess.CompletedProcess:
+    # The command commits, and HOME is a fake with no ~/.gitconfig. macOS git
     # then auto-detects an identity from the hostname; a Linux CI runner cannot,
     # so the commit failed there and only there.
     env = {
         **os.environ,
+        "PYTHONPATH": str(REPO),
         "GIT_AUTHOR_NAME": "T", "GIT_AUTHOR_EMAIL": "t@e.com",
         "GIT_COMMITTER_NAME": "T", "GIT_COMMITTER_EMAIL": "t@e.com",
     }
-    return subprocess.run([shell, str(script)], cwd=repo, env=env, capture_output=True, text=True, check=False)
+    return subprocess.run(
+        # -P: the installed `agentsmith` script does not put the working
+        # directory on sys.path, and a tenant's own `runtime/` there would shadow ours.
+        [sys.executable, "-P", "-m", "runtime.cli", "upgrade", "--to", "9.9.9"],
+        cwd=repo, env=env, capture_output=True, text=True, check=False,
+    )
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -63,9 +54,8 @@ def _git(repo: Path, *args: str) -> str:
     ).stdout
 
 
-@pytest.mark.parametrize("shell", SHELLS)
 @pytest.mark.parametrize("current_version", ["1.0.0", "9.9.9"])
-def test_first_time_vendored_files_are_committed(tmp_path, monkeypatch, current_version, shell):
+def test_first_time_vendored_files_are_committed(tmp_path, monkeypatch, current_version):
     """9.9.9 = already on the target version, so tenant.yaml is unchanged and
     the ONLY changes are untracked files — the case `git diff --quiet` missed."""
     home = tmp_path / "home"
@@ -94,7 +84,7 @@ def test_first_time_vendored_files_are_committed(tmp_path, monkeypatch, current_
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "initial")
 
-    result = _run_upgrade(shell, repo, tmp_path)
+    result = _run_upgrade(repo, tmp_path)
 
     assert "No changes" not in result.stdout, result.stdout
     tracked = set(_git(repo, "ls-files").split())
@@ -107,8 +97,7 @@ def test_first_time_vendored_files_are_committed(tmp_path, monkeypatch, current_
     assert '"run-evals.py"' in (repo / "scripts" / "ruff.toml").read_text()
 
 
-@pytest.mark.parametrize("shell", SHELLS)
-def test_upgrade_spares_a_tenants_own_scripts_test_and_runtime_package(tmp_path, monkeypatch, shell):
+def test_upgrade_spares_a_tenants_own_scripts_test_and_runtime_package(tmp_path, monkeypatch):
     """The upgrade pruned scripts/test AFTER copying into the tenant's scripts/,
     deleting the tenant's own tests; and it merged into, then `git add`-ed, any
     runtime/ — including a tenant's own package of that name."""
@@ -134,7 +123,7 @@ def test_upgrade_spares_a_tenants_own_scripts_test_and_runtime_package(tmp_path,
     _git(repo, "commit", "-q", "-m", "initial")
     (repo / "runtime" / "wip.py").write_text("# uncommitted tenant work\n")
 
-    result = _run_upgrade(shell, repo, tmp_path)
+    result = _run_upgrade(repo, tmp_path)
 
     assert (repo / "scripts" / "test" / "test_release.py").exists(), result.stdout
     assert not (repo / "scripts" / "test" / "test_framework.py").exists()
@@ -143,10 +132,9 @@ def test_upgrade_spares_a_tenants_own_scripts_test_and_runtime_package(tmp_path,
     assert "runtime/wip.py" not in _git(repo, "ls-files"), "a tenant's own runtime/ was swept into the commit"
 
 
-@pytest.mark.parametrize("shell", SHELLS)
-def test_upgrade_without_base_fixtures_installed_still_completes(tmp_path, monkeypatch, shell):
+def test_upgrade_without_base_fixtures_installed_still_completes(tmp_path, monkeypatch):
     """An install that predates base-fixture vendoring has none. Under zsh a
-    glob over them aborted the function before it committed anything."""
+    glob over them aborted the shell function before it committed anything."""
     fw = tmp_path / "home" / ".agent-framework"
     (fw / "scripts").mkdir(parents=True)
     (fw / "scripts" / "run-evals.py").write_text("# run-evals\n")
@@ -160,14 +148,13 @@ def test_upgrade_without_base_fixtures_installed_still_completes(tmp_path, monke
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "initial")
 
-    result = _run_upgrade(shell, repo, tmp_path)
+    result = _run_upgrade(repo, tmp_path)
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "scripts/run-evals.py" in _git(repo, "ls-files"), result.stdout + result.stderr
 
 
-@pytest.mark.parametrize("shell", SHELLS)
-def test_upgrade_prunes_framework_internal_runtime_tests(tmp_path, monkeypatch, shell):
+def test_upgrade_prunes_framework_internal_runtime_tests(tmp_path, monkeypatch):
     """Tenants vendored before the allowlist carry all of runtime/test/. The
     upgrade must leave only the harness's suites, or the tenant's pytest keeps
     failing on the framework's own tests."""
@@ -192,7 +179,7 @@ def test_upgrade_prunes_framework_internal_runtime_tests(tmp_path, monkeypatch, 
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "initial")
 
-    result = _run_upgrade(shell, repo, tmp_path)
+    result = _run_upgrade(repo, tmp_path)
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert sorted(p.name for p in (repo / "runtime" / "test").iterdir()) == ["test_hitl_gate.py"]
@@ -201,12 +188,11 @@ def test_upgrade_prunes_framework_internal_runtime_tests(tmp_path, monkeypatch, 
     assert "runtime/test/test_hitl_gate.py" in tracked
 
 
-@pytest.mark.parametrize("shell", SHELLS)
 @pytest.mark.parametrize("has_requirements", [True, False])
-def test_upgrade_refuses_to_vendor_into_a_package_consumer(tmp_path, monkeypatch, shell, has_requirements):
+def test_upgrade_refuses_to_vendor_into_a_package_consumer(tmp_path, monkeypatch, has_requirements):
     """KYC Sentinel pins agentsmith-runtime; vendored runtime/ at its root would
-    shadow the pin. `has_requirements=False` (pyproject only) is the zsh case:
-    a `requirements*.txt` glob with no match aborts the function there."""
+    shadow the pin. `has_requirements=False` (pyproject only) was the zsh case:
+    a `requirements*.txt` glob with no match aborted the shell function."""
     fw = tmp_path / "home" / ".agent-framework"
     (fw / "scripts").mkdir(parents=True)
     (fw / "scripts" / "run-evals.py").write_text("# run-evals\n")
@@ -227,7 +213,7 @@ def test_upgrade_refuses_to_vendor_into_a_package_consumer(tmp_path, monkeypatch
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "initial")
 
-    result = _run_upgrade(shell, repo, tmp_path)
+    result = _run_upgrade(repo, tmp_path)
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "depends on agentsmith-runtime as a package" in result.stdout, result.stdout + result.stderr

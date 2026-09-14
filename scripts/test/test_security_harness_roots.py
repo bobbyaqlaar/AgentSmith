@@ -10,7 +10,7 @@ from it too. A tenant runs
     cd my-tenant && python3 $AGENTSMITH_DIR/scripts/run-security-checks.py --strict
 
 so every tenant's strict security gate was resolving `.agent-rfc/security/`
-inside the FRAMEWORK checkout. The pack `ai-tenant-init` seeds into a tenant
+inside the FRAMEWORK checkout. The pack `agentsmith tenant init` seeds into a tenant
 (G5) was read by nothing, and a tenant's green SEC-RISK-001 was evidence about
 somebody else's repo.
 """

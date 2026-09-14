@@ -6,7 +6,7 @@ THE FAILURE THIS EXISTS FOR. Groq retired its entire Llama family on
 2026-08-17 and `llama-3.3-70b-versatile` began returning HTTP 404
 model_not_found on every call. The framework's `hybrid` profile bound
 `developer` to it, so that role was unreachable for anyone selecting
-ai-mode-hybrid — latent rather than loud, because `default_profile` is `local`.
+agentsmith mode hybrid — latent rather than loud, because `default_profile` is `local`.
 
 What makes this worth a gate rather than a comment is how it presents on a
 judged gate. A 404 is an infrastructure failure, so run-evals reports

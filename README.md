@@ -126,12 +126,13 @@ deliberately *not* built and why) is **SPECS.md §4a**.
 # from a checkout instead, which needs no release download:
 #   gh repo clone bobbyaqlaar/AgentSmith && ./AgentSmith/install-ai-stack.sh
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
-source ~/.zshrc
+# → the `agentsmith` command at ~/.local/bin; nothing is added to your shell profile
 
 # 2. Mode + dashboard  (identity needs no export: it resolves from
-#    tenant.yaml `tenant.owner`, else `git config user.email`)
-ai-mode-local          # or ai-mode-hybrid (cloud APIs)
-ai-dashboard-start     # → http://localhost:6006
+#    tenant.yaml `tenant.owner`, else `git config user.email`; the mode is
+#    recorded for every process on the machine, IDEs and hooks included)
+agentsmith mode local          # or agentsmith mode hybrid (cloud APIs)
+agentsmith dashboard start     # → http://localhost:6006
 
 # 3. Apply to a project — opt in, then check out. `git init` alone provisions
 #    nothing: git does not run post-checkout on init, and needs a commit first.
@@ -207,11 +208,11 @@ The operational guardrails AgentSmith enforces on every project it touches
 
 **Local offline** — everything on your machine via Ollama, zero API cost; the
 shipped registry routes four roles (`architect` → `developer` → `validator` →
-`fast`) to local models, and `ai-stack-required-models` prints the exact ids.
+`fast`) to local models, and `agentsmith models --ollama` prints the exact ids.
 **Hybrid cloud** — the same roles pointed at frontier providers for complex
 tasks, with automatic local fallback when the network drops. Cloud routes ship
 commented out in `models.yaml`; uncomment one or declare your own to enable
-them. Switch modes: `ai-mode-local` / `ai-mode-hybrid`.
+them. Switch modes: `agentsmith mode local` / `agentsmith mode hybrid`.
 
 In hybrid mode, prompts and completions go to cloud provider APIs; trace
 data always stays at your configured Phoenix endpoint (SPECS.md §8).
@@ -225,7 +226,7 @@ Kubernetes, a live OIDC provider). Operator procedures: OPERATIONS.md.
 
 | Layer | What it adds |
 |---|---|
-| **Multi-Tenancy** | `ai-tenant-init` / `ai-tenant-promote` — independent tenant repos with their own CI/CD, eval gates, and staging → production promotion |
+| **Multi-Tenancy** | `agentsmith tenant init` / `agentsmith tenant promote` — independent tenant repos with their own CI/CD, eval gates, and staging → production promotion |
 | **Production Runtime** | `runtime/` — LLM gateway (atomic per-tenant budgets, degrade ladder), trace redaction, idempotency + DLQ, Temporal HITL workflows incl. edit-and-resume and opt-in self-correction; cloud adapters (Vertex AI live-verified; Azure OpenAI / Bedrock / Huawei ModelArts mock-tested) |
 | **Ops Portal** | Cross-tenant cost/issues dashboard, RBAC, per-tenant DLQ triage with replay, HMAC-signed tamper-evident audit log, SSO/OIDC with server-side revocation |
 | **On-Premise** | `templates/onprem-deploy/` — Docker Compose or Helm for air-gapped customers, canary + shadow routing (Traefik or Envoy) |

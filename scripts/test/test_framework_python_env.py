@@ -15,6 +15,7 @@ curl replaced by recording stubs, so nothing is installed.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -125,10 +126,14 @@ def _step3(tmp_path: Path, *, stubs: dict[str, str], installer_dir: Path | None)
     return subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=False, env=env)
 
 
-# A venv's python: reports the version it was "built" at, from a file beside it.
+# A venv's python: reports the version it was "built" at, from a file beside it,
+# and — as `-m pip install` of the framework package — puts `agentsmith` beside itself.
 _FAKE_PYTHON = '''#!/bin/bash
 if [ "$1" = "-c" ]; then cat "$(dirname "$0")/version"; exit 0; fi
 echo "venv-python $*" >> "$LOG"
+case "$*" in *"--no-deps"*)
+  printf '#!/bin/sh\\n' > "$(dirname "$0")/agentsmith"; chmod +x "$(dirname "$0")/agentsmith";;
+esac
 '''
 
 _UV = '''echo "uv $*" >> "$LOG"
@@ -139,6 +144,10 @@ if [ "$1" = "venv" ]; then
 ''' + _FAKE_PYTHON + '''PY
   chmod +x "$last/bin/python"
   echo "3.11" > "$last/bin/version"
+fi
+if [ "$1 $2" = "pip install" ]; then
+  while [ "$1" != "--python" ]; do shift; done
+  printf '#!/bin/sh\\n' > "$(dirname "$2")/agentsmith"; chmod +x "$(dirname "$2")/agentsmith"
 fi
 '''
 
@@ -161,7 +170,10 @@ def test_with_uv_the_environment_is_built_at_the_locks_version_and_synced_to_it(
     assert _calls(tmp_path) == [
         f"uv venv --quiet --allow-existing --python 3.11 {venv}",
         f"uv pip sync --quiet --require-hashes --python {venv}/bin/python {lock}",
+        f"uv pip install --quiet --no-deps --reinstall --python {venv}/bin/python {REPO}",
     ]
+    link = tmp_path / "home" / ".local" / "bin" / "agentsmith"
+    assert link.is_symlink() and Path(os.readlink(link)) == venv / "bin" / "agentsmith"
 
 
 @bash_required
@@ -198,6 +210,7 @@ fi
     assert _calls(tmp_path) == [
         f"python3 -m venv {venv}",
         f"venv-python -m pip install --quiet --require-hashes -r {lock}",
+        f"venv-python -m pip install --quiet --no-deps --force-reinstall {REPO}",
     ]
     assert "lock compiled for 3.11" in result.stdout
 
@@ -338,6 +351,6 @@ def test_self_test_installs_the_lock_at_the_pinned_version():
 
 
 def test_the_standalone_phoenix_fallback_uses_a_subcommand_phoenix_has():
-    text = _installer_code()
-    assert "phoenix.server.main launch" not in text
-    assert "uvx --from arize-phoenix phoenix serve" in text
+    ops = (REPO / "runtime" / "machine" / "ops.py").read_text(encoding="utf-8")
+    assert '[uvx, "--from", "arize-phoenix", "phoenix", "serve"' in ops
+    assert "phoenix.server.main launch" not in _installer_code() + ops

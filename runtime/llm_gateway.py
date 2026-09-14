@@ -128,15 +128,26 @@ def _load_yaml(path: Path) -> dict:
 def _active_profile_name(doc: dict) -> str:
     """Which profile a catalog-style registry binds roles from.
 
-    AI_STACK_MODE is what `ai-mode-local` / `ai-mode-hybrid` already export, so
-    the shell switch that previously only printed a banner now actually selects
-    routes. An explicit AGENT_MODEL_PROFILE wins over it, for selecting a
-    profile without changing the machine's mode.
+    Precedence, highest first:
+      AGENT_MODEL_PROFILE   a profile chosen without changing the machine's mode
+      AI_STACK_MODE         the environment — a one-off run, or CI
+      state/mode            what `agentsmith mode local|hybrid` recorded for the
+                            machine (runtime/machine/state.py)
+      default_profile       the registry's own fallback
+
+    The mode used to be an export from a shell function, so it selected routes
+    only for processes started from that one terminal; an IDE or a git hook
+    ran the default profile while the terminal said "hybrid". A `disabled` mode
+    names no profile and falls through to the default.
     """
     explicit = os.environ.get("AGENT_MODEL_PROFILE", "").strip()
     if explicit:
         return explicit
     mode = os.environ.get("AI_STACK_MODE", "").strip()
+    if not mode:
+        from runtime.machine.state import read_mode
+
+        mode = read_mode() or ""
     profiles = doc.get("profiles") or {}
     if mode and mode in profiles:
         return mode
@@ -719,8 +730,8 @@ class LLMGateway:
         """Best-effort POST to the Ops Portal's run-status ingest endpoint —
         gated on OPS_PORTAL_URL being set, fails open (logs, never raises)
         on any error. Same philosophy as every other runtime/-to-portal
-        call in this codebase (e.g. _ai_audit_log_event in
-        install-ai-stack.sh): never let optional observability infra FAIL the
+        call in this codebase (e.g. audit_log_event in
+        runtime/machine/policy.py): never let optional observability infra FAIL the
         actual LLM call.
 
         It can still DELAY one, and the previous version of this sentence said

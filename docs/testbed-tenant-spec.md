@@ -4,7 +4,7 @@
 tenant's spec of record, not a proposal — where it and the repo disagree, the
 repo wins and this file is the thing to correct.
 **Repo:** [`bobbyaqlaar/KycSentinel`](https://github.com/bobbyaqlaar/KycSentinel)
-(the `ai-tenant-init kyc-sentinel` naming in §6 T1 was the plan; the repo was
+(the `agentsmith tenant init kyc-sentinel` naming in §6 T1 was the plan; the repo was
 created directly)
 **Purpose:** a corporate-onboarding (KYC) copilot whose day-to-day operation
 *necessarily* exercises every layer of AgentSmith — multiple LLMs, multiple
@@ -76,7 +76,7 @@ Engineered failure paths (each is a demo scenario AND an E2E test):
 | Cost Routing | Per-agent model tiers + circuit breaker + degrade ladder (F5) |
 | Memory / RAG | Policy corpus in `vector_store` (pgvector in staging — closes the pgvector-CI gap), `conversation_memory` across the Analyst↔Judge exchange |
 | Security harness | `run-security-checks.py --strict` in tenant CI; `MODERATION_HOOK=required` (regulated tenant); tenant `.agent-rfc/security/` filled in for real |
-| Multi-tenancy & deploy | `ai-tenant-init` → staging → `ai-tenant-promote`; delivery-model gate; optional on-prem overlay with canary + shadow (mirror 100% of staging traffic at a shadow Analyst build) |
+| Multi-tenancy & deploy | `agentsmith tenant init` → staging → `agentsmith tenant promote`; delivery-model gate; optional on-prem overlay with canary + shadow (mirror 100% of staging traffic at a shadow Analyst build) |
 | In-App Widget | Embedded in a one-page mock "onboarding portal" showing live run status via widget token |
 | Shadow eval | 5% of production decisions post-hoc judged by `shadow-eval.py` |
 | Sovereign / UAE | Falcon 3 Intake route + `verify_sovereign_endpoint.py` smoke; PDPL decision-path scrub is the app's front door |
@@ -121,7 +121,7 @@ Env: `INPUT_GUARDRAIL=default`, `MODERATION_HOOK=required`,
 
 | Phase | Deliverable | Framework claims proven |
 |---|---|---|
-| T1 | `ai-tenant-init` + Intake agent + fixtures; CI green with eval skip-gracefully (<3 golden cases) | Layer-1 provisioning, structured output, input guardrail, sovereign route |
+| T1 | `agentsmith tenant init` + Intake agent + fixtures; CI green with eval skip-gracefully (<3 golden cases) | Layer-1 provisioning, structured output, input guardrail, sovereign route |
 | T2 | Research agent + RAG + tools; golden dataset ≥ 12; scorecard gate active | Tool registry, vector store, cost tiers |
 | T3 | Analyst + Judge + full workflow + F1–F8 scripted as `make demo-f1` … `make demo-f8` | HITL/DLQ/self-correction/degrade/TTFT/fairness/hallucination, edit-and-resume E2E |
 | T4 | Staging deploy + portal/widget round-trip + shadow-eval + promotion-loop month | Observability E2E, continuous improvement, promote gate |

@@ -21,18 +21,14 @@ A console script has none of those. `pip install agentsmith-runtime` and
 `agentsmith tenant init` works in PowerShell, in a container, in a CI step —
 with no profile to source and nothing to un-edit on uninstall.
 
-MIGRATION, deliberately incremental. The shell functions stay; they become
-one-line delegations (`ai-tenant-init() { agentsmith tenant init "$@"; }`), so
-the profile shrinks to aliases immediately and nobody's muscle memory breaks.
-The logic moves here once, where a test can reach it.
+MIGRATION, finished. Every function is now a subcommand here; the logic lives
+in runtime/machine/ (.agent-rfc/designs/agentsmith-cli.md). The installer no
+longer writes a profile block, and removes the old one.
 
-WHAT STILL NEEDS A SHELL, honestly: nothing here can change the *calling*
-shell's environment — a child process cannot export into its parent. That is
-what `agentsmith shellenv` is for, the same pattern Homebrew uses:
-
-    eval "$(agentsmith shellenv --mode local)"
-
-Five lines in a profile instead of sixty-one, and the five are generated.
+WHAT A CHILD PROCESS CANNOT DO is export into its parent shell, which is how
+the functions "set" a mode. Nothing needs to any more: `agentsmith mode` writes
+~/.agent-framework/state/mode, which the gateway and the git hooks read — so
+the mode reaches IDEs, git GUIs and hooks, which an export never did.
 """
 
 from __future__ import annotations
@@ -162,7 +158,7 @@ delivery:
 
 
 def _templates_dir() -> Optional[Path]:
-    """Where `ai-tenant-init` copies CI workflows from.
+    """Where `agentsmith tenant init` copies CI workflows from.
 
     The installed location first, then the checkout — so a developer running
     from a clone gets their own templates rather than the machine's stale copy,
@@ -380,6 +376,20 @@ def _cmd_tenant_init(args: argparse.Namespace) -> int:
     for path in written:
         print(f"  + {path}")
     print(f"\nTenant '{args.tenant_id}' scaffolded ({args.stack}, {args.isolation}).")
+    if ".agenticframework/tenant.yaml" in written:
+        # Declared in OPERATIONS.md, the portal's audit route and its event
+        # types since the shell-function days, and written by nothing once the
+        # scaffold moved here.
+        import os
+
+        from runtime.machine.policy import audit_log_event
+
+        audit_log_event(
+            "tenant_created",
+            os.environ.get("AGENT_OWNER_ID") or "unknown",
+            args.tenant_id,
+            {"stack": args.stack, "isolation": args.isolation},
+        )
     # The generated workflows run `python3 scripts/*.py` from THIS repo, and
     # those import runtime.* and read fixtures/. Vendoring them is
     # hooks/post-checkout's job — one implementation, not a second copy here
@@ -397,31 +407,110 @@ def _cmd_tenant_init(args: argparse.Namespace) -> int:
 
 
 def _cmd_doctor(args: argparse.Namespace) -> int:
-    """Delegates to verify_system, which already owns every check."""
+    """Delegates to verify_system, which already owns every check.
+
+    It used to look beside this file (`<package>/../scripts/`), which exists in a
+    checkout and never in an installed package — so `agentsmith doctor` could
+    only ever run from a clone.
+    """
     import subprocess
 
-    script = Path(__file__).resolve().parent.parent / "scripts" / "verify_system.py"
-    if not script.is_file():
-        print(f"agentsmith: verify_system.py not found at {script}", file=sys.stderr)
+    from runtime.machine.state import find_script
+
+    script = find_script("verify_system.py")
+    if script is None:
+        print("agentsmith: verify_system.py not found in ./scripts/ or ~/.agent-framework/scripts/", file=sys.stderr)
         return 1
     return subprocess.run([sys.executable, str(script), *args.checks], check=False).returncode
 
 
-def _cmd_shellenv(args: argparse.Namespace) -> int:
-    """Emit exports for the caller to `eval`.
+# `shellenv` was removed: it printed `export AI_STACK_MODE=…` for a profile to
+# eval, and an exported mode outranks the machine's mode file for every process
+# that shell starts — the opposite of what `agentsmith mode` is for.
 
-    A child process cannot set its parent's environment, so this is the one
-    thing that genuinely needs shell cooperation — and it is five generated
-    lines rather than sixty-one hand-maintained ones.
-    """
-    lines = [
-        f'export AI_STACK_MODE="{args.mode}"',
-        'export DISABLE_AI_STACK="false"',
-    ]
-    if args.mode == "local":
-        lines.append('export OS_LLM_BASE_URL="http://localhost:11434/v1"')
-    print("\n".join(lines))
-    return 0
+
+def _cmd_mode(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    return ops.mode(args.mode)
+
+
+def _cmd_check(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    return ops.check()
+
+
+def _cmd_status(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    return ops.status()
+
+
+def _cmd_models(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    return ops.models("judge" if args.judge else "ollama")
+
+
+def _cmd_dashboard(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    return ops.dashboard_start() if args.action == "start" else ops.dashboard_stop()
+
+
+def _cmd_evals(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    return ops.evals()
+
+
+def _cmd_promote(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    return ops.promote(args.case_id, args.query, args.output)
+
+
+def _cmd_tenant_promote(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    return ops.tenant_promote(args.tenant_id, args.from_env, args.to_env)
+
+
+def _cmd_tenant_onprem(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    return ops.onprem_scaffold()
+
+
+def _cmd_upgrade(args: argparse.Namespace) -> int:
+    from runtime.machine.upgrade import upgrade
+
+    return upgrade(Path.cwd(), args.to or _default_framework_version())
+
+
+def _cmd_scrub(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    return ops.scrub(args.directory, args.yes)
+
+
+def _cmd_uninstall(args: argparse.Namespace) -> int:
+    from runtime.machine import ops
+
+    if args.legacy_profile_only:
+        return ops.remove_profile_blocks()
+    return ops.uninstall(args.yes, args.purge)
+
+
+def _cmd_hooks_bypass_check(args: argparse.Namespace) -> int:
+    """Exit 0 when the hooks may be bypassed. Called by the four git hooks when a
+    bypass is requested and an org policy file exists — see runtime/machine/policy.py."""
+    from runtime.machine.policy import bypass_decision
+
+    decision = bypass_decision()
+    print(f"AgentSmith: {decision.message}", file=sys.stderr)
+    return 0 if decision.allowed else 1
 
 
 def _cmd_purge_idempotency(args: argparse.Namespace) -> int:
@@ -479,13 +568,72 @@ def build_parser() -> argparse.ArgumentParser:
     )
     init.set_defaults(func=_cmd_tenant_init)
 
+    promote_tenant = tenant.add_parser("promote", help="gate on staging evals, then open the develop → main PR")
+    promote_tenant.add_argument("tenant_id")
+    promote_tenant.add_argument("--from", dest="from_env", required=True)
+    promote_tenant.add_argument("--to", dest="to_env", required=True)
+    promote_tenant.set_defaults(func=_cmd_tenant_promote)
+
+    onprem = tenant.add_parser("onprem-scaffold", help="copy the on-prem deployment template into ./deploy/onprem/")
+    onprem.set_defaults(func=_cmd_tenant_onprem)
+
     doctor = sub.add_parser("doctor", help="run verify_system checks")
     doctor.add_argument("checks", nargs="*", help="e.g. --check-kg --check-hooks")
     doctor.set_defaults(func=_cmd_doctor)
 
-    shellenv = sub.add_parser("shellenv", help="exports for `eval \"$(agentsmith shellenv)\"`")
-    shellenv.add_argument("--mode", default="local", choices=["local", "hybrid"])
-    shellenv.set_defaults(func=_cmd_shellenv)
+    mode = sub.add_parser("mode", help="set the machine's mode (no argument: print it)")
+    mode.add_argument("mode", nargs="?", choices=["local", "hybrid", "off"])
+    mode.set_defaults(func=_cmd_mode)
+
+    sub.add_parser("check", help="health check: Phoenix, Ollama or API keys, unresolved log entries").set_defaults(
+        func=_cmd_check
+    )
+    sub.add_parser("status", help="mode, hooks, Phoenix, judge, owner, network").set_defaults(func=_cmd_status)
+
+    models = sub.add_parser("models", help="the models the merged registry routes to")
+    which = models.add_mutually_exclusive_group()
+    which.add_argument("--ollama", action="store_true", help="Ollama ids, space-separated (default)")
+    which.add_argument("--judge", action="store_true", help="the judge model in effect")
+    models.set_defaults(func=_cmd_models)
+
+    dashboard = sub.add_parser("dashboard", help="start or stop Phoenix (the shared Docker stack when present)")
+    dashboard.add_argument("action", choices=["start", "stop"])
+    dashboard.set_defaults(func=_cmd_dashboard)
+
+    sub.add_parser("evals", help="sync HITL feedback from Phoenix, then run the eval scorecard").set_defaults(
+        func=_cmd_evals
+    )
+
+    promote = sub.add_parser("promote", help="promote a fix to the golden dataset and re-run evals")
+    promote.add_argument("case_id")
+    promote.add_argument("query")
+    promote.add_argument("output")
+    promote.set_defaults(func=_cmd_promote)
+
+    upgrade = sub.add_parser("upgrade", help="refresh this vendored tenant's framework copy and commit it")
+    upgrade.add_argument("--to", default=None, help="version to declare (default: the installed release)")
+    upgrade.set_defaults(func=_cmd_upgrade)
+
+    scrub = sub.add_parser("scrub", help="delete generated IDE-rule files under a directory, after listing them")
+    scrub.add_argument("directory", nargs="?", default=None)
+    scrub.add_argument("--yes", action="store_true", help="do not ask for confirmation")
+    scrub.set_defaults(func=_cmd_scrub)
+
+    uninstall = sub.add_parser("uninstall", help="restore git config and remove the command from this machine")
+    uninstall.add_argument("--yes", action="store_true", help="do not ask for confirmation")
+    uninstall.add_argument("--purge", action="store_true", help="also remove ~/.agent-framework and ~/.git_templates")
+    uninstall.add_argument(
+        "--legacy-profile-only", action="store_true",
+        help="only remove the shell-function block older installs appended to a shell profile",
+    )
+    uninstall.set_defaults(func=_cmd_uninstall)
+
+    hooks = sub.add_parser("hooks", help="internal: called by the git hooks").add_subparsers(
+        dest="hooks_command", required=True
+    )
+    hooks.add_parser("bypass-check", help="exit 0 when the org policy allows a hook bypass").set_defaults(
+        func=_cmd_hooks_bypass_check
+    )
 
     purge = sub.add_parser(
         "purge-idempotency", help="delete idempotency rows past their TTL"
@@ -499,7 +647,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    # `doctor` forwards verify_system's own flags (`--check-kg`). argparse will
+    # not hand an option-looking token to a positional, so `agentsmith doctor
+    # --check-kg` failed with "unrecognized arguments" — for as long as the
+    # command existed. Everything else still rejects unknown arguments.
+    args, extra = parser.parse_known_args(argv)
+    if extra:
+        if args.command != "doctor":
+            parser.error(f"unrecognized arguments: {' '.join(extra)}")
+        args.checks = [*args.checks, *extra]
     return args.func(args)
 
 

@@ -8,7 +8,7 @@ tarballs in a `run:` block, and install-ai-stack.sh fetches
 language. Nothing connected them, and they had already come apart —
 `templates.tar.gz` was built from the single file `templates/agent-rules.yaml`
 while the installer fetched that same tarball a second time expecting
-`templates/onprem-deploy/` inside it, so `ai-onprem-deploy-scaffold` was
+`templates/onprem-deploy/` inside it, so `agentsmith tenant onprem-scaffold` was
 permanently broken on any remote install, with a `warn` as the only symptom.
 
 A release is the one artifact you cannot fix in place after the fact: every
@@ -119,7 +119,7 @@ def test_docs_only_reference_artifacts_the_release_builds() -> None:
 def test_templates_tarball_carries_both_destinations() -> None:
     """install-ai-stack.sh fetches templates.tar.gz for TWO destinations:
     agent-rules.yaml (IDE config generation) and onprem-deploy/
-    (ai-onprem-deploy-scaffold). One archive has to satisfy both."""
+    (agentsmith tenant onprem-scaffold). One archive has to satisfy both."""
     with tempfile.TemporaryDirectory() as tmp:
         archive = Path(tmp) / "templates.tar.gz"
         subprocess.run(
@@ -140,7 +140,7 @@ def test_templates_tarball_carries_both_destinations() -> None:
 
     assert "agent-rules.yaml" in names, "IDE config generation would break"
     assert any(n.startswith("onprem-deploy/") for n in names), (
-        "ai-onprem-deploy-scaffold would break on a remote install"
+        "agentsmith tenant onprem-scaffold would break on a remote install"
     )
     assert not any("node_modules" in n for n in names), "build artifact leaked into the release"
 

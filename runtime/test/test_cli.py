@@ -153,17 +153,46 @@ def test_unknown_stack_and_isolation_are_refused(tmp_path: Path):
 # ── the command surface ──────────────────────────────────────────────────────
 
 
-def test_parser_covers_the_shell_functions_being_replaced():
+# Every shell function the installer used to write, and the command that replaced it.
+SHELL_FUNCTIONS_REPLACED = {
+    "ai-mode-local": ["mode", "local"],
+    "ai-mode-hybrid": ["mode", "hybrid"],
+    "ai-stack-off": ["mode", "off"],
+    "ai-stack-check": ["check"],
+    "ai-stack-status": ["status"],
+    "ai-stack-judge-model": ["models", "--judge"],
+    "ai-stack-required-models": ["models", "--ollama"],
+    "ai-dashboard-start": ["dashboard", "start"],
+    "ai-dashboard-stop": ["dashboard", "stop"],
+    "ai-test-evals": ["evals"],
+    "ai-stack-promote": ["promote", "case-1", "query", "output"],
+    "ai-tenant-init": ["tenant", "init", "acme"],
+    "ai-tenant-promote": ["tenant", "promote", "acme", "--from", "staging", "--to", "production"],
+    "ai-onprem-deploy-scaffold": ["tenant", "onprem-scaffold"],
+    "ai-stack-upgrade": ["upgrade", "--to", "1.3.0"],
+    "ai-stack-scrub": ["scrub", "some/dir", "--yes"],
+    "ai-stack-uninstall": ["uninstall", "--yes"],
+}
+
+
+def test_parser_covers_the_shell_functions_it_replaced():
     parser = build_parser()
-    for argv in (
-        ["tenant", "init", "acme"],
-        ["tenant", "init", "acme", "--stack", "go", "--isolation", "dedicated"],
-        ["shellenv", "--mode", "hybrid"],
-        ["version"],
-        ["doctor"],
-        ["purge-idempotency"],
-    ):
+    for function, argv in SHELL_FUNCTIONS_REPLACED.items():
+        args = parser.parse_args(argv)
+        assert callable(getattr(args, "func", None)), f"{function} → agentsmith {' '.join(argv)} dispatches to nothing"
+    for argv in (["tenant", "init", "acme", "--stack", "go", "--isolation", "dedicated"], ["version"],
+                 ["doctor"], ["purge-idempotency"], ["hooks", "bypass-check"], ["mode"]):
         assert parser.parse_args(argv) is not None
+
+
+def _leaf_parsers(parser: argparse.ArgumentParser, path=()):
+    subparsers = [a for a in parser._actions if isinstance(a, argparse._SubParsersAction)]
+    if not subparsers:
+        yield path, parser
+        return
+    for action in subparsers:
+        for name, child in action.choices.items():
+            yield from _leaf_parsers(child, (*path, name))
 
 
 def test_every_subcommand_dispatches_somewhere():
@@ -171,28 +200,17 @@ def test_every_subcommand_dispatches_somewhere():
     nothing — argparse does not mind, and `main` would raise AttributeError at
     the moment someone runs it. Registering the parser and forgetting the
     handler is one line apart in build_parser."""
-    parser = build_parser()
-    subparsers = [
-        action for action in parser._actions if isinstance(action, argparse._SubParsersAction)
-    ]
-    assert subparsers, "the parser has no subcommands — this test is checking nothing"
-    names = [name for action in subparsers for name in action.choices]
-    assert len(names) >= 5, f"expected the full command set, found {names}"
-    for name in names:
-        if name == "tenant":
-            continue  # a group, not a command — its children are checked below
-        args = parser.parse_args([name])
-        assert callable(getattr(args, "func", None)), f"`agentsmith {name}` dispatches to nothing"
+    leaves = list(_leaf_parsers(build_parser()))
+    assert len(leaves) >= 15, f"expected the full command set, found {[p for p, _ in leaves]}"
+    for path, leaf in leaves:
+        assert callable(leaf.get_default("func")), f"`agentsmith {' '.join(path)}` dispatches to nothing"
 
 
-def test_shellenv_emits_evaluable_exports(capsys):
-    """The one thing a child process cannot do for its parent. Five generated
-    lines instead of sixty-one hand-maintained ones in a profile."""
-    assert main(["shellenv", "--mode", "local"]) == 0
-    out = capsys.readouterr().out
-    assert 'export AI_STACK_MODE="local"' in out
-    for line in out.strip().splitlines():
-        assert line.startswith("export "), f"not evaluable: {line!r}"
+def test_shellenv_is_gone():
+    """It printed `export AI_STACK_MODE=…` for a profile to eval, and an exported
+    mode outranks the machine's mode file for everything that shell starts."""
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["shellenv"])
 
 
 def test_main_returns_two_on_a_bad_argument(tmp_path: Path, capsys):

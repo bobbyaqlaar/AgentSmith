@@ -52,7 +52,7 @@ Every command in this guide runs in one of exactly two places:
 | Directory | What it is | Example path |
 |---|---|---|
 | **AgentSmith root** | The framework repo itself — Ops Portal, Docker Compose, shared infra | `$AGENTSMITH_DIR/` |
-| **Tenant app root** | Your own agentic app repo, created by `ai-tenant-init` | `$REPO_DIR/my-oil-price-app/` |
+| **Tenant app root** | Your own agentic app repo, created by `agentsmith tenant init` | `$REPO_DIR/my-oil-price-app/` |
 
 Commands that affect the shared platform (portal, Postgres, Phoenix) run from the **AgentSmith root**. Commands that affect a specific agent app (hooks, evals, CI, sync scripts) run from the **tenant app root**. Each section below is labelled with which one applies.
 
@@ -64,7 +64,7 @@ Commands that affect the shared platform (portal, Postgres, Phoenix) run from th
 | Git 2.x | Everything | `git --version` |
 | Docker 20+ | Team Phoenix, Ops Portal Postgres, dedicated worker pool testing | `docker --version` |
 | Node.js 20+ | Ops Portal, In-App Widget | `node --version` |
-| `gh` CLI | `ai-tenant-promote` (opens the promotion PR) | `gh --version` |
+| `gh` CLI | `agentsmith tenant promote` (opens the promotion PR) | `gh --version` |
 | GnuPG | Enterprise hook bundle signing | `gpg --version` |
 | Temporal CLI | `temporal server start-dev` (local dev workflow engine) | `brew install temporal` · `temporal --version` |
 | `kubectl` | Dedicated tenant worker pools | `kubectl version --client` |
@@ -92,7 +92,7 @@ function cd() { builtin cd "$@" && [[ -f .venv/bin/activate ]] && source .venv/b
 
 ### `~/.zshrc` — environment variables
 
-These must be set before running `install-ai-stack.sh` or any `ai-*` commands. Add them to `~/.zshrc` (or `~/.bashrc`) so they persist across sessions:
+These must be set before running `install-ai-stack.sh` or any `agentsmith` commands. Add them to `~/.zshrc` (or `~/.bashrc`) so they persist across sessions. They are the only thing a shell profile is for now: the installer writes nothing to it, and the mode `agentsmith mode` records lives in `~/.agent-framework/state/`, not in an export:
 
 ```bash
 # ── Directories ───────────────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ export GEMINI_API_KEY="AIza..."         # optional: Google AI Studio (NOT vertex
 
 # ── Observability ──────────────────────────────────────────────────────────────────
 export AGENT_PHOENIX_ENDPOINT="http://localhost:6006"  # change to team server URL if shared
-export OTEL_EXPORTER_OTLP_ENDPOINT="${AGENT_PHOENIX_ENDPOINT}/v1/traces"  # set by ai-dashboard-start; listed here for manual overrides
+export OTEL_EXPORTER_OTLP_ENDPOINT="${AGENT_PHOENIX_ENDPOINT}/v1/traces"  # optional: without it, Python falls back to the endpoint `agentsmith dashboard start` recorded
 
 # ── Budget and routing ─────────────────────────────────────────────────────────────
 export AGENT_MONTHLY_USD_CAP="50"               # hard cap across all projects (dev mode)
@@ -239,11 +239,11 @@ HITL_ENCRYPTION_KEY=<32-byte-hex>        # generate: openssl rand -hex 32
 #### b. Tenant app `.env` — your agentic app's runtime config
 
 > **You don't have a tenant app directory yet.** This section is a reference template —
-> skip it for now and return here after you run `ai-tenant-init` in §1. At that point
+> skip it for now and return here after you run `agentsmith tenant init` in §1. At that point
 > you'll have a directory to put this file in.
 
 > **Where:** `my-tenant-app/.env` (your own app repo root — **not** the AgentSmith root)
-> **How:** created manually or by `ai-tenant-init` scaffolding; never committed — add `.env` to your tenant app's `.gitignore`.
+> **How:** created manually or by `agentsmith tenant init` scaffolding; never committed — add `.env` to your tenant app's `.gitignore`.
 
 This file is loaded by the tenant worker at runtime and by `scripts/sync-portal-history.py` when syncing to the Ops Portal.
 
@@ -325,7 +325,7 @@ nothing about origin.
 > like a clean install that did nothing — which is how the version documented
 > here stayed dead through a whole release cycle. Use
 > `releases/latest/download/…` for "whatever is current" rather than a pin, and
-> check `ai-stack-status` afterwards rather than trusting the exit code.
+> check `agentsmith status` afterwards rather than trusting the exit code.
 
 ### Machine install, mode, and standing infra
 
@@ -339,18 +339,21 @@ nothing about origin.
 # from a checkout instead, which needs no release download:
 #   gh repo clone bobbyaqlaar/AgentSmith && ./AgentSmith/install-ai-stack.sh
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
-source ~/.zshrc
+# Nothing to reload: `agentsmith` is linked at ~/.local/bin (the installer says
+# if that is not on your PATH).
 
 # Identity — nothing to export. Resolves from tenant.yaml `tenant.owner`,
 # then AGENT_OWNER_ID, then `git config user.email`. In a shell profile it is
 # ambient: it outranks every tenant on the machine and is absent in CI.
 
-# Mode — pick one (switch anytime)
-ai-mode-local     # 100% offline, Ollama, zero cost
-ai-mode-hybrid    # cloud frontier models, needs ANTHROPIC_API_KEY/OPENAI_API_KEY
+# Mode — pick one (switch anytime). Recorded for the whole machine, so an IDE,
+# a git GUI and the hooks see it too; an AI_STACK_MODE export still wins in the
+# shell that has it.
+agentsmith mode local     # 100% offline, Ollama, zero cost
+agentsmith mode hybrid    # cloud frontier models, needs ANTHROPIC_API_KEY/OPENAI_API_KEY
 
 # Health check — confirms Phoenix, mode deps, no unresolved issues
-ai-stack-check
+agentsmith check
 ```
 
 Production-runtime extras, only if you'll exercise §2's production runtime for real — run from the **AgentSmith root**:
@@ -361,7 +364,7 @@ source .venv/bin/activate   # activate the venv created in §0 Prerequisites
 pip install psycopg2-binary redis temporalio langgraph-checkpoint-postgres cryptography
 ```
 
-**Standing infra:** if Docker is available, `ai-dashboard-start` manages a
+**Standing infra:** if Docker is available, `agentsmith dashboard start` manages a
 machine-wide stack (Phoenix + Postgres + Ops Portal, `restart:
 unless-stopped`) shared across every repo on this machine — not just the
 one you're in. Vendored to `~/.agent-framework/observability/` during
@@ -372,10 +375,10 @@ to a plain-process Phoenix launch with no Postgres/Ops Portal — unchanged
 from the original solo-dev behavior.
 
 **Per-repo opt-out:** `touch .agenticframework/no-shared-infra` before
-`git init`/`ai-tenant-init` in a repo that needs full isolation (a client
+`git init`/`agentsmith tenant init` in a repo that needs full isolation (a client
 demo, an air-gapped environment, or just not wanting this repo's traces on
-the shared instance). `ai-dashboard-start` then always uses the standalone
-plain-process Phoenix path for that repo, and `ai-tenant-init` won't nudge
+the shared instance). `agentsmith dashboard start` then always uses the standalone
+plain-process Phoenix path for that repo, and `agentsmith tenant init` won't nudge
 you toward the shared Ops Portal's env vars in its scaffolding output.
 
 ### Team-shared Phoenix with auth
@@ -443,7 +446,7 @@ checkout) — see README "Opt-in model".
 > | What you get | How it arrives |
 > |---|---|
 > | `.agent-rfc/`, `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.agents/skills/`, Knowledge Graph seed | `post-checkout` hook fires on `git init -b main` |
-> | `.agenticframework/tenant.yaml`, `.github/workflows/` (ci-*, cd-*, eval-* reusable workflows), `.github/actions/` (composite actions the CD workflows call) | `ai-tenant-init <id> --stack <stack>` |
+> | `.agenticframework/tenant.yaml`, `.github/workflows/` (ci-*, cd-*, eval-* reusable workflows), `.github/actions/` (composite actions the CD workflows call) | `agentsmith tenant init <id> --stack <stack>` |
 > | `.env` | You create from the §0 tenant-app `.env` template |
 > | `runtime/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — accessed via `$AGENTSMITH_DIR/runtime` at run time |
 >
@@ -460,7 +463,7 @@ checkout) — see README "Opt-in model".
 > ```bash
 > mkdir $REPO_DIR/my-app && cd $REPO_DIR/my-app
 > git init -b main                               # hooks fire automatically
-> ai-tenant-init my-app --stack python-fastapi   # scaffolds tenant.yaml + CI/CD
+> agentsmith tenant init my-app --stack python-fastapi   # scaffolds tenant.yaml + CI/CD
 > # create .env from the §0 tenant-app template, then write your worker.py and workflows/
 > ```
 
@@ -493,11 +496,11 @@ GitHub Copilot/VS Code), `AGENTS.md` is the documented cross-tool fallback —
 see its own header comment for why it's self-contained rather than a
 pointer to `.cursorrules`.
 
-### Scaffold a new tenant repo (`ai-tenant-init`)
+### Scaffold a new tenant repo (`agentsmith tenant init`)
 
 ```bash
 cd /path/to/your-tenant-repo   # must be a git repo
-ai-tenant-init acme --stack python-fastapi
+agentsmith tenant init acme --stack python-fastapi
 ```
 
 Stack options: `python-fastapi` (default), `go`, `ts-react`. Add
@@ -575,7 +578,7 @@ echo ".env" >> .gitignore
 
 ```bash
 # Run from: AgenticFramework/
-ai-dashboard-start    # Phoenix at :6006, Postgres, Ops Portal at :3000
+agentsmith dashboard start    # Phoenix at :6006, Postgres, Ops Portal at :3000
 ```
 
 **Step 5 — Run the app**
@@ -1028,7 +1031,7 @@ Three surfaces, walked through in the order an operator would actually
 hit them after a problem report comes in: trace-level detail (Phoenix) →
 cross-tenant ops view (Ops Portal) → what the end user sees (In-App
 Widget). Assumes §1's example-app run (Option A or B) already produced at least one real
-trace/spend record for `oil-price-demo`, and `ai-dashboard-start` is
+trace/spend record for `oil-price-demo`, and `agentsmith dashboard start` is
 running (Phoenix + Postgres + Ops Portal).
 
 **1. Phoenix — `http://localhost:6006`**
@@ -1044,7 +1047,7 @@ running (Phoenix + Postgres + Ops Portal).
   fired): this is the *other* HITL mechanism — the golden-dataset
   promotion loop (UserManual.md §9), distinct from the production
   workflow-pause HITL gate you resolved via `hitl_approved` signal above.
-  Annotating a span here is what `ai-test-evals`/`sync-ui-feedback.py`
+  Annotating a span here is what `agentsmith evals`/`sync-ui-feedback.py`
   later promotes into `golden_evals.json`.
 
 **2. Ops Portal — `http://localhost:3000`** (basic auth: `$OPS_PORTAL_USER`/`$OPS_PORTAL_PASSWORD` from `.env`)
@@ -1170,7 +1173,7 @@ LLMGateway(tenant_id='oil-price-demo')._report_run_status('manual-demo-run', 'su
 
 ```bash
 # Sync HITL annotations from Phoenix, then score against the golden dataset
-ai-test-evals
+agentsmith evals
 
 # Same, explicitly, with a fail threshold (what CI actually runs)
 python3 scripts/run-evals.py --fail-below 0.80
@@ -1437,7 +1440,7 @@ skips gracefully).
 `eval-hallucination.yml` (hard-fail gate), `eval-ttft-live.yml` (no-ops
 unless repo variable `TTFT_LIVE=required`, since generic CI runners have no
 Ollama). All three are copied into tenant repos by `post-checkout` /
-`ai-tenant-init` alongside `eval-scorecard.yml` — a missing callee makes
+`agentsmith tenant init` alongside `eval-scorecard.yml` — a missing callee makes
 GitHub reject the whole CI workflow as invalid.
 
 **Tenant `.env` knobs (reliability pack):**
@@ -1564,7 +1567,7 @@ asyncio.run(WorkflowEnvironment.start_local())  # downloads/starts the test serv
 # Scaffold a tenant repo with CI/CD wired in (§1) — or, for the example,
 # this is already done: examples/oil-price-agent/.agenticframework/tenant.yaml
 cd my-project
-ai-tenant-init my-tenant --stack python-fastapi   # or ts-react | go
+agentsmith tenant init my-tenant --stack python-fastapi   # or ts-react | go
 git add .github .agenticframework && git commit -m "chore: scaffold tenant CI/CD"
 git push -u origin main
 
@@ -1573,13 +1576,13 @@ git push -u origin main
 # (DEPLOY_COMMAND, ANTHROPIC_API_KEY/OPENAI_API_KEY, OPS_PORTAL_* if syncing).
 ```
 
-Then the pipeline runs itself on the branch flow already wired by `ai-tenant-init`:
+Then the pipeline runs itself on the branch flow already wired by `agentsmith tenant init`:
 
 | You do | Workflow that fires | Gate |
 |---|---|---|
 | Push a feature branch / open a PR | `ci-<stack>.yml` | lint, format check, test, eval scorecard (warn-only) |
 | Merge to `develop` | `cd-staging.yml` | optional GHCR image build → eval fail-gate at 0.75 + post-deploy smoke test |
-| `ai-tenant-promote my-tenant --from staging --to production` | Opens a `develop → main` PR | re-verifies the staging eval gate before opening it; **exact tenant-id match required** — refuses if `.agenticframework/tenant.yaml`'s id doesn't match exactly |
+| `agentsmith tenant promote my-tenant --from staging --to production` | Opens a `develop → main` PR | re-verifies the staging eval gate before opening it; **exact tenant-id match required** — refuses if `.agenticframework/tenant.yaml`'s id doesn't match exactly |
 | PR reviewed + merged to `main` | `cd-production.yml` | optional GHCR image build → eval fail-gate at 0.80 + smoke test; **blocks + runs `rollback-notify` on smoke failure** (no automatic rollback execution — see "Wire your platform" below) |
 
 `cd-staging.yml`/`cd-production.yml`'s deploy step is
@@ -1700,7 +1703,7 @@ The `cd-demo-ui.yml` workflow: authenticates via WIF → builds the demo UI from
 `demo/Dockerfile` → deploys `YOUR_UI_SERVICE` to Cloud Run.
 
 > **Tenant-specific, not shipped.** `cd-demo-ui.yml` and `demo/` are not
-> framework templates — `ai-tenant-init` never writes them. They exist in the
+> framework templates — `agentsmith tenant init` never writes them. They exist in the
 > oil-price-demo tenant and are described here as a worked example of adding a
 > second deployable to a tenant's CD. Skip this workflow if your tenant has no
 > separate UI. The workflow templates the framework does provide are listed in
@@ -1738,7 +1741,7 @@ Once staging is verified:
 
 ```bash
 cd examples/oil-price-agent   # or your own tenant repo
-ai-onprem-deploy-scaffold     # writes deploy/onprem/
+agentsmith tenant onprem-scaffold     # writes deploy/onprem/
 cp deploy/onprem/.env.example deploy/onprem/.env
 # edit .env: APP_IMAGE_PROD (build your own, or point at the GHCR image
 # cd-production.yml pushed), PROXY_ENGINE=traefik|envoy
@@ -1781,7 +1784,7 @@ git clone <your-tenant-repo> /opt/kyc-sentinel
 cd /opt/kyc-sentinel/deploy/onprem
 
 # b) No git on the server — copy the scaffolded directory
-ai-onprem-deploy-scaffold                      # on your dev machine
+agentsmith tenant onprem-scaffold                      # on your dev machine
 scp -r deploy/onprem you@server:/opt/app/
 
 # c) Air-gapped — no registry reachable from the server either
@@ -1957,10 +1960,10 @@ docker compose pull && docker compose up -d
 Both are safe to re-run; compose reconciles rather than recreating what has not
 changed.
 
-### Promote staging → production (`ai-tenant-promote`)
+### Promote staging → production (`agentsmith tenant promote`)
 
 ```bash
-ai-tenant-promote acme --from staging --to production
+agentsmith tenant promote acme --from staging --to production
 ```
 
 This verifies the staging eval gate (`run-evals.py --fail-below 0.75`) and,
@@ -2064,7 +2067,7 @@ all. Don't assume Cloud Run "just works" here without one of:
 | Option | Fit | Caveat |
 |---|---|---|
 | **Cloud Run, `--no-cpu-throttling --min-instances=1`** | Works for low/moderate-throughput workers; closest to the `DEPLOY_COMMAND` pattern already documented | No autoscaling on queue depth; you're paying for one always-on instance regardless of task-queue load. `worker.py` already serves `GET /healthz` on `$PORT` (default 8080) so Cloud Run's health checks have something to hit |
-| **GKE (or any k8s)** | Best fit for a long-running poller — a `Deployment` with no `Service`/ingress needed at all, scales on whatever metric you choose (queue depth via KEDA, etc.) | More infra to operate — bring your own cluster; not scaffolded by `ai-onprem-deploy-scaffold` |
+| **GKE (or any k8s)** | Best fit for a long-running poller — a `Deployment` with no `Service`/ingress needed at all, scales on whatever metric you choose (queue depth via KEDA, etc.) | More infra to operate — bring your own cluster; not scaffolded by `agentsmith tenant onprem-scaffold` |
 | **Compute Engine (single VM/MIG)** | Simplest mental model, no container platform needed | Manual scaling, no rolling-deploy story beyond replacing the VM/instance template yourself |
 
 Set `DEPLOY_COMMAND` on each GitHub Environment to whichever platform you
@@ -2165,7 +2168,7 @@ When deploying a Next.js portal (or any app) to Cloud Run that needs to connect 
 > **Tenant-specific:** the `demo/` directory and `cd-demo-ui.yml` exist in the
 > `bobbyaqlaar/oil-price-demo` tenant repo only — they are not part of the
 > framework or of `examples/oil-price-agent/`, and are not scaffolded by
-> `ai-tenant-init`. Treat this subsection as a worked example of adding your
+> `agentsmith tenant init`. Treat this subsection as a worked example of adding your
 > own UI layer to a tenant repo.
 
 The `demo/` directory in the oil-price-demo tenant repo contains a Streamlit app (`demo/app.py`) that
@@ -2274,7 +2277,7 @@ instead of a managed cloud platform — opt-in, never auto-written the way
 the CI/CD workflow templates are:
 
 ```bash
-ai-onprem-deploy-scaffold   # run inside the tenant repo — writes deploy/onprem/
+agentsmith tenant onprem-scaffold   # run inside the tenant repo — writes deploy/onprem/
 ```
 
 This copies `templates/onprem-deploy/` (vendored to
@@ -2369,7 +2372,7 @@ Full detail: `templates/onprem-deploy/README.md`,
 | **Phoenix** | This tenant's traces, evals, HITL annotation queue | `http://localhost:6006` (or your team server) |
 | **Ops Portal** | Cross-tenant cost/spend + cap, real run status (incl. **Working**/in-progress), Phoenix error rate, per-tenant DLQ triage (edit/Replay/Discard), shadow-eval suggested promotions, signed audit log | `https://ops.example.com` (below) |
 | **Demo UI (Streamlit)** | GUI for submitting oil-price workflows, viewing status, approving/rejecting HITL, seeing results — connects to the live Temporal server | Cloud Run: get URL via `gcloud run services describe YOUR_UI_SERVICE --region YOUR_REGION --project YOUR_GCP_PROJECT_ID --format="value(status.url)"` |
-| **`.agent-history.log`** | Local append-only event log this tenant repo produces | `ai-stack-check` surfaces unresolved entries from it |
+| **`.agent-history.log`** | Local append-only event log this tenant repo produces | `agentsmith check` surfaces unresolved entries from it |
 | **In-App Widget** | End-user-facing status badge (own tenant only, token-scoped) | embedded in the tenant's own app (below) |
 | **GitHub Actions** | CI/CD run history, eval scorecard artifacts per run | the tenant repo's Actions tab |
 
@@ -2461,7 +2464,7 @@ authenticated user." See SPECS.md §26 "Role-Based Access Control".
 
 #### E.2 — Wire tenant history sync
 
-In each tenant's CD workflow (or a local `ai-stack-check` run):
+In each tenant's CD workflow (or a local `agentsmith check` run):
 
 ```bash
 curl -X POST https://ops.example.com/api/sync/history \
@@ -2489,9 +2492,10 @@ triggers — `GET /api/audit` recomputes each signature on read and flags
 outside the app (even by someone who disabled the trigger), or one signed
 before an `AUDIT_LOG_HMAC_KEY` rotation. The portal reports the mismatch and
 not a cause; the dashboard labels it **unverified** for that reason. `GET /api/audit` requires the `admin` role. Wired
-call sites: `ai-tenant-init` → `tenant_created`, `ai-tenant-promote` →
-`hitl_promotion`, `ai-stack-off` under an enterprise policy →
-`hook_bypass`. Set `OPS_PORTAL_URL` and `AUDIT_LOG_WRITE_TOKEN` in the
+call sites: `agentsmith tenant init` → `tenant_created`, `agentsmith tenant promote` →
+`hitl_promotion`, `agentsmith upgrade` and `agentsmith tenant onprem-scaffold` →
+`config_change`, and any hook bypass under an enterprise policy — from a hook
+or from `agentsmith mode off` → `hook_bypass`. Set `OPS_PORTAL_URL` and `AUDIT_LOG_WRITE_TOKEN` in the
 shell environment those commands run in.
 
 **Local fallback:** if `OPS_PORTAL_URL`/`AUDIT_LOG_WRITE_TOKEN` aren't set,
@@ -2776,8 +2780,8 @@ Two independent loops turn production reality into stronger gates
 annotates the span (`hitl_approved = true`, label), then:
 
 ```bash
-ai-test-evals                       # syncs annotations, re-runs the scorecard
-ai-stack-promote <case-id> "<input query>" "<correct output>"
+agentsmith evals                       # syncs annotations, re-runs the scorecard
+agentsmith promote <case-id> "<input query>" "<correct output>"
 ```
 
 `promote-learning.py` appends the case to `golden_evals.json`, archives the
@@ -2801,18 +2805,18 @@ Dataset Commits".
 
 | Task | Command |
 |---|---|
-| Upgrade vendored scripts in a tenant repo | `ai-stack-upgrade --to <version>` |
-| Refresh this machine's shell functions after pulling the framework | `./install-ai-stack.sh --force` — without `--force` the installer keeps the existing `~/.zshrc` block, so `ai-stack-upgrade` and friends stay at whatever version was first installed |
+| Upgrade vendored scripts in a tenant repo | `agentsmith upgrade --to <version>` |
+| Refresh this machine's framework after pulling it | `./install-ai-stack.sh` from the checkout — rebuilds `~/.agent-framework/.venv` from the lock and reinstalls `agentsmith`, so every command is the pulled version. (Shell functions used to need `--force`, and without it stayed at whatever version was first installed.) |
 | Prove onboarding still works on every stack (and npm/pnpm, pip/uv) | The **Scratch tenants** workflow — weekly, on provisioning changes, or `gh workflow run scratch-tenants.yml`. See [docs/scratch-tenants.md](docs/scratch-tenants.md) |
 | Change code in the framework repo | Design note in `.agent-rfc/designs/` first, review record in `.agent-rfc/reviews/` after, `Design:`/`Review:` trailers on the commit. Enforced by Claude Code hooks, `.githooks/commit-msg` (`git config core.hooksPath .githooks` once per clone) and Self-Test `process-gates`. See [docs/process-gates.md](docs/process-gates.md) |
-| Promote staging → production | `ai-tenant-promote <id> --from staging --to production` |
+| Promote staging → production | `agentsmith tenant promote <id> --from staging --to production` |
 | Rotate a widget token | Mint a new one (`POST .../widget-token`) — old one keeps working until explicitly revoked |
 | Rotate the audit-log HMAC key | New events sign with the new key; old events will report `verified: false` against it — re-sign history or accept the discontinuity, document which |
 | Purge expired idempotency keys | `agentsmith purge-idempotency` — `idempotency_keys.expires_at` is only read by the lookup, so an expired row stops being *returned* and never stops *existing*: one row per gateway call, kept forever. `IdempotencyStore.purge_expired()` existed the whole time with no caller anywhere, and its docstring named a `verify_system.py` check that does not call it |
 | Prune expired session revocations | `DELETE FROM revoked_sessions WHERE revoked_at < now() - interval '1 day'` — one row per SSO logout, kept forever otherwise. A revocation only matters inside the 8h token TTL, so anything older is dead weight. The instruction previously existed only as a comment inside `portal/db/schema.sql`, which is not somewhere an operator reads |
 | Rotate the org GPG signing key | Re-run `package-hook-bundle.sh` with the new key; redistribute the new public key to MDM before the next deploy |
-| Check unresolved MAJOR/CRITICAL | `ai-stack-check`, or `GET /api/audit` / `GET /api/tenants` on the Ops Portal |
-| Remove the framework from a machine | `ai-stack-uninstall` |
+| Check unresolved MAJOR/CRITICAL | `agentsmith check`, or `GET /api/audit` / `GET /api/tenants` on the Ops Portal |
+| Remove the framework from a machine | `agentsmith uninstall` |
 
 ---
 
@@ -2825,10 +2829,11 @@ In dependency order — tenants first, shared infra second, machine last.
 **Pause vs. remove (machine):**
 
 ```bash
-ai-stack-off          # developer mode only: mutes all hooks, unlinks init.templateDir
-ai-stack-uninstall    # full removal: restores the previous templateDir, surgically
-                      # removes the shell-rc block, prompts before deleting
-                      # ~/.agent-framework and ~/.git_templates
+agentsmith mode off          # mutes all hooks machine-wide; unlinks init.templateDir on a developer
+                             # install; refused or break-glass-gated under an org policy
+agentsmith uninstall         # restores the previous templateDir, removes the agentsmith link and any
+                             # legacy shell-profile block, asks first
+agentsmith uninstall --purge # …and deletes ~/.agent-framework and ~/.git_templates
 ```
 
 **Retire a tenant:**
@@ -2856,7 +2861,7 @@ Retired tenants stay queryable for their audit trail.
 **Stop shared infra (AgentSmith root):**
 
 ```bash
-ai-dashboard-stop            # stops Phoenix, unsets OTel env vars
+agentsmith dashboard stop            # stops Phoenix, unsets OTel env vars
 docker compose down          # portal + Postgres + Phoenix containers
 docker compose down -v       # ⚠️  also deletes volumes: budgets, DLQ, audit log — irreversible
 ```
@@ -2873,7 +2878,7 @@ gcloud secrets delete <secret-name> --project <project>
 ```
 
 **Scrub a repo** (remove AgentSmith runtime artefacts from a project you're
-handing off): `ai-stack-scrub [dir]` — interactive confirmation, removes
+handing off): `agentsmith scrub [dir]` — interactive confirmation, removes
 generated configs/fixtures, leaves your source untouched.
 
 ---
@@ -2916,14 +2921,19 @@ tampered or unsigned bundle is refused, not installed. Sets
 
 ### G.4 — Bypass policy enforcement
 
-Once the org policy is installed, `ai-stack-off` enforces
-`hooks.bypass_policy`:
+Once the org policy is installed, `hooks.bypass_policy` is enforced by the git
+hooks themselves (a commit or checkout run with `DISABLE_AI_STACK=true`, or on a
+machine whose mode is `disabled`) and by `agentsmith mode off` — one decision,
+`runtime/machine/policy.py`, which the hooks reach via
+`agentsmith hooks bypass-check`. A refusal, or a check that cannot run, leaves
+the hook enforcing:
 
-| Policy | Behaviour |
+| Policy | A requested bypass |
 |---|---|
-| (no policy file) | Unrestricted — default dev mode |
-| `disabled` | Always refuses; prints `break_glass_approvers` |
-| `break-glass` | Refuses unless `AI_BREAK_GLASS_TOKEN` is set **and validates** |
+| (no policy file) | Granted — default dev mode |
+| `disabled` | Refused; prints `break_glass_approvers` |
+| `break-glass` | Refused unless `AI_BREAK_GLASS_TOKEN` is set **and validates** |
+| any other value | Refused — a typo such as `disable` is not "no restriction" |
 
 `AI_BREAK_GLASS_TOKEN` is not just checked for presence — it must be a
 real token IT issues, in the form `<actor>:<expires_epoch>.<hex_hmac>`,
@@ -2943,7 +2953,7 @@ is never silently unrecorded (see §5, "Audit log").
 ### G.5 — Uninstall on a managed machine
 
 ```bash
-ai-stack-uninstall
+agentsmith uninstall
 ```
 
 Restores `git init.templateDir` to its value **before** AgentSmith
@@ -2962,7 +2972,7 @@ See [UserManual.md §16](./UserManual.md#16-troubleshooting) for dev-mode
 issues (Phoenix, Ollama, hooks, commit message format, circuit breaker).
 Production/enterprise-specific:
 
-**`ai-tenant-promote` fails with "eval gate failed"** — the staging eval
+**`agentsmith tenant promote` fails with "eval gate failed"** — the staging eval
 score is below 0.75; fix the regression on `develop` before retrying.
 
 **Ops Portal won't start** — check `DATABASE_URL` is set and reachable, and
@@ -2999,7 +3009,7 @@ throwaway/dev run.
 
 | Area | SPECS.md section | Implementation |
 |---|---|---|
-| Tenancy model | §23, §24 | `ai-tenant-init`, `ai-tenant-promote` in `install-ai-stack.sh` |
+| Tenancy model | §23, §24 | `agentsmith tenant init`, `agentsmith tenant promote` in `install-ai-stack.sh` |
 | Production runtime | §25, §29 | `runtime/` |
 | Trace redaction | §27 | `runtime/trace_redactor.py` |
 | Observability / Ops Portal | §15, §26 | `portal/` |

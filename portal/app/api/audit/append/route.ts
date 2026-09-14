@@ -1,8 +1,8 @@
 // POST /api/audit/append — append a signed audit event (SPECS.md §30).
 //
 // Called from CLI/CI contexts that can't carry the dashboard's basic-auth
-// credentials: ai-tenant-init (tenant_created), ai-tenant-promote
-// (hitl_promotion), install-ai-stack.sh's break-glass bypass path
+// credentials: agentsmith tenant init (tenant_created), agentsmith tenant promote
+// (hitl_promotion), the git hooks' bypass check (runtime/machine/policy.py)
 // (hook_bypass), scripts/promote-learning.py (hitl_promotion), etc.
 // Authenticates via its own bearer token, like /api/sync/history.
 //

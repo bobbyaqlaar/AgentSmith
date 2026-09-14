@@ -1533,7 +1533,7 @@ if __name__ == "__main__":
     )
     # 2 means "skipped: too few cases to gate" — a state every tenant starts
     # in. As a process exit code it failed the CI step, so a fresh
-    # `ai-tenant-init` repo went red on its first push for having no golden
+    # `agentsmith tenant init` repo went red on its first push for having no golden
     # dataset yet, and eval-scorecard.yml's own comment ("exit 2 = skip
     # gracefully (not a failure)") described behaviour the code never had.
     # FIXES_AND_CLEANUP.md records the rule — "graceful skip = exit 0" — but

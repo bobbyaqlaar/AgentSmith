@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+# setuptools' in-tree build dir — install-ai-stack.sh installs the package from this checkout
+/build/
 .venv/
 venv/
 .pytest_cache/

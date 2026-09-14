@@ -11,7 +11,7 @@ Validates:
   7. Unresolved MAJOR/CRITICAL log entries in current project
 
 Used by:
-  - ai-stack-check shell function
+  - `agentsmith check`
   - GitHub Actions CI (optional smoke-test step)
 
 Exit codes:
@@ -65,7 +65,7 @@ def _required_ollama_models() -> list[str]:
     """
     from _shared import provider_models
 
-    # Same helper install-ai-stack.sh's ai-stack-required-models shells out to,
+    # Same helper `agentsmith models --ollama` uses (runtime/machine/ops.py),
     # so the health check and this check can never disagree about what to pull.
     return provider_models("ollama") or ["qwen2.5", "llama3.2:3b", "falcon3:3b", "smollm2"]
 
@@ -151,7 +151,7 @@ def run_checks() -> bool:
     if not _check(
         f"Phoenix @ {phoenix_endpoint}",
         phoenix_ok,
-        "Run: ai-dashboard-start",
+        "Run: agentsmith dashboard start",
         warn_only=True,
     ):
         pass  # warn-only: offline phoenix is allowed
@@ -247,7 +247,7 @@ def run_checks() -> bool:
             _check(
                 f"{len(unresolved)} unresolved MAJOR/CRITICAL issue(s)",
                 False,
-                "Run 'ai-stack-promote' or resolve in Phoenix UI",
+                "Run 'agentsmith promote' or resolve in Phoenix UI",
             )
             for entry in unresolved[:5]:
                 print(

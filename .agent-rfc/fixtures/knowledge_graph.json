@@ -87,7 +87,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-09-13T21:10:02Z",
+      "last_modified": "2026-09-14T19:23:31Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -173,7 +173,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-09-13T21:11:12Z",
+      "last_modified": "2026-09-14T19:23:46Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -214,7 +214,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-09-13T21:12:47Z",
+      "last_modified": "2026-09-14T19:24:40Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -233,7 +233,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-09-13T21:08:40Z",
+      "last_modified": "2026-09-14T19:23:17Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -272,7 +272,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-09-13T21:09:03Z",
+      "last_modified": "2026-09-14T19:23:21Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -341,7 +341,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-09-13T21:07:31Z",
+      "last_modified": "2026-09-14T19:22:57Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -412,7 +412,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-09-13T21:12:03Z",
+      "last_modified": "2026-09-14T19:24:15Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -436,7 +436,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-09-13T21:09:19Z",
+      "last_modified": "2026-09-14T19:23:24Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -454,7 +454,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-09-13T21:12:32Z",
+      "last_modified": "2026-09-14T19:24:31Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -466,7 +466,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-09-13T21:11:55Z",
+      "last_modified": "2026-09-14T19:24:11Z",
       "id": "runtime/environment.py"
     },
     {
@@ -499,7 +499,7 @@
         "degrade_tiers",
         "__getattr__"
       ],
-      "last_modified": "2026-09-13T21:08:07Z",
+      "last_modified": "2026-09-14T19:23:04Z",
       "id": "runtime/testing.py"
     },
     {
@@ -585,7 +585,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-09-13T21:10:47Z",
+      "last_modified": "2026-09-14T19:23:41Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -607,7 +607,7 @@
         "record_exception",
         "start_as_current_span"
       ],
-      "last_modified": "2026-08-25T16:28:12Z",
+      "last_modified": "2026-09-14T19:08:30Z",
       "id": "scripts/local_agent_stack.py"
     },
     {
@@ -621,7 +621,7 @@
         "_annotate_shadow_result",
         "run_shadow_eval"
       ],
-      "last_modified": "2026-08-25T21:41:36Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "scripts/shadow-eval.py"
     },
     {
@@ -646,7 +646,7 @@
         "_fetch_span",
         "sync"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-14T19:08:30Z",
       "id": "scripts/sync-ui-feedback.py"
     },
     {
@@ -707,7 +707,7 @@
         "_write_results",
         "is_model_gone"
       ],
-      "last_modified": "2026-09-04T06:17:35Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "scripts/run-evals.py"
     },
     {
@@ -720,7 +720,7 @@
         "_resolve_exit",
         "main"
       ],
-      "last_modified": "2026-09-01T20:32:48Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "scripts/run-security-checks.py"
     },
     {
@@ -735,7 +735,7 @@
         "_load_json",
         "_save_json"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-14T19:08:30Z",
       "id": "scripts/promote-learning.py"
     },
     {
@@ -756,7 +756,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-09-13T21:10:27Z",
+      "last_modified": "2026-09-14T19:23:37Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -827,7 +827,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-09-13T21:10:23Z",
+      "last_modified": "2026-09-14T19:23:35Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -858,7 +858,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-09-13T21:10:14Z",
+      "last_modified": "2026-09-14T19:23:33Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -897,7 +897,7 @@
         "_entry_id",
         "sync"
       ],
-      "last_modified": "2026-08-25T21:41:36Z",
+      "last_modified": "2026-09-14T19:08:30Z",
       "id": "scripts/sync-portal-history.py"
     },
     {
@@ -1054,7 +1054,7 @@
         "_run",
         "_git_repo"
       ],
-      "last_modified": "2026-09-01T19:37:42Z",
+      "last_modified": "2026-09-14T19:08:30Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -1124,7 +1124,7 @@
         "test_hook_actually_writes_every_callee_into_a_fresh_tenant",
         "test_every_stacks_ci_runs_the_strict_security_harness"
       ],
-      "last_modified": "2026-09-13T20:51:46Z",
+      "last_modified": "2026-09-14T19:06:45Z",
       "id": "scripts/test/test_workflow_template_wiring.py"
     },
     {
@@ -1173,7 +1173,7 @@
         "test_templates_tarball_carries_both_destinations",
         "test_artifacts_extract_flat"
       ],
-      "last_modified": "2026-08-25T21:41:36Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "scripts/test/test_release_artifact_contract.py"
     },
     {
@@ -1246,7 +1246,7 @@
         "test_env_override_wins",
         "test_framework_grading_itself_is_unchanged"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "scripts/test/test_security_harness_roots.py"
     },
     {
@@ -1468,7 +1468,7 @@
         "test_validating_the_template_itself_is_still_allowed",
         "test_the_frameworks_own_register_is_not_the_template"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "scripts/test/test_security_risk_register.py"
     },
     {
@@ -1482,7 +1482,7 @@
         "test_specs_header_matches_the_installer",
         "test_changelog_has_an_entry_for_the_current_version"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "scripts/test/test_version_consistency.py"
     },
     {
@@ -1737,9 +1737,10 @@
         "test_every_env_var_the_code_reads_is_documented",
         "test_security_knobs_are_in_the_canonical_reference",
         "test_fail_closed_behaviour_is_stated_not_just_the_variable",
-        "test_every_shipped_command_is_in_the_canonical_reference"
+        "test_every_shipped_command_is_in_the_canonical_reference",
+        "leaves"
       ],
-      "last_modified": "2026-08-25T22:00:39Z",
+      "last_modified": "2026-09-14T19:10:16Z",
       "id": "scripts/test/test_env_var_documentation.py"
     },
     {
@@ -2046,7 +2047,7 @@
         "test_anthropic_empty_content_block_parses_to_empty_string",
         "test_pii_detection_tolerates_none"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "runtime/test/test_registry_shapes.py"
     },
     {
@@ -2917,7 +2918,7 @@
         "Isolation",
         "isValidIsolation"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "portal/lib/isolation.ts"
     },
     {
@@ -3039,7 +3040,7 @@
         "SyncEntryInput",
         "syncHistoryEntries"
       ],
-      "last_modified": "2026-08-24T23:57:25Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "portal/lib/issues.ts"
     },
     {
@@ -3073,7 +3074,7 @@
         "SuggestedPromotion",
         "getSuggestedPromotions"
       ],
-      "last_modified": "2026-08-25T01:33:30Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "portal/lib/promotions.ts"
     },
     {
@@ -3158,7 +3159,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-24T23:08:02Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "portal/app/api/sync/history/route.ts"
     },
     {
@@ -3185,7 +3186,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-23T19:45:21Z",
+      "last_modified": "2026-09-14T19:08:30Z",
       "id": "portal/app/api/audit/append/route.ts"
     },
     {
@@ -3281,7 +3282,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-08-25T09:23:32Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "portal/app/tenants/[id]/page.tsx"
     },
     {
@@ -3312,9 +3313,10 @@
       "symbols": [
         "_exporter",
         "spans",
-        "identity_processor"
+        "identity_processor",
+        "pytest_configure"
       ],
-      "last_modified": "2026-08-24T21:01:05Z",
+      "last_modified": "2026-09-14T19:25:42Z",
       "id": "runtime/test/conftest.py"
     },
     {
@@ -3408,7 +3410,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-09-13T21:11:08Z",
+      "last_modified": "2026-09-14T19:23:45Z",
       "id": "runtime/config.py"
     },
     {
@@ -3463,13 +3465,25 @@
         "_copy_composite_actions",
         "_cmd_tenant_init",
         "_cmd_doctor",
-        "_cmd_shellenv",
+        "_cmd_mode",
+        "_cmd_check",
+        "_cmd_status",
+        "_cmd_models",
+        "_cmd_dashboard",
+        "_cmd_evals",
+        "_cmd_promote",
+        "_cmd_tenant_promote",
+        "_cmd_tenant_onprem",
+        "_cmd_upgrade",
+        "_cmd_scrub",
+        "_cmd_uninstall",
+        "_cmd_hooks_bypass_check",
         "_cmd_purge_idempotency",
         "_cmd_version",
         "build_parser",
         "main"
       ],
-      "last_modified": "2026-09-13T21:08:00Z",
+      "last_modified": "2026-09-14T19:32:05Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3486,9 +3500,10 @@
         "test_ci_callees_ship_with_their_caller",
         "test_composite_actions_ship_with_the_workflows_that_use_them",
         "test_unknown_stack_and_isolation_are_refused",
-        "test_parser_covers_the_shell_functions_being_replaced",
+        "test_parser_covers_the_shell_functions_it_replaced",
+        "_leaf_parsers",
         "test_every_subcommand_dispatches_somewhere",
-        "test_shellenv_emits_evaluable_exports",
+        "test_shellenv_is_gone",
         "test_main_returns_two_on_a_bad_argument",
         "test_stacks_match_the_shipped_ci_templates",
         "test_refuses_to_scaffold_into_the_framework_itself",
@@ -3507,7 +3522,7 @@
         "test_the_declared_version_follows_the_module_not_a_literal",
         "test_the_declared_version_carries_no_source_marker"
       ],
-      "last_modified": "2026-09-12T23:03:00Z",
+      "last_modified": "2026-09-14T18:56:06Z",
       "id": "runtime/test/test_cli.py"
     },
     {
@@ -3558,7 +3573,7 @@
         "system_fingerprint",
         "prompt_attributes"
       ],
-      "last_modified": "2026-09-13T21:08:15Z",
+      "last_modified": "2026-09-14T19:23:05Z",
       "id": "runtime/prompt_identity.py"
     },
     {
@@ -3678,7 +3693,7 @@
         "currentTraceId",
         "resolveTracesEndpoint"
       ],
-      "last_modified": "2026-08-24T22:44:02Z",
+      "last_modified": "2026-09-14T19:08:30Z",
       "id": "portal/lib/tracing.ts"
     },
     {
@@ -3851,7 +3866,7 @@
         "metric_exporter",
         "_exporter"
       ],
-      "last_modified": "2026-08-28T19:53:12Z",
+      "last_modified": "2026-09-14T19:19:23Z",
       "id": "runtime/otlp.py"
     },
     {
@@ -3871,7 +3886,7 @@
         "test_the_portal_resolver_still_guards_the_doubled_suffix",
         "test_no_module_hand_rolls_the_signal_path_any_more"
       ],
-      "last_modified": "2026-08-28T19:52:08Z",
+      "last_modified": "2026-09-14T19:08:30Z",
       "id": "runtime/test/test_otlp_endpoint.py"
     },
     {
@@ -4030,7 +4045,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-09-13T21:06:54Z",
+      "last_modified": "2026-09-14T19:22:49Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -4203,7 +4218,7 @@
         "test_every_documented_env_var_is_read_somewhere",
         "test_allowlist_entries_are_still_orphans"
       ],
-      "last_modified": "2026-09-12T10:59:57Z",
+      "last_modified": "2026-09-14T19:10:31Z",
       "id": "scripts/test/test_documented_env_vars_exist.py"
     },
     {
@@ -4215,7 +4230,7 @@
         "test_a_decommissioned_entry_is_actually_marked",
         "test_no_profile_binds_a_decommissioned_model"
       ],
-      "last_modified": "2026-09-01T20:22:08Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "runtime/test/test_no_role_binds_a_dead_model.py"
     },
     {
@@ -4294,7 +4309,7 @@
         "test_unopted_repo_is_not_vendored",
         "test_the_hook_leaves_no_bytecode_in_the_tenant"
       ],
-      "last_modified": "2026-09-12T23:08:11Z",
+      "last_modified": "2026-09-14T19:07:37Z",
       "id": "scripts/test/test_scripts_vendoring.py"
     },
     {
@@ -4351,7 +4366,6 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "_function_source",
         "_run_upgrade",
         "_git",
         "test_first_time_vendored_files_are_committed",
@@ -4360,7 +4374,7 @@
         "test_upgrade_prunes_framework_internal_runtime_tests",
         "test_upgrade_refuses_to_vendor_into_a_package_consumer"
       ],
-      "last_modified": "2026-09-13T10:09:11Z",
+      "last_modified": "2026-09-14T19:00:12Z",
       "id": "scripts/test/test_ai_stack_upgrade.py"
     },
     {
@@ -4403,19 +4417,6 @@
       ],
       "last_modified": "2026-09-12T23:23:03Z",
       "id": "scripts/test/test_installed_runtime_tenant.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_step7",
-        "test_force_replaces_the_block_and_keeps_the_users_lines",
-        "test_without_force_an_existing_block_is_left_alone",
-        "test_force_will_not_edit_a_block_without_markers",
-        "test_uninstall_removes_the_whole_block_it_installed"
-      ],
-      "last_modified": "2026-09-13T10:06:23Z",
-      "id": "scripts/test/test_installer_force_shell_functions.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -4837,7 +4838,7 @@
         "test_self_test_installs_the_lock_at_the_pinned_version",
         "test_the_standalone_phoenix_fallback_uses_a_subcommand_phoenix_has"
       ],
-      "last_modified": "2026-09-14T18:40:27Z",
+      "last_modified": "2026-09-14T19:06:52Z",
       "id": "scripts/test/test_framework_python_env.py"
     },
     {
@@ -4855,6 +4856,206 @@
       "pillar": null,
       "created_at": "2026-09-14T18:43:28Z",
       "id": "rfc:reviews/framework-python-env.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_block",
+        "test_all_four_hooks_share_one_bypass_block_and_nothing_else_exits_on_the_variable",
+        "_run",
+        "test_no_bypass_requested_the_hook_runs",
+        "test_without_a_policy_the_variable_bypasses",
+        "test_without_a_policy_a_disabled_mode_file_bypasses",
+        "test_any_other_mode_does_not_bypass",
+        "test_with_a_policy_the_checker_decides_yes",
+        "test_with_a_policy_the_checker_decides_no_and_the_hook_enforces",
+        "test_with_a_policy_and_no_checker_installed_the_hook_enforces",
+        "test_end_to_end_a_disabled_policy_refuses_through_the_real_command_and_records_it"
+      ],
+      "last_modified": "2026-09-14T19:00:51Z",
+      "id": "scripts/test/test_hook_bypass.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_the_real_legacy_block_is_removed_and_the_users_lines_kept",
+        "test_two_blocks_from_repeated_installs_and_the_old_name_are_all_removed",
+        "test_a_block_without_an_end_marker_is_not_edited",
+        "test_a_pre_marker_legacy_block_is_reported_not_edited",
+        "test_nothing_to_remove_is_success_and_touches_nothing",
+        "_code",
+        "test_the_installer_writes_nothing_into_a_shell_profile",
+        "test_step7_records_the_install_mode_and_removes_the_block_via_the_command",
+        "test_step3_installs_the_command_without_re_resolving_dependencies_and_links_it",
+        "test_verification_runs_the_command_through_its_link",
+        "test_no_output_string_runs_a_command_by_accident",
+        "_leaf_paths",
+        "test_every_compat_wrapper_names_a_real_command_and_real_options"
+      ],
+      "last_modified": "2026-09-14T19:10:16Z",
+      "id": "scripts/test/test_cli_install.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "machine",
+        "_git_global_template_dir",
+        "_record_install_mode",
+        "test_mode_round_trips_and_garbage_reads_as_unset",
+        "test_the_state_dir_override_in_the_process_survives_a_hand_built_env",
+        "test_install_mode_defaults_to_developer",
+        "test_find_script_returns_exactly_one_copy",
+        "test_a_failing_tenant_script_is_not_re_run_from_the_machine_copy",
+        "test_profile_precedence_explicit_then_env_then_mode_file_then_default",
+        "test_a_disabled_mode_names_no_profile",
+        "test_otlp_reads_the_dashboard_endpoint_only_after_the_environment",
+        "_token",
+        "test_break_glass_tokens",
+        "_policy",
+        "_audit",
+        "test_no_policy_allows_and_records_nothing",
+        "test_a_disabled_policy_refuses_and_records",
+        "test_break_glass_policy",
+        "test_an_unreadable_policy_refuses",
+        "test_audit_event_types_are_the_ones_the_portal_accepts",
+        "test_mode_writes_the_file_and_touches_git_only_on_a_developer_install",
+        "test_mode_off_is_refused_by_a_disabled_policy_and_leaves_the_mode_alone",
+        "test_scrub_finds_the_generated_files_at_find_maxdepth_and_nothing_else",
+        "test_scrub_without_confirmation_deletes_nothing",
+        "test_onprem_scaffold_records_an_event_the_portal_accepts",
+        "test_tenant_promote_compares_the_parsed_quoted_id",
+        "test_upgrade_without_to_declares_the_installed_release_not_1_1_0",
+        "test_upgrade_refuses_outside_a_tenant",
+        "test_tenant_init_records_tenant_created_once",
+        "test_status_does_not_call_hooks_muted_when_a_policy_decides",
+        "test_an_unknown_bypass_policy_value_refuses",
+        "test_doctor_forwards_verify_system_flags",
+        "test_dashboard_stop_does_not_signal_a_reused_pid",
+        "fake_upgrade"
+      ],
+      "last_modified": "2026-09-14T19:32:01Z",
+      "id": "runtime/test/test_machine.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "org_policy_path",
+        "PolicyUnreadable",
+        "org_policy_hooks",
+        "approvers_text",
+        "validate_break_glass_token",
+        "audit_log_event",
+        "BypassDecision",
+        "bypass_decision"
+      ],
+      "last_modified": "2026-09-14T19:32:06Z",
+      "id": "runtime/machine/policy.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [],
+      "last_modified": "2026-09-14T18:49:05Z",
+      "id": "runtime/machine/__init__.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_files_under",
+        "_copy_tree_merge",
+        "_depends_on_runtime_package",
+        "_write_ruff_isolation",
+        "_tenant_id",
+        "upgrade",
+        "git"
+      ],
+      "last_modified": "2026-09-14T19:19:30Z",
+      "id": "runtime/machine/upgrade.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_env",
+        "phoenix_endpoint",
+        "effective_mode",
+        "_http_ok",
+        "_git_global",
+        "_shared",
+        "required_ollama_models",
+        "judge_model",
+        "_run_script",
+        "mode",
+        "_unresolved_log_entries",
+        "check",
+        "_online",
+        "status",
+        "models",
+        "_phoenix_pid_file",
+        "dashboard_start",
+        "dashboard_stop",
+        "evals",
+        "promote",
+        "_tenant_yaml_id",
+        "tenant_promote",
+        "onprem_scaffold",
+        "_confirm",
+        "scrub_matches",
+        "scrub",
+        "remove_profile_blocks",
+        "uninstall"
+      ],
+      "last_modified": "2026-09-14T19:32:07Z",
+      "id": "runtime/machine/ops.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "framework_home",
+        "state_dir",
+        "_read_word",
+        "_write_word",
+        "read_mode",
+        "write_mode",
+        "read_install_mode",
+        "read_phoenix_endpoint",
+        "write_phoenix_endpoint",
+        "clear_phoenix_endpoint",
+        "find_script"
+      ],
+      "last_modified": "2026-09-14T19:22:35Z",
+      "id": "runtime/machine/state.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "One `agentsmith` command, machine state in a file (slice B)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/agentsmith-cli.md",
+      "pillar": null,
+      "created_at": "2026-09-14T19:18:18Z",
+      "id": "rfc:designs/agentsmith-cli.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "pytest_configure"
+      ],
+      "last_modified": "2026-09-14T19:25:42Z",
+      "id": "scripts/test/conftest.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 one `agentsmith` command, machine state in a file (slice B)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/agentsmith-cli.md",
+      "pillar": null,
+      "created_at": "2026-09-14T19:35:18Z",
+      "id": "rfc:reviews/agentsmith-cli.md"
     }
   ],
   "edges": [
@@ -5021,6 +5222,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_dotenv_parsing.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_env_var_documentation.py",
       "target": "runtime/__init__.py"
     },
     {
@@ -5475,6 +5681,11 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "runtime/otlp.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "runtime/test/test_otlp_endpoint.py",
       "target": "runtime/__init__.py"
     },
@@ -5526,6 +5737,31 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_scratch_tenants.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_cli_install.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_machine.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/machine/policy.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/machine/upgrade.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/machine/ops.py",
       "target": "runtime/__init__.py"
     }
   ]

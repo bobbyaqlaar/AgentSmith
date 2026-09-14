@@ -83,6 +83,57 @@ by CI (`workflow_run`), Go and TS CI now run the strict security harness, and
 interface change** below, as this file's header requires. Existing tenants keep
 the workflow files they have: the hook never overwrites one.
 
+### One `agentsmith` command; nothing in your shell profile
+
+The 18 `ai-*` shell functions the installer appended to `~/.zshrc` are gone.
+They existed only in interactive shells — a git GUI, an IDE, CI and Claude
+Code's hooks never had them — and a mode they "set" was an export in one
+terminal. Every command is now a subcommand of `agentsmith` (installed into
+`~/.agent-framework/.venv`, linked at `~/.local/bin/agentsmith`); logic lives in
+`runtime/machine/`, where it is tested.
+
+| Was | Now |
+|---|---|
+| `ai-mode-local` / `ai-mode-hybrid` / `ai-stack-off` | `agentsmith mode local` / `hybrid` / `off` |
+| `ai-stack-check` / `ai-stack-status` | `agentsmith check` / `agentsmith status` |
+| `ai-stack-judge-model` / `ai-stack-required-models` | `agentsmith models --judge` / `--ollama` |
+| `ai-dashboard-start` / `ai-dashboard-stop` | `agentsmith dashboard start` / `stop` |
+| `ai-test-evals` / `ai-stack-promote` | `agentsmith evals` / `agentsmith promote` |
+| `ai-tenant-init` / `ai-tenant-promote` / `ai-onprem-deploy-scaffold` | `agentsmith tenant init` / `promote` / `onprem-scaffold` |
+| `ai-stack-upgrade` / `ai-stack-scrub` / `ai-stack-uninstall` | `agentsmith upgrade` / `scrub` / `uninstall` |
+
+- **Machine state is files**, in `~/.agent-framework/state/`
+  (`AGENTSMITH_STATE_DIR` overrides): `mode`, `install-mode`,
+  `phoenix-endpoint`. The gateway's profile precedence is now
+  `AGENT_MODEL_PROFILE` → `AI_STACK_MODE` → `state/mode` → `default_profile`;
+  `runtime/otlp.py` falls back to `state/phoenix-endpoint` after the
+  environment.
+- **Hook interface change:** all four hooks replace
+  `DISABLE_AI_STACK=true → exit 0` with one shared bypass block. A bypass is
+  requested by that variable or a `disabled` mode; with no org policy file it is
+  granted as before; with one, the hook asks `agentsmith hooks bypass-check`,
+  which applies `bypass_policy` and records the attempt — and a refusal, or a
+  check that cannot run, leaves the hook enforcing. Previously the variable
+  skipped every hook whatever the policy said.
+- **The installer** writes nothing to a shell profile and removes the block
+  older installs appended (backup `*.agentsmith-bak`); `--force` is accepted and
+  does nothing. Optional wrappers with the old names:
+  `source ~/.agent-framework/shell/ai-compat.sh`.
+- **Removed:** `agentsmith shellenv` (its `export AI_STACK_MODE` would outrank
+  the mode file for everything that shell starts); the exports
+  `OS_LLM_BASE_URL`/`OS_LLM_API_KEY` (read by nothing) and the defaulted
+  `AGENT_PHOENIX_ENDPOINT`/`PORT` (code already defaults them); the desktop
+  notification on a mode switch.
+- **Fixed on the way:** `upgrade` without `--to` declares the installed release
+  (the function wrote 1.1.0); a failing tenant script is no longer re-run from
+  the machine's copy; `mode` touches `init.templateDir` only on a developer
+  install; the on-prem scaffold's audit event is a type the portal accepts, and
+  `tenant init` writes the `tenant_created` event the docs promised;
+  `agentsmith doctor` finds `verify_system.py` outside a checkout and accepts
+  its flags (`agentsmith doctor --check-kg` was an argparse error); an
+  unrecognised `bypass_policy` value refuses a bypass instead of allowing it;
+  `dashboard stop` checks a pid file still names Phoenix before signalling it.
+
 ### The framework runs in a Python environment it owns — `~/.agent-framework/.venv`
 
 `install-ai-stack.sh` used to `pip install` its own package list into whatever

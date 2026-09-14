@@ -7,6 +7,24 @@ has been identified. Active work lives in `FIXES_AND_CLEANUP.md`.
 
 ---
 
+## Completed — the framework leaves the shell profile (2026-09-14)
+
+Designs: `.agent-rfc/designs/framework-python-env.md`, `.agent-rfc/designs/agentsmith-cli.md`;
+reviews beside them. Release notes: `CHANGELOG.md` [Unreleased].
+
+| Finding | Evidence | Fix |
+|---|---|---|
+| Installer pip-installed into Homebrew's externally-managed Python via `--break-system-packages`, from a list drifted from `requirements.txt` | this Mac's install log; `PACKAGES` vs `requirements.txt` | `~/.agent-framework/.venv` from a hashed `requirements.lock`, uv-built at `.python-version` |
+| Piped install treated the current directory as the checkout | reproduced from inside KYC Sentinel | checkout recognised by its own installer and hooks |
+| Standalone Phoenix ran `phoenix.server.main launch`, a subcommand Phoenix no longer has | Phoenix 17.9.0's CLI | `uvx --from arize-phoenix phoenix serve` |
+| 18 shell functions reached interactive shells only; a mode was an export in one terminal | `runtime/llm_gateway.py` read the environment only | `agentsmith` subcommands; `~/.agent-framework/state/mode` read by the gateway and hooks |
+| `DISABLE_AI_STACK=true git commit` skipped every hook whatever `bypass_policy` said | hooks exited before any policy check | one bypass decision, asked by all four hooks; tested end to end |
+| `ai-stack-upgrade` with no `--to` rewrote tenant.yaml to 1.1.0 | `${FRAMEWORK_VERSION:-1.1.0}` in a profile that never set it | defaults to the installed release |
+| A failing tenant script was re-run from the machine's copy (`X || ~/.agent-framework/X`) | the shell functions' `||` chains | `find_script` returns exactly one |
+| `ai-mode-*` set `init.templateDir` on enterprise installs | function bodies | recorded install mode gates it |
+| On-prem scaffold audit event type rejected by the portal; `tenant_created` written by nothing | `AUDIT_EVENT_TYPES` in `portal/lib/auditSignature.ts` | `config_change`; tenant init emits `tenant_created`; types pinned by a parsing test |
+| `--force` re-installs added a blank line to the profile each run | FIXES_AND_CLEANUP.md | the block and its blank line are removed, not rewritten |
+
 ## Completed — onboarding audit through real scratch-tenant CI (2026-09-13/14)
 
 Every stack onboarded into a private scratch repo and run through its own CI

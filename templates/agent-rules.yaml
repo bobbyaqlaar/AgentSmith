@@ -89,7 +89,7 @@ pillars:
     name: Observability Wire
     rule: >
       .cursorrules and CLAUDE.md include explicit OTLP endpoint instructions.
-      OTEL_EXPORTER_OTLP_ENDPOINT is set in the shell when dashboard starts.
+      Without OTEL_EXPORTER_OTLP_ENDPOINT, runtime/otlp.py uses the endpoint `agentsmith dashboard start` records.
 
   - id: 9
     name: Multi-Agent Orchestration

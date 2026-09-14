@@ -2,7 +2,7 @@
 # runtime/k8s/dedicated-tenant/render.sh — substitutes {{TENANT_ID}} and
 # {{WORKER_IMAGE}} and prints the rendered manifests to stdout (or applies
 # them directly with --apply). Same {{PLACEHOLDER}} sed-substitution
-# convention as workflow-templates/ (see ai-tenant-init in install-ai-stack.sh).
+# convention as workflow-templates/ (see `agentsmith tenant init`, runtime/cli.py).
 #
 # Usage:
 #   ./render.sh <tenant-id> <worker-image> [--apply]

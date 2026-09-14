@@ -188,7 +188,7 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
                 {p.outputValue && <p className="text-black/70 dark:text-white/70">Output: {p.outputValue}</p>}
                 {p.explanation && <p className="text-black/50 dark:text-white/50 italic">{p.explanation}</p>}
                 <p className="text-black/40 dark:text-white/40 text-xs">
-                  Review in Phoenix, then run <code>ai-stack-promote</code> to add to the golden dataset — never auto-promoted.
+                  Review in Phoenix, then run <code>agentsmith promote</code> to add to the golden dataset — never auto-promoted.
                 </p>
               </li>
             ))}

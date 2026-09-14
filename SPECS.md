@@ -43,7 +43,7 @@ Installed once (developer mode) or deployed as org bundle (enterprise mode), it 
 - A self-improvement loop with Human-in-the-Loop (HITL) promotion
 - A financial circuit breaker with tiered degrade (dev: session-scoped; production: LLM Gateway-enforced per tenant)
 - Automated CI/CD pipelines via GitHub Actions — per tenant repo, per environment
-- Tenant scaffold tooling (`ai-tenant-init`, `ai-tenant-promote`)
+- Tenant scaffold tooling (`agentsmith tenant init`, `agentsmith tenant promote`)
 - Three observability surfaces: Phoenix traces/evals/HITL, Ops Portal (cross-tenant ops), In-App Widget (end-user status)
 
 ### Implementation Status Against This Vision
@@ -103,10 +103,9 @@ extensions (e.g. richer fairness stats, portal streaming UI).
 │                         Developer Workstation                           │
 │                                                                         │
 │  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │  Shell Profile (~/.zshrc)                                        │  │
-│  │  ai-mode-local | ai-mode-hybrid | ai-stack-check                 │  │
-│  │  ai-dashboard-start | ai-test-evals | ai-stack-promote           │  │
-│  │  ai-tenant-init | ai-tenant-promote | ai-stack-upgrade           │  │
+│  │  agentsmith CLI  (~/.local/bin → ~/.agent-framework/.venv)       │  │
+│  │  mode | check | status | dashboard | evals | promote | upgrade   │  │
+│  │  tenant init|promote    state: ~/.agent-framework/state/         │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
 │                                                                         │
 │  ┌──────────────┐   ┌───────────────────┐   ┌───────────────────────┐  │
@@ -282,7 +281,7 @@ If Phoenix is unreachable, log MINOR to `.agent-history.log` and continue — ne
 - `.agent-history.log` in every repository root captures timestamped events.
 - On initialization, agents read `.agent-history.log` to avoid repeating past mistakes.
 - After two consecutive identical tool failures, the agent appends a MAJOR trace to `.agent-history.log`, halts, and escalates to the user.
-- MAJOR/CRITICAL entries are synced to the Ops Portal unresolved queue; teams cannot rely on each developer running `ai-stack-check` locally.
+- MAJOR/CRITICAL entries are synced to the Ops Portal unresolved queue; teams cannot rely on each developer running `agentsmith check` locally.
 - The HITL promotion loop (`promote-learning.py`) distills raw incidents into atomic rules, appends them to judge criteria, and adds a verified test to `golden_evals.json`.
 - Judge criteria use semantic deduplication and versioned archival — no silent FIFO eviction. See Section 9.
 
@@ -454,7 +453,7 @@ design choice that's recorded here as settled.
 
 | File | Purpose |
 |---|---|
-| `install-ai-stack.sh` | Master installer. Writes git hook templates, sets `git config --global init.templateDir`, appends shell functions to `~/.zshrc`. Supports `--mode developer` (default) and `--mode enterprise`. |
+| `install-ai-stack.sh` | Master installer. Writes git hook templates, sets `git config --global init.templateDir`, builds `~/.agent-framework/.venv` from `requirements.lock` and installs the `agentsmith` command into it (linked at `~/.local/bin`), records `state/install-mode`. Writes nothing to a shell profile, and removes the shell-function block older installs appended. Supports `--mode developer` (default) and `--mode enterprise`. |
 
 **Hook templates** live as standalone files in `hooks/` (repo root) — `install-ai-stack.sh` copies them into `$TEMPLATE_DIR/hooks/`, falling back to a GitHub release download if run outside a local checkout. This is also what `enterprise/package-hook-bundle.sh` signs for org bundle distribution (see §22, §30).
 
@@ -465,7 +464,7 @@ design choice that's recorded here as settled.
 | `pre-commit` | Before every commit | Blocks: unresolved AI markers, empty catch blocks (JS/TS), double blank identifiers (Go). Enterprise mode: also requires `RFC-NNN` reference in commit message or matching RFC file in `.agent-rfc/`. |
 | `commit-msg` | Commit message validation | Enforces Conventional Commits: `<type>(<scope>)?: <summary>` (max 72 chars) |
 | `post-commit` | After every commit | Runs `map_codebase.py`; auto-tags semver; appends to `.agent-history.log`; pushes tags if remote tracked — unless `git config agentsmith.autopush false` or `AGENTSMITH_AUTOPUSH=0`, which keep the tag and skip the push; runs log rotation |
-| `post-checkout` | After branch switch / git init | **Opt-in gate first:** a pre-existing repo (has commit history) that carries no `.agenticframework/enabled`/`tenant.yaml` is skipped with a hint — cloning an unrelated repo is never provisioned. Otherwise: detects stack; creates `.agent-rfc/`; vendors `scripts/`, `runtime/` (with only the five harness-delegated `runtime/test` suites), `fixtures/security/` and the base eval fixtures from `~/.agent-framework` (excludes `scripts/test/`, `__pycache__` and `runtime/.hitl_blobs`; merges into an existing `scripts/` without overwriting a tenant file and reports clashes; refuses to vendor over a `runtime/` that is not AgentSmith's; writes nested `ruff.toml` excludes so vendored code is outside the tenant's lint gates — see `ai-stack-upgrade` for pulling in a newer version later). A tenant that depends on `agentsmith-runtime` as a package ("installed mode") gets IDE config and the security pack only — nothing vendored, no generated workflows; generates IDE config from `agent-rules.yaml`; writes CI workflows + reusable eval workflows + `.github/actions/` composite actions; seeds golden dataset |
+| `post-checkout` | After branch switch / git init | **Opt-in gate first:** a pre-existing repo (has commit history) that carries no `.agenticframework/enabled`/`tenant.yaml` is skipped with a hint — cloning an unrelated repo is never provisioned. Otherwise: detects stack; creates `.agent-rfc/`; vendors `scripts/`, `runtime/` (with only the five harness-delegated `runtime/test` suites), `fixtures/security/` and the base eval fixtures from `~/.agent-framework` (excludes `scripts/test/`, `__pycache__` and `runtime/.hitl_blobs`; merges into an existing `scripts/` without overwriting a tenant file and reports clashes; refuses to vendor over a `runtime/` that is not AgentSmith's; writes nested `ruff.toml` excludes so vendored code is outside the tenant's lint gates — see `agentsmith upgrade` for pulling in a newer version later). A tenant that depends on `agentsmith-runtime` as a package ("installed mode") gets IDE config and the security pack only — nothing vendored, no generated workflows; generates IDE config from `agent-rules.yaml`; writes CI workflows + reusable eval workflows + `.github/actions/` composite actions; seeds golden dataset |
 
 ### 5.3 IDE Configuration Files (auto-generated per repo)
 
@@ -537,7 +536,8 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 | `runtime/pii_patterns.py` | The PII shapes `input_guardrail.py` and `trace_redactor.py` both read, plus `ascii_digits()`. Extracted for the reason `runtime/luhn.py` was: the pre-call and pre-export halves of one control disagreed about what PII is. |
 | `runtime/security_paths.py` | `security_artefact_path()` — the env-override-then-convention lookup `prompt_guard` and `tool_registry` had each implemented separately. |
 | `runtime/tenancy.py` | `resolve_tenant_id()` (explicit → `AGENT_TENANT_ID`/`TENANT_ID` → `tenant.yaml` → raise) and the `agent_context()` contextvars that `AgentIdentityProcessor` stamps onto every span. |
-| `runtime/cli.py` | The `agentsmith` console script (`[project.scripts]`). `tenant init` owns the scaffold that used to be a zsh heredoc in `~/.zshrc`; `doctor` delegates to `verify_system`; `shellenv` emits the exports a child process cannot set on its parent; `purge-idempotency` deletes expired rows from `idempotency_keys`, which nothing had ever deleted from. The shell functions now delegate here. |
+| `runtime/cli.py` | The `agentsmith` console script (`[project.scripts]`) — every operator command (§6). `tenant init` owns the scaffold that used to be a zsh heredoc in `~/.zshrc`; `doctor` delegates to `verify_system`; `purge-idempotency` deletes expired rows from `idempotency_keys`, which nothing had ever deleted from. The commands it replaced were shell functions in `~/.zshrc` until 2026-09-14. |
+| `runtime/machine/` | The operator commands' logic and the machine state they share: `state.py` (`~/.agent-framework/state/` — mode, install mode, dashboard endpoint; `find_script`), `policy.py` (org policy, break-glass tokens, audit log, the one bypass decision the hooks and `mode off` use), `ops.py` (mode, check, status, models, dashboard, evals, promote, tenant promote, on-prem scaffold, scrub, uninstall), `upgrade.py` (`agentsmith upgrade`). Import-light: the hooks call it. |
 | `runtime/metrics.py` | OTel counters and histograms. Spans are the wrong instrument for a rate: sampled, expensive to scan, worse as traffic grows. Carries the cache hit ratio, which was previously only logged. |
 | `runtime/prompt_identity.py` | `prompt.system.sha256` — a digest of the system turn, which changes when a human edits the instructions and not when the input changes. The join column for "answers degraded on Tuesday", available without a template engine. |
 | `runtime/config.py` | `load_env_file()` — the runtime loaded no `.env` at all before this, only `scripts/` did — and `resolve()`, the single precedence: explicit → environment → `tenant.yaml` → documented default or raise. |
@@ -578,53 +578,68 @@ See Section 25 for full specification (§27 redaction, §29 gateway).
 
 ---
 
-## 6. Shell Command Interface
+## 6. Command Interface
 
-All commands are Zsh/Bash functions in `~/.zshrc`.
+Every command is a subcommand of `agentsmith` (`runtime/cli.py`, logic in
+`runtime/machine/`), installed into `~/.agent-framework/.venv` and linked at
+`~/.local/bin/agentsmith`. Machine state is files in `~/.agent-framework/state/`
+(`AGENTSMITH_STATE_DIR` overrides), so it reaches every process — IDEs, git GUIs
+and hooks included — not only the shell that set it. They were Zsh/Bash
+functions in `~/.zshrc` until 2026-09-14; UserManual.md §17 is the canonical
+reference.
 
 ### Environment Control
 
 | Command | Action |
 |---|---|
-| `ai-mode-local` | Sets `AI_STACK_MODE=local`. Runs health check. Fires desktop notification on success. |
-| `ai-mode-hybrid` | Sets `AI_STACK_MODE=hybrid`. Runs health check. Fires desktop notification. |
-| `ai-stack-off` | **Developer mode only:** Sets `DISABLE_AI_STACK=true`, unlinks `init.templateDir`. Hooks silently exit. **Enterprise mode:** Disabled. Emergency bypass requires IT break-glass procedure with audit log entry. |
-| `ai-stack-status` | Prints: mode, muted flag, Phoenix endpoint, judge model, network status, owner identity. |
+| `agentsmith mode local` | Writes `state/mode` = `local`; relinks `init.templateDir` on a developer install. Runs health check. |
+| `agentsmith mode hybrid` | Writes `state/mode` = `hybrid`; relinks `init.templateDir` on a developer install. Runs health check. |
+| `agentsmith mode off` | Writes `state/mode` = `disabled` (hooks skip); unlinks `init.templateDir` on a developer install. Under an org policy the bypass decision applies first — `disabled` refuses, `break-glass` needs a valid token — and the attempt is audit-logged. |
+| `agentsmith status` | Prints: mode, hooks on/muted, install mode, Phoenix endpoint, judge model, owner identity, network status. |
+
+**Mode precedence** (the gateway's model profile): `AGENT_MODEL_PROFILE` →
+`AI_STACK_MODE` in the environment → `state/mode` → the registry's
+`default_profile`. **Hook bypass:** `DISABLE_AI_STACK=true` or a `disabled` mode
+is granted when no org policy file exists; otherwise every hook asks
+`agentsmith hooks bypass-check`, and a refusal — or a check that cannot run —
+leaves the hook enforcing.
 
 ### Health & Diagnostics
 
 | Command | Action |
 |---|---|
-| `ai-stack-check` | Checks Phoenix; Ollama (local mode) or API keys (hybrid); surfaces unresolved MAJOR/CRITICAL log entries for current project. |
+| `agentsmith check` | Checks Phoenix; Ollama (local mode) or API keys (hybrid); surfaces unresolved MAJOR/CRITICAL log entries for current project. |
 
 ### Dashboard
 
 | Command | Action |
 |---|---|
-| `ai-dashboard-start` | Starts Phoenix on `$AGENT_PHOENIX_PORT`. Sets `OTEL_EXPORTER_OTLP_ENDPOINT`. |
-| `ai-dashboard-stop` | Stops Phoenix. Unsets OTel env vars. |
+| `agentsmith dashboard start` | Starts the standing Docker stack, else a standalone Phoenix (`uvx --from arize-phoenix phoenix serve`) on `$AGENT_PHOENIX_PORT`. Writes `state/phoenix-endpoint`, which `runtime/otlp.py` reads after the environment. |
+| `agentsmith dashboard stop` | Stops it and removes `state/phoenix-endpoint`. |
 
 ### Evaluation & Self-Improvement
 
 | Command | Action |
 |---|---|
-| `ai-test-evals` | Syncs Phoenix annotations (`sync-ui-feedback.py`), then runs scorecard (`run-evals.py`). Starts dashboard if offline. |
-| `ai-stack-promote <id> <query> <output>` | Calls `promote-learning.py`. Re-runs evals to validate fix. |
+| `agentsmith evals` | Syncs Phoenix annotations (`sync-ui-feedback.py`), then runs scorecard (`run-evals.py`). Starts dashboard if offline. |
+| `agentsmith promote <id> <query> <output>` | Calls `promote-learning.py`. Re-runs evals to validate fix. |
 
 ### Tenant Lifecycle
 
 | Command | Action |
 |---|---|
-| `ai-tenant-init <id> [--stack STACK]` | Scaffolds tenant repo with `.agenticframework/tenant.yaml`, per-env CI/CD workflows, and metadata. |
-| `ai-tenant-promote <id> --from <env> --to <env>` | Promotes deployment within **same tenant repo** (e.g., staging → production). No cross-tenant promotion. |
+| `agentsmith tenant init <id> [--stack STACK]` | Scaffolds tenant repo with `.agenticframework/tenant.yaml`, per-env CI/CD workflows, and metadata. |
+| `agentsmith tenant promote <id> --from <env> --to <env>` | Promotes deployment within **same tenant repo** (e.g., staging → production). No cross-tenant promotion. |
+| `agentsmith tenant onprem-scaffold` | Copies the on-prem deploy template into `deploy/onprem/`. |
 
 ### Maintenance
 
 | Command | Action |
 |---|---|
-| `ai-stack-upgrade [--to VERSION]` | Upgrades vendored framework scripts in current repo to pinned version. |
-| `ai-stack-scrub [dir]` | Interactive confirmation. Removes framework runtime artefacts from target directory. |
-| `ai-stack-uninstall` | Enterprise-safe removal of machine-level install. Restores `git templateDir` to previous value. |
+| `agentsmith upgrade [--to VERSION]` | Upgrades vendored framework scripts in current repo; `--to` defaults to the installed release. |
+| `agentsmith scrub [dir] [--yes]` | Lists, confirms, then removes generated IDE-rule artefacts under the target directory. |
+| `agentsmith uninstall [--yes] [--purge]` | Removal of the machine-level install. Restores `git templateDir` to its previous value, removes the command link and any legacy profile block; `--purge` removes `~/.agent-framework`. |
+| `agentsmith hooks bypass-check` | Internal — the hooks' call into the org bypass policy. |
 
 ---
 
@@ -634,7 +649,7 @@ All commands are Zsh/Bash functions in `~/.zshrc`.
 
 | Mode | Audience | Hook behaviour | Bypass policy |
 |---|---|---|---|
-| `developer` (default) | Solo / small team | Opt-in per repo via `.agenticframework/enabled`; global `init.templateDir` | `DISABLE_AI_STACK=true` or `ai-stack-off` |
+| `developer` (default) | Solo / small team | Opt-in per repo via `.agenticframework/enabled`; global `init.templateDir` | `DISABLE_AI_STACK=true` or `agentsmith mode off` |
 | `enterprise` | Org-managed | IT-deployed signed bundle; hooks pushed via MDM; no global `init.templateDir` mutation | IT break-glass only; bypass is audited |
 
 ```bash
@@ -647,7 +662,7 @@ All commands are Zsh/Bash functions in `~/.zshrc`.
 | Requirement | Version |
 |---|---|
 | macOS or Linux | macOS 12+ / Ubuntu 22+ |
-| Python | 3.11+ |
+| uv (or Python 3.11+ with venv) | uv fetches the Python in `.python-version` itself |
 | Git | 2.x |
 | Zsh or Bash | Default on macOS / any Linux |
 | Ollama (local mode only) | Latest |
@@ -661,14 +676,13 @@ All commands are Zsh/Bash functions in `~/.zshrc`.
 chmod +x install-ai-stack.sh
 ./install-ai-stack.sh
 
-# 2. Reload shell and activate
-source ~/.zshrc
-ai-mode-local    # 100% offline via Ollama
+# 2. Activate (nothing to reload — agentsmith is at ~/.local/bin)
+agentsmith mode local    # 100% offline via Ollama
 # OR
-ai-mode-hybrid   # Cloud frontier APIs
+agentsmith mode hybrid   # Cloud frontier APIs
 
 # 3. Start the trace dashboard
-ai-dashboard-start
+agentsmith dashboard start
 
 # 4. Apply to a project
 cd /path/to/your/project
@@ -695,12 +709,12 @@ For internal registries, the installer supports fetching from a private artifact
 
 | Variable | Description | Example |
 |---|---|---|
-| `AI_STACK_MODE` | `local` / `hybrid` / `disabled` | `local` |
-| `DISABLE_AI_STACK` | `true` / `false` — mutes hooks (developer mode only) | `false` |
-| `OS_LLM_BASE_URL` | Open-source LLM endpoint | `http://localhost:11434/v1` |
+| `AI_STACK_MODE` | `local` / `hybrid` / `disabled` — overrides the machine's `state/mode` for processes that inherit it | `local` |
+| `DISABLE_AI_STACK` | `true` / `false` — skips hooks for one command; an org policy, when installed, decides instead | `false` |
+| `AGENTSMITH_STATE_DIR` | Machine state directory (mode, install mode, dashboard endpoint) instead of `~/.agent-framework/state` | *(unset)* |
 | `OPENAI_API_KEY` | Required for hybrid mode | `sk-...` |
 | `ANTHROPIC_API_KEY` | Required for hybrid mode | `sk-ant-...` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Set by `ai-dashboard-start` | `http://localhost:6006/v1/traces` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP base; when unset (and `AGENT_PHOENIX_ENDPOINT` too), Python falls back to the endpoint `agentsmith dashboard start` recorded | `http://localhost:6006/v1/traces` |
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Traces-only override, read by the Ops Portal **and by `runtime/otlp.py`**. Used as-is; takes precedence over the variable above | *(unset)* |
 | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Metrics-only override, same precedence. Without it the metrics endpoint is derived from the base URL above — and a base that already names `/v1/traces`, which this repo's own convention sets, has that path replaced rather than appended to | *(unset)* |
 | `AGENT_JUDGE_MODEL` | Names a judge ONLY where no `judge` role is declared | *(unset)* — the `judge` role in `models.yaml` wins and an ignored value is logged (framework default `falcon3:3b`); `scripts/_shared.py:DEFAULT_JUDGE_MODEL` is the last-resort fallback when `runtime/` isn't importable |
@@ -877,7 +891,7 @@ MAJOR/CRITICAL entry in .agent-history.log + Ops Portal queue
     │
     ▼
 Human reviews in Phoenix UI or runs:
-  ai-stack-promote <id> '<query>' '<correct-output>'
+  agentsmith promote <id> '<query>' '<correct-output>'
     │
     ▼
 promote-learning.py:
@@ -886,7 +900,7 @@ promote-learning.py:
   3. Marks log entry hitl_resolved: true (writes hitl_resolved_by + hitl_resolved_at)
     │
     ▼
-ai-test-evals re-runs to validate fix
+agentsmith evals re-runs to validate fix
 ```
 
 ### CD Golden Dataset Commits
@@ -1015,9 +1029,9 @@ Workers **never terminate** on a budget breach. Temporal activities retry with d
 |---|---|---|
 | Per commit | Log rotation (INFO/MINOR FIFO at 10,000 entries) | Automatic — post-commit hook |
 | Monthly | Knowledge Graph pruning (orphan CodebaseFile nodes) | `python3 scripts/local_knowledge_graph.py --stats` then prune via API |
-| As needed | Upgrade local GPU models | `ollama pull $(ai-stack-required-models)` — reads the merged registry, never a hardcoded list |
-| On framework version bump | Upgrade vendored scripts in tenant repos | `ai-stack-upgrade --to <version>` |
-| On rule changes | Sync team via installer | `./install-ai-stack.sh && source ~/.zshrc` |
+| As needed | Upgrade local GPU models | `ollama pull $(agentsmith models --ollama)` — reads the merged registry, never a hardcoded list |
+| On framework version bump | Upgrade vendored scripts in tenant repos | `agentsmith upgrade --to <version>` |
+| On rule changes | Sync team via installer | `./install-ai-stack.sh` |
 
 ---
 
@@ -1286,7 +1300,8 @@ AgentSmith/
 │   ├── security_paths.py        # security_artefact_path() — one lookup for the two above
 │   ├── tenancy.py               # resolve_tenant_id() + the identity contextvars (pillar 3)
 │   ├── config.py                # load_env_file() + tenant.yaml resolution, one precedence
-│   ├── cli.py                   # `agentsmith` console script — tenant init, doctor, shellenv
+│   ├── cli.py                   # `agentsmith` console script — every operator command
+│   ├── machine/                 # the commands' logic + ~/.agent-framework/state (mode, policy, upgrade)
 │   ├── metrics.py               # OTel counters/histograms — rates spans cannot answer
 │   ├── otlp.py                  # one endpoint resolver for both signals, four callers
 │   ├── version.py               # which AgentSmith is running — onto the Resource and the ingest
@@ -1447,7 +1462,7 @@ Each tenant repo receives seven workflow files:
 
 All three reusable eval workflows must exist in the tenant repo — a missing
 `workflow_call` callee makes GitHub reject the calling `ci-<stack>.yml` as
-an invalid workflow. `post-checkout` and `ai-tenant-init` copy them
+an invalid workflow. `post-checkout` and `agentsmith tenant init` copy them
 alongside the callers, plus the composite actions the CD workflows
 reference as `uses: ./.github/actions/<name>` (`gcp-auth`,
 `build-push-ghcr`, `deploy-placeholder`, `rollback-notify`), and
@@ -1602,7 +1617,7 @@ The CD workflow opens a pull request for fixture changes — it does not push di
 
 ### Ops Portal Sync
 
-MAJOR/CRITICAL entries are synced to the Ops Portal unresolved queue in addition to the local `ai-stack-check` summary. Teams operating independent tenant repos cannot rely on each developer running `ai-stack-check` locally — centralized visibility is required.
+MAJOR/CRITICAL entries are synced to the Ops Portal unresolved queue in addition to the local `agentsmith check` summary. Teams operating independent tenant repos cannot rely on each developer running `agentsmith check` locally — centralized visibility is required.
 
 ---
 
@@ -1694,7 +1709,7 @@ A **tenant** is a customer application with its own independent repository, agen
 | Dedicated | `dedicated` | Own pool, own infra | Isolated | Own Phoenix project |
 
 `isolation` is validated against this exact two-value enum wherever it's
-accepted — `ai-tenant-init --isolation`, and `POST /api/tenants` in the Ops
+accepted — `agentsmith tenant init --isolation`, and `POST /api/tenants` in the Ops
 Portal (`isolation` is also a DB-level `CHECK` constraint on the `tenants`
 table). An unrecognized value (a typo like `dedicated-typo`) is rejected at
 write time rather than stored verbatim and silently treated as `shared` by
@@ -1720,12 +1735,12 @@ whichever code path branches on `isolation === "dedicated"`.
 | `develop` | staging | `cd-staging.yml` — eval fail gate + smoke |
 | `main` | production | `cd-production.yml` — eval fail gate + smoke + rollback hook |
 
-### `ai-tenant-promote` Semantics
+### `agentsmith tenant promote` Semantics
 
 Promotion is always within the same tenant repo:
 
 ```bash
-ai-tenant-promote acme --from staging --to production
+agentsmith tenant promote acme --from staging --to production
 # 1. Verifies staging eval gate passed
 # 2. Opens PR from develop → main in the tenant repo
 # 3. Requires review approval before merge
@@ -1735,7 +1750,7 @@ ai-tenant-promote acme --from staging --to production
 Cross-tenant promotion does not exist. The guard that enforces this does an
 **exact match** against the `tenant.id` field parsed from
 `.agenticframework/tenant.yaml` — a substring match (e.g. `acme` matching a
-`tenant.yaml` with `id: acme-sandbox`) would let `ai-tenant-promote acme ...`
+`tenant.yaml` with `id: acme-sandbox`) would let `agentsmith tenant promote acme ...`
 run against a similarly-named but different tenant's repo by mistake.
 
 ### GitHub Environments per Repo
@@ -1753,10 +1768,10 @@ Golden dataset and judge criteria changes go through pull request review in the 
 
 ```bash
 # Check current version
-ai-stack-status
+agentsmith status
 
 # Upgrade vendored scripts in current tenant repo
-ai-stack-upgrade --to <version>
+agentsmith upgrade --to <version>
 
 # Applies: copies new script versions to scripts/, commits as:
 # "chore(framework): upgrade AgentSmith to v<version>"
@@ -1938,7 +1953,7 @@ Reference workflows in `runtime/workflows/` demonstrate patterns only. Tenant re
 
 ### On-Premise / Air-Gapped Deployment
 
-`templates/onprem-deploy/` — opt-in via `ai-onprem-deploy-scaffold`, never
+`templates/onprem-deploy/` — opt-in via `agentsmith tenant onprem-scaffold`, never
 auto-written the way the CI/CD workflow templates are (not every tenant
 has an on-prem customer). Stack-agnostic by design, consistent with the
 framework's own position as something that builds "other" applications
@@ -2184,7 +2199,7 @@ framework:
   version: "1.0.0"
 ```
 
-The `ai-stack-upgrade` command upgrades vendored scripts to the pinned version. Tenants upgrade on their own schedule — there is no forced upgrade.
+The `agentsmith upgrade` command upgrades vendored scripts to the pinned version. Tenants upgrade on their own schedule — there is no forced upgrade.
 
 ### Compatibility Matrix
 
@@ -2251,8 +2266,9 @@ prompt leaves the machine and no call can be billed until a profile is
 selected. Degrade chain: `architect → developer → validator → fast → halt`,
 strongest to smallest.
 
-Profile selection: `AGENT_MODEL_PROFILE` (explicit) → `AI_STACK_MODE` (what
-`ai-mode-local` / `ai-mode-hybrid` export) → `default_profile`. Shipped
+Profile selection: `AGENT_MODEL_PROFILE` (explicit) → `AI_STACK_MODE` (the
+environment) → `~/.agent-framework/state/mode` (what `agentsmith mode local` /
+`agentsmith mode hybrid` record) → `default_profile`. Shipped
 profiles are exactly `local` and `hybrid`, matching the two mode commands — a
 profile the mode switch cannot select would be unreachable through the
 documented interface. Catalog entries no profile binds stay available for

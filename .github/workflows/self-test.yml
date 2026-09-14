@@ -2,7 +2,7 @@
 #
 # Tests the FRAMEWORK itself (this repo), not a tenant project. Tenant repos
 # get their own ci-<stack>.yml / cd-staging.yml / cd-production.yml from
-# workflow-templates/ via ai-tenant-init — this workflow is unrelated to those.
+# workflow-templates/ via agentsmith tenant init — this workflow is unrelated to those.
 
 name: "Self-Test"
 

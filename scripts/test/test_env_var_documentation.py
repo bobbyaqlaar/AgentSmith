@@ -27,6 +27,7 @@ in UserManual.md's "Runtime Flags" section.
 from __future__ import annotations
 
 import re
+import sys
 import subprocess
 from pathlib import Path
 
@@ -198,23 +199,31 @@ def test_fail_closed_behaviour_is_stated_not_just_the_variable() -> None:
 
 def test_every_shipped_command_is_in_the_canonical_reference() -> None:
     """UserManual.md §17 is designated the canonical command reference, so a
-    shell function the installer defines but the manual never lists is
-    unreachable by anyone who has not read the installer.
+    command the CLI ships but the manual never lists is unreachable by anyone
+    who has not read the parser.
 
     `ai-stack-required-models` was the cautionary case: it is the correct way
-    to know which Ollama models to pull, `ai-stack-check` uses the same lookup
-    internally, and the manual meanwhile told users to pull three models the
-    framework does not route to.
+    to know which Ollama models to pull, and the manual meanwhile told users to
+    pull three models the framework does not route to. The commands were shell
+    functions then and are `agentsmith` subcommands now; the check reads the
+    parser, which is what a user actually gets.
     """
-    installer = (REPO / "install-ai-stack.sh").read_text(encoding="utf-8")
+    import argparse
+
+    sys.path.insert(0, str(REPO))
+    from runtime.cli import build_parser
+
+    def leaves(parser: argparse.ArgumentParser, path: tuple[str, ...] = ()) -> list[str]:
+        subs = [a for a in parser._actions if isinstance(a, argparse._SubParsersAction)]
+        if not subs:
+            return [" ".join(path)]
+        return [leaf for a in subs for name, child in a.choices.items() for leaf in leaves(child, (*path, name))]
+
+    shipped = {leaf for leaf in leaves(build_parser()) if not leaf.startswith("hooks ")}  # internal, for the hooks
     manual = (REPO / "UserManual.md").read_text(encoding="utf-8")
+    listed = set(re.findall(r"^\| `agentsmith ([a-z][a-z -]*?)(?: [<\[-][^`]*)?`", manual, re.M))
 
-    defined = set(re.findall(r"^function (ai-[a-z-]+)\(\)", installer, re.M))
-    listed = set(re.findall(r"^\| `(ai-[a-z-]+)`", manual, re.M))
-
-    assert defined, "no ai-* functions found — the extraction pattern broke"
-    missing = sorted(defined - listed)
-    assert not missing, (
-        f"commands the installer defines but UserManual.md's tables never list: "
-        f"{missing}"
-    )
+    assert len(shipped) >= 15, f"the parser walk found too few commands: {sorted(shipped)}"
+    # A row may carry the command's positional choice (`agentsmith dashboard start`).
+    missing = sorted(leaf for leaf in shipped if not any(row == leaf or row.startswith(leaf + " ") for row in listed))
+    assert not missing, f"commands the CLI ships but UserManual.md §17 never lists: {missing}"

@@ -15,7 +15,7 @@
 #   github-actions.tar.gz       (.github/actions/ — composite actions the
 #                                ci-*/cd-* templates reference as
 #                                ./.github/actions/<name>; copied into each
-#                                tenant repo by post-checkout/ai-tenant-init)
+#                                tenant repo by post-checkout/agentsmith tenant init)
 #   install-ai-stack.sh         (the bootstrap script ITSELF, plus a .sha256)
 #
 # The installer is an asset because OPERATIONS.md documents fetching it from a
@@ -62,7 +62,7 @@ jobs:
           # The WHOLE templates/ tree, not just agent-rules.yaml.
           # install-ai-stack.sh fetches this same tarball twice — once for
           # agent-rules.yaml and once for templates/onprem-deploy/ — so a
-          # single-file archive left `ai-onprem-deploy-scaffold` permanently
+          # single-file archive left `agentsmith tenant onprem-scaffold` permanently
           # broken on any remote install, with only a warn to show for it.
           # node_modules is a build artifact of the widget template, never
           # shipped.

@@ -61,7 +61,7 @@ def test_valid_template_passes_schema() -> None:
 
 
 def _seed_template(dest_dir: Path) -> Path:
-    """Reproduce what ai-tenant-init / install-ai-stack.sh do (G5): copy the
+    """Reproduce what agentsmith tenant init / install-ai-stack.sh do (G5): copy the
     shipped template into a repo's .agent-rfc/security/ and leave it there."""
     dest_dir.mkdir(parents=True, exist_ok=True)
     src = REPO / "fixtures" / "security" / "templates" / "risk_register.yaml"

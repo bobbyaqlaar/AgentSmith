@@ -5,7 +5,18 @@
 # 3. Appends to .agent-history.log
 # 4. Pushes tags to remote if tracked
 
-if [ "${DISABLE_AI_STACK:-false}" = "true" ]; then exit 0; fi
+# ── Bypass ─────────────────────────────────────────────────────────────────────
+# Requested by DISABLE_AI_STACK=true for one command, or `agentsmith mode off`
+# for the machine. With no enterprise org policy it is granted. With one, the
+# policy decides (runtime/machine/policy.py) and records the attempt; refused —
+# or unable to ask — this hook runs as normal. Identical in all four hooks
+# (scripts/test/test_hook_bypass.py).
+AF_STATE_DIR="${AGENTSMITH_STATE_DIR:-$HOME/.agent-framework/state}"
+if [ "${DISABLE_AI_STACK:-false}" = "true" ] || [ "$(cat "$AF_STATE_DIR/mode" 2>/dev/null)" = "disabled" ]; then
+  [ -f "$HOME/.agent-framework/agenticframework-org.yaml" ] || exit 0
+  "$HOME/.agent-framework/.venv/bin/agentsmith" hooks bypass-check && exit 0
+  echo "AgentSmith: hook bypass refused by the org policy — this hook runs as normal." >&2
+fi
 if [ "${SEMVER_LOOP_GUARD:-false}" = "true" ]; then exit 0; fi
 export SEMVER_LOOP_GUARD="true"
 

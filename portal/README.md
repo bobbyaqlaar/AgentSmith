@@ -43,8 +43,8 @@ machine or a shared team server.
 
 In production, this runs as the `portal` service in the repo-root
 `docker-compose.yml` (built from `portal/Dockerfile`), not via `npm run
-dev` — see `OPERATIONS.md` Part B/E and `install-ai-stack.sh`'s
-`ai-dashboard-start`.
+dev` — see `OPERATIONS.md` Part B/E and `agentsmith dashboard start`
+(`runtime/machine/ops.py`).
 
 ## Pages
 

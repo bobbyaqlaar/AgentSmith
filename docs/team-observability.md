@@ -9,7 +9,7 @@ with TLS termination, reverse proxy, and branch protection.
 
 ```bash
 # Start Phoenix locally (no Docker required)
-ai-dashboard-start
+agentsmith dashboard start
 
 # Or with a persistent PostgreSQL backend
 docker compose up -d
@@ -94,7 +94,7 @@ Reload and verify:
 
 ```bash
 source ~/.zshrc
-ai-stack-check
+agentsmith check
 ```
 
 ### 2.3 Configure CI

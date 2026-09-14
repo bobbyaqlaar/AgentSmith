@@ -319,7 +319,7 @@ template ship with `strict: true` (P12 complete).
 
 ### Per-app onboarding checklist
 
-1. Copy templates from `fixtures/security/templates/` (via `ai-tenant-init`) into `.agent-rfc/security/`:
+1. Copy templates from `fixtures/security/templates/` (via `agentsmith tenant init`) into `.agent-rfc/security/`:
    - `risk_register.yaml` — required in strict mode (`SEC-RISK-001`; schema: `scripts/security/schemas/risk_register.schema.json`)
    - `nist_profile.yaml` — optional NIST AI RMF profile
    - `agency_manifest.yaml` — high-impact actions → `needs_hitl`

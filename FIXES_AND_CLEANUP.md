@@ -194,8 +194,23 @@ and `Product_Archive.md`. Each was checked still open on 2026-09-14.
   clashes; the upgrade path refreshes vendored files by name. Unverified
   against a real clash. **Trigger:** a tenant reports a lost script, or the
   next change to `ai-stack-upgrade`.
-- **`install-ai-stack.sh --force` adds one blank line to `~/.zshrc` per run.**
-  Cosmetic. **Trigger:** the next change to the managed block.
+- **`ai-*` wrappers ship for one more release.** `templates/shell/ai-compat.sh`
+  (copied to `~/.agent-framework/shell/`, never sourced by the installer) maps
+  the old shell-function names onto `agentsmith`. **Trigger:** cutting the next
+  minor release — delete it, its installer copy step and its test.
+- **Existing tenant clones keep the hook copies they were created with.** git
+  copies `~/.git_templates/hooks` into `.git/hooks` at `git init`/`clone`, so a
+  clone made before 2026-09-14 still exits on `DISABLE_AI_STACK=true` without
+  asking the org policy, and runs its Python with bare `python3`. No policy file
+  is deployed on any machine today, so nothing is bypassable that was not
+  already. **Trigger:** the first org policy deployed to a machine — refresh
+  each clone's hooks (`git init` in the clone re-copies the templates).
+- **A non-checkout install gets the CLI of the release tag, not `main`.**
+  `install-ai-stack.sh` outside a checkout installs
+  `agentsmith-runtime @ git+…@v$FRAMEWORK_VERSION`; v1.3.0 predates
+  `runtime/machine/`, so that `agentsmith` has no `mode`, `check`, `dashboard`
+  or `upgrade`. Moot while every release download 404s (entry above).
+  **Trigger:** tagging the next release, which carries the commands.
 - **The TS template supports npm and pnpm only; the Python install, pip and
   uv only.** Yarn/bun fail by name; Poetry/Pipenv get a warning and no
   dependencies. **Trigger:** a tenant on one of them — add a scratch app for it

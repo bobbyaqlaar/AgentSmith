@@ -284,7 +284,7 @@ URL — `scripts/local_agent_stack.py`, `scripts/multi_agent_system.py`, KYC's `
 `portal/lib/tracing.ts` — and only the last was correct. Every Python copy ended
 `f"{endpoint.rstrip('/')}/v1/traces"`; the portal's detects a base that already names the path,
 because this repo's own convention (OPERATIONS.md, `docker-compose.yml`, SPECS.md §699,
-`ai-dashboard-start`) puts a full `…/v1/traces` URL in the variable the OTLP spec defines as a
+the then `ai-dashboard-start` shell function) puts a full `…/v1/traces` URL in the variable the OTLP spec defines as a
 base. `local_agent_stack.py` falls back to exactly that variable and appended anyway.
 
 The guard was written once, in TypeScript, and the Python sibling reading the same variable in

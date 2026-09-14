@@ -3,14 +3,16 @@
 # IT authors this file and includes it alongside the signed hook bundle when
 # packaging a release (see scripts/package-hook-bundle.sh). MDM deploys it
 # to ~/.agent-framework/agenticframework-org.yaml on every managed machine.
-# ai-stack-off reads it from there to enforce bypass_policy.
+# The git hooks and `agentsmith mode off` read it from there to enforce
+# bypass_policy (runtime/machine/policy.py).
 
 hooks:
   version: "1.0.0"
-  # disabled    — ai-stack-off always refuses; only IT can disable hooks
+  # disabled    — every bypass is refused (DISABLE_AI_STACK=true, or
+  #               `agentsmith mode off`); only IT can disable hooks
   #               (e.g. temporarily relinking init.templateDir by hand).
-  # break-glass — ai-stack-off allows disabling hooks ONLY with a token that
-  #               matches AI_BREAK_GLASS_TOKEN, issued by IT per incident.
+  # break-glass — a bypass is allowed ONLY with a valid AI_BREAK_GLASS_TOKEN
+  #               signed with BREAK_GLASS_HMAC_KEY, issued by IT per incident.
   #               Every use (granted or denied) is written to the
   #               enterprise audit log (see portal/lib/auditLog.ts, §30).
   bypass_policy: disabled
@@ -25,8 +27,8 @@ sso:
   issuer: "https://corp.okta.com"
   client_id: "REPLACE_ME"
 
-# Best-effort audit log write target (see install-ai-stack.sh's
-# _ai_audit_log_event and portal/app/api/audit/append/route.ts). Optional —
+# Best-effort audit log write target (see runtime/machine/policy.py's
+# audit_log_event and portal/app/api/audit/append/route.ts). Optional —
 # if unset, hook_bypass events are still enforced locally, just not logged
 # centrally.
 audit:

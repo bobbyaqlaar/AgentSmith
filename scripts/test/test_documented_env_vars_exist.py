@@ -56,6 +56,11 @@ ALLOWED = {
     # identifier a changelog legitimately names; that citation is not a
     # documentation claim that the variable works.
     "AI_STACK_SLACK_WEBHOOK",
+    # Exported by the installer's shell-function block and read by nothing;
+    # removed with it on 2026-09-14. The design note and CHANGELOG name them as
+    # what was removed, which is not a claim that they work.
+    "OS_LLM_BASE_URL",
+    "OS_LLM_API_KEY",
 }
 
 # Placeholders a reader is meant to substitute (YOUR_GCP_PROJECT_ID, ...).

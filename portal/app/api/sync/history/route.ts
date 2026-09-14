@@ -1,7 +1,7 @@
 // POST /api/sync/history — ingestion endpoint for .agent-history.log entries.
 //
 // Called from cd-staging.yml / cd-production.yml (or manually via
-// ai-stack-check) once per tenant CD run, pushing any MAJOR/CRITICAL entries
+// agentsmith check) once per tenant CD run, pushing any MAJOR/CRITICAL entries
 // since the last sync. Authenticates via Authorization: Bearer
 // $OPS_PORTAL_SYNC_TOKEN — a single shared secret stored as a GitHub
 // Environment secret in each tenant repo (SPECS.md §17, §19, §26).

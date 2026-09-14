@@ -171,10 +171,11 @@ def test_vendored_runtime_tests_are_exactly_what_the_security_harness_runs() -> 
     expected = bound | {"conftest.py"}
 
     hook = re.search(r"^TENANT_RUNTIME_TESTS=\(([^)]*)\)", HOOK.read_text(encoding="utf-8"), re.M)
-    installer = re.search(r'local tenant_runtime_tests="([^"]*)"', INSTALLER.read_text(encoding="utf-8"))
-    assert hook and installer
+    upgrade_src = (REPO / "runtime" / "machine" / "upgrade.py").read_text(encoding="utf-8")
+    upgrade = re.search(r"^TENANT_RUNTIME_TESTS = \((.*?)\)", upgrade_src, re.S | re.M)
+    assert hook and upgrade
     assert set(hook.group(1).split()) == expected, "hooks/post-checkout TENANT_RUNTIME_TESTS"
-    assert set(installer.group(1).split()) == expected, "ai-stack-upgrade tenant_runtime_tests"
+    assert set(re.findall(r'"([\w.]+)"', upgrade.group(1))) == expected, "agentsmith upgrade TENANT_RUNTIME_TESTS"
 
 
 def test_python_template_pins_ruff_to_the_frameworks_own_version() -> None:
