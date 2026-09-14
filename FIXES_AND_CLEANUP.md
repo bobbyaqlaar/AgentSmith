@@ -154,6 +154,17 @@ and `Product_Archive.md`. Each was checked still open on 2026-09-14.
   Sentinel does not use this action). **Trigger:** the next tenant onboarded
   from an older install, or the next fix to any composite action — at that
   point `ai-stack-upgrade` should refresh actions.
+- **Every release-download install path is broken while AgentSmith is private.**
+  The documented `curl …/releases/latest/download/install-ai-stack.sh | bash`
+  returns 404 to everyone — curl sends no GitHub login — and exits 0 having
+  installed nothing; the installer's own fallbacks (`scripts.tar.gz`,
+  `workflow-templates.tar.gz`, `github-actions.tar.gz`, `templates.tar.gz`,
+  `hooks.tar.gz`) fail the same way for anyone running it outside a checkout.
+  README, UserManual and OPERATIONS now say to install from a checkout
+  (verified 2026-09-14: anonymous release page HTTP 404). **Trigger:** the repo
+  goes public — then remove those notes — or the first collaborator who is not
+  on this machine needs to install, at which point `gh release download` (which
+  carries the login) should replace the anonymous URLs.
 - **KYC Sentinel's CI tests framework HEAD while it deploys v1.3.0.** Its
   `ci.yml` checks out `bobbyaqlaar/AgentSmith` with no `ref`, but its
   requirements pin `agentsmith-runtime @ …@v1.3.0`. **Trigger:** the next

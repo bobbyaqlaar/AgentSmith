@@ -55,6 +55,11 @@ docker --version
 ### Install the Framework
 
 ```bash
+# While this repository is private (until it is product-ready) the release URL
+# below returns 404 — even to people with access, because curl sends no GitHub
+# login — and `curl | bash` on a 404 exits 0 having installed nothing. Install
+# from a checkout instead, which needs no release download:
+#   gh repo clone bobbyaqlaar/AgentSmith && ./AgentSmith/install-ai-stack.sh
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 ```
 
@@ -775,11 +780,16 @@ ai-stack-scrub /path/to/project
 ### As Needed: Upgrade the Framework
 
 ```bash
+# While the repo is private: `./install-ai-stack.sh --force` from an updated checkout
+# instead (see Install the Framework).
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 source ~/.zshrc
 
-# Re-apply to existing projects
-cd /path/to/project && git init
+# Re-apply to an opted-in project: plain `git checkout` re-fires the hook, which
+# writes only what is missing. `git init` does not run post-checkout.
+# To pull newer vendored scripts/ and runtime/ into it (needs
+# .agenticframework/tenant.yaml, which `ai-tenant-init` writes):
+cd /path/to/project && ai-stack-upgrade
 ```
 
 ---
@@ -897,7 +907,7 @@ carrying their own copies.
 | Command | Arguments | Description |
 |---|---|---|
 | `ai-stack-scrub` | `[directory]` | Interactive removal of runtime artefacts from a project directory — lists every exact path it will delete before prompting for confirmation. |
-| `ai-stack-upgrade` | `[--to VERSION]` | Copies vendored scripts from `~/.agent-framework/scripts` into the current tenant repo, bumps `.agenticframework/tenant.yaml`'s `framework.version`, commits the change. Fails loudly (and stops) if the commit itself fails, rather than reporting "Upgrade complete" regardless. |
+| `ai-stack-upgrade` | `[--to VERSION]` | Refreshes the current tenant repo's vendored `scripts/`, `runtime/` (with only the five harness-delegated `runtime/test` suites) and `fixtures/` from `~/.agent-framework`, regenerates their `ruff.toml` excludes, bumps `.agenticframework/tenant.yaml`'s `framework.version`, and commits. Needs `tenant.yaml`. Leaves a foreign `runtime/` alone and does nothing in a tenant that installs `agentsmith-runtime` as a package. Does **not** refresh workflows or composite actions. Fails loudly (and stops) if the commit itself fails, rather than reporting "Upgrade complete" regardless. |
 | `ai-onprem-deploy-scaffold` | `[target-dir]` | Copy the on-prem deploy template (Docker Compose or Helm, `templates/onprem-deploy/`) into a repo for in-border / air-gapped clusters. Full walkthrough: OPERATIONS.md. |
 | `ai-stack-uninstall` | — | Enterprise-safe machine-level removal: restores `git init.templateDir` to its pre-install value, removes the managed block from your shell rc, optionally removes `~/.agent-framework` and `~/.git_templates`. Prompts for confirmation at each destructive step. |
 

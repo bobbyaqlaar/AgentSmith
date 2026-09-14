@@ -120,6 +120,11 @@ deliberately *not* built and why) is **SPECS.md §4a**.
 
 ```bash
 # 1. Install (once per machine) — latest published release
+# While this repository is private (until it is product-ready) the release URL
+# below returns 404 — even to people with access, because curl sends no GitHub
+# login — and `curl | bash` on a 404 exits 0 having installed nothing. Install
+# from a checkout instead, which needs no release download:
+#   gh repo clone bobbyaqlaar/AgentSmith && ./AgentSmith/install-ai-stack.sh
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 source ~/.zshrc
 
@@ -128,9 +133,13 @@ source ~/.zshrc
 ai-mode-local          # or ai-mode-hybrid (cloud APIs)
 ai-dashboard-start     # → http://localhost:6006
 
-# 3. Apply to a project
+# 3. Apply to a project — opt in, then check out. `git init` alone provisions
+#    nothing: git does not run post-checkout on init, and needs a commit first.
 mkdir my-project && cd my-project && git init -b main
-# → hooks fire, IDE rules + CI workflows written, Knowledge Graph seeded
+git commit --allow-empty -m "chore: init"
+mkdir -p .agenticframework && touch .agenticframework/enabled
+git checkout
+# → IDE rules, CI workflows, vendored scripts/ + runtime/, Knowledge Graph
 ```
 
 Full setup (env vars, `.env` files, GitHub secrets, prerequisites):

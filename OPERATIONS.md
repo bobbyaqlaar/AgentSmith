@@ -333,6 +333,11 @@ nothing about origin.
 # Install (§0) — vendors scripts/hooks/templates to ~/.agent-framework,
 # sets git's global init.templateDir (developer mode; use --mode enterprise
 # to skip that — see Appendix A).
+# While this repository is private (until it is product-ready) the release URL
+# below returns 404 — even to people with access, because curl sends no GitHub
+# login — and `curl | bash` on a 404 exits 0 having installed nothing. Install
+# from a checkout instead, which needs no release download:
+#   gh repo clone bobbyaqlaar/AgentSmith && ./AgentSmith/install-ai-stack.sh
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 source ~/.zshrc
 
