@@ -1,6 +1,6 @@
 # AgentSmith — Remaining To-Do Items
 
-**Last reviewed:** 2026-07-29 (post-1.1.0 release + cross-repo review)
+**Last reviewed:** 2026-09-14 (onboarding audit; current-state section re-verified)
 
 > **Scope:** this document owns only *not-yet-done* work: the active item and
 > confirmed future gaps with their trigger conditions. Completed build history
@@ -11,22 +11,26 @@
 > spent a week claiming the testbed deploy had not started, six days after it
 > had.
 
-## Current state (2026-07-29)
+## Current state (2026-09-14)
 
-**v1.1.1 is released.** v1.1.0 was the first actually-published version (1.0.0
-was documented but never tagged, so no tenant could pin); v1.1.1 fixed the
-install path itself — the bootstrap script and its `.sha256` had never been
-release assets, so the documented `curl … | bash` 404'd at every version, and
-silently, because that pipeline exits 0 on a 404.
+**v1.3.0 is the latest release** (2026-08-27); `main` carries the onboarding
+audit's fixes under `CHANGELOG.md` [Unreleased], not yet released.
+**AgentSmith, KYC Sentinel and AqlaarTeleologyStudio are private** since
+2026-09-13, until AgentSmith is product-ready — see the install item below.
 
-Both suites are green: `python3 -m pytest -q` here and in `../KYC_Sentinel`.
-No count is quoted — one was, and went stale three times in a single working
-session. KYC Sentinel's strict security harness and adversarial eval gate are
-green in CI; the three judge-backed gates skip until the judge has credit.
+Green on GitHub as of 2026-09-14: AgentSmith Self-Test, and all five scratch
+tenants' own CI (`docs/scratch-tenants.md`). KYC Sentinel's CI is green
+against the private framework (last run 2026-09-13) — strict harness 24 pass
+plus the declared `SEC-AUDIT-002` gap — and its three judged gates have
+graded live on the Gemini judge (golden 1.000, fairness 1.000, hallucination
+0.857; 2026-09-01 to 09-07). No test count is quoted — one was, and went stale
+three times in a single working session.
 
 The **KYC Sentinel testbed tenant** (`../KYC_Sentinel`) is built, pushed,
-CI-green and deployed as a GCP staging smoke job — full history in
-`Product_Archive.md` "T1–T4". Everything code-side is done.
+CI-green and was deployed as a GCP staging smoke job on 2026-08-12 — full
+history in `Product_Archive.md` "T1–T4". Promotion has been suspended since
+then; its `cd-staging.yml` was rewritten for the private framework on
+2026-09-13 and has not run since.
 
 **The one open build item is running it against real backends** — see below.
 
