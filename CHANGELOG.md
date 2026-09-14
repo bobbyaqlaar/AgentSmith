@@ -83,6 +83,42 @@ by CI (`workflow_run`), Go and TS CI now run the strict security harness, and
 interface change** below, as this file's header requires. Existing tenants keep
 the workflow files they have: the hook never overwrites one.
 
+### The framework runs in a Python environment it owns — `~/.agent-framework/.venv`
+
+`install-ai-stack.sh` used to `pip install` its own package list into whatever
+`python3` was first on PATH. On Homebrew's externally-managed Python that only
+worked through `--break-system-packages`, a `brew upgrade python` dropped every
+package, and the list had drifted from `requirements.txt` (it still installed
+`prophet`, missed `jsonschema`, and left `arize-phoenix` uncapped).
+
+- **One catalog, one lock.** `requirements.txt` is the only dependency list;
+  new `requirements.lock` is compiled from it by uv (pinned, hashed,
+  universal). Self-Test installs the lock, so CI and machines resolve the same
+  versions. New `.python-version` (3.11) is read by uv and by every Self-Test
+  `setup-python` step. Releases ship `requirements.lock` as an asset.
+- **The environment.** The installer builds `~/.agent-framework/.venv` with
+  `uv venv` + `uv pip sync` at the lock's Python version (uv fetches that
+  interpreter if needed), or `python3 -m venv` + hashed `pip install` when uv
+  is absent. It never writes to, or removes from, the system interpreter.
+  **Prerequisite change:** uv (`brew install uv`) is now the recommended
+  prerequisite; Python 3.11+ with venv is the fallback.
+- **Hook interface change:** `hooks/post-commit` and `hooks/post-checkout` run
+  `map_codebase.py` and `generate-ide-config.py` with
+  `~/.agent-framework/.venv/bin/python`, falling back to `python3` when that
+  environment does not exist. A tenant clone keeps the hook copy it was
+  created with until it is re-initialised.
+- **Fixed:** piped (`curl … | bash`), the installer took the current directory
+  for its checkout, so run from inside a tenant repo it copied that tenant's
+  `scripts/` over the framework's. A checkout is now recognised only by its own
+  `install-ai-stack.sh` and `hooks/post-checkout`.
+- **Removed from `requirements.txt`:** `arize-phoenix`,
+  `openinference-instrumentation-{openai,anthropic,langchain}` and
+  `langchain-community` — nothing imports them.
+- **Fixed:** `ai-dashboard-start`'s no-Docker fallback ran
+  `python3 -m phoenix.server.main launch`, a subcommand current Phoenix does not
+  have; it now runs `uvx --from arize-phoenix phoenix serve` in its own
+  isolated environment.
+
 ### Process gates configured per repository — rolled out to AqlaarTeleologyStudio and KYC Sentinel
 
 The gates' catalog of gated paths was AgentSmith's own layout, hard-coded, so a

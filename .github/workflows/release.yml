@@ -69,6 +69,9 @@ jobs:
           tar --exclude='node_modules' --exclude='__pycache__' \
               -czf dist/templates.tar.gz -C templates .
           tar -czf dist/github-actions.tar.gz -C .github/actions .
+          # The framework environment's pinned, hashed dependencies —
+          # install-ai-stack.sh builds ~/.agent-framework/.venv from it.
+          cp requirements.lock dist/requirements.lock
           # In-App Widget: no cdn.agenticframework.io exists (Product_Archive.md
           # 5.11) — ship widget.js as a release asset so tenants can self-host it
           # (e.g. <script src="/static/widget.js">) instead of pointing at a

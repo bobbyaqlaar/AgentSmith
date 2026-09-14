@@ -32,6 +32,14 @@ fi
 FRAMEWORK_DIR="$HOME/.agent-framework"
 SCRIPTS_DIR="$FRAMEWORK_DIR/scripts"
 
+# The framework's own Python environment (install-ai-stack.sh Step 3): the
+# scripts below need networkx/pyyaml, and a hook inherits whatever python3 the
+# calling process has — a GUI git client's PATH is not the terminal's. python3
+# only when the environment is absent (a machine installed before it existed).
+# Same resolution in post-commit and post-checkout (test_framework_python_env.py).
+AF_PYTHON="$HOME/.agent-framework/.venv/bin/python"
+[ -x "$AF_PYTHON" ] || AF_PYTHON="python3"
+
 # This hook runs Python out of the scripts/ it has just vendored
 # (generate-ide-config.py, map_codebase.py), and Python writes
 # scripts/__pycache__/*.pyc beside them. A tenant whose .gitignore does not
@@ -343,7 +351,7 @@ GEN_SCRIPT="$REPO_ROOT/scripts/generate-ide-config.py"
 [ ! -f "$GEN_SCRIPT" ] && GEN_SCRIPT="$SCRIPTS_DIR/generate-ide-config.py"
 
 if [ -f "$RULES_FILE" ] && [ -f "$GEN_SCRIPT" ]; then
-  python3 "$GEN_SCRIPT" \
+  "$AF_PYTHON" "$GEN_SCRIPT" \
     --repo-root "$REPO_ROOT" \
     --rules-file "$RULES_FILE" \
     --stack "$RULES_STACK_KEY" \
@@ -444,7 +452,7 @@ if [ "${AGENT_KG_DEFER:-0}" != "1" ]; then
   MAP_SCRIPT="$REPO_ROOT/scripts/map_codebase.py"
   [ ! -f "$MAP_SCRIPT" ] && MAP_SCRIPT="$SCRIPTS_DIR/map_codebase.py"
   if [ -f "$MAP_SCRIPT" ]; then
-    python3 "$MAP_SCRIPT" 2>/dev/null && echo "✅ Knowledge Graph seeded" || true
+    "$AF_PYTHON" "$MAP_SCRIPT" 2>/dev/null && echo "✅ Knowledge Graph seeded" || true
   fi
 fi
 

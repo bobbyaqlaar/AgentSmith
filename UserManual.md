@@ -39,8 +39,9 @@
 Install these before running the framework installer:
 
 ```bash
-# Python 3.11+
-python3 --version
+# uv — builds the framework's Python environment, fetching the pinned
+# interpreter itself (without it: Python 3.11+ with venv)
+uv --version            # brew install uv
 
 # Git 2.x
 git --version
@@ -66,7 +67,7 @@ curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/in
 The installer:
 - Writes four git hook templates to `~/.git_templates/hooks/`
 - Sets `git config --global init.templateDir`
-- Installs all Python dependencies to your active Python environment
+- Builds the framework's own Python environment, `~/.agent-framework/.venv`, from `requirements.lock` (pinned and hashed — the same file CI installs) at the Python version in `.python-version`. Nothing is installed into your system Python; the git hooks run the framework's scripts with this environment
 - Appends all `ai-*` shell functions to `~/.zshrc`
 - Creates `~/.agent-framework/` for shared configuration and baseline fixtures
 

@@ -60,7 +60,7 @@ Commands that affect the shared platform (portal, Postgres, Phoenix) run from th
 
 | Tool | Needed for | Check |
 |---|---|---|
-| Python 3.11+ | Everything | `python3 --version` |
+| uv (recommended), or Python 3.11+ | The framework's own environment, `~/.agent-framework/.venv` — built by `install-ai-stack.sh` from `requirements.lock` at the version in `.python-version`; uv fetches that interpreter itself, so Homebrew's Python is never used. Without uv, `python3 -m venv` is the fallback | `uv --version` (`brew install uv`) |
 | Git 2.x | Everything | `git --version` |
 | Docker 20+ | Team Phoenix, Ops Portal Postgres, dedicated worker pool testing | `docker --version` |
 | Node.js 20+ | Ops Portal, In-App Widget | `node --version` |
@@ -75,7 +75,7 @@ Commands that affect the shared platform (portal, Postgres, Phoenix) run from th
 > git config --global init.defaultBranch main
 > ```
 
-Production runtime extras — run from the **AgentSmith root** (macOS system Python is externally managed; use a venv):
+Production runtime extras for working in the checkout itself — run from the **AgentSmith root** (macOS system Python is externally managed; use a venv). This is separate from `~/.agent-framework/.venv`, which the installer builds and the git hooks use:
 
 ```bash
 # Run from: AgentSmith root (e.g. $AGENTSMITH_DIR/)

@@ -24,6 +24,14 @@ if [ ! -f "$REPO_ROOT/.agenticframework/enabled" ] && [ ! -f "$REPO_ROOT/.agenti
   exit 0
 fi
 
+# The framework's own Python environment (install-ai-stack.sh Step 3): the
+# scripts below need networkx/pyyaml, and a hook inherits whatever python3 the
+# calling process has — a GUI git client's PATH is not the terminal's. python3
+# only when the environment is absent (a machine installed before it existed).
+# Same resolution in post-commit and post-checkout (test_framework_python_env.py).
+AF_PYTHON="$HOME/.agent-framework/.venv/bin/python"
+[ -x "$AF_PYTHON" ] || AF_PYTHON="python3"
+
 # ── 1. Update Knowledge Graph ─────────────────────────────────────────────────
 # AGENT_KG_DEFER=1 skips the rebuild for batch git operations (rebase /
 # cherry-pick chains) that would otherwise fire it once per step and block
@@ -36,7 +44,7 @@ if [ "${AGENT_KG_DEFER:-0}" != "1" ]; then
   MAP_SCRIPT="$REPO_ROOT/scripts/map_codebase.py"
   [ ! -f "$MAP_SCRIPT" ] && MAP_SCRIPT="$HOME/.agent-framework/scripts/map_codebase.py"
   if [ -f "$MAP_SCRIPT" ]; then
-    python3 "$MAP_SCRIPT" 2>/dev/null || true
+    "$AF_PYTHON" "$MAP_SCRIPT" 2>/dev/null || true
   fi
 fi
 

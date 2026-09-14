@@ -1377,7 +1377,9 @@ AgentSmith/
 │   └── process-gates.json       # What this repo's process gates cover (docs/process-gates.md)
 ├── init-db/                     # Postgres bootstrap for docker-compose.yml (creates agenticframework DB)
 ├── pyproject.toml               # Packages runtime/ as `agentsmith-runtime` (§25) — pip-installable by tenants
-├── requirements.txt
+├── .python-version              # The Python version: the framework environment, requirements.lock and Self-Test all use it
+├── requirements.txt             # The one dependency catalog — never installed directly
+├── requirements.lock            # Compiled from requirements.txt (uv, hashed); CI and install-ai-stack.sh install it into ~/.agent-framework/.venv
 ├── requirements-lint.txt        # ruff + mypy + stubs, pinned exactly so the gate is reproducible
 ├── pytest.ini
 ├── .gitignore

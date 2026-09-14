@@ -40,9 +40,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          # One version, in .python-version — the one uv builds
+          # ~/.agent-framework/.venv at and requirements.lock is compiled for.
+          python-version-file: ".python-version"
           cache: "pip"
-      - run: pip install -r requirements.txt
+          cache-dependency-path: "requirements.lock"
+      # The lock, not requirements.txt: the exact versions install-ai-stack.sh
+      # puts on a machine, rather than whatever the index resolves today.
+      - run: pip install --require-hashes -r requirements.lock
       - name: "ruff (lint config lives in pyproject.toml)"
         # Ruff had no configuration and was run by NOTHING — not CI, not a hook
         # — so it ran on its defaults whenever a human happened to invoke it.
@@ -194,9 +199,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          # One version, in .python-version — the one uv builds
+          # ~/.agent-framework/.venv at and requirements.lock is compiled for.
+          python-version-file: ".python-version"
           cache: "pip"
-      - run: pip install -r requirements.txt
+          cache-dependency-path: "requirements.lock"
+      # The lock, not requirements.txt: the exact versions install-ai-stack.sh
+      # puts on a machine, rather than whatever the index resolves today.
+      - run: pip install --require-hashes -r requirements.lock
       - name: "Cache Temporal test-server binary"
         # The Python SDK caches the downloaded dev-server CLI under
         # $TMPDIR/temporal-sdk-python-<version> (confirmed by running it
@@ -295,7 +305,7 @@ jobs:
           done
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version-file: ".python-version"
       - run: pip install httpx pyyaml
       - name: "verify_system.py --check-history-sync (against the live portal above)"
         working-directory: ${{ github.workspace }}

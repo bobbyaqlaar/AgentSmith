@@ -203,8 +203,26 @@ and `Product_Archive.md`. Each was checked still open on 2026-09-14.
 - **Local gates do not match Self-Test.** On a Python 3.14 venv, `mypy` fails
   on numpy's stubs; `verify_system.py --check-idempotency`/`--check-dlq` need
   `DATABASE_URL`; `mutation_check.py` reports a `tenant_scaffold` survivor that
-  Self-Test catches. **Trigger:** a local gate is trusted as the pre-push
-  check again.
+  Self-Test catches. Since 2026-09-14 the checkout has a `.python-version`
+  (3.11) and a `requirements.lock`, so `uv venv && uv pip sync
+  requirements.lock` in the checkout builds what Self-Test runs; the local
+  `.venv` on this machine predates that and is still 3.14. **Trigger:** a
+  local gate is trusted as the pre-push check again.
+- **Self-Test's security harness job does not install `requirements.lock`.**
+  Since 2026-09-14 Self-Test's Python jobs and `install-ai-stack.sh` install
+  the hashed lock, but the `security` job calls the tenant-facing
+  `eval-security.yml`, whose `install-python-deps` action installs
+  `requirements.txt` — ranges resolved against the index on the day. Left as
+  is because that action is a tenant contract (a tenant has no
+  `requirements.lock`). **Trigger:** a harness run that passes locally and
+  fails in CI (or the reverse) on a dependency version, or the next change to
+  `install-python-deps`.
+- **The framework environment assumes a POSIX venv layout.** `install-ai-stack.sh`
+  and the hooks look for `~/.agent-framework/.venv/bin/python`; a native
+  Windows Python under Git Bash puts it at `Scripts/python.exe`, so the
+  installer's verification would fail and the hooks would fall back to
+  `python3`. WSL is unaffected. Untested — there is no Windows runner.
+  **Trigger:** the first Windows (non-WSL) install.
 - **Actions minutes.** With AgentSmith private, Self-Test alone was ≈1,900
   job-minutes/30 days (measured 2026-09-13) against GitHub Free's 2,000 —
   before the offline scratch build's strict harness runs added ~2 minutes to

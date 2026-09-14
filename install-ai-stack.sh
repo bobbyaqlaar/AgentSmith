@@ -130,19 +130,28 @@ header "Step 1: Checking Prerequisites"
 
 PREREQ_FAILED=0
 
-# Python 3.11+
-if command_exists python3; then
+# Python: the framework runs in its own environment (Step 3), never in the
+# system interpreter. uv builds it at the version in .python-version, fetching a
+# managed CPython if the machine has none that matches; without uv, a stock
+# `python3 -m venv` at 3.11+ is the fallback.
+if command_exists uv; then
+  success "uv $(uv --version 2>/dev/null | awk '{print $2}') — builds the framework environment"
+elif command_exists python3; then
   PY_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
   PY_MAJOR=$(echo "$PY_VERSION" | cut -d. -f1)
   PY_MINOR=$(echo "$PY_VERSION" | cut -d. -f2)
-  if [ "$PY_MAJOR" -ge 3 ] && [ "$PY_MINOR" -ge 11 ]; then
-    success "Python $PY_VERSION"
+  if [ "$PY_MAJOR" -ge 3 ] && [ "$PY_MINOR" -ge 11 ] && python3 -c 'import venv, ensurepip' 2>/dev/null; then
+    warn "uv not found — falling back to python3 -m venv (Python $PY_VERSION). Same pinned"
+    warn "  packages, but the interpreter is this machine's, not .python-version's."
+    warn "  Install uv for the pinned interpreter: brew install uv  (or https://docs.astral.sh/uv/)"
   else
-    error "Python 3.11+ required (found $PY_VERSION)"
+    error "uv not found, and python3 ($PY_VERSION) is not a 3.11+ interpreter with venv/ensurepip."
+    error "Install uv: brew install uv  (or https://docs.astral.sh/uv/getting-started/installation/)"
     PREREQ_FAILED=1
   fi
 else
-  error "Python 3 not found. Install from https://python.org"
+  error "Neither uv nor python3 found."
+  error "Install uv: brew install uv  (or https://docs.astral.sh/uv/getting-started/installation/)"
   PREREQ_FAILED=1
 fi
 
@@ -152,14 +161,6 @@ if command_exists git; then
   success "Git $GIT_VERSION"
 else
   error "Git not found. Install from https://git-scm.com"
-  PREREQ_FAILED=1
-fi
-
-# pip
-if command_exists pip3 || python3 -m pip --version &>/dev/null; then
-  success "pip available"
-else
-  error "pip not found. Install pip: https://pip.pypa.io"
   PREREQ_FAILED=1
 fi
 
@@ -199,60 +200,101 @@ success "$HOME/.agent-framework/ structure created"
 # SECTION 3 — PYTHON DEPENDENCIES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-header "Step 3: Installing Python Dependencies"
+# Where the installer runs from: a checkout (copy from it) or a piped download
+# (fetch release assets). Steps 3-6 all branch on it.
+#
+# Piped (`curl … | bash`), BASH_SOURCE is empty and $0 is "bash", so the
+# dirname is "." — the CURRENT directory. Run from inside a tenant repo, every
+# `[ -d "$INSTALLER_DIR/scripts" ]` below matched the tenant's own scripts/ and
+# copied them over the framework's. A checkout is recognised by its own
+# installer and hooks, not by whatever directory the user happened to be in.
+INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "")"
+if [ -n "$INSTALLER_DIR" ] && { [ ! -f "$INSTALLER_DIR/install-ai-stack.sh" ] || [ ! -f "$INSTALLER_DIR/hooks/post-checkout" ]; }; then
+  INSTALLER_DIR=""
+fi
 
-info "Installing packages (this may take a few minutes)..."
+header "Step 3: Building the Framework Python Environment"
 
-PACKAGES=(
-  "arize-phoenix>=4.0"
-  "opentelemetry-sdk"
-  "opentelemetry-exporter-otlp-proto-http"
-  "openinference-instrumentation-openai"
-  "openinference-instrumentation-anthropic"
-  "openinference-instrumentation-langchain"
-  "langgraph>=0.2"
-  "langchain-core"
-  "langchain-openai"
-  "langchain-anthropic"
-  "langchain-community"
-  "networkx>=3.0"
-  "tiktoken"
-  "httpx"
-  "plyer"
-  "tenacity"
-  "prophet"
-  "pyyaml"
-  "psycopg2-binary"
-)
+# The framework's Python dependencies live in ONE environment it owns,
+# ~/.agent-framework/.venv — never in the system interpreter. This step used to
+# `pip install` a hand-kept package list into whatever python3 was first on
+# PATH: on Homebrew's externally-managed Python that only worked through
+# --break-system-packages, a `brew upgrade python` silently dropped every
+# package, and the list had drifted from requirements.txt (it still installed
+# prophet, missed jsonschema, and left arize-phoenix uncapped).
+#
+# What is installed is requirements.lock: compiled from requirements.txt,
+# pinned and hashed, and the same file Self-Test installs — so a machine and CI
+# resolve identical versions. The Python version it was compiled for is read
+# from its own header, so the lock and the interpreter cannot disagree.
+VENV_DIR="$FRAMEWORK_DIR/.venv"
+VENV_PYTHON="$VENV_DIR/bin/python"
+LOCK_FILE="$FRAMEWORK_DIR/requirements.lock"
 
-# Build pip install command
-PIP_ARGS=("${PACKAGES[@]}")
+# The Python version a lock was compiled for, or nothing — which is also how an
+# older install's `pip freeze` output at the same path is told apart.
+lock_python_version() {
+  sed -n 's/.*uv pip compile .*--python-version \([0-9][0-9.]*\).*/\1/p' "$1" 2>/dev/null | head -1
+}
 
-if python3 -m pip install "${PIP_ARGS[@]}" --quiet 2>&1; then
-  success "All Python dependencies installed"
+if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/requirements.lock" ]; then
+  cp "$INSTALLER_DIR/requirements.lock" "$LOCK_FILE"
+  success "requirements.lock copied from local repo"
+elif command_exists curl && curl -fsSL "${FRAMEWORK_REPO}/releases/latest/download/requirements.lock" -o "$LOCK_FILE.download" 2>/dev/null \
+     && [ -n "$(lock_python_version "$LOCK_FILE.download")" ]; then
+  mv "$LOCK_FILE.download" "$LOCK_FILE"
+  success "requirements.lock downloaded from GitHub"
+elif [ -n "$(lock_python_version "$LOCK_FILE")" ]; then
+  rm -f "$LOCK_FILE.download"
+  warn "Could not fetch requirements.lock — reusing the one from the previous install."
 else
-  # Retry with --break-system-packages for system Python environments
-  warn "Retrying with --break-system-packages..."
-  if python3 -m pip install "${PIP_ARGS[@]}" --break-system-packages --quiet 2>&1; then
-    success "All Python dependencies installed (system Python)"
+  rm -f "$LOCK_FILE.download"
+  error "No requirements.lock: not running from a checkout, and the release download failed."
+  error "Clone the repo and re-run: git clone ${FRAMEWORK_REPO} && ./AgentSmith/install-ai-stack.sh"
+  exit 1
+fi
+PY_PIN="$(lock_python_version "$LOCK_FILE")"
+if [ -z "$PY_PIN" ]; then
+  error "$LOCK_FILE has no \`uv pip compile … --python-version\` header — not a lock this installer can use."
+  exit 1
+fi
+
+if command_exists uv; then
+  # An environment on a different minor version is rebuilt, not patched: the
+  # lock's markers were resolved for $PY_PIN.
+  if [ -x "$VENV_PYTHON" ]; then
+    VENV_VERSION="$("$VENV_PYTHON" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || echo "")"
+    if [ "$VENV_VERSION" != "$PY_PIN" ]; then
+      info "Rebuilding $VENV_DIR: Python ${VENV_VERSION:-unknown} → $PY_PIN"
+      rm -rf "$VENV_DIR"
+    fi
+  fi
+  info "Installing the pinned packages with uv (Python $PY_PIN)..."
+  if uv venv --quiet --allow-existing --python "$PY_PIN" "$VENV_DIR" \
+     && uv pip sync --quiet --require-hashes --python "$VENV_PYTHON" "$LOCK_FILE"; then
+    success "Framework environment ready: $VENV_DIR (Python $PY_PIN, uv)"
   else
-    error "Failed to install Python dependencies. Check pip output above."
+    error "uv could not build $VENV_DIR from requirements.lock — see the output above."
+    exit 1
+  fi
+else
+  info "Installing the pinned packages with python3 -m venv + pip (no uv)..."
+  if { [ -x "$VENV_PYTHON" ] || python3 -m venv "$VENV_DIR"; } \
+     && "$VENV_PYTHON" -m pip install --quiet --require-hashes -r "$LOCK_FILE"; then
+    success "Framework environment ready: $VENV_DIR (Python $("$VENV_PYTHON" -c 'import sys; print("%d.%d" % sys.version_info[:2])'), pip — lock compiled for $PY_PIN)"
+  else
+    error "python3 -m venv / pip could not build $VENV_DIR from requirements.lock — see the output above."
     exit 1
   fi
 fi
-
-# Pin installed versions to requirements.lock
-python3 -m pip freeze > "$FRAMEWORK_DIR/requirements.lock"
-success "Pinned versions saved to ~/.agent-framework/requirements.lock"
+info "Nothing is installed into, or removed from, the system python3. Packages an"
+info "  earlier install put there are left alone."
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 4 — SCRIPTS INSTALLATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
 header "Step 4: Installing Agent Scripts"
-
-# Determine installer location
-INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "")"
 
 if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/scripts" ]; then
   # Running from cloned repo — copy local scripts
@@ -967,10 +1009,19 @@ function ai-dashboard-start() {
   # Fallback: no Docker, stack not vendored yet, or this repo opted out —
   # the original plain-process launch. No Postgres, no Ops Portal, not
   # shared with other repos.
+  # Phoenix is a server, not a library the framework imports, so it is not in
+  # the framework environment: uvx runs it in its own cached one — the same
+  # "latest" the Docker stack's image tracks. The old `python3 -m
+  # phoenix.server.main launch` needed Phoenix in the system interpreter, and
+  # current Phoenix has no `launch` subcommand at all.
+  if ! command -v uvx >/dev/null 2>&1; then
+    echo "❌ Standalone Phoenix needs uv (uvx): brew install uv — or install Docker for the shared stack."
+    return 1
+  fi
   echo "📊 Starting Arize Phoenix at ${AGENT_PHOENIX_ENDPOINT} (standalone — no Docker stack)..."
   local db_arg=""
   [ -n "${AGENT_PHOENIX_DB_URL:-}" ] && db_arg="--database-url ${AGENT_PHOENIX_DB_URL}"
-  python3 -m phoenix.server.main launch \
+  uvx --from arize-phoenix phoenix serve \
     --port "${AGENT_PHOENIX_PORT:-6006}" \
     ${db_arg} &
   export OTEL_EXPORTER_OTLP_ENDPOINT="${AGENT_PHOENIX_ENDPOINT}/v1/traces"
@@ -992,6 +1043,8 @@ function ai-dashboard-stop() {
   fi
 
   echo "🔒 Stopping Phoenix..."
+  # Either launch: `phoenix serve` (uvx) or an older install's phoenix.server.main.
+  pkill -f "phoenix serve" 2>/dev/null || true
   pkill -f "phoenix.server.main" 2>/dev/null || true
   unset OTEL_EXPORTER_OTLP_ENDPOINT
   echo "✅ Dashboard offline"
@@ -1532,11 +1585,12 @@ else
   VERIFY_PASSED=0
 fi
 
-# Python: arize-phoenix importable
-if python3 -c "import phoenix" 2>/dev/null; then
-  success "arize-phoenix importable"
+# Python: the framework environment imports what the hooks and scripts need —
+# checked with the interpreter the hooks resolve, not the system python3.
+if "$VENV_PYTHON" -c "import yaml, networkx, httpx, opentelemetry.sdk" 2>/dev/null; then
+  success "Framework environment imports yaml, networkx, httpx, opentelemetry ($VENV_PYTHON)"
 else
-  error "arize-phoenix not importable — check pip install output"
+  error "Framework environment at $VENV_DIR cannot import yaml/networkx/httpx/opentelemetry — re-run the installer"
   VERIFY_PASSED=0
 fi
 

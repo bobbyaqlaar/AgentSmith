@@ -35,8 +35,9 @@ def _load_rules(rules_file: Path) -> dict:
         import yaml  # type: ignore
     except ImportError:
         print(
-            "❌ generate-ide-config.py requires pyyaml (pip install -r requirements.txt). "
-            "IDE config was NOT regenerated.",
+            f"❌ generate-ide-config.py requires pyyaml, which {sys.executable} lacks. "
+            "The git hooks run it with ~/.agent-framework/.venv/bin/python — re-run "
+            "install-ai-stack.sh to build that environment. IDE config was NOT regenerated.",
             file=sys.stderr,
         )
         sys.exit(1)

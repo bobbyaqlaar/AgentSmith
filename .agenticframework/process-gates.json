@@ -18,6 +18,8 @@
     "pyproject.toml",
     "pytest.ini",
     "requirements*.txt",
+    "requirements*.lock",
+    ".python-version",
     "docker-compose*.yml",
     ".claude/settings.json",
     ".agenticframework/process-gates.json"
