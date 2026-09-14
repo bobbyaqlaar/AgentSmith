@@ -83,6 +83,30 @@ by CI (`workflow_run`), Go and TS CI now run the strict security harness, and
 interface change** below, as this file's header requires. Existing tenants keep
 the workflow files they have: the hook never overwrites one.
 
+### Process gates configured per repository — rolled out to AqlaarTeleologyStudio and KYC Sentinel
+
+The gates' catalog of gated paths was AgentSmith's own layout, hard-coded, so a
+tenant would have gated the wrong directories. What a repository gates now lives
+in its own `.agenticframework/process-gates.json` (gated paths, levers doc,
+design checklist, optional CHANGELOG rule); `scripts/process_gate.py` holds no
+catalog. A repo without the file has not adopted the gates — its local hooks do
+nothing — and `ci` fails there, because CI running the gate means the file was
+removed. The config must gate itself.
+
+- `@framework/docs/…` lets an installed-mode tenant read the levers and
+  checklist beside the framework it runs, and `install-ai-stack.sh` now copies
+  `docs/review-levers.md` into `~/.agent-framework/docs/` for that.
+- `.githooks/process-gate` finds the script — the repo's own copy, then
+  `$AGENTSMITH_DIR`, then `~/.agent-framework` — and fails safe when there is
+  none. The Claude Code hooks and `.githooks/commit-msg` all go through it, so
+  the same files serve every repo.
+- CI judges each commit by the config it carries: commits from before a repo
+  adopted the gates are listed, not failed.
+
+Rolled out by hand to AqlaarTeleologyStudio (vendored: its own levers, its own
+copy of the script) and KYC Sentinel (installed mode: framework levers and
+script). New tenants are not provisioned automatically yet.
+
 ### Design before code and review before merge, enforced — and `post-commit` can tag without pushing
 
 `docs/design-review-checklist.md` and `docs/review-levers.md` were written down

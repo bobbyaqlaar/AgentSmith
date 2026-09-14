@@ -164,12 +164,13 @@ and `Product_Archive.md`. Each was checked still open on 2026-09-14.
   on Pro — verified 2026-09-14. **Trigger:** upgrading to Pro or making the repo
   public: then protect `main`, require `process-gates`, and stop pushing to it
   directly.
-- **Tenants do not get the design/review gates.** `scripts/process_gate.py` is
-  vendored with `scripts/`, but no workflow template runs `ci`, no
-  `.claude/settings.json` or `.githooks/` is provisioned, and the gated-path
-  catalog is AgentSmith's own layout. **Trigger:** the first tenant (OTS or KYC)
-  that wants the same discipline — make the catalog configurable per repo
-  first, then provision the hooks and a template job.
+- **New tenants do not get the process gates automatically.** AqlaarTeleologyStudio
+  and KYC Sentinel adopted them by hand on 2026-09-14 (`docs/process-gates.md`
+  § Rolling out to a tenant). `agentsmith tenant init` and `hooks/post-checkout`
+  write no `.agenticframework/process-gates.json`, `.githooks/`, settings hooks
+  or CI job, and a vendored tenant's copy of `.githooks/` does not move on
+  `ai-stack-upgrade`. **Trigger:** the next tenant onboarded, or the next change
+  to `.githooks/` (which today must be re-copied into both tenants by hand).
 - **Every release-download install path is broken while AgentSmith is private.**
   The documented `curl …/releases/latest/download/install-ai-stack.sh | bash`
   returns 404 to everyone — curl sends no GitHub login — and exits 0 having

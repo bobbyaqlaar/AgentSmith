@@ -1,0 +1,50 @@
+{
+  "_about": "What the process gates cover in this repository \u2014 scripts/process_gate.py, docs/process-gates.md. This file is gated itself.",
+  "gated": [
+    "scripts/**",
+    "runtime/**",
+    "hooks/**",
+    "portal/**",
+    "workflow-templates/**",
+    ".github/**",
+    "templates/**",
+    "enterprise/**",
+    "examples/**",
+    "fixtures/**",
+    "init-db/**",
+    "caddy/**",
+    ".githooks/**",
+    "install-ai-stack.sh",
+    "pyproject.toml",
+    "pytest.ini",
+    "requirements*.txt",
+    "docker-compose*.yml",
+    ".claude/settings.json",
+    ".agenticframework/process-gates.json"
+  ],
+  "not_gated": [
+    "**.md",
+    ".agent-rfc/**",
+    "**/node_modules/**"
+  ],
+  "levers_doc": "docs/review-levers.md",
+  "design_checklist": "docs/design-review-checklist.md",
+  "changelog": {
+    "_about": "Paths a tenant receives. Kept equal to what .github/workflows/scratch-tenants.yml rebuilds tenants on (test_process_gate.py), minus that workflow's two own entries.",
+    "file": "CHANGELOG.md",
+    "paths": [
+      "hooks/**",
+      "install-ai-stack.sh",
+      "workflow-templates/**",
+      ".github/actions/**",
+      "scripts/**",
+      "runtime/**",
+      "fixtures/**",
+      "templates/agent-rules.yaml"
+    ],
+    "except": [
+      "scripts/test/**",
+      "runtime/test/**"
+    ]
+  }
+}

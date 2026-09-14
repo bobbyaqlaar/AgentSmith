@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# .githooks/process-gate <subcommand> [args] — find scripts/process_gate.py and run it.
+#
+# The one launcher every caller uses — the Claude Code hooks in
+# .claude/settings.json and .githooks/commit-msg — in AgentSmith and in every
+# tenant, copied verbatim (docs/process-gates.md). Where the script is differs
+# by how a repo consumes AgentSmith, so it is looked up, in this order:
+#
+#   1. <repo>/scripts/process_gate.py      AgentSmith itself; vendored tenants (OTS)
+#   2. $AGENTSMITH_DIR/scripts/            a framework checkout (installed-mode CI)
+#   3. ~/.agent-framework/scripts/         a machine install (installed-mode tenants, locally)
+#
+# When none exists the gate cannot run, and each caller fails the safe way:
+# pre-edit denies the edit, commit-msg blocks the commit, ci fails; the
+# advisory session-start and stop only warn.
+set -uo pipefail
+
+subcommand="${1:-}"
+# The repository this was invoked in — git's view first. CLAUDE_PROJECT_DIR is
+# only a fallback: it names the SESSION's project, which is not the repo being
+# committed to when a session in one repo commits in another.
+root="$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-$PWD}")"
+
+for dir in "$root/scripts" "${AGENTSMITH_DIR:+$AGENTSMITH_DIR/scripts}" "$HOME/.agent-framework/scripts"; do
+  if [ -n "$dir" ] && [ -f "$dir/process_gate.py" ]; then
+    exec python3 "$dir/process_gate.py" "$@"
+  fi
+done
+
+why="scripts/process_gate.py not found in this repo, \$AGENTSMITH_DIR or ~/.agent-framework — set AGENTSMITH_DIR to an AgentSmith checkout, or re-run its install-ai-stack.sh"
+case "$subcommand" in
+  pre-edit)
+    printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"The process gate could not run: %s. Edits are denied until it can."}}\n' "$why"
+    exit 0 ;;
+  session-start|stop)
+    echo "⚠️  process gate did not run: $why" >&2
+    exit 0 ;;
+  *)
+    echo "❌ process gate could not run: $why" >&2
+    exit 1 ;;
+esac

@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# .githooks/commit-msg — AgentSmith's OWN commit gate (docs/process-gates.md).
+# .githooks/commit-msg — the commit gate (AgentSmith docs/process-gates.md).
+# Copied verbatim into every repo that adopts the process gates.
 #
 # Armed per clone with:  git config core.hooksPath .githooks
 #
-# This repository does not use the tenant hooks in hooks/: it is the framework,
-# not a tenant, and hooks/post-commit pushes on its own. Replacing the hooks
-# path with /dev/null to avoid that push also skipped every check — which is how
-# commits here went out with no gate at all.
+# Arming it replaces ~/.git_templates' hooks for the clone. In AgentSmith that
+# is the point (it is the framework, and hooks/post-commit pushes on its own);
+# in a tenant whose clone never had those hooks installed, nothing is lost.
 #
-# The same check runs in CI over every pushed commit (Self-Test
-# "process-gates"), so a clone without this hook armed is caught there.
+# The same check runs in CI over every pushed commit, so a clone without this
+# hook armed is caught there.
 set -euo pipefail
 
 msg_file="$1"
@@ -39,4 +39,4 @@ if parent_args | grep -qE '(^|[[:space:]])--amend([[:space:]]|$)'; then
   amend=(--amend)
 fi
 
-exec python3 "$(git rev-parse --show-toplevel)/scripts/process_gate.py" commit-msg "${amend[@]+"${amend[@]}"}" "$msg_file"
+exec "$(git rev-parse --show-toplevel)/.githooks/process-gate" commit-msg "${amend[@]+"${amend[@]}"}" "$msg_file"

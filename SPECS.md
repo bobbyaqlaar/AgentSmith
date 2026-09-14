@@ -1372,7 +1372,9 @@ AgentSmith/
 │   ├── designs/                 # Design notes the edit and commit gates require (docs/process-gates.md)
 │   ├── reviews/                 # Review records, one pass per heading, clean when the last finds 0
 │   └── security/                # This repo's own agency manifest, NIST profile, risk register, tool allowlist
-├── .githooks/                   # This repo's OWN commit gate (git config core.hooksPath .githooks) — not the tenant hooks/
+├── .githooks/                   # Commit gate + process-gate launcher (git config core.hooksPath .githooks) — copied verbatim to tenants that adopt the gates; not the tenant hooks/
+├── .agenticframework/
+│   └── process-gates.json       # What this repo's process gates cover (docs/process-gates.md)
 ├── init-db/                     # Postgres bootstrap for docker-compose.yml (creates agenticframework DB)
 ├── pyproject.toml               # Packages runtime/ as `agentsmith-runtime` (§25) — pip-installable by tenants
 ├── requirements.txt

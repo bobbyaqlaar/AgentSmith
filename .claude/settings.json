@@ -14,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/process_gate.py\" session-start",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.githooks/process-gate\" session-start",
             "timeout": 30
           }
         ]
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/process_gate.py\" pre-edit || printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"The process gate could not run (python3 missing, or scripts/process_gate.py failed before answering). Edits are denied until it runs - see docs/process-gates.md.\"}}'",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.githooks/process-gate\" pre-edit || printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"The process gate could not run (.githooks/process-gate missing, or it failed before answering). Edits are denied until it runs - see AgentSmith docs/process-gates.md.\"}}'",
             "timeout": 30,
             "statusMessage": "Checking the design gate"
           }
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/process_gate.py\" stop",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.githooks/process-gate\" stop",
             "timeout": 60
           }
         ]

@@ -229,3 +229,14 @@ def test_installer_vendors_the_two_docs() -> None:
     assert "design-review-checklist.md" in text
     assert "validation-checklist.md" in text
     assert "FRAMEWORK_DIR/docs" in text
+
+
+def test_installer_vendors_the_review_levers_the_process_gate_reads() -> None:
+    """An installed-mode tenant's process-gates config reads its levers from
+    @framework/docs/review-levers.md, which is ~/.agent-framework/docs/ when
+    the gate runs from a machine install. Asserted on the copy command itself,
+    not a mention elsewhere in the script."""
+    text = INSTALLER.read_text(encoding="utf-8")
+    copy = text[text.index('cp "$INSTALLER_DIR/docs/design-review-checklist.md"'):]
+    copy = copy[: copy.index('"$FRAMEWORK_DIR/docs/"')]
+    assert '"$INSTALLER_DIR/docs/review-levers.md"' in copy

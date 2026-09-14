@@ -390,8 +390,12 @@ fi
 # `declared-vs-enforced`, applied to this framework's own installer.
 mkdir -p "$FRAMEWORK_DIR/docs"
 if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/docs/design-review-checklist.md" ]; then
-  cp "$INSTALLER_DIR/docs/design-review-checklist.md" "$INSTALLER_DIR/docs/validation-checklist.md" "$FRAMEWORK_DIR/docs/"
-  success "design/validation playbook docs copied from local repo"
+  # review-levers.md too: the process gates (scripts/process_gate.py) validate a
+  # design's cited levers against it, and an installed-mode tenant (KYC
+  # Sentinel) has no copy of its own — its config points at @framework/.
+  cp "$INSTALLER_DIR/docs/design-review-checklist.md" "$INSTALLER_DIR/docs/validation-checklist.md" \
+     "$INSTALLER_DIR/docs/review-levers.md" "$FRAMEWORK_DIR/docs/"
+  success "design/validation playbook docs and review levers copied from local repo"
 elif [ -f "$FRAMEWORK_DIR/docs/design-review-checklist.md" ]; then
   success "design/validation playbook docs already present in ~/.agent-framework/docs/"
 else

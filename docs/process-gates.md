@@ -7,7 +7,10 @@ repository, not left to whoever — or whatever agent — is doing the work.
 and were still skipped, for two reasons that more documentation could not fix:
 no agent session in this repo ever had them in context, and nothing checked.
 Every gate below calls one script, `scripts/process_gate.py`, so the rules are
-defined once. Design: `.agent-rfc/designs/process-gates.md`.
+defined once; what each repository gates is declared in its own
+`.agenticframework/process-gates.json`. The same script serves AgentSmith and
+the tenants that adopted it — AqlaarTeleologyStudio and KYC Sentinel. Designs:
+`.agent-rfc/designs/process-gates.md`, `process-gates-tenants.md`.
 
 ## What is checked, where
 
@@ -39,19 +42,73 @@ Arming `.githooks` replaces the tenant hooks in `~/.git_templates` for this
 clone. That is deliberate: this is the framework, not a tenant, and
 `hooks/post-commit` pushes on its own.
 
-## Gated paths
+## Configuration — `.agenticframework/process-gates.json`
 
-Code, configuration, and anything a tenant receives: `scripts/`, `runtime/`,
-`hooks/`, `portal/`, `workflow-templates/`, `.github/`, `templates/`,
-`enterprise/`, `examples/`, `fixtures/`, `init-db/`, `caddy/`, `.githooks/`,
-`install-ai-stack.sh`, `pyproject.toml`, `pytest.ini`, `requirements*.txt`,
-`docker-compose*.yml`, `.claude/settings.json`. **Not gated:** any `*.md`,
-`.agent-rfc/`, `node_modules/`. The list lives in `process_gate.py` (`GATED`).
+A repository adopts the gates by committing this file. Without it the local
+hooks do nothing and `ci` fails — CI running the gate means the repo adopted it,
+so a missing config means it was removed.
 
-**Tenant-facing** paths — the ones whose change needs a `CHANGELOG.md`
-[Unreleased] entry in the same push — are the ones
-`.github/workflows/scratch-tenants.yml` rebuilds tenants on; a test keeps the
-two lists identical.
+```json
+{
+  "gated":            ["scripts/**", "runtime/**", "…", ".agenticframework/process-gates.json"],
+  "not_gated":        ["**.md", ".agent-rfc/**"],
+  "levers_doc":       "docs/review-levers.md",
+  "design_checklist": "@framework/docs/design-review-checklist.md",
+  "changelog":        { "file": "CHANGELOG.md", "paths": ["hooks/**", "…"], "except": ["scripts/test/**"] }
+}
+```
+
+- **`gated` / `not_gated`** — globs; `**` crosses directories. The config must
+  gate itself, or deleting a line would switch a gate off unreviewed; a config
+  that does not is rejected, and a broken config blocks every commit and every
+  edit except to itself.
+- **`levers_doc` / `design_checklist`** — a repo path, read at the commit being
+  checked (OTS validates against its own, extended `docs/review-levers.md`), or
+  `@framework/<path>`, read beside the running `process_gate.py` — the AgentSmith
+  checkout or `~/.agent-framework` (KYC Sentinel carries no copy).
+- **`changelog`** — optional. When present, a pushed range that changes `paths`
+  (minus `except`, minus Markdown) must also change `file`. AgentSmith's paths are
+  what `scratch-tenants.yml` rebuilds tenants on; a test keeps them equal.
+
+| Repo | Gated (summary) | Levers | CHANGELOG rule |
+|---|---|---|---|
+| AgentSmith | code, config, and everything a tenant receives | its own | yes — tenant-facing paths |
+| AqlaarTeleologyStudio | `apps/`, `services/`, `runtime/`, `scripts/`, `infra/`, `fixtures/`, `.github/`, config files | its own (inherited and extended) | none |
+| KYC Sentinel | `agents/`, `workflows/`, `test/`, `scripts/`, `corpus/`, `fixtures/`, `.github/`, root `*.py`, config files | `@framework/` | none |
+
+## Finding the script — `.githooks/process-gate`
+
+Every caller — the three Claude Code hooks and `.githooks/commit-msg` — runs
+`.githooks/process-gate <subcommand>`, which looks for `process_gate.py` in this
+order and runs the first it finds, relative to the repository git reports for
+the current directory (not the Claude Code session's project, which can be a
+different repo):
+
+1. `<repo>/scripts/` — AgentSmith, and vendored tenants (OTS);
+2. `$AGENTSMITH_DIR/scripts/` — a framework checkout (KYC's CI, and KYC locally
+   when `AGENTSMITH_DIR` is exported);
+3. `~/.agent-framework/scripts/` — a machine install (re-run
+   `install-ai-stack.sh` after upgrading AgentSmith).
+
+If none exists: the edit gate denies, the commit is blocked, CI fails; the
+session-start and stop hooks warn. `.githooks/commit-msg`, `.githooks/process-gate`
+and the `hooks` block of `.claude/settings.json` are identical in every repo that
+adopted the gates.
+
+## Rolling out to a tenant
+
+1. **Design and review records in the tenant** — its rollout commit is gated by
+   the config it adds, like any other.
+2. **Config** — `.agenticframework/process-gates.json` for its layout; gate the
+   config, `.githooks/**` and `.claude/settings.json`.
+3. **Hooks** — copy `.githooks/commit-msg` and `.githooks/process-gate` from
+   AgentSmith; merge the `hooks` block of AgentSmith's `.claude/settings.json`.
+4. **The script** — vendored tenants get `scripts/process_gate.py` (and add it to
+   `scripts/ruff.toml`'s excludes); installed-mode tenants need nothing.
+5. **CI** — a `process-gates` job with `fetch-depth: 0` running
+   `python3 <gate> ci --base <before or PR base> --head <sha>`; installed-mode
+   tenants check out the framework first and run `$AGENTSMITH_DIR/scripts/process_gate.py`.
+6. **Arm each clone** — `git config core.hooksPath .githooks`.
 
 ## The two records
 
@@ -153,9 +210,12 @@ summary, so the escape stays visible.
   themselves.
 - **History before 2026-09-14 is not gated.** CI checks only the commits each
   push adds.
-- **Tenants do not get these gates yet.** `process_gate.py` is vendored with
-  `scripts/`, but no tenant template wires it. Recorded in
-  `FIXES_AND_CLEANUP.md` with its trigger.
+- **New tenants do not get the gates automatically.** OTS and KYC Sentinel
+  adopted them by hand (above); `agentsmith tenant init` and the post-checkout
+  hook provision none of it. Recorded in `FIXES_AND_CLEANUP.md`.
+- **An installed-mode tenant's local gates follow the framework it finds.** With
+  no `AGENTSMITH_DIR`, KYC's hooks run `~/.agent-framework`'s copy — as current
+  as the last `install-ai-stack.sh`. Its CI runs the framework checkout's.
 
 ## Tenant repositories: auto-push without disabling hooks
 
