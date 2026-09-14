@@ -65,7 +65,11 @@ so a missing config means it was removed.
 - **`levers_doc` / `design_checklist`** — a repo path, read at the commit being
   checked (OTS validates against its own, extended `docs/review-levers.md`), or
   `@framework/<path>`, read beside the running `process_gate.py` — the AgentSmith
-  checkout or `~/.agent-framework` (KYC Sentinel carries no copy).
+  checkout or `~/.agent-framework` (KYC Sentinel carries no copy). **Only for
+  installed-mode tenants:** in a vendored tenant the running script is the
+  tenant's own copy, so `@framework/` resolves to the tenant repo. Point
+  `levers_doc` there at the tenant's own file; `design_checklist` is only shown
+  in messages, never read, so `@framework/` is harmless for it.
 - **`changelog`** — optional. When present, a pushed range that changes `paths`
   (minus `except`, minus Markdown) must also change `file`. AgentSmith's paths are
   what `scratch-tenants.yml` rebuilds tenants on; a test keeps them equal.
