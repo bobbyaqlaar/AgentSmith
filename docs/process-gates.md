@@ -16,7 +16,7 @@ the tenants that adopted it — AqlaarTeleologyStudio and KYC Sentinel. Designs:
 
 | Layer | Runs | Blocks | Can be skipped by |
 |---|---|---|---|
-| **Session context** — `.claude/settings.json` SessionStart | every Claude Code session | nothing — states the rules, lists active designs, warns if the commit gate is not armed | not using Claude Code |
+| **Session context** — `.claude/settings.json` SessionStart | every Claude Code session | nothing — states the rules and the pillars a design must answer, lists active designs, adds the repo's own `extends.session_start` lines, warns if the commit gate is not armed or gate spans are not being emitted | not using Claude Code |
 | **Edit gate** — PreToolUse on Edit/Write/MultiEdit/NotebookEdit | before each file edit | an edit to a gated path that no complete, *active* design note covers | editing through a shell command (the next three layers still see it) |
 | **Stop gate** — Stop | when an agent ends its turn | ending with uncommitted gated changes that have no clean review record newer than them | a second stop in a row (it warns instead of looping) |
 | **Commit gate** — `.githooks/commit-msg` | `git commit` (including `--amend`), in a clone that armed it | a commit touching gated paths without resolving `Design:` and `Review:` trailers | not arming it, `--no-verify`, and history rewrites git runs without `commit-msg` — rebase picks, cherry-picks (CI still sees all of them) |
@@ -26,6 +26,43 @@ the tenants that adopted it — AqlaarTeleologyStudio and KYC Sentinel. Designs:
 design exists, is scoped to the change, and cites real levers; that a review
 ran until a pass found nothing; and that the review is as fresh as the change.
 Quality still needs a reviewer who is not the builder.
+
+## What the gate runs on
+
+The gate follows the pillars it enforces — Pydantic V2 models (pillar 7) and a
+span per decision (pillar 3) — so it needs the framework environment:
+**Python 3.11+ with `pydantic` and `opentelemetry-sdk`**, which
+`install-ai-stack.sh` builds at `~/.agent-framework/.venv`.
+`.githooks/process-gate` tries, in order: `$AGENTSMITH_PYTHON`,
+`$AGENTSMITH_DIR/.venv/bin/python`, `~/.agent-framework/.venv/bin/python`, then
+the repo's own `.venv`. An interpreter that cannot run the gate exits 3 and the
+next one is tried; when none can, the gate **fails closed** — the edit is
+denied, the commit and push are blocked — and says to run `install-ai-stack.sh`.
+CI installs `scripts/requirements-gate.txt`, the list that travels with the
+vendored gate.
+
+Decisions are spans: `agent.gate.<event>` with `agent.role=process-gate`, the
+decision, the IDE and the repo. A hook must not wait on a collector, so spans
+are written to `~/.agent-framework/state/gate-spans/` as OTLP batches and
+shipped at session start, stop and sweep with a one-second timeout. Session
+start reports which of the four states holds: exported, not exported (no
+endpoint), not exported (collector down), or not emitted (no runtime).
+
+## The rules registry
+
+`templates/agent-rules.yaml` is the one source. `generate-ide-config.py
+--registry` compiles it to `templates/governance.json`, which the gate reads
+(hooks have no pyyaml) and which says, per pillar, where it is enforced:
+
+- `design` — the design must answer it;
+- `review` — the sign-off must attest it;
+- `mechanical` — a script checks it.
+
+A repo points at a registry with `registry` in its config (default
+`@framework/templates/governance.json`) and adds its own pillars, stack rules or
+session-start lines under `extends`, which re-syncing never overwrites. A
+missing or invalid registry blocks, exactly as a broken config does: a gate that
+cannot read its rules must not check fewer of them.
 
 ## Setup, once per clone
 
@@ -116,7 +153,8 @@ adopted the gates.
 
 ## The two records
 
-**Design note** — `.agent-rfc/designs/<slug>.md`, written *before* the code:
+**Design note** — `.agent-rfc/designs/<slug>.md`, written *before* the code.
+`agentsmith design new <slug> --scope <glob>` writes this skeleton in any IDE:
 
 ```markdown
 ---
@@ -134,9 +172,45 @@ What is wrong or missing, and the evidence.
 ## Approach
 What you will build, and the decisions that matter.
 
+## Pillars
+- P1 applies — how. Or `n/a — why`, `gap — PB-123`, or `**deviation D1**`.
+  One line per pillar the registry marks `design`; a missing one is rejected.
+
+## Deviations
+none
+# or: - D1 — P3 — what and why — approval: A-0123abcd
+
+## Dependencies
+none
+# or the packages added, direct and transitive (diff the lock file).
+
 ## Levers
 - `one-catalog` — why it applies and what the design does about it.
 ```
+
+## Permission to deviate
+
+A design may break a rule only with the owner's approval, recorded by
+
+```bash
+agentsmith approve .agent-rfc/designs/<slug>.md D1 --statement "why"
+```
+
+which asks at the **terminal** (`/dev/tty`) and appends to
+`.agenticframework/approvals.jsonl`. Every coding agent runs shell commands
+without a controlling terminal, so an agent cannot record one: it has to ask
+you. The gate then requires each active deviation to resolve to an approval
+naming that design and that deviation, so until you approve, every edit in the
+design's scope stays denied.
+
+What this cannot prevent is a person approving something they should not — it
+makes the deviation visible, attributed and dated, which unwritten exceptions
+never were.
+
+`.agenticframework/approvals.jsonl` is never edited directly: the edit gate
+denies it even when an active design's scope names it. Committing one is a
+one-line gated change, so `Design: n/a: owner approval` is the trailer for it,
+and CI lists that escape in its summary like any other.
 
 The edit gate only unlocks paths matched by `scope`, only while
 `status: active`, and only when all three sections exist and `## Levers` cites
@@ -156,8 +230,12 @@ pass, written *after* building:
 ```
 
 Verify each finding in code before recording it, fix it, and run another pass.
-The record is clean only when its last pass reports `findings: 0`, and passes
-are numbered 1, 2, 3… with none skipped.
+The record is clean only when its last pass reports `findings: 0`, passes are
+numbered 1, 2, 3… with none skipped, **and** it ends with the sign-off block
+from `docs/validation-checklist.md` Step 4 — the seven group lines, each marked
+checked, n/a with a reason or gap with a backlog id, plus Tests added,
+Mutation-checked, Fixtures re-pinned and Gates run. Passes say what was looked
+at; the sign-off says what was decided.
 
 ## Commit trailers
 
@@ -188,7 +266,12 @@ summary, so the escape stays visible.
 
 | Message | Do this |
 |---|---|
-| `… is a gated path and no active design note covers it` | write the design note (above), or add the path to an active design's `scope` if it belongs to that work |
+| `… is a gated path and no active design note covers it` | write the design note (`agentsmith design new <slug> --scope <glob>`), or add the path to an active design's `scope` if it belongs to that work |
+| `'## Pillars' does not answer P3 …` | answer it: `applies — how`, `n/a — why`, or `gap — <backlog id>` |
+| `deviation D1 has no owner approval` | ask the owner; they run `agentsmith approve` and you paste the id into the entry |
+| `records no '## Sign-off' block` | sign off per group (validation-checklist Step 4) |
+| `the rules registry … does not exist` | re-sync the framework (`agentsmith upgrade`), or regenerate it with `generate-ide-config.py --registry` |
+| `no interpreter could run …` | run AgentSmith's `install-ai-stack.sh`, or set `AGENTSMITH_PYTHON` |
 | `… covered by a design note that is not complete` | add the missing section, or cite a real lever in `## Levers` |
 | `Unreviewed gated changes: … no review record` | run a review pass against `docs/review-levers.md` and record it |
 | `… last updated before the newest change it covers` | you changed code after the last pass — review again and record the pass |

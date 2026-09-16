@@ -906,6 +906,13 @@ one for one (`~/.agent-framework/shell/ai-compat.sh`).
 | `agentsmith dashboard start` | Start the standing Docker stack (Phoenix + Postgres + Ops Portal) when it is vendored, else a standalone Phoenix on `$AGENT_PHOENIX_PORT` (default 6006) via `uvx`, logging to `~/.agent-framework/logs/phoenix.log`. Records the endpoint so scripts started anywhere on the machine export traces to it. |
 | `agentsmith dashboard stop` | Stop whichever of the two is running and clear the recorded endpoint. Docker volumes are kept. |
 
+### Design & approvals (the process gates)
+
+| Command | Arguments | Description |
+|---|---|---|
+| `agentsmith design new` | `<slug> --scope <glob>` (repeatable) | Write `.agent-rfc/designs/<slug>.md` with the shape the gate checks: front matter, Problem, Approach, **Pillars** (one line per rule, each with its question), **Deviations**, **Dependencies**, Levers. Never overwrites an existing design. Works in any IDE, and in none. |
+| `agentsmith approve` | `<design> <deviation> [--statement …]` | Record the owner's approval of one deviation, appending to `.agenticframework/approvals.jsonl`. **Asks at the terminal** (`/dev/tty`): an agent's shell has no controlling terminal, so an agent cannot record it — it has to ask you, and you type the deviation id to confirm. The gate refuses any deviation without a resolving approval, so code in that design's scope stays blocked until you run this. |
+
 ### Evaluation & Self-Improvement
 
 | Command | Arguments | Description |
@@ -943,6 +950,8 @@ one for one (`~/.agent-framework/shell/ai-compat.sh`).
 |---|---|
 | `DISABLE_AI_STACK=true` | Hooks skip for that command. With an enterprise org policy installed, the policy decides instead (see §16) |
 | `AGENTSMITH_STATE_DIR` | Where machine state is read and written instead of `~/.agent-framework/state` — the mode, install mode and dashboard endpoint. For sandboxes and test isolation; the hooks honour it too |
+| `AGENTSMITH_IDE` | Which agent is running the process gate (`claude`, `cursor`, `antigravity`, `copilot`, `gemini`, `codex`). Set by each IDE's generated hook config; it names the caller on the gate's `agent.gate.*` spans. Unset reads as `unknown`, never as a guess |
+| `AGENTSMITH_PYTHON` | The interpreter `.githooks/process-gate` runs the gate with, tried before `$AGENTSMITH_DIR/.venv`, `~/.agent-framework/.venv` and the repo's own `.venv`. It needs Python 3.11+ with pydantic and opentelemetry |
 | `SEMVER_LOOP_GUARD=true` | Prevents infinite loop in post-commit semver tagging |
 | `AGENTSMITH_AUTOPUSH=0` | post-commit still auto-tags but does not push (same as `git config agentsmith.autopush false` for one repo). Use it instead of `git -c core.hooksPath=/dev/null`, which also skips pre-commit and commit-msg |
 | `AI_BREAK_GLASS_TOKEN=<token>` | Required for any hook bypass — `DISABLE_AI_STACK=true` or `agentsmith mode off` — when the installed org policy sets `bypass_policy: break-glass` (enterprise pack, see enterprise/README.md). Must be a real IT-issued, HMAC-signed token with an expiry — not just any non-empty string — validated against `BREAK_GLASS_HMAC_KEY` on the machine. |

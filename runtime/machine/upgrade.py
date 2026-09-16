@@ -172,6 +172,16 @@ def upgrade(
     if (runtime / "llm_gateway.py").is_file():
         _write_ruff_isolation(repo, "runtime", _files_under(runtime, skip_name="ruff.toml"))
 
+    # templates/: the rules source and the registry the vendored gate reads as
+    # `@framework/templates/governance.json` — which, for a vendored tenant,
+    # resolves inside the tenant. Without these the gate cannot load its rules.
+    templates_src = home / "templates"
+    if templates_src.is_dir() and any(templates_src.iterdir()):
+        _copy_tree_merge(templates_src, repo / "templates")
+        out(f"✅ Copied vendored templates/ from {templates_src}")
+    else:
+        out(f"⚠️  No vendored templates/ found at {templates_src} — the process gate will have no rules registry.")
+
     security_src = home / "fixtures" / "security"
     if security_src.is_dir() and any(security_src.iterdir()):
         _copy_tree_merge(security_src, repo / "fixtures" / "security")
@@ -190,6 +200,8 @@ def upgrade(
     # Only paths that exist: `git add` on a pathspec matching nothing aborts
     # the whole command, not just that path.
     vendor_paths = ["scripts", ".agenticframework/tenant.yaml"]
+    if (repo / "templates").is_dir():
+        vendor_paths.append("templates")
     if (runtime / "llm_gateway.py").is_file():
         vendor_paths.append("runtime")  # never a tenant's own runtime/
     if (repo / "fixtures" / "security").is_dir():

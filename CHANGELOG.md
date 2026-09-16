@@ -75,6 +75,26 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — governance enforcement, slice G1 (design `.agent-rfc/designs/governance-enforcement.md`)
+- `templates/governance.json`: the rules registry, compiled from `templates/agent-rules.yaml`
+  by `generate-ide-config.py --registry` and read by the process gate. Says per pillar whether
+  it is answered at design time, attested at review, or checked mechanically.
+- Designs now need `## Pillars`, `## Deviations` and `## Dependencies`; reviews need the
+  validation-checklist sign-off block. Both are checked by `scripts/process_gate.py`.
+- `agentsmith approve <design> <deviation>`: records the owner's permission to deviate, asking at
+  the terminal (`/dev/tty`) — an agent's shell has none, so it must ask. `agentsmith design new`
+  writes the design skeleton in any IDE.
+- Every generated rule file (CLAUDE.md, AGENTS.md, `.cursorrules`, GEMINI.md, copilot-instructions,
+  Antigravity skills) carries the same "ask the owner before deviating" block;
+  `generate-ide-config.py --write` regenerates tracked rule files.
+- **Hook interface:** the gate now runs in the framework environment (Python 3.11+, pydantic,
+  opentelemetry). `.githooks/process-gate` resolves the interpreter and fails closed when none
+  can run it; CI installs `scripts/requirements-gate.txt`. Gate decisions emit spooled
+  `agent.gate.*` spans.
+- `agentsmith upgrade` and `install-ai-stack.sh` now carry `templates/` (rules + registry) to
+  tenants and machines; without them a vendored gate has no rules to enforce.
+
+
 Entries from here down to `runtime/.hitl_blobs/` cover the 2026-09-13/14
 onboarding audit, which ran each stack through a real scratch tenant's CI.
 **Tenant-facing changes to read before re-provisioning:** CD is now triggered

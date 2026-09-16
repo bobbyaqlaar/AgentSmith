@@ -23,8 +23,14 @@ What a repo gates is declared in its own `.agenticframework/process-gates.json`
 do nothing there, and `ci` fails, because CI running the gate means the repo
 had adopted it.
 
-Stdlib only and Python 3.9-compatible: hooks run whatever `python3` is on PATH,
-and on a stock Mac that is 3.9 without pyyaml.
+Runs in the framework environment — Python 3.11+ with pydantic and
+opentelemetry — which .githooks/process-gate resolves ($AGENTSMITH_PYTHON,
+$AGENTSMITH_DIR/.venv, ~/.agent-framework/.venv, a vendored repo's .venv). The
+records it reads are Pydantic models (scripts/gate_models.py) and every decision
+is a spooled span (scripts/gate_tracing.py): the framework follows its own
+pillars 3 and 7 with no exception (.agent-rfc/designs/governance-enforcement.md).
+This file alone stays parseable by an older interpreter so that, run by one, it
+can say why it cannot gate (exit 3) instead of dying on a syntax error.
 
 What no gate here can do is judge whether a design is GOOD. They prove a design
 and a clean review exist, are scoped to the change, cite real levers, and are
@@ -41,6 +47,25 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
+
+# The gate must not change the tree it checks: importing its own modules would
+# otherwise drop scripts/__pycache__/ into the repo, which the stop and commit
+# gates then see as gated changes nobody made.
+sys.dont_write_bytecode = True
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+
+EXIT_UNUSABLE = 3  # the interpreter cannot run the gate; the launcher tries the next one
+UNUSABLE: Optional[str] = None
+if sys.version_info < (3, 11):
+    UNUSABLE = f"Python {sys.version.split()[0]} at {sys.executable} is older than 3.11"
+else:
+    try:
+        import gate_models as gm
+        import gate_tracing as gt
+    except Exception as _exc:  # named below, not swallowed: the launcher prints it
+        UNUSABLE = f"{sys.executable} cannot import the gate's models or tracing ({type(_exc).__name__}: {_exc})"
 
 CONFIG = ".agenticframework/process-gates.json"
 DESIGNS_DIR = ".agent-rfc/designs"
@@ -100,6 +125,10 @@ class Config:
         self.changelog_file: Optional[str] = changelog.get("file")
         self.changelog_paths: List[str] = list(changelog.get("paths") or [])
         self.changelog_except: List[str] = list(changelog.get("except") or [])
+        # The rules registry: the framework's by default — beside the running
+        # script, which in a vendored tenant is the tenant's own synced copy.
+        self.registry: str = data.get("registry") or f"{FRAMEWORK_PREFIX}templates/governance.json"
+        self.extends_data = data.get("extends")
 
     def problems(self) -> List[str]:
         errors = []
@@ -109,7 +138,26 @@ class Config:
             errors.append(f"{CONFIG} must gate itself, or the gates can be switched off unreviewed")
         if self.changelog_file and not self.changelog_paths:
             errors.append(f"{CONFIG} names a changelog file but no paths that require it")
+        if self.extends_data is not None:
+            try:
+                gm.Extends.model_validate(self.extends_data)
+            except gm.ValidationError as exc:
+                errors.append(f"{CONFIG} 'extends' is invalid: {exc.errors()[0]['loc']} {exc.errors()[0]['msg']}")
         return errors
+
+    def load_registry(self, read: Reader) -> Tuple[Optional["gm.Registry"], List[str]]:
+        """-> (registry merged with `extends`, problems). A missing or invalid
+        registry is a problem, never a reason to check less."""
+        text = self.doc_text(self.registry, read)
+        if text is None:
+            return None, [f"the rules registry {self.display(self.registry)} does not exist — "
+                          "run scripts/generate-ide-config.py --registry, or re-sync AgentSmith"]
+        try:
+            registry = gm.Registry.model_validate_json(text)
+            extends = gm.Extends.model_validate(self.extends_data) if self.extends_data is not None else None
+            return registry.merged(extends), []
+        except (gm.ValidationError, ValueError) as exc:
+            return None, [f"the rules registry {self.display(self.registry)} is invalid: {exc}"]
 
     def is_gated(self, path: str) -> bool:
         return _any(path, self.gated) and not _any(path, self.not_gated)
@@ -181,7 +229,14 @@ def _section(body: str, heading: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
-def check_design(text: str, known_slugs: set, levers_doc: str = "docs/review-levers.md") -> List[str]:
+def check_design(
+    text: str,
+    known_slugs: set,
+    levers_doc: str,
+    registry: "gm.Registry",
+    approvals: List["gm.Approval"],
+    design_path: str,
+) -> List[str]:
     errors = []
     meta, body = front_matter(text)
     if not meta:
@@ -191,9 +246,15 @@ def check_design(text: str, known_slugs: set, levers_doc: str = "docs/review-lev
     scope = meta.get("scope")
     if not isinstance(scope, list) or not scope:
         errors.append("scope lists no paths")
-    for heading in ("Problem", "Approach", "Levers"):
+    for heading in registry.records.design_sections:
         if _section(body, heading) is None:
             errors.append(f"has no '## {heading}' section")
+    deviations, deviation_errors = gm.parse_deviations(_section(body, "Deviations") or "")
+    if _section(body, "Deviations") is not None:
+        errors.extend(deviation_errors)
+        errors.extend(gm.check_approvals(deviations, approvals, design_path))
+    if _section(body, "Pillars") is not None:
+        errors.extend(gm.check_pillars(_section(body, "Pillars") or "", registry, deviations))
     # Backticked names in the section that are real levers. Other backticked
     # names (a file, a flag) are allowed alongside; what is required is that
     # the checklist was worked and at least one lever named.
@@ -211,7 +272,7 @@ def design_scope(text: str) -> List[str]:
 _PASS = re.compile(r"^##\s+Pass\s+(\d+)\s+[—–-]+\s+findings:\s*(\d+)\s*$", re.M)
 
 
-def check_review(text: str) -> List[str]:
+def check_review(text: str, registry: "gm.Registry") -> List[str]:
     passes = [(int(n), int(k)) for n, k in _PASS.findall(text)]
     if not passes:
         return ["records no passes ('## Pass N — findings: K')"]
@@ -223,7 +284,15 @@ def check_review(text: str) -> List[str]:
         errors.append(
             f"last pass (Pass {passes[-1][0]}) reports {passes[-1][1]} finding(s) — fix them and run another pass"
         )
+    else:
+        # Clean passes are half of done; the sign-off states per group what was
+        # checked, what did not apply and what is a declared gap.
+        errors.extend(gm.check_signoff(text, registry))
     return errors
+
+
+def load_approvals(read: Reader) -> Tuple[List["gm.Approval"], List[str]]:
+    return gm.parse_approvals(read(gm.APPROVALS_FILE))
 
 
 # ── Trailers ─────────────────────────────────────────────────────────────────
@@ -262,6 +331,11 @@ def check_change(
     small = gated_lines <= SMALL_CHANGE_LINES
     known_slugs = lever_slugs(config.doc_text(config.levers_doc, read) or "")
     levers_shown = config.display(config.levers_doc)
+    registry, registry_errors = config.load_registry(read)
+    if registry is None:
+        return registry_errors, []
+    approvals, approval_errors = load_approvals(read)
+    errors.extend(approval_errors)
 
     def na(name: str, value: str) -> bool:
         match = re.match(r"^n/?a\s*[:—-]\s*(\S.*)$", value, re.I)
@@ -288,7 +362,8 @@ def check_change(
         elif text is None:
             errors.append(f"Design: {path} does not exist in this commit")
         else:
-            errors.extend(f"Design: {path} {e}" for e in check_design(text, known_slugs, levers_shown))
+            design_errors = check_design(text, known_slugs, levers_shown, registry, approvals, path)
+            errors.extend(f"Design: {path} {e}" for e in design_errors)
             scope = design_scope(text)
             uncovered = [f for f in gated if not _any(f, scope)]
             if scope and uncovered:
@@ -305,7 +380,7 @@ def check_change(
         elif text is None:
             errors.append(f"Review: {path} does not exist in this commit")
         else:
-            errors.extend(f"Review: {path} {e}" for e in check_review(text))
+            errors.extend(f"Review: {path} {e}" for e in check_review(text, registry))
             if path not in files:
                 errors.append(
                     f"Review: {path} is not changed in this commit — a review older than the change "
@@ -366,19 +441,39 @@ def _worktree_config(root: Path) -> Tuple[Optional[Config], List[str]]:
 
 
 def active_designs(root: Path, config: Config) -> List[Tuple[str, str, List[str]]]:
-    """-> [(relpath, text, errors)] for designs with status: active."""
+    """-> [(relpath, text, errors)] for designs with status: active. A registry
+    or approvals file that cannot be read makes every design incomplete."""
     read = _worktree_reader(root)
     slugs = lever_slugs(config.doc_text(config.levers_doc, read) or "")
+    registry, shared_errors = config.load_registry(read)
+    approvals, approval_errors = load_approvals(read)
+    shared_errors = shared_errors + approval_errors
     found = []
     for path in sorted((root / DESIGNS_DIR).glob("*.md")):
         text = path.read_text(encoding="utf-8")
         if front_matter(text)[0].get("status") == "active":
-            errors = check_design(text, slugs, config.display(config.levers_doc))
-            found.append((f"{DESIGNS_DIR}/{path.name}", text, errors))
+            rel = f"{DESIGNS_DIR}/{path.name}"
+            errors = list(shared_errors)
+            if registry is not None:
+                errors += check_design(text, slugs, config.display(config.levers_doc), registry, approvals, rel)
+            found.append((rel, text, errors))
     return found
 
 
+# What the last decision was, for the span. Read from the decision itself, not
+# inferred from the text a hook printed: a formatting change to that JSON would
+# quietly relabel every deny as an allow (`ambiguous-signals`).
+_DECISION: Dict[str, Optional[str]] = {"value": None, "rule": None}
+
+
+def _record(decision: str, rule: Optional[str] = None) -> None:
+    _DECISION["value"] = decision
+    if rule:
+        _DECISION["rule"] = rule
+
+
 def _deny(reason: str) -> None:
+    _record("deny")
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": reason,
     }}))
@@ -401,6 +496,15 @@ def cmd_pre_edit(payload: dict) -> int:
             # It cannot say what is gated, so nothing but the config itself may change.
             _deny(f"the process-gate config is broken — {'; '.join(problems)}. Fix {CONFIG} first.")
         return 0
+    if rel == gm.APPROVALS_FILE:
+        # No design scope can unlock this one: the record of the owner's
+        # permission is written by `agentsmith approve` at a terminal. An agent
+        # that could edit the file could approve its own deviation.
+        _deny(
+            f"{rel} records the owner's approvals and is never edited directly — "
+            "ask the owner to run `agentsmith approve <design> <deviation>` in a terminal."
+        )
+        return 0
     if config is None or not config.is_gated(rel):
         return 0
     designs = active_designs(root, config)
@@ -414,8 +518,11 @@ def cmd_pre_edit(payload: dict) -> int:
     _deny(
         f"{rel} is a gated path and no active design note covers it. Design before code: "
         f"work {config.display(config.design_checklist)}, write {DESIGNS_DIR}/<slug>.md "
-        "(front matter status: active, scope: globs covering this file; sections ## Problem, "
-        f"## Approach, ## Levers citing levers from {config.display(config.levers_doc)}), then retry. "
+        "(front matter status: active, scope: globs covering this file; sections ## Problem, ## Approach, "
+        "## Pillars (one answer per pillar), ## Deviations (none, or each with the owner's "
+        "approval), "
+        f"## Dependencies, ## Levers citing levers from {config.display(config.levers_doc)}) — "
+        "`agentsmith design new <slug>` writes the skeleton — then retry. Ask the owner before any deviation. "
         "See AgentSmith's docs/process-gates.md."
     )
     return 0
@@ -457,7 +564,8 @@ def stop_problems(root: Path) -> List[str]:
         if not review_path.is_file():
             problems.append(f"{design}: no review record at {review} for {', '.join(paths)}")
             continue
-        errs = check_review(review_path.read_text(encoding="utf-8"))
+        registry, registry_errors = config.load_registry(_worktree_reader(root))
+        errs = registry_errors if registry is None else check_review(review_path.read_text(encoding="utf-8"), registry)
         if errs:
             problems.append(f"{review}: {'; '.join(errs)}")
             continue
@@ -475,6 +583,7 @@ def cmd_stop(payload: dict) -> int:
     problems = stop_problems(root)
     if not problems:
         return 0
+    _record("block", "review-before-done")
     text = "Unreviewed gated changes:\n- " + "\n- ".join(problems)
     if payload.get("stop_hook_active"):
         # Blocking again could loop forever. The commit and CI gates still hold.
@@ -496,23 +605,41 @@ def cmd_session_start(payload: dict) -> int:
         ]
     else:
         designs = active_designs(root, config)
+        registry, _ = config.load_registry(_worktree_reader(root))
         checklist, levers = config.display(config.design_checklist), config.display(config.levers_doc)
         lines = [
             "This repository enforces its build discipline mechanically (AgentSmith docs/process-gates.md).",
             f"1. Design before code: before editing code, work {checklist} and write "
-            f"{DESIGNS_DIR}/<slug>.md (status: active, scope globs, ## Problem / ## Approach / ## Levers). "
-            "Edits to gated paths without one are denied.",
+            f"{DESIGNS_DIR}/<slug>.md (status: active, scope globs, ## Problem / ## Approach / ## Pillars / "
+            "## Deviations / ## Dependencies / ## Levers; `agentsmith design new <slug>` writes it). "
+            "Answer every pillar. If any rule must be deviated from, STOP and ask the owner first: a deviation "
+            "counts only with an approval the owner records in a terminal (`agentsmith approve`). "
+            "Edits to gated paths without a complete design are denied.",
             f"2. Review before done: after building, run review passes against {levers}, verify each "
             f"finding in code, fix, and record every pass in {REVIEWS_DIR}/<slug>.md as "
-            "'## Pass N — findings: K' until a pass finds 0. Ending a turn with unreviewed changes is blocked.",
+            "'## Pass N — findings: K' until a pass finds 0, then a complete '## Sign-off' block "
+            "(docs/validation-checklist.md Step 4). Ending a turn with unreviewed changes is blocked.",
             "3. Every commit touching gated paths carries 'Design: <design path>' and 'Review: <review path>' "
             "trailers, and changes the review record in that same commit. CI checks every pushed commit"
             + (f", and {config.changelog_file} for the paths that need it." if config.changelog_file else "."),
             f"Gated paths are declared in {CONFIG}. Bash-made edits are not caught by the edit gate — "
             "the stop, commit and CI gates still see them.",
         ]
+        extends = config.extends_data or {}
+        lines.extend(str(line) for line in (extends.get("session_start") or []))
+        if registry is not None:
+            answerable = [p for p in registry.pillars if "design" in p.check]
+            lines.append(
+                f"Pillars a design must answer ({len(answerable)}): "
+                + ", ".join(f"P{p.id} {p.name}" for p in answerable)
+            )
         if designs:
-            lines.append("Active designs: " + ", ".join(p for p, _, _ in designs))
+            # An incomplete design is listed as incomplete: it unlocks nothing,
+            # and a bare list of names reads as "these are in force".
+            listed = []
+            for path, _text, errors in designs:
+                listed.append(f"{path} — INCOMPLETE, unlocks nothing: {errors[0]}" if errors else path)
+            lines.append("Active designs: " + "; ".join(listed))
         if not (root / "AGENTS.md").is_file() and (root / "scripts/generate-ide-config.py").is_file():
             # Other agents (Codex, Cursor, Gemini, Copilot) read these, not this hook.
             lines.append(
@@ -521,6 +648,9 @@ def cmd_session_start(payload: dict) -> int:
             )
     if git("config", "--get", "core.hooksPath", cwd=root, check=False).strip() != ".githooks":
         lines.append("⚠️ The commit gate is not armed in this clone: run `git config core.hooksPath .githooks`.")
+    telemetry = gt.status_line(gt.ship())
+    if telemetry:
+        lines.append(telemetry)
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "\n".join(lines)}}))
     return 0
 
@@ -555,6 +685,7 @@ def cmd_commit_msg(message_file: str, amend: bool = False) -> int:
     for note in notes:
         print(f"ℹ️  process gate: {note}")
     if errors:
+        _record("block", "design-and-review-trailers")
         print("❌ process gate: commit blocked (AgentSmith docs/process-gates.md)", file=sys.stderr)
         for error in errors:
             print(f"   - {error}", file=sys.stderr)
@@ -657,7 +788,43 @@ def cmd_ci(base: str, head: str) -> int:
     return 1 if failures or changelog_error else 0
 
 
+_SPAN_EVENTS = {"session-start": "session_start", "pre-edit": "pre_edit", "stop": "stop",
+                "commit-msg": "commit_msg", "ci": "ci"}
+
+
+def _traced(command: str, root: Path, run: Callable[[], int]) -> int:
+    """Run one subcommand inside its span; the exit code and whether it
+    denied or blocked are recorded from what it actually printed."""
+    import contextlib
+    import io
+
+    captured = io.StringIO()
+    ide = os.environ.get("AGENTSMITH_IDE") or "unknown"
+    with gt.gate_span(_SPAN_EVENTS[command], root=root, ide=ide) as span:
+        with contextlib.redirect_stdout(captured):
+            code = run()
+        out = captured.getvalue()
+        decision = _DECISION["value"] or ("block" if code != 0 else "allow")
+        span.set_attribute("agent.decision", decision)
+        if _DECISION["rule"]:
+            span.set_attribute("agent.rule", _DECISION["rule"])
+        span.set_attribute("agent.exit_code", code)
+    sys.stdout.write(out)
+    if command in ("session-start", "stop", "ci"):
+        gt.flush()
+        if command != "session-start":
+            gt.ship()
+    else:
+        gt.flush()
+    return code
+
+
 def main(argv: Optional[List[str]] = None) -> int:
+    if UNUSABLE:
+        print(f"process gate cannot run here: {UNUSABLE}. It needs the framework environment "
+              "(Python 3.11+ with pydantic and opentelemetry) — run AgentSmith's install-ai-stack.sh, "
+              "or point AGENTSMITH_PYTHON at an interpreter that has them.", file=sys.stderr)
+        return EXIT_UNUSABLE
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("session-start", "pre-edit", "stop"):
@@ -675,7 +842,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         handler = {"session-start": cmd_session_start, "pre-edit": cmd_pre_edit, "stop": cmd_stop}[args.command]
         try:
             payload = json.loads(raw) if raw.strip() else {}
-            return handler(payload)
+            return _traced(args.command, repo_root(payload.get("cwd")), lambda: handler(payload))
         except Exception as exc:  # a hook must answer, whatever broke
             if args.command != "pre-edit":
                 print(f"process gate {args.command} could not run: {exc!r}", file=sys.stderr)
@@ -687,8 +854,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                   "fix process_gate.py or its input before editing gated paths")
             return 0
     if args.command == "commit-msg":
-        return cmd_commit_msg(args.message_file, amend=args.amend)
-    return cmd_ci(args.base, args.head)
+        return _traced("commit-msg", repo_root(), lambda: cmd_commit_msg(args.message_file, amend=args.amend))
+    return _traced("ci", repo_root(), lambda: cmd_ci(args.base, args.head))
 
 
 if __name__ == "__main__":

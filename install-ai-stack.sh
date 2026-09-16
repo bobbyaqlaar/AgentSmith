@@ -441,7 +441,12 @@ fi
 mkdir -p "$FRAMEWORK_DIR/templates"
 if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/templates/agent-rules.yaml" ]; then
   cp "$INSTALLER_DIR/templates/agent-rules.yaml" "$FRAMEWORK_DIR/templates/agent-rules.yaml"
-  success "agent-rules.yaml copied from local repo"
+  # governance.json is agent-rules.yaml compiled for the process gate, which
+  # runs without pyyaml. Copied together: a machine with one and not the other
+  # has rule files and a gate that disagree.
+  [ -f "$INSTALLER_DIR/templates/governance.json" ] && \
+    cp "$INSTALLER_DIR/templates/governance.json" "$FRAMEWORK_DIR/templates/governance.json"
+  success "agent-rules.yaml + governance.json copied from local repo"
 elif [ -f "$FRAMEWORK_DIR/templates/agent-rules.yaml" ]; then
   success "agent-rules.yaml already present in ~/.agent-framework/templates/"
 else

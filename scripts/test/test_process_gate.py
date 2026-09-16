@@ -35,8 +35,10 @@ needs_git = pytest.mark.skipif(shutil.which("git") is None or shutil.which("bash
 LEVERS = (REPO / "docs" / "review-levers.md").read_text(encoding="utf-8")
 SLUGS = pg.lever_slugs(LEVERS)
 AGENTSMITH = pg.Config(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
+REGISTRY = AGENTSMITH.load_registry(lambda _p: None)[0]
+DESIGN_PILLARS = ", ".join(f"P{p.id}" for p in REGISTRY.pillars if "design" in p.check)
 
-DESIGN = """---
+DESIGN = f"""---
 status: active
 scope:
   - scripts/lib/**
@@ -50,10 +52,37 @@ Something.
 ## Approach
 Something else.
 
+## Pillars
+- {DESIGN_PILLARS} applies — each was worked for this change.
+
+## Deviations
+none
+
+## Dependencies
+none
+
 ## Levers
 - `gate-integrity` — it can fail.
 """
-REVIEW_CLEAN = "# Review\n\n## Pass 1 — findings: 2\n- a\n- b\n\n## Pass 2 — findings: 0\n"
+SIGNOFF = """
+## Sign-off
+
+```
+Group 1 · DRY & shared code           [x] checked
+Group 2 · Quality / safety            [x] checked
+Group 3 · Architecture / hygiene      [x] checked
+Group 4 · Process                     [x] checked
+Group 5 · Intuitive UI                [x] n/a — no screen
+Group 6 · Signal integrity            [x] checked
+Group 7 · Auth & session integrity    [x] n/a — no session
+
+Tests added/updated:      test_tool.py
+Mutation-checked:          yes — guard removed, test fails
+Fixtures re-pinned:        n/a
+Gates run locally:         pytest
+```
+"""
+REVIEW_CLEAN = "# Review\n\n## Pass 1 — findings: 2\n- a\n- b\n\n## Pass 2 — findings: 0\n" + SIGNOFF
 
 
 # ── AgentSmith's own configuration ───────────────────────────────────────────
@@ -116,9 +145,47 @@ def test_glob_semantics():
     assert not pg.glob_match("xscripts/a.py", "scripts/**")
 
 
-def test_runs_on_python_39_syntax():
-    """Hooks run the PATH python3 — 3.9 on a stock Mac."""
+def test_an_old_interpreter_can_still_say_why_it_cannot_gate():
+    """The gate runs in the framework environment (3.11+, pydantic, OTel), but a
+    stock Mac's python3 is 3.9: run by it, the file must parse and name the
+    problem (exit 3, so the launcher tries the next interpreter) rather than die
+    on a syntax error the hook reports as nothing."""
     ast.parse(GATE.read_text(encoding="utf-8"), feature_version=(3, 9))
+
+
+def test_a_design_must_answer_every_pillar_it_is_asked():
+    without = DESIGN.replace(f"- {DESIGN_PILLARS} applies", "- P1 applies")
+    errors = _design_errors(without)
+    assert any("does not answer P3" in e for e in errors), errors
+
+
+def test_a_design_with_an_unapproved_deviation_is_incomplete():
+    deviating = DESIGN.replace("## Deviations\nnone", "## Deviations\n- D1 — P3 — no spans — approval: A-0123abcd")
+    errors = _design_errors(deviating)
+    assert any("A-0123abcd" in e and "agentsmith approve" in e for e in errors), errors
+    approval = pg.gm.Approval(
+        id="A-0123abcd", design=".agent-rfc/designs/change.md", deviation="D1",
+        approver="o", approved_at="2026-09-15T00:00:00Z", channel="tty", statement="ok")
+    assert _design_errors(deviating, approvals=[approval]) == []
+
+
+def test_a_review_without_a_signoff_is_not_clean():
+    errors = pg.check_review(REVIEW_CLEAN.replace(SIGNOFF, ""), REGISTRY)
+    assert any("Sign-off" in e for e in errors), errors
+
+
+def test_a_missing_registry_blocks_rather_than_checking_less():
+    config = pg.Config({"gated": ["**"], "registry": "templates/nowhere.json"})
+    registry, problems = config.load_registry(lambda _p: None)
+    assert registry is None and "does not exist" in problems[0]
+    errors, _ = pg.check_change(["scripts/a.py"], 50, MESSAGE, dict(FILES).get, config)
+    assert errors == problems
+
+
+def test_extends_cannot_redefine_a_framework_pillar():
+    config = pg.Config({"gated": ["**"], "extends": {"pillars": [{"id": 3, "name": "mine", "check": ["review"]}]}})
+    registry, problems = config.load_registry(lambda _p: None)
+    assert registry is None and "P3" in problems[0]
 
 
 # ── Config validation ────────────────────────────────────────────────────────
@@ -153,8 +220,15 @@ def test_framework_docs_resolve_beside_the_running_script():
 # ── Records ──────────────────────────────────────────────────────────────────
 
 
+DESIGN_PATH = ".agent-rfc/designs/change.md"
+
+
+def _design_errors(text, approvals=()):
+    return pg.check_design(text, SLUGS, "docs/review-levers.md", REGISTRY, list(approvals), DESIGN_PATH)
+
+
 def test_a_complete_design_passes():
-    assert pg.check_design(DESIGN, SLUGS) == []
+    assert _design_errors(DESIGN) == []
 
 
 @pytest.mark.parametrize(
@@ -163,12 +237,15 @@ def test_a_complete_design_passes():
         (lambda d: d.replace("status: active", "status: draft"), "status is 'draft'"),
         (lambda d: d.replace("scope:\n  - scripts/lib/**\n  - scripts/tool.py\n", "scope:\n"), "scope lists no paths"),
         (lambda d: d.replace("## Approach", "## Plan"), "no '## Approach'"),
+        (lambda d: d.replace("## Pillars", "## Notes"), "no '## Pillars'"),
+        (lambda d: d.replace("## Deviations\nnone\n", ""), "no '## Deviations'"),
+        (lambda d: d.replace("## Dependencies", "## Deps"), "no '## Dependencies'"),
         (lambda d: d.replace("`gate-integrity`", "`not-a-lever`"), "cites no lever"),
         (lambda d: d.split("---\n", 2)[2], "no front matter"),
     ],
 )
 def test_an_incomplete_design_fails(mutate, expected):
-    errors = pg.check_design(mutate(DESIGN), SLUGS)
+    errors = _design_errors(mutate(DESIGN))
     assert any(expected in e for e in errors), errors
 
 
@@ -181,12 +258,12 @@ def test_an_incomplete_design_fails(mutate, expected):
     ],
 )
 def test_an_unclean_review_fails(review, expected):
-    assert any(expected in e for e in pg.check_review(review))
+    assert any(expected in e for e in pg.check_review(review, REGISTRY))
 
 
 def test_a_clean_review_passes_with_any_dash():
-    assert pg.check_review(REVIEW_CLEAN) == []
-    assert pg.check_review("## Pass 1 - findings: 0\n") == []
+    assert pg.check_review(REVIEW_CLEAN, REGISTRY) == []
+    assert pg.check_review("## Pass 1 - findings: 0\n" + SIGNOFF, REGISTRY) == []
 
 
 @pytest.mark.parametrize(
@@ -288,6 +365,10 @@ def _git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProc
 
 def _make_repo(tmp_path: Path, name: str, files: dict, monkeypatch) -> Path:
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    # HOME moved, so ~/.agent-framework/.venv is gone: name the interpreter
+    # running these tests, which has the framework environment.
+    monkeypatch.setenv("AGENTSMITH_PYTHON", sys.executable)
+    monkeypatch.setenv("AGENTSMITH_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
     monkeypatch.delenv("AGENTSMITH_DIR", raising=False)
     monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
@@ -296,7 +377,9 @@ def _make_repo(tmp_path: Path, name: str, files: dict, monkeypatch) -> Path:
     subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(repo)], check=True)
     for rel, source in files.items():
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
-        if isinstance(source, Path):
+        if isinstance(source, Path) and source.is_dir():
+            shutil.copytree(source, repo / rel, ignore=shutil.ignore_patterns("__pycache__", "test", "k8s"))
+        elif isinstance(source, Path):
             shutil.copy(source, repo / rel)
         else:
             (repo / rel).write_text(source)
@@ -313,13 +396,22 @@ HOOK_FILES = {
     ".githooks/commit-msg": REPO / ".githooks/commit-msg",
     ".githooks/process-gate": REPO / ".githooks/process-gate",
 }
+# What a vendored copy of the gate carries: the script, its models and tracing,
+# the registry beside it, and the runtime its spans go through.
+GATE_FILES = {
+    "scripts/process_gate.py": GATE,
+    "scripts/gate_models.py": REPO / "scripts/gate_models.py",
+    "scripts/gate_tracing.py": REPO / "scripts/gate_tracing.py",
+    "templates/governance.json": REPO / "templates/governance.json",
+    "runtime": REPO / "runtime",
+}
 
 
 @pytest.fixture()
 def gated_repo(tmp_path, monkeypatch):
     """A repo shaped like AgentSmith: the gate, its levers doc and its config in-tree."""
     return _make_repo(tmp_path, "repo", {
-        "scripts/process_gate.py": GATE,
+        **GATE_FILES,
         "docs/review-levers.md": REPO / "docs/review-levers.md",
         pg.CONFIG: CONFIG_PATH,
         **HOOK_FILES,
@@ -412,10 +504,14 @@ def test_the_first_commit_of_a_repo_is_checked(tmp_path, monkeypatch):
     repo = tmp_path / "fresh"
     repo.mkdir()
     subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(repo)], check=True)
-    for rel, source in {"scripts/process_gate.py": GATE, "docs/review-levers.md": REPO / "docs/review-levers.md",
+    monkeypatch.setenv("AGENTSMITH_PYTHON", sys.executable)
+    for rel, source in {**GATE_FILES, "docs/review-levers.md": REPO / "docs/review-levers.md",
                         pg.CONFIG: CONFIG_PATH, **HOOK_FILES}.items():
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(source, repo / rel)
+        if source.is_dir():
+            shutil.copytree(source, repo / rel, ignore=shutil.ignore_patterns("__pycache__", "test", "k8s"))
+        else:
+            shutil.copy(source, repo / rel)
     _git(repo, "config", "core.hooksPath", ".githooks")
     result = _commit(repo, "feat: initial")
     assert result.returncode != 0 and "missing 'Design:" in result.stderr
@@ -467,6 +563,135 @@ def test_the_launcher_prefers_the_repos_own_copy(gated_repo, tmp_path, monkeypat
     _write(gated_repo, "scripts/tool.py", "print(1)\n")
     result = _commit(gated_repo, "feat: add tool")
     assert "missing 'Design:" in result.stderr and "decoy" not in result.stdout
+
+
+def _fake_interpreter(tmp_path: Path) -> Path:
+    """An interpreter that cannot run the gate: it drains stdin (as a real one
+    would before failing) and exits 3, as process_gate.py does under Python 3.9."""
+    fake = tmp_path / "old-python"
+    fake.write_text("#!/usr/bin/env bash\ncat >/dev/null\necho 'too old' >&2\nexit 3\n")
+    fake.chmod(0o755)
+    return fake
+
+
+@needs_git
+def test_the_launcher_moves_past_an_interpreter_that_cannot_run_the_gate(gated_repo, tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTSMITH_PYTHON", str(_fake_interpreter(tmp_path)))
+    framework_python = Path(os.environ["HOME"]) / ".agent-framework/.venv/bin/python"
+    framework_python.parent.mkdir(parents=True)
+    framework_python.symlink_to(sys.executable)
+    launcher = gated_repo / ".githooks/process-gate"
+
+    denied = subprocess.run(
+        ["bash", str(launcher), "pre-edit"], input=json.dumps(_edit(gated_repo, "scripts/lib/a.py")),
+        capture_output=True, text=True, check=False, cwd=gated_repo)
+    assert _decision(denied) == "deny" and "no active design note covers it" in denied.stdout, \
+        "the second interpreter must receive the same payload the first one drained"
+
+    _write(gated_repo, "scripts/tool.py", "print(1)\n")
+    assert "missing 'Design:" in _commit(gated_repo, "feat: add tool").stderr
+
+
+@needs_git
+def test_the_launcher_fails_closed_when_no_interpreter_can_run_the_gate(gated_repo, tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENTSMITH_PYTHON", str(_fake_interpreter(tmp_path)))
+    launcher = gated_repo / ".githooks/process-gate"
+
+    denied = subprocess.run(["bash", str(launcher), "pre-edit"], input=json.dumps(_edit(gated_repo, "docs/x.md")),
+                            capture_output=True, text=True, check=False, cwd=gated_repo)
+    assert denied.returncode == 0 and _decision(denied) == "deny"
+    assert "no interpreter could run" in denied.stdout and "install-ai-stack.sh" in denied.stdout
+
+    _write(gated_repo, "notes.txt", "x\n")
+    blocked = _commit(gated_repo, "docs: notes")
+    assert blocked.returncode != 0 and "no interpreter could run" in blocked.stderr
+
+
+def test_the_gate_under_an_old_interpreter_exits_3_and_names_the_fix(monkeypatch):
+    monkeypatch.setattr(pg, "UNUSABLE", "Python 3.9.6 at /usr/bin/python3 is older than 3.11")
+    assert pg.main(["stop"]) == pg.EXIT_UNUSABLE
+
+
+@needs_git
+def test_a_hook_run_spools_a_span_carrying_its_decision(gated_repo, tmp_path):
+    from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceRequest
+
+    launcher = gated_repo / ".githooks/process-gate"
+    subprocess.run(["bash", str(launcher), "pre-edit"], input=json.dumps(_edit(gated_repo, "scripts/lib/a.py")),
+                   capture_output=True, text=True, check=True, cwd=gated_repo)
+
+    spans = []
+    for batch in (tmp_path / "state" / "gate-spans").glob("*.pb"):
+        request = ExportTraceServiceRequest()
+        request.ParseFromString(batch.read_bytes())
+        spans += [s for rs in request.resource_spans for ss in rs.scope_spans for s in ss.spans]
+    [span] = [s for s in spans if s.name == "agent.gate.pre_edit"]
+    attrs = {a.key: a.value.string_value for a in span.attributes}
+    assert attrs["agent.decision"] == "deny" and attrs["agent.role"] == "process-gate"
+    assert _git(gated_repo, "status", "--porcelain").stdout == "", "the gate must leave the tree it checks untouched"
+
+
+@needs_git
+def test_the_approvals_record_cannot_be_edited_through_a_design(gated_repo):
+    """An agent that could edit approvals.jsonl could approve its own deviation,
+    so no design scope unlocks it — not even one that names it."""
+    design = DESIGN.replace("  - scripts/tool.py", f"  - {pg.gm.APPROVALS_FILE}")
+    _write(gated_repo, ".agent-rfc/designs/change.md", design)
+    result = _hook(gated_repo, "pre-edit", _edit(gated_repo, pg.gm.APPROVALS_FILE))
+    assert _decision(result) == "deny"
+    assert "agentsmith approve" in result.stdout
+
+
+@needs_git
+def test_a_denied_edit_is_labelled_deny_in_its_span_whatever_the_json_looks_like(gated_repo, tmp_path, monkeypatch):
+    """The span's decision comes from the decision, not from matching the text
+    the hook printed — which a formatting change would silently relabel."""
+    from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceRequest
+
+    monkeypatch.setenv("AGENTSMITH_IDE", "cursor")
+    subprocess.run([sys.executable, str(gated_repo / "scripts/process_gate.py"), "pre-edit"],
+                   input=json.dumps(_edit(gated_repo, "scripts/lib/a.py")), capture_output=True, text=True,
+                   check=True, cwd=gated_repo, env=dict(os.environ, AGENTSMITH_IDE="cursor",
+                                                        AGENTSMITH_STATE_DIR=str(tmp_path / "state")))
+    spans = []
+    for batch in (tmp_path / "state" / "gate-spans").glob("*.pb"):
+        request = ExportTraceServiceRequest()
+        request.ParseFromString(batch.read_bytes())
+        spans += [s for rs in request.resource_spans for ss in rs.scope_spans for s in ss.spans]
+    attrs = {a.key: a.value.string_value for s in spans for a in s.attributes}
+    assert attrs["agent.decision"] == "deny"
+    assert attrs["agent.ide"] == "cursor", "the span names the IDE that ran it, not a guess"
+
+
+@needs_git
+def test_session_start_says_which_active_designs_unlock_nothing(gated_repo):
+    """A design listed by name reads as one that is in force. An incomplete one
+    — an unanswered pillar, an unapproved deviation — unlocks nothing."""
+    _write(gated_repo, ".agent-rfc/designs/change.md",
+           DESIGN.replace("## Deviations\nnone", "## Deviations\n- D1 — P3 — no spans — approval: A-0123abcd"))
+    context = json.loads(_hook(gated_repo, "session-start", {"cwd": str(gated_repo)}).stdout)
+    text = context["hookSpecificOutput"]["additionalContext"]
+    assert "INCOMPLETE, unlocks nothing" in text and "A-0123abcd" in text
+
+
+@needs_git
+def test_session_start_lists_the_pillars_and_a_repos_own_extra_lines(gated_repo):
+    config = json.loads((gated_repo / pg.CONFIG).read_text(encoding="utf-8"))
+    config["extends"] = {"session_start": ["Tenant rule: run `npm test` in apps/web too."]}
+    _write(gated_repo, pg.CONFIG, json.dumps(config, indent=2))
+    context = json.loads(_hook(gated_repo, "session-start", {"cwd": str(gated_repo)}).stdout)
+    text = context["hookSpecificOutput"]["additionalContext"]
+    assert "Tenant rule: run `npm test`" in text
+    assert "Pillars a design must answer" in text and "P3 Tracing" in text
+
+
+@needs_git
+def test_session_start_says_when_gate_spans_are_not_emitted(gated_repo):
+    shutil.rmtree(gated_repo / "runtime")
+    _git(gated_repo, "commit", "-qam", "chore: drop runtime", "--no-verify")
+    context = json.loads(_hook(gated_repo, "session-start", {"cwd": str(gated_repo)}).stdout)
+    text = context["hookSpecificOutput"]["additionalContext"]
+    assert "gate spans NOT emitted" in text
 
 
 def _ci(repo: Path, base: str, head: str = "HEAD", summary: Path | None = None,
@@ -538,7 +763,7 @@ def test_ci_fails_when_the_config_was_removed(gated_repo):
 
 @needs_git
 def test_ci_lists_commits_from_before_adoption_instead_of_failing_them(tmp_path, monkeypatch):
-    repo = _make_repo(tmp_path, "adopting", {"scripts/process_gate.py": GATE, "src.py": "x = 1\n"}, monkeypatch)
+    repo = _make_repo(tmp_path, "adopting", {**GATE_FILES, "src.py": "x = 1\n"}, monkeypatch)
     base = _git(repo, "rev-parse", "HEAD").stdout.strip()
     _write(repo, "scripts/other.py", "y = 2\n")
     _git(repo, "add", "-A")
@@ -756,6 +981,15 @@ def test_self_test_runs_the_ci_gate_over_the_pushed_range():
     assert checkout["with"]["fetch-depth"] == 0, "a shallow clone has no range to check"
     step = next(s for s in job["steps"] if "process_gate.py ci" in s.get("run", ""))
     assert "github.event.before" in step["env"]["BASE"] and "pull_request.base.sha" in step["env"]["BASE"]
+    # Without the framework environment the gate exits 3 and checks nothing.
+    assert any("requirements-gate.txt" in s.get("run", "") for s in job["steps"]), \
+        "CI must install what the gate imports, or it cannot run at all"
+
+
+def test_the_gate_requirements_list_covers_what_the_gate_imports():
+    listed = (REPO / "scripts/requirements-gate.txt").read_text(encoding="utf-8")
+    for package in ("pydantic", "opentelemetry-sdk", "opentelemetry-exporter-otlp-proto-http"):
+        assert package in listed
 
 
 def test_the_commit_hook_calls_the_gate_through_the_launcher():

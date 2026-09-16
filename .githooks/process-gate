@@ -10,6 +10,9 @@
 #   2. $AGENTSMITH_DIR/scripts/            a framework checkout (installed-mode CI)
 #   3. ~/.agent-framework/scripts/         a machine install (installed-mode tenants, locally)
 #
+# and runs it with the first interpreter that can: $AGENTSMITH_PYTHON,
+# $AGENTSMITH_DIR/.venv, ~/.agent-framework/.venv, then the repo's own .venv.
+#
 # When none exists the gate cannot run, and each caller fails the safe way:
 # pre-edit denies the edit, commit-msg blocks the commit, ci fails; the
 # advisory session-start and stop only warn.
@@ -21,13 +24,42 @@ subcommand="${1:-}"
 # committed to when a session in one repo commits in another.
 root="$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-$PWD}")"
 
+gate=""
 for dir in "$root/scripts" "${AGENTSMITH_DIR:+$AGENTSMITH_DIR/scripts}" "$HOME/.agent-framework/scripts"; do
   if [ -n "$dir" ] && [ -f "$dir/process_gate.py" ]; then
-    exec python3 "$dir/process_gate.py" "$@"
+    gate="$dir/process_gate.py"
+    break
   fi
 done
 
-why="scripts/process_gate.py not found in this repo, \$AGENTSMITH_DIR or ~/.agent-framework — set AGENTSMITH_DIR to an AgentSmith checkout, or re-run its install-ai-stack.sh"
+# The interpreter: the gate needs the framework environment (Python 3.11+ with
+# pydantic and opentelemetry — pillars 3 and 7 hold for the gate itself). The
+# gate exits 3 when an interpreter cannot run it, and the next one is tried; a
+# hook's stdin is read once and replayed to each attempt.
+why=""
+if [ -z "$gate" ]; then
+  why="scripts/process_gate.py not found in this repo, \$AGENTSMITH_DIR or ~/.agent-framework — set AGENTSMITH_DIR to an AgentSmith checkout, or re-run its install-ai-stack.sh"
+else
+  case "$subcommand" in
+    session-start|pre-edit|stop) payload="$(cat)" ;;
+    *) payload="" ;;
+  esac
+  tried=""
+  for py in "${AGENTSMITH_PYTHON:-}" "${AGENTSMITH_DIR:+$AGENTSMITH_DIR/.venv/bin/python}" \
+            "$HOME/.agent-framework/.venv/bin/python" "$root/.venv/bin/python"; do
+    [ -n "$py" ] && [ -x "$py" ] || continue
+    case " $tried " in *" $py "*) continue ;; esac
+    tried="$tried $py"
+    if [ -n "$payload" ]; then
+      printf '%s' "$payload" | "$py" "$gate" "$@"
+    else
+      "$py" "$gate" "$@" </dev/null
+    fi
+    code=$?
+    [ "$code" -eq 3 ] || exit "$code"
+  done
+  why="no interpreter could run $gate (tried:${tried:- none}) — it needs Python 3.11+ with pydantic and opentelemetry: run AgentSmith's install-ai-stack.sh, or set AGENTSMITH_PYTHON"
+fi
 case "$subcommand" in
   pre-edit)
     printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"The process gate could not run: %s. Edits are denied until it can."}}\n' "$why"

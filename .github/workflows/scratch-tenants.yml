@@ -42,6 +42,7 @@ on:
       - "!runtime/test/**"
       - "fixtures/**"
       - "templates/agent-rules.yaml"
+      - "templates/governance.json"
       - ".github/scratch-tenants/**"
       - ".github/workflows/scratch-tenants.yml"
 

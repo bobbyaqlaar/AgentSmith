@@ -546,6 +546,24 @@ def _cmd_version(args: argparse.Namespace) -> int:
     return 0
 
 
+def governance_designs_dir() -> str:
+    from runtime.machine.governance import DESIGNS_DIR
+
+    return DESIGNS_DIR
+
+
+def _cmd_approve(args: argparse.Namespace) -> int:
+    from runtime.machine import governance
+
+    return governance.approve(args.design, args.deviation, args.statement)
+
+
+def _cmd_design_new(args: argparse.Namespace) -> int:
+    from runtime.machine import governance
+
+    return governance.design_new(args.slug, args.scope)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="agentsmith", description="AgentSmith framework CLI"
@@ -639,6 +657,22 @@ def build_parser() -> argparse.ArgumentParser:
         "purge-idempotency", help="delete idempotency rows past their TTL"
     )
     purge.set_defaults(func=_cmd_purge_idempotency)
+
+    approve = sub.add_parser(
+        "approve",
+        help="record the owner's approval of one deviation in a design (asks at the terminal)",
+    )
+    approve.add_argument("design", help=f"e.g. {governance_designs_dir()}/<slug>.md")
+    approve.add_argument("deviation", help="the id in the design's '## Deviations' section, e.g. D1")
+    approve.add_argument("--statement", default=None, help="one line on why (asked for if omitted)")
+    approve.set_defaults(func=_cmd_approve)
+
+    design = sub.add_parser("design", help="design records").add_subparsers(dest="design_command", required=True)
+    design_new = design.add_parser("new", help="write the design skeleton the process gate asks for")
+    design_new.add_argument("slug")
+    design_new.add_argument("--scope", action="append", default=[],
+                            help="path or glob this change may touch (repeatable)")
+    design_new.set_defaults(func=_cmd_design_new)
 
     ver = sub.add_parser("version", help="installed framework version")
     ver.set_defaults(func=_cmd_version)

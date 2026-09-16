@@ -42,7 +42,8 @@
       "scripts/**",
       "runtime/**",
       "fixtures/**",
-      "templates/agent-rules.yaml"
+      "templates/agent-rules.yaml",
+      "templates/governance.json"
     ],
     "except": [
       "scripts/test/**",

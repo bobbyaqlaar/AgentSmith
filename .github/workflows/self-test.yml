@@ -24,6 +24,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # The gate runs in the framework environment (pydantic + OTel), the same
+      # one the local hooks resolve. Installed from the list that travels with
+      # scripts/, so CI and a developer's machine run the same gate.
+      - run: pip install -r scripts/requirements-gate.txt
       - name: "Every gated commit has a design and a clean review"
         env:
           # A pull request's range is base..head; a push's is before..sha,
