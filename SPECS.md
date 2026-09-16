@@ -639,6 +639,7 @@ leaves the hook enforcing.
 | `agentsmith upgrade [--to VERSION]` | Upgrades vendored framework scripts in current repo; `--to` defaults to the installed release. |
 | `agentsmith scrub [dir] [--yes]` | Lists, confirms, then removes generated IDE-rule artefacts under the target directory. |
 | `agentsmith uninstall [--yes] [--purge]` | Removal of the machine-level install. Restores `git templateDir` to its previous value, removes the command link and any legacy profile block; `--purge` removes `~/.agent-framework`. |
+| `agentsmith gates repair` | Lists commits that reached this repo without passing the gate, and how to repair them. |
 | `agentsmith hooks bypass-check` | Internal — the hooks' call into the org bypass policy. |
 
 ---

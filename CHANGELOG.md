@@ -75,6 +75,26 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — governance enforcement, slice G3: the bypass sweep
+
+- `process_gate.py sweep` re-checks every locally reachable commit it has not
+  verified, with the same per-commit code the CI gate runs. `.git/agentsmith/verified`
+  remembers what passed, so it costs one pass over what is new. The first sweep in a
+  repo records the existing history as its starting point and says so.
+- **Hook interface change:** two new hooks, `.githooks/pre-commit` (reports, re-arms
+  `core.hooksPath`) and `.githooks/pre-push` (refuses while a bypass is unrepaired).
+  Tenants that adopted the gates get them by re-syncing; a clone without them is
+  still checked at session start, turn end and in CI.
+- A commit that skipped the gate is repaired, never rewritten: the next commit
+  carries the records plus a `Repairs: <sha>` trailer naming it, which `commit-msg`
+  requires while anything is outstanding. `agentsmith gates repair` lists them.
+- Session start now re-arms an unarmed `core.hooksPath` instead of asking the reader to.
+- **Workflow templates:** the IDE-config drift check no longer passes on failure in
+  `ci-python-fastapi`, `ci-go` and `ci-ts-react`. The Knowledge Graph step stays
+  warn-only until G4 builds and commits the graph at onboarding — blocking a control
+  that is not provisioned yet would fail every tenant's CI for something it cannot fix.
+  `test_workflow_template_wiring.py` fails if either state changes silently.
+
 ### Added — governance enforcement, slice G1 (design `.agent-rfc/designs/governance-enforcement.md`)
 - Declaring `registry` in `.agenticframework/process-gates.json` is what adopts the rules below.
   A commit whose own config omits it — anything from before this slice, and any tenant that has

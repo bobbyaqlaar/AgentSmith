@@ -20,6 +20,7 @@ the tenants that adopted it — AqlaarTeleologyStudio and KYC Sentinel. Designs:
 | **Edit gate** — PreToolUse on Edit/Write/MultiEdit/NotebookEdit | before each file edit | an edit to a gated path that no complete, *active* design note covers | editing through a shell command (the next three layers still see it) |
 | **Stop gate** — Stop | when an agent ends its turn | ending with uncommitted gated changes that have no clean review record newer than them | a second stop in a row (it warns instead of looping) |
 | **Commit gate** — `.githooks/commit-msg` | `git commit` (including `--amend`), in a clone that armed it | a commit touching gated paths without resolving `Design:` and `Review:` trailers | not arming it, `--no-verify`, and history rewrites git runs without `commit-msg` — rebase picks, cherry-picks (CI still sees all of them) |
+| **Sweep** — `.githooks/pre-commit`, `.githooks/pre-push`, session start, stop | every commit, push, session start and turn end | a push while any commit that never passed the gate is unrepaired; the next commit must be its repair | nothing local: the sweep is what catches `--no-verify`, an unarmed clone, a rebase and a cherry-pick |
 | **CI gate** — Self-Test job `process-gates` | every push and pull request | a pushed range with any non-compliant gated commit, or tenant-facing changes without a CHANGELOG update | nothing in the repo — but it reports red after a push rather than refusing it (below) |
 
 **What no gate can check** is whether the design was *good*. The gates prove a
@@ -237,6 +238,45 @@ checked, n/a with a reason or gap with a backlog id, plus Tests added,
 Mutation-checked, Fixtures re-pinned and Gates run. Passes say what was looked
 at; the sign-off says what was decided.
 
+## The sweep — what catches a bypass
+
+The commit gate is skippable: `git commit --no-verify`, a clone that never ran
+`git config core.hooksPath .githooks`, a rebase or cherry-pick (git runs no
+`commit-msg` for those), or git run from a shell no IDE gates. Branch protection
+would catch it on the way out, and a private repository on a free plan does not
+have it — so the check runs again, locally, at every touchpoint.
+
+`process_gate.py sweep` re-checks every commit reachable from a local branch
+that it has not checked before, using the same per-commit code the CI gate uses.
+`.git/agentsmith/verified` records what passed, so a sweep costs one pass over
+what is new. It runs from `.githooks/pre-commit` (report only), `.githooks/pre-push`
+(blocking), every session start and every turn end.
+
+The first sweep in a repo **records where it started and checks nothing**: a
+repo adopting the gates has history that could not comply, and failing all of it
+would say nothing useful. It prints how many commits it recorded.
+
+**Repairing, never rewriting.** A commit that skipped the gate is not amended
+away. The next commit carries the design and review records that cover those
+changes and a trailer naming what it repairs:
+
+```
+fix(worker): bring the bypassed change under review
+
+Design: .agent-rfc/designs/worker-retry.md
+Review: .agent-rfc/reviews/worker-retry.md
+Repairs: 9f2c1ab
+```
+
+Until then, `commit-msg` refuses any commit that does not repair the outstanding
+ones, and `pre-push` refuses the push. `agentsmith gates repair` lists them and
+what each lacks. The trailer is resolved by git, so it cannot name a commit that
+does not exist.
+
+Every sweep also re-arms `core.hooksPath` when it finds it unset in a repo that
+carries `.githooks/process-gate`, and says that it did — an unarmed clone is one
+of the ways commits skip the gate in the first place.
+
 ## Commit trailers
 
 ```
@@ -296,7 +336,17 @@ summary, so the escape stays visible.
   read reliably from its text. The stop, commit and CI gates check the files
   themselves.
 - **History before 2026-09-14 is not gated.** CI checks only the commits each
-  push adds.
+  push adds, and the sweep records the history it finds on first run as its
+  starting point rather than failing it.
+- **The sweep's hooks are `.githooks/`.** A repo that runs the machine-wide
+  `~/.git_templates` hooks without adopting `.githooks` gets the sweep at
+  session start and in CI, but not at commit or push time. Adopting the gates
+  (`git config core.hooksPath .githooks`) is what arms those two, and every
+  sweep re-arms it when it finds it unset.
+- **The sweep sees this machine's clone.** It walks local branches, not remote
+  refs: what someone else pushed is their machine's and CI's business. A commit
+  that reaches a remote without passing anything is caught by CI, and by the
+  sweep on the next machine that fetches and works on it.
 - **New tenants do not get the gates automatically.** OTS and KYC Sentinel
   adopted them by hand (above); `agentsmith tenant init` and the post-checkout
   hook provision none of it. Recorded in `FIXES_AND_CLEANUP.md`.

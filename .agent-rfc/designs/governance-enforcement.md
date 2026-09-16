@@ -28,6 +28,9 @@ scope:
   - .agents/hooks.json
   - .github/hooks/**
   - .github/workflows/**
+  - workflow-templates/**
+  - scripts/test/conftest.py
+  - scripts/test/test_workflow_template_wiring.py
   - .agenticframework/process-gates.json
   - runtime/cli.py
   - runtime/machine/**
@@ -83,6 +86,10 @@ Seven slices, each designed, built, reviewed (passes until 0) and signed off bef
 ### Owner decisions — 2026-09-16 (sequencing)
 
 Recorded after G1 shipped; they change the order and three of the slices.
+
+**Each slice keeps its own review record** — `reviews/governance-enforcement-<slice>.md` —
+because the gate checks one record per change: passes numbered 1..N, ending at 0 and a
+sign-off. G1's is `reviews/governance-enforcement.md`.
 
 **Order.** G3 → G5a → G6 → G2 → G4 → G7, with the document migrations (G5b) and the
 scope-derived pillar subset trailing their prerequisites:
@@ -214,7 +221,8 @@ files under this one, and the stop gate's findings changed between turns.
 - **Blocked until repaired.** While unverified non-compliant commits exist, pre-commit and pre-push fail and the IDE pre-edit denies, naming the commits. `agentsmith gates repair` shows them. The fix is to amend or add the records in a new commit carrying `Repairs: <sha>…` trailers, re-run the check, and append a `bypass` entry to the review log. History is never rewritten automatically (pillar 12 spirit).
 - **Hooks re-armed.** Every sweep checks `core.hooksPath` and re-arms it (idempotent) when a tenant config exists, printing that it did.
 - **No trailer stamp.** An HMAC key would sit on the same disk the agent can read, and the sweep re-checks content anyway, so a stamp adds no guarantee. This replaces the "Gate: trailer" idea in the owner-reviewed backlog note, and it is flagged to the owner.
-- **CI** stays as the last layer. `continue-on-error` / `|| true` are removed from governance steps in workflow templates, and a test fails on their reappearance.
+- **CI** stays as the last layer. `continue-on-error` / `|| true` are removed from governance steps in workflow templates, and a test fails on their reappearance. **Amended while building (2026-09-16):** the Knowledge Graph step keeps `continue-on-error` until G4, because it is G4 that builds and commits the graph at onboarding — making it blocking now would fail every tenant's CI for a control no tenant has yet. The framework health check stays non-blocking too: it reports on Phoenix and the registry, which a tenant may legitimately not configure in CI. Both are pinned with their reason by `test_governance_steps_block_on_failure`.
+- **Amended while building (2026-09-16):** pre-commit reports rather than refuses. Refusing there deadlocks the repair — the commit that would fix a bypass is itself a commit, and pre-commit runs before the message that says what it repairs exists. `commit-msg` makes that call, and `pre-push` refuses unconditionally.
 
 ### G4 — Knowledge graph from day one, and reviews that use it
 

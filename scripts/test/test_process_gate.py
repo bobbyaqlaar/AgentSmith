@@ -383,7 +383,7 @@ def _make_repo(tmp_path: Path, name: str, files: dict, monkeypatch) -> Path:
             shutil.copy(source, repo / rel)
         else:
             (repo / rel).write_text(source)
-    for hook in (".githooks/commit-msg", ".githooks/process-gate"):
+    for hook in HOOK_FILES:
         if (repo / hook).exists():
             (repo / hook).chmod(0o755)
     _git(repo, "add", "-A")
@@ -395,6 +395,8 @@ def _make_repo(tmp_path: Path, name: str, files: dict, monkeypatch) -> Path:
 HOOK_FILES = {
     ".githooks/commit-msg": REPO / ".githooks/commit-msg",
     ".githooks/process-gate": REPO / ".githooks/process-gate",
+    ".githooks/pre-commit": REPO / ".githooks/pre-commit",
+    ".githooks/pre-push": REPO / ".githooks/pre-push",
 }
 # What a vendored copy of the gate carries: the script, its models and tracing,
 # the registry beside it, and the runtime its spans go through.
@@ -916,12 +918,26 @@ def test_stop_catches_a_gated_change_no_design_covers(gated_repo):
 
 
 @needs_git
-def test_session_start_states_the_rules_and_an_unarmed_commit_gate(gated_repo):
+def test_session_start_states_the_rules_and_rearms_an_unarmed_commit_gate(gated_repo):
+    """An unarmed clone used to be told to arm itself, which only works if
+    somebody reads it. Since the sweep (G3) the session start re-arms it and
+    reports that it did — the fix, not the reminder."""
     _git(gated_repo, "config", "--unset", "core.hooksPath")
     context = json.loads(_hook(gated_repo, "session-start", {"cwd": str(gated_repo)}).stdout)
     text = context["hookSpecificOutput"]["additionalContext"]
     assert "design-review-checklist.md" in text and "review-levers.md" in text
-    assert "git config core.hooksPath .githooks" in text
+    assert _git(gated_repo, "config", "core.hooksPath").stdout.strip() == ".githooks"
+
+
+@needs_git
+def test_session_start_warns_when_the_gate_cannot_be_armed(gated_repo):
+    """No launcher to point core.hooksPath at: re-arming would name a directory
+    with no hooks in it, which is worse than saying so."""
+    _git(gated_repo, "config", "--unset", "core.hooksPath")
+    (gated_repo / ".githooks" / "process-gate").unlink()
+    context = json.loads(_hook(gated_repo, "session-start", {"cwd": str(gated_repo)}).stdout)
+
+    assert "not armed" in context["hookSpecificOutput"]["additionalContext"]
 
 
 @needs_git

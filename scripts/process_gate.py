@@ -595,11 +595,16 @@ def stop_problems(root: Path) -> List[str]:
 
 def cmd_stop(payload: dict) -> int:
     root = repo_root(payload.get("cwd"))
-    problems = stop_problems(root)
+    unreviewed = stop_problems(root)
+    # A commit that skipped the gate is as unreviewed as an uncommitted change,
+    # and the end of a turn is a touchpoint like any other.
+    swept, sweep_report, _failing = sweep(root)
+    problems = [*unreviewed, *([line.strip() for line in sweep_report if line.strip()] if swept else [])]
     if not problems:
         return 0
-    _record("block", "review-before-done")
-    text = "Unreviewed gated changes:\n- " + "\n- ".join(problems)
+    _record("block", "review-before-done" if not swept else "bypass-sweep")
+    heading = "Commits that never passed the gate" if swept and not unreviewed else "Unreviewed gated changes"
+    text = f"{heading}:\n- " + "\n- ".join(problems)
     if payload.get("stop_hook_active"):
         # Blocking again could loop forever. The commit and CI gates still hold.
         print(json.dumps({"systemMessage": "⚠️ Turn ended with " + text}))
@@ -642,6 +647,11 @@ def cmd_session_start(payload: dict) -> int:
         ]
         extends = config.extends_data or {}
         lines.extend(str(line) for line in (extends.get("session_start") or []))
+        swept, sweep_report, _failing = sweep(root)
+        if swept:
+            lines.append("⚠️ The bypass sweep found commits that never passed the gate — commits and pushes are "
+                         "refused until they are repaired (`agentsmith gates repair`):")
+            lines.extend(line.strip() for line in sweep_report if line.strip().startswith(("❌", "✅", "ℹ️", "Repair")))
         if registry is not None:
             answerable = [p for p in registry.pillars if "design" in p.check]
             lines.append(
@@ -662,7 +672,10 @@ def cmd_session_start(payload: dict) -> int:
                 "`python3 scripts/generate-ide-config.py --repo-root .` (needs pyyaml; the files are gitignored)."
             )
     if git("config", "--get", "core.hooksPath", cwd=root, check=False).strip() != ".githooks":
-        lines.append("⚠️ The commit gate is not armed in this clone: run `git config core.hooksPath .githooks`.")
+        # The sweep re-arms a clone that carries .githooks, and says so there.
+        # Reaching here means it could not: no launcher to point at.
+        lines.append("⚠️ The commit gate is not armed in this clone and cannot be: it has no .githooks/process-gate. "
+                     "Re-sync AgentSmith into this repo, then run `git config core.hooksPath .githooks`.")
     telemetry = gt.status_line(gt.ship())
     if telemetry:
         lines.append(telemetry)
@@ -697,6 +710,24 @@ def cmd_commit_msg(message_file: str, amend: bool = False) -> int:
     lines = _gated_lines(git("diff", "--cached", "--numstat", *base, cwd=root), config)
 
     errors, notes = check_change(files, lines, message, read, config)
+
+    # A commit that skipped the gate blocks the next commit — unless the next
+    # commit is the repair. pre-commit cannot decide that (no message yet), so
+    # it is decided here, where the message says which commits it repairs.
+    _code, sweep_report, failing = sweep(root)
+    if failing:
+        claimed = {sha for line in _REPAIRS.findall(message)
+                   for token in re.split(r"[\s,]+", line) if token
+                   for sha in [git("rev-parse", "--verify", "--quiet", f"{token}^{{commit}}",
+                                   cwd=root, check=False).strip()] if sha}
+        unrepaired = [f for f in failing if f[0] not in claimed]
+        if unrepaired:
+            errors.extend([
+                *[line.strip() for line in sweep_report if line.strip().startswith("❌")],
+                f"this commit must repair them: add a `Repairs: {unrepaired[0][0][:12]}` trailer "
+                "(one per commit) to the message that brings them under a design and review",
+            ])
+
     for note in notes:
         print(f"ℹ️  process gate: {note}")
     if errors:
@@ -728,19 +759,23 @@ def _report(lines: List[str], annotations: List[str]) -> None:
         print(annotation)
 
 
-def cmd_ci(base: str, head: str) -> int:
-    root = repo_root()
-    head_config, head_problems = parse_config(_reader_at(root, head)(CONFIG))
-    if head_config is None or head_problems:
-        why = "; ".join(head_problems) or (
-            f"{CONFIG} is missing at {head[:12]} — this CI runs the process gate, so the repo adopted it, "
-            "and a missing config means the gates were removed"
-        )
-        _report(["## Process gates", "", f"- ❌ {why}"], [f"::error title=Process gate::{why}"])
-        return 1
 
-    commits, caveat = _range_commits(root, base, head)
-    failures: List[Tuple[str, str, List[str]]] = []
+# ── Checking commits ─────────────────────────────────────────────────────────
+
+Failures = List[Tuple[str, str, List[str]]]
+
+
+def check_commits(root: Path, commits: List[str]) -> Tuple[Failures, List[Tuple[str, str, str]],
+                                                           List[Tuple[str, str]], set, int]:
+    """Every commit against the config and records it carries.
+
+    One implementation for `ci` (a pushed range) and `sweep` (whatever reached
+    this machine without passing the commit gate): two would answer the same
+    question differently, and the sweep exists precisely to catch what the other
+    layers missed.
+    -> (failures, escapes, unadopted, files seen, commits touching gated paths)
+    """
+    failures: Failures = []
     escapes: List[Tuple[str, str, str]] = []
     unadopted: List[Tuple[str, str]] = []
     range_files: set = set()
@@ -769,6 +804,23 @@ def cmd_ci(base: str, head: str) -> int:
         if errors:
             failures.append((commit, subject, errors))
         escapes.extend((commit, subject, n) for n in notes)
+
+    return failures, escapes, unadopted, range_files, gated_commits
+
+
+def cmd_ci(base: str, head: str) -> int:
+    root = repo_root()
+    head_config, head_problems = parse_config(_reader_at(root, head)(CONFIG))
+    if head_config is None or head_problems:
+        why = "; ".join(head_problems) or (
+            f"{CONFIG} is missing at {head[:12]} — this CI runs the process gate, so the repo adopted it, "
+            "and a missing config means the gates were removed"
+        )
+        _report(["## Process gates", "", f"- ❌ {why}"], [f"::error title=Process gate::{why}"])
+        return 1
+
+    commits, caveat = _range_commits(root, base, head)
+    failures, escapes, unadopted, range_files, gated_commits = check_commits(root, commits)
 
     changelog_error = None
     needing = sorted(f for f in range_files if head_config.needs_changelog(f))
@@ -803,8 +855,185 @@ def cmd_ci(base: str, head: str) -> int:
     return 1 if failures or changelog_error else 0
 
 
+
+# ── The sweep ────────────────────────────────────────────────────────────────
+#
+# The commit gate is skippable: `--no-verify`, an unarmed clone, a rebase, a
+# cherry-pick, or git run from a shell no IDE gates. Branch protection would
+# catch it on the way out, and the owner ruled out depending on a GitHub plan
+# (D3, approved 2026-09-15). So the check runs again, locally, at every
+# touchpoint: pre-commit, pre-push, session start and stop. A commit that
+# slipped past is found at the next thing anyone does in the repo.
+#
+# `.git/agentsmith/verified` remembers what has already been checked, so a
+# sweep costs one pass over what is new. It lives in .git — it is this
+# machine's record of what it verified, not shared history.
+
+VERIFIED_CAP = 5000
+# How many unverified commits one sweep checks. Overridable so the batching
+# itself is testable without making 200 commits.
+SWEEP_BATCH = int(os.environ.get("AGENTSMITH_SWEEP_BATCH") or 200)
+VERIFIED_REL = "agentsmith/verified"
+
+
+def _git_dir(root: Path) -> Path:
+    out = git("rev-parse", "--git-dir", cwd=root, check=False).strip() or ".git"
+    path = Path(out)
+    return path if path.is_absolute() else root / path
+
+
+def load_verified(root: Path) -> dict:
+    """What this machine has already checked. A missing or unreadable store
+    means "never swept", which initialises rather than re-checking history."""
+    try:
+        data = json.loads((_git_dir(root) / VERIFIED_REL).read_text(encoding="utf-8"))
+        if isinstance(data, dict) and isinstance(data.get("shas"), list):
+            return {"version": 1, "shas": [str(s) for s in data["shas"]], "initialised": True}
+    except (OSError, json.JSONDecodeError, ValueError):
+        pass
+    return {"version": 1, "shas": [], "initialised": False}
+
+
+def save_verified(root: Path, shas: List[str]) -> int:
+    """Keep the newest VERIFIED_CAP; -> how many were dropped, never silently."""
+    dropped = max(0, len(shas) - VERIFIED_CAP)
+    path = _git_dir(root) / VERIFIED_REL
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"version": 1, "shas": shas[-VERIFIED_CAP:], "updated_at": _now()}
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return dropped
+
+
+def _now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def local_commits(root: Path, limit: int = 2000) -> List[str]:
+    """Every commit reachable from a local branch or HEAD, oldest first. Remote
+    refs are not swept: what someone else pushed is their CI's business, and a
+    fetch would otherwise make this machine responsible for their history."""
+    out = git("rev-list", "--reverse", "--no-merges", f"--max-count={limit}",
+              "--branches", "HEAD", cwd=root, check=False)
+    return [c for c in out.splitlines() if c]
+
+
+_REPAIRS = re.compile(r"^Repairs:[ \t]*(.+?)[ \t]*$", re.M | re.I)
+
+
+def repairs_claimed(root: Path, commit: str) -> List[str]:
+    """Full shas this commit says it repairs, as resolved by git. A trailer
+    naming something git does not have repairs nothing — otherwise any commit
+    could clear any finding by claiming it."""
+    message = git("log", "-1", "--format=%B", commit, cwd=root, check=False)
+    claimed: List[str] = []
+    for line in _REPAIRS.findall(message):
+        for token in re.split(r"[\s,]+", line):
+            if not token:
+                continue
+            resolved = git("rev-parse", "--verify", "--quiet", f"{token}^{{commit}}", cwd=root, check=False).strip()
+            if resolved:
+                claimed.append(resolved)
+    return claimed
+
+
+def rearm_hooks(root: Path, config: Optional[Config]) -> Optional[str]:
+    """An unarmed clone is one of the ways a commit skips the gate. Where the
+    repo has adopted the gates and carries the launcher, re-arm it — and say so.
+    A repo that never adopted them is left alone: git's machine-wide template
+    applies these hooks to every `git init` on the machine."""
+    if config is None or not (root / ".githooks" / "process-gate").is_file():
+        return None
+    current = git("config", "core.hooksPath", cwd=root, check=False).strip()
+    if current == ".githooks":
+        return None
+    git("config", "core.hooksPath", ".githooks", cwd=root, check=False)
+    return f"re-armed core.hooksPath = .githooks (was {current or 'unset'})"
+
+
+def sweep(root: Path) -> Tuple[int, List[str], Failures]:
+    """Re-check everything local that has not been verified.
+    -> (code, report, the commits still failing)."""
+    config, problems = parse_config(_reader_at(root, "")(CONFIG))
+    report: List[str] = []
+    if config is None and not problems:
+        return 0, ["sweep: this repo has not adopted the process gates — nothing to check"], []
+    armed = rearm_hooks(root, config)
+    if armed:
+        report.append(f"sweep: {armed}")
+    if problems:
+        return 1, [*report, f"sweep: {CONFIG} is unusable — " + "; ".join(problems)], []
+
+    store = load_verified(root)
+    commits = local_commits(root)
+    if not store["initialised"]:
+        dropped = save_verified(root, commits)
+        report.append(
+            f"sweep: initialised — {len(commits)} commit(s) of existing history recorded as the starting point "
+            f"and NOT swept; everything from here on is checked"
+            + (f" ({dropped} older sha(s) beyond the cap were not recorded)" if dropped else "")
+        )
+        return 0, report, []
+
+    known = set(store["shas"])
+    candidates = [c for c in commits if c not in known]
+    deferred = 0
+    if len(candidates) > SWEEP_BATCH:
+        # This runs at every commit, push, session start and turn end, and each
+        # commit costs several git calls. Fetching a long branch must not turn
+        # the next session start into a minute of silence: take the oldest
+        # batch, say how many are left, and take the rest next time. Nothing is
+        # skipped — an unchecked commit stays unverified.
+        deferred = len(candidates) - SWEEP_BATCH
+        candidates = candidates[:SWEEP_BATCH]
+    if not candidates:
+        report.append("sweep: nothing new since the last sweep")
+        return 0, report, []
+
+    failures, _escapes, unadopted, _files, gated = check_commits(root, candidates)
+    failed = {commit for commit, _subject, _errors in failures}
+    passed = [c for c in candidates if c not in failed]
+    repaired = {sha for c in passed for sha in repairs_claimed(root, c)} & failed
+    still_failing = [(c, s, e) for c, s, e in failures if c not in repaired]
+
+    verified = store["shas"] + [c for c in candidates if c not in failed or c in repaired]
+    dropped = save_verified(root, verified)
+
+    report.append(f"sweep: checked {len(candidates)} new commit(s), {gated} touching gated paths"
+                  + (f"; {deferred} more will be swept next time" if deferred else ""))
+    if dropped:
+        report.append(f"  ℹ️ the verified record keeps the newest {VERIFIED_CAP} commits; {dropped} older sha(s) "
+                      "were dropped and would be re-checked if they are still reachable")
+    for commit, subject, _errors in failures:
+        if commit in repaired:
+            report.append(f"  ✅ {commit[:10]} {subject} — repaired by a later commit")
+    for commit, subject in unadopted:
+        report.append(f"  ℹ️ {commit[:10]} {subject} — before this repo adopted the gates; not checked")
+    for commit, subject, errors in still_failing:
+        report.append(f"  ❌ {commit[:10]} {subject} — this commit did not pass the gate:")
+        report.extend(f"       {e}" for e in errors)
+    if still_failing:
+        report.append(
+            "  Repair, never rewrite: commit the design and review records that cover those changes, with a "
+            "`Repairs: <sha>` trailer naming each commit above (`agentsmith gates repair` lists them). "
+            "Until then a commit must repair them, and pushes are refused."
+        )
+        return 1, report, still_failing
+    return 0, report, []
+
+
+def cmd_sweep(report_only: bool = False) -> int:
+    """`--report` is what pre-commit runs: the commit being made may be the
+    repair, and its message — the only place that says so — does not exist yet.
+    commit-msg makes that call; this re-arms the hooks and says what is pending."""
+    code, report, _failures = sweep(repo_root())
+    print("\n".join(report))
+    return 0 if report_only else code
+
+
 _SPAN_EVENTS = {"session-start": "session_start", "pre-edit": "pre_edit", "stop": "stop",
-                "commit-msg": "commit_msg", "ci": "ci"}
+                "commit-msg": "commit_msg", "ci": "ci", "sweep": "sweep"}
 
 
 def _traced(command: str, root: Path, run: Callable[[], int]) -> int:
@@ -844,6 +1073,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("session-start", "pre-edit", "stop"):
         sub.add_parser(name)
+    sweep_cmd = sub.add_parser("sweep")
+    sweep_cmd.add_argument("--report", action="store_true",
+                           help="report and re-arm, but do not refuse (pre-commit; commit-msg decides)")
     msg = sub.add_parser("commit-msg")
     msg.add_argument("--amend", action="store_true", help="the commit replaces HEAD (git commit --amend)")
     msg.add_argument("message_file")
@@ -868,6 +1100,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             _deny(f"process gate could not evaluate this edit ({exc!r}) — "
                   "fix process_gate.py or its input before editing gated paths")
             return 0
+    if args.command == "sweep":
+        return _traced("sweep", repo_root(), lambda: cmd_sweep(args.report))
     if args.command == "commit-msg":
         return _traced("commit-msg", repo_root(), lambda: cmd_commit_msg(args.message_file, amend=args.amend))
     return _traced("ci", repo_root(), lambda: cmd_ci(args.base, args.head))

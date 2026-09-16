@@ -503,6 +503,12 @@ def _cmd_uninstall(args: argparse.Namespace) -> int:
     return ops.uninstall(args.yes, args.purge)
 
 
+def _cmd_gates_repair(args: argparse.Namespace) -> int:
+    from runtime.machine import governance
+
+    return governance.gates_repair()
+
+
 def _cmd_hooks_bypass_check(args: argparse.Namespace) -> int:
     """Exit 0 when the hooks may be bypassed. Called by the four git hooks when a
     bypass is requested and an org policy file exists — see runtime/machine/policy.py."""
@@ -645,6 +651,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="only remove the shell-function block older installs appended to a shell profile",
     )
     uninstall.set_defaults(func=_cmd_uninstall)
+
+    gates = sub.add_parser("gates", help="the local gates").add_subparsers(dest="gates_command", required=True)
+    gates.add_parser(
+        "repair", help="list commits that never passed the gate, and how to bring them under one"
+    ).set_defaults(func=_cmd_gates_repair)
 
     hooks = sub.add_parser("hooks", help="internal: called by the git hooks").add_subparsers(
         dest="hooks_command", required=True

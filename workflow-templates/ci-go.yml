@@ -76,7 +76,10 @@ jobs:
               print("⚠️  Knowledge Graph is empty — map_codebase.py may have failed.")
               sys.exit(1)
           EOF
-        continue-on-error: true # warn, not block, until adoption is stable
+        # Still warn-only: the graph becomes blocking in G4, when it is built at
+        # onboarding and committed. Blocking it before a tenant HAS one would fail
+        # every CI run for a control that is not provisioned yet.
+        continue-on-error: true
 
       - name: "RFC gate (Pillar 1)"
         run: |
@@ -92,8 +95,10 @@ jobs:
           echo "✅ RFC gate: ${RFC_COUNT} RFC(s) found."
 
       - name: "IDE config drift check (Pillar 6/7)"
+        # Blocking since G3: the rule files are generated from one source, so
+        # drift means a repo is telling its agents something the framework did
+        # not say. Regenerate with `python3 scripts/generate-ide-config.py --write`.
         run: python3 scripts/generate-ide-config.py --check-only
-        continue-on-error: true # warn only — blocking is a Phase 5 decision
 
       - name: "Framework health check (Pillar 3/5)"
         env:

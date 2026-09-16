@@ -16,3 +16,8 @@ def pytest_configure(config):
     import tempfile
 
     os.environ.setdefault("AGENTSMITH_STATE_DIR", tempfile.mkdtemp(prefix="agentsmith-test-state-"))
+
+
+# The gated-repo fixture lives beside the gate's own tests; re-exported here so
+# every gate suite builds the same repo shape instead of a second one.
+from test_process_gate import gated_repo  # noqa: F401 — a fixture, used by name

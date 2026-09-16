@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Sequence
 
-from runtime.machine.state import framework_home
+from runtime.machine.state import find_script, framework_home
 
 DESIGNS_DIR = ".agent-rfc/designs"
 
@@ -220,3 +220,19 @@ def design_new(slug: str, scope: Sequence[str], root: Optional[Path] = None) -> 
     target.write_text("\n".join(body), encoding="utf-8")
     print(f"✅ Written {target.relative_to(root)} — answer every pillar before you write code")
     return 0
+
+
+def gates_repair(root: Optional[Path] = None) -> int:
+    """`agentsmith gates repair` — what the sweep found, and how to clear it.
+
+    The same sweep the hooks run, so the list a person reads is the list that is
+    refusing their commit; a second implementation would eventually disagree
+    with the one doing the refusing.
+    """
+    root = Path(root or Path.cwd())
+    script = find_script("process_gate.py", root)
+    if script is None:
+        print("❌ scripts/process_gate.py not found in this repo or ~/.agent-framework — "
+              "re-run install-ai-stack.sh, or set AGENTSMITH_DIR", file=sys.stderr)
+        return 2
+    return subprocess.run([sys.executable, str(script), "sweep"], cwd=root, check=False).returncode

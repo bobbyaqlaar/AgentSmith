@@ -933,6 +933,7 @@ one for one (`~/.agent-framework/shell/ai-compat.sh`).
 | `agentsmith upgrade` | `[--to VERSION]` | Refreshes the current tenant repo's vendored `scripts/`, `runtime/` (with only the five harness-delegated `runtime/test` suites) and `fixtures/` from `~/.agent-framework`, regenerates their `ruff.toml` excludes, bumps `.agenticframework/tenant.yaml`'s `framework.version`, and commits. Needs `tenant.yaml`. Leaves a foreign `runtime/` alone and does nothing in a tenant that installs `agentsmith-runtime` as a package. Does **not** refresh workflows or composite actions. Fails loudly (and stops) if the commit itself fails, rather than reporting "Upgrade complete" regardless. |
 | `agentsmith tenant onprem-scaffold` | — | Copy the on-prem deploy template (Docker Compose or Helm, `templates/onprem-deploy/`) into the current repo's `deploy/onprem/` for in-border / air-gapped clusters. Full walkthrough: OPERATIONS.md. |
 | `agentsmith uninstall` | `[--yes] [--purge]` | Machine-level removal: restores `git init.templateDir` to its pre-install value, removes `~/.local/bin/agentsmith` and any AgentSmith block left in a shell profile; `--purge` also removes `~/.agent-framework` (including the command itself) and `~/.git_templates`. Asks for confirmation unless `--yes`. |
+| `agentsmith gates repair` | — | Lists commits that reached this repo without passing the gate — a `--no-verify` commit, an unarmed clone, a rebase — and how to bring each under a design and review. The same sweep the hooks run, so this list is the one refusing your commit. |
 | `agentsmith doctor` | `[verify_system flags]` | Runs `scripts/verify_system.py` (the tenant's copy, else the machine's) with the flags given. |
 | `agentsmith purge-idempotency` | — | Deletes idempotency rows past their TTL (OPERATIONS.md §9). |
 | `agentsmith version` | — | The installed framework version. |
@@ -949,6 +950,7 @@ one for one (`~/.agent-framework/shell/ai-compat.sh`).
 | Variable | Effect |
 |---|---|
 | `DISABLE_AI_STACK=true` | Hooks skip for that command. With an enterprise org policy installed, the policy decides instead (see §16) |
+| `AGENTSMITH_SWEEP_BATCH` | How many unverified commits one bypass sweep checks before deferring the rest to the next one (default 200). The sweep runs at every commit, push, session start and turn end, so this bounds what any of them costs after a long fetch; nothing is skipped — an unchecked commit stays unverified |
 | `AGENTSMITH_STATE_DIR` | Where machine state is read and written instead of `~/.agent-framework/state` — the mode, install mode and dashboard endpoint. For sandboxes and test isolation; the hooks honour it too |
 | `AGENTSMITH_IDE` | Which agent is running the process gate (`claude`, `cursor`, `antigravity`, `copilot`, `gemini`, `codex`). Set by each IDE's generated hook config; it names the caller on the gate's `agent.gate.*` spans. Unset reads as `unknown`, never as a guess |
 | `AGENTSMITH_PYTHON` | The interpreter `.githooks/process-gate` runs the gate with, tried before `$AGENTSMITH_DIR/.venv`, `~/.agent-framework/.venv` and the repo's own `.venv`. It needs Python 3.11+ with pydantic and opentelemetry |

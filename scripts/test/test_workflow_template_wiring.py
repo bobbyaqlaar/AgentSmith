@@ -30,6 +30,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+import yaml
+
 REPO = Path(__file__).resolve().parents[2]
 TEMPLATES = REPO / "workflow-templates"
 INSTALLER = REPO / "install-ai-stack.sh"
@@ -279,3 +282,42 @@ def test_every_stacks_ci_runs_the_strict_security_harness() -> None:
         gate = jobs.get("security-checks", {})
         assert gate.get("uses") == "./.github/workflows/eval-security.yml", f"{path.name} skips the security harness"
         assert gate.get("with", {}).get("strict") is True, f"{path.name} runs the security harness non-strict"
+
+
+# ── Governance steps block (G3) ──────────────────────────────────────────────
+
+
+# A governance step that passes on failure is a rule nobody enforces: the CI run
+# is green, the control did not hold, and only someone reading the log knows.
+# Each entry says whether the step must block, and a non-blocking one must say
+# in the file why it does not yet (`ambiguous-signals`).
+GOVERNANCE_STEPS = {
+    "RFC gate (Pillar 1)": True,
+    "IDE config drift check (Pillar 6/7)": True,
+    # Blocking moves with G4, when the graph is built at onboarding and committed.
+    "Validate Knowledge Graph (Pillar 2)": False,
+    # Not a gate: it reports on Phoenix and the model registry, which a tenant
+    # may legitimately not have configured in CI.
+    "Framework health check (Pillar 3/5)": False,
+}
+CI_TEMPLATES = ("ci-python-fastapi", "ci-go", "ci-ts-react")
+
+
+@pytest.mark.parametrize("template", CI_TEMPLATES)
+def test_governance_steps_block_on_failure(template) -> None:
+    doc = yaml.safe_load((REPO / "workflow-templates" / f"{template}.yml").read_text(encoding="utf-8"))
+    seen = {}
+    for job in (doc.get("jobs") or {}).values():
+        for step in job.get("steps") or []:
+            name = step.get("name", "")
+            if name in GOVERNANCE_STEPS:
+                seen[name] = step
+    assert set(seen) == set(GOVERNANCE_STEPS), f"{template}: governance steps renamed or removed: {sorted(seen)}"
+    for name, step in seen.items():
+        blocks = GOVERNANCE_STEPS[name]
+        passes_on_failure = bool(step.get("continue-on-error")) or "|| true" in (step.get("run") or "")
+        assert passes_on_failure is not blocks, (
+            f"{template}: step {name!r} "
+            + ("passes on failure — a governance gate that cannot fail is not a gate"
+               if blocks else "is expected to be non-blocking; if that changed, update this test with the reason")
+        )
