@@ -22,17 +22,12 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 GENERATOR = REPO / "scripts" / "generate-ide-config.py"
 sys.path.insert(0, str(REPO / "scripts"))
-def _load(path: Path):
-    """The generator is a hyphenated script, so it is loaded by path."""
-    import importlib.util
 
-    spec = importlib.util.spec_from_file_location("generate_ide_config", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from _shared import load_script  # imported after the path insert above
 
-
-generate = _load(GENERATOR)
+# The generator is a hyphenated script; `load_script` is the one loader
+# (scripts/test/test_security_registry.py fails on a hand-rolled second).
+generate = load_script("generate-ide-config")
 
 RULES = yaml.safe_load((REPO / "templates" / "agent-rules.yaml").read_text(encoding="utf-8"))
 CTX = {"project_name": "t", "owner_id": "o@x", "otel_endpoint": "http://localhost:6006",

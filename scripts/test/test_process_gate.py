@@ -997,3 +997,79 @@ def test_the_commit_hook_calls_the_gate_through_the_launcher():
     assert '.githooks/process-gate" commit-msg "${amend[@]+"${amend[@]}"}" "$msg_file"' in text
     for hook in (".githooks/commit-msg", ".githooks/process-gate"):
         assert os.access(REPO / hook, os.X_OK), hook
+
+
+# ── Adoption of the registry's design-time rules ─────────────────────────────
+
+
+PRE_REGISTRY_DESIGN = """---
+status: active
+scope:
+  - scripts/**
+---
+# A design written before the registry existed
+
+## Problem
+Something was wrong.
+
+## Approach
+Fix it.
+
+## Levers
+- `declared-vs-enforced` — the gate reads it.
+"""
+
+PRE_REGISTRY_REVIEW = """# Review — before the registry
+
+## Pass 1 — findings: 0
+Everything checked.
+"""
+
+
+def _checked(config_data: dict, design: str, review: str) -> list:
+    """The errors `ci` would report for one commit carrying this config."""
+    config = pg.Config(config_data)
+    files = {
+        ".agent-rfc/designs/change.md": design,
+        ".agent-rfc/reviews/change.md": review,
+        "docs/review-levers.md": (REPO / "docs/review-levers.md").read_text(encoding="utf-8"),
+        "templates/governance.json": (REPO / "templates/governance.json").read_text(encoding="utf-8"),
+    }
+    errors, _notes = pg.check_change(
+        ["scripts/tool.py", ".agent-rfc/reviews/change.md"], 10,
+        "feat: x\n\nDesign: .agent-rfc/designs/change.md\nReview: .agent-rfc/reviews/change.md\n",
+        lambda path: files.get(path), config,
+    )
+    return errors
+
+
+BASE_CONFIG = {
+    "gated": ["scripts/**"],
+    "not_gated": ["**.md", ".agent-rfc/**"],
+    "levers_doc": "docs/review-levers.md",
+}
+
+
+def test_a_commit_made_before_the_registry_is_judged_by_the_rules_it_was_made_under():
+    """G1 added `## Pillars`, `## Deviations`, `## Dependencies` and the sign-off
+    block. Applying them to commits made before they existed would fail history
+    that no design written then could have satisfied — and `ci` walks a range of
+    commits. A config that does not declare `registry` has not adopted them."""
+    assert _checked(BASE_CONFIG, PRE_REGISTRY_DESIGN, PRE_REGISTRY_REVIEW) == []
+
+
+def test_a_commit_that_declares_the_registry_must_answer_it():
+    errors = _checked(
+        {**BASE_CONFIG, "registry": "templates/governance.json"},
+        PRE_REGISTRY_DESIGN, PRE_REGISTRY_REVIEW,
+    )
+    assert any("Pillars" in e for e in errors), errors
+    assert any("Deviations" in e for e in errors), errors
+    assert any("Dependencies" in e for e in errors), errors
+    assert any("Sign-off" in e for e in errors), errors
+
+
+def test_this_repo_has_adopted_the_registry():
+    """AgentSmith declares it, so every commit from G1 on is held to it — the
+    grandfathering above is for history, not an opt-out."""
+    assert "registry" in json.loads(CONFIG_PATH.read_text(encoding="utf-8"))

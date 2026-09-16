@@ -76,6 +76,10 @@ version table being consulted.
 ## [Unreleased]
 
 ### Added — governance enforcement, slice G1 (design `.agent-rfc/designs/governance-enforcement.md`)
+- Declaring `registry` in `.agenticframework/process-gates.json` is what adopts the rules below.
+  A commit whose own config omits it — anything from before this slice, and any tenant that has
+  not adopted yet — is checked by the pre-registry sections, so CI never fails history that
+  could not have complied.
 - `templates/governance.json`: the rules registry, compiled from `templates/agent-rules.yaml`
   by `generate-ide-config.py --registry` and read by the process gate. Says per pillar whether
   it is answered at design time, attested at review, or checked mechanically.

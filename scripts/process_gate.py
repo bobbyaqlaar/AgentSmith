@@ -128,6 +128,13 @@ class Config:
         # The rules registry: the framework's by default — beside the running
         # script, which in a vendored tenant is the tenant's own synced copy.
         self.registry: str = data.get("registry") or f"{FRAMEWORK_PREFIX}templates/governance.json"
+        # Declaring `registry` is how a repo ADOPTS the registry's design-time
+        # requirements — pillars, deviations, dependencies, the sign-off block.
+        # A commit whose own config does not declare one predates them, and no
+        # design written then could satisfy them, so `ci` judges it by the rules
+        # it was made under. Same rule as a repo that had not adopted the gates
+        # at all: every commit is judged by the config it carries.
+        self.registry_declared: bool = "registry" in data
         self.extends_data = data.get("extends")
 
     def problems(self) -> List[str]:
@@ -229,6 +236,10 @@ def _section(body: str, heading: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
+# What a design had to carry before the registry existed (pre-G1 commits).
+PRE_REGISTRY_SECTIONS = ["Problem", "Approach", "Levers"]
+
+
 def check_design(
     text: str,
     known_slugs: set,
@@ -236,6 +247,7 @@ def check_design(
     registry: "gm.Registry",
     approvals: List["gm.Approval"],
     design_path: str,
+    adopted: bool = True,
 ) -> List[str]:
     errors = []
     meta, body = front_matter(text)
@@ -246,7 +258,7 @@ def check_design(
     scope = meta.get("scope")
     if not isinstance(scope, list) or not scope:
         errors.append("scope lists no paths")
-    for heading in registry.records.design_sections:
+    for heading in (registry.records.design_sections if adopted else PRE_REGISTRY_SECTIONS):
         if _section(body, heading) is None:
             errors.append(f"has no '## {heading}' section")
     deviations, deviation_errors = gm.parse_deviations(_section(body, "Deviations") or "")
@@ -272,7 +284,7 @@ def design_scope(text: str) -> List[str]:
 _PASS = re.compile(r"^##\s+Pass\s+(\d+)\s+[—–-]+\s+findings:\s*(\d+)\s*$", re.M)
 
 
-def check_review(text: str, registry: "gm.Registry") -> List[str]:
+def check_review(text: str, registry: "gm.Registry", adopted: bool = True) -> List[str]:
     passes = [(int(n), int(k)) for n, k in _PASS.findall(text)]
     if not passes:
         return ["records no passes ('## Pass N — findings: K')"]
@@ -284,7 +296,7 @@ def check_review(text: str, registry: "gm.Registry") -> List[str]:
         errors.append(
             f"last pass (Pass {passes[-1][0]}) reports {passes[-1][1]} finding(s) — fix them and run another pass"
         )
-    else:
+    elif adopted:
         # Clean passes are half of done; the sign-off states per group what was
         # checked, what did not apply and what is a declared gap.
         errors.extend(gm.check_signoff(text, registry))
@@ -362,7 +374,8 @@ def check_change(
         elif text is None:
             errors.append(f"Design: {path} does not exist in this commit")
         else:
-            design_errors = check_design(text, known_slugs, levers_shown, registry, approvals, path)
+            design_errors = check_design(text, known_slugs, levers_shown, registry, approvals, path,
+                                         config.registry_declared)
             errors.extend(f"Design: {path} {e}" for e in design_errors)
             scope = design_scope(text)
             uncovered = [f for f in gated if not _any(f, scope)]
@@ -380,7 +393,7 @@ def check_change(
         elif text is None:
             errors.append(f"Review: {path} does not exist in this commit")
         else:
-            errors.extend(f"Review: {path} {e}" for e in check_review(text, registry))
+            errors.extend(f"Review: {path} {e}" for e in check_review(text, registry, config.registry_declared))
             if path not in files:
                 errors.append(
                     f"Review: {path} is not changed in this commit — a review older than the change "
@@ -455,7 +468,8 @@ def active_designs(root: Path, config: Config) -> List[Tuple[str, str, List[str]
             rel = f"{DESIGNS_DIR}/{path.name}"
             errors = list(shared_errors)
             if registry is not None:
-                errors += check_design(text, slugs, config.display(config.levers_doc), registry, approvals, rel)
+                errors += check_design(text, slugs, config.display(config.levers_doc), registry, approvals, rel,
+                                   config.registry_declared)
             found.append((rel, text, errors))
     return found
 
@@ -565,7 +579,8 @@ def stop_problems(root: Path) -> List[str]:
             problems.append(f"{design}: no review record at {review} for {', '.join(paths)}")
             continue
         registry, registry_errors = config.load_registry(_worktree_reader(root))
-        errs = registry_errors if registry is None else check_review(review_path.read_text(encoding="utf-8"), registry)
+        errs = (registry_errors if registry is None else
+                check_review(review_path.read_text(encoding="utf-8"), registry, config.registry_declared))
         if errs:
             problems.append(f"{review}: {'; '.join(errs)}")
             continue

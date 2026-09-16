@@ -113,6 +113,48 @@ and drift-checked rather than hand-edited into a generated file
 
 - Final tree, every lever. `scripts/test/` 721 passed, `runtime/test/` 664 passed and 10 skipped, ruff clean.
 
+## Pass 7 — findings: 1
+
+Run after the handover, against the committed slice (`dde56b3`) rather than the working tree —
+`process_gate.py ci` over the range a push would check, which the passes above had not covered.
+
+- `two-owners-two-cadences`, `gate-integrity` — **finding:** the registry's design-time
+  requirements were retroactive. `Config` defaults `registry` when the key is absent, so `ci`
+  applied `## Pillars`, `## Deviations`, `## Dependencies` and the sign-off block to every commit
+  in the range — including `685c296` and `4f8e26a`, made before G1 existed, whose designs could
+  not have carried them. Self-Test's `process-gates` job would have failed on the next push, with
+  no fix available short of rewriting history. Declaring `registry` in
+  `.agenticframework/process-gates.json` is now what adopts those rules: a commit whose own config
+  omits it is judged by the pre-registry sections, exactly as a repo that had not adopted the gates
+  at all is (`PRE_REGISTRY_SECTIONS`). AgentSmith declares it, so G1 onward is held to it; OTS and
+  KYC Sentinel adopt it with their own slices. Three tests pin it — history passes, an adopting
+  config fails on all four requirements, and this repo is adopted — and three mutations (the flag
+  ignored, the sign-off always required, adoption assumed) are each caught.
+
+## Pass 8 — findings: 2
+
+Both found by running the gate list CI actually runs, over the whole tree rather than the files
+this slice touched (`run-the-gates-ci-lists`). Pass 6 and the sign-off had reported ruff and the
+two suites only, so neither had been exercised since the last files were added.
+
+- `run-the-gates-ci-lists`, `one-catalog` — **finding:**
+  `test_security_registry.py::test_scripts_has_exactly_one_script_loader` failed:
+  `test_generate_ide_config_governance.py` hand-rolled `spec_from_file_location` for the
+  hyphenated generator, the fifteenth reinvention of the loader `_shared.load_script` exists to be.
+  It uses the shared loader now.
+- `docs-match-behaviour` — **finding:** the SPECS.md tree drift check failed —
+  `scripts/gate_models.py`, `scripts/gate_tracing.py` and `scripts/requirements-gate.txt` were
+  shipped without an entry, so the repo's own map did not describe three new files. All three
+  added, with what they are for.
+
+## Pass 9 — findings: 0
+
+Whole gate list again on the final tree: `scripts/test/` and `runtime/test/` (1388 passed,
+10 skipped), `ruff check .`, SPECS tree drift (93 second-level entries), `--check-hooks`,
+`--check-kg`, the registry drift check, `bash -n` and ShellCheck on the installer and every hook,
+and `process_gate.py ci` over `4ef685e..HEAD`. The curated mutation check runs against the commit,
+since it rewrites tracked files.
+
 ## Sign-off (validation-checklist Step 4)
 
 ```

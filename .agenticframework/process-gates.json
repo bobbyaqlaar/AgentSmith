@@ -29,6 +29,7 @@
     ".agent-rfc/**",
     "**/node_modules/**"
   ],
+  "registry": "@framework/templates/governance.json",
   "levers_doc": "docs/review-levers.md",
   "design_checklist": "docs/design-review-checklist.md",
   "changelog": {

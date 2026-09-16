@@ -1269,6 +1269,9 @@ AgentSmith/
 │   ├── delivery_evidence.py     # Promote-time evidence pack (JSON + Markdown)
 │   ├── check_bare_except.py     # AST empty-handler detector (pre-commit Guardrail 2)
 │   ├── process_gate.py          # Design/review gates: Claude Code hooks, .githooks/commit-msg, Self-Test (docs/process-gates.md)
+│   ├── gate_models.py           # Pydantic V2 models the gate validates with: IDE payloads, registry, config, approvals, sign-off
+│   ├── gate_tracing.py          # One span per gate decision, spooled to state/gate-spans and shipped at session start
+│   ├── requirements-gate.txt    # What the gate itself needs (pydantic, opentelemetry-sdk) — installed by CI and the framework env
 │   ├── _shared.py               # Consolidated scripts/ helpers (repo root, Phoenix REST, judge model)
 │   ├── verify_ttft.py           # live Ollama TTFT smoke (`TTFT_FAIL_ABOVE_MS`)
 │   ├── verify_sovereign_endpoint.py  # Falcon 3 / HF sovereign smoke
