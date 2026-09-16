@@ -45,16 +45,18 @@ Evidence: OTS template slices S1/S2 (no spans, dataclasses, KG skipped, CI subse
 | Slice | What | Status |
 |---|---|---|
 | G1 | Hooks in the framework environment (Pydantic + spooled OTel spans); `governance.json` registry generated from `agent-rules.yaml`; design needs `## Pillars / ## Deviations / ## Dependencies`; TTY-only `agentsmith approve` + `approvals.jsonl`; review sign-off parsed; "Design start: ask the owner" block in every rule file | **Done 2026-09-16** (`dde56b3`, `62810c3`) — review `.agent-rfc/reviews/governance-enforcement.md`; declaring `registry` in a repo's config is what adopts the design-time rules, so history and tenants that have not adopted are unaffected |
-| G2 | `process_gate.py --ide` adapters and generated hook configs for six IDEs; shell pre-check denies `--no-verify`, hooksPath overrides, `agentsmith approve`, edits to hooks/approvals | Open |
-| G3 | Verified-pointer bypass sweep (pre-commit, pre-push, session start, stop) plus `agentsmith gates repair`; hooks re-armed; no `continue-on-error` / `\|\| true` in governance steps of workflow templates | Open |
-| G4 | KG built at onboarding and committed; freshness blocking; `local_knowledge_graph.py impact` scopes reviews; sign-off `KG query:` hash verified | Open |
-| G5 | Artifact registry and `artifacts` check; `records: single` (DESIGN.md active-change sections, REVIEW_LOG.md) alongside `legacy` for KYC; consolidate AgentSmith's own docs, including OTS `review-levers-history.md` into the review log | Open |
-| G6 | Mechanical pillar checks with shrink-only allowlists; `agentsmith gates` runs workflow steps tagged `# agentsmith:gate`; generated Repo gates table | Open |
-| G7 | `agentsmith tenant init` provisions all of the above; `verify_system.py --governed`; hooks write `.agent-history.log` | Open |
+| G2 *(4th)* | `process_gate.py --ide` adapters and generated hook configs for six IDEs; shell pre-check denies `--no-verify`, hooksPath overrides, `agentsmith approve`, edits to hooks/approvals | Open |
+| G3 **(next)** | Verified-pointer bypass sweep (pre-commit, pre-push, session start, stop) plus `agentsmith gates repair`; hooks re-armed; no `continue-on-error` / `\|\| true` in governance steps of workflow templates | Open |
+| G4 *(5th)* | KG built at onboarding and committed; freshness blocking; `local_knowledge_graph.py impact` scopes reviews; sign-off `KG query:` hash verified | Open |
+| G5a *(2nd)* | Artifact registry, the `artifacts` check, `records: single`, and the cross-reference rule (no pointer into another artifact's section numbers; new and changed lines first) — as code, no documents moved | Open |
+| G5b | The migrations: **OTS first** (its sprawl is what confuses agents), **AgentSmith second** (the framework follows the rule it ships). Existing `§`-style pointers cleaned up as each document moves | Open — after G5a |
+| G6 *(3rd)* | Mechanical pillar checks with evidence-token resolution (a design's `applies` must name a path, test or span);  with shrink-only allowlists; `agentsmith gates` runs workflow steps tagged `# agentsmith:gate`; generated Repo gates table | Open |
+| G7 *(6th)* | `agentsmith tenant init` provisions all of the above; `verify_system.py --governed`; hooks write `.agent-history.log` | Open |
 | Now | `scripts/mutation_check.py` has one surviving mutant, found 2026-09-16 and pre-existing: `tenant_scaffold` — "the source-checkout marker leaks into the tenant's declared version". `runtime/cli.py` strips `SOURCE_SUFFIX` from the version it writes into a tenant's `tenant.yaml`, and no test fails when that strip is removed, so a tenant could declare a source-checkout version | Trigger: next change to tenant scaffolding |
 | Now | KYC Sentinel's CI runs the framework gate with a bare `python3`, which exits 3 since G1. Add `pip install -r scripts/requirements-gate.txt` (or `AGENTSMITH_PYTHON`) to its process-gates job | Trigger: before KYC's next push |
-| Later | KYC Sentinel migrates to `records: single` (D4 ends) | Trigger: after G5 ships |
-| Later | Optional local file lock on gated paths until design approval (owner: future extension) | Trigger: owner request |
+| Later | KYC Sentinel migrates to `records: single` (D4 ends) | Trigger: after G5a ships |
+| Later | Scope-derived pillar subset — ask only the pillars a change's paths implicate, each still carrying evidence. Held until G4: deriving the subset needs the impact query, and a wrong subset silently excuses a pillar | Trigger: G4 shipped and its impact query trusted |
+| Later | Two agents in one checkout: owner decided 2026-09-16 to keep the lock a future extension. Evidence if it recurs: that morning a `mutation_check` run in a second session rewrote tracked files under an active session, and the stop gate's findings changed between turns | Trigger: owner request, or the next collision |
 
 ---
 

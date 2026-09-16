@@ -80,6 +80,49 @@ Root causes:
 
 Seven slices, each designed, built, reviewed (passes until 0) and signed off before the next. The tenant (OTS) side of each slice lands in the same session (owner: "implement both sides together").
 
+### Owner decisions — 2026-09-16 (sequencing)
+
+Recorded after G1 shipped; they change the order and three of the slices.
+
+**Order.** G3 → G5a → G6 → G2 → G4 → G7, with the document migrations (G5b) and the
+scope-derived pillar subset trailing their prerequisites:
+
+1. **G3 — the sweep, next.** It is the backstop every other layer leans on, it needs no vendor
+   cooperation, and an uncommitted unreviewed tree survived a whole session on 2026-09-16 because
+   nothing checked between the edit gate and the end of the turn.
+2. **G5a — the artifact registry, the `artifacts` check, `records: single` and the
+   cross-reference rule, as code.** Split from the migrations below: enforcement must not wait
+   behind renaming references in three repos.
+3. **G6 — mechanical checks**, starting with the two pillars OTS actually violated (tracing,
+   Pydantic models) and the resolution of evidence tokens (below).
+4. **G2 — IDE adapters.** 5. **G4 — knowledge-graph impact.** 6. **G7 — onboarding.**
+   **G5b — migrations: OTS first** (its sprawl is what confuses agents today), **AgentSmith
+   second** (the framework must follow the rule it ships, or the `artifacts` check never runs
+   against the repo that defines it).
+
+**Pillar answers carry evidence (G1 amendment, built in G6).** `P<id> applies` must name something
+resolvable — a path, a test id, a span name — not prose. A prose "applies" is unfalsifiable, which
+is how sixteen lines become ritual. G6 resolves the token (does that file/test/span exist?). The
+scope-derived subset stays on the roadmap for **after G4**, because deriving it needs the impact
+query: a wrong subset silently excuses a pillar, and a question never asked is invisible. Evidence
+tokens survive that change — the two compose.
+
+**Cross-references are minimised, and never by section number.** No pointer into another
+artifact's numbering (`SPECS.md §23`, `OPERATIONS.md §9`, `DESIGN.md#L120`): numbers move on every
+edit. Name the document, or a heading within the same document. Enforced on **new and changed
+lines first**; existing pointers are cleaned up as each document is migrated in G5b, because
+consolidation is exactly when stale pointers multiply.
+
+**Documentation is for humans. The knowledge graph and the code are the agent's sources.** An
+agent designing a change, fixing a defect or scoping a review reads the graph and the code; prose
+explains the system to a person. This is why G4's freshness is blocking rather than advisory, why
+session start carries a graph summary instead of a reading list, and why the artifact set stays
+small: every document is a human's map, not an agent's index.
+
+**Two agents in one checkout stays a future extension** (owner, 2026-09-16), with the evidence
+recorded in the backlog: on 2026-09-16 a `mutation_check` run in a second session rewrote tracked
+files under this one, and the stop gate's findings changed between turns.
+
 ### G1 — Rules registry, design-time pillars and deviations
 
 - **Hook runtime (owner option B, 2026-09-15).**
