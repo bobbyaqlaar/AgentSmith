@@ -75,6 +75,26 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — governance enforcement, slice G5a: one artifact per type
+
+- `templates/governance.json → artifacts` names one document per type, compiled
+  from `templates/agent-rules.yaml` like the rest of the registry. A repo adjusts
+  paths in `extends.artifacts`; `path: null` says it keeps none of that type.
+- `process_gate.py artifacts` reports a second file of a type, a Markdown file
+  that is neither artifact nor declared reference documentation, and a missing
+  required artifact. **Per-repo mode** `artifacts: off | report | enforce`
+  (default `off`): the documents move in G5b, so a repo consolidating runs
+  `report` until it is done. AgentSmith is in `report` — it lists 21 items.
+- **Cross-references:** on the lines a change adds, a pointer into another
+  document's numbering (`SPECS.md §23`, `DESIGN.md#L120`) is refused; name the
+  document or a heading. Existing lines are untouched, and an example carries
+  `<!-- xref: example -->`. Follows the `artifacts` mode.
+- **`records: single`:** a repo may keep its records as `## Active change: <slug>`
+  sections in `docs/DESIGN.md` and `## <slug> — Pass N — findings: K` entries in
+  `docs/REVIEW_LOG.md`, with trailers `Design: docs/DESIGN.md#<slug>`. The rules
+  are unchanged — a section is normalised into the shape the existing checkers
+  read — and a repo is held to exactly one convention. `legacy` stays the default.
+
 ### Added — governance enforcement, slice G3: the bypass sweep
 
 - `process_gate.py sweep` re-checks every locally reachable commit it has not

@@ -25,6 +25,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 __all__ = [
     "Approval",
+    "Artifact",
+    "Artifacts",
     "Deviation",
     "Extends",
     "Pillar",
@@ -78,9 +80,46 @@ class Extends(_Frozen):
     #   session_start  extra lines in every agent's session-start context (process_gate.py)
     #   rules_extra    repo notes appended to every generated rule file (generate-ide-config.py)
     #   test_command   what those files name as this repo's test command
+    #   artifacts      this repo's own document layout, over the framework's
     session_start: list[str] = Field(default_factory=list)
     rules_extra: list[str] = Field(default_factory=list)
     test_command: str | None = None
+    artifacts: "Artifacts | None" = None
+
+
+class Artifact(_Frozen):
+    """One document type a repo is allowed exactly one of."""
+
+    id: str = Field(min_length=1)
+    path: str | None = Field(default=None)
+    patterns: list[str] = Field(default_factory=list)
+    required: bool = True
+    note: str | None = None
+
+
+class Artifacts(_Frozen):
+    types: list[Artifact] = Field(default_factory=list)
+    reference: list[str] = Field(default_factory=list)
+    ignored: list[str] = Field(default_factory=list)
+
+    def merged(self, extra: "Artifacts | None") -> "Artifacts":
+        """A repo's own `extends.artifacts` over the framework's defaults.
+
+        A type it names again replaces that type — `path: null` says this repo
+        has none — and anything else is added. Reference and ignored globs are
+        additive: a repo knows its own documentation, and removing one of the
+        framework's would quietly stop checking a file.
+        """
+        if extra is None:
+            return self
+        by_id = {a.id: a for a in self.types}
+        for artifact in extra.types:
+            by_id[artifact.id] = artifact
+        return Artifacts(
+            types=list(by_id.values()),
+            reference=[*self.reference, *extra.reference],
+            ignored=[*self.ignored, *extra.ignored],
+        )
 
 
 class Registry(_Frozen):
@@ -89,20 +128,25 @@ class Registry(_Frozen):
     version: str
     pillars: list[Pillar] = Field(min_length=1)
     records: Records
+    artifacts: Artifacts = Field(default_factory=Artifacts)
 
     def pillar_ids(self) -> set[int]:
         return {p.id for p in self.pillars}
 
     def merged(self, extends: Extends | None) -> Registry:
-        if extends is None or not extends.pillars:
+        if extends is None:
             return self
+        merged_artifacts = self.artifacts.merged(extends.artifacts)
+        if not extends.pillars:
+            return self.model_copy(update={"artifacts": merged_artifacts})
         clash = sorted(self.pillar_ids() & {p.id for p in extends.pillars})
         if clash:
             raise ValueError(
                 "extends redefines " + ", ".join(f"P{i}" for i in clash)
                 + " — a tenant may add pillars, not replace them"
             )
-        return self.model_copy(update={"pillars": [*self.pillars, *extends.pillars]})
+        return self.model_copy(update={"pillars": [*self.pillars, *extends.pillars],
+                                        "artifacts": merged_artifacts})
 
 
 # ── ## Deviations ────────────────────────────────────────────────────────────

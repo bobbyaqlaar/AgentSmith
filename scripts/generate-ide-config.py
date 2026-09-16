@@ -168,6 +168,7 @@ def render_registry(rules: dict) -> str:
             for p in rules.get("pillars", [])
         ],
         "records": rules.get("records") or {},
+        "artifacts": rules.get("artifacts") or {},
     }
     return json.dumps(registry, indent=2, ensure_ascii=False) + "\n"
 

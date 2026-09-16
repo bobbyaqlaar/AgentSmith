@@ -238,6 +238,70 @@ checked, n/a with a reason or gap with a backlog id, plus Tests added,
 Mutation-checked, Fixtures re-pinned and Gates run. Passes say what was looked
 at; the sign-off says what was decided.
 
+## One artifact per type
+
+A repo grows a second backlog, a third review file and four READMEs, and then
+no agent knows which one governs. `templates/governance.json → artifacts` names
+one file per type — readme, backlog, archive, design, review log, user manual,
+and optionally a changelog and a manual test script — and a repo adjusts the
+paths in `extends.artifacts`, where `path: null` says it has none.
+
+`process_gate.py artifacts` reads what git tracks and reports three things: a
+second file of a type (by name pattern), a Markdown file that is neither an
+artifact nor declared reference documentation, and a missing required artifact.
+It runs standalone, in the sweep and in CI.
+
+**The mode is per repo**, in `.agenticframework/process-gates.json`:
+
+| `artifacts` | Effect |
+|---|---|
+| `off` (default) | Nothing is checked — the repo has not declared a layout |
+| `report` | Every problem is listed; nothing is blocked |
+| `enforce` | A problem fails the commit, the sweep and CI |
+
+A repo consolidating its documents runs `report` until it has finished, then
+switches to `enforce` in the same change. Blocking first would block the
+migration that fixes it.
+
+## Cross-references
+
+A pointer into another document's numbering rots the next time that document is
+edited. On the lines a change ADDS, the gate refuses `SPECS.md §23`,
+`DESIGN.md#L120` and the like; name the document, or a heading inside it. Lines
+already in the repo are left alone — they go as each document moves — and a line
+that must show a bad pointer as an example carries `<!-- xref: example -->`. The
+rule follows the `artifacts` mode above.
+
+## Where the records live
+
+`records` in the repo's config picks one convention, and the gate reads only
+that one:
+
+- **`legacy`** (default) — a file per change: `.agent-rfc/designs/<slug>.md`,
+  `.agent-rfc/reviews/<slug>.md`, named by the trailers.
+- **`single`** — a section per change in the design artifact, entries in the
+  review log:
+
+  ```
+  ## Active change: worker-retry
+
+  ```governance
+  status: active
+  scope:
+    - services/worker/**
+  ```
+
+  ### Problem … ### Approach … ### Pillars … ### Deviations … ### Dependencies … ### Levers
+  ```
+
+  with `## worker-retry — Pass N — findings: K` and `## worker-retry — Sign-off`
+  in `docs/REVIEW_LOG.md`, and trailers `Design: docs/DESIGN.md#worker-retry`,
+  `Review: docs/REVIEW_LOG.md#worker-retry`.
+
+The rules are identical either way: the same pillars, deviations, dependencies,
+passes and sign-off. A section is normalised into the shape the checkers already
+read, so there is one set of rules, not two.
+
 ## The sweep — what catches a bypass
 
 The commit gate is skippable: `git commit --no-verify`, a clone that never ran

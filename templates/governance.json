@@ -180,5 +180,108 @@
         "Gates run"
       ]
     }
+  },
+  "artifacts": {
+    "types": [
+      {
+        "id": "readme",
+        "path": "README.md",
+        "patterns": [
+          "README*.md",
+          "docs/README*.md"
+        ],
+        "note": "The high-level view of every aspect of the repo."
+      },
+      {
+        "id": "backlog",
+        "path": "docs/PRODUCT_BACKLOG.md",
+        "patterns": [
+          "*BACKLOG*.md",
+          "*TODO*.md",
+          "FIXES*.md"
+        ],
+        "note": "Open work only; an item moves to the archive when it is done."
+      },
+      {
+        "id": "archive",
+        "path": "docs/PRODUCT_ARCHIVE.md",
+        "patterns": [
+          "*ARCHIVE*.md"
+        ],
+        "note": "Done items with a date and the evidence."
+      },
+      {
+        "id": "design",
+        "path": "docs/DESIGN.md",
+        "patterns": [
+          "SPECS*.md",
+          "*DESIGN*.md",
+          "docs/superpowers/specs/*.md"
+        ],
+        "note": "Living current state — architecture, deployment, runbooks — plus one section per active change."
+      },
+      {
+        "id": "review_log",
+        "path": "docs/REVIEW_LOG.md",
+        "patterns": [
+          "*REVIEW*.md",
+          "ReviewFindings*.md",
+          "TestCoverageReview*.md",
+          "TestbedFeedback*.md"
+        ],
+        "note": "Append-only — passes, sign-offs, audits, bypass repairs."
+      },
+      {
+        "id": "user_manual",
+        "path": "docs/UserManual.md",
+        "patterns": [
+          "*MANUAL*.md",
+          "OPERATIONS*.md"
+        ],
+        "note": "The operations manual, including the Administrator/Operator section."
+      },
+      {
+        "id": "changelog",
+        "path": "CHANGELOG.md",
+        "patterns": [
+          "CHANGELOG*.md"
+        ],
+        "required": false,
+        "note": "Only where the repo releases to tenants."
+      },
+      {
+        "id": "test_script",
+        "path": "docs/manual-test-script.md",
+        "patterns": [
+          "*test-script*.md"
+        ],
+        "required": false,
+        "note": "Optional; where a tenant keeps its whole-platform manual test."
+      }
+    ],
+    "reference": [
+      "docs/process-gates.md",
+      "docs/review-levers.md",
+      "docs/review-lever-notes.md",
+      "docs/design-review-checklist.md",
+      "docs/validation-checklist.md",
+      "docs/delivery-model.md",
+      "docs/rag-memory.md",
+      "docs/scratch-tenants.md",
+      "docs/team-observability.md",
+      "docs/iso-42001-control-map.md",
+      "docs/security-framework-map.md",
+      "docs/uae-regulatory.md",
+      "docs/testbed-tenant-spec.md",
+      "TRADEMARK.md",
+      ".agent-rfc/**/*.md",
+      "templates/**/*.md",
+      "examples/**/*.md",
+      "enterprise/*.md",
+      "portal/*.md",
+      "runtime/**/*.md",
+      ".github/**/*.md"
+    ],
+    "ignored": []
   }
 }

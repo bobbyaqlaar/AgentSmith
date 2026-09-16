@@ -30,6 +30,7 @@
     "**/node_modules/**"
   ],
   "registry": "@framework/templates/governance.json",
+  "artifacts": "report",
   "levers_doc": "docs/review-levers.md",
   "design_checklist": "docs/design-review-checklist.md",
   "changelog": {

@@ -252,6 +252,16 @@ files under this one, and the stop gate's findings changed between turns.
   | changelog | `CHANGELOG.md` | Only where the repo releases to tenants (AgentSmith) |
 
   `ignored` covers git-ignored personal files (e.g. OTS `docs/DemoScript.md`). `reference` globs cover shipped product docs that aren't project records (AgentSmith `docs/process-gates.md`, `review-levers.md`, checklists).
+- **Mode, per repo (amended while building G5a, 2026-09-17).** `.agenticframework/process-gates.json`
+  gains `artifacts: "off" | "report" | "enforce"`, default `off`. The check ships in G5a; the
+  documents move in G5b, and a repo that has not migrated would otherwise block every commit on
+  files it is not allowed to delete yet. AgentSmith and OTS run `report` from G5a — the check says
+  exactly what the migration has to fix — and G5b flips each to `enforce` in the same change that
+  finishes its migration. `off` is for a repo that has not adopted the registry at all.
+- **Cross-references travel with it.** The same mode governs the cross-reference rule (no pointer
+  into another artifact's section numbers), which looks only at lines a commit adds or changes.
+  A line that must quote a bad pointer as an example carries `<!-- xref: example -->`; the marker
+  is greppable, so the exemptions can be counted.
 - **Check.** `process_gate.py artifacts` runs in pre-commit, sweep and CI. It fails on:
   - a tracked Markdown file outside the registry, reference globs and ignored;
   - a second file whose name or heading matches an artifact type's patterns (`*BACKLOG*`, `*TODO*`, `*REVIEW*`, `SPECS*`, `OPERATIONS*`, `README*` outside the root and package roots);
@@ -260,7 +270,7 @@ files under this one, and the stop gate's findings changed between turns.
   - Designs become `## Active change: <slug>` sections in `docs/DESIGN.md`. Front matter is replaced by a fenced `governance` block holding `status`, `scope`, Pillars, Deviations, Dependencies and Levers. A section is folded into the living text and removed when done.
   - Reviews become `## <slug> — Pass N — findings: K` and `## <slug> — Sign-off` entries in `docs/REVIEW_LOG.md`.
   - Trailers become `Design: docs/DESIGN.md#<slug>` and `Review: docs/REVIEW_LOG.md#<slug>`. "Changed in this commit" means the log gained lines for that slug.
-  - `process-gates.json → records: "single" | "legacy"`. The gate accepts only the configured mode, so a repo never has two conventions. AgentSmith and OTS switch to `single`; KYC Sentinel stays `legacy` until it migrates (a logged item in the AgentSmith backlog).
+  - `process-gates.json → records: "single" | "legacy"`, default `legacy`: the mode a repo has not declared is the one every repo has today. The gate accepts only the configured mode, so a repo never has two conventions. AgentSmith and OTS switch to `single`; KYC Sentinel stays `legacy` until it migrates (a logged item in the AgentSmith backlog).
 - **AgentSmith's own consolidation:**
   - `FIXES_AND_CLEANUP.md` → `docs/PRODUCT_BACKLOG.md`;
   - `Product_Archive.md` → `docs/PRODUCT_ARCHIVE.md`;

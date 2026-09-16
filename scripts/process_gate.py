@@ -135,6 +135,16 @@ class Config:
         # it was made under. Same rule as a repo that had not adopted the gates
         # at all: every commit is judged by the config it carries.
         self.registry_declared: bool = "registry" in data
+        # One artifact per type, and the cross-reference rule that travels with
+        # it: "off" (default), "report" or "enforce". The check ships in G5a and
+        # the documents move in G5b, so a repo that has not migrated says
+        # "report" — it is told what to fix without being stopped from fixing it.
+        self.artifacts_mode: str = str(data.get("artifacts") or "off")
+        # Where the records live: "legacy" is a file per change under
+        # .agent-rfc/, "single" is a section in the design artifact and entries
+        # in the review log. A repo keeps exactly one convention, so a change
+        # can never be recorded in a place the gate does not read.
+        self.records_mode: str = str(data.get("records") or "legacy")
         self.extends_data = data.get("extends")
 
     def problems(self) -> List[str]:
@@ -315,9 +325,20 @@ def trailer(message: str, name: str) -> Optional[str]:
     return found[-1] if found else None
 
 
-def resolve_record(value: str, directory: str) -> Tuple[Optional[str], Optional[str]]:
-    """-> (path, error). The value arrives from a commit message; it is only
-    ever allowed to name a Markdown file directly inside `directory`."""
+def resolve_record(value: str, directory: str, single: bool = False,
+                   artifact: str = "") -> Tuple[Optional[str], Optional[str]]:
+    """-> (path, error). The value arrives from a commit message, so it names
+    either a Markdown file directly inside `directory` (legacy) or a slug in
+    this repo's record artifact (single). A repo keeps one convention; the
+    other is refused by name, so nobody records a change where nothing reads."""
+    if single:
+        path, slug = split_record_ref(value)
+        if path != artifact or not slug:
+            return None, f"must name {artifact}#<slug> in this repo, got {value!r}"
+        return f"{path}#{slug}", None
+    if "#" in value:
+        return None, (f"must name a file directly under {directory}/, got {value!r} — "
+                      "this repo keeps a record per change, not sections in one artifact")
     path = value.strip()
     if path.startswith("./"):
         path = path[2:]
@@ -333,13 +354,23 @@ def check_change(
     message: str,
     read: Reader,
     config: Config,
+    added: Optional[List[str]] = None,
 ) -> Tuple[List[str], List[str]]:
     """One commit's worth of files against its message. -> (errors, notes)."""
+    # The cross-reference rule is about documents, which are mostly ungated, so
+    # it runs before the gated-paths shortcut below.
+    xref: List[str] = []
+    if config.artifacts_mode in ("report", "enforce") and added:
+        xref = cross_reference_problems(added)
     gated = sorted(f for f in files if config.is_gated(f))
     if not gated:
-        return [], []
-    errors: List[str] = []
-    notes: List[str] = []
+        if config.artifacts_mode == "enforce":
+            return xref, []
+        return [], [f"artifacts (report): {problem}" for problem in xref]
+    errors: List[str] = list(xref) if config.artifacts_mode == "enforce" else []
+    notes: List[str] = [] if config.artifacts_mode == "enforce" else [
+        f"artifacts (report): {problem}" for problem in xref
+    ]
     small = gated_lines <= SMALL_CHANGE_LINES
     known_slugs = lever_slugs(config.doc_text(config.levers_doc, read) or "")
     levers_shown = config.display(config.levers_doc)
@@ -362,17 +393,25 @@ def check_change(
             )
         return True
 
+    single = config.records_mode == "single"
+    design_wanted = f"{DESIGN_ARTIFACT}#<slug>" if single else f"{DESIGNS_DIR}/<slug>.md"
+    review_wanted = f"{REVIEW_ARTIFACT}#<slug>" if single else f"{REVIEWS_DIR}/<slug>.md"
+
     design_value = trailer(message, "Design")
     if design_value is None:
-        errors.append(f"missing 'Design: {DESIGNS_DIR}/<slug>.md' trailer (gated paths: {', '.join(gated[:5])}"
+        errors.append(f"missing 'Design: {design_wanted}' trailer (gated paths: {', '.join(gated[:5])}"
                       f"{' …' if len(gated) > 5 else ''})")
     elif not na("Design", design_value):
-        path, err = resolve_record(design_value, DESIGNS_DIR)
-        text = read(path) if path else None
+        path, err = resolve_record(design_value, DESIGNS_DIR, single, DESIGN_ARTIFACT)
+        file_path, slug = split_record_ref(path or "")
+        document = read(file_path) if file_path else None
+        text = design_section(document or "", slug or "") if (single and document is not None) else document
         if err:
             errors.append(f"Design: {err}")
+        elif document is None:
+            errors.append(f"Design: {file_path} does not exist in this commit")
         elif text is None:
-            errors.append(f"Design: {path} does not exist in this commit")
+            errors.append(f"Design: {file_path} has no '## {ACTIVE_CHANGE}{slug}' section in this commit")
         else:
             design_errors = check_design(text, known_slugs, levers_shown, registry, approvals, path,
                                          config.registry_declared)
@@ -384,19 +423,23 @@ def check_change(
 
     review_value = trailer(message, "Review")
     if review_value is None:
-        errors.append(f"missing 'Review: {REVIEWS_DIR}/<slug>.md' trailer")
+        errors.append(f"missing 'Review: {review_wanted}' trailer")
     elif not na("Review", review_value):
-        path, err = resolve_record(review_value, REVIEWS_DIR)
-        text = read(path) if path else None
+        path, err = resolve_record(review_value, REVIEWS_DIR, single, REVIEW_ARTIFACT)
+        file_path, slug = split_record_ref(path or "")
+        document = read(file_path) if file_path else None
+        text = review_entries(document or "", slug or "") if (single and document is not None) else document
         if err:
             errors.append(f"Review: {err}")
+        elif document is None:
+            errors.append(f"Review: {file_path} does not exist in this commit")
         elif text is None:
-            errors.append(f"Review: {path} does not exist in this commit")
+            errors.append(f"Review: {file_path} records no passes for {slug} in this commit")
         else:
             errors.extend(f"Review: {path} {e}" for e in check_review(text, registry, config.registry_declared))
-            if path not in files:
+            if file_path not in files:
                 errors.append(
-                    f"Review: {path} is not changed in this commit — a review older than the change "
+                    f"Review: {file_path} is not changed in this commit — a review older than the change "
                     "cannot vouch for it; record the pass that covers this change"
                 )
     return errors, notes
@@ -434,6 +477,11 @@ def _worktree_reader(root: Path) -> Reader:
     return read
 
 
+def _added_lines(diff: str) -> List[str]:
+    """The lines a diff adds, without the `+`. `-U0` keeps this to what changed."""
+    return [line[1:] for line in diff.splitlines() if line.startswith("+") and not line.startswith("+++")]
+
+
 def _gated_lines(numstat: str, config: Config) -> int:
     total = 0
     for line in numstat.splitlines():
@@ -461,16 +509,25 @@ def active_designs(root: Path, config: Config) -> List[Tuple[str, str, List[str]
     registry, shared_errors = config.load_registry(read)
     approvals, approval_errors = load_approvals(read)
     shared_errors = shared_errors + approval_errors
+    def checked(rel: str, text: str) -> Tuple[str, str, List[str]]:
+        errors = list(shared_errors)
+        if registry is not None:
+            errors += check_design(text, slugs, config.display(config.levers_doc), registry, approvals, rel,
+                                   config.registry_declared)
+        return rel, text, errors
+
     found = []
+    if config.records_mode == "single":
+        document = read(DESIGN_ARTIFACT) or ""
+        for slug in _slug_sections(document, ACTIVE_CHANGE):
+            text = design_section(document, slug) or ""
+            if front_matter(text)[0].get("status") == "active":
+                found.append(checked(f"{DESIGN_ARTIFACT}#{slug}", text))
+        return found
     for path in sorted((root / DESIGNS_DIR).glob("*.md")):
         text = path.read_text(encoding="utf-8")
         if front_matter(text)[0].get("status") == "active":
-            rel = f"{DESIGNS_DIR}/{path.name}"
-            errors = list(shared_errors)
-            if registry is not None:
-                errors += check_design(text, slugs, config.display(config.levers_doc), registry, approvals, rel,
-                                   config.registry_declared)
-            found.append((rel, text, errors))
+            found.append(checked(f"{DESIGNS_DIR}/{path.name}", text))
     return found
 
 
@@ -709,7 +766,8 @@ def cmd_commit_msg(message_file: str, amend: bool = False) -> int:
     files = [f for f in git("diff", "--cached", "--name-only", *base, cwd=root).splitlines() if f]
     lines = _gated_lines(git("diff", "--cached", "--numstat", *base, cwd=root), config)
 
-    errors, notes = check_change(files, lines, message, read, config)
+    added = _added_lines(git("diff", "--cached", "-U0", *base, cwd=root, check=False))
+    errors, notes = check_change(files, lines, message, read, config, added)
 
     # A commit that skipped the gate blocks the next commit — unless the next
     # commit is the repair. pre-commit cannot decide that (no message yet), so
@@ -800,7 +858,8 @@ def check_commits(root: Path, commits: List[str]) -> Tuple[Failures, List[Tuple[
             continue
         gated_commits += 1
         lines = _gated_lines(git("diff-tree", "--no-commit-id", "--numstat", "-r", "--root", commit, cwd=root), config)
-        errors, notes = check_change(files, lines, message, read, config)
+        added = _added_lines(git("show", "--format=", "-U0", "--root", commit, cwd=root, check=False))
+        errors, notes = check_change(files, lines, message, read, config, added)
         if errors:
             failures.append((commit, subject, errors))
         escapes.extend((commit, subject, n) for n in notes)
@@ -846,14 +905,192 @@ def cmd_ci(base: str, head: str) -> int:
         report.append(f"- ⚠️ `{commit[:10]}` {subject} — {note}")
     for commit, subject in unadopted:
         report.append(f"- ℹ️ `{commit[:10]}` {subject} — before this repo adopted the gates; not checked")
-    if not failures and not changelog_error:
+    art_code, art_lines = artifacts_report(root, head_config)
+    report.extend(f"- {'❌' if art_code else 'ℹ️'} {line}" for line in art_lines)
+    if not failures and not changelog_error and not art_code:
         report.append("- ✅ every gated commit carries a resolving Design and a clean, same-commit Review")
     annotations = [f"::error title=Process gate {c[:10]}::{e}" for c, _s, errs in failures for e in errs]
     if changelog_error:
         annotations.append(f"::error title=Process gate::{changelog_error}")
     _report(report, annotations)
-    return 1 if failures or changelog_error else 0
+    return 1 if failures or changelog_error or art_code else 0
 
+
+
+
+
+# ── records: single — one design artifact, one review log ────────────────────
+#
+# The rules do not change with the shape, so a section is normalised into what
+# the legacy checkers already read: the fenced `governance` block becomes front
+# matter and `### X` becomes `## X`. A second set of checkers would be a second
+# set of rules (`no-copy-paste`).
+
+DESIGN_ARTIFACT = "docs/DESIGN.md"
+REVIEW_ARTIFACT = "docs/REVIEW_LOG.md"
+ACTIVE_CHANGE = "Active change: "
+
+
+def _slug_sections(text: str, prefix: str) -> Dict[str, str]:
+    """`## <prefix><slug>` sections, by slug, in document order."""
+    found: Dict[str, str] = {}
+    for match in re.finditer(rf"^## {re.escape(prefix)}(\S+).*?$(.*?)(?=^## |\Z)", text, re.M | re.S):
+        found.setdefault(match.group(1).strip(), match.group(2))
+    return found
+
+
+def design_section(text: str, slug: str) -> Optional[str]:
+    """One `## Active change: <slug>` section, as a legacy design note."""
+    body = _slug_sections(text, ACTIVE_CHANGE).get(slug)
+    if body is None:
+        return None
+    fence = re.search(r"^```governance\s*$(.*?)^```\s*$", body, re.M | re.S)
+    if fence is None:
+        # No front matter: check_design says what is missing, in its own words.
+        return re.sub(r"^### ", "## ", body, flags=re.M)
+    rest = body[: fence.start()] + body[fence.end():]
+    return "---\n" + fence.group(1).strip("\n") + "\n---\n" + re.sub(r"^### ", "## ", rest, flags=re.M)
+
+
+def review_entries(text: str, slug: str) -> Optional[str]:
+    """This change's `## <slug> — Pass N` and `## <slug> — Sign-off` entries, as
+    a legacy review record. One log holds every change, so the slug is what
+    keeps another change's clean pass from vouching for this one."""
+    entries = re.findall(rf"^## {re.escape(slug)}\s+[—–-]\s+(.*?)$(.*?)(?=^## |\Z)", text, re.M | re.S)
+    if not entries:
+        return None
+    return "\n".join(f"## {heading}\n{body}" for heading, body in entries)
+
+
+def split_record_ref(value: str) -> Tuple[Optional[str], Optional[str]]:
+    path, _, slug = value.strip().partition("#")
+    return (path or None), (slug or None)
+
+
+# ── One artifact per type, and cross-references ──────────────────────────────
+
+ARTIFACT_MODES = ("off", "report", "enforce")
+
+# A pointer into another document's numbering: `SPECS.md §23`, `DESIGN.md#L120`.
+# Section numbers move on the next edit of the document they point into; a
+# heading name or the document alone does not.
+_XREF = re.compile(r"[\w./-]+\.md\s*(?:§|#L)\s*[\w.]*\d")
+# What a line that must SHOW a bad pointer carries. Greppable, so the
+# exemptions can be counted.
+_XREF_EXEMPT = "<!-- xref: example -->"
+
+
+def _glob_match(path: str, pattern: str) -> bool:
+    """Match a repo path against a registry glob. `PurePosixPath.match` handles
+    a bare filename pattern (`*BACKLOG*.md` anywhere); fnmatch handles a rooted
+    one (`docs/reference/*.md`, `.agent-rfc/**/*.md`)."""
+    from fnmatch import fnmatch
+    from pathlib import PurePosixPath
+
+    try:
+        if PurePosixPath(path).match(pattern):
+            return True
+    except ValueError:
+        pass
+    return fnmatch(path, pattern) or fnmatch(path, pattern.replace("**/", "*"))
+
+
+def artifact_problems(root: Path, registry: "gm.Registry") -> List[str]:
+    """Where this repo has more than one document of a type, a stray, or a gap.
+
+    Reads what git tracks, not the filesystem: an untracked scratch file is
+    nobody's record, and a document that is not committed governs nothing.
+    """
+    tracked = [f for f in git("ls-files", "*.md", cwd=root, check=False).splitlines() if f]
+    artifacts = registry.artifacts
+    canonical = {a.path: a for a in artifacts.types if a.path}
+    problems: List[str] = []
+
+    for artifact in artifacts.types:
+        if artifact.path and artifact.required and artifact.path not in tracked:
+            problems.append(f"{artifact.path} is missing — every repo keeps one {artifact.id}")
+
+    for path in tracked:
+        if path in canonical or any(_glob_match(path, g) for g in artifacts.reference + artifacts.ignored):
+            continue
+        matched = [a for a in artifacts.types for pattern in a.patterns if _glob_match(path, pattern)]
+        if matched:
+            governs = matched[0].path or f"this repo declares no {matched[0].id}"
+            problems.append(f"{path} is a second {matched[0].id} — {governs} governs; fold it in and delete it")
+        else:
+            problems.append(
+                f"{path} is neither an artifact nor declared reference documentation — "
+                "fold it into the artifact that owns it, or declare it in `extends.artifacts.reference`"
+            )
+    return problems
+
+
+def cross_reference_problems(added: List[str]) -> List[str]:
+    """Pointers into another document's numbering, among the lines a change adds.
+
+    Added lines only: a repo adopting the rule has pointers already, and failing
+    all of them would block the very migrations that remove them (G5b).
+    """
+    problems = []
+    for line in added:
+        if _XREF_EXEMPT in line:
+            continue
+        found = _XREF.search(line)
+        if found:
+            problems.append(
+                f"a new line points into another document's section numbers ({found.group(0).strip()}) — "
+                "numbers move on the next edit; name the document, or a heading inside it. "
+                f"An example that must show one carries {_XREF_EXEMPT}"
+            )
+    return problems
+
+
+def artifacts_report(root: Path, config: Config, read: Optional[Reader] = None) -> Tuple[int, List[str]]:
+    """-> (code, lines). `report` never fails; `enforce` fails on any problem."""
+    if config.artifacts_mode not in ("report", "enforce"):
+        return 0, []
+    registry, registry_errors = config.load_registry(read or _reader_at(root, ""))
+    if registry is None:
+        return 1, [f"artifacts: {'; '.join(registry_errors)}"]
+    found = artifact_problems(root, registry)
+    if not found:
+        return 0, []
+    lines = [f"artifacts ({config.artifacts_mode}): {len(found)} problem(s)"]
+    lines += [f"  - {problem}" for problem in found]
+    return (1 if config.artifacts_mode == "enforce" else 0), lines
+
+
+def cmd_artifacts() -> int:
+    """Run by hand and by CI. It reads the WORKING TREE, not the index: someone
+    asking "what does this repo look like now?" means the files in front of
+    them. The sweep and commit-msg read the index, which is what those commits
+    will contain. The verdict itself comes from `artifacts_report`, so this and
+    the sweep can never disagree about what `report` means (`one-verdict`)."""
+    root = repo_root()
+    config, problems = _worktree_config(root)
+    if config is None:
+        print("artifacts: this repo has not adopted the process gates — nothing to check")
+        return 0
+    if problems:
+        print(f"artifacts: {CONFIG} is unusable — " + "; ".join(problems))
+        return 1
+    if config.artifacts_mode not in ARTIFACT_MODES:
+        print(f"artifacts: `artifacts` must be one of {', '.join(ARTIFACT_MODES)}, "
+              f"not {config.artifacts_mode!r}")
+        return 1
+    if config.artifacts_mode == "off":
+        print("artifacts: off for this repo — it has not declared a document layout yet "
+              "(set `artifacts` to report or enforce in " + CONFIG + ")")
+        return 0
+
+    code, lines = artifacts_report(root, config, _worktree_reader(root))
+    if not lines:
+        print(f"artifacts: one file per type, no strays ({config.artifacts_mode})")
+        return code
+    print("\n".join(lines))
+    if config.artifacts_mode == "report":
+        print("  reported, not blocked: this repo is in `report` until its documents are consolidated")
+    return code
 
 
 # ── The sweep ────────────────────────────────────────────────────────────────
@@ -965,6 +1202,9 @@ def sweep(root: Path) -> Tuple[int, List[str], Failures]:
     if problems:
         return 1, [*report, f"sweep: {CONFIG} is unusable — " + "; ".join(problems)], []
 
+    art_code, art_lines = artifacts_report(root, config)
+    report.extend(art_lines)
+
     store = load_verified(root)
     commits = local_commits(root)
     if not store["initialised"]:
@@ -974,7 +1214,7 @@ def sweep(root: Path) -> Tuple[int, List[str], Failures]:
             f"and NOT swept; everything from here on is checked"
             + (f" ({dropped} older sha(s) beyond the cap were not recorded)" if dropped else "")
         )
-        return 0, report, []
+        return art_code, report, []
 
     known = set(store["shas"])
     candidates = [c for c in commits if c not in known]
@@ -989,7 +1229,7 @@ def sweep(root: Path) -> Tuple[int, List[str], Failures]:
         candidates = candidates[:SWEEP_BATCH]
     if not candidates:
         report.append("sweep: nothing new since the last sweep")
-        return 0, report, []
+        return art_code, report, []
 
     failures, _escapes, unadopted, _files, gated = check_commits(root, candidates)
     failed = {commit for commit, _subject, _errors in failures}
@@ -1020,7 +1260,7 @@ def sweep(root: Path) -> Tuple[int, List[str], Failures]:
             "Until then a commit must repair them, and pushes are refused."
         )
         return 1, report, still_failing
-    return 0, report, []
+    return art_code, report, []
 
 
 def cmd_sweep(report_only: bool = False) -> int:
@@ -1033,7 +1273,7 @@ def cmd_sweep(report_only: bool = False) -> int:
 
 
 _SPAN_EVENTS = {"session-start": "session_start", "pre-edit": "pre_edit", "stop": "stop",
-                "commit-msg": "commit_msg", "ci": "ci", "sweep": "sweep"}
+                "commit-msg": "commit_msg", "ci": "ci", "sweep": "sweep", "artifacts": "artifacts"}
 
 
 def _traced(command: str, root: Path, run: Callable[[], int]) -> int:
@@ -1071,7 +1311,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return EXIT_UNUSABLE
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("session-start", "pre-edit", "stop"):
+    for name in ("session-start", "pre-edit", "stop", "artifacts"):
         sub.add_parser(name)
     sweep_cmd = sub.add_parser("sweep")
     sweep_cmd.add_argument("--report", action="store_true",
@@ -1084,6 +1324,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ci.add_argument("--head", default="HEAD")
     args = parser.parse_args(argv)
 
+    if args.command == "artifacts":
+        return _traced("artifacts", repo_root(), cmd_artifacts)
     if args.command in ("session-start", "pre-edit", "stop"):
         raw = sys.stdin.read() if not sys.stdin.isatty() else ""
         handler = {"session-start": cmd_session_start, "pre-edit": cmd_pre_edit, "stop": cmd_stop}[args.command]
