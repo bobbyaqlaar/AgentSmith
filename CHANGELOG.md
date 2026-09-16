@@ -86,7 +86,7 @@ version table being consulted.
   (default `off`): the documents move in G5b, so a repo consolidating runs
   `report` until it is done. AgentSmith is in `report` — it lists 21 items.
 - **Cross-references:** on the lines a change adds, a pointer into another
-  document's numbering (`SPECS.md §23`, `DESIGN.md#L120`) is refused; name the
+  document's numbering (`SPECS.md §23`, `DESIGN.md#L120`) is refused; <!-- xref: example --> name the
   document or a heading. Existing lines are untouched, and an example carries
   `<!-- xref: example -->`. Follows the `artifacts` mode.
 - **`records: single`:** a repo may keep its records as `## Active change: <slug>`

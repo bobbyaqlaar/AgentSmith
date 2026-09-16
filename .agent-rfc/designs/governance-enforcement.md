@@ -115,7 +115,7 @@ query: a wrong subset silently excuses a pillar, and a question never asked is i
 tokens survive that change — the two compose.
 
 **Cross-references are minimised, and never by section number.** No pointer into another
-artifact's numbering (`SPECS.md §23`, `OPERATIONS.md §9`, `DESIGN.md#L120`): numbers move on every
+artifact's numbering (`SPECS.md §23`, `OPERATIONS.md §9`, `DESIGN.md#L120`) <!-- xref: example -->: numbers move on every
 edit. Name the document, or a heading within the same document. Enforced on **new and changed
 lines first**; existing pointers are cleaned up as each document is migrated in G5b, because
 consolidation is exactly when stale pointers multiply.

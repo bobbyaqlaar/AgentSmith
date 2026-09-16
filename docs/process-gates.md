@@ -267,7 +267,7 @@ migration that fixes it.
 
 A pointer into another document's numbering rots the next time that document is
 edited. On the lines a change ADDS, the gate refuses `SPECS.md §23`,
-`DESIGN.md#L120` and the like; name the document, or a heading inside it. Lines
+`DESIGN.md#L120` and the like; name the document, or a heading inside it. <!-- xref: example --> Lines
 already in the repo are left alone — they go as each document moves — and a line
 that must show a bad pointer as an example carries `<!-- xref: example -->`. The
 rule follows the `artifacts` mode above.
