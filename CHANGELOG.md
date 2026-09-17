@@ -75,6 +75,28 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the idempotency row is parsed, not trusted
+
+- `LLMGateway.complete()` wrote its cache row as `result.__dict__` and read it back as
+  `CompletionResult(**row)`. Rows are JSON with a 24-hour TTL, written by whichever build was
+  deployed, so every deploy that changed the class left a day of rows shaped for a different one.
+  Unpacking one fell into the generic `except`, which logs `idempotency lookup failed` and
+  re-runs the model: **the duplicate-call guarantee quietly stopped holding and the tenant paid
+  for a second completion**, while the log line read like a database outage.
+- The row is now a declared Pydantic model (`_CachedCompletion`) with a schema version. A row that
+  does not validate, or that carries a version this build does not know, is a **miss with its own
+  warning** naming the field or version; `idempotency lookup failed` goes back to meaning the
+  store is unreachable. Moderation still re-runs on every cache hit (SEC-MOD-001) — and that is
+  pinned by a test now, not only by a comment.
+- **`CompletionResult` is unchanged**: it is a public type in the compatibility matrix, and it is
+  not a boundary model at its other construction sites. What crosses the boundary is the row.
+- **On a rollback**, rows written by this build carry `"v": 1`, which an older build reads as an
+  unexpected keyword: it re-runs those calls for up to the 24-hour TTL rather than serving them.
+  No error, but a cost spike worth knowing about before you roll back.
+- `P7-pydantic` learned that unpacking a Pydantic model's own `model_dump()` is not a boundary —
+  the data came out of a model the code just validated. `X(**json.loads(raw))` still fails.
+  AgentSmith's allowlist is down to the two liveness probes in the tenant scaffolds.
+
 ### Added — governance enforcement, slice G2a: one gate, six dialects
 
 - **`process_gate.py <hook> --ide <claude|cursor|antigravity|copilot|gemini|codex>`** (or

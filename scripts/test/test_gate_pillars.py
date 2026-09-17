@@ -505,6 +505,20 @@ def test_a_dataclass_built_from_data_the_code_did_not_write_is_refused(enforcing
     assert "P7-pydantic" in result.stderr and "Payload" in result.stderr
 
 
+def test_unpacking_a_validated_model_is_not_a_boundary(enforcing):
+    """`X(**row.model_dump())` is built from data this code just validated. The
+    rule is "built from data the code did not write", and flagging this teaches
+    people to write every field out at the call site to quiet a checker."""
+    _records(enforcing)
+    _write(enforcing, "scripts/tool.py",
+           "from dataclasses import dataclass\nfrom pydantic import BaseModel\n\n\n"
+           "@dataclass\nclass Payload:\n    amount: int\n\n\n"
+           "class Row(BaseModel):\n    amount: int\n\n\n"
+           "def build(row: Row):\n    return Payload(**row.model_dump())\n")
+
+    assert _commit(enforcing, MESSAGE).returncode == 0
+
+
 def test_an_internal_value_object_is_not_a_model(enforcing):
     """The narrowing: a dataclass built by keyword from values in the same
     module validates nothing, so requiring Pydantic there is ritual."""

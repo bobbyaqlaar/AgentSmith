@@ -178,6 +178,25 @@ def _annotation_name(node: Optional[ast.expr]) -> str:
 # ── the checks ───────────────────────────────────────────────────────────────
 
 
+# What a validated source looks like: the output of a Pydantic model's own
+# dump. `X(**json.loads(raw))` is not this, which is the case that matters.
+# `model_dump` only — Pydantic V2's dump, which is what this repo uses. v1's
+# `.dict()` would match any object with a `dict()` method, which is a hole.
+_VALIDATED_CALLS = {"model_dump"}
+
+
+def _validated(node: ast.expr) -> bool:
+    """Is this expression the dump of a model something already validated?"""
+    if isinstance(node, ast.Call):
+        if _decorator_name(node.func).rsplit(".", 1)[-1] in _VALIDATED_CALLS:
+            return "." in _decorator_name(node.func)  # a method on something, not a bare dict()
+        return False
+    # `{k: v for ...}` over a dump, which is how a converter drops a field.
+    if isinstance(node, (ast.DictComp, ast.Dict)):
+        return any(_validated(inner) for inner in ast.walk(node) if isinstance(inner, ast.Call))
+    return False
+
+
 def _p7_pydantic(src: Source) -> List[str]:
     """P7: a model at a boundary is a Pydantic model.
 
@@ -185,6 +204,11 @@ def _p7_pydantic(src: Source) -> List[str]:
     out of data the code did not write, which is where validation belongs. A
     dataclass built by keyword from values in the same module validates
     nothing, so requiring Pydantic there is ritual.
+
+    Unpacking a Pydantic model's own `model_dump()` is not that either: the
+    values came out of a model this code just validated. Flagging it would
+    teach people to write every field out at the call site to quiet a checker,
+    which is worse code and one more copy of the field list.
 
     Stated limit: a boundary this cannot see is a dataclass filled field by
     field from a parsed payload.
@@ -200,8 +224,8 @@ def _p7_pydantic(src: Source) -> List[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
             name = _decorator_name(node.func).rsplit(".", 1)[-1]
-            unpacked = any(k.arg is None for k in node.keywords) or \
-                any(isinstance(a, ast.Starred) for a in node.args)
+            unpacked = any(k.arg is None and not _validated(k.value) for k in node.keywords) or \
+                any(isinstance(a, ast.Starred) and not _validated(a.value) for a in node.args)
             if name in models and unpacked and name not in found:
                 found[name] = (f"`{name}` is a dataclass built from data the code did not write "
                                f"(line {node.lineno}) — a model at a boundary is a Pydantic BaseModel, "

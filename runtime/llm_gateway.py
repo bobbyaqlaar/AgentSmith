@@ -35,6 +35,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+# Already a runtime dependency (requirements.lock; runtime/structured_output.py
+# imports it too) — the idempotency row is validated on the receiving side.
+from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import Field as PydanticField
+
 logger = logging.getLogger(__name__)
 
 from runtime.config import resolve  # noqa: E402
@@ -77,6 +82,64 @@ class CompletionResult:
     # result they return. Use it to measure a guard rollout against real
     # traffic before switching that tenant to enforcing.
     prompt_guard_reasons: list[str] = field(default_factory=list)
+
+
+# ── The idempotency row ──────────────────────────────────────────────────────
+#
+# A row is JSON in Postgres or Redis with a 24-hour TTL, written by whichever
+# build was deployed at the time. `CompletionResult(**row)` trusted it, and a
+# row shaped for another version fell into the generic `except`: the log said
+# "idempotency lookup failed", the duplicate-call guarantee quietly stopped
+# holding, and the tenant paid for a second completion
+# (.agent-rfc/designs/idempotency-row-boundary.md).
+#
+# `CompletionResult` itself is NOT a boundary model — at its other construction
+# sites it is built from values this code just computed. The ROW is what crosses
+# the boundary, so the row is what gets parsed.
+
+CACHE_SCHEMA_VERSION = 1
+# A row written before the version existed. Its keys are the old `__dict__`,
+# which are these fields, so it validates and is used rather than thrown away.
+LEGACY_ROW_VERSION = 0
+
+
+class _CachedCompletion(BaseModel):
+    """One idempotency row, as it is stored and as it is read back."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    v: int = LEGACY_ROW_VERSION
+    text: str
+    model_used: str
+    input_tokens: Optional[int]
+    output_tokens: Optional[int]
+    cost_usd: float
+    degrade_tier: Optional[str] = None
+    ttft_ms: Optional[float] = None
+    guardrail_counts: dict[str, int] = PydanticField(default_factory=dict)
+    prompt_guard_reasons: list[str] = PydanticField(default_factory=list)
+
+    @field_validator("v")
+    @classmethod
+    def _readable_here(cls, value: int) -> int:
+        if value > CACHE_SCHEMA_VERSION:
+            raise ValueError(
+                f"row schema v{value} is newer than this build reads (v{CACHE_SCHEMA_VERSION}) — "
+                "a newer deployment wrote it; treated as a miss rather than guessed at"
+            )
+        return value
+
+    @classmethod
+    def from_result(cls, result: "CompletionResult") -> "_CachedCompletion":
+        """The row to store. Declared fields only: a private attribute set on an
+        instance later cannot leak into the store the way `__dict__` let it."""
+        return cls(v=CACHE_SCHEMA_VERSION,
+                   **{name: getattr(result, name) for name in cls.model_fields if name != "v"})
+
+    def to_result(self) -> "CompletionResult":
+        return CompletionResult(**{name: value for name, value in self.model_dump().items()
+                                   if name != "v"})
+
 
 
 class BudgetExceededError(RuntimeError):
@@ -1322,6 +1385,66 @@ class LLMGateway:
             prompt_guard_reasons=list(pg_reasons),
         )
 
+    def _cached_completion(self, idempotency_key: str) -> Optional["CompletionResult"]:
+        """A previous answer for this key, or None to go and get one.
+
+        Three outcomes, three messages. A hit is a hit. A row this build cannot
+        read is a MISS and says which field or version — not the store's fault,
+        and not a silent second completion. The store being unreachable stays
+        the infrastructure error it always was (`ambiguous-signals`).
+        """
+        from runtime.metrics import record_cache
+
+        try:
+            cached = self._idempotency.get(idempotency_key)
+        except Exception as exc:
+            # The backends are real (Postgres/Redis), so a failure here is a
+            # live infra error — DB down, bad creds — not a cache miss.
+            logger.error(
+                "idempotency lookup failed tenant=%s key=%s: %s",
+                self.tenant_id, idempotency_key, exc,
+            )
+            return None
+
+        if cached is None:
+            record_cache(tenant_id=self.tenant_id, hit=False)
+            logger.debug("idempotency cache miss tenant=%s key=%s", self.tenant_id, idempotency_key)
+            return None
+
+        try:
+            row = _CachedCompletion.model_validate(cached)
+        except Exception as exc:
+            # A row written by a different build of this class. The duplicate
+            # call is about to run again and be paid for again, so say so here
+            # rather than leaving it to look like a cache miss.
+            record_cache(tenant_id=self.tenant_id, hit=False)
+            logger.warning(
+                "idempotency row unreadable by this build, re-running the call "
+                "tenant=%s key=%s: %s",
+                self.tenant_id, idempotency_key, exc,
+            )
+            return None
+
+        record_cache(tenant_id=self.tenant_id, hit=True)
+        logger.info("idempotency cache hit tenant=%s key=%s", self.tenant_id, idempotency_key)
+        result = row.to_result()
+        # Moderation re-runs on every cache hit (SEC-MOD-001) so a newly
+        # registered or stricter hook cannot be bypassed by idempotency. It
+        # raises past this method deliberately.
+        apply_output_moderation(result.text, raise_on_block=True)
+        return result
+
+    def _cache_completion(self, idempotency_key: str, result: "CompletionResult") -> None:
+        """Store the answer as a declared row, so what is written is a shape
+        this code owns rather than whatever `__dict__` happened to hold."""
+        try:
+            self._idempotency.set(idempotency_key, _CachedCompletion.from_result(result).model_dump())
+        except Exception as exc:
+            logger.error(
+                "idempotency write failed tenant=%s key=%s: %s",
+                self.tenant_id, idempotency_key, exc,
+            )
+
     async def complete(
         self,
         prompt: Any,
@@ -1338,43 +1461,9 @@ class LLMGateway:
         model_hint options: "architect" | "developer" | "validator" | "fast"
         """
         if idempotency_key and self._idempotency is not None:
-            try:
-                cached = self._idempotency.get(idempotency_key)
-                if cached is not None:
-                    from runtime.metrics import record_cache
-
-                    record_cache(tenant_id=self.tenant_id, hit=True)
-                    logger.info(
-                        "idempotency cache hit tenant=%s key=%s",
-                        self.tenant_id,
-                        idempotency_key,
-                    )
-                    cached_result = CompletionResult(**cached)
-                    # Re-run moderation on cache hits (SEC-MOD-001) so a newly
-                    # registered/stricter hook cannot be bypassed by idempotency.
-                    apply_output_moderation(cached_result.text, raise_on_block=True)
-                    return cached_result
-                from runtime.metrics import record_cache
-
-                record_cache(tenant_id=self.tenant_id, hit=False)
-                logger.debug(
-                    "idempotency cache miss tenant=%s key=%s",
-                    self.tenant_id,
-                    idempotency_key,
-                )
-            except (ModerationBlockedError, ModerationHookRequiredError):
-                raise
-            except Exception as exc:
-                # Now that the backends are real (Postgres/Redis), a failure
-                # here is a live infra error (DB down, bad creds), not the
-                # old "backend not implemented" case — log it instead of
-                # silently treating every failure as a cache miss.
-                logger.error(
-                    "idempotency lookup failed tenant=%s key=%s: %s",
-                    self.tenant_id,
-                    idempotency_key,
-                    exc,
-                )
+            served = self._cached_completion(idempotency_key)
+            if served is not None:
+                return served
 
         budget = self.get_budget_status()
         role, degrade_tier = self._resolve_role(model_hint, budget)
@@ -1697,15 +1786,7 @@ class LLMGateway:
         )
 
         if idempotency_key and self._idempotency is not None:
-            try:
-                self._idempotency.set(idempotency_key, result.__dict__)
-            except Exception as exc:
-                logger.error(
-                    "idempotency write failed tenant=%s key=%s: %s",
-                    self.tenant_id,
-                    idempotency_key,
-                    exc,
-                )
+            self._cache_completion(idempotency_key, result)
 
         return result
 
