@@ -75,6 +75,25 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — governance enforcement, slice G6c: the gates CI lists, run locally
+
+- **`agentsmith gates run`** runs this repo's CI gates here — every step tagged `# agentsmith:gate`
+  in `.github/workflows/` — and reports **three** counts: passed, failed, and skipped with the
+  reason. A tool that is not installed (exit 127), a service container CI starts, or an expression
+  only CI can answer is a skip, named; never a pass, and never a failed quality gate.
+  `--only TEXT`, `--services`, `--fail-fast`, `--allow-install`. **`agentsmith gates list`** shows
+  the list without running it.
+- **Dependency-install lines are dropped and named.** A CI runner starts empty and installs its
+  tooling; your machine is not a fresh runner, and `gates run` will not pip-install into whatever
+  environment is active. `--allow-install` runs them.
+- **The checklist's table is generated** from the same tags by
+  `generate-ide-config.py --gates`, with a drift test. `docs/validation-checklist.md` Step 3 used
+  to list four commands by hand against a workflow with thirty steps — the duplicate that
+  `run-the-gates-ci-lists` exists to stop.
+- The tenant CI templates (`workflow-templates/ci-*.yml`) carry the tags too, so a tenant gets the
+  same command from the workflows it already syncs. A step in a job with `services:` can say
+  `no-services` when it does not need them.
+
 ### Added — governance enforcement, slice G6b: the rest of the mechanical checks
 
 - **Six more checks**, over the files a commit touches: `P2-dependencies` (a package added to a

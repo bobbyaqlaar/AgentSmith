@@ -88,6 +88,7 @@ jobs:
       # standard scaffold defines — a stock `create-vite` react-ts project
       # failed here with `Missing script: "tsc"` before any real check ran.
       - name: Type check
+        # agentsmith:gate
         run: |
           if node -e 'process.exit(require("./package.json").scripts?.typecheck ? 0 : 1)'; then
             "$PM" run typecheck
@@ -100,9 +101,11 @@ jobs:
       # --if-present BEFORE the script name: pnpm passes anything after it to
       # the script itself. npm accepts it in either place.
       - name: Lint
+        # agentsmith:gate
         run: '"$PM" run --if-present lint'
 
       - name: "Validate Knowledge Graph (Pillar 2)"
+        # agentsmith:gate
         run: |
           python3 scripts/map_codebase.py --quiet
           python3 - <<'EOF'
@@ -131,6 +134,7 @@ jobs:
         continue-on-error: true
 
       - name: "RFC gate (Pillar 1)"
+        # agentsmith:gate
         run: |
           if [ ! -f ".agenticframework/org-policy.yaml" ]; then
             echo "ℹ️  Developer mode — RFC gate skipped."
@@ -144,6 +148,7 @@ jobs:
           echo "✅ RFC gate: ${RFC_COUNT} RFC(s) found."
 
       - name: "IDE config drift check (Pillar 6/7)"
+        # agentsmith:gate
         # Blocking since G3: the rule files are generated from one source, so
         # drift means a repo is telling its agents something the framework did
         # not say. Regenerate with `python3 scripts/generate-ide-config.py --write`.
@@ -160,6 +165,7 @@ jobs:
       # were Jest-only flags — Vitest, the default runner for a Vite project,
       # exits with `Unknown option --watchAll`.
       - name: Unit tests
+        # agentsmith:gate
         env:
           CI: "true"
         run: '"$PM" test'

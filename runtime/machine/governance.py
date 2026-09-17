@@ -43,20 +43,24 @@ def _candidate_dirs(name: str) -> list[Path]:
     return [root / name for root in roots if root is not None]
 
 
-def _gate_models():
-    """The gate's own models, so the record the CLI writes and the record the
-    gate accepts are one definition (`one-catalog`)."""
+def _gate_module(name: str):
+    """One of the gate's own modules, so the CLI and the gate share a
+    definition rather than each carrying one (`one-catalog`)."""
+    import importlib
+
     for directory in _candidate_dirs("scripts"):
-        if (directory / "gate_models.py").is_file():
+        if (directory / f"{name}.py").is_file():
             if str(directory) not in sys.path:
                 sys.path.insert(0, str(directory))
-            import gate_models  # type: ignore
-
-            return gate_models
+            return importlib.import_module(name)
     raise FileNotFoundError(
-        "scripts/gate_models.py not found in this repo, $AGENTSMITH_DIR, ~/.agent-framework or the framework "
+        f"scripts/{name}.py not found in this repo, $AGENTSMITH_DIR, ~/.agent-framework or the framework "
         "checkout — re-run AgentSmith's install-ai-stack.sh, or set AGENTSMITH_DIR"
     )
+
+
+def _gate_models():
+    return _gate_module("gate_models")
 
 
 def _registry(gm):
@@ -236,3 +240,24 @@ def gates_repair(root: Optional[Path] = None) -> int:
               "re-run install-ai-stack.sh, or set AGENTSMITH_DIR", file=sys.stderr)
         return 2
     return subprocess.run([sys.executable, str(script), "sweep"], cwd=root, check=False).returncode
+
+
+def gates_list() -> int:
+    """The gates this repo's CI declares, as the table the checklist carries."""
+    steps = _gate_module("gate_steps")
+    found = steps.gates(Path.cwd())
+    if not found:
+        print(f"gates: no step in .github/workflows carries `{steps.TAG}` — nothing to run. "
+              "Tag the steps that are gates, then re-run.")
+        return 0
+    print(steps.render_table(found, note=False).strip())
+    return 0
+
+
+def gates_run(only: str | None = None, services: bool = False, fail_fast: bool = False,
+              allow_install: bool = False) -> int:
+    """Run them here. The exit code is CI's answer to the same list, as far as
+    a machine without CI's services can give one."""
+    steps = _gate_module("gate_steps")
+    return steps.run(Path.cwd(), only=only, services=services, fail_fast=fail_fast,
+                     allow_install=allow_install)

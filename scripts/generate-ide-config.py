@@ -194,6 +194,41 @@ def _registry_mode(rules_file: Path, rules: dict, check_only: bool) -> int:
     return 0
 
 
+def _gates_mode(repo_root: Path, check_only: bool) -> int:
+    """The gates table in docs/validation-checklist.md, from the workflow tags.
+
+    Step 3 of that checklist used to carry four commands somebody typed out, in
+    a repo whose CI runs thirty steps — the duplicate `run-the-gates-ci-lists`
+    exists to stop. It is generated between markers now, from the one place the
+    gates are declared (`pin-unremovable-duplicates`).
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import gate_steps as gs
+
+    target = repo_root / "docs" / "validation-checklist.md"
+    text = target.read_text(encoding="utf-8")
+    if gs.BEGIN not in text or gs.END not in text:
+        print(f"❌ {target} has no {gs.BEGIN} / {gs.END} markers to write the gates table between")
+        return 1
+    head, rest = text.split(gs.BEGIN, 1)
+    _old, tail = rest.split(gs.END, 1)
+    expected = head + gs.BEGIN + "\n" + gs.render_table(gs.gates(repo_root)) + gs.END + tail
+    if check_only:
+        if text == expected:
+            print("✅ validation-checklist.md gates table matches the workflow tags")
+            return 0
+        print(f"❌ {target} has drifted from the `{gs.TAG}` tags — "
+              "run generate-ide-config.py --gates")
+        sys.stdout.writelines(difflib.unified_diff(
+            text.splitlines(keepends=True), expected.splitlines(keepends=True),
+            fromfile="committed/validation-checklist.md", tofile="generated/validation-checklist.md",
+        ))
+        return 1
+    target.write_text(expected, encoding="utf-8")
+    print(f"✅ Written the gates table in {target} from the workflow tags")
+    return 0
+
+
 def _render_cursorrules(rules: dict, stack: str, ctx: dict[str, str]) -> str:
     lines = [
         "# AgentSmith — Agent Guardrails",
@@ -539,6 +574,12 @@ def main() -> None:
         "drifted from templates/agent-rules.yaml (Pillar 6/7 CI gate).",
     )
     ap.add_argument(
+        "--gates",
+        action="store_true",
+        help="Regenerate the gates table in docs/validation-checklist.md from the "
+        "`# agentsmith:gate` tags in .github/workflows; with --check-only, exit 1 when it has drifted.",
+    )
+    ap.add_argument(
         "--registry",
         action="store_true",
         help="Compile agent-rules.yaml into governance.json beside it (the process gate's registry); "
@@ -566,6 +607,8 @@ def main() -> None:
 
     stack = args.stack or detected_stack
     rules = _load_rules(rules_file)
+    if args.gates:
+        sys.exit(_gates_mode(Path(args.repo_root).resolve(), args.check_only))
     if args.registry:
         sys.exit(_registry_mode(rules_file, rules, args.check_only))
     extends = _repo_extends(repo_root)

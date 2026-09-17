@@ -509,6 +509,19 @@ def _cmd_gates_repair(args: argparse.Namespace) -> int:
     return governance.gates_repair()
 
 
+def _cmd_gates_list(args: argparse.Namespace) -> int:
+    from runtime.machine import governance
+
+    return governance.gates_list()
+
+
+def _cmd_gates_run(args: argparse.Namespace) -> int:
+    from runtime.machine import governance
+
+    return governance.gates_run(only=args.only, services=args.services, fail_fast=args.fail_fast,
+                                allow_install=args.allow_install)
+
+
 def _cmd_hooks_bypass_check(args: argparse.Namespace) -> int:
     """Exit 0 when the hooks may be bypassed. Called by the four git hooks when a
     bypass is requested and an org policy file exists — see runtime/machine/policy.py."""
@@ -656,6 +669,24 @@ def build_parser() -> argparse.ArgumentParser:
     gates.add_parser(
         "repair", help="list commits that never passed the gate, and how to bring them under one"
     ).set_defaults(func=_cmd_gates_repair)
+    gates.add_parser(
+        "list", help="the gates this repo's CI declares (the `# agentsmith:gate` steps)"
+    ).set_defaults(func=_cmd_gates_list)
+    gates_run = gates.add_parser(
+        "run", help="run this repo's CI gates here, and say which ones could not run"
+    )
+    gates_run.add_argument("--only", default=None, help="only the gates whose name contains this text")
+    gates_run.add_argument(
+        "--services", action="store_true",
+        help="the service containers CI starts (a database, a broker) are running here",
+    )
+    gates_run.add_argument("--fail-fast", action="store_true", help="stop at the first failure")
+    gates_run.add_argument(
+        "--allow-install", action="store_true",
+        help="also run the dependency-install lines CI needs (they change this environment; "
+        "by default they are dropped and named)",
+    )
+    gates_run.set_defaults(func=_cmd_gates_run)
 
     hooks = sub.add_parser("hooks", help="internal: called by the git hooks").add_subparsers(
         dest="hooks_command", required=True

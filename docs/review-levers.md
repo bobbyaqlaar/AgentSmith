@@ -53,7 +53,7 @@ drops the mark the day it catches something. Cite one from code as
 - `small-verified-slices` — **(legacy)** Ship small, testable slices. Verify before claiming done.
 - `review-the-branch` — **(+)** Scope the pass by what the branch ships and what CI checks, not by the files you edited.
 - `grep-for-siblings` — **(+)** When a fix lands, grep for its siblings — following the DATA, not the directory.
-- `run-the-gates-ci-lists` — **(+)** Run the gates CI lists, not the ones you remember, against the state CI will see.
+- `run-the-gates-ci-lists` — **(+)** Run the gates CI lists, not the ones you remember, against the state CI will see. `agentsmith gates run` reads them from the workflow and says which ones could not run here.
 
 ## 5 · Intuitive UI
 

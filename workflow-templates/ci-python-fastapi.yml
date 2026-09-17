@@ -66,12 +66,15 @@ jobs:
             "langchain-anthropic>=0.1"
 
       - name: Lint (ruff)
+        # agentsmith:gate
         run: ruff check .
 
       - name: Format check (ruff format)
+        # agentsmith:gate
         run: ruff format --check .
 
       - name: "Validate Knowledge Graph (Pillar 2)"
+        # agentsmith:gate
         run: |
           python3 scripts/map_codebase.py --quiet
           python3 - <<'EOF'
@@ -100,6 +103,7 @@ jobs:
         continue-on-error: true
 
       - name: "RFC gate (Pillar 1)"
+        # agentsmith:gate
         run: |
           if [ ! -f ".agenticframework/org-policy.yaml" ]; then
             echo "ℹ️  Developer mode — RFC gate skipped."
@@ -113,6 +117,7 @@ jobs:
           echo "✅ RFC gate: ${RFC_COUNT} RFC(s) found."
 
       - name: "IDE config drift check (Pillar 6/7)"
+        # agentsmith:gate
         # Blocking since G3: the rule files are generated from one source, so
         # drift means a repo is telling its agents something the framework did
         # not say. Regenerate with `python3 scripts/generate-ide-config.py --write`.
@@ -125,6 +130,7 @@ jobs:
         run: python3 scripts/verify_system.py || true # non-blocking — inform, not gate
 
       - name: Run tests
+        # agentsmith:gate
         env:
           DATABASE_URL: "postgresql+asyncpg://test:test@localhost:5432/test"
           ENVIRONMENT:  "testing"

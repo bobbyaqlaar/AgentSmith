@@ -4,6 +4,7 @@ scope:
   - scripts/process_gate.py
   - scripts/gate_models.py
   - scripts/gate_pillars.py
+  - scripts/gate_steps.py
   - portal/lib/**
   - templates/in-app-widget/**
   - runtime/test/test_trace_redactor.py
@@ -373,6 +374,29 @@ files under this one, and the stop gate's findings changed between turns.
 - **`P2-dependencies`** — a package added to a lock file that the change's `## Dependencies`
   section does not name. It reads the lock diff against the commit's parent, so it answers the
   question the section exists for: which dependencies did this change actually add?
+
+**Amended while designing (2026-09-17): G6c, the local gate runner.**
+
+- **The table goes where the stale copy is.** The design said `review-levers.md`; the hand-written
+  list it duplicates is in `validation-checklist.md` Step 3 ("at minimum, for this framework:",
+  four commands against a workflow with thirty steps). Generating a second table beside the lever
+  would leave the duplicate in place, which is the opposite of `pin-unremovable-duplicates`. The
+  table is generated into Step 3, between markers, and the lever points at the command.
+- **The tag is `# agentsmith:gate` on a step with a name and a `run:`.** A tag on a `uses:` step
+  is a generation error, not a silent skip — an action is not a script a developer can run. An
+  optional `needs=<command>` or `needs=env:VAR` says what the step needs locally.
+- **What the runner can resolve is a short, declared table**, not an expression evaluator:
+  `github.workspace` is the repo root, `github.sha` and the pull-request head are `HEAD`, and the
+  base is the merge-base with the upstream branch. Any other `${{ … }}` makes the step
+  **skipped — needs CI context**, named. A job that declares `services:` makes its steps
+  **skipped — needs services**, unless the developer says they are running. `skipped` and
+  `passed` are never the same word (`ambiguous-signals`).
+- **Stated limits.** The runner executes a step's script with bash in the working tree; it does
+  not reproduce the runner image, the `uses:` steps before it (checkout, setup-python, caches) or
+  a service container. It answers "does this gate pass here", not "is this identical to CI" —
+  which is why CI stays the authority and this is the thing you run before pushing.
+- **Tenant workflows carry the same tags**, so `agentsmith gates` works in OTS and KYC Sentinel
+  from the templates they already sync.
 
 ### G7 — Onboarding completeness
 

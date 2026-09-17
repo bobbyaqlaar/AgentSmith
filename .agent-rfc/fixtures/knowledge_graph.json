@@ -87,7 +87,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-09-17T08:29:34Z",
+      "last_modified": "2026-09-17T13:15:58Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -173,7 +173,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-09-17T08:29:43Z",
+      "last_modified": "2026-09-17T13:16:13Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -214,7 +214,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-09-17T08:30:32Z",
+      "last_modified": "2026-09-17T13:17:07Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -233,7 +233,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-09-17T08:29:25Z",
+      "last_modified": "2026-09-17T13:15:44Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -272,7 +272,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-09-17T08:29:28Z",
+      "last_modified": "2026-09-17T13:15:48Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -341,7 +341,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-09-17T08:29:13Z",
+      "last_modified": "2026-09-17T13:15:24Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -412,7 +412,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-09-17T08:30:09Z",
+      "last_modified": "2026-09-17T13:16:42Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -436,7 +436,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-09-17T08:29:29Z",
+      "last_modified": "2026-09-17T13:15:51Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -454,7 +454,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-09-17T08:30:24Z",
+      "last_modified": "2026-09-17T13:16:58Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -466,7 +466,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-09-17T08:30:06Z",
+      "last_modified": "2026-09-17T13:16:37Z",
       "id": "runtime/environment.py"
     },
     {
@@ -499,7 +499,7 @@
         "degrade_tiers",
         "__getattr__"
       ],
-      "last_modified": "2026-09-17T08:29:18Z",
+      "last_modified": "2026-09-17T13:15:31Z",
       "id": "runtime/testing.py"
     },
     {
@@ -585,7 +585,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-09-17T08:29:40Z",
+      "last_modified": "2026-09-17T13:16:08Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -756,7 +756,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-09-17T08:29:37Z",
+      "last_modified": "2026-09-17T13:16:04Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -827,7 +827,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-09-17T08:29:37Z",
+      "last_modified": "2026-09-17T13:16:03Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -858,7 +858,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-09-17T08:29:35Z",
+      "last_modified": "2026-09-17T13:16:00Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -965,6 +965,7 @@
         "_design_start_block",
         "render_registry",
         "_registry_mode",
+        "_gates_mode",
         "_render_cursorrules",
         "_render_claude_md",
         "_render_agents_md",
@@ -976,7 +977,7 @@
         "main",
         "_check_drift"
       ],
-      "last_modified": "2026-09-16T20:07:19Z",
+      "last_modified": "2026-09-17T19:08:36Z",
       "id": "scripts/generate-ide-config.py"
     },
     {
@@ -3418,7 +3419,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-09-17T08:29:42Z",
+      "last_modified": "2026-09-17T13:16:12Z",
       "id": "runtime/config.py"
     },
     {
@@ -3486,6 +3487,8 @@
         "_cmd_scrub",
         "_cmd_uninstall",
         "_cmd_gates_repair",
+        "_cmd_gates_list",
+        "_cmd_gates_run",
         "_cmd_hooks_bypass_check",
         "_cmd_purge_idempotency",
         "_cmd_version",
@@ -3495,7 +3498,7 @@
         "build_parser",
         "main"
       ],
-      "last_modified": "2026-09-17T08:29:17Z",
+      "last_modified": "2026-09-17T19:12:17Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3585,7 +3588,7 @@
         "system_fingerprint",
         "prompt_attributes"
       ],
-      "last_modified": "2026-09-17T08:29:18Z",
+      "last_modified": "2026-09-17T13:15:33Z",
       "id": "runtime/prompt_identity.py"
     },
     {
@@ -4057,7 +4060,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-09-17T08:29:08Z",
+      "last_modified": "2026-09-17T13:15:12Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -4590,7 +4593,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-17T13:06:21Z",
+      "last_modified": "2026-09-17T13:07:14Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5259,6 +5262,7 @@
       "language": "python",
       "symbols": [
         "_candidate_dirs",
+        "_gate_module",
         "_gate_models",
         "_registry",
         "_git_identity",
@@ -5266,9 +5270,11 @@
         "approve",
         "design_new",
         "gates_repair",
+        "gates_list",
+        "gates_run",
         "config"
       ],
-      "last_modified": "2026-09-16T07:34:38Z",
+      "last_modified": "2026-09-17T19:12:17Z",
       "id": "runtime/machine/governance.py"
     },
     {
@@ -5405,7 +5411,7 @@
         "read",
         "resolve"
       ],
-      "last_modified": "2026-09-17T13:06:20Z",
+      "last_modified": "2026-09-17T13:08:24Z",
       "id": "scripts/gate_pillars.py"
     },
     {
@@ -5439,6 +5445,7 @@
         "test_dropping_the_policy_is_a_weakening",
         "test_the_first_policy_a_repo_declares_is_its_seed",
         "test_an_entry_says_why_it_is_there",
+        "test_the_count_is_of_exemptions_taken_not_markers_written",
         "_pillars",
         "test_the_command_lists_what_the_repo_owns_today",
         "test_the_command_says_off_when_the_repo_has_no_policy",
@@ -5466,7 +5473,7 @@
         "test_a_package_the_design_names_passes",
         "test_removing_a_package_is_not_an_addition"
       ],
-      "last_modified": "2026-09-17T13:01:02Z",
+      "last_modified": "2026-09-17T13:08:24Z",
       "id": "scripts/test/test_gate_pillars.py"
     },
     {
@@ -5484,6 +5491,67 @@
       "pillar": null,
       "created_at": "2026-09-17T13:06:32Z",
       "id": "rfc:reviews/governance-enforcement-g6a.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_git",
+        "_merge_base",
+        "Step",
+        "_tagged_names",
+        "_steps_of",
+        "_workflow_files",
+        "gates",
+        "_resolve",
+        "runnable",
+        "run",
+        "_without_installs",
+        "_escape",
+        "render_table",
+        "swap"
+      ],
+      "last_modified": "2026-09-17T19:12:17Z",
+      "id": "scripts/gate_steps.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "workflows",
+        "test_only_tagged_steps_are_gates",
+        "test_a_step_carries_its_job_and_its_script",
+        "test_a_block_script_keeps_its_lines",
+        "test_job_and_step_env_both_reach_the_step",
+        "test_a_tag_on_a_step_that_runs_nothing_is_an_error",
+        "test_a_tag_on_an_unnamed_step_is_an_error",
+        "test_a_resolvable_expression_becomes_a_local_value",
+        "test_an_unresolvable_expression_is_skipped_by_name",
+        "test_a_job_with_services_is_skipped_unless_they_are_running",
+        "test_a_missing_tool_is_skipped_by_name",
+        "test_running_reports_one_line_per_gate_and_fails_on_a_failure",
+        "test_a_skipped_gate_never_reads_as_a_pass",
+        "test_only_runs_the_gates_whose_name_matches",
+        "test_an_install_line_is_dropped_and_said_so",
+        "test_the_install_line_runs_when_the_environment_is_disposable",
+        "test_a_tool_that_is_not_installed_is_not_a_failed_gate",
+        "test_the_table_names_every_gate",
+        "test_the_checklist_holds_the_generated_table",
+        "test_the_frameworks_own_workflow_tags_its_gates",
+        "test_the_tenant_templates_tag_theirs",
+        "test_this_repos_gates_are_its_own_ci_not_the_templates",
+        "test_the_cli_lists_them"
+      ],
+      "last_modified": "2026-09-17T19:11:50Z",
+      "id": "scripts/test/test_gate_steps.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 governance enforcement, G6b (the rest of the mechanical checks)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/governance-enforcement-g6b.md",
+      "pillar": null,
+      "created_at": "2026-09-17T19:09:51Z",
+      "id": "rfc:reviews/governance-enforcement-g6b.md"
     }
   ],
   "edges": [

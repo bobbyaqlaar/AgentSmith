@@ -29,6 +29,7 @@ jobs:
       # scripts/, so CI and a developer's machine run the same gate.
       - run: pip install -r scripts/requirements-gate.txt
       - name: "Every gated commit has a design and a clean review"
+        # agentsmith:gate
         env:
           # A pull request's range is base..head; a push's is before..sha,
           # where `before` is all zeros for a new branch (the script then
@@ -53,6 +54,7 @@ jobs:
       # puts on a machine, rather than whatever the index resolves today.
       - run: pip install --require-hashes -r requirements.lock
       - name: "ruff (lint config lives in pyproject.toml)"
+        # agentsmith:gate
         # Ruff had no configuration and was run by NOTHING — not CI, not a hook
         # — so it ran on its defaults whenever a human happened to invoke it.
         # That is how the repo accumulated `# noqa` codes for rules that were
@@ -63,10 +65,12 @@ jobs:
           pip install -r requirements-lint.txt
           ruff check .
       - name: "mypy (shipped runtime only — see pyproject.toml for the scope)"
+        # agentsmith:gate
         run: |
           pip install -r requirements-lint.txt
           mypy
       - name: "mutation_check.py (curated — the properties we chose to defend)"
+        # agentsmith:gate
         run: |
           pip install pytest pytest-asyncio pydantic pyyaml httpx tenacity tiktoken
           python3 scripts/mutation_check.py
@@ -84,9 +88,11 @@ jobs:
           echo "── surviving mutants (a reading list, not a score) ──"
           mutmut results || true
       - name: "py_compile sweep"
+        # agentsmith:gate
         run: |
           find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
       - name: "SPECS.md repo-tree drift check (top level + key sub-trees)"
+        # agentsmith:gate
         # SPECS.md §16 holds the only copy of the repository tree (README links
         # to it). This diffs its top-level entries against git ls-files so tree
         # drift (renamed/added/removed top-level files or dirs) fails CI instead
@@ -160,22 +166,28 @@ jobs:
           print(f"SPECS.md tree matches repo ({len(top)} top-level, {n2} second-level entries)")
           EOF
       - name: "Redaction compliance (staging + production profiles)"
+        # agentsmith:gate
         run: |
           ENVIRONMENT=staging python3 scripts/verify_system.py --check-redaction
           ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
       - name: "Hook opt-in / enterprise RFC gate"
+        # agentsmith:gate
         run: python3 scripts/verify_system.py --check-hooks
       - name: "verify_system.py --check-kg (Knowledge Graph, Product_Archive.md P10a)"
+        # agentsmith:gate
         run: python3 scripts/verify_system.py --check-kg
       - name: "Set up Helm"
         uses: azure/setup-helm@v4
       - name: "On-prem deploy template (Compose + Helm syntax)"
+        # agentsmith:gate needs=helm
         run: python3 scripts/verify_system.py --check-onprem-deploy
       - name: "Delivery Model soft gate (warn-only)"
         run: python3 scripts/verify_system.py --check-delivery-model
       - name: "Delivery evidence pack script"
+        # agentsmith:gate
         run: python3 scripts/delivery_evidence.py
       - name: "Unit tests — delivery model + fairness + input guardrail"
+        # agentsmith:gate
         run: |
           pip install pytest pyyaml
           PYTHONPATH=scripts:. pytest scripts/test/test_delivery_model.py scripts/test/test_fairness_evals.py runtime/test/test_input_guardrail.py -q
@@ -222,12 +234,16 @@ jobs:
           path: /tmp/temporal-sdk-python-*
           key: temporal-testsrv-${{ runner.os }}
       - name: "pytest (runtime/test/)"
+        # agentsmith:gate
         run: pytest runtime/test/ -v
       - name: "pytest (scripts/test/ — shadow eval sampling)"
+        # agentsmith:gate
         run: pytest scripts/test/ -v
       - name: "verify_system.py --check-idempotency"
+        # agentsmith:gate
         run: python3 scripts/verify_system.py --check-idempotency
       - name: "verify_system.py --check-dlq"
+        # agentsmith:gate
         run: python3 scripts/verify_system.py --check-dlq
 
   shell:
@@ -236,6 +252,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: "bash -n / zsh -n syntax check"
+        # agentsmith:gate
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq zsh > /dev/null
           bash -n install-ai-stack.sh
@@ -287,8 +304,10 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run db:migrate
       - name: "npm test — cross-tenant isolation (no DB required)"
+        # agentsmith:gate no-services
         run: npm test
       - name: "npm run test:db — audit log HMAC sign/verify + tamper detection"
+        # agentsmith:gate needs=npm
         run: npm run test:db
       - run: npm run build
       - name: "Start portal for history-sync check"
