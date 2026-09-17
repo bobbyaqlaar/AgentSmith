@@ -912,6 +912,8 @@ one for one (`~/.agent-framework/shell/ai-compat.sh`).
 |---|---|---|
 | `agentsmith design new` | `<slug> --scope <glob>` (repeatable) | Write `.agent-rfc/designs/<slug>.md` with the shape the gate checks: front matter, Problem, Approach, **Pillars** (one line per rule, each with its question), **Deviations**, **Dependencies**, Levers. Never overwrites an existing design. Works in any IDE, and in none. |
 | `agentsmith approve` | `<design> <deviation> [--statement …]` | Record the owner's approval of one deviation, appending to `.agenticframework/approvals.jsonl`. **Asks at the terminal** (`/dev/tty`): an agent's shell has no controlling terminal, so an agent cannot record it — it has to ask you, and you type the deviation id to confirm. The gate refuses any deviation without a resolving approval, so code in that design's scope stays blocked until you run this. |
+| `python3 scripts/process_gate.py pillars` | — | The pillars a script can check, over everything this repo tracks: a `@dataclass` where a Pydantic model belongs (`P7-pydantic`), a route or CLI command that opens no span (`P3-tracing`). The commit gate checks only the files a change touches; this is the whole list — what to fix, or what to seed `pillars.allow` from when a repo first declares the policy. Silent unless the repo declares one. |
+| `python3 scripts/process_gate.py artifacts` | — | One document per type, and the strays: a second backlog, a third review file, a Markdown file that is neither an artifact nor declared reference documentation. Silent unless the repo declares an `artifacts` mode. |
 
 ### Evaluation & Self-Improvement
 

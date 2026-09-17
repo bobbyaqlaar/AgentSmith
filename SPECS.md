@@ -1271,6 +1271,7 @@ AgentSmith/
 │   ├── check_bare_except.py     # AST empty-handler detector (pre-commit Guardrail 2)
 │   ├── process_gate.py          # Design/review gates: Claude Code hooks, .githooks/commit-msg, Self-Test (docs/process-gates.md)
 │   ├── gate_models.py           # Pydantic V2 models the gate validates with: IDE payloads, registry, config, approvals, sign-off
+│   ├── gate_pillars.py          # The pillars a script can check (P3 tracing, P7 Pydantic), the per-repo policy and its ratchet, evidence-token resolution
 │   ├── gate_tracing.py          # One span per gate decision, spooled to state/gate-spans and shipped at session start
 │   ├── requirements-gate.txt    # What the gate itself needs (pydantic, opentelemetry-sdk) — installed by CI and the framework env
 │   ├── _shared.py               # Consolidated scripts/ helpers (repo root, Phoenix REST, judge model)

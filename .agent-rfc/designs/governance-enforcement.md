@@ -3,6 +3,7 @@ status: active
 scope:
   - scripts/process_gate.py
   - scripts/gate_models.py
+  - scripts/gate_pillars.py
   - scripts/gate_tracing.py
   - scripts/test/test_gate_*.py
   - scripts/test/test_cli_approve.py
@@ -291,6 +292,46 @@ files under this one, and the stop gate's findings changed between turns.
 - **Runs** in pre-commit (staged files only), the sweep and CI.
 - **Local gate runner.** `agentsmith gates` runs the workflow's governance and test jobs locally by reading the steps tagged `# agentsmith:gate` in `.github/workflows/*.yml`. The Repo gates table in `review-levers.md` is generated from those tags (`pin-unremovable-duplicates`).
 
+**Amended while designing (2026-09-17): G6 splits, and the policy is per repo.**
+
+- **G6a (this slice)** — the pillar policy, evidence tokens, and the two checks the owner named:
+  `P3-tracing` and `P7-pydantic`. **G6b** — the rest (`: any` / `use client`, async handlers, the
+  gateway rule, the staged-secrets scan, the dependency diff) and the local `agentsmith gates`
+  runner. Same reason G5 split: enforcement must not wait behind the breadth of a rule set.
+- **The policy lives in the repo's config, not in the registry version.** A `@framework/…`
+  registry is read beside the running script, not at the commit being checked, so a requirement
+  added to it would apply retroactively to every commit CI re-checks — the defect G1 shipped with
+  and fixed by adoption. `process-gates.json` is read at each commit, so the policy goes there:
+  `"pillars": "off" | "report" | "enforce"`, or `{"mode": …, "allow": [...]}`, default `off`.
+  Which checks exist is still the registry's: a check runs only while its pillar is marked
+  `mechanical`.
+- **Evidence is written in backticks and resolved against the tree.** A token resolves when it
+  names a tracked path or glob, or when its literal text is found in tracked content (`git grep
+  -F` at that commit) — one rule covering a path, a test id and a span name. Only `applies`
+  carries evidence: `n/a` is a reason there is nothing to name, `gap` already names a backlog id,
+  and a deviation already resolves to an approval. **Stated limit:** this proves the token
+  resolves, not that it is the right token. A resolvable name can be falsified by anyone reading
+  it; prose cannot.
+- **The allowlist is per check and per path, and only ratchets.** An entry carries `check`,
+  `path` and `why`. Adding one to a repo that already declares a policy needs `approval:
+  A-xxxxxxxx` on the entry, resolved against `approvals.jsonl` like a deviation — the owner at a
+  terminal, never the agent. The mode may only strengthen (`off` → `report` → `enforce`), and
+  dropping the key is a weakening, so an allowlist cannot be widened by turning the policy off
+  and on again. The seed is the adoption commit itself, where there is no policy to weaken.
+- **Mechanical checks read the files a commit touches**, whole-file, not the added lines: a rule
+  about how a module is built is not answerable line by line. So a repo adopts without fixing
+  everything it owns, and pays when it next edits a file — which is what the allowlist is for.
+- **`P7-pydantic`** flags `@dataclass` and `dataclasses` imports in first-party Python (tests
+  excluded — a fixture is not a model). **Stated limit:** the AST cannot tell an internal value
+  object from a model built out of unvalidated input, so the check flags both and the allowlist
+  carries the difference in a sentence a person wrote. AgentSmith seeds sixteen entries, which is
+  the evidence for narrowing the rule in G6b rather than a reason to trust it less.
+- **`P3-tracing`** flags a route handler (`@<app>.get/post/put/patch/delete`) or a CLI command
+  (`@<app>.command`) whose body opens no span — `agent_span(...)`, `*.start_as_current_span(...)`
+  or `gate_span(...)` — and no tracing decorator. **Stated limit:** an entrypoint that is not
+  declared by a decorator is not found, and a handler that delegates to a helper that traces
+  reads as untraced. Both are the design-time question's job, which does not go away.
+
 ### G7 — Onboarding completeness
 
 - `agentsmith tenant init` / sync provisions everything: `process-gates.json`, `governance.json`, `.githooks` (armed), every IDE hook config, generated rule files, a committed KG, and single-artifact stubs.
@@ -299,22 +340,22 @@ files under this one, and the stop gate's findings changed between turns.
 
 ## Pillars
 
-- P1 applies — this design precedes code; the slices are recorded in it; the tenant counterpart is linked.
-- P2 applies — no new third-party dependencies; pydantic, opentelemetry-sdk/exporter and pyyaml are already pinned in the framework environment.
-- P3 applies — every gate decision is a span `agent.gate.<event>` via `runtime/tracing.py`, spooled locally and shipped with a short timeout.
-- P4 applies — each slice adds failing tests first in `scripts/test/`, with mutation checks on every blocking path.
+- P1 applies — this design precedes code and records each slice; the shape it must have is checked by `check_design`.
+- P2 applies — no new third-party dependencies: pydantic, opentelemetry-sdk/exporter and pyyaml are already pinned in `requirements.lock`.
+- P3 applies — every gate decision is a span through `scripts/gate_tracing.py`, spooled locally and shipped with a short timeout.
+- P4 applies — each slice adds failing tests first, this one in `scripts/test/test_gate_pillars.py`, with mutation checks on every blocking path.
 - P5 applies — bypasses and blocked turns are appended to `.agent-history.log` by hooks (G7).
-- P6 applies — hook messages are one line naming the rule, the file and the fix.
-- P7 applies — Pydantic V2 models for payloads, registry, config, approvals and sign-offs.
+- P6 applies — hook messages are one line naming the rule, the file and the fix; the wording is pinned by `test_gate_pillars.py`.
+- P7 applies — Pydantic V2 models for payloads, registry, config, approvals and sign-offs, in `scripts/gate_models.py`.
 - P8 n/a — no runtime OTLP wiring changes.
 - P9 n/a — no orchestration.
 - P10 n/a — no LLM calls.
-- P11 applies — hook payloads and commit messages are data; trailer values are only resolved inside the registry paths (as today).
-- P12 applies — no credentials; the approval record stores the git identity only.
-- P13 applies — no threshold lowered; allowlists may only shrink; every limit (a human typing an approval, fail-open IDEs) is stated.
-- P14 applies — the golden hook payload fixtures per IDE are pinned and re-pinned in the same change.
-- P15 applies — "skipped", "not armed", "not generated" and "passed" are four distinct outputs.
-- P16 applies — no usable framework interpreter means pre-edit, pre-commit, commit-msg and pre-push fail closed with the fix; session start and stop warn; a failed span ship is kept in the spool and retried, never fatal.
+- P11 applies — hook payloads and commit messages are data; `resolve_record` resolves a trailer only inside the records directories.
+- P12 applies — no credentials; the approval record in `.agenticframework/approvals.jsonl` stores the git identity only.
+- P13 applies — no threshold lowered; `transition_problems` is what keeps an allowlist shrinking; every limit (a human typing an approval, fail-open IDEs) is stated.
+- P14 applies — the baseline each slice re-pins in the same change is `templates/governance.json`, generated and drift-checked; the golden hook payload fixtures per IDE arrive with G2 and are pinned the same way.
+- P15 applies — "skipped", "not armed", "not generated" and "passed" are four distinct outputs; `test_off_is_the_default_and_checks_nothing` pins one of them.
+- P16 applies — no usable framework interpreter means pre-edit, pre-commit, commit-msg and pre-push fail closed with the fix (`.githooks/process-gate`); session start and stop warn; a failed span ship is kept in the spool and retried, never fatal.
 
 ## Deviations
 

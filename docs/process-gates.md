@@ -90,6 +90,7 @@ so a missing config means it was removed.
 {
   "gated":            ["scripts/**", "runtime/**", "…", ".agenticframework/process-gates.json"],
   "not_gated":        ["**.md", ".agent-rfc/**"],
+  "pillars":          { "mode": "enforce", "allow": [{"check": "P7-pydantic", "path": "runtime/x.py", "why": "…"}] },
   "levers_doc":       "docs/review-levers.md",
   "design_checklist": "@framework/docs/design-review-checklist.md",
   "changelog":        { "file": "CHANGELOG.md", "paths": ["hooks/**", "…"], "except": ["scripts/test/**"] }
@@ -108,6 +109,9 @@ so a missing config means it was removed.
   tenant's own copy, so `@framework/` resolves to the tenant repo. Point
   `levers_doc` there at the tenant's own file; `design_checklist` is only shown
   in messages, never read, so `@framework/` is harmless for it.
+- **`pillars`** — optional, default `off`. Whether this repo is held to the
+  pillars a script can check, and to evidence in its designs' pillar answers
+  (below). `"enforce"` on its own is the same as `{"mode": "enforce"}`.
 - **`changelog`** — optional. When present, a pushed range that changes `paths`
   (minus `except`, minus Markdown) must also change `file`. AgentSmith's paths are
   what `scratch-tenants.yml` rebuilds tenants on; a test keeps them equal.
@@ -174,8 +178,10 @@ What is wrong or missing, and the evidence.
 What you will build, and the decisions that matter.
 
 ## Pillars
-- P1 applies — how. Or `n/a — why`, `gap — PB-123`, or `**deviation D1**`.
-  One line per pillar the registry marks `design`; a missing one is rejected.
+- P1 applies — how, naming something in backticks: `scripts/thing.py`,
+  `test_it_retries`, `agent.gate.pre_edit`. Or `n/a — why`, `gap — PB-123`, or
+  `**deviation D1**`. One line per pillar the registry marks `design`; a missing
+  one is rejected.
 
 ## Deviations
 none
@@ -262,6 +268,47 @@ It runs standalone, in the sweep and in CI.
 A repo consolidating its documents runs `report` until it has finished, then
 switches to `enforce` in the same change. Blocking first would block the
 migration that fixes it.
+
+## Pillars a script can check
+
+Sixteen lines of "P7 applies — it does" is a form, not a control. Where a repo
+declares a `pillars` policy, two things change.
+
+**Every `applies` answer names something in backticks** — a path, a test id, a
+span name — and the gate resolves it against what the commit tracks: a tracked
+path or glob, or text a tracked source file holds. Markdown is searched for
+paths but not for text, so a design cannot resolve a token it invented itself.
+`n/a` is a reason there is nothing to name, `gap` already names a backlog id,
+and a deviation already resolves to an approval, so only `applies` carries
+evidence. It proves the token resolves, not that it is the right one — a name
+someone else can look up is falsifiable, and prose is not. Checked when the
+change is committed, not while it is being designed: a design that names the
+file it is about, before that file exists, is doing its job.
+
+**Two pillars are checked in the code**, over the files a commit touches
+(`process_gate.py pillars` checks everything the repo tracks, which is the list
+to fix, or to seed an allowlist from at adoption):
+
+| Check | Pillar | What fails |
+|---|---|---|
+| `P7-pydantic` | 7 Stack-Specific Rules | a `@dataclass`, or a `dataclasses` import, in first-party Python — models are Pydantic V2. Test files are not first-party: a fixture is not a model |
+| `P3-tracing` | 3 Tracing and Evaluations | a route (`@app.get`) or CLI command (`@app.command`) whose body opens no span |
+
+A check runs only while its pillar is marked `mechanical` in the registry, and
+only in a repo whose policy is `report` or `enforce` — the same three modes as
+`artifacts`.
+
+**The allowlist only ratchets.** `allow` entries name one check and one path and
+say `why`; a repo seeds it when it first declares a policy. After that a new
+entry needs `"approval": "A-xxxxxxxx"` from `agentsmith approve`, the mode may
+only strengthen, and dropping the key counts as weakening it — otherwise the
+allowlist could be widened by switching the policy off and on again.
+
+**Stated limits.** The tree cannot tell an internal value object from a model
+built out of unvalidated input, so `P7-pydantic` flags both and the allowlist
+carries the difference in a sentence a person wrote. `P3-tracing` finds only
+entrypoints a decorator declares, and reads a handler that delegates to a
+tracing helper as untraced. Both design questions still get asked.
 
 ## Cross-references
 

@@ -38,6 +38,10 @@ AGENTSMITH = pg.Config(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
 REGISTRY = AGENTSMITH.load_registry(lambda _p: None)[0]
 DESIGN_PILLARS = ", ".join(f"P{p.id}" for p in REGISTRY.pillars if "design" in p.check)
 
+# What a pillar answer names, once a repo is held to the evidence rule: a
+# path this fixture repo really tracks.
+TOKEN = "`scripts/process_gate.py`"
+
 DESIGN = f"""---
 status: active
 scope:
@@ -53,7 +57,7 @@ Something.
 Something else.
 
 ## Pillars
-- {DESIGN_PILLARS} applies — each was worked for this change.
+- {DESIGN_PILLARS} applies — each was worked for {TOKEN}.
 
 ## Deviations
 none
@@ -403,6 +407,7 @@ HOOK_FILES = {
 GATE_FILES = {
     "scripts/process_gate.py": GATE,
     "scripts/gate_models.py": REPO / "scripts/gate_models.py",
+    "scripts/gate_pillars.py": REPO / "scripts/gate_pillars.py",
     "scripts/gate_tracing.py": REPO / "scripts/gate_tracing.py",
     "templates/governance.json": REPO / "templates/governance.json",
     "runtime": REPO / "runtime",

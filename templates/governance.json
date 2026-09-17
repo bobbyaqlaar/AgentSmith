@@ -24,7 +24,8 @@
       "id": 3,
       "name": "Tracing and Evaluations",
       "check": [
-        "design"
+        "design",
+        "mechanical"
       ],
       "design_question": "Which new execution paths (commands, routes, jobs, hooks, LLM calls) emit which spans, and with which identity attributes?",
       "rule": "All execution must emit OpenTelemetry spans to $AGENT_PHOENIX_ENDPOINT/v1/traces. Every span must carry: agent.name, agent.role, agent.owner_id, tenant.id, llm.model_name, project.name, environment. Input/output content policy: full in dev, scrubbed in staging, minimal in prod."
@@ -60,7 +61,8 @@
       "id": 7,
       "name": "Stack-Specific Rules",
       "check": [
-        "design"
+        "design",
+        "mechanical"
       ],
       "design_question": "Which stack rules apply (Pydantic V2 models, async handlers, no `any`, `use client`, err checks), and are any at risk?",
       "rule": "TypeScript/React: no `any` type; enforce `use client` on client components. Python/FastAPI: Pydantic V2 for all models; async-safe, no blocking calls. Go: always check `if err != nil`; table-driven tests; -race flag."

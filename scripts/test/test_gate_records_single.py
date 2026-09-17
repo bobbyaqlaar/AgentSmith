@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from test_process_gate import DESIGN_PILLARS, SIGNOFF, _commit, _git, _write, needs_git
+from test_process_gate import DESIGN_PILLARS, SIGNOFF, TOKEN, _commit, _git, _write, needs_git
 
 pytestmark = needs_git
 
@@ -47,7 +47,7 @@ Retry with a bounded ladder.
 
 ### Pillars
 
-- {DESIGN_PILLARS} applies — each was worked for this change.
+- {DESIGN_PILLARS} applies — each was worked for {TOKEN}.
 
 ### Deviations
 
@@ -124,7 +124,7 @@ def test_a_commit_whose_records_live_in_the_artifacts_passes(single_repo):
 
 
 def test_the_section_must_answer_the_pillars_like_any_design(single_repo):
-    answered = f"- {DESIGN_PILLARS} applies — each was worked for this change."
+    answered = f"- {DESIGN_PILLARS} applies — each was worked for {TOKEN}."
     _write(single_repo, "docs/DESIGN.md", DESIGN_DOC.replace(answered, "- P1 applies — it does"))
     _write(single_repo, "docs/REVIEW_LOG.md", REVIEW_DOC)
     _write(single_repo, "scripts/tool.py", "print('retry')\n")

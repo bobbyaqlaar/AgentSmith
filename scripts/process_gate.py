@@ -63,6 +63,7 @@ if sys.version_info < (3, 11):
 else:
     try:
         import gate_models as gm
+        import gate_pillars as gp
         import gate_tracing as gt
     except Exception as _exc:  # named below, not swallowed: the launcher prints it
         UNUSABLE = f"{sys.executable} cannot import the gate's models or tracing ({type(_exc).__name__}: {_exc})"
@@ -145,6 +146,13 @@ class Config:
         # in the review log. A repo keeps exactly one convention, so a change
         # can never be recorded in a place the gate does not read.
         self.records_mode: str = str(data.get("records") or "legacy")
+        # Whether this repo is held to the pillar checks G6 makes mechanical,
+        # and to evidence in its designs' pillar answers. It lives here, not in
+        # the shared registry, because THIS file is read at the commit being
+        # checked: a requirement added to the registry would judge every commit
+        # ever made by rules that did not exist when they were made.
+        self.pillars_declared: bool = "pillars" in data
+        self.pillar_policy, self.pillar_problems = gp.parse_policy(data.get("pillars"))
         self.extends_data = data.get("extends")
 
     def problems(self) -> List[str]:
@@ -155,6 +163,7 @@ class Config:
             errors.append(f"{CONFIG} must gate itself, or the gates can be switched off unreviewed")
         if self.changelog_file and not self.changelog_paths:
             errors.append(f"{CONFIG} names a changelog file but no paths that require it")
+        errors.extend(f"{CONFIG} {problem}" for problem in self.pillar_problems)
         if self.extends_data is not None:
             try:
                 gm.Extends.model_validate(self.extends_data)
@@ -250,6 +259,13 @@ def _section(body: str, heading: str) -> Optional[str]:
 PRE_REGISTRY_SECTIONS = ["Problem", "Approach", "Levers"]
 
 
+def evidence_problems(body: str, evidence: "gp.Resolver") -> List[str]:
+    """The one place the '## Pillars' section is handed to the evidence rule:
+    `enforce` reads it as errors and `report` as notes, and they must be reading
+    the same thing (`one-verdict`)."""
+    return gm.check_evidence(_section(body, "Pillars") or "", evidence)
+
+
 def check_design(
     text: str,
     known_slugs: set,
@@ -258,6 +274,7 @@ def check_design(
     approvals: List["gm.Approval"],
     design_path: str,
     adopted: bool = True,
+    evidence: Optional["gp.Resolver"] = None,
 ) -> List[str]:
     errors = []
     meta, body = front_matter(text)
@@ -277,6 +294,8 @@ def check_design(
         errors.extend(gm.check_approvals(deviations, approvals, design_path))
     if _section(body, "Pillars") is not None:
         errors.extend(gm.check_pillars(_section(body, "Pillars") or "", registry, deviations))
+        if evidence is not None:
+            errors.extend(evidence_problems(body, evidence))
     # Backticked names in the section that are real levers. Other backticked
     # names (a file, a flag) are allowed alongside; what is required is that
     # the checklist was worked and at least one lever named.
@@ -355,6 +374,8 @@ def check_change(
     read: Reader,
     config: Config,
     added: Optional[List[str]] = None,
+    previous: Optional[Config] = None,
+    evidence: Optional["gp.Resolver"] = None,
 ) -> Tuple[List[str], List[str]]:
     """One commit's worth of files against its message. -> (errors, notes)."""
     # The cross-reference rule is about documents, which are mostly ungated, so
@@ -379,6 +400,19 @@ def check_change(
         return registry_errors, []
     approvals, approval_errors = load_approvals(read)
     errors.extend(approval_errors)
+
+    # The pillars this repo is held to mechanically, and what its policy does to
+    # the one it inherited. The ratchet runs in every mode: it guards the policy
+    # itself, which `report` does not exempt anyone from.
+    policy = config.pillar_policy
+    inherited = previous.pillar_policy if previous is not None and previous.pillars_declared else None
+    errors.extend(gp.transition_problems(inherited, policy, approvals))
+    if policy.mode in ("report", "enforce"):
+        mechanical = gp.mechanical_problems(gated, read, registry, policy)
+        if policy.mode == "enforce":
+            errors.extend(mechanical)
+        else:
+            notes.extend(f"pillars (report): {problem}" for problem in mechanical)
 
     def na(name: str, value: str) -> bool:
         match = re.match(r"^n/?a\s*[:—-]\s*(\S.*)$", value, re.I)
@@ -414,8 +448,12 @@ def check_change(
             errors.append(f"Design: {file_path} has no '## {ACTIVE_CHANGE}{slug}' section in this commit")
         else:
             design_errors = check_design(text, known_slugs, levers_shown, registry, approvals, path,
-                                         config.registry_declared)
+                                         config.registry_declared,
+                                         evidence if policy.mode == "enforce" else None)
             errors.extend(f"Design: {path} {e}" for e in design_errors)
+            if policy.mode == "report" and evidence is not None:
+                notes.extend(f"pillars (report): Design: {path} {e}"
+                             for e in evidence_problems(front_matter(text)[1], evidence))
             scope = design_scope(text)
             uncovered = [f for f in gated if not _any(f, scope)]
             if scope and uncovered:
@@ -767,7 +805,11 @@ def cmd_commit_msg(message_file: str, amend: bool = False) -> int:
     lines = _gated_lines(git("diff", "--cached", "--numstat", *base, cwd=root), config)
 
     added = _added_lines(git("diff", "--cached", "-U0", *base, cwd=root, check=False))
-    errors, notes = check_change(files, lines, message, read, config, added)
+    previous = parse_config(_reader_at(root, base[0])(CONFIG))[0]
+    # The index, because that is what this commit will contain: a file added by
+    # the same change is evidence the moment it is staged.
+    evidence = gp.evidence_resolver(root, "") if config.pillar_policy.mode != "off" else None
+    errors, notes = check_change(files, lines, message, read, config, added, previous, evidence)
 
     # A commit that skipped the gate blocks the next commit — unless the next
     # commit is the repair. pre-commit cannot decide that (no message yet), so
@@ -859,7 +901,10 @@ def check_commits(root: Path, commits: List[str]) -> Tuple[Failures, List[Tuple[
         gated_commits += 1
         lines = _gated_lines(git("diff-tree", "--no-commit-id", "--numstat", "-r", "--root", commit, cwd=root), config)
         added = _added_lines(git("show", "--format=", "-U0", "--root", commit, cwd=root, check=False))
-        errors, notes = check_change(files, lines, message, read, config, added)
+        parent = git("rev-parse", "--verify", "-q", f"{commit}^", cwd=root, check=False).strip()
+        previous = parse_config(_reader_at(root, parent)(CONFIG))[0] if parent else None
+        evidence = gp.evidence_resolver(root, commit) if config.pillar_policy.mode != "off" else None
+        errors, notes = check_change(files, lines, message, read, config, added, previous, evidence)
         if errors:
             failures.append((commit, subject, errors))
         escapes.extend((commit, subject, n) for n in notes)
@@ -1093,6 +1138,52 @@ def cmd_artifacts() -> int:
     return code
 
 
+def cmd_pillars() -> int:
+    """What this repo owns today, for the pillars a script can check.
+
+    The commit gate checks the files a change touches; this checks everything
+    tracked, which is the question someone asking about the repo is asking —
+    and the list to fix or to seed the allowlist from at adoption. Both call the
+    same checks, so they cannot disagree about what a rule means.
+    """
+    root = repo_root()
+    config, problems = _worktree_config(root)
+    if config is None:
+        print("pillars: this repo has not adopted the process gates — nothing to check")
+        return 0
+    if problems:
+        print(f"pillars: {CONFIG} is unusable — " + "; ".join(problems))
+        return 1
+    policy = config.pillar_policy
+    if policy.mode == "off":
+        print("pillars: off for this repo — it is not held to the mechanical checks yet "
+              f"(set `pillars` to report or enforce in {CONFIG})")
+        return 0
+    registry, registry_errors = config.load_registry(_worktree_reader(root))
+    if registry is None:
+        print("pillars: " + "; ".join(registry_errors))
+        return 1
+    active = gp.active_checks(registry)
+    if not active:
+        print(f"pillars: {config.display(config.registry)} marks no pillar `mechanical` — "
+              "nothing was checked, which is not the same as passing")
+        return 0
+    found = gp.repo_problems(root, registry, policy)
+    if not found:
+        allowed = len(policy.allow)
+        print(f"pillars: every tracked file passes {', '.join(sorted(active))} ({policy.mode}"
+              + (f", {allowed} allowlisted)" if allowed else ")"))
+        return 0
+    print(f"pillars ({policy.mode}): {len(found)} problem(s) across what this repo tracks")
+    print("\n".join(f"  - {problem}" for problem in found))
+    if policy.mode == "report":
+        print("  reported, not blocked: this repo is in `report`")
+    else:
+        print("  a commit is refused only for the files it touches — fix them, or have the owner "
+              "approve an allowlist entry for each")
+    return 1 if policy.mode == "enforce" else 0
+
+
 # ── The sweep ────────────────────────────────────────────────────────────────
 #
 # The commit gate is skippable: `--no-verify`, an unarmed clone, a rebase, a
@@ -1273,7 +1364,8 @@ def cmd_sweep(report_only: bool = False) -> int:
 
 
 _SPAN_EVENTS = {"session-start": "session_start", "pre-edit": "pre_edit", "stop": "stop",
-                "commit-msg": "commit_msg", "ci": "ci", "sweep": "sweep", "artifacts": "artifacts"}
+                "commit-msg": "commit_msg", "ci": "ci", "sweep": "sweep", "artifacts": "artifacts",
+                "pillars": "pillars"}
 
 
 def _traced(command: str, root: Path, run: Callable[[], int]) -> int:
@@ -1311,7 +1403,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return EXIT_UNUSABLE
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("session-start", "pre-edit", "stop", "artifacts"):
+    for name in ("session-start", "pre-edit", "stop", "artifacts", "pillars"):
         sub.add_parser(name)
     sweep_cmd = sub.add_parser("sweep")
     sweep_cmd.add_argument("--report", action="store_true",
@@ -1326,6 +1418,8 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.command == "artifacts":
         return _traced("artifacts", repo_root(), cmd_artifacts)
+    if args.command == "pillars":
+        return _traced("pillars", repo_root(), cmd_pillars)
     if args.command in ("session-start", "pre-edit", "stop"):
         raw = sys.stdin.read() if not sys.stdin.isatty() else ""
         handler = {"session-start": cmd_session_start, "pre-edit": cmd_pre_edit, "stop": cmd_stop}[args.command]

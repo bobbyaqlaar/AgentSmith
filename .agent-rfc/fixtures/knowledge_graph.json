@@ -4530,6 +4530,7 @@
         "lever_slugs",
         "front_matter",
         "_section",
+        "evidence_problems",
         "check_design",
         "design_scope",
         "check_review",
@@ -4566,6 +4567,7 @@
         "cross_reference_problems",
         "artifacts_report",
         "cmd_artifacts",
+        "cmd_pillars",
         "_git_dir",
         "load_verified",
         "save_verified",
@@ -4588,7 +4590,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-16T20:26:55Z",
+      "last_modified": "2026-09-17T08:21:18Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4687,7 +4689,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-09-16T07:40:27Z",
+      "last_modified": "2026-09-17T08:18:07Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5148,6 +5150,8 @@
       "symbols": [
         "_Frozen",
         "Pillar",
+        "Allowance",
+        "PillarPolicy",
         "Signoff",
         "Records",
         "Extends",
@@ -5161,12 +5165,13 @@
         "check_approvals",
         "_detail",
         "check_pillars",
+        "check_evidence",
         "_signoff_section",
         "check_signoff",
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-09-16T20:07:19Z",
+      "last_modified": "2026-09-17T08:20:03Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -5352,7 +5357,7 @@
         "test_a_done_section_unlocks_nothing",
         "test_session_start_lists_the_active_section"
       ],
-      "last_modified": "2026-09-16T20:17:45Z",
+      "last_modified": "2026-09-17T08:27:19Z",
       "id": "scripts/test/test_gate_records_single.py"
     },
     {
@@ -5362,6 +5367,77 @@
       "pillar": null,
       "created_at": "2026-09-16T20:31:06Z",
       "id": "rfc:reviews/governance-enforcement-g3.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "parse_policy",
+        "transition_problems",
+        "first_party",
+        "_decorator_name",
+        "_p7_pydantic",
+        "_opens_span",
+        "_p3_tracing",
+        "Check",
+        "_active",
+        "_file_problems",
+        "mechanical_problems",
+        "repo_problems",
+        "_git",
+        "evidence_resolver",
+        "read",
+        "resolve"
+      ],
+      "last_modified": "2026-09-17T08:15:09Z",
+      "id": "scripts/gate_pillars.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_policy",
+        "_records",
+        "enforcing",
+        "test_an_applies_answer_without_a_token_is_refused",
+        "test_an_applies_answer_that_names_a_tracked_path_passes",
+        "test_a_token_that_resolves_to_nothing_is_refused",
+        "test_a_test_id_resolves_by_the_content_that_holds_it",
+        "test_a_token_the_record_itself_invents_does_not_vouch_for_it",
+        "test_n_a_and_gap_answers_need_no_token",
+        "test_off_asks_for_no_evidence",
+        "test_a_dataclass_in_a_touched_file_is_refused",
+        "test_a_route_that_opens_no_span_is_refused",
+        "test_a_route_inside_a_span_passes",
+        "test_a_test_file_is_not_first_party_code",
+        "test_an_allowlisted_path_is_not_refused",
+        "test_an_allowlist_entry_covers_one_check_only",
+        "test_report_says_what_would_fail_without_failing",
+        "test_a_check_whose_pillar_is_not_mechanical_does_not_run",
+        "test_a_new_allowlist_entry_needs_the_owners_approval",
+        "test_an_approved_entry_is_accepted",
+        "test_removing_an_entry_needs_nothing",
+        "test_the_mode_may_not_be_weakened",
+        "test_dropping_the_policy_is_a_weakening",
+        "test_the_first_policy_a_repo_declares_is_its_seed",
+        "test_an_entry_says_why_it_is_there",
+        "_pillars",
+        "test_the_command_lists_what_the_repo_owns_today",
+        "test_the_command_says_off_when_the_repo_has_no_policy",
+        "test_report_mode_reports_in_the_command_too",
+        "test_every_implemented_check_belongs_to_a_mechanical_pillar",
+        "test_the_framework_holds_itself_to_the_policy_it_ships"
+      ],
+      "last_modified": "2026-09-17T08:28:26Z",
+      "id": "scripts/test/test_gate_pillars.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 governance enforcement, G5a (one artifact per type, as code)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/governance-enforcement-g5a.md",
+      "pillar": null,
+      "created_at": "2026-09-17T08:28:47Z",
+      "id": "rfc:reviews/governance-enforcement-g5a.md"
     }
   ],
   "edges": [

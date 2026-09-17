@@ -75,6 +75,33 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — governance enforcement, slice G6a: pillar answers that can be checked
+
+- **Evidence tokens.** Where a repo declares a `pillars` policy, every `applies`
+  answer in a design's `## Pillars` names something in backticks — a path, a test
+  id, a span name — and the gate resolves it against what the commit tracks: a
+  tracked path or glob, or text a tracked source file holds. Markdown is searched
+  for paths but not for text, so a design cannot resolve a token it invented.
+  `n/a`, `gap` and deviation answers are unchanged. Checked at commit and in CI,
+  not while the design is being written.
+- **Two mechanical checks**, over the files a commit touches: `P7-pydantic` (a
+  `@dataclass` or `dataclasses` import in first-party Python — models are Pydantic
+  V2; test files excluded) and `P3-tracing` (a route or CLI command whose body
+  opens no span). A check runs only while its pillar is marked `mechanical` in
+  `templates/governance.json`; P3 and P7 now are.
+- **`python3 scripts/process_gate.py pillars`** checks everything the repo
+  tracks — the list to fix, or to seed an allowlist from.
+- **Per-repo policy** `pillars: off | report | enforce`, or `{"mode": …, "allow":
+  [{"check", "path", "why", "approval"}]}`, default `off`. It lives in the repo's
+  config, not the shared registry, because the config is read at the commit being
+  checked: a requirement added to the registry would judge every commit ever made.
+  **The allowlist only ratchets** — a new entry needs an owner approval, the mode
+  may only strengthen, and dropping the key counts as weakening it.
+- AgentSmith runs `enforce`, seeded with 18 allowlist entries (16 files): two
+  liveness probes in tenant scaffolds, and fourteen files whose dataclasses are
+  internal value objects. That list is the evidence for narrowing `P7-pydantic`
+  to boundary models in G6b, and it can only shrink.
+
 ### Added — governance enforcement, slice G5a: one artifact per type
 
 - `templates/governance.json → artifacts` names one document per type, compiled

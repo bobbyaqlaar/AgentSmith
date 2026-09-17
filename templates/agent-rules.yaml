@@ -53,7 +53,7 @@ pillars:
 
   - id: 3
     name: Tracing and Evaluations
-    check: [design]
+    check: [design, mechanical]
     design_question: "Which new execution paths (commands, routes, jobs, hooks, LLM calls) emit which spans, and with which identity attributes?"
     rule: >
       All execution must emit OpenTelemetry spans to $AGENT_PHOENIX_ENDPOINT/v1/traces.
@@ -92,7 +92,7 @@ pillars:
 
   - id: 7
     name: Stack-Specific Rules
-    check: [design]
+    check: [design, mechanical]
     design_question: "Which stack rules apply (Pydantic V2 models, async handlers, no `any`, `use client`, err checks), and are any at risk?"
     rule: >
       TypeScript/React: no `any` type; enforce `use client` on client components.

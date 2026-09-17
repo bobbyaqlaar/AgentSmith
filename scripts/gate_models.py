@@ -24,17 +24,20 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 __all__ = [
+    "Allowance",
     "Approval",
     "Artifact",
     "Artifacts",
     "Deviation",
     "Extends",
     "Pillar",
+    "PillarPolicy",
     "Records",
     "Registry",
     "Signoff",
     "ValidationError",
     "check_approvals",
+    "check_evidence",
     "check_pillars",
     "check_signoff",
     "parse_approvals",
@@ -43,6 +46,10 @@ __all__ = [
 
 APPROVALS_FILE = ".agenticframework/approvals.jsonl"
 CheckKind = Literal["design", "review", "mechanical"]
+# The two ids the records cite each other by: a deviation in a design, and the
+# approval the owner recorded at a terminal.
+_DEVIATION_ID = r"(?:[A-Z]+-)?D\d+"
+_APPROVAL_ID = r"A-[0-9a-f]{8}"
 
 
 class _Frozen(BaseModel):
@@ -55,6 +62,37 @@ class Pillar(_Frozen):
     check: list[CheckKind] = Field(min_length=1)
     design_question: str | None = None
     rule: str | None = None
+
+
+class Allowance(_Frozen):
+    """One file this repo is not held to one mechanical check for.
+
+    `why` is required because an exemption nobody explained is one nobody can
+    review, and `approval` is what lets a new one appear at all (gate_pillars
+    .transition_problems).
+    """
+
+    check: str = Field(min_length=1)
+    path: str = Field(min_length=1)
+    why: str = Field(min_length=1)
+    approval: str | None = Field(default=None, pattern=rf"^{_APPROVAL_ID}$")
+
+
+class PillarPolicy(_Frozen):
+    """`pillars` in .agenticframework/process-gates.json — whether this repo is
+    held to the evidence rule and the mechanical checks, and what it is not
+    held to yet.
+
+    Unknown keys are refused (`allowed` is not `allow`, and a policy nobody
+    reads is worse than none), which is why the `_about` every other block in
+    that file carries has to be a field here.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid", populate_by_name=True)
+
+    about: str | None = Field(default=None, alias="_about")
+    mode: Literal["off", "report", "enforce"] = "off"
+    allow: list[Allowance] = Field(default_factory=list)
 
 
 class Signoff(_Frozen):
@@ -150,9 +188,6 @@ class Registry(_Frozen):
 
 
 # ── ## Deviations ────────────────────────────────────────────────────────────
-
-_DEVIATION_ID = r"(?:[A-Z]+-)?D\d+"
-_APPROVAL_ID = r"A-[0-9a-f]{8}"
 
 
 class Deviation(_Frozen):
@@ -283,6 +318,43 @@ def check_pillars(section: str, registry: Registry, deviations: list[Deviation])
     for pillar in registry.pillars:
         if "design" in pillar.check and pillar.id not in answered:
             errors.append(f"'## Pillars' does not answer P{pillar.id} {pillar.name} — {pillar.design_question}")
+    return errors
+
+
+def check_evidence(section: str, resolve) -> list[str]:
+    """Every `applies` answer names something that can be looked up.
+
+    Sixteen lines of "it applies" is a form. An answer carries a token in
+    backticks — a path, a test id, a span name — and `resolve` says whether
+    anything of that name exists. It proves the token resolves, not that it is
+    the right one: a name someone else can look up is falsifiable, prose is not.
+
+    `n/a` is a reason there is nothing to name, `gap` already names a backlog
+    id, and a deviation already resolves to an approval, so only `applies`
+    carries evidence. One resolving token is enough: an answer may quote a flag
+    or a word in backticks beside the evidence, and flagging those would push
+    everyone to write the evidence without them.
+    """
+    errors: list[str] = []
+    for line in section.splitlines():
+        match = _ANSWER.match(line.strip())
+        if not match:
+            continue
+        verdict = match.group("verdict").strip("* ").rstrip(" —")
+        if verdict != "applies":
+            continue
+        label = match.group("ids")
+        tokens = re.findall(r"`([^`]+)`", match.group("rest"))
+        if not tokens:
+            errors.append(
+                f"{label} applies — the answer names nothing that can be looked up; name the path, test "
+                "or span it applies to in backticks (`scripts/thing.py`, `test_it_retries`)"
+            )
+        elif not any(resolve(token) for token in tokens):
+            errors.append(
+                f"{label} applies — {', '.join(f'`{t}`' for t in tokens)} names nothing this commit "
+                "tracks: no such path, and no source file holds that text"
+            )
     return errors
 
 
