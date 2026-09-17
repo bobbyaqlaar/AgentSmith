@@ -75,6 +75,23 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — governance enforcement, slice G2b: the shell surface
+
+- The gate now sees shell commands, not only edit tools: a `Bash` matcher in `.claude/settings.json`
+  and `beforeShellExecution` in `.cursor/hooks.json`, both generated. It refuses
+  `git commit --no-verify` / `-n` and `git push --no-verify`, `git -c core.hooksPath=…`,
+  `git config core.hooksPath` to anywhere but this repo's, writes to `.githooks/**`,
+  `approvals.jsonl`, `process-gates.json` or an IDE hook config, and `agentsmith approve` (which
+  asks at a terminal an agent does not have). Reading those files is fine; `git push -n` is a dry
+  run and is allowed.
+- **The command is tokenised the way a shell tokenises it**, so a bypass inside quotes is an
+  argument to another program rather than a command being run — this rule refused AgentSmith's own
+  tests for it until that was fixed.
+- **Stated limit:** it reads the command, not what the command does. `bash -c "$(…)"`, a script
+  file, an alias or a Makefile target all reach git without passing through. The sweep remains the
+  layer that catches those, and the commit and CI gates remain the ones that cannot be talked
+  around.
+
 ### Fixed — the idempotency row is parsed, not trusted
 
 - `LLMGateway.complete()` wrote its cache row as `result.__dict__` and read it back as

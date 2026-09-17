@@ -64,6 +64,7 @@ else:
     try:
         import gate_ides as gi
         import gate_models as gm
+        import gate_shell as gsh
         import gate_pillars as gp
         import gate_tracing as gt
     except Exception as _exc:  # named below, not swallowed: the launcher prints it
@@ -605,8 +606,19 @@ def cmd_pre_edit(payload: dict) -> int:
         # Fail closed: a write this cannot read is refused, naming what it saw.
         _deny(str(unreadable))
         return 0
+    if event.kind == "shell" and event.command:
+        # The same agent that cannot edit a gated file can type `git commit
+        # --no-verify`. This refuses the obvious ways round; the sweep is what
+        # catches the rest (gate_shell.py states that limit).
+        hooks_path = git("config", "--get", "core.hooksPath",
+                         cwd=repo_root(event.cwd), check=False).strip() or ".githooks"
+        refusal = gsh.refusal(event.command, hooks_path=hooks_path)
+        if refusal:
+            _record("deny", "shell-bypass")
+            _deny(refusal)
+        return 0
     if event.kind != "edit" or not event.paths:
-        return 0  # a read, a shell command (G2b), or a tool that changes nothing
+        return 0  # a read, or a tool that changes nothing
     target = event.paths[0]
     root = repo_root(event.cwd)
     try:

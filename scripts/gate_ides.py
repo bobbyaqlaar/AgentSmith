@@ -294,6 +294,10 @@ def render_config(ide: str, existing: Optional[dict] = None) -> dict:
                 # before every tool and the matcher narrows it to writes.
                 "preToolUse": [{"command": _command("pre-edit", ide), "matcher": "Write",
                                 "failClosed": True, "timeout": 30}],
+                # The shell surface (G2b). Cursor gives it its own hook, with
+                # the command and cwd; the same subcommand reads both.
+                "beforeShellExecution": [{"command": _command("pre-edit", ide),
+                                          "failClosed": True, "timeout": 30}],
                 "stop": [{"command": _command("stop", ide), "timeout": 60}],
             },
         }
@@ -309,7 +313,14 @@ def render_config(ide: str, existing: Optional[dict] = None) -> dict:
             "SessionStart": [{"hooks": [
                 {"type": "command", "command": _command("session-start", ide, "$CLAUDE_PROJECT_DIR"),
                  "timeout": 30}]}],
-            "PreToolUse": [{"matcher": "Edit|Write|MultiEdit|NotebookEdit", "hooks": [
+            # The shell surface fails OPEN when the launcher cannot run, unlike
+            # the edit gate below. A broken gate that refuses every shell
+            # command leaves no way to repair the install from inside the IDE,
+            # and the sweep and commit gate still hold behind it.
+            "PreToolUse": [{"matcher": "Bash", "hooks": [
+                {"type": "command", "command": _command("pre-edit", ide, "$CLAUDE_PROJECT_DIR"),
+                 "timeout": 30, "statusMessage": "Checking the shell gate"}]},
+                {"matcher": "Edit|Write|MultiEdit|NotebookEdit", "hooks": [
                 {"type": "command",
                  # The fallback is the fail-closed half: a launcher that cannot
                  # run must still produce a deny, or the gate silently stops.

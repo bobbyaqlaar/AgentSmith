@@ -257,7 +257,11 @@ def test_cursors_config_fails_closed_on_the_edit_gate() -> None:
 
 
 def test_claudes_config_still_denies_when_the_launcher_cannot_run() -> None:
-    command = gi.render_config("claude", {})["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+    # By matcher, not by position: the shell surface (G2b) added a second
+    # PreToolUse entry, and indexing [0] silently started asserting about it.
+    entries = gi.render_config("claude", {})["hooks"]["PreToolUse"]
+    edit = next(e for e in entries if "Edit" in e["matcher"])
+    command = edit["hooks"][0]["command"]
     assert "||" in command and "deny" in command
 
 

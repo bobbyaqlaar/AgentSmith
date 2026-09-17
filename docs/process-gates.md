@@ -305,6 +305,35 @@ would leave a silent hole in exactly the IDEs nobody here tests daily. Each
 IDE's golden payload is in `scripts/test/fixtures/ide-payloads/`: replace one
 with a real session's payload and the tests say whether anything else changes.
 
+## The shell surface
+
+The edit gate watches an IDE's edit tools. The same agent can open a terminal,
+so the shell is checked too — in Claude Code through a `Bash` matcher, in Cursor
+through `beforeShellExecution`. It refuses four things:
+
+| Refused | Why |
+|---|---|
+| `git commit --no-verify` / `-n`, `git push --no-verify` | skips the commit gate or the pre-push sweep |
+| `git -c core.hooksPath=… <anything>` | runs that one command with the hooks off |
+| `git config core.hooksPath <not this repo's>` | points the repo away from its gates. Re-arming it to `.githooks` is allowed — that is what the sweep asks for |
+| writes to `.githooks/**`, `approvals.jsonl`, `process-gates.json`, an IDE hook config | changing the gate itself, which is a gated path |
+| `agentsmith approve` | it asks at a terminal and an agent has none; refusing early beats a confusing failure |
+
+Reading any of those files is fine. `git push -n` is a dry run, not a bypass,
+and is allowed.
+
+**The line is tokenised the way a shell tokenises it**, so a bypass inside
+quotes — a test fixture, an `echo`, a script handed to an interpreter — is an
+argument to another program, not a command being run. This rule refused the
+repo's own tests for itself until that was fixed.
+
+**Stated limit, and it decides what this is worth.** It reads the command an
+IDE is about to run, not what that command does. `bash -c "$(…)"`, a script
+file, a shell alias and a Makefile target all reach git without passing
+through. That is why the sweep exists and why the commit and CI gates are the
+ones that cannot be talked around: this layer makes the obvious bypass visible
+and costly, not impossible.
+
 ## Pillars a script can check
 
 Sixteen lines of "P7 applies — it does" is a form, not a control. Where a repo

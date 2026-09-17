@@ -1273,6 +1273,7 @@ AgentSmith/
 │   ├── gate_models.py           # Pydantic V2 models the gate validates with: IDE payloads, registry, config, approvals, sign-off
 │   ├── gate_pillars.py          # The pillars a script can check (P3 tracing, P7 Pydantic), the per-repo policy and its ratchet, evidence-token resolution
 │   ├── gate_ides.py             # One gate, six dialects: each IDE's payload shape in, its answer shape out, its hook config generated
+│   ├── gate_shell.py            # The shell surface: refuses --no-verify, a hooksPath override, `agentsmith approve` and writes to the gate itself
 │   ├── gate_steps.py            # The `# agentsmith:gate` steps in the workflows: `agentsmith gates run` and the generated checklist table
 │   ├── gate_tracing.py          # One span per gate decision, spooled to state/gate-spans and shipped at session start
 │   ├── requirements-gate.txt    # What the gate itself needs (pydantic, opentelemetry-sdk) — installed by CI and the framework env

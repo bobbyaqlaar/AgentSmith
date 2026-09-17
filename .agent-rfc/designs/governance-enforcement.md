@@ -6,6 +6,7 @@ scope:
   - scripts/gate_pillars.py
   - scripts/gate_steps.py
   - scripts/gate_ides.py
+  - scripts/gate_shell.py
   - scripts/test/fixtures/**
   - .cursor/**
   - .agents/hooks.json
@@ -213,6 +214,29 @@ files under this one, and the stop gate's findings changed between turns.
   - `agentsmith approve`.
 
   It also warns when a shell command writes into a gated path with no complete design. That is best effort; the stop, commit and sweep gates are authoritative.
+
+**Amended while designing (2026-09-18): G2b, the shell pre-check.**
+
+- **Deny-only.** The design's last bullet — warn when a shell command writes into a gated path
+  with no complete design — is **deferred**, because there is no warn channel that works in more
+  than one of the six IDEs: a `PreToolUse` "allow with a reason" is surfaced by some and swallowed
+  by others, and a warning nobody sees is worse than none. The stop gate already catches exactly
+  that case at the end of the turn and is the authoritative one, as this design says.
+- **The subcommand stays `pre-edit`.** It is what every tenant's committed hook config calls, and
+  it has always been "before a tool" rather than "before an edit" — the payload says which. Cursor
+  wires `beforeShellExecution` to it and Claude Code gets a second `PreToolUse` entry matching
+  `Bash`.
+- **Segment by segment, not a grep over the line.** `cd x && git commit --no-verify` is a bypass;
+  `grep -r -- --no-verify docs/` is not. The command is split on `&&`, `||`, `;` and `|`, and each
+  segment is judged on its own program and arguments.
+- **`-n` is `--no-verify` for `git commit` and `--dry-run` for `git push`.** Reading it as a bypass
+  everywhere would refuse a harmless dry run, and refusing the wrong thing is how a gate gets
+  turned off.
+- **Stated limit, loudly:** this reads the command an IDE is about to run. It does not read what
+  that command does. `bash -c "$(printf …)"`, a script file, a shell alias or a Makefile target
+  all reach git without passing this check — which is why G3's sweep exists and why the commit and
+  CI gates remain the ones that cannot be talked around. This layer makes the obvious bypass
+  visible and costly, not impossible.
 - **Generated configs.** Every hook config is generated from `governance.json → ides`, drift-checked and committed. In a hook-capable IDE, the only way round the gate is to edit a generated config, which is itself a gated, denied path.
 - **Fail-closed where the IDE allows it:**
   - Cursor: `failClosed: true`;

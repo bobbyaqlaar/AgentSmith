@@ -87,7 +87,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-09-17T13:15:58Z",
+      "last_modified": "2026-09-17T20:45:58Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -173,7 +173,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-09-17T13:16:13Z",
+      "last_modified": "2026-09-17T20:46:13Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -214,7 +214,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-09-17T13:17:07Z",
+      "last_modified": "2026-09-17T20:47:08Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -233,7 +233,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-09-17T13:15:44Z",
+      "last_modified": "2026-09-17T20:45:42Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -272,7 +272,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-09-17T13:15:48Z",
+      "last_modified": "2026-09-17T20:45:47Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -341,7 +341,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-09-17T13:15:24Z",
+      "last_modified": "2026-09-17T20:45:22Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -365,6 +365,7 @@
       "language": "python",
       "symbols": [
         "CompletionResult",
+        "_CachedCompletion",
         "BudgetExceededError",
         "_repo_root",
         "_load_yaml",
@@ -380,6 +381,9 @@
         "_PostgresBudgetBackend",
         "_make_budget_backend",
         "LLMGateway",
+        "_readable_here",
+        "from_result",
+        "to_result",
         "remaining_usd",
         "breached",
         "get_spend",
@@ -400,6 +404,8 @@
         "_emit_call_metrics",
         "_stamp_llm_span",
         "complete_stream",
+        "_cached_completion",
+        "_cache_completion",
         "complete",
         "_coerce_messages",
         "_retry_reason",
@@ -412,7 +418,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-09-17T13:16:42Z",
+      "last_modified": "2026-09-17T20:46:43Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -436,7 +442,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-09-17T13:15:51Z",
+      "last_modified": "2026-09-17T20:45:50Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -454,7 +460,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-09-17T13:16:58Z",
+      "last_modified": "2026-09-17T20:47:00Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -466,7 +472,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-09-17T13:16:37Z",
+      "last_modified": "2026-09-17T20:46:39Z",
       "id": "runtime/environment.py"
     },
     {
@@ -499,7 +505,7 @@
         "degrade_tiers",
         "__getattr__"
       ],
-      "last_modified": "2026-09-17T13:15:31Z",
+      "last_modified": "2026-09-17T20:45:29Z",
       "id": "runtime/testing.py"
     },
     {
@@ -585,7 +591,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-09-17T13:16:08Z",
+      "last_modified": "2026-09-17T20:46:08Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -756,7 +762,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-09-17T13:16:04Z",
+      "last_modified": "2026-09-17T20:46:04Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -827,7 +833,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-09-17T13:16:03Z",
+      "last_modified": "2026-09-17T20:46:03Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -858,7 +864,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-09-17T13:16:00Z",
+      "last_modified": "2026-09-17T20:46:00Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -3420,7 +3426,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-09-17T13:16:12Z",
+      "last_modified": "2026-09-17T20:46:12Z",
       "id": "runtime/config.py"
     },
     {
@@ -3499,7 +3505,7 @@
         "build_parser",
         "main"
       ],
-      "last_modified": "2026-09-17T19:12:17Z",
+      "last_modified": "2026-09-17T20:45:28Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3589,7 +3595,7 @@
         "system_fingerprint",
         "prompt_attributes"
       ],
-      "last_modified": "2026-09-17T13:15:33Z",
+      "last_modified": "2026-09-17T20:45:31Z",
       "id": "runtime/prompt_identity.py"
     },
     {
@@ -4061,7 +4067,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-09-17T13:15:12Z",
+      "last_modified": "2026-09-17T20:45:08Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -4594,7 +4600,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-17T19:42:15Z",
+      "last_modified": "2026-09-17T20:59:47Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4693,7 +4699,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-09-17T19:49:21Z",
+      "last_modified": "2026-09-17T21:08:49Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5388,6 +5394,7 @@
         "_entrypoint",
         "_is_dataclass",
         "_annotation_name",
+        "_validated",
         "_p7_pydantic",
         "_p7_async",
         "_p3_tracing",
@@ -5414,7 +5421,7 @@
         "read",
         "resolve"
       ],
-      "last_modified": "2026-09-17T13:08:24Z",
+      "last_modified": "2026-09-17T20:37:49Z",
       "id": "scripts/gate_pillars.py"
     },
     {
@@ -5458,6 +5465,7 @@
         "test_every_implemented_check_belongs_to_a_mechanical_pillar",
         "test_the_framework_holds_itself_to_the_policy_it_ships",
         "test_a_dataclass_built_from_data_the_code_did_not_write_is_refused",
+        "test_unpacking_a_validated_model_is_not_a_boundary",
         "test_an_internal_value_object_is_not_a_model",
         "test_a_dataclass_that_is_a_request_body_is_refused",
         "test_a_route_handler_that_blocks_the_loop_is_refused",
@@ -5476,7 +5484,7 @@
         "test_a_package_the_design_names_passes",
         "test_removing_a_package_is_not_an_addition"
       ],
-      "last_modified": "2026-09-17T13:08:24Z",
+      "last_modified": "2026-09-17T20:34:03Z",
       "id": "scripts/test/test_gate_pillars.py"
     },
     {
@@ -5582,7 +5590,7 @@
         "_command",
         "render_config"
       ],
-      "last_modified": "2026-09-17T19:42:20Z",
+      "last_modified": "2026-09-17T21:07:18Z",
       "id": "scripts/gate_ides.py"
     },
     {
@@ -5610,13 +5618,14 @@
         "test_a_write_the_adapter_cannot_read_is_denied_by_the_gate",
         "test_the_ide_comes_from_the_flag_then_the_environment_then_claude",
         "test_an_ide_nobody_wrote_an_adapter_for_is_named",
+        "test_every_ide_hook_config_is_a_gated_path",
         "test_the_committed_config_is_the_generated_one",
         "test_generating_claudes_config_keeps_what_it_does_not_own",
         "test_cursors_config_fails_closed_on_the_edit_gate",
         "test_claudes_config_still_denies_when_the_launcher_cannot_run",
         "test_an_unverified_config_schema_is_refused_rather_than_guessed"
       ],
-      "last_modified": "2026-09-17T19:41:13Z",
+      "last_modified": "2026-09-17T21:07:18Z",
       "id": "scripts/test/test_gate_ides.py"
     },
     {
@@ -5634,6 +5643,98 @@
       "pillar": null,
       "created_at": "2026-09-17T19:50:40Z",
       "id": "rfc:reviews/governance-enforcement-g2a.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_segments",
+        "_redirect_targets",
+        "_protects",
+        "_git_refusal",
+        "refusal"
+      ],
+      "last_modified": "2026-09-17T20:59:43Z",
+      "id": "scripts/gate_shell.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_refused",
+        "test_a_command_that_skips_the_gate_is_refused",
+        "test_ordinary_work_is_not_refused",
+        "test_a_bypass_inside_quotes_is_an_argument_not_a_command",
+        "test_push_dash_n_is_a_dry_run_not_a_bypass",
+        "test_the_hooks_path_this_repo_uses_is_allowed_to_be_set",
+        "test_writing_to_the_gate_itself_is_refused",
+        "test_reading_those_files_is_fine",
+        "test_recording_an_approval_from_a_shell_is_refused",
+        "test_other_agentsmith_commands_are_fine",
+        "test_what_it_cannot_see_is_not_pretended_otherwise",
+        "test_the_reason_names_the_layer_that_still_holds",
+        "test_the_gate_refuses_a_bypass_in_the_shell",
+        "test_an_ordinary_shell_command_is_allowed_through",
+        "test_cursor_wires_the_shell_hook",
+        "test_claude_matches_the_shell_tool"
+      ],
+      "last_modified": "2026-09-17T20:59:06Z",
+      "id": "scripts/test/test_gate_shell.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_result",
+        "test_a_row_round_trips_through_the_boundary_model",
+        "test_the_row_carries_only_declared_fields",
+        "test_every_field_of_the_result_is_on_the_row",
+        "test_a_legacy_row_without_a_version_is_still_read",
+        "test_a_row_from_a_newer_build_is_refused_rather_than_guessed_at",
+        "test_a_row_with_an_unexpected_field_is_refused",
+        "test_a_row_with_the_wrong_type_is_refused",
+        "test_a_row_missing_a_required_field_is_refused",
+        "_Store",
+        "gateway",
+        "test_a_good_row_is_served_from_the_cache",
+        "test_a_stale_row_reads_as_a_miss_and_says_which",
+        "test_the_store_being_unreachable_still_reads_as_infrastructure",
+        "test_moderation_still_runs_on_a_cache_hit",
+        "test_a_blocked_cache_hit_raises_rather_than_being_served",
+        "test_what_is_written_is_the_declared_row",
+        "gateway_cached",
+        "__init__",
+        "get",
+        "set",
+        "moderator",
+        "blocking"
+      ],
+      "last_modified": "2026-09-17T20:44:34Z",
+      "id": "runtime/test/test_idempotency_boundary.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The idempotency row is a boundary, and it is parsed like one",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/idempotency-row-boundary.md",
+      "pillar": null,
+      "created_at": "2026-09-17T21:15:55Z",
+      "id": "rfc:designs/idempotency-row-boundary.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 governance enforcement, G2b (the shell surface)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/governance-enforcement-g2b.md",
+      "pillar": null,
+      "created_at": "2026-09-17T21:15:55Z",
+      "id": "rfc:reviews/governance-enforcement-g2b.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the idempotency row is a boundary, and it is parsed like one",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/idempotency-row-boundary.md",
+      "pillar": null,
+      "created_at": "2026-09-17T21:15:55Z",
+      "id": "rfc:reviews/idempotency-row-boundary.md"
     }
   ],
   "edges": [
@@ -6355,6 +6456,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/machine/governance.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_idempotency_boundary.py",
       "target": "runtime/__init__.py"
     }
   ]

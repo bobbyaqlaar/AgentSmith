@@ -409,6 +409,7 @@ GATE_FILES = {
     "scripts/gate_models.py": REPO / "scripts/gate_models.py",
     "scripts/gate_ides.py": REPO / "scripts/gate_ides.py",
     "scripts/gate_pillars.py": REPO / "scripts/gate_pillars.py",
+    "scripts/gate_shell.py": REPO / "scripts/gate_shell.py",
     "scripts/gate_tracing.py": REPO / "scripts/gate_tracing.py",
     "templates/governance.json": REPO / "templates/governance.json",
     "runtime": REPO / "runtime",
@@ -979,7 +980,10 @@ def test_claude_settings_wire_all_three_agent_hooks_through_the_launcher():
     assert f"{launcher} stop --ide claude" in commands["Stop"]
     pre = [m for m in hooks["PreToolUse"] if any(f"{launcher} pre-edit --ide claude" in h["command"]
                                                  for h in m["hooks"])]
-    assert pre and {"Edit", "Write", "MultiEdit", "NotebookEdit"} <= set(pre[0]["matcher"].split("|"))
+    matchers = {matcher for entry in pre for matcher in entry["matcher"].split("|")}
+    assert {"Edit", "Write", "MultiEdit", "NotebookEdit"} <= matchers
+    shell = [entry for entry in hooks["PreToolUse"] if entry["matcher"] == "Bash"]
+    assert shell, "the shell surface (G2b) is wired here too"
     for event_commands in commands.values():
         for command in event_commands:
             assert command.split(launcher + " ", 1)[1].split()[0] in SUBCOMMANDS
@@ -990,7 +994,8 @@ def test_the_edit_gate_fails_closed_when_the_gate_cannot_run(tmp_path):
     """Claude Code lets an edit through when a PreToolUse hook exits non-zero —
     so a missing launcher, or one that dies before answering, must still deny."""
     hooks = json.loads((REPO / ".claude/settings.json").read_text(encoding="utf-8"))["hooks"]
-    command = hooks["PreToolUse"][0]["hooks"][0]["command"]
+    edit = next(entry for entry in hooks["PreToolUse"] if "Edit" in entry["matcher"])
+    command = edit["hooks"][0]["command"]
     result = subprocess.run(
         ["bash", "-c", command], input="{}", capture_output=True, text=True, check=False,
         env=dict(os.environ, CLAUDE_PROJECT_DIR=str(tmp_path)),     # no .githooks/process-gate here
