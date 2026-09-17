@@ -335,8 +335,10 @@ def check_redaction() -> bool:
 
     redactor = TraceRedactor()
     fixtures = [
+        # not-a-secret: the string this test proves gets scrubbed
         "Authorization: Bearer sk-ant-abcdefghijklmnopqrstuvwxyz0123456789",
         "contact support at someone@example.com about order 4111-1111-1111-1111",
+        # not-a-secret: the string this test proves gets scrubbed
         "raw key sk-abcdefghijklmnopqrstuvwxyz0123456789",
     ]
 

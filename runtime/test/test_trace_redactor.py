@@ -52,6 +52,7 @@ def test_staging_profile_hashes_secrets_preserving_structure():
     redactor = _redactor("staging")
     span = FakeSpan(
         {
+            # not-a-secret: the string this test proves gets scrubbed
             "input.value": "Authorization: Bearer sk-ant-abcdefghijklmnopqrstuvwxyz0123456789"
         }
     )
@@ -73,9 +74,11 @@ def test_production_profile_truncates_and_flattens():
 
 def test_development_profile_does_not_scrub():
     redactor = _redactor("development")
+    # not-a-secret: the string this test proves gets scrubbed
     span = FakeSpan({"input.value": "sk-ant-abcdefghijklmnopqrstuvwxyz0123456789"})
     redactor.on_end(span)
     assert (
+        # not-a-secret: the string this test proves gets scrubbed
         span._attributes["input.value"] == "sk-ant-abcdefghijklmnopqrstuvwxyz0123456789"
     )
 
@@ -226,6 +229,7 @@ def test_real_span_is_scrubbed_end_to_end():
     control: a test double must never be more capable than the real thing.
     """
     provider, exporter = _isolated_provider("staging")
+    # not-a-secret: the string this test proves gets scrubbed
     secret = "sk-ant-abcdefghijklmnopqrstuvwxyz0123456789"
 
     with provider.get_tracer("t").start_as_current_span("llm.call") as span:
@@ -303,6 +307,7 @@ def _export_with_profile(profile: str, attributes: dict) -> dict:
 def test_a_sequence_attribute_is_scrubbed_like_a_string_one(profile) -> None:
     out = _export_with_profile(
         profile,
+        # not-a-secret: the string this test proves gets scrubbed
         {"docs": ["contact bob@example.com", "key sk-ant-aaaaaaaaaaaaaaaaaaaaaaaa"]},
     )
     joined = " ".join(out["docs"])

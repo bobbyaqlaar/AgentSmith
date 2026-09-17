@@ -18,7 +18,18 @@ export interface Tenant {
 
 const TENANT_COLUMNS = "tenant_id, name, isolation, phoenix_base_url, budget_cap_usd, replay_webhook_url, created_at";
 
-function rowToTenant(r: any): Tenant {
+/** The row `TENANT_COLUMNS` selects — named, so the mapping below is checked. */
+interface TenantRow {
+  tenant_id: string;
+  name: string;
+  isolation: Tenant["isolation"];
+  phoenix_base_url: string | null;
+  budget_cap_usd: string | number | null;
+  replay_webhook_url: string | null;
+  created_at: string;
+}
+
+function rowToTenant(r: TenantRow): Tenant {
   return {
     tenantId: r.tenant_id,
     name: r.name,

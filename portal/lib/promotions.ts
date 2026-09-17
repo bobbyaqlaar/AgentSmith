@@ -37,7 +37,24 @@ interface PhoenixSpan {
   attributes?: Record<string, unknown>;
 }
 
-async function phoenixGet(phoenixBaseUrl: string, path: string, params: URLSearchParams): Promise<any> {
+/** One `shadow_eval` annotation, as Phoenix returns it. */
+interface PhoenixAnnotation {
+  span_id: string;
+  result?: { label?: string; score?: number; explanation?: string };
+}
+
+/**
+ * What the REST endpoints return: a bare array, or a page around one. Naming
+ * the two shapes here is what lets the callers below narrow instead of
+ * reaching into `any`, which would switch off every check past it.
+ */
+type PhoenixPage<T> = T[] | { data?: T[]; next_cursor?: string | null };
+
+async function phoenixGet<T>(
+  phoenixBaseUrl: string,
+  path: string,
+  params: URLSearchParams,
+): Promise<PhoenixPage<T>> {
   const qs = params.toString();
   // Through lib/phoenix's shared client, so this hop is traced like the other
   // two. It had its own fetch — same trailing-slash strip, same 5s timeout,
@@ -49,7 +66,7 @@ async function phoenixGet(phoenixBaseUrl: string, path: string, params: URLSearc
     attributes: { "http.route": path },
   });
   if (!resp.ok) throw new Error(`Phoenix REST HTTP ${resp.status}`);
-  return resp.json();
+  return (await resp.json()) as PhoenixPage<T>;
 }
 
 /**
@@ -74,7 +91,7 @@ export async function getSuggestedPromotions(
   try {
     const start = new Date(Date.now() - sinceHours * 60 * 60 * 1000);
     const spanParams = new URLSearchParams({ start_time: start.toISOString(), limit: "1000" });
-    const spanData = await phoenixGet(phoenixBaseUrl, `/v1/projects/${project}/spans`, spanParams);
+    const spanData = await phoenixGet<PhoenixSpan>(phoenixBaseUrl, `/v1/projects/${project}/spans`, spanParams);
     const spans: PhoenixSpan[] = Array.isArray(spanData) ? spanData : spanData.data ?? [];
     // Non-null next_cursor means Phoenix has more for this window than one page.
     const truncated = !Array.isArray(spanData) && Boolean(spanData?.next_cursor);
@@ -85,8 +102,12 @@ export async function getSuggestedPromotions(
     for (const s of spans) annotationParams.append("span_ids", s.context.span_id);
     annotationParams.append("include_annotation_names", "shadow_eval");
 
-    const annotationData = await phoenixGet(phoenixBaseUrl, `/v1/projects/${project}/span_annotations`, annotationParams);
-    const annotations: any[] = Array.isArray(annotationData) ? annotationData : annotationData.data ?? [];
+    const annotationData = await phoenixGet<PhoenixAnnotation>(
+      phoenixBaseUrl,
+      `/v1/projects/${project}/span_annotations`,
+      annotationParams,
+    );
+    const annotations: PhoenixAnnotation[] = Array.isArray(annotationData) ? annotationData : annotationData.data ?? [];
 
     const failures: SuggestedPromotion[] = [];
     for (const ann of annotations) {

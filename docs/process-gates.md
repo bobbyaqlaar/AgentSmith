@@ -291,8 +291,18 @@ to fix, or to seed an allowlist from at adoption):
 
 | Check | Pillar | What fails |
 |---|---|---|
-| `P7-pydantic` | 7 Stack-Specific Rules | a `@dataclass`, or a `dataclasses` import, in first-party Python — models are Pydantic V2. Test files are not first-party: a fixture is not a model |
+| `P2-dependencies` | 2 Build Architecture | a package added to a lock file that the change's `## Dependencies` does not name |
 | `P3-tracing` | 3 Tracing and Evaluations | a route (`@app.get`) or CLI command (`@app.command`) whose body opens no span |
+| `P7-pydantic` | 7 Stack-Specific Rules | a `@dataclass` built from data the code did not write — unpacked with `**`, or used as a request body. A dataclass built by keyword is an internal value object, not a model |
+| `P7-async` | 7 | a route handler declared `def` — a synchronous handler holds the event loop for every other request |
+| `P7-ts-any` | 7 | `: any`, `as any`, `any[]` in TypeScript, outside comments |
+| `P7-use-client` | 7 | a `.tsx` using hooks or event handlers without `'use client'`, **only** where a `next.config.*` sits above it |
+| `P10-gateway` | 10 Cost-Optimization Routing | a provider SDK imported outside `runtime/llm_gateway.py`, `provider_dispatch.py` or `cost_router.py` |
+| `P12-secrets` | 12 Secrets and Credentials | a credential-shaped string in any tracked file. A line that must hold one — a redaction test — carries `# not-a-secret: <why>` on it or on the line above |
+
+Test files are not first-party for the code-shape checks: a fixture is not a
+model and a test double is not a route. `P12-secrets` opts back in, because a
+real key committed in a test is leaked exactly as far as one in a module.
 
 A check runs only while its pillar is marked `mechanical` in the registry, and
 only in a repo whose policy is `report` or `enforce` — the same three modes as
@@ -304,11 +314,18 @@ entry needs `"approval": "A-xxxxxxxx"` from `agentsmith approve`, the mode may
 only strengthen, and dropping the key counts as weakening it — otherwise the
 allowlist could be widened by switching the policy off and on again.
 
-**Stated limits.** The tree cannot tell an internal value object from a model
-built out of unvalidated input, so `P7-pydantic` flags both and the allowlist
-carries the difference in a sentence a person wrote. `P3-tracing` finds only
-entrypoints a decorator declares, and reads a handler that delegates to a
-tracing helper as untraced. Both design questions still get asked.
+**A new check cannot be allowlisted into existence.** The ratchet asks for an
+approval on any entry a repo did not already have, and it cannot tell "this
+check is new" from "this repo is giving itself a pass". So a repo turning on a
+new check fixes what it finds, or the owner approves each exemption. AgentSmith
+fixed ten things to turn these on.
+
+**Stated limits.** `P7-pydantic` cannot see a dataclass filled field by field
+from a parsed payload. `P3-tracing` finds only entrypoints a decorator
+declares, and reads a handler that delegates to a tracing helper as untraced.
+`P7-ts-any` reads lines, not a parse, so the text inside a string counts.
+`P12-secrets` matches shapes, not issuers: a credential shaped like nothing on
+the list is not found. Every design question still gets asked.
 
 ## Cross-references
 

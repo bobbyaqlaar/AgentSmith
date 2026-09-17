@@ -15,7 +15,8 @@
       "id": 2,
       "name": "Build Architecture (Ponytail)",
       "check": [
-        "design"
+        "design",
+        "mechanical"
       ],
       "design_question": "What already exists (search, knowledge-graph impact), what is the minimal change, and which dependencies — direct and transitive — does it add?",
       "rule": "Run a 5-step analysis before creating new files: (1) does this already exist? (2) is there a native library? (3) what is the minimal change? (4) what does this affect? (5) are there downstream graph dependencies? No unapproved third-party dependencies."
@@ -89,7 +90,8 @@
       "id": 10,
       "name": "Cost-Optimization Routing",
       "check": [
-        "design"
+        "design",
+        "mechanical"
       ],
       "design_question": "Does the change call an LLM, and does it route through runtime/llm_gateway.py and the tenant models.yaml?",
       "rule": "Dev sessions use cost_router.py heuristics. Production calls must route through runtime/llm_gateway.py."
@@ -107,7 +109,8 @@
       "id": 12,
       "name": "Secrets and Credentials",
       "check": [
-        "design"
+        "design",
+        "mechanical"
       ],
       "design_question": "Does the change touch credentials, and are they read by variable name from .env / the model registry only?",
       "rule": "Never write a credential into source, a fixture, a commit message, a log line or a shell profile. They belong in .env, which stays gitignored, and in the CI secret store. Do not print a key to verify it — check presence and length. When a route needs a credential, read the variable NAME from the model registry rather than hardcoding one: the name changes when a route is repointed, and a hardcoded check quietly stops matching, which reads as \"gate skipped\" rather than as an error. If you think a secret has been committed, stop and tell the user rather than rewriting history yourself."

@@ -374,7 +374,7 @@ def check_change(
     read: Reader,
     config: Config,
     added: Optional[List[str]] = None,
-    previous: Optional[Config] = None,
+    previous: Optional[Reader] = None,
     evidence: Optional["gp.Resolver"] = None,
 ) -> Tuple[List[str], List[str]]:
     """One commit's worth of files against its message. -> (errors, notes)."""
@@ -401,18 +401,15 @@ def check_change(
     approvals, approval_errors = load_approvals(read)
     errors.extend(approval_errors)
 
-    # The pillars this repo is held to mechanically, and what its policy does to
-    # the one it inherited. The ratchet runs in every mode: it guards the policy
-    # itself, which `report` does not exempt anyone from.
+    # What this commit does to the policy it inherited. The ratchet runs in
+    # every mode: it guards the policy itself, which `report` does not exempt
+    # anyone from.
     policy = config.pillar_policy
-    inherited = previous.pillar_policy if previous is not None and previous.pillars_declared else None
+    previous_config = parse_config(previous(CONFIG))[0] if previous is not None else None
+    inherited = previous_config.pillar_policy if previous_config is not None \
+        and previous_config.pillars_declared else None
     errors.extend(gp.transition_problems(inherited, policy, approvals))
-    if policy.mode in ("report", "enforce"):
-        mechanical = gp.mechanical_problems(gated, read, registry, policy)
-        if policy.mode == "enforce":
-            errors.extend(mechanical)
-        else:
-            notes.extend(f"pillars (report): {problem}" for problem in mechanical)
+    design_body = ""
 
     def na(name: str, value: str) -> bool:
         match = re.match(r"^n/?a\s*[:—-]\s*(\S.*)$", value, re.I)
@@ -454,10 +451,21 @@ def check_change(
             if policy.mode == "report" and evidence is not None:
                 notes.extend(f"pillars (report): Design: {path} {e}"
                              for e in evidence_problems(front_matter(text)[1], evidence))
+            design_body = front_matter(text)[1]
             scope = design_scope(text)
             uncovered = [f for f in gated if not _any(f, scope)]
             if scope and uncovered:
                 errors.append(f"Design: {path} scope does not cover {', '.join(uncovered)}")
+
+    # The pillars this repo is held to in the code. After the design, because
+    # `P2-dependencies` reads the '## Dependencies' section that design carries.
+    if policy.mode in ("report", "enforce"):
+        mechanical = gp.mechanical_problems(
+            gated, read, registry, policy, previous, _section(design_body, "Dependencies") or "")
+        if policy.mode == "enforce":
+            errors.extend(mechanical)
+        else:
+            notes.extend(f"pillars (report): {problem}" for problem in mechanical)
 
     review_value = trailer(message, "Review")
     if review_value is None:
@@ -805,9 +813,11 @@ def cmd_commit_msg(message_file: str, amend: bool = False) -> int:
     lines = _gated_lines(git("diff", "--cached", "--numstat", *base, cwd=root), config)
 
     added = _added_lines(git("diff", "--cached", "-U0", *base, cwd=root, check=False))
-    previous = parse_config(_reader_at(root, base[0])(CONFIG))[0]
-    # The index, because that is what this commit will contain: a file added by
-    # the same change is evidence the moment it is staged.
+    # What this commit is measured against: the config it inherits and the lock
+    # files as they were. The index, for the commit's own side, because that is
+    # what it will contain — a file added by the same change is evidence the
+    # moment it is staged.
+    previous = _reader_at(root, base[0])
     evidence = gp.evidence_resolver(root, "") if config.pillar_policy.mode != "off" else None
     errors, notes = check_change(files, lines, message, read, config, added, previous, evidence)
 
@@ -902,7 +912,7 @@ def check_commits(root: Path, commits: List[str]) -> Tuple[Failures, List[Tuple[
         lines = _gated_lines(git("diff-tree", "--no-commit-id", "--numstat", "-r", "--root", commit, cwd=root), config)
         added = _added_lines(git("show", "--format=", "-U0", "--root", commit, cwd=root, check=False))
         parent = git("rev-parse", "--verify", "-q", f"{commit}^", cwd=root, check=False).strip()
-        previous = parse_config(_reader_at(root, parent)(CONFIG))[0] if parent else None
+        previous = _reader_at(root, parent) if parent else None
         evidence = gp.evidence_resolver(root, commit) if config.pillar_policy.mode != "off" else None
         errors, notes = check_change(files, lines, message, read, config, added, previous, evidence)
         if errors:
@@ -1169,12 +1179,15 @@ def cmd_pillars() -> int:
               "nothing was checked, which is not the same as passing")
         return 0
     found = gp.repo_problems(root, registry, policy)
+    # Both kinds of exemption, counted: an allowlist entry the owner approved,
+    # and a line that says it must hold a credential-shaped string. A number
+    # that is printed is a number someone can watch grow.
+    exempt = f"{len(policy.allow)} allowlisted, {gp.exemption_count(root)} line marker(s)"
     if not found:
-        allowed = len(policy.allow)
-        print(f"pillars: every tracked file passes {', '.join(sorted(active))} ({policy.mode}"
-              + (f", {allowed} allowlisted)" if allowed else ")"))
+        print(f"pillars: every tracked file passes {', '.join(sorted(active))} "
+              f"({policy.mode}, {exempt})")
         return 0
-    print(f"pillars ({policy.mode}): {len(found)} problem(s) across what this repo tracks")
+    print(f"pillars ({policy.mode}): {len(found)} problem(s) across what this repo tracks ({exempt})")
     print("\n".join(f"  - {problem}" for problem in found))
     if policy.mode == "report":
         print("  reported, not blocked: this repo is in `report`")

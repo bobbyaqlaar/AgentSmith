@@ -4,6 +4,9 @@ scope:
   - scripts/process_gate.py
   - scripts/gate_models.py
   - scripts/gate_pillars.py
+  - portal/lib/**
+  - templates/in-app-widget/**
+  - runtime/test/test_trace_redactor.py
   - scripts/gate_tracing.py
   - scripts/test/test_gate_*.py
   - scripts/test/test_cli_approve.py
@@ -331,6 +334,45 @@ files under this one, and the stop gate's findings changed between turns.
   or `gate_span(...)` — and no tracing decorator. **Stated limit:** an entrypoint that is not
   declared by a decorator is not found, and a handler that delegates to a helper that traces
   reads as untraced. Both are the design-time question's job, which does not go away.
+
+**Amended while designing (2026-09-17): what G6b is, and what a new check does to the ratchet.**
+
+- **G6b (this slice)** — the remaining mechanical checks and the narrowing of `P7-pydantic`.
+  **G6c** — the local `agentsmith gates` runner and the generated Repo gates table, which are
+  about running CI's steps locally, not about pillars; they are separable and G6b is already a
+  slice's worth.
+- **A new check cannot be allowlisted into existence.** The ratchet asks for an owner approval on
+  any allowlist entry a repo did not already have, and it cannot tell "this check is new" from
+  "this repo is giving itself a pass" — the registry that says which checks exist is read beside
+  the running script, not at the commit, so there is no honest historical answer to compare
+  against. The consequence is deliberate and is the rule the owner asked for: **this slice fixes
+  what the new checks find rather than exempting it.** Ten fixes, listed in the review record.
+  A tenant adopting these checks later faces the same choice — fix, or ask the owner.
+- **`P7-pydantic`, narrowed.** It flags a dataclass **built from data the code did not write**:
+  constructed with `**`/`*` unpacking, or annotating a route handler's parameter (the request
+  body). A dataclass built by keyword from values in the same module is an internal value object,
+  which is what all sixteen of AgentSmith's seeded files turned out to hold — fourteen of the
+  eighteen allowlist entries go, which is a shrink and needs no approval. **Stated limit:** a
+  boundary this rule cannot see is a dataclass filled field by field from a parsed payload.
+- **`P7-async`** — a route handler declared `def` rather than `async def` blocks the event loop
+  for every other request. Same decorators as `P3-tracing`, so they find the same handlers.
+- **`P7-ts-any`** — `: any`, `as any`, `<any>` in TypeScript, outside comments. **Stated limit:**
+  a line, not a parse: a string containing the text reads as a violation.
+- **`P7-use-client`** — a `.tsx` file using hooks or DOM events needs `'use client'`, **only where
+  a `next.config.*` sits above it**. `'use client'` is a Next.js directive; requiring it in the
+  Vite scaffolds would be requiring a mistake.
+- **`P10-gateway`** — a provider SDK imported outside the gateway. The gateway's own modules are
+  part of the rule, not entries in an allowlist: "no provider SDK outside `llm_gateway.py`" is one
+  rule, and writing the exception down twice would let the two drift.
+- **`P12-secrets`** — credential-shaped strings in tracked content, over every file a commit
+  touches rather than Python alone. A file that must hold one — a redaction test, a fixture that
+  proves the scrubber works — marks the line `# not-a-secret: <why>`, the same convention as
+  `# fail-open:` and `<!-- xref: example -->`. The markers are counted in the `pillars` output, so
+  their number is visible rather than silently growing. **Stated limit:** a shape, not a check
+  against any issuer; a credential that does not match a known shape is not found.
+- **`P2-dependencies`** — a package added to a lock file that the change's `## Dependencies`
+  section does not name. It reads the lock diff against the commit's parent, so it answers the
+  question the section exists for: which dependencies did this change actually add?
 
 ### G7 — Onboarding completeness
 

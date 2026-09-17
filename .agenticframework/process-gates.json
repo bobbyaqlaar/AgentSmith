@@ -32,7 +32,7 @@
   "registry": "@framework/templates/governance.json",
   "artifacts": "report",
   "pillars": {
-    "_about": "Whether this repo is held to the pillars a script can check (G6a). The allowlist only shrinks: a new entry needs an approval the owner records in a terminal, and the mode may not be weakened.",
+    "_about": "Whether this repo is held to the pillars a script can check (G6). The allowlist only shrinks: a new entry needs an approval the owner records in a terminal, and the mode may not be weakened.",
     "mode": "enforce",
     "allow": [
       {
@@ -44,86 +44,6 @@
         "check": "P3-tracing",
         "path": ".github/scratch-tenants/apps/python-uv/app/main.py",
         "why": "liveness probe in a generated tenant scaffold — a span per kubelet probe is noise, not observability"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "examples/oil-price-agent/trigger_workflow.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "examples/oil-price-agent/workflows/oil_price_workflow.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "runtime/dead_letter.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "runtime/judging.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "runtime/llm_gateway.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "runtime/machine/policy.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "runtime/moderation.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "runtime/prompt_guard.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "runtime/testing.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "runtime/tool_registry.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "runtime/vector_store.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "runtime/workflows/base_workflow.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "scripts/local_agent_stack.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "scripts/mutation_check.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "scripts/security/registry.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
-      },
-      {
-        "check": "P7-pydantic",
-        "path": "scripts/security/report.py",
-        "why": "internal value object with annotated fields, not a model built from unvalidated input; pre-existing at adoption, and the evidence for narrowing this check in G6b"
       }
     ]
   },

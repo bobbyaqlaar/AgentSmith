@@ -9,7 +9,7 @@
 // construction, and the next module to open a query is traced without knowing
 // this file exists.
 
-import { Pool } from "pg";
+import { Pool, type QueryResult } from "pg";
 
 import { SpanKind, portalSpan, truncate } from "./tracing";
 
@@ -47,12 +47,21 @@ export function isPassthroughQuery(args: unknown[]): boolean {
  * behind it (the Python side's runtime/trace_redactor.py protects only the
  * worker's spans), so nothing that could hold a row value goes on.
  */
+// `Pool.query` is an overload set (streams, array configs, text+values,
+// callbacks), so an override cannot restate it without either repeating all
+// four or falling back to `any` — which would switch off type checking for
+// every caller of the portal's pool. The traced body is written in `unknown`
+// and given the base's own type once, here: callers see exactly `Pool.query`,
+// and nothing inside reads an argument without narrowing it first.
+type PoolQuery = Pool["query"];
+const baseQuery = Pool.prototype.query as (this: Pool, ...args: unknown[]) => Promise<QueryResult>;
+
 class TracedPool extends Pool {
-  query(...args: any[]): any {
-    const passthrough = () => (super.query as (...rest: any[]) => any)(...args);
+  query: PoolQuery = ((...args: unknown[]): unknown => {
+    const passthrough = () => baseQuery.apply(this, args);
     if (isPassthroughQuery(args)) return passthrough();
 
-    const first = args[0];
+    const first = args[0] as { text?: string } | string | undefined;
     const statement: string | undefined = typeof first === "string" ? first : first?.text;
     const operation = operationOf(statement);
     return portalSpan(
@@ -73,7 +82,7 @@ class TracedPool extends Pool {
         return result;
       },
     );
-  }
+  }) as PoolQuery;
 }
 
 export function getPool(): Pool {

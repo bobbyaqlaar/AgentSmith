@@ -75,6 +75,27 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — governance enforcement, slice G6b: the rest of the mechanical checks
+
+- **Six more checks**, over the files a commit touches: `P2-dependencies` (a package added to a
+  lock file that the change's `## Dependencies` does not name), `P7-async` (a route handler
+  declared `def`), `P7-ts-any` (`: any` / `as any` / `any[]` in TypeScript), `P7-use-client` (a
+  `.tsx` using hooks without `'use client'`, only under a `next.config.*`), `P10-gateway` (a
+  provider SDK imported outside the gateway) and `P12-secrets` (credential-shaped strings in any
+  tracked file, test files included).
+- **`P7-pydantic` narrowed** to what the rule protects: a dataclass built from data the code did
+  not write — unpacked with `**`, or used as a request body. A dataclass built by keyword is an
+  internal value object, and requiring Pydantic there was ritual. Fourteen of AgentSmith's
+  eighteen allowlist entries went with it.
+- **`# not-a-secret: <why>`** exempts a line that must hold a credential-shaped string — a
+  redaction test, a fixture that proves the scrubber works — on the line itself or the one above.
+  The markers are counted, not silent.
+- **A new check cannot be allowlisted into existence:** the ratchet cannot tell a new rule from a
+  repo excusing itself, so turning these on meant fixing what they found. AgentSmith fixed ten
+  things — two scaffold handlers that blocked the event loop, five `any`s in the portal's data
+  layer (the Phoenix and tenant-row boundaries are named types now), and the redaction fixtures
+  are marked. `P2`, `P10` and `P12` are marked `mechanical` in `templates/governance.json`.
+
 ### Added — governance enforcement, slice G6a: pillar answers that can be checked
 
 - **Evidence tokens.** Where a repo declares a `pillars` policy, every `applies`
