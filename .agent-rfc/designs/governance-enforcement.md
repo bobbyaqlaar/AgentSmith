@@ -5,6 +5,12 @@ scope:
   - scripts/gate_models.py
   - scripts/gate_pillars.py
   - scripts/gate_steps.py
+  - scripts/gate_ides.py
+  - scripts/test/fixtures/**
+  - .cursor/**
+  - .agents/hooks.json
+  - .gemini/settings.json
+  - .codex/hooks.json
   - portal/lib/**
   - templates/in-app-widget/**
   - runtime/test/test_trace_redactor.py
@@ -212,6 +218,32 @@ files under this one, and the stop gate's findings changed between turns.
   - Cursor: `failClosed: true`;
   - Claude: the existing shell fallback prints a deny;
   - Antigravity and VS Code fail open by design, so the stated limit is that git and the sweep still hold.
+
+**Amended while designing (2026-09-17): G2 splits, and what has been verified.**
+
+- **G2a (this slice)** — the adapter layer: one internal event, six input parsers, six output
+  renderers, the `ides` registry section, the generated hook configs and a golden payload fixture
+  per IDE. **G2b** — the shell pre-check, which is a new rule rather than a new dialect and needs
+  its own per-IDE surface (`beforeShellExecution` in Cursor, a `Bash` matcher in Claude).
+- **Cursor re-verified against the vendor's docs on 2026-09-17**, and it changes two things the
+  table above implied. There is **no before-edit file hook** — `afterFileEdit` fires after the
+  write and `beforeReadFile` is a read — so the edit gate hangs on `preToolUse` with
+  `matcher: "Write"`, which fires before every tool. And `sessionStart` is **fire-and-forget**:
+  it can add context but cannot block, so Cursor's session line is advisory, as Claude's is.
+  Confirmed as designed: `permission: "allow"|"deny"` with `user_message`/`agent_message`,
+  `followup_message` on `stop`, `additional_context` on `sessionStart`, and `failClosed: true`
+  per script. Payloads carry `workspace_roots`; `stop` and `sessionStart` carry no `cwd`, so the
+  repo root comes from `cwd` or the first workspace root.
+- **Claude Code is verified by use** — it is the hook family this repo runs.
+- **The other four** (Antigravity, VS Code Copilot, Gemini CLI, Codex) are implemented to the
+  table above, which the owner verified on 2026-09-15 and which is **not re-verified here**. Each
+  carries a golden payload fixture: when a real session pastes one in, the fixture is replaced and
+  the adapter's test says whether anything else has to change. This is the stated limit, and it is
+  why the next point matters.
+- **A payload the adapter cannot read denies the edit.** Field names are the part most likely to
+  be wrong, and a parser that shrugged would leave a silent hole in exactly the IDEs nobody here
+  tests daily. An unrecognised write payload is refused with the keys it actually saw, so the fix
+  is one fixture away. Session-start and stop warn instead: they cannot block anywhere.
 
 ### G3 — Bypass sweep (no GitHub dependency)
 

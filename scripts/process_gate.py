@@ -62,6 +62,7 @@ if sys.version_info < (3, 11):
     UNUSABLE = f"Python {sys.version.split()[0]} at {sys.executable} is older than 3.11"
 else:
     try:
+        import gate_ides as gi
         import gate_models as gm
         import gate_pillars as gp
         import gate_tracing as gt
@@ -581,6 +582,9 @@ def active_designs(root: Path, config: Config) -> List[Tuple[str, str, List[str]
 # inferred from the text a hook printed: a formatting change to that JSON would
 # quietly relabel every deny as an allow (`ambiguous-signals`).
 _DECISION: Dict[str, Optional[str]] = {"value": None, "rule": None}
+# Which IDE asked, and so which dialect the answer is written in. Set once in
+# main() from --ide / $AGENTSMITH_IDE; the rules below never look at it.
+_IDE: Dict[str, str] = {"value": gi.DEFAULT_IDE if not UNUSABLE else "claude"}
 
 
 def _record(decision: str, rule: Optional[str] = None) -> None:
@@ -591,17 +595,20 @@ def _record(decision: str, rule: Optional[str] = None) -> None:
 
 def _deny(reason: str) -> None:
     _record("deny")
-    print(json.dumps({"hookSpecificOutput": {
-        "hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": reason,
-    }}))
+    print(gi.render(_IDE["value"], "deny", reason))
 
 
 def cmd_pre_edit(payload: dict) -> int:
-    tool_input = payload.get("tool_input") or {}
-    target = tool_input.get("file_path") or tool_input.get("notebook_path")
-    if not target:
+    try:
+        event = gi.parse(_IDE["value"], "pre-edit", payload)
+    except gi.Unreadable as unreadable:
+        # Fail closed: a write this cannot read is refused, naming what it saw.
+        _deny(str(unreadable))
         return 0
-    root = repo_root(payload.get("cwd"))
+    if event.kind != "edit" or not event.paths:
+        return 0  # a read, a shell command (G2b), or a tool that changes nothing
+    target = event.paths[0]
+    root = repo_root(event.cwd)
     try:
         rel = Path(target).resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
@@ -697,7 +704,8 @@ def stop_problems(root: Path) -> List[str]:
 
 
 def cmd_stop(payload: dict) -> int:
-    root = repo_root(payload.get("cwd"))
+    event = gi.parse(_IDE["value"], "stop", payload)
+    root = repo_root(event.cwd)
     unreviewed = stop_problems(root)
     # A commit that skipped the gate is as unreviewed as an uncommitted change,
     # and the end of a turn is a touchpoint like any other.
@@ -708,16 +716,15 @@ def cmd_stop(payload: dict) -> int:
     _record("block", "review-before-done" if not swept else "bypass-sweep")
     heading = "Commits that never passed the gate" if swept and not unreviewed else "Unreviewed gated changes"
     text = f"{heading}:\n- " + "\n- ".join(problems)
-    if payload.get("stop_hook_active"):
-        # Blocking again could loop forever. The commit and CI gates still hold.
-        print(json.dumps({"systemMessage": "⚠️ Turn ended with " + text}))
-    else:
-        print(json.dumps({"decision": "block", "reason": text + "\nSee AgentSmith's docs/process-gates.md."}))
+    # Blocking a turn that is already being blocked could loop forever, so a
+    # repeat warns instead. The commit and CI gates still hold.
+    print(gi.render(_IDE["value"], "block", text + "\nSee AgentSmith's docs/process-gates.md.",
+                    repeat=event.stop_active))
     return 0
 
 
 def cmd_session_start(payload: dict) -> int:
-    root = repo_root(payload.get("cwd"))
+    root = repo_root(gi.parse(_IDE["value"], "session-start", payload).cwd)
     config, problems = _worktree_config(root)
     if config is None and not problems:
         return 0  # this repository has not adopted the gates
@@ -782,7 +789,7 @@ def cmd_session_start(payload: dict) -> int:
     telemetry = gt.status_line(gt.ship())
     if telemetry:
         lines.append(telemetry)
-    print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "\n".join(lines)}}))
+    print(gi.render(_IDE["value"], "context", "\n".join(lines)))
     return 0
 
 
@@ -1416,8 +1423,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         return EXIT_UNUSABLE
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("session-start", "pre-edit", "stop", "artifacts", "pillars"):
+    for name in ("artifacts", "pillars"):
         sub.add_parser(name)
+    for name in ("session-start", "pre-edit", "stop"):
+        hook = sub.add_parser(name)
+        hook.add_argument("--ide", default=None, choices=gi.IDES,
+                          help="which IDE is asking (default: $AGENTSMITH_IDE, then claude)")
     sweep_cmd = sub.add_parser("sweep")
     sweep_cmd.add_argument("--report", action="store_true",
                            help="report and re-arm, but do not refuse (pre-commit; commit-msg decides)")
@@ -1434,6 +1445,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command == "pillars":
         return _traced("pillars", repo_root(), cmd_pillars)
     if args.command in ("session-start", "pre-edit", "stop"):
+        try:
+            _IDE["value"] = gi.resolve(args.ide, os.environ)
+        except ValueError as exc:
+            print(f"process gate: {exc}", file=sys.stderr)
+            return 1
         raw = sys.stdin.read() if not sys.stdin.isatty() else ""
         handler = {"session-start": cmd_session_start, "pre-edit": cmd_pre_edit, "stop": cmd_stop}[args.command]
         try:

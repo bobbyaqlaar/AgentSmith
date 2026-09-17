@@ -30,6 +30,8 @@ __all__ = [
     "Artifacts",
     "Deviation",
     "Extends",
+    "GateEvent",
+    "Ide",
     "Pillar",
     "PillarPolicy",
     "Records",
@@ -93,6 +95,31 @@ class PillarPolicy(_Frozen):
     about: str | None = Field(default=None, alias="_about")
     mode: Literal["off", "report", "enforce"] = "off"
     allow: list[Allowance] = Field(default_factory=list)
+
+
+class GateEvent(_Frozen):
+    """What an IDE is asking the gate about, once the dialect is off it.
+
+    Six IDEs send six payload shapes for the same three questions; the checks
+    read this and nothing else, so a seventh IDE cannot change what a rule
+    means (scripts/gate_ides.py).
+    """
+
+    kind: Literal["edit", "shell", "other"]
+    paths: list[str] = Field(default_factory=list)
+    command: str | None = None
+    cwd: str | None = None
+    stop_active: bool = False
+
+
+class Ide(_Frozen):
+    """One IDE's hook wiring, as the registry declares it."""
+
+    id: str = Field(min_length=1)
+    config: str = Field(min_length=1)
+    events: dict[str, str] = Field(default_factory=dict)
+    fail_closed: bool = False
+    note: str | None = None
 
 
 class Signoff(_Frozen):
@@ -167,6 +194,7 @@ class Registry(_Frozen):
     pillars: list[Pillar] = Field(min_length=1)
     records: Records
     artifacts: Artifacts = Field(default_factory=Artifacts)
+    ides: list[Ide] = Field(default_factory=list)
 
     def pillar_ids(self) -> set[int]:
         return {p.id for p in self.pillars}

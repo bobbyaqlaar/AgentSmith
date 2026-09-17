@@ -269,6 +269,42 @@ A repo consolidating its documents runs `report` until it has finished, then
 switches to `enforce` in the same change. Blocking first would block the
 migration that fixes it.
 
+## Six IDEs, one gate
+
+The rules are one implementation. What differs is the shape of the payload an
+IDE sends and the shape of the answer it reads, and those live in
+`scripts/gate_ides.py` — a seventh IDE is a table entry, a fixture and a test,
+never a second gate. Every hook command carries `--ide <name>` (or
+`$AGENTSMITH_IDE`); without one it answers in Claude Code's dialect.
+
+| IDE | Config | Deny | Turn blocked | Session context | Config generated |
+|---|---|---|---|---|---|
+| Claude Code | `.claude/settings.json` | `permissionDecision: deny` | `decision: block` | `additionalContext` | yes — verified by use |
+| Cursor | `.cursor/hooks.json` | `permission: deny` | `followup_message` | `additional_context` | yes — vendor docs, 2026-09-17 |
+| Antigravity | `.agents/hooks.json` | `decision: deny` | `decision: block` | `additionalContext` | no — schema not verified |
+| VS Code Copilot | `.github/hooks/agentsmith.json` | Claude's shape | `decision: block` | `additionalContext` | no — schema not verified |
+| Gemini CLI | `.gemini/settings.json` | `decision: deny` | `AfterAgent` deny | `additionalContext` | no — schema not verified |
+| Codex | `.codex/hooks.json` | `decision: block` | `decision: block` | `context` | no — schema not verified |
+
+**Cursor has no before-edit hook.** `afterFileEdit` fires after the write and
+`beforeReadFile` is a read, so the edit gate is `preToolUse` with
+`matcher: "Write"`, which fires before every tool. `sessionStart` there is
+fire-and-forget: it can add context but cannot block. `failClosed: true` is set
+on the edit gate — Cursor is the one IDE where a hook that crashes still
+refuses.
+
+**A config is generated only where its schema is verified.** A file in a shape
+nobody has confirmed looks like enforcement and may be ignored in silence,
+which is worse than no file. The adapters read and answer all six either way;
+`generate-ide-config.py --hooks` writes the two that are confirmed and names
+the four that are not.
+
+**A write payload the adapter cannot read is denied**, naming the keys it saw.
+Field names are the part most likely to be wrong, and a parser that shrugged
+would leave a silent hole in exactly the IDEs nobody here tests daily. Each
+IDE's golden payload is in `scripts/test/fixtures/ide-payloads/`: replace one
+with a real session's payload and the tests say whether anything else changes.
+
 ## Pillars a script can check
 
 Sixteen lines of "P7 applies — it does" is a form, not a control. Where a repo

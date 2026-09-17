@@ -169,6 +169,7 @@ def render_registry(rules: dict) -> str:
         ],
         "records": rules.get("records") or {},
         "artifacts": rules.get("artifacts") or {},
+        "ides": rules.get("ides") or [],
     }
     return json.dumps(registry, indent=2, ensure_ascii=False) + "\n"
 
@@ -227,6 +228,43 @@ def _gates_mode(repo_root: Path, check_only: bool) -> int:
     target.write_text(expected, encoding="utf-8")
     print(f"✅ Written the gates table in {target} from the workflow tags")
     return 0
+
+
+def _hooks_mode(repo_root: Path, check_only: bool) -> int:
+    """The IDE hook configs, from the registry's `ides`.
+
+    Written only where the config schema is verified — a file in a shape nobody
+    has confirmed looks like enforcement and may be ignored in silence. The
+    adapters read and answer all six dialects either way.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import gate_ides as gi
+
+    problems = 0
+    for ide in gi.GENERATED:
+        target = repo_root / gi.ADAPTERS[ide].config_path
+        existing = json.loads(target.read_text(encoding="utf-8")) if target.is_file() else None
+        expected = json.dumps(gi.render_config(ide, existing), indent=2, ensure_ascii=False) + "\n"
+        actual = target.read_text(encoding="utf-8") if target.is_file() else None
+        if check_only:
+            if actual == expected:
+                print(f"✅ {gi.ADAPTERS[ide].config_path} matches the registry")
+                continue
+            problems += 1
+            print(f"❌ {gi.ADAPTERS[ide].config_path} "
+                  f"{'is missing' if actual is None else 'has drifted'} — run generate-ide-config.py --hooks")
+            if actual is not None:
+                sys.stdout.writelines(difflib.unified_diff(
+                    actual.splitlines(keepends=True), expected.splitlines(keepends=True),
+                    fromfile=f"committed/{ide}", tofile=f"generated/{ide}"))
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(expected, encoding="utf-8")
+        print(f"✅ Written {gi.ADAPTERS[ide].config_path} from the registry")
+    not_generated = [i for i in gi.IDES if i not in gi.GENERATED]
+    print(f"ℹ️  Not generated (no verified config schema yet, the adapter still reads them): "
+          f"{', '.join(not_generated)}")
+    return 1 if problems else 0
 
 
 def _render_cursorrules(rules: dict, stack: str, ctx: dict[str, str]) -> str:
@@ -574,6 +612,12 @@ def main() -> None:
         "drifted from templates/agent-rules.yaml (Pillar 6/7 CI gate).",
     )
     ap.add_argument(
+        "--hooks",
+        action="store_true",
+        help="Regenerate the IDE hook configs from governance.json's `ides`; with --check-only, "
+        "exit 1 when a committed one has drifted.",
+    )
+    ap.add_argument(
         "--gates",
         action="store_true",
         help="Regenerate the gates table in docs/validation-checklist.md from the "
@@ -607,6 +651,8 @@ def main() -> None:
 
     stack = args.stack or detected_stack
     rules = _load_rules(rules_file)
+    if args.hooks:
+        sys.exit(_hooks_mode(Path(args.repo_root).resolve(), args.check_only))
     if args.gates:
         sys.exit(_gates_mode(Path(args.repo_root).resolve(), args.check_only))
     if args.registry:

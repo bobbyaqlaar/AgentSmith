@@ -407,6 +407,7 @@ HOOK_FILES = {
 GATE_FILES = {
     "scripts/process_gate.py": GATE,
     "scripts/gate_models.py": REPO / "scripts/gate_models.py",
+    "scripts/gate_ides.py": REPO / "scripts/gate_ides.py",
     "scripts/gate_pillars.py": REPO / "scripts/gate_pillars.py",
     "scripts/gate_tracing.py": REPO / "scripts/gate_tracing.py",
     "templates/governance.json": REPO / "templates/governance.json",
@@ -973,9 +974,11 @@ def test_claude_settings_wire_all_three_agent_hooks_through_the_launcher():
     hooks = json.loads((REPO / ".claude/settings.json").read_text(encoding="utf-8"))["hooks"]
     commands = {event: [h["command"] for m in entries for h in m["hooks"]] for event, entries in hooks.items()}
     launcher = 'bash "$CLAUDE_PROJECT_DIR/.githooks/process-gate"'
-    assert f"{launcher} session-start" in commands["SessionStart"]
-    assert f"{launcher} stop" in commands["Stop"]
-    pre = [m for m in hooks["PreToolUse"] if any(f"{launcher} pre-edit" in h["command"] for h in m["hooks"])]
+    # Every command names its dialect since G2a: one gate, six of them.
+    assert f"{launcher} session-start --ide claude" in commands["SessionStart"]
+    assert f"{launcher} stop --ide claude" in commands["Stop"]
+    pre = [m for m in hooks["PreToolUse"] if any(f"{launcher} pre-edit --ide claude" in h["command"]
+                                                 for h in m["hooks"])]
     assert pre and {"Edit", "Write", "MultiEdit", "NotebookEdit"} <= set(pre[0]["matcher"].split("|"))
     for event_commands in commands.values():
         for command in event_commands:

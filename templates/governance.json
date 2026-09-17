@@ -288,5 +288,73 @@
       ".github/**/*.md"
     ],
     "ignored": []
-  }
+  },
+  "ides": [
+    {
+      "id": "claude",
+      "config": ".claude/settings.json",
+      "events": {
+        "session-start": "SessionStart",
+        "pre-edit": "PreToolUse",
+        "stop": "Stop"
+      },
+      "fail_closed": false,
+      "note": "Verified by use — the hook family this repo runs. The configured command falls back to printing a deny when the launcher cannot run.\n"
+    },
+    {
+      "id": "cursor",
+      "config": ".cursor/hooks.json",
+      "events": {
+        "session-start": "sessionStart",
+        "pre-edit": "preToolUse",
+        "stop": "stop"
+      },
+      "fail_closed": true,
+      "note": "Vendor docs, re-read 2026-09-17. There is no before-edit hook (afterFileEdit fires after the write), so the edit gate is preToolUse with matcher Write; sessionStart is fire-and-forget and cannot block.\n"
+    },
+    {
+      "id": "antigravity",
+      "config": ".agents/hooks.json",
+      "events": {
+        "session-start": "SessionStart",
+        "pre-edit": "PreToolUse",
+        "stop": "Stop"
+      },
+      "fail_closed": false,
+      "note": "Design's pinned table (owner, 2026-09-15). Fails open: git and the sweep hold."
+    },
+    {
+      "id": "copilot",
+      "config": ".github/hooks/agentsmith.json",
+      "events": {
+        "session-start": "sessionStart",
+        "pre-edit": "preToolUse",
+        "stop": "stop"
+      },
+      "fail_closed": false,
+      "note": "VS Code reads Claude's shape but ignores matchers and spells the tool fields in camelCase, so the adapter accepts both spellings.\n"
+    },
+    {
+      "id": "gemini",
+      "config": ".gemini/settings.json",
+      "events": {
+        "session-start": "SessionStart",
+        "pre-edit": "PreToolUse",
+        "stop": "AfterAgent"
+      },
+      "fail_closed": false,
+      "note": "Design's pinned table (owner, 2026-09-15)."
+    },
+    {
+      "id": "codex",
+      "config": ".codex/hooks.json",
+      "events": {
+        "session-start": "SessionStart",
+        "pre-edit": "PreToolUse",
+        "stop": "Stop"
+      },
+      "fail_closed": false,
+      "note": "Design's pinned table (owner, 2026-09-15). Session context travels via AGENTS.md."
+    }
+  ]
 }

@@ -22,6 +22,10 @@
     ".python-version",
     "docker-compose*.yml",
     ".claude/settings.json",
+    ".cursor/**",
+    ".agents/hooks.json",
+    ".gemini/settings.json",
+    ".codex/hooks.json",
     ".agenticframework/process-gates.json"
   ],
   "not_gated": [

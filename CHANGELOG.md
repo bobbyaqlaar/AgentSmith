@@ -75,6 +75,24 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — governance enforcement, slice G2a: one gate, six dialects
+
+- **`process_gate.py <hook> --ide <claude|cursor|antigravity|copilot|gemini|codex>`** (or
+  `$AGENTSMITH_IDE`) normalises each IDE's payload into one `GateEvent` and renders the decision in
+  that IDE's shape. The checks read the event and nothing else, so a seventh IDE is a table entry,
+  a golden payload fixture and a test — not a second gate.
+- **Cursor re-verified against the vendor's docs (2026-09-17)** and it changed the design:
+  there is no before-edit hook, so the edit gate is `preToolUse` with `matcher: "Write"`;
+  `sessionStart` is fire-and-forget and cannot block; `failClosed: true` is set on the edit gate.
+  Payloads carry `workspace_roots` where they carry no `cwd`.
+- **A write payload the adapter cannot read is DENIED**, naming the keys it saw. Field names are
+  the part most likely to be wrong, and a shrug there is a silent hole in the IDEs nobody tests
+  daily. Golden payloads live in `scripts/test/fixtures/ide-payloads/`.
+- **`generate-ide-config.py --hooks`** writes the hook configs from `governance.json → ides`, with
+  a drift test — but **only where the config schema is verified** (Claude Code, Cursor). For the
+  other four it says so instead of writing a file in a shape nobody confirmed, which would look
+  like enforcement and may be ignored in silence.
+
 ### Added — governance enforcement, slice G6c: the gates CI lists, run locally
 
 - **`agentsmith gates run`** runs this repo's CI gates here — every step tagged `# agentsmith:gate`

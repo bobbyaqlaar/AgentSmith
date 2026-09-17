@@ -966,6 +966,7 @@
         "render_registry",
         "_registry_mode",
         "_gates_mode",
+        "_hooks_mode",
         "_render_cursorrules",
         "_render_claude_md",
         "_render_agents_md",
@@ -977,7 +978,7 @@
         "main",
         "_check_drift"
       ],
-      "last_modified": "2026-09-17T19:08:36Z",
+      "last_modified": "2026-09-17T19:39:42Z",
       "id": "scripts/generate-ide-config.py"
     },
     {
@@ -4593,7 +4594,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-17T13:07:14Z",
+      "last_modified": "2026-09-17T19:42:15Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4692,7 +4693,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-09-17T08:18:07Z",
+      "last_modified": "2026-09-17T19:49:21Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5155,6 +5156,8 @@
         "Pillar",
         "Allowance",
         "PillarPolicy",
+        "GateEvent",
+        "Ide",
         "Signoff",
         "Records",
         "Extends",
@@ -5174,7 +5177,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-09-17T13:05:38Z",
+      "last_modified": "2026-09-17T19:37:53Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -5499,6 +5502,7 @@
         "_git",
         "_merge_base",
         "Step",
+        "_item_bounds",
         "_tagged_names",
         "_steps_of",
         "_workflow_files",
@@ -5511,7 +5515,7 @@
         "render_table",
         "swap"
       ],
-      "last_modified": "2026-09-17T19:12:17Z",
+      "last_modified": "2026-09-17T19:16:28Z",
       "id": "scripts/gate_steps.py"
     },
     {
@@ -5525,10 +5529,12 @@
         "test_job_and_step_env_both_reach_the_step",
         "test_a_tag_on_a_step_that_runs_nothing_is_an_error",
         "test_a_tag_on_an_unnamed_step_is_an_error",
+        "test_a_tag_never_borrows_a_name_from_outside_its_step",
         "test_a_resolvable_expression_becomes_a_local_value",
         "test_an_unresolvable_expression_is_skipped_by_name",
         "test_a_job_with_services_is_skipped_unless_they_are_running",
         "test_a_missing_tool_is_skipped_by_name",
+        "test_a_step_can_say_it_does_not_need_the_jobs_services",
         "test_running_reports_one_line_per_gate_and_fails_on_a_failure",
         "test_a_skipped_gate_never_reads_as_a_pass",
         "test_only_runs_the_gates_whose_name_matches",
@@ -5542,7 +5548,7 @@
         "test_this_repos_gates_are_its_own_ci_not_the_templates",
         "test_the_cli_lists_them"
       ],
-      "last_modified": "2026-09-17T19:11:50Z",
+      "last_modified": "2026-09-17T19:16:13Z",
       "id": "scripts/test/test_gate_steps.py"
     },
     {
@@ -5552,6 +5558,82 @@
       "pillar": null,
       "created_at": "2026-09-17T19:09:51Z",
       "id": "rfc:reviews/governance-enforcement-g6b.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "Unreadable",
+        "_first",
+        "_tool_input",
+        "_tool_name",
+        "_root",
+        "_generic",
+        "_claude_render",
+        "_cursor_render",
+        "_gemini_render",
+        "_antigravity_render",
+        "_codex_render",
+        "Adapter",
+        "resolve",
+        "parse",
+        "render",
+        "retarget",
+        "_command",
+        "render_config"
+      ],
+      "last_modified": "2026-09-17T19:42:20Z",
+      "id": "scripts/gate_ides.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_fixture",
+        "test_every_ide_has_a_parser_a_renderer_and_a_config_target",
+        "test_the_registry_names_the_same_six",
+        "test_every_ide_has_a_golden_payload_for_every_event",
+        "test_an_edit_payload_yields_the_path_it_is_about",
+        "test_every_dialect_finds_the_repository",
+        "test_vs_code_spells_the_tool_fields_in_camel_case",
+        "test_a_tool_that_is_not_an_edit_is_not_an_edit",
+        "test_a_shell_tool_is_recognised_as_one",
+        "test_a_write_payload_nobody_can_read_is_refused_with_what_it_saw",
+        "test_a_stop_payload_says_whether_it_is_a_repeat",
+        "test_claude_denies_the_way_claude_reads_it",
+        "test_cursor_denies_the_way_cursor_reads_it",
+        "test_cursor_blocks_a_turn_with_a_followup_message",
+        "test_cursor_adds_session_context",
+        "test_every_dialect_answers_every_decision_in_json",
+        "test_a_repeated_stop_never_blocks_twice",
+        "test_the_gate_denies_an_undesigned_edit_in_every_ide",
+        "test_a_write_the_adapter_cannot_read_is_denied_by_the_gate",
+        "test_the_ide_comes_from_the_flag_then_the_environment_then_claude",
+        "test_an_ide_nobody_wrote_an_adapter_for_is_named",
+        "test_the_committed_config_is_the_generated_one",
+        "test_generating_claudes_config_keeps_what_it_does_not_own",
+        "test_cursors_config_fails_closed_on_the_edit_gate",
+        "test_claudes_config_still_denies_when_the_launcher_cannot_run",
+        "test_an_unverified_config_schema_is_refused_rather_than_guessed"
+      ],
+      "last_modified": "2026-09-17T19:41:13Z",
+      "id": "scripts/test/test_gate_ides.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 governance enforcement, G6c (the gates CI lists, run locally)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/governance-enforcement-g6c.md",
+      "pillar": null,
+      "created_at": "2026-09-17T19:50:40Z",
+      "id": "rfc:reviews/governance-enforcement-g6c.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 governance enforcement, G2a (one gate, six dialects)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/governance-enforcement-g2a.md",
+      "pillar": null,
+      "created_at": "2026-09-17T19:50:40Z",
+      "id": "rfc:reviews/governance-enforcement-g2a.md"
     }
   ],
   "edges": [

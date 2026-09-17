@@ -1,0 +1,9 @@
+{
+  "cwd": "/repo",
+  "hookEventName": "preToolUse",
+  "toolName": "Edit",
+  "toolInput": {
+    "filePath": "/repo/scripts/tool.py",
+    "content": "print(1)"
+  }
+}

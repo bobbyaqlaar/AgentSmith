@@ -14,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.githooks/process-gate\" session-start",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.githooks/process-gate\" session-start --ide claude",
             "timeout": 30
           }
         ]
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.githooks/process-gate\" pre-edit || printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"The process gate could not run (.githooks/process-gate missing, or it failed before answering). Edits are denied until it runs - see AgentSmith docs/process-gates.md.\"}}'",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.githooks/process-gate\" pre-edit --ide claude || printf '%s' '{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"The process gate could not run (.githooks/process-gate missing, or it failed before answering). Edits are denied until it runs - see AgentSmith docs/process-gates.md.\"}}'",
             "timeout": 30,
             "statusMessage": "Checking the design gate"
           }
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.githooks/process-gate\" stop",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.githooks/process-gate\" stop --ide claude",
             "timeout": 60
           }
         ]
