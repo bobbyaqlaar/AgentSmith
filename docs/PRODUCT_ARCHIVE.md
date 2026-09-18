@@ -7,6 +7,17 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — the mutation gate reads the same locally as in CI (2026-09-18)
+
+Design: `.agent-rfc/designs/version-marker-test.md`; review: `.agent-rfc/reviews/version-marker-test.md`.
+
+- **The `tenant_scaffold` survivor, open since 2026-09-16.** Deleting the `+src` strip in
+  `runtime/cli.py` failed no test on a machine where AgentSmith is installed as a package, because
+  `framework_version()` then reads the package metadata and never carries the marker. In CI,
+  with nothing installed, the same mutant died. The test now patches the version to `1.3.0+src`
+  and asserts the declared version is exactly `1.3.0`; a second test pins that a released version
+  is written unchanged. `mutation_check.py tenant_scaffold`: 6 of 6 caught on the owner's machine.
+
 ## Completed — the framework leaves the shell profile (2026-09-14)
 
 Designs: `.agent-rfc/designs/framework-python-env.md`, `.agent-rfc/designs/agentsmith-cli.md`;

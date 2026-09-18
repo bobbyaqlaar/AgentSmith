@@ -433,11 +433,29 @@ def test_the_declared_version_follows_the_module_not_a_literal(monkeypatch):
     assert declared == "9.9.9", "the scaffold is not reading the version, it is a literal"
 
 
-def test_the_declared_version_carries_no_source_marker():
+def test_the_declared_version_carries_no_source_marker(monkeypatch):
     """framework_version() reports `1.3.0+src` from a checkout. That is the
     right answer for "what is running" and the wrong one to write into a
-    tenant's config, which declares the RELEASE it targets."""
+    tenant's config, which declares the RELEASE it targets.
+
+    The marker is set here rather than left to the machine: where AgentSmith
+    is installed, framework_version() reads the package metadata and there is
+    no marker to strip, so a test relying on the environment passed with the
+    strip deleted."""
     import yaml
 
+    import runtime.version
+
+    monkeypatch.setattr(runtime.version, "framework_version", lambda: "1.3.0+src")
     declared = yaml.safe_load(cli.tenant_yaml("acme"))["framework"]["version"]
-    assert "+src" not in declared
+    assert declared == "1.3.0"
+
+
+def test_a_released_version_is_declared_unchanged(monkeypatch):
+    import yaml
+
+    import runtime.version
+
+    monkeypatch.setattr(runtime.version, "framework_version", lambda: "1.3.0")
+    declared = yaml.safe_load(cli.tenant_yaml("acme"))["framework"]["version"]
+    assert declared == "1.3.0"

@@ -75,6 +75,13 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the mutation gate reads the same on a developer machine as in CI
+
+- `mutation_check.py` reported a surviving `tenant_scaffold` mutant wherever AgentSmith was
+  installed as a package, and none in CI. The code was right; the test relied on the machine to
+  produce a `+src` version and never saw one where the package was installed. The test now sets
+  the version itself, so deleting the strip fails it everywhere.
+
 ### Changed — the design, the manual and the README say what the system is, not how it got there
 
 - `docs/DESIGN.md`, `docs/UserManual.md` and `README.md` carry the current system and its reasons.
