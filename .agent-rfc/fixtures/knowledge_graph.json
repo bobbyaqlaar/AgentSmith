@@ -10,7 +10,7 @@
         "config",
         "middleware"
       ],
-      "last_modified": "2026-09-18T14:48:39Z",
+      "last_modified": "2026-09-18T14:54:12Z",
       "id": "portal/middleware.ts"
     },
     {
@@ -2920,23 +2920,26 @@
         "operationOf",
         "isPassthroughQuery",
         "getPool",
+        "withTransaction",
         "tableExists",
         "columnExists"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T14:54:12Z",
       "id": "portal/lib/db.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
+        "REPO_PROVIDERS",
+        "RepoProvider",
         "Tenant",
         "listTenants",
         "getTenant",
         "getReplayWebhookConfig",
         "upsertTenant"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T14:54:35Z",
       "id": "portal/lib/tenants.ts"
     },
     {
@@ -2966,7 +2969,7 @@
         "BearerGateConfig",
         "requireBearer"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-18T14:55:47Z",
       "id": "portal/lib/bearerAuth.ts"
     },
     {
@@ -3774,7 +3777,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-09-18T14:46:57Z",
+      "last_modified": "2026-09-18T14:54:35Z",
       "id": "portal/test/catalogs.test.ts"
     },
     {
@@ -4629,7 +4632,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-18T14:32:10Z",
+      "last_modified": "2026-09-18T14:55:25Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5970,9 +5973,10 @@
         "test_without_the_flag_no_file_is_written",
         "test_a_deviation_is_recorded_by_id_text_hash_and_approval",
         "test_every_pillar_kind_is_recorded_as_answered",
-        "test_an_incomplete_sign_off_is_recorded_as_not_signed_off"
+        "test_an_incomplete_sign_off_is_recorded_as_not_signed_off",
+        "test_the_gate_and_the_portal_agree_on_the_record"
       ],
-      "last_modified": "2026-09-18T14:28:56Z",
+      "last_modified": "2026-09-18T14:54:51Z",
       "id": "scripts/test/test_dev_record.py"
     },
     {
@@ -6006,6 +6010,89 @@
       "pillar": null,
       "created_at": "2026-09-18T14:50:52Z",
       "id": "rfc:reviews/portal-phase1-s2.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-09-18T14:56:55Z",
+      "id": "portal/test/devIngestDb.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-09-18T14:52:28Z",
+      "id": "portal/test/devIngest.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "storeDevIngest"
+      ],
+      "last_modified": "2026-09-18T14:57:02Z",
+      "id": "portal/lib/devStore.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "DEV_RECORD_SCHEMA",
+        "DEV_VERDICTS",
+        "DevVerdict",
+        "PILLAR_KINDS",
+        "PillarKind",
+        "DEV_LIMITS",
+        "DevDeviation",
+        "DevDesign",
+        "DevReview",
+        "DevCommit",
+        "DevIngest",
+        "Parsed",
+        "parseDevIngest"
+      ],
+      "last_modified": "2026-09-18T14:57:02Z",
+      "id": "portal/lib/devIngest.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "IngestResult",
+        "handleDevIngest"
+      ],
+      "last_modified": "2026-09-18T14:57:02Z",
+      "id": "portal/lib/devIngestHandler.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "createIngestToken",
+        "resolveIngestToken",
+        "revokeIngestTokens",
+        "bearerToken"
+      ],
+      "last_modified": "2026-09-18T14:57:02Z",
+      "id": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-09-18T14:54:12Z",
+      "id": "portal/app/api/dev/ingest/route.ts"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 portal phase 1, S3: the Dev ingest",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/portal-phase1-s3.md",
+      "pillar": null,
+      "created_at": "2026-09-18T14:58:21Z",
+      "id": "rfc:reviews/portal-phase1-s3.md"
     }
   ],
   "edges": [
@@ -6738,6 +6825,46 @@
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_governed_tenant.py",
       "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devStore.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devStore.ts",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devIngest.ts",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devIngestHandler.ts",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devIngestHandler.ts",
+      "target": "portal/lib/devStore.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devIngestHandler.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devIngestHandler.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/ingestTokens.ts",
+      "target": "portal/lib/db.ts"
     }
   ]
 }

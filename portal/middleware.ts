@@ -47,6 +47,9 @@ import {
 // (docs/PRODUCT_ARCHIVE.md P2a) — same machine-to-machine reasoning as
 // /api/sync/*, gated by OPS_PORTAL_SYNC_TOKEN inside the route handler.
 //
+// /api/dev/ingest is an app's CI sending the process gate's record (portal
+// phase 1) — authenticated inside the handler by that app's own ingest token.
+//
 // /api/auth/* must always be reachable unauthenticated — it IS the
 // login/callback/logout flow; gating it would make login impossible.
 // Each exclusion is anchored to a path-segment boundary (`(?:/|$)`) so a
@@ -56,7 +59,7 @@ import {
 // a latent auth-bypass footgun (see docs/PRODUCT_ARCHIVE.md 2.6).
 export const config = {
   matcher:
-    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/runs/ingest(?:/|$)|api/auth(?:/|$)).*)",
+    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/runs/ingest(?:/|$)|api/dev/ingest(?:/|$)|api/auth(?:/|$)).*)",
 };
 
 // Strip any client-supplied copy of the trusted access header before it can

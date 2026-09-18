@@ -3,6 +3,11 @@
 import { getPool } from "./db";
 import type { Isolation } from "./isolation";
 
+/** Where an app's repository lives. Kept equal to the CHECK on tenants.repo_provider
+ *  (test/catalogs.test.ts). GitLab apps are link-only until GitLab CI templates exist. */
+export const REPO_PROVIDERS = ["github", "gitlab"] as const;
+export type RepoProvider = (typeof REPO_PROVIDERS)[number];
+
 export interface Tenant {
   tenantId: string;
   name: string;

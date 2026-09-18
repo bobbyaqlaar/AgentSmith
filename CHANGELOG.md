@@ -75,6 +75,17 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the portal's Dev ingest (portal phase 1)
+
+- `POST /api/dev/ingest` accepts the record `process_gate.py ci --json` writes, from an app's CI,
+  authenticated by that app's own ingest token — the app written to is the token's, never one
+  named in the body. The body is validated whole before anything is stored (schema, verdicts,
+  hashes, lengths; at most 500 commits and 2 MB); a refused body stores nothing. The same run
+  posted twice leaves one row per commit.
+- New tables, applied by `npm run db:migrate`: `orgs` (one row), `app_ingest_tokens`,
+  `dev_commits`, `dev_ingest_runs`; `tenants` gains `repo_url`, `repo_provider` and
+  `default_branch`. **Run the migration before deploying this portal.**
+
 ### Changed — the portal's seven roles (portal phase 1)
 
 - **Users hold grants** — a role and the apps it covers — and one person may hold several.

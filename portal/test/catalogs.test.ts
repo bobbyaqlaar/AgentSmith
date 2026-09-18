@@ -25,6 +25,8 @@ import { ROLES } from "../lib/authz.ts";
 import { ISOLATION_VALUES } from "../lib/isolation.ts";
 import { AGENT_RUN_STATUSES } from "../lib/runStatus.ts";
 import { AUDIT_EVENT_TYPES } from "../lib/auditSignature.ts";
+import { DEV_VERDICTS } from "../lib/devIngest.ts";
+import { REPO_PROVIDERS } from "../lib/tenants.ts";
 
 const PORTAL = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SCHEMA = readFileSync(join(PORTAL, "db", "schema.sql"), "utf8");
@@ -70,6 +72,14 @@ test("agent_runs.status matches AGENT_RUN_STATUSES", () => {
 
 test("audit_log.event_type matches AUDIT_EVENT_TYPES", () => {
   assert.deepEqual(checkConstraintValues("event_type").sort(), [...AUDIT_EVENT_TYPES].sort());
+});
+
+test("dev_commits.verdict matches DEV_VERDICTS", () => {
+  assert.deepEqual(checkConstraintValues("verdict").sort(), [...DEV_VERDICTS].sort());
+});
+
+test("tenants.repo_provider matches REPO_PROVIDERS", () => {
+  assert.deepEqual(checkConstraintValues("repo_provider").sort(), [...REPO_PROVIDERS].sort());
 });
 
 test("ROLES has no SQL counterpart to drift from", () => {

@@ -106,9 +106,10 @@ either works standalone or together:
   revocable server-side (`revoked_sessions` table) on logout.
 
 **Machine-to-machine endpoints** (`/api/sync/*`, `/api/runs/ingest`,
-`/api/widget/*`, `/api/audit/append`) are excluded from the dashboard-auth
-middleware entirely — each has its own bearer-token/widget-token check
-inside the route handler, not basic-auth/SSO.
+`/api/dev/ingest`, `/api/widget/*`, `/api/audit/append`) are excluded from the
+dashboard-auth middleware entirely — each has its own bearer-token/widget-token
+check inside the route handler, not basic-auth/SSO. `/api/dev/ingest` takes a
+per-app ingest token, and the app a request writes to is the token's.
 
 ## Data sources
 
@@ -120,6 +121,7 @@ inside the route handler, not basic-auth/SSO.
 | DLQ | `dlq_entries` | **`runtime/dead_letter.py`**, not this portal's migration — it creates/migrates the table itself on first `DeadLetterQueue()` construction in a worker process. `db/schema.sql` deliberately excludes it (see that file's comment) so there's one schema owner, not two competing migrations of the same table. Until at least one worker has constructed a `DeadLetterQueue`, `GET /api/dlq` reports `wired: false` — a genuine "nothing has run against this DB yet" signal, not a placeholder. |
 | Phoenix trace stats | Phoenix's own REST (health check) + GraphQL (`traceCountByStatusTimeSeries`) | Read live from each tenant's `phoenixBaseUrl`, not cached |
 | Audit log | `audit_log` | This portal — HMAC-signed, DB-trigger-enforced append-only |
+| Dev workspace | `dev_commits`, `dev_ingest_runs` | This portal, via `/api/dev/ingest` — what each app's CI gate decided (`process_gate.py ci --json`). A cache of git: every row can be rebuilt from the app's history |
 
 ## Tracing
 

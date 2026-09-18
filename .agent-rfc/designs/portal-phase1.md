@@ -134,7 +134,7 @@ log. Needs `admin.apps`.
 - P9 n/a — no agents are orchestrated.
 - P10 n/a — no model calls.
 - P11 applies — commit subjects, design titles and error text come from repositories: validated in `portal/lib/devIngest.ts` (S3) and rendered as text, never markup; repository links go through `portal/lib/safeUrl.ts`.
-- P12 applies — ingest tokens are shown once and stored as SHA-256 in `app_ingest_tokens`; the bearer comparison stays in `portal/lib/bearerAuth.ts`.
+- P12 applies — ingest tokens are shown once and stored as SHA-256 in `app_ingest_tokens`, looked up by hash in `portal/lib/ingestTokens.ts` the way widget tokens are.
 - P13 applies — the portal is sent the verdict `scripts/process_gate.py` reached and cannot change it; `dev_commits` is a cache that can be rebuilt from git.
 - P14 applies — the ingest's `schema` field pins the record's shape; `scripts/test/test_dev_record.py` pins what the gate emits.
 - P15 applies — `before_adoption`, `not_gated` and `passed_with_notes` are distinct verdicts, pinned by `scripts/test/test_dev_record.py`; "no data received", "not available for GitLab" and "stale" are distinct states on the Dev pages (S5).

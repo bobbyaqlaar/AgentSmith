@@ -1002,6 +1002,10 @@ def _report(lines: List[str], annotations: List[str]) -> None:
 # verdict and never re-derives one (.agent-rfc/designs/portal-phase1.md).
 
 DEV_RECORD_SCHEMA = 1
+# Every verdict a record can carry. The portal refuses any other
+# (portal/lib/devIngest.ts DEV_VERDICTS, and a CHECK on dev_commits.verdict);
+# scripts/test/test_dev_record.py pins the three together.
+DEV_VERDICTS = ("passed", "failed", "passed_with_notes", "not_gated", "before_adoption")
 
 
 def design_summary(text: str, registry: Optional["gm.Registry"] = None) -> Dict[str, object]:
@@ -1089,6 +1093,8 @@ def _record_commit(records: Optional[List[Dict[str, object]]], about: Optional[t
     if records is None or about is None:
         return
     root, commit, message, config, read = about
+    if verdict not in DEV_VERDICTS:  # a verdict the portal would refuse is a bug here, not there
+        raise ValueError(f"not a record verdict: {verdict}")
     records.append(_commit_record(root, commit, message, verdict, errors, notes, gated, adopted, config, read))
 
 

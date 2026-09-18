@@ -176,6 +176,78 @@ ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS framework_version TEXT;
 CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_started
     ON agent_runs (tenant_id, started_at DESC);
 
+-- ── The Dev workspace (portal phase 1, .agent-rfc/designs/portal-phase1.md) ──
+--
+-- What the process gate decided about each commit, sent by the app's CI
+-- (`process_gate.py ci --json`). These tables are a CACHE of git: every fact
+-- in them can be rebuilt from the app's history, and the portal never decides
+-- a verdict of its own.
+
+-- One row today. Every new table carries org_id so a later multi-organisation
+-- portal is a data change, not a schema rewrite; nothing isolates by it yet.
+CREATE TABLE IF NOT EXISTS orgs (
+    org_id      TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO orgs (org_id, name) VALUES ('default', 'Default organisation') ON CONFLICT (org_id) DO NOTHING;
+
+-- An app's repository. The table keeps the name `tenants`; the UI says "app".
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS repo_url       TEXT;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS repo_provider  TEXT CHECK (repo_provider IN ('github', 'gitlab'));
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS default_branch TEXT;
+
+-- One app's CI credential for the Dev ingest. Only the SHA-256 is stored; the
+-- token is shown once, when issued. The app a request writes to is the app
+-- its token belongs to — never an id in the request body.
+CREATE TABLE IF NOT EXISTS app_ingest_tokens (
+    token_hash  TEXT PRIMARY KEY,
+    org_id      TEXT NOT NULL DEFAULT 'default' REFERENCES orgs(org_id),
+    tenant_id   TEXT NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by  TEXT,
+    revoked_at  TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_app_ingest_tokens_tenant ON app_ingest_tokens (tenant_id);
+
+-- One commit as the gate judged it. Keyed on (app, commit): the same CI run
+-- posted twice leaves one row.
+CREATE TABLE IF NOT EXISTS dev_commits (
+    org_id        TEXT NOT NULL DEFAULT 'default' REFERENCES orgs(org_id),
+    tenant_id     TEXT NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    sha           TEXT NOT NULL,
+    parent_sha    TEXT,
+    subject       TEXT NOT NULL,
+    author_name   TEXT,
+    author_email  TEXT,
+    committed_at  TIMESTAMPTZ,
+    adopted       BOOLEAN NOT NULL,
+    gated         BOOLEAN NOT NULL,
+    verdict       TEXT NOT NULL CHECK (verdict IN ('passed', 'failed', 'passed_with_notes', 'not_gated', 'before_adoption')),
+    errors        JSONB NOT NULL DEFAULT '[]'::jsonb,
+    notes         JSONB NOT NULL DEFAULT '[]'::jsonb,
+    repairs       JSONB NOT NULL DEFAULT '[]'::jsonb,
+    design        JSONB,
+    review        JSONB,
+    received_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, sha)
+);
+CREATE INDEX IF NOT EXISTS idx_dev_commits_tenant_committed ON dev_commits (tenant_id, committed_at DESC);
+
+-- Each accepted ingest: when an app's CI last reached the portal, and from
+-- which run. "Last received" on every Dev page reads this.
+CREATE TABLE IF NOT EXISTS dev_ingest_runs (
+    ingest_id       BIGSERIAL PRIMARY KEY,
+    org_id          TEXT NOT NULL DEFAULT 'default' REFERENCES orgs(org_id),
+    tenant_id       TEXT NOT NULL REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    received_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    head_sha        TEXT NOT NULL,
+    ci_run_url      TEXT,
+    commits         INTEGER NOT NULL,
+    schema_version  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_dev_ingest_runs_tenant_received ON dev_ingest_runs (tenant_id, received_at DESC);
+
 -- Deliberately NOT created here: dlq_entries, idempotency_keys.
 --
 -- Both are owned and created by the Python runtime side, not this

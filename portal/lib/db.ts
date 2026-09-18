@@ -9,7 +9,7 @@
 // construction, and the next module to open a query is traced without knowing
 // this file exists.
 
-import { Pool, type QueryResult } from "pg";
+import { Pool, type PoolClient, type QueryResult } from "pg";
 
 import { SpanKind, portalSpan, truncate } from "./tracing";
 
@@ -94,6 +94,35 @@ export function getPool(): Pool {
     pool = new TracedPool({ connectionString: databaseUrl, max: 10 });
   }
   return pool;
+}
+
+/**
+ * Runs `fn` in one transaction on one client: BEGIN, COMMIT on success,
+ * ROLLBACK on any throw. The statements a checked-out client runs are not the
+ * pool's `query`, so they are not traced one by one; the transaction as a
+ * whole is, as `portal.db.transaction` named by `name`. Every multi-statement
+ * write goes through here rather than calling `connect()` itself, so none of
+ * them is invisible.
+ */
+export async function withTransaction<T>(name: string, fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  return portalSpan(
+    "portal.db.transaction",
+    { kind: SpanKind.CLIENT, attributes: { "db.system": "postgresql", "db.transaction.name": name } },
+    async () => {
+      const client = await getPool().connect();
+      try {
+        await client.query("BEGIN");
+        const result = await fn(client);
+        await client.query("COMMIT");
+        return result;
+      } catch (err) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw err;
+      } finally {
+        client.release();
+      }
+    },
+  );
 }
 
 export async function tableExists(tableName: string): Promise<boolean> {
