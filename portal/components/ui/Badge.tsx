@@ -42,3 +42,16 @@ export function toneForDlqReason(reason: string | null): BadgeTone {
   }
   return "neutral";
 }
+
+// The process gate's verdict on a commit (lib/devIngest DEV_VERDICTS). A commit
+// that was never gated, or predates adoption, is not a pass: neutral, not green.
+export function toneForVerdict(verdict: string): BadgeTone {
+  if (verdict === "passed") return "success";
+  if (verdict === "failed") return "danger";
+  if (verdict === "passed_with_notes") return "warning";
+  return "neutral";
+}
+
+export function verdictLabel(verdict: string): string {
+  return verdict.replace(/_/g, " ");
+}

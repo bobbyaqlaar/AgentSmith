@@ -39,7 +39,7 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
   return (
     <div className="space-y-8">
       <nav className="text-sm text-black/50 dark:text-white/50">
-        <Link href="/" className="hover:text-black dark:hover:text-white">Tenants</Link>
+        <Link href="/ops" className="hover:text-black dark:hover:text-white">Apps</Link>
         <span className="mx-1.5">/</span>
         <span className="text-black/80 dark:text-white/80">{tenant.name}</span>
       </nav>
@@ -66,7 +66,7 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
             {phoenixUp === true && <Badge tone="success">reachable</Badge>}
           </p>
         ) : (
-          <p className="text-sm text-black/40 dark:text-white/40 mt-1">No Phoenix endpoint registered for this tenant.</p>
+          <p className="text-sm text-black/40 dark:text-white/40 mt-1">No Phoenix endpoint registered for this app.</p>
         )}
         {traceStats !== null && (
           <p className="text-sm mt-1 text-black/60 dark:text-white/60">
@@ -158,7 +158,7 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
           <p className="text-black/60 dark:text-white/60">
             {tenant.phoenixBaseUrl
               ? "Could not read shadow-eval results from Phoenix — this list is unavailable, not empty."
-              : "No Phoenix endpoint registered for this tenant, so nothing has been read — this list is unavailable, not empty."}
+              : "No Phoenix endpoint registered for this app, so nothing has been read — this list is unavailable, not empty."}
           </p>
         ) : suggestedPromotions.failures.length === 0 ? (
           <p className="text-black/60 dark:text-white/60">

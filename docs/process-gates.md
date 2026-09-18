@@ -27,8 +27,9 @@ the tenants that adopted it — AqlaarTeleologyStudio and KYC Sentinel. Designs:
 --json FILE` writes, alongside the usual report, one record per commit in the range
 — its verdict, errors and notes, the design and review it named (or why they did
 not resolve), each pillar's kind, each deviation's text hash and approval, each
-review pass, and the commits a `Repairs:` trailer names. The file is written
-whatever the verdict. It is what the portal's Dev workspace is sent, so the portal
+review pass, and the commits a `Repairs:` trailer names — and every design
+document as it stands at the head, because a design is usually closed by a
+commit that does not cite it. The file is written whatever the verdict. It is what the portal's Dev workspace is sent, so the portal
 shows the gate's verdict rather than reaching its own.
 
 **What no gate can check** is whether the design was *good*. The gates prove a

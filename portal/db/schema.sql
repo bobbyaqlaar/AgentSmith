@@ -234,6 +234,20 @@ CREATE TABLE IF NOT EXISTS dev_commits (
 );
 CREATE INDEX IF NOT EXISTS idx_dev_commits_tenant_committed ON dev_commits (tenant_id, committed_at DESC);
 
+-- Every design document as it stood at the newest head an app's CI has sent.
+-- Status and approvals are read from here, not from the commits that cited a
+-- design: a design is closed by a records commit that does not cite it, so the
+-- last citing commit still says `active`. One row per app, replaced only by a
+-- head at least as new, so a re-run of an old CI job cannot roll it back.
+CREATE TABLE IF NOT EXISTS dev_design_snapshots (
+    tenant_id          TEXT PRIMARY KEY REFERENCES tenants(tenant_id) ON DELETE CASCADE,
+    org_id             TEXT NOT NULL DEFAULT 'default' REFERENCES orgs(org_id),
+    head_sha           TEXT NOT NULL,
+    head_committed_at  TIMESTAMPTZ,
+    designs            JSONB NOT NULL,
+    received_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Each accepted ingest: when an app's CI last reached the portal, and from
 -- which run. "Last received" on every Dev page reads this.
 CREATE TABLE IF NOT EXISTS dev_ingest_runs (

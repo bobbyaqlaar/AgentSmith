@@ -21,7 +21,7 @@ export function CostChart({ history }: { history: CostByPeriod[] }) {
   if (history.length === 0) {
     return (
       <p className="text-black/60 dark:text-white/60">
-        No cost history yet — the budget table is empty for this tenant.
+        No cost history yet — the budget table is empty for this app.
       </p>
     );
   }

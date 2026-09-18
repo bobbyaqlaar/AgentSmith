@@ -228,3 +228,24 @@ def test_the_gate_and_the_portal_agree_on_the_record():
     assert verdicts and schema, "the constants moved — re-point this test"
     assert tuple(re.findall(r'"([^"]+)"', verdicts.group(1))) == pg.DEV_VERDICTS
     assert int(schema.group(1)) == pg.DEV_RECORD_SCHEMA
+
+
+def test_the_record_carries_every_design_as_it_stands_at_the_head(gated_repo, tmp_path):
+    """A design is closed by a records commit that does not cite it, so the last
+    commit that DID cite it still says `active`. The portal reads status from
+    the head, which this list is."""
+    base = _head(gated_repo)
+    _compliant_commit(gated_repo)
+    closed = (gated_repo / ".agent-rfc/designs/change.md").read_text().replace("status: active", "status: done", 1)
+    _write(gated_repo, ".agent-rfc/designs/change.md", closed)
+    _git(gated_repo, "add", "-A")
+    _git(gated_repo, "commit", "-qm", "docs(design): change — status done", "--no-verify")
+    out = tmp_path / "record.json"
+
+    _ci_json(gated_repo, base, out)
+
+    document = json.loads(out.read_text())
+    [design] = [d for d in document["designs"] if d["path"] == ".agent-rfc/designs/change.md"]
+    assert design["status"] == "done" and design["title"] == "A change"
+    cited = next(c for c in document["commits"] if c["design"])
+    assert cited["design"]["status"] == "active", "the commit keeps what was true when it was made"

@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import { currentAccess } from "@/lib/currentAccess";
+import { WORKSPACES, workspacesFor } from "@/lib/workspaces";
 
 export const metadata: Metadata = {
-  title: "AgentSmith — Ops Portal",
-  description: "Cross-tenant operations dashboard (docs/DESIGN.md › Universal Observability Platform, Federated Observability)",
+  title: "AgentSmith Portal",
+  description: "Every app from design to operation: the Dev and Ops workspaces (docs/DESIGN.md › Universal Observability Platform, Federated Observability)",
 };
 
 // Applies the stored theme preference to <html> before React hydrates —
@@ -25,6 +28,10 @@ const NO_FLASH_THEME_SCRIPT = `
 `;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const workspaces = workspacesFor(currentAccess()).map((area) => ({
+    label: WORKSPACES[area].label,
+    home: WORKSPACES[area].home,
+  }));
   return (
     <html lang="en">
       <head>
@@ -34,13 +41,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="border-b border-black/10 dark:border-white/10 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/" className="text-lg font-medium hover:opacity-80">
-              AgentSmith <span className="text-black/40 dark:text-white/40">Ops Portal</span>
+              AgentSmith
             </Link>
-            <nav className="flex items-center gap-4 text-sm text-black/60 dark:text-white/60">
-              <Link href="/" className="hover:text-black dark:hover:text-white">Tenants</Link>
-              <Link href="/dlq" className="hover:text-black dark:hover:text-white">Dead-letter queue</Link>
-              <Link href="/audit" className="hover:text-black dark:hover:text-white">Audit log</Link>
-            </nav>
+            <WorkspaceSwitcher workspaces={workspaces} />
           </div>
           <ThemeToggle />
         </header>

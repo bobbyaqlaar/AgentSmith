@@ -42,6 +42,8 @@ import {
   type Access,
 } from "../lib/authz.ts";
 
+import { WORKSPACES, workspacesFor } from "../lib/workspaces.ts";
+
 const PORTAL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 let passed = 0;
@@ -206,6 +208,13 @@ test("the areas follow the permissions a user holds", () => {
   assert.deepEqual(areas(dev), ["dev"]);
   assert.deepEqual(areas(ops), ["ops"]);
   assert.deepEqual(areas(admin), [...AREAS]);
+});
+
+test("the switcher offers only areas that exist: Administration waits for its pages", () => {
+  const admin = { grants: parseGrants({ grants: [{ role: "administrator", apps: "*" }] }) };
+  assert.deepEqual(areas(admin), ["dev", "ops", "admin"], "the permission is held");
+  assert.deepEqual(workspacesFor(admin), ["dev", "ops"], "but there is nothing to show yet");
+  assert.equal(WORKSPACES.admin.built, false);
 });
 
 // ── The trusted header ───────────────────────────────────────────────────────

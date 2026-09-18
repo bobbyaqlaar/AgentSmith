@@ -44,7 +44,7 @@ export default async function AuditLogPage() {
                 <th className="py-2.5 px-4 font-medium">Time</th>
                 <th className="py-2.5 px-4 font-medium">Event type</th>
                 <th className="py-2.5 px-4 font-medium">Actor</th>
-                <th className="py-2.5 px-4 font-medium">Tenant</th>
+                <th className="py-2.5 px-4 font-medium">App</th>
                 <th className="py-2.5 px-4 font-medium">Verified</th>
               </tr>
             </thead>

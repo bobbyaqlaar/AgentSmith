@@ -2794,7 +2794,7 @@
         "metadata",
         "RootLayout"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T15:00:18Z",
       "id": "portal/app/layout.tsx"
     },
     {
@@ -2802,9 +2802,9 @@
       "language": "typescript",
       "symbols": [
         "dynamic",
-        "TenantOverviewPage"
+        "Home"
       ],
-      "last_modified": "2026-09-18T14:47:19Z",
+      "last_modified": "2026-09-18T15:00:18Z",
       "id": "portal/app/page.tsx"
     },
     {
@@ -2818,7 +2818,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-09-18T14:48:39Z",
+      "last_modified": "2026-09-18T15:12:07Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -2862,7 +2862,7 @@
       "symbols": [
         "CostChart"
       ],
-      "last_modified": "2026-06-26T21:15:31Z",
+      "last_modified": "2026-09-18T14:59:44Z",
       "id": "portal/components/CostChart.tsx"
     },
     {
@@ -2871,7 +2871,7 @@
       "symbols": [
         "DlqEntryCard"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T14:59:35Z",
       "id": "portal/components/DlqEntryCard.tsx"
     },
     {
@@ -2882,9 +2882,11 @@
         "Badge",
         "toneForLevel",
         "toneForRunStatus",
-        "toneForDlqReason"
+        "toneForDlqReason",
+        "toneForVerdict",
+        "verdictLabel"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T15:02:19Z",
       "id": "portal/components/ui/Badge.tsx"
     },
     {
@@ -2939,7 +2941,7 @@
         "getReplayWebhookConfig",
         "upsertTenant"
       ],
-      "last_modified": "2026-09-18T14:54:35Z",
+      "last_modified": "2026-09-18T15:01:04Z",
       "id": "portal/lib/tenants.ts"
     },
     {
@@ -3132,26 +3134,6 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
-        "dynamic",
-        "AuditLogPage"
-      ],
-      "last_modified": "2026-09-18T14:47:19Z",
-      "id": "portal/app/audit/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "DLQPage"
-      ],
-      "last_modified": "2026-09-18T14:47:19Z",
-      "id": "portal/app/dlq/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
         "GET",
         "POST"
       ],
@@ -3296,26 +3278,6 @@
       ],
       "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/widget/status/route.ts"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "TenantDlqPage"
-      ],
-      "last_modified": "2026-09-18T14:47:19Z",
-      "id": "portal/app/dlq/[tenantId]/page.tsx"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "typescript",
-      "symbols": [
-        "dynamic",
-        "TenantDetailPage"
-      ],
-      "last_modified": "2026-09-18T14:47:19Z",
-      "id": "portal/app/tenants/[id]/page.tsx"
     },
     {
       "node_type": "Guardrail",
@@ -4593,6 +4555,7 @@
         "review_summary",
         "describe_records",
         "_commit_record",
+        "designs_at",
         "_record_commit",
         "_verdict",
         "check_commits",
@@ -4632,7 +4595,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-18T14:55:25Z",
+      "last_modified": "2026-09-18T15:13:27Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5974,9 +5937,10 @@
         "test_a_deviation_is_recorded_by_id_text_hash_and_approval",
         "test_every_pillar_kind_is_recorded_as_answered",
         "test_an_incomplete_sign_off_is_recorded_as_not_signed_off",
-        "test_the_gate_and_the_portal_agree_on_the_record"
+        "test_the_gate_and_the_portal_agree_on_the_record",
+        "test_the_record_carries_every_design_as_it_stands_at_the_head"
       ],
-      "last_modified": "2026-09-18T14:54:51Z",
+      "last_modified": "2026-09-18T15:07:37Z",
       "id": "scripts/test/test_dev_record.py"
     },
     {
@@ -6022,7 +5986,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-09-18T14:52:28Z",
+      "last_modified": "2026-09-18T15:09:49Z",
       "id": "portal/test/devIngest.test.ts"
     },
     {
@@ -6031,7 +5995,7 @@
       "symbols": [
         "storeDevIngest"
       ],
-      "last_modified": "2026-09-18T14:57:02Z",
+      "last_modified": "2026-09-18T15:13:27Z",
       "id": "portal/lib/devStore.ts"
     },
     {
@@ -6048,11 +6012,12 @@
         "DevDesign",
         "DevReview",
         "DevCommit",
+        "HeadDesign",
         "DevIngest",
         "Parsed",
         "parseDevIngest"
       ],
-      "last_modified": "2026-09-18T14:57:02Z",
+      "last_modified": "2026-09-18T15:13:27Z",
       "id": "portal/lib/devIngest.ts"
     },
     {
@@ -6093,6 +6058,267 @@
       "pillar": null,
       "created_at": "2026-09-18T14:58:21Z",
       "id": "rfc:reviews/portal-phase1-s3.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-09-18T15:12:27Z",
+      "id": "portal/test/devReadDb.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-09-18T15:01:04Z",
+      "id": "portal/test/devView.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "NavLink",
+        "NavLinks"
+      ],
+      "last_modified": "2026-09-18T15:10:42Z",
+      "id": "portal/components/NavLinks.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "WorkspaceLink",
+        "WorkspaceSwitcher"
+      ],
+      "last_modified": "2026-09-18T15:00:18Z",
+      "id": "portal/components/WorkspaceSwitcher.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "AreaNav",
+        "AreaDenied"
+      ],
+      "last_modified": "2026-09-18T15:10:32Z",
+      "id": "portal/components/AreaNav.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "VerdictBadge",
+        "Freshness",
+        "PillarSummary",
+        "ShortSha",
+        "Crumbs"
+      ],
+      "last_modified": "2026-09-18T15:10:32Z",
+      "id": "portal/components/DevBits.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "WORKSPACES",
+        "workspacesFor"
+      ],
+      "last_modified": "2026-09-18T15:13:27Z",
+      "id": "portal/lib/workspaces.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "DevCommitRow",
+        "DesignSnapshot",
+        "AwaitingApproval",
+        "listAwaitingApprovals",
+        "IngestRun",
+        "DevAppSummary",
+        "listDevApps",
+        "COMMIT_PAGE",
+        "listDevCommits",
+        "commitsStartingWith",
+        "getDevCommit",
+        "DesignListing",
+        "listDevDesigns",
+        "getDevDesign",
+        "listIngestRuns",
+        "listGateFailures"
+      ],
+      "last_modified": "2026-09-18T15:13:27Z",
+      "id": "portal/lib/devRead.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "STALE_AFTER_HOURS",
+        "commitUrl",
+        "fileUrl",
+        "Freshness",
+        "freshness",
+        "unrepairedFailures"
+      ],
+      "last_modified": "2026-09-18T15:13:27Z",
+      "id": "portal/lib/devView.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "DevLayout"
+      ],
+      "last_modified": "2026-09-18T15:10:42Z",
+      "id": "portal/app/dev/layout.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "DevAppsPage"
+      ],
+      "last_modified": "2026-09-18T15:02:33Z",
+      "id": "portal/app/dev/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "OpsLayout"
+      ],
+      "last_modified": "2026-09-18T15:10:42Z",
+      "id": "portal/app/ops/layout.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "OpsAppsPage"
+      ],
+      "last_modified": "2026-09-18T14:59:35Z",
+      "id": "portal/app/ops/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "AuditLogPage"
+      ],
+      "last_modified": "2026-09-18T14:59:35Z",
+      "id": "portal/app/ops/audit/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "DLQPage"
+      ],
+      "last_modified": "2026-09-18T14:59:35Z",
+      "id": "portal/app/ops/dlq/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "TenantDetailPage"
+      ],
+      "last_modified": "2026-09-18T14:59:35Z",
+      "id": "portal/app/ops/apps/[id]/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "TenantDlqPage"
+      ],
+      "last_modified": "2026-09-18T14:59:35Z",
+      "id": "portal/app/ops/dlq/[tenantId]/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "DevApprovalsPage"
+      ],
+      "last_modified": "2026-09-18T15:04:29Z",
+      "id": "portal/app/dev/approvals/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "DevAppLayout"
+      ],
+      "last_modified": "2026-09-18T15:10:32Z",
+      "id": "portal/app/dev/apps/[app]/layout.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "DevChangesPage"
+      ],
+      "last_modified": "2026-09-18T15:03:12Z",
+      "id": "portal/app/dev/apps/[app]/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "DevGatesPage"
+      ],
+      "last_modified": "2026-09-18T15:04:00Z",
+      "id": "portal/app/dev/apps/[app]/gates/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "DevDesignsPage"
+      ],
+      "last_modified": "2026-09-18T15:03:38Z",
+      "id": "portal/app/dev/apps/[app]/designs/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "DevDesignPage"
+      ],
+      "last_modified": "2026-09-18T15:09:27Z",
+      "id": "portal/app/dev/apps/[app]/designs/[...path]/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "DevCommitPage"
+      ],
+      "last_modified": "2026-09-18T15:11:34Z",
+      "id": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 portal phase 1, S4 and S5: three areas, and the Dev workspace",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/portal-phase1-s4.md",
+      "pillar": null,
+      "created_at": "2026-09-18T15:16:47Z",
+      "id": "rfc:reviews/portal-phase1-s4.md"
     }
   ],
   "edges": [
@@ -6865,6 +7091,51 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/ingestTokens.ts",
       "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/AreaNav.tsx",
+      "target": "portal/components/NavLinks.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/workspaces.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devRead.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devRead.ts",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devRead.ts",
+      "target": "portal/lib/devView.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devRead.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devView.ts",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devView.ts",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/devView.ts",
+      "target": "portal/lib/tenants.ts"
     }
   ]
 }

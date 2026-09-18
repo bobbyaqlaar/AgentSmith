@@ -18,10 +18,16 @@ export interface Tenant {
   // server-side-code-that-needs-it (see getReplayWebhookConfig below); it
   // must never appear in any API response or be added to this interface.
   replayWebhookUrl: string | null;
+  // The app's repository — git is the record the Dev workspace links into.
+  repoUrl: string | null;
+  repoProvider: RepoProvider | null;
+  defaultBranch: string | null;
   createdAt: string;
 }
 
-const TENANT_COLUMNS = "tenant_id, name, isolation, phoenix_base_url, budget_cap_usd, replay_webhook_url, created_at";
+const TENANT_COLUMNS =
+  "tenant_id, name, isolation, phoenix_base_url, budget_cap_usd, replay_webhook_url, " +
+  "repo_url, repo_provider, default_branch, created_at";
 
 /** The row `TENANT_COLUMNS` selects — named, so the mapping below is checked. */
 interface TenantRow {
@@ -31,6 +37,9 @@ interface TenantRow {
   phoenix_base_url: string | null;
   budget_cap_usd: string | number | null;
   replay_webhook_url: string | null;
+  repo_url: string | null;
+  repo_provider: RepoProvider | null;
+  default_branch: string | null;
   created_at: string;
 }
 
@@ -42,6 +51,9 @@ function rowToTenant(r: TenantRow): Tenant {
     phoenixBaseUrl: r.phoenix_base_url,
     budgetCapUsd: r.budget_cap_usd !== null ? Number(r.budget_cap_usd) : null,
     replayWebhookUrl: r.replay_webhook_url,
+    repoUrl: r.repo_url,
+    repoProvider: r.repo_provider,
+    defaultBranch: r.default_branch,
     createdAt: r.created_at,
   };
 }

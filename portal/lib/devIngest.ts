@@ -31,6 +31,8 @@ export const DEV_LIMITS = {
   text: 4000,
   /** Entries in one list: errors, notes, repairs, scope, deviations, passes. */
   list: 200,
+  /** Design documents in one repository at the head. */
+  designs: 1000,
   /** Bytes in one request body. */
   bodyBytes: 2_000_000,
 } as const;
@@ -80,11 +82,17 @@ export interface DevCommit {
   review: DevReview | null;
 }
 
+/** A design document as it stands at the head: the same summary a commit carries, always resolved. */
+export type HeadDesign = DevDesign & { path: string };
+
 export interface DevIngest {
   schema: number;
   head: string;
   ciRunUrl: string | null;
   commits: DevCommit[];
+  /** Every design at the head, or null when the sender did not include them — then the stored
+   *  snapshot is left as it is, not emptied. */
+  designs: HeadDesign[] | null;
 }
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -182,6 +190,13 @@ function design(value: unknown, where: string): DevDesign | null {
   };
 }
 
+function headDesign(value: unknown, where: string): HeadDesign {
+  if (!isObject(value)) throw new Refused(`${where} must be an object`);
+  const path = str(value.path, `${where}.path`);
+  const parsed = design({ ...value, ref: path, resolved: true }, where);
+  return { ...parsed!, path };
+}
+
 function review(value: unknown, where: string): DevReview | null {
   if (value === null || value === undefined) return null;
   if (!isObject(value)) throw new Refused(`${where} must be an object or null`);
@@ -236,6 +251,13 @@ export function parseDevIngest(body: unknown): Parsed<DevIngest> {
     if (body.commits.length > DEV_LIMITS.commits) {
       throw new Refused(`commits holds ${body.commits.length}; send at most ${DEV_LIMITS.commits} per request`);
     }
+    const designs = body.designs;
+    if (designs !== undefined && designs !== null) {
+      if (!Array.isArray(designs)) throw new Refused("designs must be a list");
+      if (designs.length > DEV_LIMITS.designs) {
+        throw new Refused(`designs holds ${designs.length}; this portal reads at most ${DEV_LIMITS.designs}`);
+      }
+    }
     const url = body.ci_run_url;
     if (url !== undefined && url !== null && !isSafeHttpUrl(url)) throw new Refused("ci_run_url must be an http(s) URL");
     return {
@@ -245,6 +267,7 @@ export function parseDevIngest(body: unknown): Parsed<DevIngest> {
         head: sha(body.head, "head"),
         ciRunUrl: typeof url === "string" ? url : null,
         commits: body.commits.map((c, i) => commit(c, `commits[${i}]`)),
+        designs: Array.isArray(designs) ? designs.map((d, i) => headDesign(d, `designs[${i}]`)) : null,
       },
     };
   } catch (err) {

@@ -17,7 +17,7 @@ export default async function TenantDlqPage({ params }: { params: { tenantId: st
   return (
     <div className="space-y-6">
       <nav className="text-sm text-black/50 dark:text-white/50">
-        <Link href="/dlq" className="hover:text-black dark:hover:text-white">Dead-letter queue</Link>
+        <Link href="/ops/dlq" className="hover:text-black dark:hover:text-white">Dead-letter queue</Link>
         <span className="mx-1.5">/</span>
         <span className="text-black/80 dark:text-white/80">{params.tenantId}</span>
       </nav>
@@ -40,7 +40,7 @@ export default async function TenantDlqPage({ params }: { params: { tenantId: st
           database yet, so this list is unavailable rather than empty.
         </p>
       ) : entries.total === 0 ? (
-        <p className="text-black/60 dark:text-white/60">No pending DLQ entries for this tenant.</p>
+        <p className="text-black/60 dark:text-white/60">No pending DLQ entries for this app.</p>
       ) : (
         <div className="space-y-3">
           {entries.entries.map((entry) => (

@@ -41,6 +41,11 @@ Seven slices, each committed on its own with its own review record
   its approval id. When it names a review: path, each pass's findings count, whether the sign-off
   is complete, and the `KG query` hash. A record that does not resolve says so — `null` with the
   reason — rather than being omitted.
+- The document also carries **every design as it stands at the head** (`designs`). A design is
+  usually closed by a records commit that does not cite it, so the last commit that did still
+  says `active`; status and approvals are read from the head, not from the history of citations.
+  Found by looking at the Dev pages with AgentSmith's own history: seven designs showed as active,
+  of which two were.
 - `"schema": 1` on the document. The portal refuses a schema it does not know.
 
 ### S2 — seven roles (`portal/lib/authz.ts`)
@@ -74,6 +79,8 @@ Seven slices, each committed on its own with its own review record
   - `app_ingest_tokens` — app, SHA-256 of the token, created, created by, revoked.
   - `dev_commits` — app, commit, and the S1 record as columns plus `design` and `review` as
     JSONB; `received_at`. Primary key (app, commit).
+  - `dev_design_snapshots` — per app, the designs at the newest head received. Replaced only by
+    a head at least as new, so a re-run of an old CI job cannot roll it back.
   - `dev_ingest_runs` — app, received at, the CI run URL, commits received, schema.
 - **Authentication:** `Authorization: Bearer <token>`, looked up by its SHA-256 among the app's
   unrevoked tokens. The app comes from the token, never from the body — a token for one app
@@ -94,6 +101,9 @@ Seven slices, each committed on its own with its own review record
 - "Tenant" becomes "app" in page text.
 
 ### S5 — the Dev pages
+
+S4 and S5 ship in one commit: a switcher pointing at a `/dev` area with no pages in it would be a
+dead link between the two. The Administration area joins the switcher in S6, when it has pages.
 
 `/dev` (apps), `/dev/apps/<app>` (changes), `/dev/apps/<app>/designs`,
 `/dev/apps/<app>/designs/<path>`, `/dev/approvals`, `/dev/apps/<app>/gates`,

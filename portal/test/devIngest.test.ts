@@ -170,5 +170,16 @@ test("a commit time that is not a time is refused; an empty one is none", () => 
   if (result.ok) assert.equal(result.value.commits[0].committedAt, null);
 });
 
+test("the designs at the head are optional, but when sent each must have a path", () => {
+  const withDesigns = parseDevIngest(body({ designs: [{ path: "a.md", title: "A", status: "done", scope: [], pillars: {}, deviations: [] }] }));
+  assert.ok(withDesigns.ok);
+  if (withDesigns.ok) assert.equal(withDesigns.value.designs?.[0].path, "a.md");
+  const without = parseDevIngest(body());
+  assert.ok(without.ok);
+  if (without.ok) assert.equal(without.value.designs, null, "absent means leave the snapshot alone, not empty it");
+  refused(body({ designs: [{ title: "no path" }] }), /designs\[0\]\.path/);
+  refused(body({ designs: Array.from({ length: DEV_LIMITS.designs + 1 }, () => ({ path: "a.md" })) }), /at most/);
+});
+
 console.log(`\n${passed} passed`);
 process.exit(process.exitCode || 0);

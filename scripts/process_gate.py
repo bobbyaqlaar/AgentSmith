@@ -1088,6 +1088,30 @@ def _commit_record(root: Path, commit: str, message: str, verdict: str, errors: 
     }
 
 
+def designs_at(root: Path, rev: str, config: "Config") -> List[Dict[str, object]]:
+    """Every design document as it stands at `rev`, summarised like a commit's.
+
+    A design is usually closed by a records commit that does not cite it, so
+    the last commit that DID cite it still says `active`. Status, and which
+    deviations are approved, are read from here — the head — not from the
+    history of citations."""
+    read = _reader_at(root, rev)
+    found: List[Dict[str, object]] = []
+    if config.records_mode == "single":
+        document = read(DESIGN_ARTIFACT) or ""
+        for slug in _slug_sections(document, ACTIVE_CHANGE):
+            text = design_section(document, slug)
+            if text is not None:
+                found.append({"path": f"{DESIGN_ARTIFACT}#{slug}", **design_summary(text)})
+        return found
+    listed = git("ls-tree", "-r", "--name-only", rev, "--", f"{DESIGNS_DIR}/", cwd=root, check=False)
+    for path in sorted(p for p in listed.splitlines() if p.endswith(".md")):
+        text = read(path)
+        if text is not None:
+            found.append({"path": path, **design_summary(text)})
+    return found
+
+
 def _record_commit(records: Optional[List[Dict[str, object]]], about: Optional[tuple], verdict: str,
                    errors: List[str], notes: List[str], gated: bool, adopted: bool = True) -> None:
     if records is None or about is None:
@@ -1199,13 +1223,15 @@ def cmd_ci(base: str, head: str, json_path: Optional[str] = None) -> int:
     if json_path:
         # Written whatever the verdict: a failed range is exactly what the Dev
         # workspace has to show.
+        head_sha = git("rev-parse", "--verify", f"{head}^{{commit}}", cwd=root).strip()
         document = {
             "schema": DEV_RECORD_SCHEMA,
             "generated_at": _now(),
             "base": base or None,
-            "head": git("rev-parse", "--verify", f"{head}^{{commit}}", cwd=root).strip(),
+            "head": head_sha,
             "range_caveat": caveat,
             "commits": records,
+            "designs": designs_at(root, head_sha, head_config),
         }
         Path(json_path).write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 

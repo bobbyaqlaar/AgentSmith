@@ -75,6 +75,23 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the portal's Dev workspace, and three areas (portal phase 1)
+
+- **The portal is one application with areas**: `/dev` (new), `/ops` (everything that was
+  there before) and, later, `/admin`. A switcher in the header lists the areas the signed-in user
+  may enter; `/` sends them to the first one.
+- **The operations pages moved under `/ops`**: `/tenants/<id>` → `/ops/apps/<id>`, `/dlq` →
+  `/ops/dlq`, `/audit` → `/ops/audit`. The old paths redirect permanently, so bookmarks and
+  runbooks keep working. The API routes did not move. The pages say "app" where they said
+  "tenant".
+- **The Dev workspace** shows, for every app, what its CI gate decided about each commit: the
+  changes timeline (filter by verdict or author), designs with their pillars and deviations,
+  what awaits approval, failures and their repairs, and each commit's design, review and
+  approvals. Links go to the app's repository at the exact commit. It shows data only after the
+  app's CI sends it (see the Dev ingest above) and says so, and says when data is stale.
+- `process_gate.py ci --json` also writes every design as it stands at the head: a design is
+  closed by a commit that does not cite it, so status and approvals are read from the head.
+
 ### Added — the portal's Dev ingest (portal phase 1)
 
 - `POST /api/dev/ingest` accepts the record `process_gate.py ci --json` writes, from an app's CI,

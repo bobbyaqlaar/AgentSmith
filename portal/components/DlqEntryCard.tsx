@@ -47,8 +47,8 @@ export function DlqEntryCard({ entry }: { entry: DLQEntry }) {
       setMessage({
         kind: "ok",
         text: data.resumable
-          ? "Sent — the tenant's receiver accepted the payload and can resume the parked workflow."
-          : "Sent to the tenant's webhook, but this entry has no live workflow to resume (it's from a terminal dead-letter, not a parked one) — what happens next is up to the tenant's own receiver.",
+          ? "Sent — the app's receiver accepted the payload and can resume the parked workflow."
+          : "Sent to the app's webhook, but this entry has no live workflow to resume (it's from a terminal dead-letter, not a parked one) — what happens next is up to the app's own receiver.",
       });
       setOutcome("sent");
     } catch (e) {

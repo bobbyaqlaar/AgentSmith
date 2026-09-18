@@ -35,17 +35,17 @@ export default async function DLQPage() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <MetricCard label="Pending entries" value={totalPending} tone={totalPending > 0 ? "warning" : "success"} />
-            <MetricCard label="Tenants with entries" value={visibleTenantIds.filter((id) => dlq.pendingByTenant[id] > 0).length} />
+            <MetricCard label="Apps with entries" value={visibleTenantIds.filter((id) => dlq.pendingByTenant[id] > 0).length} />
           </div>
 
           {visibleTenantIds.length === 0 ? (
-            <p className="text-black/60 dark:text-white/60">No DLQ entries for any tenant you have access to.</p>
+            <p className="text-black/60 dark:text-white/60">No DLQ entries for any app you have access to.</p>
           ) : (
             <div className="border border-black/10 dark:border-white/10 rounded-lg overflow-hidden">
               <table className="w-full text-left text-sm">
                 <thead className="bg-black/[0.03] dark:bg-white/[0.05] text-black/60 dark:text-white/60">
                   <tr>
-                    <th className="py-2.5 px-4 font-medium">Tenant</th>
+                    <th className="py-2.5 px-4 font-medium">App</th>
                     <th className="py-2.5 px-4 font-medium">Pending</th>
                   </tr>
                 </thead>
@@ -53,7 +53,7 @@ export default async function DLQPage() {
                   {visibleTenantIds.map((id) => (
                     <tr key={id} className="border-t border-black/10 dark:border-white/10">
                       <td className="py-2.5 px-4">
-                        <Link className="text-blue-700 dark:text-blue-400 hover:underline" href={`/dlq/${id}`}>
+                        <Link className="text-blue-700 dark:text-blue-400 hover:underline" href={`/ops/dlq/${id}`}>
                           {id}
                         </Link>
                       </td>

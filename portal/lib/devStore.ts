@@ -30,6 +30,23 @@ export async function storeDevIngest(tenantId: string, ingest: DevIngest): Promi
         ],
       );
     }
+    if (ingest.designs !== null) {
+      const headTime = ingest.commits.find((c) => c.sha === ingest.head)?.committedAt ?? null;
+      // Replaced only by a head at least as new: a re-run of an old CI job must
+      // not roll the app's designs back. An unknown time cannot be compared,
+      // so it replaces.
+      await client.query(
+        `INSERT INTO dev_design_snapshots (tenant_id, head_sha, head_committed_at, designs, received_at)
+         VALUES ($1, $2, $3, $4, now())
+         ON CONFLICT (tenant_id) DO UPDATE SET
+           head_sha = EXCLUDED.head_sha, head_committed_at = EXCLUDED.head_committed_at,
+           designs = EXCLUDED.designs, received_at = now()
+         WHERE dev_design_snapshots.head_committed_at IS NULL
+            OR EXCLUDED.head_committed_at IS NULL
+            OR EXCLUDED.head_committed_at >= dev_design_snapshots.head_committed_at`,
+        [tenantId, ingest.head, headTime, JSON.stringify(ingest.designs)],
+      );
+    }
     await client.query(
       `INSERT INTO dev_ingest_runs (tenant_id, head_sha, ci_run_url, commits, schema_version)
        VALUES ($1, $2, $3, $4, $5)`,
