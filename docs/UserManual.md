@@ -2047,9 +2047,9 @@ running (Phoenix + Postgres + Ops Portal).
 
 **2. Ops Portal — `http://localhost:3000`** (basic auth: `$OPS_PORTAL_USER`/`$OPS_PORTAL_PASSWORD` from `.env`)
 
-- **Tenant list** (`/`) — confirm `oil-price-demo` is listed (auto-registered
+- **Apps** (`/ops`) — confirm `oil-price-demo` is listed (auto-registered
   on first trace/spend) with non-zero spend.
-- **Tenant detail** (`/tenants/oil-price-demo`) — click the tenant. Confirm:
+- **App detail** (`/ops/apps/oil-price-demo`) — click the app. Confirm:
   - **Spend this month** / **Budget cap** metric cards (cap shows `—` until
     `tenant.yaml`'s `gateway.budget_cap_usd` is synced — see the Deploy via GitHub CI/CD section).
   - **Run status** — reflects the *last* `gw.complete()` call's outcome
@@ -2069,10 +2069,13 @@ running (Phoenix + Postgres + Ops Portal).
     `run_with_recoverable_step` only touch the DLQ, never `agent_runs`).
   - **Phoenix: reachable** badge, plus **Last 24h: N trace(s)** with an error
     rate badge once there's enough trace volume to compute one.
-- **Dead-letter queue** (`/dlq`) — see the dedicated HITL/DLQ walkthrough
+- **Dead-letter queue** (`/ops/dlq`) — see the dedicated HITL/DLQ walkthrough
   immediately below; this is the newest, most hands-on part of the portal.
-- **Audit log** (`/audit`) — confirms every admin action above (if you're
+- **Audit log** (`/ops/audit`) — confirms every admin action above (if you're
   logged in as admin) is recorded with an HMAC signature.
+- **Dev workspace** (`/dev`) — once the app's CI sends its gate record (Connect an app to the
+  Dev workspace, below), each commit with its verdict, design and review. Until then it says
+  "No data received".
 
 **2a. HITL/DLQ — edit a failing payload and replay it (the CRM-style example)**
 
@@ -3382,8 +3385,9 @@ issues, upgrading the framework version) are in [Maintain (Day-2 Operations)](#m
 
 ### Ops Portal
 
-Cross-tenant cost/issues dashboard. Full detail:
-[portal/README.md](../portal/README.md).
+One portal with three areas: **Dev** (`/dev`, each app's commits as its CI gate judged them),
+**Ops** (`/ops`, cost, issues, runs, dead-letter queue, audit log) and **Administration**
+(`/admin`, apps and their CI tokens). Full detail: [portal/README.md](../portal/README.md).
 
 #### Ops Portal setup
 

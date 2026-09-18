@@ -1188,12 +1188,29 @@ Every OTel span must carry all of the following:
 | `input.value` | Prompt (redacted per environment) | *(see the Trace Redaction section)* |
 | `output.value` | Completion (redacted per environment) | *(see the Trace Redaction section)* |
 
-### Ops Portal
+### Portal
 
-- **Purpose:** Cross-tenant operations view aggregating independent pipelines
-- **Views:** tenant list, real run status (`agent_runs`, aggregated across concurrent/sequential calls within one workflow — "running" until every call in the group finishes), cost by tenant/agent/model with cap %, Phoenix trace count + error rate (last 24h, GraphQL), per-tenant DLQ triage with editable payload + Replay/Discard (not just an aggregate pending count), suggested shadow-eval promotion queue, audit log
+One application with three areas, each shown only to a user whose roles open it (the Federated
+Observability section "Role-Based Access Control"):
+
+- **Dev (`/dev`)** — for every app, what its CI process gate decided about each commit: a
+  timeline filterable by verdict and author, the designs with their pillars and deviations and
+  whether each is approved, what awaits approval, failures and the commits that repaired them,
+  and a page per commit linking into the repository at that exact commit. It reads only what the
+  app's CI sends (`process_gate.py ci --json`, posted by `scripts/send_dev_record.py`), so it is a
+  cache of git and never reaches a verdict of its own. Design status and approvals are read from
+  the designs as they stand at the newest commit received, because a design is closed by a commit
+  that does not cite it.
+- **Ops (`/ops`)** — the operations views below.
+- **Administration (`/admin`)** — register apps and their repositories; issue, rotate and revoke
+  each app's ingest token. Every change is audited in the same transaction, with its actor.
+
+Ops:
+
+- **Purpose:** Cross-app operations view aggregating independent pipelines
+- **Views:** app list, real run status (`agent_runs`, aggregated across concurrent/sequential calls within one workflow — "running" until every call in the group finishes), cost by tenant/agent/model with cap %, Phoenix trace count + error rate (last 24h, GraphQL), per-tenant DLQ triage with editable payload + Replay/Discard (not just an aggregate pending count), suggested shadow-eval promotion queue, audit log
 - **Auth:** SSO/OIDC (enterprise pack); basic auth minimum (team deployment)
-- **Data sources:** Phoenix REST/GraphQL, `agent_runs`/`dlq_entries`/`llm_gateway_budget` (Postgres), `.agent-history.log` sync
+- **Data sources:** Phoenix REST/GraphQL, `agent_runs`/`dlq_entries`/`llm_gateway_budget` (Postgres), `.agent-history.log` sync; for Dev, `dev_commits`, `dev_design_snapshots` and `dev_ingest_runs`, written only by the Dev ingest
 
 ### In-App Widget
 
@@ -1997,6 +2014,10 @@ The Ops Portal aggregates data from:
 2. Workflow engine metrics — queue depth, active workflows, DLQ depth
 3. LLM Gateway — per-tenant spend, per-model cost breakdown
 4. `.agent-history.log` sync — unresolved MAJOR/CRITICAL entries per tenant
+5. The Dev ingest (`POST /api/dev/ingest`) — each app's gate record, authenticated by that
+   app's own token, so a token writes only its own app. The record carries a schema number and
+   the portal refuses one it does not know; the verdict list is pinned across the gate, the
+   portal and the database.
 
 Ops Portal API contract is defined in `portal/README.md`.
 
@@ -2015,7 +2036,7 @@ The widget reads from Phoenix (via a read-only scoped API token). It displays no
 
 ### Cross-Tenant Aggregation Without Data Leakage
 
-The Ops Portal aggregates metrics by `tenant.id` attribute. Raw span content (prompts, completions) is never displayed cross-tenant — only aggregated counts, costs, and status flags. Role-based access in the portal (viewer, operator, admin) controls which tenants each user can view.
+The Ops Portal aggregates metrics by `tenant.id` attribute. Raw span content (prompts, completions) is never displayed cross-tenant — only aggregated counts, costs, and status flags. Role-based access in the portal — grants of a role over a list of apps — controls which apps each user can view.
 
 ### Role-Based Access Control
 

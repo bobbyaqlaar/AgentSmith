@@ -17,17 +17,20 @@ explainable, and carries the same rules into production:
 - **Operate.** The running app gets the same rules as guardrails — budgets,
   prompt and tool controls, PII handling, human-in-the-loop for high-impact
   actions — and is observable: traces, cost, run status and incidents for every
-  app, in one Ops Portal.
+  app, in one portal.
 
 AgentSmith is not a CI/CD system or a monitoring stack. It runs on the ones you
 have — GitHub Actions, OpenTelemetry, Phoenix — and git stays the record of
 every change. Install it once per machine, and every app you opt in is governed
 from its first commit.
 
-**Where observability stands.** Tracing (Phoenix, OpenTelemetry), spend, run
-status, incident history, dead-letter replay and a tamper-evident audit log ship
-today. Log-based monitoring and the administration and approval pages of the
-portal are the next stage.
+**Where the portal stands.** One portal with three areas. **Dev** shows, for
+every app, how each change was designed, reviewed and gated — sent by the app's
+CI. **Ops** shows tracing (Phoenix, OpenTelemetry), spend, run status, incident
+history, dead-letter replay and a tamper-evident audit log. **Administration**
+registers apps and issues their CI tokens. Next: passkey sign-in and approving
+deviations in the portal, then the HITL queue, production approvals and log
+monitoring.
 
 > **What this is:** an introduction to AgentSmith — what it is for, how it is built, and what
 > sets it apart. The Quick Start below is the only procedure here; the rest is in the documents
@@ -76,7 +79,7 @@ portal are the next stage.
 | **IDE Guardrails** | `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.agents/skills/` — generated for Cursor, Claude Code, Codex, Gemini CLI, Copilot and Antigravity from one template on every checkout |
 | **Git Hooks** | Pre-commit safety checks, commit message linting, automatic semantic versioning, AST codebase mapping |
 | **OpenTelemetry & Observability** | OTel span contract → Arize Phoenix — one instance per machine or team, per-project and per-tenant namespacing, owner/cost/token attribution |
-| **Ops Portal** | Cross-tenant ops dashboard — run history, cost vs cap, DLQ triage, HMAC append-only audit log, RBAC / optional SSO |
+| **Portal** | One portal, three areas — **Dev** (each app's commits as its gate judged them: designs, deviations, reviews, repairs), **Ops** (run history, cost vs cap, DLQ triage, HMAC append-only audit log) and **Administration** (apps and their CI tokens); seven roles granted per app, optional SSO |
 | **Workflow Orchestration** | Durable agents via **Temporal** (primary) or **Celery** — HITL pause/resume, recoverable steps, shared or dedicated worker pools |
 | **LLM Gateway** | Single choke point for **workload** provider calls — budget reservation, degrade ladder, circuit breaker, redaction, prompt guard, moderation hook. Workers and activities must not bypass it. The eval harness (`scripts/cost_router.py`) is the one path that does not go through it, by design — see docs/UserManual.md |
 | **Vector / RAG Memory** | Short-term conversation memory + vector store substrate (`embeddings.py` / `vector_store.py`; hash or sentence-transformers; optional pgvector) |
@@ -243,7 +246,7 @@ Kubernetes, a live OIDC provider). Operator procedures: docs/UserManual.md.
 |---|---|
 | **Multi-Tenancy** | `agentsmith tenant init` / `agentsmith tenant promote` — independent tenant repos with their own CI/CD, eval gates, and staging → production promotion |
 | **Production Runtime** | `runtime/` — LLM gateway (atomic per-tenant budgets, degrade ladder), trace redaction, idempotency + DLQ, Temporal HITL workflows incl. edit-and-resume and opt-in self-correction; cloud adapters (Vertex AI live-verified; Azure OpenAI / Bedrock / Huawei ModelArts mock-tested) |
-| **Ops Portal** | Cross-tenant cost/issues dashboard, RBAC, per-tenant DLQ triage with replay, HMAC-signed tamper-evident audit log, SSO/OIDC with server-side revocation |
+| **Portal** | Dev workspace fed by each app's CI gate, cross-app cost/issues dashboard, per-app DLQ triage with replay, HMAC-signed tamper-evident audit log, seven per-app roles, SSO/OIDC with server-side revocation |
 | **On-Premise** | `templates/onprem-deploy/` — Docker Compose or Helm for air-gapped customers, canary + shadow routing (Traefik or Envoy) |
 | **In-App Widget** | `templates/in-app-widget/` — embeddable end-user status component, token-scoped, self-hosted |
 | **Enterprise Pack** | GPG-signed hook bundles + MDM deploy, HMAC-validated break-glass bypass, RFC-enforcement hooks, dedicated per-tenant worker pools |

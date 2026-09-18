@@ -7,6 +7,32 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — portal phase 1: the Dev workspace (2026-09-18)
+
+Specification: `.agent-rfc/designs/portal-control-plane.md` (approved by the owner the same day);
+design: `.agent-rfc/designs/portal-phase1.md`; reviews: `.agent-rfc/reviews/portal-phase1-s1.md`,
+`-s2.md`, `-s3.md`, `-s4.md` (S4 and S5), `-s6.md`, `-s7.md`.
+
+- **S1 — the gate writes what it decided.** `process_gate.py ci --json` records each commit's
+  verdict, design, pillars, deviations, review passes and repairs, and every design as it stands
+  at the head. One resolution of a commit's `Design:`/`Review:` serves both the verdict and the
+  record.
+- **S2 — seven roles**, granted per app, combinable, checked by permission. Old configurations
+  map to exactly the access they had.
+- **S3 — the Dev ingest**, per-app tokens, validated whole, idempotent, one traced transaction.
+- **S4 and S5 — three areas and the Dev workspace**, with distinct empty, unavailable, stale and
+  no-access screens. Looking at the pages against AgentSmith's own history found that design
+  status read from citing commits was wrong (seven active, two real): a design is closed by a
+  commit that does not cite it.
+- **S6 — Administration › Apps**: register apps, issue and rotate tokens; every change audited in
+  the same transaction, with the actor the middleware now forwards.
+- **S7 — CI sends the record** (`scripts/send_dev_record.py`); AgentSmith's Self-Test sends its own.
+  The tenant CI templates run no gate job yet — backlog.
+- **Found at the end, by the full suites:** a documentation test naming the retired header
+  constants, and the design document's repository tree missing the new script.
+
+---
+
 ## Completed — a pointer names something its target defines (2026-09-18)
 
 Design: `.agent-rfc/designs/xref-names.md`; review: `.agent-rfc/reviews/xref-names.md`. The owner

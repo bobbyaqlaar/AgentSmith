@@ -1,23 +1,25 @@
-# Ops Portal
+# AgentSmith Portal
 
-Cross-tenant operations dashboard for AgentSmith (docs/DESIGN.md › Universal Observability Platform, Federated Observability).
+One portal with three areas (docs/DESIGN.md › Universal Observability Platform, Federated Observability):
+**Dev** (`/dev`) shows each app's commits as its CI gate judged them; **Ops** (`/ops`) is the
+operations dashboard; **Administration** (`/admin`) registers apps and issues their CI tokens.
 Full setup/operate walkthrough: `docs/UserManual.md` › Ops Portal. A
 click-through of every page against a real example tenant:
 `docs/UserManual.md` › Manual test walkthrough: the UIs.
 
 ## Purpose
 
-Aggregates data across every tenant pipeline running on this framework and
-surfaces it to the operations team. Distinct from Arize Phoenix
+Aggregates data across every app built on this framework: how each change was
+designed, reviewed and gated (Dev), and how each app is running (Ops). Distinct from Arize Phoenix
 (per-developer trace viewer, one tenant's detail at a time) and the In-App
 Widget (`templates/in-app-widget/` — end-user-facing status badge, no
 operator surface).
 
 ## Audience
 
-- Platform / operations team
-- Tech leads monitoring multiple tenant deployments
-- Whoever's on call for HITL/DLQ triage
+- Developers and design approvers following their apps' changes (Dev)
+- Platform / operations team, and whoever is on call for HITL/DLQ triage (Ops)
+- Administrators registering apps and issuing their tokens (Administration)
 
 ## Setup
 
