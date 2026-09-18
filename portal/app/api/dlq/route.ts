@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDLQStatus } from "@/lib/dlq";
-import { filterTenantIds } from "@/lib/authz";
+import { appsWith } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
 export async function GET() {
@@ -8,7 +8,7 @@ export async function GET() {
 
   try {
     const status = await getDLQStatus();
-    const visibleIds = new Set(filterTenantIds(access, Object.keys(status.pendingByTenant)));
+    const visibleIds = new Set(appsWith(access, "ops.read", Object.keys(status.pendingByTenant)));
     const pendingByTenant = Object.fromEntries(
       Object.entries(status.pendingByTenant).filter(([tenantId]) => visibleIds.has(tenantId))
     );

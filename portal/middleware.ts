@@ -12,11 +12,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
-  ROLE_HEADER,
-  TENANT_SCOPE_HEADER,
-  encodeTenantScopeHeader,
+  GRANTS_HEADER,
+  SINGLE_USER_GRANTS,
+  encodeGrantsHeader,
   getAccessForSsoEmail,
+  stripAccessHeaders,
   verifyBasicAuthCredentials,
+  type Grant,
 } from "./lib/authz";
 import { constantTimeEquals } from "./lib/constantTime";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "./lib/sessionToken";
@@ -57,19 +59,15 @@ export const config = {
     "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/runs/ingest(?:/|$)|api/auth(?:/|$)).*)",
 };
 
-// Strip any client-supplied copy of the trusted RBAC headers before they can
+// Strip any client-supplied copy of the trusted access header before it can
 // reach a route handler — otherwise an unauthenticated caller could simply
-// set `x-af-role: admin` itself and skip the lookup below entirely.
+// set it itself and skip the lookup below entirely (lib/authz.stripAccessHeaders).
 function stripForgedAccessHeaders(request: NextRequest): Headers {
-  const headers = new Headers(request.headers);
-  headers.delete(ROLE_HEADER);
-  headers.delete(TENANT_SCOPE_HEADER);
-  return headers;
+  return stripAccessHeaders(request.headers);
 }
 
-function withAccessHeaders(headers: Headers, role: string, tenantScope: "*" | string[]): Headers {
-  headers.set(ROLE_HEADER, role);
-  headers.set(TENANT_SCOPE_HEADER, encodeTenantScopeHeader(tenantScope));
+function withAccessHeaders(headers: Headers, grants: Grant[]): Headers {
+  headers.set(GRANTS_HEADER, encodeGrantsHeader(grants));
   return headers;
 }
 
@@ -143,7 +141,7 @@ export async function middleware(request: NextRequest) {
     }
     if (session) {
       const access = getAccessForSsoEmail(session.email);
-      const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.role, access.tenantScope);
+      const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.grants);
       return NextResponse.next({ request: { headers } });
     }
 
@@ -175,8 +173,8 @@ export async function middleware(request: NextRequest) {
     const sepIdx = decoded.indexOf(":");
     const reqUser = sepIdx === -1 ? decoded : decoded.slice(0, sepIdx);
     const reqPass = sepIdx === -1 ? "" : decoded.slice(sepIdx + 1);
-    // Legacy single-user fallback (OPS_PORTAL_USER/PASSWORD) always grants
-    // admin/"*" — same behavior as before RBAC existed. OPS_PORTAL_USERS
+    // Legacy single-user fallback (OPS_PORTAL_USER/PASSWORD) is always an
+    // Administrator on every app — same behavior as before RBAC existed. OPS_PORTAL_USERS
     // (multi-user, per-user role + tenant scope) takes precedence when set.
     if (!process.env.OPS_PORTAL_USERS) {
       // Constant-time, and both comparisons run before the branch so neither
@@ -189,13 +187,13 @@ export async function middleware(request: NextRequest) {
       const userOk = constantTimeEquals(user ?? "", reqUser);
       const passOk = constantTimeEquals(pass ?? "", reqPass);
       if (userOk && passOk) {
-        const headers = withAccessHeaders(stripForgedAccessHeaders(request), "admin", "*");
+        const headers = withAccessHeaders(stripForgedAccessHeaders(request), SINGLE_USER_GRANTS);
         return NextResponse.next({ request: { headers } });
       }
     } else {
       const access = verifyBasicAuthCredentials(reqUser, reqPass);
       if (access) {
-        const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.role, access.tenantScope);
+        const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.grants);
         return NextResponse.next({ request: { headers } });
       }
     }

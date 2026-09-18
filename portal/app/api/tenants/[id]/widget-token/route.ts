@@ -4,7 +4,7 @@
 // tier as creating tenants via POST /api/tenants); revoking requires
 // `admin` only, since it instantly breaks every live embed for that
 // tenant — a more disruptive action than minting a new one. Both also
-// require the caller's tenantScope to include this tenant id. Protected
+// require the caller's grants to cover this tenant id. Protected
 // by the dashboard's basic auth (this route is NOT in middleware's
 // exclusion list). The plaintext token is returned exactly once; only its
 // hash is persisted — losing it means minting a new one and updating the
@@ -13,15 +13,15 @@
 import { NextResponse } from "next/server";
 import { createWidgetToken, revokeWidgetTokensForTenant } from "@/lib/widgetTokens";
 import { getTenant } from "@/lib/tenants";
-import { canAccessTenant, canAdmin, canWrite } from "@/lib/authz";
+import { can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
   const access = currentAccess();
-  if (!canWrite(access)) {
-    return NextResponse.json({ error: "operator or admin role required to mint widget tokens" }, { status: 403 });
+  if (!can(access, "ops.widget")) {
+    return NextResponse.json({ error: "Operator or Administrator role required to mint widget tokens" }, { status: 403 });
   }
-  if (!canAccessTenant(access, params.id)) {
+  if (!can(access, "ops.widget", params.id)) {
     return NextResponse.json({ error: `Unknown tenant ${params.id}` }, { status: 404 });
   }
 
@@ -41,10 +41,10 @@ export async function POST(_request: Request, { params }: { params: { id: string
 // scoped rather than taking a specific token).
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   const access = currentAccess();
-  if (!canAdmin(access)) {
-    return NextResponse.json({ error: "admin role required to revoke widget tokens" }, { status: 403 });
+  if (!can(access, "admin.apps")) {
+    return NextResponse.json({ error: "Administrator role required to revoke widget tokens" }, { status: 403 });
   }
-  if (!canAccessTenant(access, params.id)) {
+  if (!can(access, "admin.apps", params.id)) {
     return NextResponse.json({ error: `Unknown tenant ${params.id}` }, { status: 404 });
   }
 

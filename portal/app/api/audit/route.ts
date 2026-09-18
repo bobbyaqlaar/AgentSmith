@@ -6,7 +6,7 @@
 
 import { NextResponse } from "next/server";
 import { listAuditEvents, isValidAuditEventType } from "@/lib/auditLog";
-import { canAccessTenant, canAdmin } from "@/lib/authz";
+import { can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
 
@@ -14,13 +14,13 @@ export async function GET(request: Request) {
   const access = currentAccess();
   // Audit events span hook-bypass/config-change actions that aren't always
   // tenant-scoped (tenant_id is nullable) — only admins get to see the feed.
-  if (!canAdmin(access)) {
-    return NextResponse.json({ error: "admin role required" }, { status: 403 });
+  if (!can(access, "admin.audit")) {
+    return NextResponse.json({ error: "Administrator role required" }, { status: 403 });
   }
 
   const url = new URL(request.url);
   const tenantId = url.searchParams.get("tenantId") ?? undefined;
-  if (tenantId && !canAccessTenant(access, tenantId)) {
+  if (tenantId && !can(access, "admin.audit", tenantId)) {
     return NextResponse.json({ error: `forbidden: no access to tenant ${tenantId}` }, { status: 403 });
   }
   const eventTypeParam = url.searchParams.get("eventType");

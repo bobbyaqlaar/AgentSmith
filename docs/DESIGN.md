@@ -2018,47 +2018,46 @@ The Ops Portal aggregates metrics by `tenant.id` attribute. Raw span content (pr
 
 ### Role-Based Access Control
 
-Every authenticated request resolves to an `Access { role, tenantScope }`
-(`portal/lib/authz.ts`) before any tenant data is read:
+Every authenticated request resolves to an `Access { grants }` (`portal/lib/authz.ts`) before
+any app's data is read. A **grant** is a role and the apps it covers — `"*"` or a list. One person
+may hold several: on a small project, every development role on the same app.
 
-| Role | Can view | Can write (`POST /api/tenants`, mint widget tokens) — **within the caller's tenant scope**, checked per handler | Can revoke widget tokens | Can view audit log |
-|---|---|---|---|---|
-| `viewer` | Tenants in `tenantScope` only | No | No | No |
-| `operator` | Tenants in `tenantScope` only | Yes | No | No |
-| `admin` | Tenants in `tenantScope` only (or all, if `tenantScope: "*"`) | Yes | Yes | Yes |
+Every check asks for a **permission**, never a role — `can(access, "ops.dlq", app)` — so each
+role's reach is decided in one table:
 
-Mint and revoke are deliberately split: minting a widget token is routine
-tenant-onboarding work (same tier as creating the tenant itself), revoking
-one instantly breaks every live embed for that tenant — a more disruptive
-action reserved for `admin`.
+| Role | Permissions |
+|---|---|
+| Developer | Read the Dev workspace; approve a design deviation |
+| Design approver | Developer's, and approve an exemption from a mechanical pillar check |
+| Operator | Read the Ops workspace; replay and discard dead-letter entries; mint widget tokens; edit an app's operational settings |
+| HITL reviewer | Decide HITL gates — nothing else in Ops |
+| Release approver | Read the Ops workspace; approve production promotions |
+| Administrator | Everything above; register apps and issue their tokens; revoke widget tokens; read the audit log; manage users |
+| Super user | Everything; organisation settings and Administrators |
 
-`tenantScope` is either `"*"` (all tenants) or an explicit allow-list of
-tenant ids. This is enforced server-side in every route under
-`portal/app/api/tenants/**`, `portal/app/page.tsx`, and
-`portal/app/tenants/[id]/page.tsx` — never client-side only.
+Administrator and Super user act for the whole organisation, so a grant of either must cover
+`"*"`. Minting and revoking a widget token are split on purpose: minting is routine onboarding,
+revoking breaks every live embed at once.
 
-**Basic auth (`OPS_PORTAL_USERS`):** a JSON array of
-`{ username, password, role, tenants }`. The legacy single-user
-`OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD` pair remains supported for backward
-compatibility and is granted `admin`/`"*"` automatically; `OPS_PORTAL_USERS`
-takes precedence when set.
+A permission check with an app answers "on this app" and a failure is a 404, so an app outside
+a user's grants is indistinguishable from one that does not exist. Without an app it answers "at
+all" (a 403). Every human-facing route checks the app; `portal/test/authz.test.ts` fails any
+route handler that resolves access and never does.
 
-**SSO (`OPS_PORTAL_SSO_USERS`):** a JSON array of
-`{ email, role, tenants }`, keyed by the IdP's email claim
-(case-insensitive). An authenticated SSO identity that does not appear in
-this list gets the most restrictive possible access — `viewer` with an
-**empty** tenant scope — rather than being rejected outright or defaulting
-to full access.
+**Configuration.** `OPS_PORTAL_USERS` (basic auth: `{ username, password, grants }`) and
+`OPS_PORTAL_SSO_USERS` (`{ email, grants }`, keyed by the IdP's email claim, case-insensitive).
+The single `OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD` pair is an Administrator on every app;
+`OPS_PORTAL_USERS` takes precedence when set. An authenticated SSO identity not listed gets no
+grants — never an implicit default.
 
-`middleware.ts` resolves access once per request and forwards it downstream
-to route handlers and pages as trusted `x-af-role` / `x-af-tenant-scope`
-request headers, stripping any client-supplied copy of those same header
-names first so a caller cannot simply set `x-af-role: admin` itself.
+**The earlier `{ role, tenants }` form still works** and grants exactly what it always did:
+`viewer` → read Ops (a legacy role, accepted only in this form), `operator` → Operator,
+`admin` → Administrator — each over the tenants it lists. The portal logs one line naming the
+new form when it reads an old entry.
 
-A dedicated test suite (`portal/test/authz.test.ts`, run via `npm test` in
-`portal/`) asserts cross-tenant isolation directly: a viewer scoped to one
-tenant cannot read another's cost/issues data, an unlisted SSO identity gets
-zero tenants (not all), and forged role/scope headers do not grant access.
+`middleware.ts` resolves access once per request and forwards the grants to handlers as one
+trusted header, `x-af-grants`. It strips any client-supplied copy first, and the retired header
+names too. A header grant naming an unknown role or malformed apps is dropped, never widened.
 
 ---
 
@@ -2525,9 +2524,8 @@ When enterprise pack is enabled:
 - Phoenix is placed behind SSO proxy
 - GitHub SAML enforced for tenant repos
 - `promoted_by` in HITL records is the SSO user identity (not just email)
-- Each SSO identity's role and tenant scope are resolved via
-  `OPS_PORTAL_SSO_USERS` (see the Federated Observability section "Role-Based Access Control") — SSO
-  authentication alone does not imply any particular tenant access
+- Each SSO identity's grants are resolved via `OPS_PORTAL_SSO_USERS` (see the Federated
+  Observability section "Role-Based Access Control") — SSO authentication alone grants nothing
 - The session JWT carries a `jti` claim and supports server-side
   revocation: `POST /api/auth/logout` records the session's `jti` in the
   `revoked_sessions` table (not the token itself), and every authenticated

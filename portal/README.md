@@ -82,29 +82,27 @@ dev` — see `docs/UserManual.md` Part B/E and `agentsmith dashboard start`
 
 ## Auth & RBAC
 
-Every authenticated request resolves to `Access { role, tenantScope }`
-(`lib/authz.ts`) before any tenant data is read — enforced server-side in
+Every authenticated request resolves to `Access { grants }`
+(`lib/authz.ts`) before any app's data is read — enforced server-side in
 every route under `app/api/**` and in every page component, never
 client-side only.
 
-| Role | View | Write (create/update tenants, mint widget tokens) | Revoke widget tokens | Audit log |
-|---|---|---|---|---|
-| `viewer` | Tenants in scope | No | No | No |
-| `operator` | Tenants in scope | Yes | No | No |
-| `admin` | Tenants in scope (or all, with `tenants: "*"`) | Yes | Yes | Yes |
+Each user holds **grants** — a role and the apps it covers — and every check asks for a
+permission on an app. Roles: `developer`, `design_approver`, `operator`, `hitl_reviewer`,
+`release_approver`, `administrator`, `super_user`; what each may do is in docs/DESIGN.md ›
+Federated Observability "Role-Based Access Control".
 
-`tenantScope` is `"*"` or an explicit tenant-id allow-list. Two auth modes,
+Two auth modes,
 either works standalone or together:
 
 - **Basic auth, single user**: `OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD` —
-  implicitly `admin`, `tenants: "*"`.
+  an Administrator on every app.
 - **Basic auth, multi-user**: `OPS_PORTAL_USERS` — a JSON array of
-  `{ username, password, role, tenants }`.
+  `{ username, password, grants }`.
 - **SSO/OIDC**: `SSO_ENABLED=true` + `SSO_ISSUER`/`SSO_CLIENT_ID`/
   `SSO_CLIENT_SECRET`/`SSO_REDIRECT_URI`, with `OPS_PORTAL_SSO_USERS`
-  (keyed by email) for per-identity roles — an authenticated identity not
-  listed gets `viewer` with **zero** tenant access, never an implicit-admin
-  fallback. Session is a stateless HMAC-signed JWT cookie (`lib/sessionToken.ts`),
+  (keyed by email) for per-identity grants — an authenticated identity not
+  listed gets no access, never an implicit-admin fallback. Session is a stateless HMAC-signed JWT cookie (`lib/sessionToken.ts`),
   revocable server-side (`revoked_sessions` table) on logout.
 
 **Machine-to-machine endpoints** (`/api/sync/*`, `/api/runs/ingest`,

@@ -75,6 +75,19 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — the portal's seven roles (portal phase 1)
+
+- **Users hold grants** — a role and the apps it covers — and one person may hold several.
+  Roles: `developer`, `design_approver`, `operator`, `hitl_reviewer`, `release_approver`,
+  `administrator`, `super_user`. Every check asks for a permission on an app.
+- **Existing configurations keep working, with exactly the access they had.** An entry in the
+  `{"role": "viewer|operator|admin", "tenants": …}` form maps to a legacy read-only role, to
+  Operator, or to Administrator over the tenants it lists, and the portal logs one line naming the
+  new form: `{"grants": [{"role": "operator", "apps": ["acme"]}]}`.
+- `administrator` and `super_user` grants must cover `"*"`; a narrower one is refused at start-up.
+- The trusted request headers `x-af-role` and `x-af-tenant-scope` are replaced by one,
+  `x-af-grants`. Middleware strips all three from every incoming request.
+
 ### Added — `process_gate.py ci --json`: what the gate decided, per commit
 
 - `ci --json FILE` writes one record per commit alongside the usual report: the verdict

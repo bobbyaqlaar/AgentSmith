@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getTenantCost } from "@/lib/cost";
-import { canAccessTenant } from "@/lib/authz";
+import { can, roleFor } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { withIdentity } from "@/lib/tracing";
 
@@ -11,12 +11,12 @@ import { withIdentity } from "@/lib/tracing";
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const access = currentAccess();
-  if (!canAccessTenant(access, params.id)) {
+  if (!can(access, "ops.read", params.id)) {
     return NextResponse.json({ error: `forbidden: no access to tenant ${params.id}` }, { status: 403 });
   }
 
   try {
-    const cost = await withIdentity({ tenantId: params.id, actorRole: access.role }, () =>
+    const cost = await withIdentity({ tenantId: params.id, actorRole: roleFor(access, "ops.read", params.id) }, () =>
       getTenantCost(params.id),
     );
     return NextResponse.json(cost);

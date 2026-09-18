@@ -6,7 +6,7 @@ import { getUnresolvedIssues } from "@/lib/issues";
 import { tenantTraceUrl, checkPhoenixHealth, getRecentTraceStats } from "@/lib/phoenix";
 import { getSuggestedPromotions } from "@/lib/promotions";
 import { CostChart } from "@/components/CostChart";
-import { canAccessTenant } from "@/lib/authz";
+import { can } from "@/lib/authz";
 import { isSafeHttpUrl } from "@/lib/safeUrl";
 import { isTruncated } from "@/lib/cappedList";
 import { currentAccess } from "@/lib/currentAccess";
@@ -20,7 +20,7 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
   const access = currentAccess();
   // Treat out-of-scope tenants identically to nonexistent ones — a 403 page
   // would itself leak "this tenant id exists" to a viewer who shouldn't see it.
-  if (!canAccessTenant(access, params.id)) notFound();
+  if (!can(access, "ops.read", params.id)) notFound();
 
   const tenant = await getTenant(params.id);
   if (!tenant) notFound();

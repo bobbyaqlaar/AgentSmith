@@ -8,20 +8,20 @@
 // request binding is a different concern from access rules, and only one of
 // them needs a framework.
 //
-// Thirteen files previously repeated the two lines this replaces, and each had
-// to import ROLE_HEADER and TENANT_SCOPE_HEADER purely to hand them straight
-// back. Those names are an internal detail of the middleware contract.
+// Thirteen files previously repeated the lines this replaces, and each had to
+// import the header names purely to hand them straight back. The header is an
+// internal detail of the middleware contract.
 
 import { headers } from "next/headers";
 
-import { ROLE_HEADER, TENANT_SCOPE_HEADER, getAccessFromHeaderValues, type Access } from "./authz";
+import { GRANTS_HEADER, getAccessFromHeaderValue, type Access } from "./authz";
 
 /**
- * Server-side only, and only behind middleware.ts: these headers are trusted
+ * Server-side only, and only behind middleware.ts: this header is trusted
  * precisely because middleware sets them after authenticating. Never call this
  * from client code, and never let a client-supplied header reach it.
  */
 export function currentAccess(): Access {
   const h = headers();
-  return getAccessFromHeaderValues(h.get(ROLE_HEADER), h.get(TENANT_SCOPE_HEADER));
+  return getAccessFromHeaderValue(h.get(GRANTS_HEADER));
 }

@@ -77,7 +77,9 @@ test("ROLES has no SQL counterpart to drift from", () => {
   // (environment, not schema), so if a `role` column ever appears here, this
   // test is where the fourth copy should be caught.
   assert.ok(!/CHECK\s*\(\s*role\s+IN/i.test(SCHEMA), "a role CHECK now exists — pin it above");
-  assert.deepEqual([...ROLES], ["viewer", "operator", "admin"]);
+  assert.deepEqual([...ROLES], [
+    "developer", "design_approver", "operator", "hitl_reviewer", "release_approver", "administrator", "super_user",
+  ]);
 });
 
 test("the constraint reader actually reads constraints", () => {

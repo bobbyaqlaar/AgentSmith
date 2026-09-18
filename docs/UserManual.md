@@ -3423,29 +3423,32 @@ who acted, blank for machine-to-machine calls), and parameterised SQL. They do
 `runtime/trace_redactor.py` scrubs the worker's spans, and nothing stands
 between a portal span and the collector.
 
-**Multi-user RBAC (optional):** set `OPS_PORTAL_USERS` instead of/alongside
-`OPS_PORTAL_USER`/`PASSWORD` for per-user roles and tenant scoping:
+**Users and roles (optional):** set `OPS_PORTAL_USERS` instead of the single
+`OPS_PORTAL_USER`/`PASSWORD` pair. Each user holds one or more **grants** — a role and the apps
+it covers:
 
 ```bash
 OPS_PORTAL_USERS='[
-  {"username":"alice","password":"...","role":"admin","tenants":"*"},
-  {"username":"bob-readonly","password":"...","role":"viewer","tenants":["acme"]}
+  {"username":"alice","password":"...","grants":[{"role":"administrator","apps":"*"}]},
+  {"username":"bob","password":"...","grants":[
+    {"role":"developer","apps":["acme"]},
+    {"role":"design_approver","apps":["acme"]}]},
+  {"username":"carol","password":"...","grants":[{"role":"operator","apps":["acme","globex"]}]}
 ]'
 ```
 
-For SSO, set `OPS_PORTAL_SSO_USERS` the same way, keyed by email instead of
-username/password:
+For SSO, set `OPS_PORTAL_SSO_USERS` the same way, keyed by email:
 
 ```bash
-OPS_PORTAL_SSO_USERS='[{"email":"alice@corp.com","role":"admin","tenants":"*"}]'
+OPS_PORTAL_SSO_USERS='[{"email":"alice@corp.com","grants":[{"role":"administrator","apps":"*"}]}]'
 ```
 
-Roles: `viewer` (read-only, scoped tenants), `operator` (+ create tenants,
-mint widget tokens), `admin` (+ revoke widget tokens, read the audit log,
-implicitly all tenants if `"tenants": "*"`). An authenticated SSO identity
-not listed in `OPS_PORTAL_SSO_USERS` gets `viewer` with **zero** tenant
-access, not full access — there is no implicit-admin fallback for "any
-authenticated user." See docs/DESIGN.md › Federated Observability "Role-Based Access Control".
+Roles: `developer`, `design_approver`, `operator`, `hitl_reviewer`, `release_approver`,
+`administrator` and `super_user`; what each may do is in docs/DESIGN.md › Federated
+Observability "Role-Based Access Control". `administrator` and `super_user` must cover `"*"`.
+An authenticated SSO identity not listed gets no access at all. Entries in the earlier
+`{"role":"viewer|operator|admin","tenants":…}` form keep working with exactly the access they
+had.
 
 #### Wire tenant history sync
 
@@ -3512,10 +3515,8 @@ only — never set it in a real deployment. Session `jti` revocation is always
 on; `SSO_REVOCATION_MODE=fail-closed` prefers availability loss over a missed
 revoke when `session-status` is down (SEC-SSO-001 / docs/DESIGN.md › Enterprise Install and Compliance Pack).
 
-Each SSO identity's role and tenant access are resolved via
-`OPS_PORTAL_SSO_USERS` (see Ops Portal setup above) — logging in via SSO grants
-`viewer`/no-tenants by default, not admin access, until the identity is
-added to that list.
+Each SSO identity's grants are resolved via `OPS_PORTAL_SSO_USERS` (see Ops Portal setup
+above) — logging in via SSO grants nothing until the identity is added to that list.
 
 `POST /api/auth/logout` revokes the session server-side (not just the
 client cookie) by recording the session's `jti` claim in the

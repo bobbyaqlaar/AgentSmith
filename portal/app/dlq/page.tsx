@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getDLQStatus } from "@/lib/dlq";
-import { filterTenantIds } from "@/lib/authz";
+import { appsWith } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { MetricCard } from "@/components/ui/Card";
 
@@ -10,7 +10,7 @@ export default async function DLQPage() {
   const access = currentAccess();
 
   const dlq = await getDLQStatus();
-  const visibleTenantIds = filterTenantIds(access, Object.keys(dlq.pendingByTenant));
+  const visibleTenantIds = appsWith(access, "ops.read", Object.keys(dlq.pendingByTenant));
   const totalPending = visibleTenantIds.reduce((sum, id) => sum + (dlq.pendingByTenant[id] ?? 0), 0);
 
   return (

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { listDLQEntries } from "@/lib/dlq";
-import { canAccessTenant } from "@/lib/authz";
+import { can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { DlqEntryCard } from "@/components/DlqEntryCard";
 import { isTruncated } from "@/lib/cappedList";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TenantDlqPage({ params }: { params: { tenantId: string } }) {
   const access = currentAccess();
-  if (!canAccessTenant(access, params.tenantId)) notFound();
+  if (!can(access, "ops.read", params.tenantId)) notFound();
 
   const entries = await listDLQEntries(params.tenantId, "pending");
 

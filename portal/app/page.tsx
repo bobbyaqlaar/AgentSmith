@@ -5,7 +5,7 @@ import { getUnresolvedCountByTenant } from "@/lib/issues";
 import { getDLQStatus } from "@/lib/dlq";
 import { getFrameworkVersionByTenant } from "@/lib/runStatus";
 import { FIRST_VERSIONED_RELEASE, versionBreakdown } from "@/lib/wireContract";
-import { filterTenantIds } from "@/lib/authz";
+import { appsWith } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { MetricCard } from "@/components/ui/Card";
 import { Badge, toneForRunStatus } from "@/components/ui/Badge";
@@ -22,7 +22,7 @@ export default async function TenantOverviewPage() {
     getDLQStatus(),
     getFrameworkVersionByTenant(),
   ]);
-  const visibleIds = new Set(filterTenantIds(access, allTenants.map((t) => t.tenantId)));
+  const visibleIds = new Set(appsWith(access, "ops.read", allTenants.map((t) => t.tenantId)));
   const tenants = allTenants.filter((t) => visibleIds.has(t.tenantId));
 
   const totalSpend = spend.wired

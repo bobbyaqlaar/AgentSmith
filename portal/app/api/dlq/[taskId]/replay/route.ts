@@ -13,13 +13,13 @@ import {
   ReplayNotConfiguredError,
   ReplayWebhookError,
 } from "@/lib/dlq";
-import { canAccessTenant, canWrite } from "@/lib/authz";
+import { can, roleFor } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { portalSpan, withIdentity } from "@/lib/tracing";
 
 export async function POST(request: Request, { params }: { params: { taskId: string } }) {
   const access = currentAccess();
-  if (!canWrite(access)) {
+  if (!can(access, "ops.dlq")) {
     return NextResponse.json({ error: "operator or admin role required to replay DLQ entries" }, { status: 403 });
   }
 
@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: { taskId: str
   }
   // Treat out-of-scope identically to nonexistent — same posture as the
   // tenant detail page (a 403 would itself leak "this entry exists").
-  if (!canAccessTenant(access, entry.tenantId)) {
+  if (!can(access, "ops.dlq", entry.tenantId)) {
     return NextResponse.json({ error: `Unknown DLQ entry ${params.taskId}` }, { status: 404 });
   }
   if (entry.status !== "pending") {
@@ -47,7 +47,7 @@ export async function POST(request: Request, { params }: { params: { taskId: str
     // first. The span records WHO (role, never the person) and WHICH entry,
     // and deliberately not the payload: it is operator-edited tenant data and
     // no redactor stands between a portal span and the exporter.
-    await withIdentity({ tenantId: entry.tenantId, actorRole: access.role }, () =>
+    await withIdentity({ tenantId: entry.tenantId, actorRole: roleFor(access, "ops.dlq", entry.tenantId) }, () =>
       portalSpan(
         "portal.dlq.replay",
         { attributes: { "dlq.task_id": entry.taskId, "dlq.resumable": Boolean(entry.workflowId && entry.gateId) } },

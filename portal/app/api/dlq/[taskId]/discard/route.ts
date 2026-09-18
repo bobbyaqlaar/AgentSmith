@@ -4,22 +4,22 @@
 
 import { NextResponse } from "next/server";
 import { getDlqEntry, discardDlqEntry } from "@/lib/dlq";
-import { canAccessTenant, canWrite } from "@/lib/authz";
+import { can, roleFor } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { portalSpan, withIdentity } from "@/lib/tracing";
 
 export async function POST(_request: Request, { params }: { params: { taskId: string } }) {
   const access = currentAccess();
-  if (!canWrite(access)) {
+  if (!can(access, "ops.dlq")) {
     return NextResponse.json({ error: "operator or admin role required to discard DLQ entries" }, { status: 403 });
   }
 
   const entry = await getDlqEntry(params.taskId);
-  if (!entry || !canAccessTenant(access, entry.tenantId)) {
+  if (!entry || !can(access, "ops.dlq", entry.tenantId)) {
     return NextResponse.json({ error: `Unknown DLQ entry ${params.taskId}` }, { status: 404 });
   }
 
-  const discarded = await withIdentity({ tenantId: entry.tenantId, actorRole: access.role }, () =>
+  const discarded = await withIdentity({ tenantId: entry.tenantId, actorRole: roleFor(access, "ops.dlq", entry.tenantId) }, () =>
     portalSpan(
       "portal.dlq.discard",
       { attributes: { "dlq.task_id": entry.taskId } },

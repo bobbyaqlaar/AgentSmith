@@ -10,29 +10,40 @@
         "config",
         "middleware"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T14:48:39Z",
       "id": "portal/middleware.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
+        "PERMISSIONS",
+        "Permission",
         "ROLES",
         "Role",
+        "LEGACY_ROLES",
+        "AnyRole",
+        "ROLE_PERMISSIONS",
+        "Grant",
         "Access",
-        "ROLE_HEADER",
-        "TENANT_SCOPE_HEADER",
+        "GRANTS_HEADER",
+        "RETIRED_HEADERS",
+        "can",
+        "roleFor",
+        "appsWith",
+        "AREAS",
+        "Area",
+        "areas",
+        "parseGrants",
+        "SINGLE_USER_GRANTS",
         "verifyBasicAuthCredentials",
         "getAccessForSsoEmail",
-        "encodeTenantScopeHeader",
-        "decodeTenantScopeHeader",
-        "canAccessTenant",
-        "filterTenantIds",
-        "canWrite",
-        "canAdmin",
-        "getAccessFromHeaderValues"
+        "encodeGrantsHeader",
+        "decodeGrantsHeader",
+        "stripAccessHeaders",
+        "getAccessFromHeaderValue"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T14:48:46Z",
       "id": "portal/lib/authz.ts"
     },
     {
@@ -2793,7 +2804,7 @@
         "dynamic",
         "TenantOverviewPage"
       ],
-      "last_modified": "2026-08-25T20:58:03Z",
+      "last_modified": "2026-09-18T14:47:19Z",
       "id": "portal/app/page.tsx"
     },
     {
@@ -2807,7 +2818,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T14:48:39Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -3067,7 +3078,7 @@
       "symbols": [
         "currentAccess"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-18T14:46:57Z",
       "id": "portal/lib/currentAccess.ts"
     },
     {
@@ -3121,7 +3132,7 @@
         "dynamic",
         "AuditLogPage"
       ],
-      "last_modified": "2026-08-25T09:23:32Z",
+      "last_modified": "2026-09-18T14:47:19Z",
       "id": "portal/app/audit/page.tsx"
     },
     {
@@ -3131,7 +3142,7 @@
         "dynamic",
         "DLQPage"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-09-18T14:47:19Z",
       "id": "portal/app/dlq/page.tsx"
     },
     {
@@ -3141,7 +3152,7 @@
         "GET",
         "POST"
       ],
-      "last_modified": "2026-08-24T23:16:37Z",
+      "last_modified": "2026-09-18T14:48:19Z",
       "id": "portal/app/api/tenants/route.ts"
     },
     {
@@ -3150,7 +3161,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-09-18T14:47:19Z",
       "id": "portal/app/api/audit/route.ts"
     },
     {
@@ -3159,7 +3170,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-09-18T14:47:19Z",
       "id": "portal/app/api/dlq/route.ts"
     },
     {
@@ -3186,7 +3197,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-24T22:41:52Z",
+      "last_modified": "2026-09-18T14:47:51Z",
       "id": "portal/app/api/dlq/[taskId]/discard/route.ts"
     },
     {
@@ -3195,7 +3206,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T14:47:51Z",
       "id": "portal/app/api/dlq/[taskId]/replay/route.ts"
     },
     {
@@ -3213,7 +3224,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-08-24T22:41:52Z",
+      "last_modified": "2026-09-18T14:47:51Z",
       "id": "portal/app/api/tenants/[id]/cost/route.ts"
     },
     {
@@ -3223,7 +3234,7 @@
         "POST",
         "DELETE"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T14:47:19Z",
       "id": "portal/app/api/tenants/[id]/widget-token/route.ts"
     },
     {
@@ -3232,7 +3243,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-08-24T23:58:48Z",
+      "last_modified": "2026-09-18T14:47:51Z",
       "id": "portal/app/api/tenants/[id]/issues/route.ts"
     },
     {
@@ -3290,7 +3301,7 @@
         "dynamic",
         "TenantDlqPage"
       ],
-      "last_modified": "2026-08-24T23:58:16Z",
+      "last_modified": "2026-09-18T14:47:19Z",
       "id": "portal/app/dlq/[tenantId]/page.tsx"
     },
     {
@@ -3300,7 +3311,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-09-14T19:07:37Z",
+      "last_modified": "2026-09-18T14:47:19Z",
       "id": "portal/app/tenants/[id]/page.tsx"
     },
     {
@@ -3763,7 +3774,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T23:26:51Z",
+      "last_modified": "2026-09-18T14:46:57Z",
       "id": "portal/test/catalogs.test.ts"
     },
     {
@@ -5987,6 +5998,14 @@
       "pillar": null,
       "created_at": "2026-09-18T14:43:26Z",
       "id": "rfc:reviews/portal-phase1-s1.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 portal phase 1, S2: seven roles",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/portal-phase1-s2.md",
+      "pillar": null,
+      "created_at": "2026-09-18T14:50:52Z",
+      "id": "rfc:reviews/portal-phase1-s2.md"
     }
   ],
   "edges": [

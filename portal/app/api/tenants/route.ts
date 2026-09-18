@@ -3,7 +3,7 @@ import { listTenants, upsertTenant } from "@/lib/tenants";
 import { getAllTenantsCurrentSpend } from "@/lib/cost";
 import { getUnresolvedCountByTenant } from "@/lib/issues";
 import { getDLQStatus } from "@/lib/dlq";
-import { canAccessTenant, canWrite, filterTenantIds } from "@/lib/authz";
+import { appsWith, can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { ISOLATION_VALUES, isValidIsolation } from "@/lib/isolation";
 import { isSafeHttpUrl } from "@/lib/safeUrl";
@@ -19,7 +19,7 @@ export async function GET() {
       getDLQStatus(),
     ]);
 
-    const visibleIds = new Set(filterTenantIds(access, tenants.map((t) => t.tenantId)));
+    const visibleIds = new Set(appsWith(access, "ops.read", tenants.map((t) => t.tenantId)));
 
     const data = tenants
       .filter((t) => visibleIds.has(t.tenantId))
@@ -40,8 +40,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const access = currentAccess();
-  if (!canWrite(access)) {
-    return NextResponse.json({ error: "operator or admin role required" }, { status: 403 });
+  if (!can(access, "ops.app_settings")) {
+    return NextResponse.json({ error: "Operator or Administrator role required" }, { status: 403 });
   }
 
   // `.catch(() => null)` like every other body-reading route — malformed JSON
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   // replay webhook URL and secret the portal signs outgoing payloads with.
   // A scoped operator can still edit its own tenants; creating a new one
   // requires the "*" scope, which is what an unscoped operator/admin has.
-  if (!canAccessTenant(access, body.tenantId)) {
+  if (!can(access, "ops.app_settings", body.tenantId)) {
     return NextResponse.json(
       { error: `forbidden: no access to tenant ${body.tenantId}` },
       { status: 403 },

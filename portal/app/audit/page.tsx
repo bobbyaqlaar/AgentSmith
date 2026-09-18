@@ -1,5 +1,5 @@
 import { listAuditEvents } from "@/lib/auditLog";
-import { canAdmin } from "@/lib/authz";
+import { can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { Badge } from "@/components/ui/Badge";
 import { Timestamp } from "@/components/ui/Timestamp";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function AuditLogPage() {
   const access = currentAccess();
 
-  if (!canAdmin(access)) {
+  if (!can(access, "admin.audit")) {
     return (
       <div className="space-y-2">
         <h2 className="text-xl font-medium">Audit log</h2>
