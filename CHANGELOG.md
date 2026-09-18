@@ -75,6 +75,15 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — `process_gate.py ci --json`: what the gate decided, per commit
+
+- `ci --json FILE` writes one record per commit alongside the usual report: the verdict
+  (`passed`, `failed`, `passed_with_notes`, `not_gated`, `before_adoption`), errors and notes,
+  the design and review the commit named with their pillars, deviations, passes and sign-off,
+  and the commits a `Repairs:` trailer names. It is written whatever the verdict, and carries a
+  `schema` number. Without the flag, `ci` behaves exactly as before. This is what the portal's
+  Dev workspace will receive (portal phase 1).
+
 ### Fixed — the shell pre-check lets an agent ask whether the repo is armed
 
 - **`git config core.hooksPath` with no value is a read, and is no longer refused.** Neither are

@@ -1,5 +1,5 @@
 ---
-status: draft
+status: approved
 scope:
   - portal/**
   - scripts/process_gate.py
@@ -9,9 +9,9 @@ scope:
 ---
 # The portal is the control plane: a Dev workspace and an Ops workspace
 
-UI specification. `draft` until the owner approves it; the gate reads only `active` designs, so
-this authorises no edit yet. Each phase below becomes active on its own, with its scope narrowed
-to what that phase touches.
+UI specification, approved by the owner on 2026-09-18. The gate reads only `active` designs, so
+this document authorises no edit itself: each phase is built under its own design
+(`.agent-rfc/designs/portal-phase1.md`, …), scoped to what that phase touches.
 
 ## Decisions (owner, 2026-09-18)
 
@@ -186,8 +186,9 @@ and age. The count in the header is the same number.
 
 ### App › Gates (`/dev/apps/<app>/gates`)
 
-The latest result of each CI gate step for the app's default branch, with the run link;
-bypass-sweep findings and whether each has been repaired (the `Repairs:` commit).
+The commit gate's failures on the default branch, whether each has been repaired (the
+`Repairs:` commit), and a link to the CI run that sent them. Each CI gate step's own latest
+result needs GitHub's API, so it arrives with the GitHub App in phase 2.
 
 ### Trace-back (`/dev/apps/<app>/commits/<sha>`) — the accountability chain
 

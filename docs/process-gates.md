@@ -23,6 +23,14 @@ the tenants that adopted it — AqlaarTeleologyStudio and KYC Sentinel. Designs:
 | **Sweep** — `.githooks/pre-commit`, `.githooks/pre-push`, session start, stop | every commit, push, session start and turn end | a push while any commit that never passed the gate is unrepaired; the next commit must be its repair | nothing local: the sweep is what catches `--no-verify`, an unarmed clone, a rebase and a cherry-pick |
 | **CI gate** — Self-Test job `process-gates` | every push and pull request | a pushed range with any non-compliant gated commit, or tenant-facing changes without a CHANGELOG update | nothing in the repo — but it reports red after a push rather than refusing it (below) |
 
+**What the CI gate decided, per commit, can be written out:** `process_gate.py ci
+--json FILE` writes, alongside the usual report, one record per commit in the range
+— its verdict, errors and notes, the design and review it named (or why they did
+not resolve), each pillar's kind, each deviation's text hash and approval, each
+review pass, and the commits a `Repairs:` trailer names. The file is written
+whatever the verdict. It is what the portal's Dev workspace is sent, so the portal
+shows the gate's verdict rather than reaching its own.
+
 **What no gate can check** is whether the design was *good*. The gates prove a
 design exists, is scoped to the change, and cites real levers; that a review
 ran until a pass found nothing; and that the review is as fresh as the change.
