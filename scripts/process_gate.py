@@ -1233,6 +1233,9 @@ def cmd_ci(base: str, head: str, json_path: Optional[str] = None) -> int:
             "commits": records,
             "designs": designs_at(root, head_sha, head_config),
         }
+        run = [os.environ.get(k) for k in ("GITHUB_SERVER_URL", "GITHUB_REPOSITORY", "GITHUB_RUN_ID")]
+        if all(run):
+            document["ci_run_url"] = f"{run[0]}/{run[1]}/actions/runs/{run[2]}"
         Path(json_path).write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
     changelog_error = None

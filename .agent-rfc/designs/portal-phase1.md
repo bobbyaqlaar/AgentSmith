@@ -6,7 +6,8 @@ scope:
   - scripts/test/test_process_gate.py
   - scripts/test/test_dev_record.py
   - portal/**
-  - workflow-templates/**
+  - scripts/send_dev_record.py
+  - scripts/test/test_send_dev_record.py
   - .github/workflows/self-test.yml
   - .github/workflows/scratch-tenants.yml
   - .agent-rfc/fixtures/knowledge_graph.json
@@ -124,14 +125,23 @@ log. Needs `admin.apps`.
 
 ### S7 — CI sends the record
 
-- The process-gates job in `workflow-templates/` and AgentSmith's own `self-test.yml` run
-  `ci --json dev-record.json`, then post it when `AGENTSMITH_PORTAL_URL` and
-  `AGENTSMITH_PORTAL_INGEST_TOKEN` are set. When they are not, the step says so in one notice and
-  succeeds: a tenant without a portal is not a failed build.
-- A refused post (4xx) fails the step with the portal's reason; the portal unreachable (5xx,
-  timeout) is a warning — the gate's verdict does not depend on the portal being up.
-- Documentation: the manual's Ops Portal section and the design document's portal section
-  describe the Dev workspace, the roles and the new configuration form.
+Corrected while building: the design assumed a process-gates job in `workflow-templates/`. There
+is none — tenants get the gate's local hooks from `tenant init`, and only repositories that
+adopted the gate by hand (AgentSmith, KYC Sentinel, OTS) run it in CI. Adding a gate job to every
+tenant template changes every tenant's CI, the scratch tenants' included (their generated commits
+carry no design trailers); that is its own design, recorded in the backlog.
+
+- **`scripts/send_dev_record.py FILE`** posts the record to `$AGENTSMITH_PORTAL_URL/api/dev/ingest`
+  with `$AGENTSMITH_PORTAL_INGEST_TOKEN`. Not configured: one notice, exit 0 — a repository without
+  a portal is not a failed build. Refused (4xx): the portal's reason as an error, exit 1.
+  Unreachable or 5xx: a warning, exit 0 — the gate's verdict does not depend on the portal being
+  up. A plain-`http` portal other than localhost is refused before the token is sent. A range over
+  the ingest's 500-commit limit goes in parts, the designs with the last.
+- **The record names its CI run** (`ci_run_url`) when it is written inside GitHub Actions.
+- **AgentSmith's Self-Test** writes the record and sends it, after the gate, whatever the gate
+  decided.
+- **Documentation:** the manual's Ops Portal section says how to register an app, and the two
+  lines to add to an existing process-gates job.
 
 ## Pillars
 
@@ -148,7 +158,7 @@ log. Needs `admin.apps`.
 - P13 applies — the portal is sent the verdict `scripts/process_gate.py` reached and cannot change it; `dev_commits` is a cache that can be rebuilt from git.
 - P14 applies — the ingest's `schema` field pins the record's shape; `scripts/test/test_dev_record.py` pins what the gate emits.
 - P15 applies — `before_adoption`, `not_gated` and `passed_with_notes` are distinct verdicts, pinned by `scripts/test/test_dev_record.py`; "no data received", "not available for GitLab" and "stale" are distinct states on the Dev pages (S5).
-- P16 applies — a refused ingest stores nothing and says why; an unreachable portal warns without failing the gate, in `workflow-templates/`.
+- P16 applies — a refused ingest stores nothing and says why; an unreachable portal warns without failing the gate, in `scripts/send_dev_record.py`.
 
 ## Deviations
 

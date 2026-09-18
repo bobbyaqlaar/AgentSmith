@@ -3462,6 +3462,43 @@ curl -X POST https://ops.example.com/api/sync/history \
 
 A tenant auto-registers on its first sync — no separate provisioning step.
 
+#### Connect an app to the Dev workspace
+
+The Dev workspace (`/dev`) shows what each app's process gate decided about every commit: its
+design, pillars, deviations and approvals, review passes, and failures with their repairs. It
+reads only what the app's CI sends; nothing is fetched from the repository.
+
+1. **Register the app** under Administration › Apps (`/admin/apps`) with its repository URL and
+   provider. An Administrator does this.
+2. **Issue its ingest token** on the app's page. The token is shown once. Set two secrets in the
+   app's repository: `AGENTSMITH_PORTAL_INGEST_TOKEN` to the token and `AGENTSMITH_PORTAL_URL` to
+   this portal's `https://` address.
+3. **Have its process-gates job write and send the record** — two changes to a job that already
+   runs the gate:
+
+   ```yaml
+   - name: "Every gated commit has a design and a clean review"
+     run: python3 <gate>/process_gate.py ci --base "$BASE" --head "$HEAD_SHA" --json "$RUNNER_TEMP/dev-record.json"
+   - name: "Send the gate's record to the portal"
+     if: always()
+     env:
+       AGENTSMITH_PORTAL_URL: ${{ secrets.AGENTSMITH_PORTAL_URL }}
+       AGENTSMITH_PORTAL_INGEST_TOKEN: ${{ secrets.AGENTSMITH_PORTAL_INGEST_TOKEN }}
+     run: python3 <gate>/send_dev_record.py "$RUNNER_TEMP/dev-record.json"
+   ```
+
+   `<gate>` is `scripts` in AgentSmith and in a tenant that carries the scripts, and the framework
+   checkout's `scripts` in one that installs the framework. The send step runs whatever the gate
+   decided. Without the secrets it says so and passes; a portal that refuses the record fails the
+   step with the reason; a portal that is down only warns.
+
+The first push after that fills the app's pages. Until then the workspace says "No data received";
+data older than 24 hours is marked stale.
+
+**Who sees what** is set per user in `OPS_PORTAL_USERS` / `OPS_PORTAL_SSO_USERS` (Ops Portal
+setup, above): a `developer` or `design_approver` grant opens the Dev workspace for the apps it
+lists.
+
 #### Audit log (enterprise pack, docs/DESIGN.md › Enterprise Install and Compliance Pack)
 
 ```bash

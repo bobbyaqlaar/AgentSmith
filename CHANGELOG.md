@@ -75,6 +75,19 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — sending the gate's record to the portal (portal phase 1)
+
+- `scripts/send_dev_record.py FILE` posts what `process_gate.py ci --json` wrote to the portal,
+  with the app's ingest token. Without `AGENTSMITH_PORTAL_URL` and
+  `AGENTSMITH_PORTAL_INGEST_TOKEN` it says so and passes; a refusal fails the step with the
+  portal's reason; a portal that is down only warns. It will not send the token to a plain-`http`
+  portal other than localhost. A range over 500 commits goes in parts.
+- The record names its CI run when written inside GitHub Actions.
+- AgentSmith's own Self-Test sends its record. For a tenant, the manual's "Connect an app to the
+  Dev workspace" gives the two lines to add to an existing process-gates job. The tenant CI
+  templates do not yet run a process-gates job at all — a backlog item with its own design to
+  come.
+
 ### Added — Administration › Apps (portal phase 1)
 
 - `/admin/apps`: register an app (id, name, repository, provider, default branch), edit it, and

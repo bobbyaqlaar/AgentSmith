@@ -102,7 +102,7 @@ CI stays the authority.
 
 | Gate | Workflow · job | Runs | Locally |
 |---|---|---|---|
-| Every gated commit has a design and a clean review | `.github/workflows/self-test.yml` · Process gates (design + review) | `python3 scripts/process_gate.py ci --base "$BASE" --head "$HEAD_SHA"` | yes |
+| Every gated commit has a design and a clean review | `.github/workflows/self-test.yml` · Process gates (design + review) | `python3 scripts/process_gate.py ci --base "$BASE" --head "$HEAD_SHA" --json "${RUNNER_TEMP:-/tmp}/dev-record.json"` | yes |
 | ruff (lint config lives in pyproject.toml) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | mypy (shipped runtime only — see pyproject.toml for the scope) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | mutation_check.py (curated — the properties we chose to defend) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |

@@ -4598,7 +4598,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-18T15:13:27Z",
+      "last_modified": "2026-09-18T15:29:34Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -6451,6 +6451,49 @@
       "pillar": null,
       "created_at": "2026-09-18T15:24:06Z",
       "id": "rfc:reviews/portal-phase1-s6.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_say",
+        "_parts",
+        "main"
+      ],
+      "last_modified": "2026-09-18T15:29:56Z",
+      "id": "scripts/send_dev_record.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "Portal",
+        "record",
+        "send",
+        "test_without_a_portal_configured_it_says_so_and_succeeds",
+        "test_a_stored_record_succeeds_with_the_token_as_a_bearer",
+        "test_a_refused_record_fails_the_step_with_the_portals_reason",
+        "test_a_portal_that_is_down_is_a_warning_not_a_failure",
+        "test_security_a_plain_http_portal_is_refused_before_the_token_is_sent",
+        "test_a_long_range_goes_in_parts_with_the_designs_last",
+        "test_no_record_file_is_a_warning",
+        "test_the_gate_names_the_ci_run_inside_github_actions",
+        "__init__",
+        "close",
+        "Handler",
+        "do_POST",
+        "log_message"
+      ],
+      "last_modified": "2026-09-18T15:29:46Z",
+      "id": "scripts/test/test_send_dev_record.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 portal phase 1, S7: CI sends the gate's record",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/portal-phase1-s7.md",
+      "pillar": null,
+      "created_at": "2026-09-18T15:30:47Z",
+      "id": "rfc:reviews/portal-phase1-s7.md"
     }
   ],
   "edges": [
