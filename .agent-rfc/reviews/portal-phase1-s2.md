@@ -51,6 +51,18 @@ declined:
 - Moving users to the database now. That is phase 2, with passkeys; configuration stays in the
   environment until then.
 
+## Pass 3 — findings: 1
+
+- `run-the-gates-ci-lists` — **finding, after the fact:** this slice changed only the portal, so
+  the Python suite was not run for it, and `test_documented_env_vars_exist.py` checks every
+  backticked constant the documents name — the archive names `ROLE_HEADER` and
+  `TENANT_SCOPE_HEADER`, which this slice removed. Found by the full suite at the end of phase 1.
+  They are listed with the other identifiers the history names, with the reason.
+
+## Pass 4 — findings: 0
+
+The full Python suite, the portal's suites and the CI gate over every phase 1 commit.
+
 ## Sign-off (validation-checklist Step 4)
 
 ```
@@ -65,7 +77,7 @@ Group 7 · Auth & session integrity    [x] checked
 Tests added/updated:      portal/test/authz.test.ts (28), portal/test/catalogs.test.ts
 Mutation-checked:          yes — fourteen, each reverted; one survivor became finding 3
 Fixtures re-pinned:        .agent-rfc/fixtures/knowledge_graph.json
-KG query:                 kg:8e29af19ccb3
+KG query:                 kg:100b95360ab6
 Gates run locally:         npm test, tsc --noEmit, next build
 Declared gaps:             none
 ```

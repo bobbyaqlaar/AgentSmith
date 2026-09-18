@@ -61,6 +61,11 @@ ALLOWED = {
     # what was removed, which is not a claim that they work.
     "OS_LLM_BASE_URL",
     "OS_LLM_API_KEY",
+    # The portal's two trusted request headers before phase 1 (2026-09-18), replaced
+    # by one, x-af-grants (portal/lib/authz.ts GRANTS_HEADER). The archive names
+    # them in the history of an earlier refactor, which is not a claim they exist.
+    "ROLE_HEADER",
+    "TENANT_SCOPE_HEADER",
 }
 
 # Placeholders a reader is meant to substitute (YOUR_GCP_PROJECT_ID, ...).

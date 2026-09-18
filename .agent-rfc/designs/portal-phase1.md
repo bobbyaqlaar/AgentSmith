@@ -5,6 +5,7 @@ scope:
   - scripts/gate_models.py
   - scripts/test/test_process_gate.py
   - scripts/test/test_dev_record.py
+  - scripts/test/test_documented_env_vars_exist.py
   - portal/**
   - scripts/send_dev_record.py
   - scripts/test/test_send_dev_record.py
