@@ -1398,6 +1398,8 @@ AgentSmith/
 │   ├── reviews/                 # Review records, one pass per heading, clean when the last finds 0
 │   └── security/                # This repo's own agency manifest, NIST profile, risk register, tool allowlist
 ├── .githooks/                   # Commit gate + process-gate launcher (git config core.hooksPath .githooks) — copied verbatim to tenants that adopt the gates; not the tenant hooks/
+├── .cursor/                     # Cursor's hook config, generated from templates/governance.json → ides (preToolUse+Write is the edit gate, beforeShellExecution the shell one)
+│   └── hooks.json
 ├── .agenticframework/
 │   └── process-gates.json       # What this repo's process gates cover (docs/process-gates.md)
 ├── init-db/                     # Postgres bootstrap for docker-compose.yml (creates agenticframework DB)
