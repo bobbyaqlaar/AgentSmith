@@ -676,7 +676,7 @@
         "stats",
         "as_json"
       ],
-      "last_modified": "2026-08-24T11:07:12Z",
+      "last_modified": "2026-09-17T21:27:11Z",
       "id": "scripts/local_knowledge_graph.py"
     },
     {
@@ -1140,7 +1140,7 @@
         "test_every_stacks_ci_runs_the_strict_security_harness",
         "test_governance_steps_block_on_failure"
       ],
-      "last_modified": "2026-09-16T07:47:30Z",
+      "last_modified": "2026-09-18T00:02:24Z",
       "id": "scripts/test/test_workflow_template_wiring.py"
     },
     {
@@ -4547,6 +4547,7 @@
         "load_approvals",
         "trailer",
         "resolve_record",
+        "kg_problems",
         "check_change",
         "git",
         "repo_root",
@@ -4600,7 +4601,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-17T20:59:47Z",
+      "last_modified": "2026-09-17T21:30:32Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4699,7 +4700,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-09-17T21:08:49Z",
+      "last_modified": "2026-09-18T00:07:30Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5735,6 +5736,54 @@
       "pillar": null,
       "created_at": "2026-09-17T21:15:55Z",
       "id": "rfc:reviews/idempotency-row-boundary.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "Impact",
+        "_dependents",
+        "impact",
+        "changed_files",
+        "render_impact"
+      ],
+      "last_modified": "2026-09-17T21:30:11Z",
+      "id": "scripts/gate_kg.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_impact_is_the_change_plus_one_hop_of_dependents",
+        "test_a_file_the_graph_does_not_know_is_still_in_the_scope",
+        "test_the_lever_groups_come_from_what_was_touched",
+        "test_the_hash_is_the_scope_not_the_bytes",
+        "test_the_order_files_arrive_in_does_not_change_the_hash",
+        "test_the_hash_is_the_same_in_a_second_process",
+        "test_the_hash_is_short_enough_to_type",
+        "test_the_command_reports_the_scope_of_a_diff",
+        "_kg_mode",
+        "_expected",
+        "kg_repo",
+        "test_a_review_without_the_line_is_refused",
+        "test_the_line_must_name_the_scope_that_was_reviewed",
+        "test_the_matching_hash_passes",
+        "test_off_asks_for_no_line",
+        "test_report_says_what_is_missing_without_refusing",
+        "test_a_repo_whose_graph_is_missing_says_so_rather_than_passing",
+        "test_agentsmith_declares_the_mode_it_ships",
+        "test_the_tenant_template_runs_the_same_freshness_check"
+      ],
+      "last_modified": "2026-09-18T00:18:31Z",
+      "id": "scripts/test/test_gate_kg.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 governance enforcement, G4 (reviews that use the graph)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/governance-enforcement-g4.md",
+      "pillar": null,
+      "created_at": "2026-09-18T00:23:47Z",
+      "id": "rfc:reviews/governance-enforcement-g4.md"
     }
   ],
   "edges": [

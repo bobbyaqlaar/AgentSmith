@@ -294,8 +294,13 @@ def test_every_stacks_ci_runs_the_strict_security_harness() -> None:
 GOVERNANCE_STEPS = {
     "RFC gate (Pillar 1)": True,
     "IDE config drift check (Pillar 6/7)": True,
-    # Blocking moves with G4, when the graph is built at onboarding and committed.
-    "Validate Knowledge Graph (Pillar 2)": False,
+    # Blocking since G4 (2026-09-18). It runs `verify_system.py --check-kg`, the
+    # same check the framework runs on itself: the inline version it replaced
+    # rebuilt the graph and then counted nodes in the COMMITTED file without
+    # ever comparing them, so a stale graph passed every run. A tenant with no
+    # graph at all still passes with a warning inside that check, until
+    # `agentsmith tenant init` provisions one (G7).
+    "Validate Knowledge Graph (Pillar 2)": True,
     # Not a gate: it reports on Phoenix and the model registry, which a tenant
     # may legitimately not have configured in CI.
     "Framework health check (Pillar 3/5)": False,

@@ -34,7 +34,14 @@ import process_gate as pg
 needs_git = pytest.mark.skipif(shutil.which("git") is None or shutil.which("bash") is None, reason="git+bash")
 LEVERS = (REPO / "docs" / "review-levers.md").read_text(encoding="utf-8")
 SLUGS = pg.lever_slugs(LEVERS)
-AGENTSMITH = pg.Config(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
+# AgentSmith's own config, with one rule turned off for these tests: the
+# `KG query:` hash is computed from each commit's file set, so a shared review
+# constant cannot carry one, and every commit test in this file would end up
+# asserting about the knowledge graph instead of the rule it is about. That
+# rule has its own tests, which turn it back on (test_gate_kg.py).
+FIXTURE_CONFIG = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+FIXTURE_CONFIG["knowledge_graph"] = "off"
+AGENTSMITH = pg.Config(dict(FIXTURE_CONFIG))
 REGISTRY = AGENTSMITH.load_registry(lambda _p: None)[0]
 DESIGN_PILLARS = ", ".join(f"P{p.id}" for p in REGISTRY.pillars if "design" in p.check)
 
@@ -410,6 +417,11 @@ GATE_FILES = {
     "scripts/gate_ides.py": REPO / "scripts/gate_ides.py",
     "scripts/gate_pillars.py": REPO / "scripts/gate_pillars.py",
     "scripts/gate_shell.py": REPO / "scripts/gate_shell.py",
+    "scripts/gate_kg.py": REPO / "scripts/gate_kg.py",
+    "scripts/local_knowledge_graph.py": REPO / "scripts/local_knowledge_graph.py",
+    # local_knowledge_graph's CLI reaches for the shared helpers; the GATE does
+    # not — it imports gate_kg.py, which is why that split exists.
+    "scripts/_shared.py": REPO / "scripts/_shared.py",
     "scripts/gate_tracing.py": REPO / "scripts/gate_tracing.py",
     "templates/governance.json": REPO / "templates/governance.json",
     "runtime": REPO / "runtime",
@@ -422,7 +434,7 @@ def gated_repo(tmp_path, monkeypatch):
     return _make_repo(tmp_path, "repo", {
         **GATE_FILES,
         "docs/review-levers.md": REPO / "docs/review-levers.md",
-        pg.CONFIG: CONFIG_PATH,
+        pg.CONFIG: json.dumps(FIXTURE_CONFIG, indent=2) + "\n",
         **HOOK_FILES,
     }, monkeypatch)
 
@@ -777,9 +789,10 @@ def test_ci_lists_commits_from_before_adoption_instead_of_failing_them(tmp_path,
     _write(repo, "scripts/other.py", "y = 2\n")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-qm", "feat: before adoption", "--no-verify")
-    for rel, source in {"docs/review-levers.md": REPO / "docs/review-levers.md", pg.CONFIG: CONFIG_PATH}.items():
-        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(source, repo / rel)
+    (repo / "docs").mkdir(parents=True, exist_ok=True)
+    shutil.copy(REPO / "docs/review-levers.md", repo / "docs/review-levers.md")
+    (repo / pg.CONFIG).parent.mkdir(parents=True, exist_ok=True)
+    (repo / pg.CONFIG).write_text(json.dumps(FIXTURE_CONFIG, indent=2) + "\n", encoding="utf-8")
     _write(repo, ".agent-rfc/designs/change.md", DESIGN.replace("scripts/tool.py", pg.CONFIG))
     _write(repo, ".agent-rfc/reviews/change.md", REVIEW_CLEAN)
     _write(repo, "CHANGELOG.md", "adopted\n")

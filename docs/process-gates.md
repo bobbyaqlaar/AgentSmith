@@ -305,6 +305,35 @@ would leave a silent hole in exactly the IDEs nobody here tests daily. Each
 IDE's golden payload is in `scripts/test/fixtures/ide-payloads/`: replace one
 with a real session's payload and the tests say whether anything else changes.
 
+## The scope a review covered
+
+The knowledge graph existed and nothing made a review use it. Where a repo
+declares `knowledge_graph` in its config, a review says which scope it covered:
+
+```bash
+python3 scripts/local_knowledge_graph.py --impact --base HEAD
+```
+
+It lists the files to read — the change plus **one hop** of dependents, because
+two hops out from a shared helper is most of the repo — the lever groups those
+files pull in, and a `KG query:` hash. That hash goes in the sign-off, and the
+commit gate recomputes it from the commit's own file list.
+
+**The hash is the scope, not the diff.** It covers the impacted file SET, so it
+does not go stale on the next keystroke; what it says is "the reviewer looked
+at the right files". Whether the review is as fresh as the change is a separate
+rule that already exists — the record changes in the same commit.
+
+| `knowledge_graph` | Effect |
+|---|---|
+| `off` (default) | nothing is asked for |
+| `report` | a missing or wrong line is listed; nothing is blocked |
+| `enforce` | it is a commit-gate failure |
+
+A missing `knowledge_graph.json` is its own answer — "no graph" and "the scope
+matches" are different facts — and session start prints the current change's
+scope rather than telling an agent to go and run a script.
+
 ## The shell surface
 
 The edit gate watches an IDE's edit tools. The same agent can open a terminal,

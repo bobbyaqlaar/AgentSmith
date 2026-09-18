@@ -75,6 +75,25 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — governance enforcement, slice G4: reviews that use the graph
+
+- **`local_knowledge_graph.py --impact --base <ref>`** turns a diff into the files a reviewer must
+  read (the change plus one hop of dependents), the lever groups those files pull in, and a
+  `KG query:` hash.
+- **The sign-off carries that hash** where a repo declares `knowledge_graph: off | report |
+  enforce` (default `off`), and the commit gate recomputes it from the commit's own file list. The
+  hash covers the file SET, not the diff's bytes: it says which scope was reviewed, and it does
+  not go stale on the next keystroke. AgentSmith runs `enforce`.
+- **Session start prints the current change's scope** instead of telling an agent to run a script.
+- **The impact computation is in `scripts/gate_kg.py`**, which reads the node-link JSON with no
+  networkx and no `scripts/` helpers — the gate runs in every tenant's git hooks and its
+  dependency list stays pydantic plus OpenTelemetry. The CLI re-exports the same function.
+- **The tenant CI template's Knowledge Graph step was checking nothing:** it rebuilt the graph and
+  then counted nodes in the committed file, never comparing them, so a graph months stale passed
+  every run. It calls the same `verify_system.py --check-kg` the framework runs on itself now —
+  which captures the committed shape *before* regenerating — and it blocks. A tenant with no graph
+  still passes with a warning until `agentsmith tenant init` provisions one (G7).
+
 ### Added — governance enforcement, slice G2b: the shell surface
 
 - The gate now sees shell commands, not only edit tools: a `Bash` matcher in `.claude/settings.json`

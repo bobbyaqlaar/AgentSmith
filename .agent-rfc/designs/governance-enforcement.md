@@ -7,6 +7,9 @@ scope:
   - scripts/gate_steps.py
   - scripts/gate_ides.py
   - scripts/gate_shell.py
+  - scripts/gate_kg.py
+  - scripts/local_knowledge_graph.py
+  - scripts/test/test_gate_kg.py
   - scripts/test/fixtures/**
   - .cursor/**
   - .agents/hooks.json
@@ -296,6 +299,30 @@ files under this one, and the stop gate's findings changed between turns.
 
   The review sign-off's `KG query:` line must carry that hash for the reviewed diff, and `check_review` verifies it matches the current diff.
 - **Session start** injects a 20-line KG summary (changed-since-last-session impact) instead of telling the agent to run a script.
+
+**Amended while designing (2026-09-18): what G4 is, and what the hash covers.**
+
+- **Onboarding provisioning stays in G7**, where it is already listed (`tenant init` provisions a
+  committed KG). G4 is the three things that work on a repo that has one: freshness that blocks,
+  `impact` as a command, and the review sign-off carrying its hash.
+- **The gate reads the graph without networkx.** `scripts/requirements-gate.txt` is pydantic and
+  OpenTelemetry — networkx is not in it and should not be, because every git hook in every tenant
+  would pay for it. So `impact` is a pure function over the node-link JSON, in
+  `local_knowledge_graph.py`, and the CLI and the gate call the same one.
+- **The hash covers the impacted FILE SET, not the diff's content.** A content hash would go stale
+  on the next keystroke and turn the sign-off into a thing people paste without reading. What the
+  line is for is "the reviewer looked at the right scope", and the scope is the changed files plus
+  one hop of dependents. The review's freshness relative to the change is already covered: the
+  record must change in the same commit.
+- **`knowledge_graph: "off" | "report" | "enforce"`**, default `off`, in the repo's own config —
+  the third knob with that shape, for the third time for the same reason: the shared registry is
+  read beside the running script, so a requirement added there would judge every commit ever made.
+  AgentSmith runs `enforce`, which means its own review records carry the line from here on.
+- **The tenant CI template's KG step was checking nothing.** It ran the mapper and then counted
+  nodes in the committed file — it never compared them, and it said "skipping staleness check"
+  when the file was missing. It calls the same `verify_system.py --check-kg` the framework uses
+  now, which captures the committed shape BEFORE regenerating, and it blocks. A tenant with no
+  graph at all still passes with a warning until G7 provisions one.
 
 ### G5 — One artifact per type
 

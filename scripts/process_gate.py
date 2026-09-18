@@ -64,6 +64,7 @@ else:
     try:
         import gate_ides as gi
         import gate_models as gm
+        import gate_kg as lkg
         import gate_shell as gsh
         import gate_pillars as gp
         import gate_tracing as gt
@@ -79,6 +80,9 @@ FRAMEWORK_PREFIX = "@framework/"
 FRAMEWORK_ROOT = Path(__file__).resolve().parents[1]
 
 SMALL_CHANGE_LINES = 20
+# Where the graph lives, read at the commit being checked like every record.
+KG_FIXTURE = ".agent-rfc/fixtures/knowledge_graph.json"
+_KG_QUERY = re.compile(r"^\s*KG query[^:\n]*:\s*(\S+)\s*$", re.M)
 Reader = Callable[[str], Optional[str]]
 
 
@@ -153,6 +157,10 @@ class Config:
         # the shared registry, because THIS file is read at the commit being
         # checked: a requirement added to the registry would judge every commit
         # ever made by rules that did not exist when they were made.
+        # Whether a review must name the scope it covered, as the knowledge
+        # graph computes it. Same three modes and the same reason as the two
+        # above: this file is read at the commit being checked.
+        self.kg_mode: str = str(data.get("knowledge_graph") or "off")
         self.pillars_declared: bool = "pillars" in data
         self.pillar_policy, self.pillar_problems = gp.parse_policy(data.get("pillars"))
         self.extends_data = data.get("extends")
@@ -369,6 +377,34 @@ def resolve_record(value: str, directory: str, single: bool = False,
     return path, None
 
 
+def kg_problems(files: List[str], review_text: str, read: Reader) -> List[str]:
+    """The review names the scope it covered, and the scope is recomputed here.
+
+    The line is a hash of the impacted FILE SET — the change plus one hop of
+    dependents — so it says which scope was reviewed, not which bytes. A
+    missing graph is its own answer: "no graph" and "the scope matches" are
+    different facts (`ambiguous-signals`).
+    """
+    graph_text = read(KG_FIXTURE)
+    if graph_text is None:
+        return [f"{KG_FIXTURE} is not in this commit, so the scope of the review cannot be checked — "
+                "build it (`python3 scripts/map_codebase.py`) and commit it"]
+    try:
+        graph = json.loads(graph_text)
+    except json.JSONDecodeError as exc:
+        return [f"{KG_FIXTURE} is not valid JSON ({exc}) — rebuild it with scripts/map_codebase.py"]
+    expected = lkg.impact(graph, files)
+    found = _KG_QUERY.search(review_text)
+    if not found:
+        return ["records no 'KG query:' line — run `python3 scripts/local_knowledge_graph.py --impact "
+                f"--base HEAD`, read what it lists, and put its hash in the sign-off ({expected.query})"]
+    if found.group(1) != expected.query:
+        return [f"'KG query: {found.group(1)}' is not the scope of this change ({expected.query}) — "
+                f"{len(expected.files)} file(s) are in it, including "
+                + ", ".join(expected.files[:3]) + ("…" if len(expected.files) > 3 else "")]
+    return []
+
+
 def check_change(
     files: List[str],
     gated_lines: int,
@@ -485,6 +521,10 @@ def check_change(
             errors.append(f"Review: {file_path} records no passes for {slug} in this commit")
         else:
             errors.extend(f"Review: {path} {e}" for e in check_review(text, registry, config.registry_declared))
+            if config.kg_mode in ("report", "enforce"):
+                scope = [f"Review: {path} {e}" for e in kg_problems(files, text, read)]
+                (errors if config.kg_mode == "enforce" else notes).extend(
+                    scope if config.kg_mode == "enforce" else [f"knowledge graph (report): {s}" for s in scope])
             if file_path not in files:
                 errors.append(
                     f"Review: {file_path} is not changed in this commit — a review older than the change "
@@ -787,6 +827,27 @@ def cmd_session_start(payload: dict) -> int:
             for path, _text, errors in designs:
                 listed.append(f"{path} — INCOMPLETE, unlocks nothing: {errors[0]}" if errors else path)
             lines.append("Active designs: " + "; ".join(listed))
+        if config.kg_mode in ("report", "enforce"):
+            # The graph, read rather than recommended: an agent told to run a
+            # script mostly does not, and a summary it can act on is the point
+            # of having the graph at all.
+            graph_text = _worktree_reader(root)(KG_FIXTURE)
+            uncommitted = _uncommitted_gated(root, config)
+            if graph_text and uncommitted:
+                try:
+                    found = lkg.impact(json.loads(graph_text), uncommitted)
+                except json.JSONDecodeError:
+                    found = None
+                if found is not None:
+                    lines.append(
+                        f"Knowledge graph — this change touches {len(found.files)} file(s): "
+                        + ", ".join(found.files[:12]) + ("…" if len(found.files) > 12 else "")
+                        + (f". Lever groups: {', '.join(str(g) for g in found.groups)}" if found.groups else "")
+                        + f". The review's sign-off carries `KG query: {found.query}`."
+                    )
+            elif not graph_text:
+                lines.append(f"⚠️ {KG_FIXTURE} is missing — build it with "
+                             "`python3 scripts/map_codebase.py`, and commit it.")
         if not (root / "AGENTS.md").is_file() and (root / "scripts/generate-ide-config.py").is_file():
             # Other agents (Codex, Cursor, Gemini, Copilot) read these, not this hook.
             lines.append(

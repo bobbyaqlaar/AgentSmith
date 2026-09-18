@@ -75,32 +75,13 @@ jobs:
 
       - name: "Validate Knowledge Graph (Pillar 2)"
         # agentsmith:gate
-        run: |
-          python3 scripts/map_codebase.py --quiet
-          python3 - <<'EOF'
-          import json, sys
-          from pathlib import Path
-
-          committed = Path(".agent-rfc/fixtures/knowledge_graph.json")
-          if not committed.exists():
-              print("⚠️  No committed knowledge_graph.json — skipping staleness check.")
-              sys.exit(0)
-
-          with committed.open() as f:
-              data = json.load(f)
-
-          node_count = len(data.get("nodes", []))
-          edge_count = len(data.get("edges", data.get("links", [])))
-          print(f"✅ Knowledge Graph: {node_count} nodes, {edge_count} edges")
-
-          if node_count == 0:
-              print("⚠️  Knowledge Graph is empty — map_codebase.py may have failed.")
-              sys.exit(1)
-          EOF
-        # Still warn-only: the graph becomes blocking in G4, when it is built at
-        # onboarding and committed. Blocking it before a tenant HAS one would fail
-        # every CI run for a control that is not provisioned yet.
-        continue-on-error: true
+        # The same check AgentSmith runs on itself. The inline version here
+        # rebuilt the graph and then counted nodes in the committed file — it
+        # never compared them, so a graph stale by months passed every time.
+        # verify_system.py captures the committed shape BEFORE regenerating.
+        # A repo with no graph at all still passes with a warning until
+        # `agentsmith tenant init` provisions one (G7).
+        run: python3 scripts/verify_system.py --check-kg
 
       - name: "RFC gate (Pillar 1)"
         # agentsmith:gate
