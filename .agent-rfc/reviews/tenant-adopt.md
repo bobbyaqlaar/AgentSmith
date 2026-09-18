@@ -107,6 +107,24 @@ The pass-2 fixes and everything they touch. Considered and declined:
 - the gates workflow's default ref, `v1.3.0`, predates the arming rule, so an adopted repository's
   first CI run fails the adoption commit until a release carries it — backlogged as **Now**.
 
+## Pass 4 — findings: 1
+
+After the push (`d2b7f49`), from Self-Test.
+
+- `run-the-gates-ci-lists` — **finding:** Self-Test's mypy step failed on `runtime/cli.py` — a
+  parameter reused for a `Path` in `write_scaffold_records`, and the gate config dict inferred too
+  narrowly once `gated` became a parameter. The local gates I ran were ruff and pytest, not the
+  list CI runs. Fixed (`design_path`; the config dict typed `dict[str, object]`); mypy now passes
+  in a clean environment built from `requirements-lint.txt`, as CI builds it. `agentsmith gates
+  run` over the whole list: its other three failures here were this machine's bare `python3`
+  lacking the framework's packages, and each passes with the framework environment — CI passed
+  them on the same push.
+
+## Pass 5 — findings: 0
+
+The fix and its callers (`tenant init`, `tenant adopt`): the tests that write both designs and
+manifests pass, and the mutation targets are untouched by it.
+
 ## Sign-off (validation-checklist Step 4)
 
 ```
@@ -123,9 +141,10 @@ Tests added/updated:      scripts/test/test_tenant_adopt.py (20), scripts/test/t
                           runtime/test/test_architectures.py (+3), scripts/test/test_process_gate.py (1 re-pinned)
 Mutation-checked:          yes — `scripts/mutation_check.py tenant_adopt`, 18 mutations, all caught
 Fixtures re-pinned:        .agent-rfc/fixtures/knowledge_graph.json
-KG query:                 kg:9a7dfb919371
-Gates run locally:         ruff, the suites above, the repo-tree check from Self-Test, the full pytest run
-                          (1844 passed, 10 skipped), the end-to-end journey with the real CLI
+KG query:                 kg:f9b11352f265
+Gates run locally:         ruff, mypy (clean env, as CI), `agentsmith gates run`, the suites above, the
+                          repo-tree check, the full pytest run (1844 passed, 10 skipped), the
+                          end-to-end journey with the real CLI
 Declared gaps:             (1) the adoption manifest is not signed; (2) the gates workflow's default ref
                               predates the arming rule until the next release; (3) husky re-points
                               core.hooksPath on install
