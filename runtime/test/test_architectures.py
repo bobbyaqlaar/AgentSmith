@@ -98,3 +98,26 @@ def test_the_session_start_line_names_the_style_and_its_rule():
     line = arch.session_start_line("hexagonal", agentic=True)
     assert "Hexagonal" in line and "docs/DESIGN.md" in line and "agent" in line.lower()
     assert arch.session_start_line(None, agentic=False) is None
+
+
+# ── tenant adopt (.agent-rfc/designs/tenant-adopt.md) ────────────────────────
+
+
+def test_a_target_architecture_is_a_direction_and_starts_at_the_repositorys_code():
+    text = arch.render_architecture("python-fastapi", "hexagonal", agentic=True, target=True, source_root="mypkg/")
+    assert text.startswith("## Architecture (target)")
+    assert "may not follow it yet" in text
+    assert "`mypkg/domain/`" in text and "`mypkg/agents/`" in text and "`app/" not in text
+
+
+def test_a_target_without_a_style_does_not_point_at_tenant_init():
+    text = arch.render_architecture("go", None, agentic=False, target=True)
+    assert "No structural style was chosen at adoption" in text and "tenant init" not in text
+
+
+def test_the_adoption_design_describes_an_adoption():
+    text = arch.render_scaffold_design("legacy", "python-fastapi", "layered", False, ["CLAUDE.md"], PILLARS,
+                                       adopted=True)
+    assert "# Adopt legacy" in text and "tenant adopt" in text and "tenant init" not in text
+    assert "`.github/workflows/agentsmith-gates.yml`" in text and "ci-python-fastapi" not in text
+    assert "status: done" in text

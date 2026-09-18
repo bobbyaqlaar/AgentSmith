@@ -218,6 +218,10 @@ Plain `git checkout`, with no path. `git checkout .` also fires the hook, but it
 first reverts every uncommitted change in the working tree — in an existing
 project, that is your work.
 
+That provisions the rules and CI; it does not arm the design and review gates. To
+bring an existing project under them, use `agentsmith tenant adopt` (Create an
+AgentSmith-Governed Repo › Bring an existing repo under the gates).
+
 ### Public vs. Private Repositories
 
 If the repository is public (checked via `gh repo view` when the `gh` CLI is
@@ -942,6 +946,7 @@ The older `ai-*` names map to these one for one
 | Command | Arguments | Description |
 |---|---|---|
 | `agentsmith tenant init` | `<id> [--stack STACK] [--isolation shared\|dedicated]` | Scaffolds `.agenticframework/tenant.yaml` and per-environment CI/CD workflows in the current repo. |
+| `agentsmith tenant adopt` | `<id> [--stack STACK] [--architecture STYLE] [--agentic] [--gate GLOB]… [--framework-ref TAG] [--yes]` | Brings an existing repo under the gates: prints what it found and would do, then — on a yes — gates its code, keeps its hooks, CI, rules and design doc, and prints the adoption commit. |
 | `agentsmith tenant promote` | `<id> --from staging --to production` | Verifies the staging eval gate, then opens a `develop → main` promotion PR. No direct push to `main`. Refuses if `<id>` doesn't exactly match the current repo's `.agenticframework/tenant.yaml` — a same-prefix tenant id (e.g. `acme` vs. `acme-sandbox`) is not a match. |
 
 ### Runtime Flags (Environment Variables)
@@ -1532,6 +1537,13 @@ The gate accepts that review only on the repository's first commit and only whil
 still matches its hash; change one, or add code, and it asks for a real review. Add code in the
 next commit, under a design of its own.
 
+**Vendoring.** When the repo was created on a machine with AgentSmith installed, `git init` put the
+machine's hooks in `.git/hooks`; `tenant init` runs their `post-checkout` before writing the
+manifest, so the vendored `scripts/`, `runtime/` and `fixtures/` go into that first commit too, and
+the workflows' `scripts/*.py` steps can run. Those hooks keep running behind the gates. If the run
+says nothing was vendored, run `git init` in the repo (it adds the machine's hooks and changes
+nothing else) and re-run `tenant init` with `--force`, before the first commit.
+
 This writes:
 - `.agenticframework/tenant.yaml` — tenant id, isolation tier, framework version pin, per-environment Phoenix namespaces and eval thresholds
 - `.github/workflows/ci-<stack>.yml`, `cd-staging.yml`, `cd-production.yml`, plus the reusable eval / security workflows the CI file calls (`eval-scorecard.yml`, `eval-fairness.yml`, `eval-hallucination.yml`, `eval-ttft-live.yml`, `eval-security.yml`, called with `strict: true` by every stack's CI template)
@@ -1540,6 +1552,50 @@ This writes:
 
 Re-running is idempotent — existing files are never overwritten (`--force` replaces them, and
 regenerates the scaffold's design and manifest).
+
+### Bring an existing repo under the gates (`agentsmith tenant adopt`)
+
+`tenant init` is for an empty repo. For one with history, code and tooling of its own:
+
+```bash
+cd /path/to/existing-repo
+agentsmith tenant adopt acme --architecture hexagonal
+```
+
+It reads the repo and prints a plan before writing anything: the stack, the paths it will gate
+(each top-level directory git tracks source files in, plus source files at the root — or exactly
+the `--gate GLOB`s you pass), the hooks the repo already runs, and for every file whether it will
+be created, merged or left alone. Answer `y` to go ahead; off a terminal, pass `--yes`.
+
+What it keeps:
+
+- **Your hooks** (husky, pre-commit, `.git/hooks`) keep running, after the gate. AgentSmith's own
+  `post-checkout` and `post-commit`, which `git init` copies in, are left out: they would vendor
+  framework code and CI workflows into your repo.
+- **Your CI** is left alone. One workflow is added, `.github/workflows/agentsmith-gates.yml`, which
+  checks out AgentSmith at the release it names and runs the gate over every push. Set the
+  `AGENTSMITH_READ_TOKEN` repository secret (Contents: read on AgentSmith) for it to run.
+  Nothing is vendored into the repo.
+- **Your agent rules**: an existing `CLAUDE.md`, `AGENTS.md`, `.cursorrules` gets AgentSmith's rules
+  appended in a marked block, replaced on a re-run.
+- **Your Claude settings**: the gate hooks are added; permissions and everything else stay.
+- **Your design doc**: `docs/DESIGN.md` gets an `## Architecture (target)` section — the style your
+  code moves towards, not a claim that it already follows it.
+
+It ends by printing the adoption commit, which stages exactly the files it wrote:
+
+```bash
+git add -- <the files adopt wrote> && git commit -m "chore: adopt AgentSmith gates" -m "Design: .agent-rfc/designs/adoption.md" -m "Review: n/a: generated scaffold"
+```
+
+The gate accepts that review on this commit only — the one that arms the gates — and only while
+every file still matches its hash. From the next commit on, a change to gated code, including code
+that was there before, needs a design and a review. Earlier history is listed as before adoption,
+never failed. `artifacts`, `pillars` and `knowledge_graph` start `off`; turn each on when the repo
+is ready for it.
+
+If you use husky, `npm install` points `core.hooksPath` back at `.husky`, which disarms the gates;
+re-arm with `git config core.hooksPath .githooks` (your husky hooks still run through the chain).
 
 ### Configure GitHub Environments
 

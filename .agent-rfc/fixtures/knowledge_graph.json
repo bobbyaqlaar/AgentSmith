@@ -3458,14 +3458,18 @@
         "FrameworkRootError",
         "looks_like_framework",
         "init_tenant",
+        "_all_files",
+        "_vendor",
         "_scaffold_files",
-        "_write_scaffold_records",
+        "write_scaffold_records",
         "_process_gates_config",
         "_framework_dir",
+        "install_gate_hooks",
         "_provision_governance",
         "_actions_dir",
         "_copy_composite_actions",
         "_cmd_tenant_init",
+        "_cmd_tenant_adopt",
         "_cmd_doctor",
         "_cmd_mode",
         "_cmd_check",
@@ -3492,7 +3496,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-18T16:29:39Z",
+      "last_modified": "2026-09-18T21:06:37Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4105,7 +4109,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-08-30T11:53:33Z",
+      "last_modified": "2026-09-18T21:08:14Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4423,9 +4427,10 @@
         "_tenant",
         "_run",
         "test_a_package_consumer_is_not_vendored_into",
-        "test_a_vendored_tenant_is_still_vendored"
+        "test_a_vendored_tenant_is_still_vendored",
+        "test_an_adopted_repository_is_not_vendored_into"
       ],
-      "last_modified": "2026-09-12T23:23:03Z",
+      "last_modified": "2026-09-18T20:06:07Z",
       "id": "scripts/test/test_installed_runtime_tenant.py"
     },
     {
@@ -4521,6 +4526,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "framework_file",
         "glob_match",
         "_any",
         "Config",
@@ -4536,6 +4542,7 @@
         "trailer",
         "resolve_record",
         "kg_problems",
+        "_manifest_author",
         "scaffold_problems",
         "record_text",
         "check_change",
@@ -4601,7 +4608,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-18T16:30:08Z",
+      "last_modified": "2026-09-18T21:06:07Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4700,7 +4707,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-09-18T05:14:52Z",
+      "last_modified": "2026-09-18T20:19:52Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -6513,11 +6520,12 @@
         "resolve_style",
         "_paths",
         "render_design_md",
+        "render_architecture",
         "_scaffold_answers",
         "render_scaffold_design",
         "session_start_line"
       ],
-      "last_modified": "2026-09-18T16:29:39Z",
+      "last_modified": "2026-09-18T20:08:43Z",
       "id": "runtime/architectures.py"
     },
     {
@@ -6535,9 +6543,12 @@
         "test_a_later_commit_cannot_claim_to_be_the_scaffold",
         "test_without_the_manifest_there_is_nothing_to_verify",
         "test_the_scaffold_design_authorises_no_later_edit",
-        "test_ci_reaches_the_same_verdict_on_the_root_commit"
+        "test_ci_reaches_the_same_verdict_on_the_root_commit",
+        "test_init_vendors_before_the_first_commit_and_the_manifest_covers_it",
+        "test_init_runs_only_the_machines_post_checkout",
+        "test_a_forced_rerun_still_vouches_for_what_the_first_run_wrote"
       ],
-      "last_modified": "2026-09-18T16:29:55Z",
+      "last_modified": "2026-09-18T21:06:21Z",
       "id": "scripts/test/test_scaffold_review.py"
     },
     {
@@ -6554,9 +6565,12 @@
         "test_without_a_style_the_design_says_one_is_still_to_choose",
         "test_the_scaffold_design_answers_every_design_pillar_and_scopes_exactly_the_scaffold",
         "test_an_agentic_scaffold_design_says_the_agent_rules_are_recorded",
-        "test_the_session_start_line_names_the_style_and_its_rule"
+        "test_the_session_start_line_names_the_style_and_its_rule",
+        "test_a_target_architecture_is_a_direction_and_starts_at_the_repositorys_code",
+        "test_a_target_without_a_style_does_not_point_at_tenant_init",
+        "test_the_adoption_design_describes_an_adoption"
       ],
-      "last_modified": "2026-09-18T16:31:11Z",
+      "last_modified": "2026-09-18T20:05:33Z",
       "id": "runtime/test/test_architectures.py"
     },
     {
@@ -6574,6 +6588,109 @@
       "pillar": null,
       "created_at": "2026-09-18T16:39:14Z",
       "id": "rfc:reviews/tenant-architecture.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "AdoptError",
+        "Plan",
+        "_git",
+        "_executable_hooks",
+        "prior_hooks_dir",
+        "is_machine_hook",
+        "stub_names",
+        "chain_hooks",
+        "_detect_stack",
+        "_detect_code",
+        "plan_adoption",
+        "_skill_files",
+        "describe",
+        "generated_by_agentsmith",
+        "merge_rules_block",
+        "_test_command",
+        "_project_name",
+        "_write_rules",
+        "adopt",
+        "commit_command",
+        "fate",
+        "put"
+      ],
+      "last_modified": "2026-09-18T21:06:37Z",
+      "id": "runtime/adopt.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_git",
+        "_write",
+        "legacy",
+        "_plan",
+        "_adopt",
+        "_status",
+        "test_the_plan_finds_the_repository_as_it_is",
+        "test_a_given_glob_replaces_detection",
+        "test_without_yes_and_no_terminal_nothing_is_written",
+        "test_a_repository_adopt_is_not_for_is_refused_before_anything_is_written",
+        "test_what_the_repository_had_is_kept_and_extended",
+        "test_a_rule_file_agentsmith_generated_is_regenerated_not_merged_into",
+        "test_the_rules_block_is_replaced_not_repeated",
+        "test_the_gates_are_armed_and_the_old_hooks_chained",
+        "test_the_gates_workflow_runs_the_gate_from_a_framework_checkout",
+        "_adoption_commit",
+        "test_the_adoption_commit_goes_in_though_it_is_not_the_first",
+        "test_the_printed_commit_stages_by_name",
+        "test_after_adoption_existing_code_needs_a_design",
+        "test_after_adoption_the_edit_gate_reaches_existing_code",
+        "test_a_later_commit_cannot_claim_to_be_the_adoption",
+        "test_ci_lists_the_history_before_adoption_and_notes_the_adoption",
+        "test_the_machines_provisioning_hooks_are_not_chained_into_an_adopted_repository"
+      ],
+      "last_modified": "2026-09-18T20:45:22Z",
+      "id": "scripts/test/test_tenant_adopt.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_git",
+        "_hook",
+        "repo",
+        "prior",
+        "_ran",
+        "_commit",
+        "test_without_the_setting_nothing_is_chained",
+        "test_the_prior_hooks_run_after_the_gate",
+        "test_a_failing_prior_hook_still_blocks_the_commit",
+        "test_a_commit_the_gate_refuses_never_reaches_the_prior_hook",
+        "test_a_message_the_process_gate_refuses_never_reaches_the_prior_commit_msg",
+        "test_the_prior_pre_push_gets_the_refs_on_stdin",
+        "test_a_chain_that_points_at_itself_does_not_loop",
+        "_chain",
+        "test_chaining_writes_a_stub_for_each_hook_the_gate_does_not_own",
+        "test_chaining_a_post_commit_turns_autopush_off_unless_it_was_set",
+        "test_an_explicit_autopush_is_left_alone",
+        "test_the_prior_directory_is_found"
+      ],
+      "last_modified": "2026-09-18T20:44:03Z",
+      "id": "scripts/test/test_hook_chain.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "An existing repository comes under the gates without losing what it has",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/tenant-adopt.md",
+      "pillar": null,
+      "created_at": "2026-09-18T21:08:27Z",
+      "id": "rfc:designs/tenant-adopt.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 an existing repository comes under the gates without losing what it has",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/tenant-adopt.md",
+      "pillar": null,
+      "created_at": "2026-09-18T21:08:27Z",
+      "id": "rfc:reviews/tenant-adopt.md"
     }
   ],
   "edges": [
@@ -7425,6 +7542,21 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_architectures.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/adopt.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_tenant_adopt.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_hook_chain.py",
       "target": "runtime/__init__.py"
     }
   ]

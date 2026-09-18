@@ -1042,7 +1042,7 @@ def test_the_gate_requirements_list_covers_what_the_gate_imports():
 
 def test_the_commit_hook_calls_the_gate_through_the_launcher():
     text = (REPO / ".githooks/commit-msg").read_text(encoding="utf-8")
-    assert '.githooks/process-gate" commit-msg "${amend[@]+"${amend[@]}"}" "$msg_file"' in text
+    assert '"$hook_dir/process-gate" commit-msg "${amend[@]+"${amend[@]}"}" "$msg_file"' in text
     for hook in (".githooks/commit-msg", ".githooks/process-gate"):
         assert os.access(REPO / hook, os.X_OK), hook
 

@@ -16,4 +16,7 @@ hook_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # --report: this hook runs before the message exists, and the commit being made
 # may BE the repair. commit-msg makes that call; this re-arms the hooks, moves
 # the verified pointer, and says what is pending.
-"$hook_dir/process-gate" sweep --report
+"$hook_dir/process-gate" sweep --report || exit $?
+# The hook this repository ran before the gates, if any (.githooks/chain).
+[ -f "$hook_dir/chain" ] || exit 0
+exec bash "$hook_dir/chain" pre-commit "$@"

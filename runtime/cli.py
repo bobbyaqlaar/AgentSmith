@@ -281,6 +281,11 @@ def init_tenant(
     from runtime import architectures
 
     style = architectures.resolve_style(architecture) if architecture else None
+    from runtime.adopt import prior_hooks_dir
+
+    # Before anything re-points core.hooksPath: the hooks this repository runs
+    # now — the machine's, copied by `git init` — keep running behind the gates.
+    prior = prior_hooks_dir(root)
 
     written: list[str] = []
     cfg_dir = root / ".agenticframework"
@@ -322,9 +327,38 @@ def init_tenant(
         root, force=force,
         design_md=architectures.render_design_md(tenant_id, stack, style, agentic),
         session_start=architectures.session_start_line(style, agentic),
+        prior=prior,
     )
-    written += _write_scaffold_records(root, tenant_id, stack, style, agentic, written, force)
+    written += _vendor(root, prior)
+    written += write_scaffold_records(root, tenant_id, stack, style, agentic, written, force)
     return written
+
+
+def _all_files(root: Path) -> set[str]:
+    return {p.relative_to(root).as_posix() for p in root.rglob("*")
+            if p.is_file() and ".git" not in p.relative_to(root).parts[:1]}
+
+
+def _vendor(root: Path, prior: Optional[Path]) -> list[str]:
+    """Run the machine's post-checkout once, before the manifest is written, so
+    the framework code it vendors is part of the scaffold the manifest vouches
+    for (.agent-rfc/designs/tenant-adopt.md). Vendoring stays the hook's job —
+    this only makes it happen before the first commit instead of never.
+    Returns the files it added."""
+    import subprocess as sp
+
+    from runtime.adopt import is_machine_hook
+
+    hook = prior / "post-checkout" if prior is not None else None
+    # The machine's hook only: the manifest vouches for what it writes, and
+    # AgentSmith can vouch for its own vendoring, not for another tool's output.
+    if hook is None or not os.access(hook, os.X_OK) or not is_machine_hook(hook):
+        return []
+    before = _all_files(root)
+    done = sp.run([str(hook), "0" * 40, "0" * 40, "1"], cwd=root, capture_output=True, text=True, check=False)
+    if done.returncode != 0:
+        print(f"  ! {hook} failed while vendoring: {(done.stderr or done.stdout).strip()[-300:]}", file=sys.stderr)
+    return sorted(_all_files(root) - before)
 
 
 SCAFFOLD_DESIGN = ".agent-rfc/designs/scaffold.md"
@@ -343,43 +377,60 @@ def _scaffold_files(root: Path, written: list[str]) -> list[str]:
     return sorted(files)
 
 
-def _write_scaffold_records(root: Path, tenant_id: str, stack: str, style: Optional[str], agentic: bool,
-                            written: list[str], force: bool) -> list[str]:
-    """The scaffold commit's design, and the manifest that lets its review be
-    `n/a: generated scaffold` (scripts/process_gate.py scaffold_problems).
+def write_scaffold_records(root: Path, tenant_id: str, stack: str, style: Optional[str], agentic: bool,
+                           written: list[str], force: bool, design: str = SCAFFOLD_DESIGN,
+                           adopted: bool = False) -> list[str]:
+    """The design for the commit that arms the gates, and the manifest that
+    lets its review be `n/a: generated scaffold` (scripts/process_gate.py
+    scaffold_problems) — for `tenant init`, or `tenant adopt` when `adopted`.
 
     The manifest lists only files this run wrote: a file the tenant already had
-    is theirs, and the gate asks for a real review of it."""
+    is theirs, and the gate asks for a real review of it. A file adopt merged
+    into is listed as merged — its whole new content is what the hash vouches for."""
     import hashlib
 
     framework = _framework_dir()
     if framework is None:
         return []
     files = _scaffold_files(root, written)
+    # A re-run skips what exists and is not its to replace (the composite
+    # actions, vendored code); an earlier manifest vouched for those, and still
+    # does while each is byte-for-byte what it recorded.
+    manifest_path = root / SCAFFOLD_MANIFEST
+    earlier: dict = {}
+    if manifest_path.is_file():
+        try:
+            earlier = json.loads(manifest_path.read_text(encoding="utf-8")).get("files") or {}
+        except (ValueError, AttributeError):
+            earlier = {}
+    files = sorted(set(files) | {
+        f for f, digest in earlier.items()
+        if (root / f).is_file() and hashlib.sha256((root / f).read_bytes()).hexdigest() == digest})
     records: list[str] = []
     registry_path = framework / "templates" / "governance.json"
-    design = root / SCAFFOLD_DESIGN
+    design_rel, design = design, root / design
     if not registry_path.is_file():
         # An install from before the registry existed: the gate it runs cannot
         # read its rules either. Say so rather than write a design that answers
         # pillars nobody can list.
-        print(f"  ! {SCAFFOLD_DESIGN} not written: {registry_path} is missing — re-run "
+        print(f"  ! {design_rel} not written: {registry_path} is missing — re-run "
               "install-ai-stack.sh from a current AgentSmith checkout", file=sys.stderr)
     elif design.exists() and not force:
-        print(f"  = {SCAFFOLD_DESIGN} exists — left untouched")
+        print(f"  = {design_rel} exists — left untouched")
     else:
         from runtime import architectures
 
         design.parent.mkdir(parents=True, exist_ok=True)
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
         design.write_text(architectures.render_scaffold_design(
-            tenant_id, stack, style, agentic, files, registry.get("pillars", [])), encoding="utf-8")
-        records.append(SCAFFOLD_DESIGN)
+            tenant_id, stack, style, agentic, files, registry.get("pillars", []), adopted=adopted), encoding="utf-8")
+        records.append(design_rel)
+    command = "agentsmith tenant adopt" if adopted else "agentsmith tenant init"
     manifest = {
-        "_about": "What `agentsmith tenant init` wrote, by SHA-256. The first commit's review may be "
+        "_about": f"What `{command}` wrote, by SHA-256. The review of the commit that arms the gates may be "
                   "`n/a: generated scaffold` only while every gated file still matches — see AgentSmith "
                   "docs/process-gates.md.",
-        "generated_by": "agentsmith tenant init",
+        "generated_by": command,
         "framework_version": _default_framework_version(),
         "tenant": tenant_id,
         "stack": stack,
@@ -404,7 +455,8 @@ ALWAYS_GATED = [".github/**", ".githooks/**", ".agenticframework/process-gates.j
                 ".claude/settings.json", ".cursor/hooks.json"]
 
 
-def _process_gates_config(stack: str, session_start: Optional[str] = None) -> str:
+def _process_gates_config(stack: str, session_start: Optional[str] = None,
+                          gated: Optional[list[str]] = None) -> str:
     """A tenant's gate config.
 
     The design and review gates are LIVE from the first commit. `artifacts`,
@@ -416,7 +468,7 @@ def _process_gates_config(stack: str, session_start: Optional[str] = None) -> st
     config = {
         "_about": "What the process gates cover here — AgentSmith docs/process-gates.md. "
                   "This file is gated itself, so switching a gate off takes a design and a review.",
-        "gated": [*GATED_BY_STACK.get(stack, GATED_BY_STACK["python-fastapi"]), *ALWAYS_GATED],
+        "gated": gated or [*GATED_BY_STACK.get(stack, GATED_BY_STACK["python-fastapi"]), *ALWAYS_GATED],
         "not_gated": ["**.md", ".agent-rfc/**", "**/node_modules/**"],
         "registry": "@framework/templates/governance.json",
         "artifacts": "off",
@@ -440,11 +492,38 @@ def _framework_dir() -> Optional[Path]:
     return None
 
 
+GATE_HOOKS = ("process-gate", "commit-msg", "pre-commit", "pre-push", "chain")
+
+
+def install_gate_hooks(root: Path, framework: Path, prior: Optional[Path] = None, force: bool = False,
+                       provisioning: bool = True) -> list[str]:
+    """The gate's hooks, copied in and armed; `prior`'s hooks chained behind
+    them (runtime/adopt.py chain_hooks — `provisioning=False` leaves out the
+    machine's post-checkout and post-commit). Returns the paths written."""
+    import subprocess as sp
+
+    written = []
+    for hook in GATE_HOOKS:
+        source = framework / ".githooks" / hook
+        if source.is_file() and (force or not (root / ".githooks" / hook).exists()):
+            (root / ".githooks").mkdir(parents=True, exist_ok=True)
+            shutil.copy(source, root / ".githooks" / hook)
+            (root / ".githooks" / hook).chmod(0o755)
+            written.append(f".githooks/{hook}")
+    # Armed, not merely present: a hook family nobody points git at is the
+    # `implemented-not-invoked` failure this whole programme is about.
+    sp.run(["git", "-C", str(root), "config", "core.hooksPath", ".githooks"], check=False)
+    if prior is not None:
+        from runtime.adopt import chain_hooks
+
+        written += chain_hooks(root, prior, provisioning=provisioning)
+    return written
+
+
 def _provision_governance(root: Path, force: bool = False, design_md: Optional[str] = None,
-                          session_start: Optional[str] = None) -> list[str]:
+                          session_start: Optional[str] = None, prior: Optional[Path] = None) -> list[str]:
     """The gates, armed, plus what they read: the config, the hooks, the IDE
     hook configs, the generated rule files, a committed graph and the stubs."""
-    import shutil
     import subprocess as sp
 
     written: list[str] = []
@@ -466,16 +545,7 @@ def _provision_governance(root: Path, force: bool = False, design_md: Optional[s
     put(".agenticframework/process-gates.json", _process_gates_config(stack, session_start))
 
     if framework is not None:
-        for hook in ("process-gate", "commit-msg", "pre-commit", "pre-push"):
-            source = framework / ".githooks" / hook
-            if source.is_file() and (force or not (root / ".githooks" / hook).exists()):
-                (root / ".githooks").mkdir(parents=True, exist_ok=True)
-                shutil.copy(source, root / ".githooks" / hook)
-                (root / ".githooks" / hook).chmod(0o755)
-                written.append(f".githooks/{hook}")
-        # Armed, not merely present: a hook family nobody points git at is the
-        # `implemented-not-invoked` failure this whole programme is about.
-        sp.run(["git", "-C", str(root), "config", "core.hooksPath", ".githooks"], check=False)
+        written += install_gate_hooks(root, framework, prior=prior, force=force)
 
         sys.path.insert(0, str(framework / "scripts"))
         try:
@@ -615,16 +685,62 @@ def _cmd_tenant_init(args: argparse.Namespace) -> int:
     # The generated workflows run `python3 scripts/*.py` from THIS repo, and
     # those import runtime.* and read fixtures/. Vendoring them is
     # hooks/post-checkout's job — one implementation, not a second copy here
-    # to drift — so say plainly that the scaffold is not usable until it runs.
+    # to drift — and `init_tenant` ran it when this repository had it. When it
+    # did not, say plainly that the scaffold is not usable yet, and how to fix
+    # it BEFORE the first commit: vendored after it, the code needs a review.
     if not (root / "scripts" / "run-security-checks.py").exists():
         print(
             "\nNot done yet: scripts/, runtime/ and fixtures/ are not vendored, and every "
             "scripts/*.py step in the workflows above fails until they are.\n"
-            "Commit, then run `git checkout` (no path — `git checkout .` discards "
-            "uncommitted work) to fire the AgentSmith post-checkout hook."
+            "This repository's hooks do not include AgentSmith's post-checkout, which vendors them. "
+            "Before the first commit, run `git init` here (it adds the machine's hooks and changes "
+            f"nothing else), then re-run `agentsmith tenant init {args.tenant_id} ... --force`."
         )
     if args.isolation == "dedicated":
         print("Apply runtime/k8s/dedicated-tenant/ to provision its own worker pool.")
+    return 0
+
+
+def _cmd_tenant_adopt(args: argparse.Namespace) -> int:
+    """`agentsmith tenant adopt` — runtime/adopt.py. The plan is printed first,
+    and nothing is written without a yes: at a terminal, asked; elsewhere, --yes."""
+    from runtime.adopt import AdoptError, adopt, commit_command, describe, plan_adoption
+
+    root = Path(args.root).resolve() if args.root else Path.cwd()
+    try:
+        plan = plan_adoption(args.tenant_id, root, stack=args.stack, architecture=args.architecture,
+                             agentic=args.agentic, gate=args.gate, framework_ref=args.framework_ref)
+    except ValueError as exc:  # AdoptError, an unknown style, a bad tenant id
+        print(f"agentsmith: {exc}", file=sys.stderr)
+        return 2
+    print(describe(plan))
+    if not args.yes:
+        if not sys.stdin.isatty():
+            print("\nagentsmith: not a terminal, so nothing was written — re-run with --yes to adopt",
+                  file=sys.stderr)
+            return 2
+        if input("\nAdopt this repository? [y/N] ").strip().lower() not in ("y", "yes"):
+            print("Nothing written.")
+            return 1
+    try:
+        written = adopt(plan)
+    except AdoptError as exc:
+        print(f"agentsmith: {exc}", file=sys.stderr)
+        return 1
+    print()
+    for path in written:
+        print(f"  + {path}")
+    from runtime.machine.policy import audit_log_event
+
+    audit_log_event("tenant_created", os.environ.get("AGENT_OWNER_ID") or "unknown", args.tenant_id,
+                    {"stack": plan.stack, "adopted": True})
+    print(
+        f"\nTenant '{args.tenant_id}' adopted. The gates are armed; commit what adopt wrote, exactly as written:\n"
+        f"  {commit_command(written)}\n"
+        "The gate accepts that review only on this commit and only while every file still matches. From the next "
+        "commit on, a change to gated code — existing code included — needs a design and a review.\n"
+        "The gates workflow needs the AGENTSMITH_READ_TOKEN repository secret to check out AgentSmith."
+    )
     return 0
 
 
@@ -838,6 +954,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="scaffold even where the framework's own checkout is detected",
     )
     init.set_defaults(func=_cmd_tenant_init)
+
+    adopt = tenant.add_parser("adopt", help="bring an existing repository under the gates, keeping what it has")
+    adopt.add_argument("tenant_id")
+    adopt.add_argument("--stack", default=None, choices=list(STACKS), help="default: detected")
+    adopt.add_argument("--architecture", default=None, metavar="STYLE",
+                       help="the structural style the code moves towards, recorded in docs/DESIGN.md")
+    adopt.add_argument("--agentic", action="store_true", help="record the agent layer too")
+    adopt.add_argument("--gate", action="append", default=None, metavar="GLOB",
+                       help="a path to gate (repeatable); replaces what detection found")
+    adopt.add_argument("--framework-ref", default=None,
+                       help="the AgentSmith tag the gates workflow runs (default: this install's version)")
+    adopt.add_argument("--root", default=None, help="target repo (default: cwd)")
+    adopt.add_argument("--yes", action="store_true", help="adopt without asking (required off a terminal)")
+    adopt.set_defaults(func=_cmd_tenant_adopt)
 
     promote_tenant = tenant.add_parser("promote", help="gate on staging evals, then open the develop → main PR")
     promote_tenant.add_argument("tenant_id")

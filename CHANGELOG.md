@@ -75,6 +75,37 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — `agentsmith tenant adopt`: an existing repository comes under the gates
+
+- **Detect, report, then write.** It prints the stack, the paths it will gate (the top-level
+  directories and root files git tracks for that stack, or `--gate GLOB`), the hooks the repository
+  already runs, and per file whether it is created, merged or left alone. Nothing is written
+  without a yes; off a terminal, `--yes`.
+- **Merge, never skip or overwrite.** The gate hooks go into an existing `.claude/settings.json`;
+  the generated rules into an existing `CLAUDE.md`, `AGENTS.md`, … between `agentsmith:rules`
+  markers; an `## Architecture (target)` section into an existing `docs/DESIGN.md`.
+- **Its CI is left alone.** One workflow is added, `agentsmith-gates.yml`, which runs the gate from
+  a checkout of AgentSmith (`--framework-ref`, secret `AGENTSMITH_READ_TOKEN`) and sends the record
+  to the portal. An adopted repository is never vendored into.
+- **The adoption commit goes in.** `Review: n/a: generated scaffold` is now accepted on the commit
+  that arms the gates — its parent carries no `process-gates.json` — not only on a root commit;
+  still only while every gated file matches the manifest. The messages name the command that
+  wrote it.
+
+### Fixed — the hooks a repository ran are kept, and `tenant init` vendors again
+
+- **Hook interface change.** `.githooks/commit-msg`, `pre-commit` and `pre-push` run, after the
+  gate passes, the same-named hook from `git config agentsmith.chainHooksPath` through the new
+  `.githooks/chain`; other hooks get a one-line stub. Unset — as in AgentSmith itself — nothing
+  changes. `tenant init` and `tenant adopt` set it to the hooks directory the repository used, and
+  set `agentsmith.autopush false` when that directory has a `post-commit` and the setting is unset.
+- **`tenant init` repositories were never vendored**: `.githooks` has no `post-checkout`, so the
+  machine's never ran. `tenant init` now runs it before writing the manifest, so the vendored code
+  is in the first commit, vouched for by hash.
+- **A vendored copy of the gate could not find its registry**: `@framework/…` resolved beside the
+  running script, which in a vendored tenant is the tenant's own `scripts/`. It now falls back to
+  `$AGENTSMITH_DIR`, then `~/.agent-framework`.
+
 ### Added — `tenant init` starts from an architecture, and its first commit goes in
 
 - **`--architecture STYLE`** — `layered` (n-tier), `modular-monolith`, `hexagonal` (clean

@@ -140,6 +140,16 @@ if grep -qsE '^[[:space:]"'"'"']*agentsmith-runtime' "$REPO_ROOT"/requirements*.
   echo "   scripts/, runtime/ and fixtures/ are NOT vendored, and the generated CI/CD workflows are NOT written"
   echo "   (they assume vendored scripts/). Run the harness from a framework checkout, as KYC Sentinel's ci.yml does."
 fi
+# A repository `agentsmith tenant adopt` brought in keeps its own layout and CI,
+# and its agentsmith-gates.yml runs the gate from a framework checkout — the
+# same shape (.agent-rfc/designs/tenant-adopt.md). This hook reaches it through
+# .githooks/chain, so the guard is here.
+if [ "$INSTALLED_RUNTIME" -eq 0 ] \
+   && grep -qs '"generated_by": "agentsmith tenant adopt"' "$REPO_ROOT/.agenticframework/scaffold.json"; then
+  INSTALLED_RUNTIME=1
+  echo "ℹ️  This repo was brought in by \`agentsmith tenant adopt\`: scripts/, runtime/ and fixtures/ are NOT"
+  echo "   vendored, and the generated CI/CD workflows are NOT written — its own CI stays, beside agentsmith-gates.yml."
+fi
 
 # ── Create .agent-rfc/ structure ─────────────────────────────────────────────
 mkdir -p "$REPO_ROOT/.agent-rfc/fixtures"

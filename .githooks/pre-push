@@ -18,3 +18,7 @@ if ! "$hook_dir/process-gate" sweep; then
   echo "   Repair them (agentsmith gates repair), then push again." >&2
   exit 1
 fi
+# The hook this repository ran before the gates, if any (.githooks/chain). The
+# sweep reads nothing from stdin, so the refs git sent are still there for it.
+[ -f "$hook_dir/chain" ] || exit 0
+exec bash "$hook_dir/chain" pre-push "$@"

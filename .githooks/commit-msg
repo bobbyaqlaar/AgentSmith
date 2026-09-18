@@ -4,9 +4,10 @@
 #
 # Armed per clone with:  git config core.hooksPath .githooks
 #
-# Arming it replaces ~/.git_templates' hooks for the clone. In AgentSmith that
-# is the point (it is the framework, and hooks/post-commit pushes on its own);
-# in a tenant whose clone never had those hooks installed, nothing is lost.
+# Arming it replaces the clone's hooks directory. In AgentSmith that is the
+# point (it is the framework, and hooks/post-commit pushes on its own); a tenant
+# keeps the hooks it had through .githooks/chain, which `tenant init` and
+# `tenant adopt` set up.
 #
 # The same check runs in CI over every pushed commit, so a clone without this
 # hook armed is caught there.
@@ -39,4 +40,9 @@ if parent_args | grep -qE '(^|[[:space:]])--amend([[:space:]]|$)'; then
   amend=(--amend)
 fi
 
-exec "$(git rev-parse --show-toplevel)/.githooks/process-gate" commit-msg "${amend[@]+"${amend[@]}"}" "$msg_file"
+hook_dir="$(git rev-parse --show-toplevel)/.githooks"
+"$hook_dir/process-gate" commit-msg "${amend[@]+"${amend[@]}"}" "$msg_file" || exit $?
+# The hook this repository ran before the gates, if any — after the gate, never
+# instead of it (.githooks/chain).
+[ -f "$hook_dir/chain" ] || exit 0
+exec bash "$hook_dir/chain" commit-msg "$msg_file"

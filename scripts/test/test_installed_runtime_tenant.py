@@ -93,3 +93,21 @@ def test_a_vendored_tenant_is_still_vendored(framework_home, tmp_path):
     assert (repo / "scripts" / "run-security-checks.py").exists()
     assert (repo / ".github" / "workflows" / "ci-python-fastapi.yml").exists()
     assert "installed mode" not in result.stdout
+
+
+def test_an_adopted_repository_is_not_vendored_into(framework_home, tmp_path):
+    """`agentsmith tenant adopt` brings in a repository with its own layout and
+    CI, and its gates workflow runs from a framework checkout — so the hook,
+    now chained into such a repository, must not vendor or write workflows
+    (.agent-rfc/designs/tenant-adopt.md)."""
+    repo = _tenant(tmp_path, "requirements.txt", "fastapi\n")
+    (repo / ".agenticframework" / "scaffold.json").write_text(
+        '{\n  "generated_by": "agentsmith tenant adopt",\n  "files": {}\n}\n')
+
+    result = _run(repo)
+
+    assert result.returncode == 0, result.stderr
+    assert not (repo / "runtime").exists()
+    assert sorted(p.name for p in (repo / "scripts").iterdir()) == ["pin_eval_outputs.py"]
+    assert not (repo / ".github" / "workflows").exists()
+    assert "tenant adopt" in result.stdout

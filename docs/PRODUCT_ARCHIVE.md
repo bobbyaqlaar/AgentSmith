@@ -7,6 +7,21 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — an existing repository comes under the gates (2026-09-19)
+
+Design: `.agent-rfc/designs/tenant-adopt.md`; review: `.agent-rfc/reviews/tenant-adopt.md`.
+
+- **`agentsmith tenant adopt`** detects before it writes, merges into what the repository has,
+  leaves its CI alone and adds a gates workflow that runs from a framework checkout. The review
+  exemption moved from "the root commit" to "the commit that arms the gates".
+- **Hooks are chained, not replaced**, closing the backlog row "A `tenant init` repository is never
+  vendored": `tenant init` now runs the machine's `post-checkout` before its first commit.
+- **Found by the vendoring test:** a vendored copy of the gate resolved `@framework/` to the
+  tenant's own repository and could not find the registry — latent since G7, because no tenant
+  had ever been both vendored and gated.
+
+---
+
 ## Completed — portal phase 1: the Dev workspace (2026-09-18)
 
 Specification: `.agent-rfc/designs/portal-control-plane.md` (approved by the owner the same day);

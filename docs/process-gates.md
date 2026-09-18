@@ -89,6 +89,14 @@ Arming `.githooks` replaces the tenant hooks in `~/.git_templates` for this
 clone. That is deliberate: this is the framework, not a tenant, and
 `hooks/post-commit` pushes on its own.
 
+In a tenant whose hooks were chained (Provisioning, below), a new clone also
+names the directory those hooks live in — it is local configuration, so a
+clone does not inherit it:
+
+```bash
+git config agentsmith.chainHooksPath .husky   # or whatever the repository's hooks directory is
+```
+
 ## Configuration — `.agenticframework/process-gates.json`
 
 A repository adopts the gates by committing this file. Without it the local
@@ -113,11 +121,10 @@ so a missing config means it was removed.
 - **`levers_doc` / `design_checklist`** — a repo path, read at the commit being
   checked (OTS validates against its own, extended `docs/review-levers.md`), or
   `@framework/<path>`, read beside the running `process_gate.py` — the AgentSmith
-  checkout or `~/.agent-framework` (KYC Sentinel carries no copy). **Only for
-  installed-mode tenants:** in a vendored tenant the running script is the
-  tenant's own copy, so `@framework/` resolves to the tenant repo. Point
-  `levers_doc` there at the tenant's own file; `design_checklist` is only shown
-  in messages, never read, so `@framework/` is harmless for it.
+  checkout or `~/.agent-framework` (KYC Sentinel carries no copy) — and, when it
+  is not there, from `$AGENTSMITH_DIR`, then `~/.agent-framework`. A vendored
+  tenant runs its own copy of the script, which has no `templates/` or `docs/`
+  beside it; the framework it came from does.
 - **`pillars`** — optional, default `off`. Whether this repo is held to the
   pillars a script can check, and to evidence in its designs' pillar answers
   (below). `"enforce"` on its own is the same as `{"mode": "enforce"}`.
@@ -317,25 +324,60 @@ with a real session's payload and the tests say whether anything else changes.
 ## Provisioning, and knowing whether it held
 
 A control a tenant has to install by hand is a control most tenants do not
-have. `agentsmith tenant init` writes the gate config, the four `.githooks`
+have. `agentsmith tenant init` writes the gate config, the `.githooks`
 **armed** (`core.hooksPath` is set), the Claude Code and Cursor hook configs,
 the generated rule files, a committed knowledge graph and the artifact stubs.
 It refuses to write into the framework's own checkout, and it never replaces a
 file the tenant already owns without `--force`.
 
-**The first commit.** The scaffold touches gated paths, so it needs a design and
+**The hooks a repository already ran keep running.** `core.hooksPath` names one
+directory, so arming `.githooks` used to switch off whatever ran before. `tenant
+init` and `tenant adopt` record that directory in `agentsmith.chainHooksPath`
+(local configuration, never set by default): `commit-msg`, `pre-commit` and
+`pre-push` run the gate and then, if it passed, the same-named hook from there
+through `.githooks/chain`, with the same arguments and stdin; any other hook it
+has gets a one-line stub in `.githooks/`. A prior hook that fails still blocks.
+When that directory has a `post-commit`, `agentsmith.autopush` is set to `false`
+unless it was already set — the machine's post-commit pushes on its own, and a
+repository that was not pushing on commit must not start.
+
+**Vendoring happens before the first commit.** When the repository's prior hooks
+include the machine's `post-checkout`, `tenant init` runs it once before writing
+the manifest, so the `scripts/`, `runtime/` and `fixtures/` it vendors are part of
+the scaffold, vouched for by hash like the rest. Vendored after the first commit,
+they would sit under gated paths and need a design and a review.
+
+**The commit that arms the gates.** The scaffold touches gated paths, so it needs a design and
 a review like any change. `tenant init` writes the design —
 `.agent-rfc/designs/scaffold.md`, scoped to exactly the files it wrote and
 `done`, so it covers that commit and authorises nothing after it — and records a
 SHA-256 of every file it wrote in `.agenticframework/scaffold.json`. The review
-is `Review: n/a: generated scaffold`, which the gate accepts only on the
-repository's first commit and only when every gated file in it matches its hash.
+is `Review: n/a: generated scaffold`, which the gate accepts only on the commit
+that arms the gates — its parent carries no `process-gates.json`: the
+repository's first commit, or an adoption — and only when every gated file in it
+matches its hash.
 An edited scaffold file, a file the tenant already had, or code added alongside
 fails with the file named, and needs a real review. An accepted scaffold is a
 note — the commit's verdict is `passed_with_notes`, and CI lists it. The limit:
 the manifest is not signed, so someone who rewrites a file *and* its hash defeats
-it, once, on the root commit, in plain sight in the manifest — the same kind of
-escape as `n/a` for a small change.
+it, once, on the commit that arms the gates, in plain sight in the manifest —
+the same kind of escape as `n/a` for a small change. Deleting `process-gates.json`
+to reopen that door is itself a change to a gated file.
+
+**An existing repository — `agentsmith tenant adopt`.** It detects before it
+writes and prints the plan: the stack, the paths to gate (the top-level
+directories and root files git tracks for that stack, or `--gate`), the prior
+hooks, and per file whether it is created, merged or left alone. Nothing is
+written without a yes (`--yes` off a terminal). It merges rather than skips: the
+gates into an existing `.claude/settings.json`, the generated rules into an
+existing `CLAUDE.md` or `AGENTS.md` between `agentsmith:rules` markers, and an
+`## Architecture (target)` section into an existing `docs/DESIGN.md`. It leaves the
+repository's CI alone and adds `.github/workflows/agentsmith-gates.yml`, which
+runs the gate from a checkout of AgentSmith at the release it names (secret
+`AGENTSMITH_READ_TOKEN`). An adopted repository is never vendored into, and the
+machine's own `post-checkout` and `post-commit` are not chained into it. The
+adoption commit carries `.agent-rfc/designs/adoption.md` and the manifest, and
+stages exactly what adopt wrote; history before it is `before_adoption`.
 
 `--architecture` (`layered`, `modular-monolith`, `hexagonal`, `microservice`,
 `event-driven`) and `--agentic` shape `docs/DESIGN.md`'s Architecture section and
@@ -613,8 +655,8 @@ For a commit touching gated paths, the commit gate and CI require:
 **`n/a: <reason>`** is accepted for either trailer when the commit changes at
 most 20 gated lines (a typo, a version pin). CI lists every such commit in its
 summary, so the escape stays visible. **`Review: n/a: generated scaffold`** is
-accepted at any size, but only for a repository's untouched first commit — see
-Provisioning, above.
+accepted at any size, but only for the untouched commit that arms the gates —
+see Provisioning, above.
 
 ## When a gate blocks you
 
@@ -677,6 +719,9 @@ it when the branch tracks a remote. To keep the tag and skip the push:
 git config agentsmith.autopush false    # this repo
 AGENTSMITH_AUTOPUSH=0 git commit …      # one commit
 ```
+
+`tenant init` and `tenant adopt` set the first when they chain a `post-commit`
+and it is unset.
 
 The only alternative used to be `git -c core.hooksPath=/dev/null commit`, which
 also skipped `pre-commit` and `commit-msg`.

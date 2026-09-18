@@ -1,0 +1,50 @@
+# AgentSmith gates — written by `agentsmith tenant adopt` beside this
+# repository's own CI, which it leaves alone (AgentSmith docs/process-gates.md).
+#
+# Design before code, review before merge — checked on every pushed commit. The
+# local commit-msg hook runs the same function, but only in a clone that armed
+# it; this is the check no clone can skip. An adopted repository is not vendored
+# into, so the gate runs from a checkout of AgentSmith at the release this
+# repository targets. AgentSmith is private: AGENTSMITH_READ_TOKEN is a
+# fine-grained token with Contents: read on it, set as a repository secret.
+name: "AgentSmith gates"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  process-gates:
+    name: "Process gates (design + review)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: bobbyaqlaar/AgentSmith
+          ref: "{{FRAMEWORK_REF}}"
+          token: ${{ secrets.AGENTSMITH_READ_TOKEN }}
+          path: .agentsmith-framework
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r .agentsmith-framework/scripts/requirements-gate.txt
+      - name: "Every gated commit has a design and a clean review"
+        # agentsmith:gate
+        env:
+          # A pull request's range is base..head; a push's is before..sha,
+          # where `before` is all zeros for a new branch (the gate then checks
+          # the head commit only, and says so).
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 .agentsmith-framework/scripts/process_gate.py ci --base "$BASE" --head "$HEAD_SHA" --json "${RUNNER_TEMP:-/tmp}/dev-record.json"
+      # What the gate decided, to the portal's Dev workspace — whatever it
+      # decided. Without the two secrets it says so and succeeds.
+      - name: "Send the gate's record to the portal"
+        if: always()
+        env:
+          AGENTSMITH_PORTAL_URL: ${{ secrets.AGENTSMITH_PORTAL_URL }}
+          AGENTSMITH_PORTAL_INGEST_TOKEN: ${{ secrets.AGENTSMITH_PORTAL_INGEST_TOKEN }}
+        run: python3 .agentsmith-framework/scripts/send_dev_record.py "${RUNNER_TEMP:-/tmp}/dev-record.json"
