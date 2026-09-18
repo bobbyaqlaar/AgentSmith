@@ -462,7 +462,7 @@ the list is not found. Every design question still gets asked.
 ## Cross-references
 
 A pointer into another document's numbering rots the next time that document is
-edited. On the lines a change ADDS, the gate refuses `SPECS.md §23`,
+edited. On the lines a change ADDS, the gate refuses `SPECS.md §23`, <!-- xref: example -->
 `DESIGN.md#L120` and the like; name the document, or a heading inside it. <!-- xref: example --> Lines
 already in the repo are left alone — they go as each document moves — and a line
 that must show a bad pointer as an example carries `<!-- xref: example -->`. The
@@ -586,7 +586,7 @@ summary, so the escape stays visible.
   `process-gates` a required check on `main`, needs GitHub Pro for a private
   repository (verified 2026-09-14: the API answers "Upgrade to GitHub Pro or
   make this repository public"). Until then a non-compliant push lands and
-  Self-Test goes red. Recorded in `FIXES_AND_CLEANUP.md`.
+  Self-Test goes red. Recorded in `docs/PRODUCT_BACKLOG.md`.
 - **Only the edit gate fails closed.** If `python3` is missing or the script
   dies, the edit gate still denies (its command falls back to a deny). The
   session-start and stop hooks cannot: Claude Code treats their failure as a
@@ -609,7 +609,7 @@ summary, so the escape stays visible.
   sweep on the next machine that fetches and works on it.
 - **New tenants do not get the gates automatically.** OTS and KYC Sentinel
   adopted them by hand (above); `agentsmith tenant init` and the post-checkout
-  hook provision none of it. Recorded in `FIXES_AND_CLEANUP.md`.
+  hook provision none of it. Recorded in `docs/PRODUCT_BACKLOG.md`.
 - **An installed-mode tenant's local gates follow the framework it finds.** With
   no `AGENTSMITH_DIR`, KYC's hooks run `~/.agent-framework`'s copy — as current
   as the last `install-ai-stack.sh`. Its CI runs the framework checkout's.

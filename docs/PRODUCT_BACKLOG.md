@@ -4,8 +4,8 @@
 
 > **Scope:** this document owns only *not-yet-done* work: the active item and
 > confirmed future gaps with their trigger conditions. Completed build history
-> lives in `Product_Archive.md`; the formal specification is `SPECS.md`;
-> operator procedures are `OPERATIONS.md`; release notes are `CHANGELOG.md`.
+> lives in `docs/PRODUCT_ARCHIVE.md`; the formal specification is `docs/DESIGN.md`;
+> operator procedures are `docs/UserManual.md`; release notes are `CHANGELOG.md`.
 >
 > If an entry here says something is missing, check it still is — this file
 > spent a week claiming the testbed deploy had not started, six days after it
@@ -28,7 +28,7 @@ three times in a single working session.
 
 The **KYC Sentinel testbed tenant** (`../KYC_Sentinel`) is built, pushed,
 CI-green and was deployed as a GCP staging smoke job on 2026-08-12 — full
-history in `Product_Archive.md` "T1–T4". Promotion has been suspended since
+history in `docs/PRODUCT_ARCHIVE.md` "T1–T4". Promotion has been suspended since
 then; its `cd-staging.yml` was rewritten for the private framework on
 2026-09-13 and has not run since.
 
@@ -47,7 +47,7 @@ Evidence: OTS template slices S1/S2 (no spans, dataclasses, KG skipped, CI subse
 | G1 | Hooks in the framework environment (Pydantic + spooled OTel spans); `governance.json` registry generated from `agent-rules.yaml`; design needs `## Pillars / ## Deviations / ## Dependencies`; TTY-only `agentsmith approve` + `approvals.jsonl`; review sign-off parsed; "Design start: ask the owner" block in every rule file | **Done 2026-09-16** (`dde56b3`, `62810c3`) — review `.agent-rfc/reviews/governance-enforcement.md`; declaring `registry` in a repo's config is what adopts the design-time rules, so history and tenants that have not adopted are unaffected |
 | G3 | Bypass sweep over every locally reachable commit, with `.git/agentsmith/verified`; `.githooks/pre-commit` (reports, re-arms) and `.githooks/pre-push` (refuses); `commit-msg` requires a `Repairs:` trailer while anything is outstanding; `agentsmith gates repair`; the IDE-drift CI step blocks | **Done 2026-09-16** — review `.agent-rfc/reviews/governance-enforcement.md` § G3. The Knowledge Graph CI step stays warn-only until G4 provisions the graph |
 | G5a | Artifact registry, the `artifacts` check with a per-repo mode, `records: single`, and the cross-reference rule — as code, no documents moved | **Done 2026-09-17** — review `.agent-rfc/reviews/governance-enforcement-g5a.md`. AgentSmith runs `report`: `python3 scripts/process_gate.py artifacts` lists the 21 items G5b has to fix |
-| G5b | The migrations: **OTS first** (its sprawl is what confuses agents), **AgentSmith second** (the framework follows the rule it ships). Existing `§`-style pointers cleaned up as each document moves | Open — after G5a |
+| G5b | The migrations: **OTS first**, **AgentSmith second** (reordered by the owner on 2026-09-18: AgentSmith's done here, OTS still open). AgentSmith: one file per type, numbered cross-references gone, `artifacts: enforce` | **AgentSmith commit 1 of 2 done 2026-09-18** — review `.agent-rfc/reviews/artifact-consolidation.md`. Commit 2 (distillation: history out of DESIGN and the manual into the archive) and the OTS migration remain |
 | G6a | Evidence tokens in every `applies` answer; `P7-pydantic` and `P3-tracing` over the files a commit touches; `agentsmith pillars`; per-repo `pillars` policy with a ratcheting allowlist | **Done 2026-09-17** — review `.agent-rfc/reviews/governance-enforcement-g6a.md`. AgentSmith runs `enforce` with 18 seeded allowlist entries |
 | G6b | Six more mechanical checks (`P2-dependencies`, `P7-async`, `P7-ts-any`, `P7-use-client`, `P10-gateway`, `P12-secrets`) and the narrowing of `P7-pydantic` to models built from data the code did not write | **Done 2026-09-17** — review `.agent-rfc/reviews/governance-enforcement-g6b.md`. Ten fixes rather than exemptions; the allowlist shrank from 18 entries to 2 |
 | G6c | `agentsmith gates list` / `run` execute the `# agentsmith:gate` steps locally, with skips named (missing tool, service container, CI-only expression) and install lines dropped; the checklist's gates table is generated from the same tags | **Done 2026-09-17** — review `.agent-rfc/reviews/governance-enforcement-g6c.md`. 19 gates tagged here, 6 in each tenant CI template |
@@ -110,7 +110,7 @@ code blocker; deliberately deferred when the deploy pipeline was proven.
    the day's 20 remain, only that the per-minute window is open.
 3. Swap `cd-staging.yml`'s Cloud Run **Job** for a `gcloud run deploy` of
    `worker.py` as a long-running service (`--no-cpu-throttling
-   --min-instances=1`, OPERATIONS.md §4), pointed at the real
+   --min-instances=1`, docs/UserManual.md › Deploy via GitHub CI/CD), pointed at the real
    `TEMPORAL_ADDRESS`.
 4. Then, in order: Phoenix/Ops Portal wiring → widget embed → first HITL
    round-trip through the portal → shadow-eval sampling on → first production
@@ -142,7 +142,7 @@ round-trip) need "Running live" above.
 4. CI/CD: GitHub Actions → GCP Cloud Run via WIF (keyless).
 5. Screenshots: Phoenix traces, Ops Portal, HITL DLQ flow, eval scorecard.
 
-**Source material:** `Product_Archive.md` (build history, use as structure),
+**Source material:** `docs/PRODUCT_ARCHIVE.md` (build history, use as structure),
 `README.md` (intro), `CHANGELOG.md` 1.1.0 (what the review found).
 
 **Open cost:** Cloud SQL `temporal-pg` (~$7–10/month) and `temporal-server`
@@ -158,7 +158,7 @@ whether the trigger has fired instead of re-litigating whether the gap matters.
 
 **Settled design decisions (do not re-open without a concrete reason):**
 - MCP integration stays tenant-owned (BYO) — the framework ships no MCP
-  client/server. Rationale in SPECS.md §4a.
+  client/server. Rationale in docs/DESIGN.md › Architecture by Layer.
 - LLM self-correction is a separate opt-in method
   (`run_with_self_correction`), never inserted in front of the human DLQ path.
 - The default model registry is local-only. Cloud tiers are a deliberate
@@ -170,13 +170,13 @@ whether the trigger has fired instead of re-litigating whether the gap matters.
 
 Found running every stack through a real scratch tenant's CI
 (`docs/scratch-tenants.md`); fixed items are in `CHANGELOG.md` [Unreleased]
-and `Product_Archive.md`. Each was checked still open on 2026-09-14.
+and `docs/PRODUCT_ARCHIVE.md`. Each was checked still open on 2026-09-14.
 
 - **A day-one tenant's CI is red on every stack.** The strict harness fails on
   the shipped placeholder `risk_register.yaml` / `agency_manifest.yaml` (even
   non-strict fails on the manifest), and since 2026-09-14 Go and TS run it
   too. Deliberate — a placeholder is not a declaration — and now said in the
-  hook's onboarding message and OPERATIONS.md's `tenant init` steps. The red
+  hook's onboarding message and docs/UserManual.md's `tenant init` steps. The red
   run names the placeholder file, but not that this is the expected day-one
   state. **Trigger:** the first
   external tenant onboards, or someone proposes relaxing strict to get green.
@@ -361,9 +361,9 @@ last needs holdouts and traffic volume this project does not have.
 ### Team-shared RFC store (`AGENT_SHARED_RFC_DIR`) — specified, never built
 
 Found 2026-09-01 during a documentation audit. `AGENT_SHARED_RFC_DIR` was
-documented in **UserManual.md** with two copy-pasteable `export` lines and the
+documented in **docs/UserManual.md** with two copy-pasteable `export` lines and the
 claim that "agents and `run-evals.py` also read from this directory", and in
-**SPECS.md** in three places including a security boundary for it. Nothing in
+**docs/DESIGN.md** in three places including a security boundary for it. Nothing in
 the codebase has ever read the variable, and there is no shared-RFC concept in
 any module.
 
@@ -388,15 +388,15 @@ environment variable named in the docs is read somewhere.
 Live status for the two compliance tracks is maintained in one place each — do
 **not** duplicate their tables here:
 
-- **UAE Regulatory:** [`docs/uae-regulatory.md`](./docs/uae-regulatory.md) +
-  [`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md). Still
+- **UAE Regulatory:** [`docs/uae-regulatory.md`](uae-regulatory.md) +
+  [`docs/iso-42001-control-map.md`](iso-42001-control-map.md). Still
   open there: live verification against a *named* UAE sovereign API (beyond the
   verified Ollama Falcon 3 pattern), and org-level certification work (never
   framework-owned).
   **Trigger:** a bid requires live sovereign-endpoint verification, or an
   auditor demands a licensed clause-ID matrix beyond the thematic pack.
 - **Enterprise Delivery Model:**
-  [`docs/delivery-model.md`](./docs/delivery-model.md). v1 soft pack shipped.
+  [`docs/delivery-model.md`](delivery-model.md). v1 soft pack shipped.
   Still open: hard-fail enterprise mode; auto-inject `delivery.*` defaults from
   `ai-tenant-init`; a CD step uploading the evidence pack as a release artifact.
   **Trigger:** an org wants promote blocked when a platform isn't approved.
@@ -429,7 +429,7 @@ f-strings (KYC Sentinel has four such prompts across its agents).
 ### Memory / RAG — remaining extensions (v1 shipped)
 
 Shipped: `conversation_memory.py`, `embeddings.py`, `vector_store.py`
-(memory / pgvector). See [`docs/rag-memory.md`](./docs/rag-memory.md).
+(memory / pgvector). See [`docs/rag-memory.md`](rag-memory.md).
 
 **Remaining:** summarization eviction; auto-RAG in the gateway; ingest/chunk
 CLI; a live pgvector CI job (the extension is often absent in bare Postgres).
@@ -471,13 +471,13 @@ The distribution is `agentsmith-runtime` but imports as the generic top-level
 ## Appendix — Lessons (do not repeat)
 
 Operational lessons distilled from past phases; full incident context in
-`Product_Archive.md` and `CHANGELOG.md`.
+`docs/PRODUCT_ARCHIVE.md` and `CHANGELOG.md`.
 
 - **Review the branch, not the diff — and run the CI job list before pushing.**
   On 2026-08-24 three review passes over `scripts/` reported clean, and the push
   found `main` had been red for three commits: the portal could not build
   (`node:crypto` reached the Edge bundle via `middleware → authz → constantTime`),
-  `SEC-RBAC-001` failed on a missing loader, and SPECS.md was missing
+  `SEC-RBAC-001` failed on a missing loader, and docs/DESIGN.md was missing
   `runtime/security_paths.py`. None were in the reviewed diff; all three were in
   what the branch was about to ship.
 

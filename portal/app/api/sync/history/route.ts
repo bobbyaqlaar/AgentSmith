@@ -4,13 +4,13 @@
 // agentsmith check) once per tenant CD run, pushing any MAJOR/CRITICAL entries
 // since the last sync. Authenticates via Authorization: Bearer
 // $OPS_PORTAL_SYNC_TOKEN — a single shared secret stored as a GitHub
-// Environment secret in each tenant repo (SPECS.md §17, §19, §26).
+// Environment secret in each tenant repo (docs/DESIGN.md › CI/CD via GitHub Actions, Structured Agent History Log, Federated Observability).
 //
 // Body shape:
 //   { "tenantId": "acme", "entries": [...], "budgetCapUsd"?: number,
 //     "replayWebhookUrl"?: string, "replayWebhookSecret"?: string }
 //
-// budgetCapUsd (Product_Archive.md P2b) is optional — when
+// budgetCapUsd (docs/PRODUCT_ARCHIVE.md P2b) is optional — when
 // scripts/sync-portal-history.py finds gateway.budget_cap_usd in this
 // tenant's .agenticframework/tenant.yaml, it's included on every sync call
 // (not just the first) so the portal's displayed cap stays current if the

@@ -147,8 +147,8 @@ export function currentTraceId(): string | null {
 /**
  * The OTLP traces endpoint, or null when tracing is not configured.
  *
- * THE TRAP THIS EXISTS FOR: this repo's own convention (SPECS.md §695,
- * OPERATIONS.md, and the old `ai-dashboard-start`) sets
+ * THE TRAP THIS EXISTS FOR: this repo's own convention (docs/DESIGN.md › Installation Procedure,
+ * docs/UserManual.md, and the old `ai-dashboard-start`) sets
  *
  *     OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:6006/v1/traces
  *

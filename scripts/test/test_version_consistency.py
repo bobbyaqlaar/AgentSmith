@@ -2,7 +2,7 @@
 scripts/test/test_version_consistency.py — the framework's version is declared
 in three places that nothing kept in step.
 
-SPECS.md's header claimed "**Version:** 1.0.0 (matches `install-ai-stack.sh`'s
+docs/DESIGN.md's header claimed "**Version:** 1.0.0 (matches `install-ai-stack.sh`'s
 `FRAMEWORK_VERSION` — the single version source)" while `FRAMEWORK_VERSION` was
 `1.1.0` and `pyproject.toml` was `1.1.0`. The parenthetical asserting they match
 is what makes this worth a test rather than a one-off correction: the document
@@ -35,8 +35,8 @@ def _pyproject_version() -> str:
 
 
 def _specs_version() -> str:
-    m = re.search(rf"\*\*Version:\*\*\s*{_SEMVER}", (REPO / "SPECS.md").read_text(encoding="utf-8"))
-    assert m, "**Version:** header not found in SPECS.md"
+    m = re.search(rf"\*\*Version:\*\*\s*{_SEMVER}", (REPO / "docs/DESIGN.md").read_text(encoding="utf-8"))
+    assert m, "**Version:** header not found in docs/DESIGN.md"
     return m.group(1)
 
 
@@ -50,9 +50,9 @@ def test_installer_and_package_agree() -> None:
 
 
 def test_specs_header_matches_the_installer() -> None:
-    """SPECS.md's header explicitly claims to match FRAMEWORK_VERSION."""
+    """docs/DESIGN.md's header explicitly claims to match FRAMEWORK_VERSION."""
     assert _specs_version() == _installer_version(), (
-        f"SPECS.md declares {_specs_version()} while FRAMEWORK_VERSION is "
+        f"docs/DESIGN.md declares {_specs_version()} while FRAMEWORK_VERSION is "
         f"{_installer_version()} — the header claims these match"
     )
 

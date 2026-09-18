@@ -84,7 +84,7 @@ def head(root: Path) -> str:
 
 
 def record_gates_run(root: Path, passed: int, failed: int, skipped: int,
-                     commit: Optional[str] = None) -> None:
+                     commit: Optional[str] = None, only: Optional[str] = None) -> None:
     """What the last local gates run found, and which commit it ran against.
 
     In `.git/`, not the work tree: it is a fact about this clone at this
@@ -99,6 +99,9 @@ def record_gates_run(root: Path, passed: int, failed: int, skipped: int,
         "at": _now(),
         "commit": commit if commit is not None else head(root),
         "passed": passed, "failed": failed, "skipped": skipped,
+        # A filtered run is recorded AS filtered: one gate passing is not the
+        # list passing, and `--governed` must not read it as if it were.
+        "only": only,
     }) + "\n", encoding="utf-8")
 
 

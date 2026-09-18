@@ -1,8 +1,8 @@
 // portal/lib/promotions.ts — reads shadow-eval failures (scripts/shadow-eval.py,
-// Product_Archive.md P1c) from a tenant's Phoenix and surfaces them as a
+// docs/PRODUCT_ARCHIVE.md P1c) from a tenant's Phoenix and surfaces them as a
 // read-only "suggested promotion" list. Promotion itself stays HITL-gated
 // via `agentsmith promote` — this is a queue for a human to act on, not an
-// auto-promotion path (SPECS.md §9).
+// auto-promotion path (docs/DESIGN.md › Evaluation Framework).
 
 import { phoenixFetch } from "./phoenix";
 

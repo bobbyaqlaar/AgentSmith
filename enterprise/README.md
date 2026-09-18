@@ -1,4 +1,4 @@
-# Enterprise Pack (SPECS.md §30)
+# Enterprise Pack (docs/DESIGN.md › Enterprise Install and Compliance Pack)
 
 Optional governance layer for orgs running AgentSmith across multiple
 teams. Does not change core framework behaviour — adds enforcement,
@@ -71,5 +71,5 @@ write fails. Best-effort: never blocks the command if the portal is unreachable.
 
 See `portal/README.md` for SSO/OIDC and the audit log (both live in the Ops
 Portal). Dedicated worker pool (`tenant.isolation: dedicated`) is documented
-in SPECS.md §23/§30 and scaffolded via `agentsmith tenant init` + the example
+in docs/DESIGN.md › Tenancy Model (Independent Repositories), Enterprise Install and Compliance Pack and scaffolded via `agentsmith tenant init` + the example
 manifests — see the project root for the current state of that piece.

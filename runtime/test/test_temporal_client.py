@@ -3,7 +3,7 @@ runtime/test/test_temporal_client.py — one way to reach Temporal.
 
 Seven call sites connected independently and disagreed in three ways at once:
 the address default, whether TEMPORAL_TLS was read at all, and whether the
-connect was bounded. The TLS half was a live defect — OPERATIONS.md documented
+connect was bounded. The TLS half was a live defect — docs/UserManual.md documented
 `TEMPORAL_TLS="1"` while the only code reading it compared against `"true"`, so
 following the documentation produced `use_tls=False` and TLS was silently off.
 """
@@ -26,7 +26,7 @@ from runtime.temporal_client import (
 
 @pytest.mark.parametrize("value", ["1", "true", "True", "TRUE", "yes", "on", " 1 "])
 def test_every_documented_spelling_enables_tls(value: str) -> None:
-    """`"1"` is what OPERATIONS.md documents; `"true"` is what the example
+    """`"1"` is what docs/UserManual.md documents; `"true"` is what the example
     scripts checked for. Only one of them worked, and it was not the
     documented one — so a deployment configured from the docs connected to a
     TLS-terminating endpoint without TLS, and nothing reported it."""

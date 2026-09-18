@@ -231,6 +231,52 @@ def test_a_repo_whose_graph_is_missing_says_so_rather_than_passing(kg_repo) -> N
     assert "knowledge_graph.json" in result.stderr
 
 
+@needs_git
+def test_a_renaming_commit_has_one_scope_in_the_commit_gate_and_in_ci(kg_repo) -> None:
+    """`git diff` detects the rename and names the new path; `git diff-tree`
+    names the old one too. Both gates must compute the same hash for the same
+    commit, or a change the commit gate accepts is one CI refuses."""
+    _write(kg_repo, "scripts/old_name.py", "print(1)\n")
+    _git(kg_repo, "add", "-A")
+    _git(kg_repo, "commit", "-qm", "chore: a file to rename", "--no-verify")
+    base = _git(kg_repo, "rev-parse", "HEAD").stdout.strip()
+    _git(kg_repo, "mv", "scripts/old_name.py", "scripts/tool.py")
+    # A rename deletes a gated path, so the design covers where it came from too.
+    _write(kg_repo, ".agent-rfc/designs/change.md",
+           DESIGN.replace("  - scripts/tool.py\n", "  - scripts/tool.py\n  - scripts/old_name.py\n"))
+    _write(kg_repo, "CHANGELOG.md", "- renamed a script\n")  # the fixture's CHANGELOG rule, not this test's
+    query = _expected(kg_repo, ["scripts/tool.py", ".agent-rfc/designs/change.md",
+                                ".agent-rfc/reviews/change.md", "CHANGELOG.md"])
+    _write(kg_repo, ".agent-rfc/reviews/change.md",
+           REVIEW_CLEAN.replace("Gates run locally:", f"KG query:                 {query}\nGates run locally:"))
+
+    committed = _commit(kg_repo, MESSAGE)
+    ci = subprocess.run([sys.executable, str(kg_repo / "scripts" / "process_gate.py"), "ci",
+                         "--base", base, "--head", "HEAD"],
+                        cwd=kg_repo, capture_output=True, text=True, check=False)
+
+    assert committed.returncode == 0, committed.stderr
+    assert ci.returncode == 0, ci.stdout
+
+
+@needs_git
+def test_renaming_a_gated_file_away_needs_a_design_at_commit_time_too(kg_repo) -> None:
+    """Before this, the commit gate never saw a rename's old path, so moving a
+    gated file out from under its design passed locally and failed in CI."""
+    _kg_mode(kg_repo, "off")
+    _write(kg_repo, "scripts/old_name.py", "print(1)\n")
+    _git(kg_repo, "add", "-A")
+    _git(kg_repo, "commit", "-qm", "chore: a file to rename", "--no-verify")
+    _git(kg_repo, "mv", "scripts/old_name.py", "scripts/tool.py")
+    _write(kg_repo, ".agent-rfc/designs/change.md", DESIGN)
+    _write(kg_repo, ".agent-rfc/reviews/change.md", REVIEW_CLEAN)
+
+    result = _commit(kg_repo, MESSAGE)
+
+    assert result.returncode != 0
+    assert "scripts/old_name.py" in result.stderr
+
+
 # ── the framework holds itself to it ─────────────────────────────────────────
 
 

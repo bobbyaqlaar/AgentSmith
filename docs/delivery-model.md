@@ -9,7 +9,7 @@ concrete catalogs, soft gates, and promote-time **artifacts**.
 **Related:** [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md),
 [`docs/uae-regulatory.md`](./uae-regulatory.md),
 [`templates/delivery-model/`](../templates/delivery-model/),
-[`FIXES_AND_CLEANUP.md`](../FIXES_AND_CLEANUP.md).
+[`docs/PRODUCT_BACKLOG.md`](PRODUCT_BACKLOG.md).
 
 ---
 

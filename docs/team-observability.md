@@ -27,7 +27,7 @@ No further configuration is needed for solo development.
 Run Phoenix on a dedicated server (Linux VM, EC2, GCE, etc.) so all developers
 and CI pipelines send traces to one place.
 
-**Authentication is mandatory here, not optional** — SPECS.md §15: "An
+**Authentication is mandatory here, not optional** — docs/DESIGN.md › Universal Observability Platform: "An
 unauthenticated shared Phoenix instance is non-compliant — production traces
 may contain sensitive metadata even with redaction active." `docker-compose.yml`
 binds Phoenix's own port to `127.0.0.1` only (loopback), so by default it is

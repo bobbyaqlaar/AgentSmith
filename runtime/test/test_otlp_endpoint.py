@@ -11,8 +11,8 @@ and they disagreed:
     portal/lib/tracing.ts          the full chain, and the only correct one
 
 Every Python copy ended `f"{endpoint.rstrip('/')}/v1/traces"`. The portal's did
-not, because this repo's own convention — OPERATIONS.md, docker-compose.yml,
-SPECS.md §699, the old `ai-dashboard-start` — sets OTEL_EXPORTER_OTLP_ENDPOINT to a full
+not, because this repo's own convention — docs/UserManual.md, docker-compose.yml,
+docs/DESIGN.md › Installation Procedure, the old `ai-dashboard-start` — sets OTEL_EXPORTER_OTLP_ENDPOINT to a full
 `…/v1/traces` URL in the variable the spec defines as a BASE. `local_agent_stack`
 falls back to precisely that variable and appends anyway, giving
 `/v1/traces/v1/traces` and a 404 nothing surfaces.

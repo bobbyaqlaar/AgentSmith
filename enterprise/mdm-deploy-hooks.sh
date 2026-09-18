@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# enterprise/mdm-deploy-hooks.sh — IT deployment script template (SPECS.md §30).
+# enterprise/mdm-deploy-hooks.sh — IT deployment script template (docs/DESIGN.md › Enterprise Install and Compliance Pack).
 #
 # Run by an MDM (Jamf, Intune, Kandji, etc.) on every managed developer
 # machine. Verifies the GPG signature of the hook bundle against the org's

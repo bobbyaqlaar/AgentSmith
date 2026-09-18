@@ -1,4 +1,4 @@
-# AgentSmith — Self-Test CI (SPECS.md §22 Phase 5).
+# AgentSmith — Self-Test CI.
 #
 # Tests the FRAMEWORK itself (this repo), not a tenant project. Tenant repos
 # get their own ci-<stack>.yml / cd-staging.yml / cd-production.yml from
@@ -91,9 +91,9 @@ jobs:
         # agentsmith:gate
         run: |
           find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
-      - name: "SPECS.md repo-tree drift check (top level + key sub-trees)"
+      - name: "docs/DESIGN.md repo-tree drift check (top level + key sub-trees)"
         # agentsmith:gate
-        # SPECS.md §16 holds the only copy of the repository tree (README links
+        # docs/DESIGN.md › GitHub Repository holds the only copy of the repository tree (README links
         # to it). This diffs its top-level entries against git ls-files so tree
         # drift (renamed/added/removed top-level files or dirs) fails CI instead
         # of accumulating silently. Extended (ReviewFindings-2026-07-18 A2):
@@ -103,9 +103,9 @@ jobs:
         run: |
           python3 - <<'EOF'
           import fnmatch, re, subprocess, pathlib, sys
-          specs = pathlib.Path("SPECS.md").read_text()
+          specs = pathlib.Path("docs/DESIGN.md").read_text()
           m = re.search(r"### Repository Structure\n\n```\n(.*?)\n```", specs, re.S)
-          assert m, "Repository Structure block missing from SPECS.md"
+          assert m, "Repository Structure block missing from docs/DESIGN.md"
 
           # Parse the box-drawing tree into (depth, name) entries. A line like
           # "│   ├── foo.py  # comment" is depth 1, name "foo.py". Lines may
@@ -157,13 +157,13 @@ jobs:
                       deep_ghost.append(f"{d}/{name}")
 
           if missing or ghost or deep_missing or deep_ghost:
-              print("missing from SPECS.md tree (top level):", missing)
+              print("missing from docs/DESIGN.md tree (top level):", missing)
               print("in tree but absent on disk (top level):", ghost)
-              print("missing from SPECS.md tree (second level):", deep_missing)
+              print("missing from docs/DESIGN.md tree (second level):", deep_missing)
               print("in tree but absent on disk (second level):", deep_ghost)
               sys.exit(1)
           n2 = sum(len(v) for v in second.values())
-          print(f"SPECS.md tree matches repo ({len(top)} top-level, {n2} second-level entries)")
+          print(f"docs/DESIGN.md tree matches repo ({len(top)} top-level, {n2} second-level entries)")
           EOF
       - name: "Redaction compliance (staging + production profiles)"
         # agentsmith:gate
@@ -173,7 +173,7 @@ jobs:
       - name: "Hook opt-in / enterprise RFC gate"
         # agentsmith:gate
         run: python3 scripts/verify_system.py --check-hooks
-      - name: "verify_system.py --check-kg (Knowledge Graph, Product_Archive.md P10a)"
+      - name: "verify_system.py --check-kg (Knowledge Graph, docs/PRODUCT_ARCHIVE.md P10a)"
         # agentsmith:gate
         run: python3 scripts/verify_system.py --check-kg
       - name: "Set up Helm"

@@ -47,4 +47,4 @@ export EMBEDDER=sentence-transformers
 - Chunking / document ingest CLI
 - Hybrid KG + vector fusion
 
-See `FIXES_AND_CLEANUP.md` Memory Management.
+See `docs/PRODUCT_BACKLOG.md` Memory Management.

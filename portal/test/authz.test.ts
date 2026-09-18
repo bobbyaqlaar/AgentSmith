@@ -1,5 +1,5 @@
 // portal/test/authz.test.ts — cross-tenant isolation regression tests
-// (Product_Archive.md Part 3: "there is no test anywhere that asserts
+// (docs/PRODUCT_ARCHIVE.md Part 3: "there is no test anywhere that asserts
 // tenant A's session/token/gateway instance cannot read tenant B's data").
 //
 // Run (from portal/):

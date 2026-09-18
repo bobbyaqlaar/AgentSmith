@@ -4,11 +4,11 @@ docs name must be read by something.
 
 THE FAILURE THIS EXISTS FOR. Two were not, found 2026-09-01:
 
-  AGENT_SHARED_RFC_DIR    UserManual.md gave two copy-pasteable `export` lines
+  AGENT_SHARED_RFC_DIR    docs/UserManual.md gave two copy-pasteable `export` lines
                           and said "agents and run-evals.py also read from this
-                          directory". SPECS.md specified a security boundary for
+                          directory". docs/DESIGN.md specified a security boundary for
                           it. Nothing has ever read it.
-  AI_STACK_SLACK_WEBHOOK  Listed in SPECS.md's environment table as the Slack
+  AI_STACK_SLACK_WEBHOOK  Listed in docs/DESIGN.md's environment table as the Slack
                           alert webhook, directly above AGENT_NOTIFY_WEBHOOK,
                           which is the one scripts/notifier.py actually reads. A
                           reader wiring up Slack had even odds of picking the
@@ -43,7 +43,7 @@ CODE_SUFFIXES = (
 
 # Tokens that look like environment variables but are not ours to implement.
 ALLOWED = {
-    # Documented as NOT IMPLEMENTED, tracked in FIXES_AND_CLEANUP.md. Listed
+    # Documented as NOT IMPLEMENTED, tracked in docs/PRODUCT_BACKLOG.md. Listed
     # here so the test stays green while the docs stay honest — remove this
     # entry when the feature is built, and the test starts guarding it.
     "AGENT_SHARED_RFC_DIR",
@@ -51,7 +51,7 @@ ALLOWED = {
     "EXECUTION_SUCCEEDED",
     # Node/OpenSSL error string quoted from a real incident.
     "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
-    # Removed from SPECS.md's env table (never implemented — see CHANGELOG).
+    # Removed from docs/DESIGN.md's env table (never implemented — see CHANGELOG).
     # CHANGELOG.md narrates it as history, same as any other removed
     # identifier a changelog legitimately names; that citation is not a
     # documentation claim that the variable works.

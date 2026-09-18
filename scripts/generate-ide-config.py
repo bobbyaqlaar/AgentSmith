@@ -1,7 +1,7 @@
 """
 generate-ide-config.py — generates .cursorrules, CLAUDE.md, and Antigravity
 skill files from templates/agent-rules.yaml, the single source of truth
-(SPECS.md §4, §13, §22 Phase 5).
+(docs/DESIGN.md › Ten Operational Pillars, Antigravity Integration).
 
 Called by the post-checkout hook instead of embedding IDE-rule content
 inline — editing templates/agent-rules.yaml is now the only way to change

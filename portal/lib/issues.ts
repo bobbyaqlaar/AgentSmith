@@ -1,5 +1,5 @@
 // portal/lib/issues.ts — unresolved MAJOR/CRITICAL .agent-history.log entries,
-// synced per-tenant via POST /api/sync/history (SPECS.md §19, §26).
+// synced per-tenant via POST /api/sync/history (docs/DESIGN.md › Structured Agent History Log, Federated Observability).
 
 import { getPool } from "./db";
 import { capped, type CappedList } from "./cappedList";

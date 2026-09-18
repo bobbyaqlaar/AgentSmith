@@ -15,7 +15,7 @@
 // gap on exactly that basis.
 //
 // Signing here is the SECOND layer, deliberately: it catches tampering by
-// someone with direct database access who disables the trigger (SPECS.md §30).
+// someone with direct database access who disables the trigger (docs/DESIGN.md › Enterprise Install and Compliance Pack).
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
@@ -52,7 +52,7 @@ function hmacKey(): string {
   if (!key) {
     throw new Error(
       "AUDIT_LOG_HMAC_KEY is not set — the audit log refuses to write or verify events without it " +
-        "(an unsigned audit log provides no tamper-detection, see SPECS.md §30)."
+        "(an unsigned audit log provides no tamper-detection, see docs/DESIGN.md › Enterprise Install and Compliance Pack)."
     );
   }
   return key;

@@ -107,10 +107,10 @@ CI stays the authority.
 | mypy (shipped runtime only — see pyproject.toml for the scope) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | mutation_check.py (curated — the properties we chose to defend) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | py_compile sweep | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `find scripts runtime examples -name "*.py" -print0 \| xargs -0 -n1 python3 -m py_compile` | yes |
-| SPECS.md repo-tree drift check (top level + key sub-trees) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
+| docs/DESIGN.md repo-tree drift check (top level + key sub-trees) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | Redaction compliance (staging + production profiles) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | Hook opt-in / enterprise RFC gate | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-hooks` | yes |
-| verify_system.py --check-kg (Knowledge Graph, Product_Archive.md P10a) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-kg` | yes |
+| verify_system.py --check-kg (Knowledge Graph, docs/PRODUCT_ARCHIVE.md P10a) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-kg` | yes |
 | On-prem deploy template (Compose + Helm syntax) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-onprem-deploy` | needs helm |
 | Delivery evidence pack script | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/delivery_evidence.py` | yes |
 | Unit tests — delivery model + fairness + input guardrail | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |

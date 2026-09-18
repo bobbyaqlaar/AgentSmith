@@ -1,7 +1,7 @@
 # Changelog
 
 All notable AgentSmith framework changes. The framework releases on its own
-semver (SPECS.md §28); tenant apps pin `framework.version` in
+semver (docs/DESIGN.md › Framework vs Application Release); tenant apps pin `framework.version` in
 `.agenticframework/tenant.yaml` and upgrade on their own schedule via
 `ai-stack-upgrade --to <version>`.
 
@@ -10,9 +10,9 @@ explicitly — those are the two contracts tenant repos depend on.
 
 ## Compatibility Matrix
 
-Canonical copy — SPECS.md §28 mirrors the current row.
+Canonical copy — docs/DESIGN.md › Framework vs Application Release mirrors the current row.
 
-**Backward compatibility within a major is an obligation (SPECS.md §28), and it
+**Backward compatibility within a major is an obligation (docs/DESIGN.md › Framework vs Application Release), and it
 applies from 1.3.0 forward. 1.3.x is the one release that broke it**, and saying
 so here is cheaper than a reader discovering it: it shipped five breaking
 changes as a MINOR, all listed in its row below. It was cut that way knowingly,
@@ -74,6 +74,29 @@ version table being consulted.
 
 
 ## [Unreleased]
+
+### Changed — one document per type, and numbered cross-references gone (G5b, AgentSmith)
+
+- **The documents moved to where the artifact registry says they live:** `docs/DESIGN.md` (was
+  `SPECS.md`), `docs/UserManual.md` (was `UserManual.md`, with `OPERATIONS.md` as its Part II),
+  `docs/PRODUCT_BACKLOG.md` (was `FIXES_AND_CLEANUP.md`), `docs/PRODUCT_ARCHIVE.md` (was
+  `Product_Archive.md`, now also holding the session handoffs and the completed design notes), and
+  a new `docs/REVIEW_LOG.md` holding the three dated review files and the observability audit.
+  Every move is `git mv`, so history follows each file. **If you link to one of these from outside
+  this repo, update the link.**
+- **Numbered cross-references are gone.** 170 pointers of the form `SPECS.md §30` across 91 files <!-- xref: example -->
+  now name the section they meant (`docs/DESIGN.md › Enterprise Install and Compliance Pack`);
+  five of them were dead — line numbers written as section numbers. `OPERATIONS.md`'s appendix
+  that only mapped section numbers to files is deleted: that logic belongs in the knowledge graph.
+- `artifacts` is **`enforce`** in AgentSmith: a second backlog, design or review file, or a stray
+  Markdown file, now fails the commit.
+- **Fixed, in G7:** `verify_system.py --governed` counted an `agentsmith gates run --only …` as
+  the whole list passing. A filtered run is recorded as filtered and does not count as proof.
+- **Fixed, in the commit gate:** it listed a commit's files with rename detection, CI without, so
+  a rename's old path never reached the local design-scope check — renaming a gated file away
+  passed locally and failed in CI — and the `KG query:` hash of a renaming commit differed between
+  the two. The commit gate lists files the way CI does now, and the review scope is the files a
+  change leaves.
 
 ### Added — governance enforcement, slice G7: a tenant that is governed from its first commit
 
@@ -452,7 +475,7 @@ only way to commit without the push used to be `core.hooksPath=/dev/null`,
 which silently skipped `pre-commit` and `commit-msg` as well.
 
 Tenants do not get the design/review gates yet: `process_gate.py` is vendored
-with `scripts/`, but no template wires it (`FIXES_AND_CLEANUP.md`).
+with `scripts/`, but no template wires it (`docs/PRODUCT_BACKLOG.md`).
 
 ### `rollback-notify` names the commit that failed — replace an existing tenant's copy
 
@@ -917,7 +940,7 @@ a comment or a reordered key is not a different rubric, and a digest that
 churns on cosmetic edits gets ignored within a week. Stamped on every row
 beside `judged_by`, on the run-level summary beside `judge_model`, and gated
 the same way: a scorecard graded under more than one digest **fails** rather
-than averaging. SPECS.md §9 previously specified a hand-bumped `"version"`
+than averaging. docs/DESIGN.md › Evaluation Framework previously specified a hand-bumped `"version"`
 field for this schema; it was never implemented, and is now documented as
 what actually shipped.
 
@@ -1004,18 +1027,18 @@ fails loudly instead of becoming invisible the same way.
 
 ### Two environment variables that nothing read
 
-`AGENT_SHARED_RFC_DIR` was specified in `UserManual.md` with two
+`AGENT_SHARED_RFC_DIR` was specified in `docs/UserManual.md` with two
 copy-pasteable `export` lines and the claim that "agents and `run-evals.py`
-also read from this directory," and in `SPECS.md` in three places including a
+also read from this directory," and in `docs/DESIGN.md` in three places including a
 stated security boundary ("not for cross-tenant production data linkage").
 Nothing in the codebase has ever read the variable — there is no shared-RFC
 concept anywhere in the framework. Reasoning publicly about a feature's
 security properties is exactly what convinces a reader it exists, and it is
 not the kind of sentence anyone writes about a stub. Both documents now say
-NOT IMPLEMENTED; the boundary itself is preserved in `FIXES_AND_CLEANUP.md`
+NOT IMPLEMENTED; the boundary itself is preserved in `docs/PRODUCT_BACKLOG.md`
 as the requirement any future implementation must honour.
 
-`AI_STACK_SLACK_WEBHOOK` sat in `SPECS.md`'s environment table directly above
+`AI_STACK_SLACK_WEBHOOK` sat in `docs/DESIGN.md`'s environment table directly above
 `AGENT_NOTIFY_WEBHOOK` — the one `scripts/notifier.py` actually reads. Two
 adjacent rows, one real; removed.
 
@@ -1600,10 +1623,10 @@ can produce.
 
 ### Documentation and cleanup
 
-- `SPECS.md` gains the ruff and mypy gates in its CI list, and an
+- `docs/DESIGN.md` gains the ruff and mypy gates in its CI list, and an
   `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` row; the traces row now says the runtime
   reads it too, not only the portal.
-- `OPERATIONS.md`'s local pre-push recipe runs lint and types first — the
+- `docs/UserManual.md`'s local pre-push recipe runs lint and types first — the
   cheapest gates, and the only ones that fail on a keystroke rather than a
   behaviour.
 - `.gitignore` lists `.ruff_cache/` and `.mypy_cache/` alongside
@@ -1740,7 +1763,7 @@ meter in one call, and new `runtime/otlp.py` resolves OTLP endpoints for both si
   without a `MeterProvider` `opentelemetry.metrics.get_meter()` hands back a `_ProxyMeter`
   whose instruments buffer for a provider that never arrives. Nothing raises, nothing logs.
   The error rate, the cache hit ratio and the TTFT percentiles — the numbers
-  `docs/observability-audit.md` §5 says spans are the wrong instrument for — were computable
+  `docs/REVIEW_LOG.md` §5 says spans are the wrong instrument for — were computable
   in no deployment, while that section read ✅ Fixed.
 
   This is `configure_tracing`'s own founding defect one signal over: KYC installed no
@@ -1758,7 +1781,7 @@ meter in one call, and new `runtime/otlp.py` resolves OTLP endpoints for both si
 - **Four implementations of "endpoint variable → OTLP URL", three of them wrong.**
   `scripts/local_agent_stack.py`, `scripts/multi_agent_system.py` and KYC's `worker.py` each
   ended `f"{endpoint.rstrip('/')}/v1/traces"`; `portal/lib/tracing.ts` did not, because this
-  repo's own convention — OPERATIONS.md, `docker-compose.yml`, SPECS.md §699,
+  repo's own convention — docs/UserManual.md, `docker-compose.yml`, docs/DESIGN.md › Installation Procedure,
   `ai-dashboard-start` — sets `OTEL_EXPORTER_OTLP_ENDPOINT` to a full `…/v1/traces` URL in the
   variable the OTLP spec defines as a base. `local_agent_stack.py` falls back to precisely
   that variable and appended anyway, posting to `/v1/traces/v1/traces` and dropping everything
@@ -1775,7 +1798,7 @@ meter in one call, and new `runtime/otlp.py` resolves OTLP endpoints for both si
   removed: `test_otlp_endpoint.py` parses the TypeScript for its variable order and its
   suffix guard instead of restating them.
 
-- **`docs/observability-audit.md`** carries the correction in §5 rather than editing the
+- **`docs/REVIEW_LOG.md`** carries the correction in §5 rather than editing the
   original claim away, marks Priority 5 (prompt hash) done — it had shipped as
   `prompt.system.sha256` / `prompt.template.id` and was never struck — and updates the §3 and
   §5 tables for prompt identity, RAG chunk identities, error rate and cache hit ratio.
@@ -1845,7 +1868,7 @@ previously hardcoded strict off.
 
 ### Pass 13 — across AgentSmith, KYC Sentinel and the oil-price example
 
-- **`SPECS.md` still documented the HITL pattern pass 12 removed** — a bare
+- **`docs/DESIGN.md` still documented the HITL pattern pass 12 removed** — a bare
   `wait_condition(lambda: self._hitl_approved is not None, ...)`, which is the
   read-never-consume idiom that let one approval satisfy every later gate. The
   fix had landed in the base class, the example and the tests, and not in the
@@ -2012,7 +2035,7 @@ owner is not a control**.
   never stops *existing*. `IdempotencyStore.purge_expired()` existed the whole
   time **with no caller anywhere**, and its docstring named a `verify_system.py`
   check that does not call it. Now reachable as **`agentsmith purge-idempotency`**
-  and listed as a Day-2 task in `OPERATIONS.md` §9.
+  and listed as a Day-2 task in `docs/UserManual.md` §9.
 
 - **The idempotency store's stated guarantee was wider than its real one.**
   `get` then `set` is check-then-act with no reservation, so it suppresses
@@ -2056,7 +2079,7 @@ owner is not a control**.
 - **`revoked_sessions` grows one row per logout, forever.** The instruction to
   prune it existed only as a comment inside `db/schema.sql` — a maintenance task
   filed where nobody maintaining the portal reads it. Now a Day-2 row in
-  `OPERATIONS.md` §9, with the schema comment pointing at it.
+  `docs/UserManual.md` §9, with the schema comment pointing at it.
 
 ### Ops Portal — pass 6
 
@@ -2102,7 +2125,7 @@ running instance, including a 26 KB query string, which it accepts.
   because `collapseRunGroup` compared `TERMINAL_SEVERITY[status]` directly and
   `3 > undefined` is false. Both guarded; the severity lookup is total now.
 - **The audit log labelled an ambiguity as a verdict.** A signature mismatch
-  showed as **tampered**, while the same page's prose (and `OPERATIONS.md`, two
+  showed as **tampered**, while the same page's prose (and `docs/UserManual.md`, two
   lines apart from a line saying the opposite) explains it is also what a key
   rotation looks like. It reads **unverified** now — what the portal actually
   knows. On an audit log, the difference is an incident.
@@ -2143,7 +2166,7 @@ over a diff. Thirteen findings; the first two are the ones that mattered.
   where the cookie is set *and* where it is followed.
 - **The default basic-auth path compared its password with `===`.** The
   multi-user path was made constant-time; the single-user fallback in
-  `middleware.ts` — the configuration SPECS.md §15 calls the team-deployment
+  `middleware.ts` — the configuration docs/DESIGN.md › Universal Observability Platform calls the team-deployment
   minimum — was not.
 - **Operator-supplied URLs are validated as `http(s)`** before being stored,
   fetched server-side (four call sites) or rendered as an `<a href>`. The rule
@@ -2452,7 +2475,7 @@ repo receives three additional files and four additional rules.
 > **Upgrading:** the hooks run the GLOBAL copy at `~/.agent-framework` and
 > `~/.git_templates`, so a repo checkout alone changes nothing on your machine.
 > Re-run `install-ai-stack.sh` from the checkout, or copy the three files listed
-> in `FIXES_AND_CLEANUP.md`. Existing files are never overwritten, so a repo that
+> in `docs/PRODUCT_BACKLOG.md`. Existing files are never overwritten, so a repo that
 > already has `AGENTS.md` keeps its own.
 
 
@@ -2667,7 +2690,7 @@ connected to Temporal, and they disagreed in three ways at once.
   `examples/oil-price-agent` scripts. `runtime/worker.py` and KYC Sentinel's
   worker ignored it entirely, so a deployment against a TLS-terminating
   Temporal Cloud endpoint connected **without TLS** and nothing reported it.
-- **Those three compared it against the literal `"true"`, while OPERATIONS.md
+- **Those three compared it against the literal `"true"`, while docs/UserManual.md
   documents `TEMPORAL_TLS="1"`.** Following the documentation produced
   `use_tls=False`. The switch did nothing everywhere it was read.
 - `runtime/worker.py` used `os.environ["TEMPORAL_ADDRESS"]`, so an unset
@@ -2680,7 +2703,7 @@ connected to Temporal, and they disagreed in three ways at once.
 `runtime/temporal_client.connect()` now owns address resolution, TLS parsing
 (accepting `1`/`true`/`yes`/`on`) and a bounded timeout, and all seven sites use
 it. A test asserts no caller builds its own connection, so the per-file
-opinions cannot return. OPERATIONS.md's row now states what the code accepts.
+opinions cannot return. docs/UserManual.md's row now states what the code accepts.
 
 ### Changed — the dead-letter envelope has one definition
 
@@ -3023,7 +3046,7 @@ visibly rather than changing what a gate measures. Worth revisiting.
   OPERATIONS but not the command tables. All 16 installer-defined commands are
   now listed.
 - **Stale test counts removed rather than corrected.** The figure in
-  `FIXES_AND_CLEANUP.md` went stale three times in one working session; the
+  `docs/PRODUCT_BACKLOG.md` went stale three times in one working session; the
   doc now points at `pytest -q` instead of quoting a number.
 
 New guards in `scripts/test/test_env_var_documentation.py`: an env var read by
@@ -3130,7 +3153,7 @@ tell. Scores are only comparable against the grader they were calibrated for.
   ids *declared* in the merged registry, so it validates configuration and is
   structurally blind to any runtime substitution.
 - **`README.md` called the gateway the "single choke point for provider
-  calls"** without qualification, where `SPECS.md` correctly scoped it to
+  calls"** without qualification, where `docs/DESIGN.md` correctly scoped it to
   production workers. The eval harness is the one deliberate exception.
 - **`PgVectorStore` bypassed the connection pool** — the last raw
   `psycopg2.connect()` in the codebase, and the store `pg_pool.py`'s docstring
@@ -3160,7 +3183,7 @@ No API changes — no span-attribute or hook-interface changes.
   `.sha256` (and a GPG `.sig` when signing is configured). It never was one:
   the release shipped only the tarballs the script fetches, so
   `curl …/releases/download/<tag>/install-ai-stack.sh | bash` — the first
-  command in OPERATIONS.md — 404'd at **every** version, and the checksum the
+  command in docs/UserManual.md — 404'd at **every** version, and the checksum the
   docs piped into `shasum --check` had never existed. Nothing surfaced it
   because `curl -fsSL … | bash` on a 404 **exits 0**: curl writes to stderr,
   bash runs an empty script, and the pipeline reports bash's status, so a dead
@@ -3180,7 +3203,7 @@ No API changes — no span-attribute or hook-interface changes.
   which reads the merged registry, and routing is described by **role**
   (`architect`/`developer`/`validator`/`fast`) rather than by model name, so
   the same drift cannot recur.
-- **SPECS.md declared version 1.0.0** while claiming in the same sentence to
+- **docs/DESIGN.md declared version 1.0.0** while claiming in the same sentence to
   match `FRAMEWORK_VERSION` (1.1.0) — pinned now by
   `scripts/test/test_version_consistency.py`, which also fails a version bump
   that ships without release notes.
@@ -3192,7 +3215,7 @@ No API changes — no span-attribute or hook-interface changes.
   `test_docs_only_reference_artifacts_the_release_builds`. The existing tests
   could not have caught this: they verify artifacts the installer *downloads*,
   and it does not download itself — so the docs are now part of the contract.
-- `test_version_consistency.py` (new) ties SPECS.md, `pyproject.toml` and
+- `test_version_consistency.py` (new) ties docs/DESIGN.md, `pyproject.toml` and
   `FRAMEWORK_VERSION` together.
 
 ### Fixed — evals (carried from 1.1.0)
@@ -3429,7 +3452,7 @@ From a docs+code review of the framework and the KYC Sentinel tenant.
 
 Found by building the KYC Sentinel testbed tenant
 (`docs/testbed-tenant-spec.md`); full analysis in
-`TestbedFeedback-2026-07-21.md`.
+`docs/REVIEW_LOG.md`.
 
 - **Gateway (behaviour change):** `complete_stream()` now streams
   **Anthropic** (Messages SSE) in addition to OpenAI-compatible providers,

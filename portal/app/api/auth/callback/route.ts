@@ -1,4 +1,4 @@
-// GET /api/auth/callback — OIDC redirect target (SPECS.md §30). Validates
+// GET /api/auth/callback — OIDC redirect target (docs/DESIGN.md › Enterprise Install and Compliance Pack). Validates
 // state + PKCE verifier from short-lived cookies, exchanges the code, sets
 // the signed session cookie, and redirects back into the dashboard.
 

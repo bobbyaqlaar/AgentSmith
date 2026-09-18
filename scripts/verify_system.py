@@ -558,7 +558,7 @@ def check_dlq() -> bool:
 def check_hooks() -> bool:
     """
     CI validation for the developer opt-in + enterprise RFC gate
-    (Product_Archive.md P1a) — simulates both scenarios in throwaway git
+    (docs/PRODUCT_ARCHIVE.md P1a) — simulates both scenarios in throwaway git
     repos so a regression in hooks/pre-commit / hooks/commit-msg fails CI
     instead of only being caught by hand.
     """
@@ -675,7 +675,7 @@ def check_hooks() -> bool:
 def check_history_sync() -> bool:
     """
     CI/manual validation for scripts/sync-portal-history.py against a real
-    running Ops Portal (Product_Archive.md P1b) — requires OPS_PORTAL_URL
+    running Ops Portal (docs/PRODUCT_ARCHIVE.md P1b) — requires OPS_PORTAL_URL
     and OPS_PORTAL_SYNC_TOKEN pointing at one, run from a throwaway tenant
     repo (with .agenticframework/tenant.yaml and a fixture .agent-history.log).
 
@@ -906,6 +906,9 @@ def check_governed() -> bool:
     run = gate_history.last_gates_run(root)
     if run is None:
         unproven.append("`agentsmith gates run` has never run in this clone — run it before pushing")
+    elif run.get("only"):
+        unproven.append(f"the last `agentsmith gates run` was filtered to {run['only']!r} — "
+                        f"{run.get('passed')} gate(s) is not the list; run it without --only")
     elif run.get("commit") != gate_history.head(root):
         unproven.append(f"the last `agentsmith gates run` was for a different commit "
                         f"({str(run.get('commit'))[:12]}) — run it again for this one")
@@ -936,7 +939,7 @@ def check_governed() -> bool:
 
 def check_kg() -> bool:
     """
-    CI validation for the Knowledge Graph (Product_Archive.md P10a, Pillar 2).
+    CI validation for the Knowledge Graph (docs/PRODUCT_ARCHIVE.md P10a, Pillar 2).
     Runs map_codebase.py against the framework's own codebase and asserts the
     resulting graph is non-empty with at least the known scripts/ file nodes.
 
@@ -1031,7 +1034,7 @@ def check_kg() -> bool:
 
 def check_onprem_deploy() -> bool:
     """
-    Syntax/shape validation for templates/onprem-deploy/ (OPERATIONS.md
+    Syntax/shape validation for templates/onprem-deploy/ (docs/UserManual.md
     D.6) — no live cluster or Docker daemon required beyond `docker
     compose config` and `helm template`'s own dry-run rendering. Renders
     both proxy engines' configs with canary+shadow+with-db all enabled
@@ -1208,7 +1211,7 @@ def check_onprem_deploy() -> bool:
 
 def check_delivery_model() -> bool:
     """
-    Soft gate for Enterprise Delivery Model (Product_Archive.md).
+    Soft gate for Enterprise Delivery Model (docs/PRODUCT_ARCHIVE.md).
 
     If `.agenticframework/org-policy.yaml` defines `delivery_model`, warn when
     tenant `delivery.platform` / `data_access_pattern` are missing or not in

@@ -1,6 +1,6 @@
 // GET /api/auth/session-status?jti=... — internal endpoint middleware.ts
 // calls (via fetch) to check the server-side revocation denylist
-// (Product_Archive.md 4.14). Exists only because middleware.ts runs on
+// (docs/PRODUCT_ARCHIVE.md 4.14). Exists only because middleware.ts runs on
 // the Edge runtime and can't use the `pg` driver directly — see
 // lib/sessionRevocation.ts. Not itself gated by middleware.ts's auth check
 // (this route only answers "is this opaque jti revoked", which reveals

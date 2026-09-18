@@ -20,7 +20,7 @@ Degrade ladder (on budget breach or provider throttle):
 
 Workers MUST NOT import cost_router.py directly.
 
-See SPECS.md §29 for full specification.
+See docs/DESIGN.md › LLM Gateway (Production) for full specification.
 """
 
 from __future__ import annotations
@@ -362,7 +362,7 @@ def _current_period() -> str:
     `new Date().toISOString().slice(0, 7)`, which is always UTC; a worker
     running in a non-UTC server timezone could otherwise disagree with the
     portal for several hours around a month boundary, putting spend in the
-    "wrong" month from the portal's point of view (Product_Archive.md 4.15).
+    "wrong" month from the portal's point of view (docs/PRODUCT_ARCHIVE.md 4.15).
     """
     return time.strftime("%Y-%m", time.gmtime())
 
@@ -401,7 +401,7 @@ class _BudgetBackend:
         LLM call returns — left a window where N concurrent calls for the
         same tenant could all read "not breached" before any of them
         recorded spend, letting the combined cost of every in-flight call
-        blow through the monthly cap (Product_Archive.md 2.1). Callers
+        blow through the monthly cap (docs/PRODUCT_ARCHIVE.md 2.1). Callers
         reserve an upper-bound cost estimate via try_reserve() before
         invoking the provider, then reconcile the estimate vs. actual cost
         afterward via add_spend()'s signed delta.
@@ -772,7 +772,7 @@ class LLMGateway:
             f"and no configured tier below {model_hint!r}. Halting (alert tier)."
         )
 
-    # ── Run status reporting (Ops Portal, Product_Archive.md P2a) ─────────
+    # ── Run status reporting (Ops Portal, docs/PRODUCT_ARCHIVE.md P2a) ─────────
 
     # Set the first time a run-status POST fails, so the warning below is
     # emitted once per process rather than once per LLM call.
@@ -1547,7 +1547,7 @@ class LLMGateway:
         # Reserve an upper-bound cost estimate atomically before the call,
         # not after — closes the check-then-act race where concurrent calls
         # could all observe "not breached" before any of them recorded
-        # spend (Product_Archive.md 2.1). max_tokens bounds output cost
+        # spend (docs/PRODUCT_ARCHIVE.md 2.1). max_tokens bounds output cost
         # exactly; input cost is bounded by the same max_tokens too since we
         # don't know the actual prompt token count until the provider
         # responds — this overestimates input cost, which only makes the
@@ -2019,7 +2019,7 @@ class LLMGateway:
 
         Request building / response parsing delegated to
         runtime/provider_dispatch.py, shared with scripts/cost_router.py
-        (Product_Archive.md 4.3) — only the base_url/api_key resolution
+        (docs/PRODUCT_ARCHIVE.md 4.3) — only the base_url/api_key resolution
         below (which legitimately differs: this is the production path with
         its own model registry, cost_router.py has its own env-var-driven
         route table) stays local to this method.

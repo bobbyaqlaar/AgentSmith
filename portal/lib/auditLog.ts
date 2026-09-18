@@ -1,4 +1,4 @@
-// portal/lib/auditLog.ts — immutable, signed audit log (SPECS.md §30).
+// portal/lib/auditLog.ts — immutable, signed audit log (docs/DESIGN.md › Enterprise Install and Compliance Pack).
 //
 // The persistence half. Signing and verification live in ./auditSignature so
 // they can be exercised without a database — see that file for why the seam is

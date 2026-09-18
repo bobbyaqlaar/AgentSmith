@@ -5,7 +5,7 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "AgentSmith — Ops Portal",
-  description: "Cross-tenant operations dashboard (SPECS.md §15, §26)",
+  description: "Cross-tenant operations dashboard (docs/DESIGN.md › Universal Observability Platform, Federated Observability)",
 };
 
 // Applies the stored theme preference to <html> before React hydrates —

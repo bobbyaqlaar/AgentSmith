@@ -1,4 +1,4 @@
--- AgentSmith Ops Portal — schema (SPECS.md §15, §26).
+-- AgentSmith Ops Portal — schema (docs/DESIGN.md › Universal Observability Platform, Federated Observability).
 --
 -- Runs against the same Postgres instance used by runtime/llm_gateway.py's
 -- Postgres budget backend (DATABASE_URL) — the portal reads `llm_gateway_budget`
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- budget_cap_usd (Product_Archive.md P2b), added after the table already
+-- budget_cap_usd (docs/PRODUCT_ARCHIVE.md P2b), added after the table already
 -- shipped — CREATE TABLE IF NOT EXISTS above is a no-op against an
 -- already-existing `tenants` table, so the column has to be added via
 -- ALTER for this migration to actually apply to a pre-existing database
@@ -61,7 +61,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_history_unresolved
     WHERE hitl_resolved = FALSE AND level IN ('MAJOR', 'CRITICAL');
 
 -- Read-only scoped tokens for the In-App Widget (templates/in-app-widget/,
--- SPECS.md §15, §26). The token itself is the only access-control boundary —
+-- docs/DESIGN.md › Universal Observability Platform, Federated Observability). The token itself is the only access-control boundary —
 -- never trust a client-supplied tenant-id for this. Only the hash is stored;
 -- the plaintext token is shown once at creation time (POST /api/tenants/:id/widget-token).
 CREATE TABLE IF NOT EXISTS widget_tokens (
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS widget_tokens (
     revoked_at   TIMESTAMPTZ
 );
 
--- Immutable audit log (SPECS.md §30, enterprise pack). Every event is signed
+-- Immutable audit log (docs/DESIGN.md › Enterprise Install and Compliance Pack, enterprise pack). Every event is signed
 -- with HMAC-SHA256 over its own fields (see portal/lib/auditLog.ts) so
 -- tampering is detectable even by someone with direct DB access — and a
 -- trigger below blocks UPDATE/DELETE outright (append-only at the DB level).
@@ -108,7 +108,7 @@ DROP TRIGGER IF EXISTS audit_log_no_delete ON audit_log;
 CREATE TRIGGER audit_log_no_delete BEFORE DELETE ON audit_log
     FOR EACH ROW EXECUTE FUNCTION audit_log_immutable();
 
--- Server-side session revocation (Product_Archive.md 4.14). The SSO
+-- Server-side session revocation (docs/PRODUCT_ARCHIVE.md 4.14). The SSO
 -- session JWT (portal/lib/sessionToken.ts) is stateless and otherwise valid
 -- for its full 8h TTL even after logout if it was copied/leaked elsewhere —
 -- this lets POST /api/auth/logout actually invalidate it server-side instead
@@ -125,12 +125,12 @@ CREATE TABLE IF NOT EXISTS revoked_sessions (
 --   DELETE FROM revoked_sessions WHERE revoked_at < now() - interval '1 day';
 --
 -- Not automated here — this file runs migrations, not cron. It is listed as a
--- Day-2 task in OPERATIONS.md §9, which it was not until 2026-08-25: a
+-- Day-2 task in docs/UserManual.md › Maintain (Day-2 Operations), which it was not until 2026-08-25: a
 -- maintenance instruction that exists only inside a schema file is filed where
 -- nobody maintaining the portal will read it, and the table grew one row per
 -- logout, forever.
 
--- Agent run status (Product_Archive.md P2a). Unlike dlq_entries/
+-- Agent run status (docs/PRODUCT_ARCHIVE.md P2a). Unlike dlq_entries/
 -- llm_gateway_budget, this IS portal-owned state — runtime/llm_gateway.py
 -- only ever POSTs to it via the ingest API (best-effort, optional), it
 -- never connects to Postgres to create this table itself — so the

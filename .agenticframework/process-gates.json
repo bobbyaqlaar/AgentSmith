@@ -34,7 +34,7 @@
     "**/node_modules/**"
   ],
   "registry": "@framework/templates/governance.json",
-  "artifacts": "report",
+  "artifacts": "enforce",
   "knowledge_graph": "enforce",
   "pillars": {
     "_about": "Whether this repo is held to the pillars a script can check (G6). The allowlist only shrinks: a new entry needs an approval the owner records in a terminal, and the mode may not be weakened.",

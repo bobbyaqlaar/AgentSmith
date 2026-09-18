@@ -305,7 +305,7 @@ def run(root: Path, only: Optional[str] = None, services: bool = False,
     try:
         import gate_history
 
-        gate_history.record_gates_run(where, passed=passed, failed=failed, skipped=skipped)
+        gate_history.record_gates_run(where, passed=passed, failed=failed, skipped=skipped, only=only)
     except Exception:  # fail-open: recording the run must not fail the run
         pass
     return 1 if failed else 0

@@ -1,5 +1,5 @@
 // POST /api/tenants/:id/widget-token — mint a new read-only widget token for
-// a tenant (SPECS.md §26). Minting requires `operator` or `admin` (an
+// a tenant (docs/DESIGN.md › Federated Observability). Minting requires `operator` or `admin` (an
 // operator's day-to-day job includes onboarding a tenant's widget, same
 // tier as creating tenants via POST /api/tenants); revoking requires
 // `admin` only, since it instantly breaks every live embed for that

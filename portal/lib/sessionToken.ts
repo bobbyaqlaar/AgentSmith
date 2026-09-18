@@ -1,10 +1,10 @@
 // portal/lib/sessionToken.ts — the stateless signed-JWT session cookie
-// (SPECS.md §30). Split out of lib/oidc.ts specifically so middleware.ts can
+// (docs/DESIGN.md › Enterprise Install and Compliance Pack). Split out of lib/oidc.ts specifically so middleware.ts can
 // import it directly: middleware.ts runs on the Edge runtime by default, and
 // lib/oidc.ts imports `openid-client` at module scope, which is Node-only —
 // importing oidc.ts from middleware.ts would pull openid-client into the
 // Edge bundle and likely fail to build/run there. This module only uses
-// `jose`, which is Edge-safe. See Product_Archive.md 4.2: the original
+// `jose`, which is Edge-safe. See docs/PRODUCT_ARCHIVE.md 4.2: the original
 // suggestion ("import verifySessionToken from lib/oidc.ts") would have hit
 // exactly that problem, so the cookie name + verify/create logic moved here
 // instead, with oidc.ts re-exporting them for the (Node-runtime) callback route.
@@ -20,7 +20,7 @@ export interface OidcIdentity {
   name?: string;
 }
 
-// jti enables server-side revocation (Product_Archive.md 4.14) without
+// jti enables server-side revocation (docs/PRODUCT_ARCHIVE.md 4.14) without
 // needing the full token: logout records this id in revoked_sessions
 // (portal/db/schema.sql) instead of the (much larger, and itself sensitive)
 // signed token string.

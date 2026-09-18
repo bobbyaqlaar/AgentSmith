@@ -1,4 +1,4 @@
-// portal/lib/tenants.ts — tenant registry (SPECS.md §23, §26).
+// portal/lib/tenants.ts — tenant registry (docs/DESIGN.md › Tenancy Model (Independent Repositories), Federated Observability).
 
 import { getPool } from "./db";
 import type { Isolation } from "./isolation";

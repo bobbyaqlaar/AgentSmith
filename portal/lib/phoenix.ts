@@ -1,5 +1,5 @@
 // portal/lib/phoenix.ts — thin client for the per-tenant Arize Phoenix
-// instance referenced by tenants.phoenix_base_url (SPECS.md §15, §26).
+// instance referenced by tenants.phoenix_base_url (docs/DESIGN.md › Universal Observability Platform, Federated Observability).
 //
 // GraphQL query shapes below (projects / Project.traceCount /
 // Project.traceCountByStatusTimeSeries) were validated directly against a

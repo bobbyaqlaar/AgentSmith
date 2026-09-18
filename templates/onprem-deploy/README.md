@@ -1,6 +1,6 @@
 # On-premise / air-gapped deployment template
 
-> **Deploying this to a server rather than your laptop?** See OPERATIONS.md
+> **Deploying this to a server rather than your laptop?** See docs/UserManual.md
 > → "Deploying to a server that is not your dev machine" for the Linux / macOS
 > / Windows paths, including the Docker-only route that needs no bash or
 > python3 on the target.
@@ -14,7 +14,7 @@
 
 Opt-in deployment artifact for tenants whose customers run the agent app on
 their own hardware instead of a managed cloud platform — see
-`OPERATIONS.md` "On-premise / air-gapped deployment". This directory is
+`docs/UserManual.md` "On-premise / air-gapped deployment". This directory is
 copied into a tenant repo as `deploy/onprem/` by `agentsmith tenant onprem-scaffold`
 (runtime/machine/ops.py); it is never auto-written by `agentsmith tenant init` the way
 the CI/CD workflow templates are, because not every tenant needs it.
@@ -99,7 +99,7 @@ response discarded) to the shadow container if `APP_IMAGE_SHADOW` is set.
 
 **Why mirroring is proxy-level, not application-level, here:** the
 framework's separate shadow-eval sampler (`scripts/shadow-eval.py`,
-SPECS.md §9) already does *application-level* shadow evaluation — judging
+docs/DESIGN.md › Evaluation Framework) already does *application-level* shadow evaluation — judging
 a 5% sample of already-served production *traces* after the fact, safely,
 because it only reads from Phoenix, never re-executes the request. This
 template's proxy-level mirroring is a different thing: it's for testing a

@@ -1,8 +1,8 @@
 # Ops Portal
 
-Cross-tenant operations dashboard for AgentSmith (SPECS.md §15, §26).
+Cross-tenant operations dashboard for AgentSmith (docs/DESIGN.md › Universal Observability Platform, Federated Observability).
 Full setup/operate walkthrough, including a click-through of every page
-against a real example tenant: `OPERATIONS.md` §2.3b and Part E.
+against a real example tenant: `docs/UserManual.md` §2.3b and Part E.
 
 ## Purpose
 
@@ -43,7 +43,7 @@ machine or a shared team server.
 
 In production, this runs as the `portal` service in the repo-root
 `docker-compose.yml` (built from `portal/Dockerfile`), not via `npm run
-dev` — see `OPERATIONS.md` Part B/E and `agentsmith dashboard start`
+dev` — see `docs/UserManual.md` Part B/E and `agentsmith dashboard start`
 (`runtime/machine/ops.py`).
 
 ## Pages

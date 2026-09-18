@@ -315,7 +315,7 @@ def test_upgrade_refuses_outside_a_tenant(tmp_path):
 
 
 def test_tenant_init_records_tenant_created_once(machine, tmp_path, monkeypatch):
-    """OPERATIONS.md and the portal's audit route name `agentsmith tenant init →
+    """docs/UserManual.md and the portal's audit route name `agentsmith tenant init →
     tenant_created`; nothing wrote it after the scaffold left the shell profile."""
     from runtime import cli
 

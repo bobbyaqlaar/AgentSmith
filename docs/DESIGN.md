@@ -8,17 +8,17 @@
 > the functional→technical component mapping (§4a is the canonical copy),
 > component inventory, data schemas, integration contracts, and the decision
 > log. It contains no step-by-step procedures: installation and operations
-> live in [OPERATIONS.md](./OPERATIONS.md), the framework introduction in
-> [README.md](./README.md), day-to-day dev usage in
-> [UserManual.md](./UserManual.md), build history in
-> [Product_Archive.md](./Product_Archive.md), remaining to-dos in
-> [FIXES_AND_CLEANUP.md](./FIXES_AND_CLEANUP.md).
+> live in [docs/UserManual.md](UserManual.md), the framework introduction in
+> [README.md](../README.md), day-to-day dev usage in
+> [docs/UserManual.md](UserManual.md), build history in
+> [docs/PRODUCT_ARCHIVE.md](PRODUCT_ARCHIVE.md), remaining to-dos in
+> [docs/PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md).
 
 **Version:** 1.3.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
 `pyproject.toml` — pinned together by
 `scripts/test/test_version_consistency.py`)
 **Date:** 2026-07-29
-**Status:** Current — incorporates tenancy, production runtime, observability review, the reliability/compliance pack v1, and the security/correctness fix passes (history: `Product_Archive.md`; open items: `Product_Archive.md`)
+**Status:** Current — incorporates tenancy, production runtime, observability review, the reliability/compliance pack v1, and the security/correctness fix passes (history: `docs/PRODUCT_ARCHIVE.md`; open items: `docs/PRODUCT_ARCHIVE.md`)
 
 ---
 
@@ -50,7 +50,7 @@ Installed once (developer mode) or deployed as org bundle (enterprise mode), it 
 
 Everything in the list above is implemented and verified against real
 infrastructure (Postgres, Redis, a real OIDC provider, `kind` Kubernetes,
-real GPG keys) — see `Product_Archive.md` for the line-by-line audit
+real GPG keys) — see `docs/PRODUCT_ARCHIVE.md` for the line-by-line audit
 trail. Specifically real, not aspirational:
 
 - Dev lifecycle layer (hooks, IDE rules, Knowledge Graph, dev-mode LLM routing, eval gate)
@@ -69,7 +69,7 @@ Additionally implemented and verified against live infrastructure (same bar as a
 - GCP CI/CD end-to-end: `.github/actions/gcp-auth` composite action (Workload Identity Federation, keyless) verified through real GitHub Actions runs deploying both `bobbyaqlaar/oil-price-demo` (worker) and `bobbyaqlaar/AgentSmith` Ops Portal to Cloud Run on GCP project `agentsmith-500916` (2026-07-01). `.github/actions/build-push-ghcr` + Artifact Registry re-push pattern verified. `cd-portal.yml` added for the Ops Portal (Next.js → Cloud Run via AR).
 
 **Genuine remaining gaps** (not yet built — trigger conditions documented in
-`FIXES_AND_CLEANUP.md` "Future Phases"): `@tool` registration/schema-extraction.
+`docs/PRODUCT_BACKLOG.md` "Future Phases"): `@tool` registration/schema-extraction.
 Shipped reliability / compliance pack (v1): hallucination-rate hard gate,
 TTFT `complete_stream` + `verify_ttft.py`, LLM `run_with_self_correction`,
 Memory/RAG substrate, pre-call `input_guardrail`, fairness suite, Delivery
@@ -506,8 +506,8 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `sync-ui-feedback.py` | Pulls Phoenix annotations; promotes unsynced negative feedback to golden dataset. |
 | `agent_logger.py` | JSON-Lines to stdout + `.agent-history.log`. Four levels: INFO/MINOR/MAJOR/CRITICAL. Calls `audit_token_velocity_circuit()`. All entries carry `owner_id`, `tenant.id` (if available), `agent.role`. |
 | `circuit_breaker.py` | Dual-tier burst/monthly guard. Dev-mode: raises `CircuitBreakerTripped`. Production: degrade ladder via LLM Gateway (see §11, §29). |
-| `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-history-sync`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / Product_Archive.md P10a), `--check-security` (P12 smoke path), `--check-delivery-model` (warn-only gate). |
-| `generate-ide-config.py` | Renders `.cursorrules` / `CLAUDE.md` / `AGENTS.md` (Codex) / `GEMINI.md` / `.github/copilot-instructions.md` (condensed — Copilot pays the length on every request) / `.agents/skills/*/skill.md` from `templates/agent-rules.yaml` (single source, §13). Called by `post-checkout`. `--check-only` regenerates in memory and diffs against the committed files, exiting 1 on drift (Pillar 6/7 CI gate — Product_Archive.md P10c). |
+| `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-history-sync`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / docs/PRODUCT_ARCHIVE.md P10a), `--check-security` (P12 smoke path), `--check-delivery-model` (warn-only gate). |
+| `generate-ide-config.py` | Renders `.cursorrules` / `CLAUDE.md` / `AGENTS.md` (Codex) / `GEMINI.md` / `.github/copilot-instructions.md` (condensed — Copilot pays the length on every request) / `.agents/skills/*/skill.md` from `templates/agent-rules.yaml` (single source, §13). Called by `post-checkout`. `--check-only` regenerates in memory and diffs against the committed files, exiting 1 on drift (Pillar 6/7 CI gate — docs/PRODUCT_ARCHIVE.md P10c). |
 
 ### 5.5 Production Runtime (runtime/)
 
@@ -585,7 +585,7 @@ Every command is a subcommand of `agentsmith` (`runtime/cli.py`, logic in
 `~/.local/bin/agentsmith`. Machine state is files in `~/.agent-framework/state/`
 (`AGENTSMITH_STATE_DIR` overrides), so it reaches every process — IDEs, git GUIs
 and hooks included — not only the shell that set it. They were Zsh/Bash
-functions in `~/.zshrc` until 2026-09-14; UserManual.md §17 is the canonical
+functions in `~/.zshrc` until 2026-09-14; docs/UserManual.md › Command Reference is the canonical
 reference.
 
 ### Environment Control
@@ -963,7 +963,7 @@ session that learned it ended.
 | **Stay within context budget** | `fetch_subgraph_context_window(anchor, hops=n)` → ~200-token subgraph | Loading full files and exhausting the window (§3 "Headroom") |
 
 Because the graph is rebuilt on every commit/checkout (and now validated in
-CI via `verify_system.py --check-kg`, Product_Archive.md P10a), the recall
+CI via `verify_system.py --check-kg`, docs/PRODUCT_ARCHIVE.md P10a), the recall
 a new session reads is current with the committed code rather than a stale
 snapshot.
 
@@ -1147,7 +1147,7 @@ grader is rebound.
 
 ### Team-Shared RFC Store — NOT IMPLEMENTED
 
-`AGENT_SHARED_RFC_DIR` was specified here, and in UserManual.md with two
+`AGENT_SHARED_RFC_DIR` was specified here, and in docs/UserManual.md with two
 copy-pasteable `export` lines, as a way to share RFC documentation across a
 team's repositories. **Nothing reads it.** There is no shared-RFC concept
 anywhere in the codebase; the variable has never had an implementation.
@@ -1155,7 +1155,7 @@ anywhere in the codebase; the variable has never had an implementation.
 Recorded rather than deleted, because the surrounding text reasoned about its
 security boundary — "not for cross-tenant production data linkage" — which is
 the kind of sentence that makes a reader confident a feature exists. Setting
-the variable did nothing, and said nothing. Tracked in FIXES_AND_CLEANUP.md;
+the variable did nothing, and said nothing. Tracked in docs/PRODUCT_BACKLOG.md;
 if it is built, the boundary above is the constraint it must honour.
 
 ### Monorepo Sub-Package Scoping
@@ -1244,7 +1244,7 @@ Distributed from `github.com/bobbyaqlaar/AgentSmith` as a curl-able
 installer plus versioned release artifacts (`scripts.tar.gz`, `hooks.tar.gz`,
 `workflow-templates.tar.gz`, `templates.tar.gz`, `github-actions.tar.gz`,
 `widget.js` — see `release.yml`). Installation commands, including pinned-
-version and checksum-verified variants, live in OPERATIONS.md §0.
+version and checksum-verified variants, live in docs/UserManual.md › Install & Start.
 
 ### Repository Structure
 
@@ -1364,22 +1364,24 @@ AgentSmith/
 │   └── security/                # P12: control_registry.json, adversarial/PII/injection cases,
 │                                #   atlas_technique_map.json, tenant .agent-rfc/security templates
 ├── docs/
+│   ├── DESIGN.md                # This document — the design, and the reasons it is this way
+│   ├── UserManual.md            # Using AgentSmith, and operating it across its lifecycle
+│   ├── PRODUCT_BACKLOG.md       # What is open, one row per item
+│   ├── PRODUCT_ARCHIVE.md       # Decision history: what was built, when, and why
+│   ├── REVIEW_LOG.md            # Review history: audits, findings and what closed them
 │   ├── uae-regulatory.md
 │   ├── iso-42001-control-map.md
 │   ├── security-framework-map.md # Live SEC-* status: OWASP · NIST AI RMF · ATLAS · ISO 42001
 │   ├── delivery-model.md
 │   ├── rag-memory.md
 │   ├── team-observability.md
-│   ├── observability-audit.md   # Gap register: spans/metrics/propagation vs pillar 3
 │   ├── review-levers.md         # The checklist a review pass runs against (6 groups)
 │   ├── review-lever-notes.md   # Why each lever exists, and what it caught
 │   ├── design-review-checklist.md   # review-levers.md reframed as build-time guidance
 │   ├── validation-checklist.md      # review-levers.md worked group-by-group, pre-merge
 │   ├── testbed-tenant-spec.md   # Proposed "KYC Sentinel" E2E testbed tenant (multi-LLM, multi-agent)
 │   ├── scratch-tenants.md       # The scratch tenants: apps built here, CI run in their own repos
-│   ├── process-gates.md         # How design-before-code and review-before-merge are enforced here
-│   ├── session-handoff/         # Cross-session working notes
-│   └── superpowers/             # Design specs + implementation plans
+│   └── process-gates.md         # How design-before-code and review-before-merge are enforced here
 ├── .github/
 │   ├── actions/                 # Composite actions copied into tenant repos (§17): gcp-auth,
 │   │                            #   build-push-ghcr, deploy-placeholder, rollback-notify, install-python-deps
@@ -1415,15 +1417,7 @@ AgentSmith/
 ├── LICENSE                      # AGPL-3.0
 ├── CHANGELOG.md                 # Release notes + canonical compatibility matrix (§28)
 ├── TRADEMARK.md
-├── README.md
-├── SPECS.md
-├── OPERATIONS.md
-├── UserManual.md
-├── Product_Archive.md           # Build history (P0–P11) + phase deliverables checklist
-├── FIXES_AND_CLEANUP.md         # Remaining to-do items only
-├── ReviewFindings-2026-07-18.md # Docs↔code sync + code-quality audit (P1–P3 status)
-├── TestCoverageReview-2026-07-21.md # Test coverage matrix, gaps, testbed-tenant recommendation
-└── TestbedFeedback-2026-07-21.md # Framework gaps found by building the KYC Sentinel tenant
+└── README.md
 ```
 
 This tree is the **only** copy — README.md links here instead of carrying
@@ -1464,7 +1458,7 @@ Each tenant repo receives seven workflow files:
 
 | Workflow | Trigger | Environment | Gate |
 |---|---|---|---|
-| `ci-<stack>.yml` | PR to `develop` or `main` | — | lint, test, calls `eval-scorecard.yml`; plus four Ten-Pillars gates (Product_Archive.md P10): Validate Knowledge Graph (Pillar 2, `map_codebase.py --quiet`, warn-only), RFC gate (Pillar 1, enforced only when `.agenticframework/org-policy.yaml` is present), IDE config drift (Pillar 6/7, `generate-ide-config.py --check-only`, warn-only), framework health check (Pillar 3/5, `verify_system.py`, non-blocking) |
+| `ci-<stack>.yml` | PR to `develop` or `main` | — | lint, test, calls `eval-scorecard.yml`; plus four Ten-Pillars gates (docs/PRODUCT_ARCHIVE.md P10): Validate Knowledge Graph (Pillar 2, `map_codebase.py --quiet`, warn-only), RFC gate (Pillar 1, enforced only when `.agenticframework/org-policy.yaml` is present), IDE config drift (Pillar 6/7, `generate-ide-config.py --check-only`, warn-only), framework health check (Pillar 3/5, `verify_system.py`, non-blocking) |
 | `eval-scorecard.yml` | `workflow_call` from `ci-<stack>.yml` (not triggered standalone) | — | eval scorecard, warn below 0.7 — shared by all three stacks (`ci-go.yml`/`ci-python-fastapi.yml`/`ci-ts-react.yml`) so a threshold/dependency change lands in one place, not three copy-pasted blocks |
 | `eval-fairness.yml` | `workflow_call` from `ci-<stack>.yml` | — | fairness suite (`FAIRNESS_FAIL_BELOW`, default 0.80); warn-only unless repo variable `FAIRNESS_EVALS=required` |
 | `eval-hallucination.yml` | `workflow_call` from `ci-<stack>.yml` | — | hallucination rate hard-fail (`HALLUCINATION_FAIL_ABOVE`, default 0.05) |
@@ -1689,7 +1683,7 @@ In non-interactive environments (CI), the hook defaults to yes.
 
 All phase deliverables (Phase 0–5 and the v0.3.0 baseline) shipped; the
 checklist is preserved verbatim in
-[`Product_Archive.md`](./Product_Archive.md) § "Phase deliverables
+[`docs/PRODUCT_ARCHIVE.md`](PRODUCT_ARCHIVE.md) § "Phase deliverables
 checklist". References elsewhere to "§22 Phase 5" (framework hygiene:
 hooks extraction, `agent-rules.yaml` single-source IDE config, self-test /
 release CI) remain valid — that work is done and specified in §5, §13, §16.
@@ -1998,7 +1992,7 @@ Air-gapped bundling: `scripts/bundle-airgapped.sh`/`load-airgapped.sh`
 (`docker save`/`docker load`, zero registry calls on the target host).
 See `templates/onprem-deploy/README.md` and
 `templates/onprem-deploy/kubernetes/README.md` for the full walkthrough;
-OPERATIONS.md §4 ("On-premise / air-gapped deployment") for the operator-facing quickstart.
+docs/UserManual.md › Deploy via GitHub CI/CD ("On-premise / air-gapped deployment") for the operator-facing quickstart.
 
 ---
 
@@ -2215,12 +2209,12 @@ The `agentsmith upgrade` command upgrades vendored scripts to the pinned version
 
 ### Compatibility Matrix
 
-The canonical compatibility matrix lives in [`CHANGELOG.md`](./CHANGELOG.md)
+The canonical compatibility matrix lives in [`CHANGELOG.md`](../CHANGELOG.md)
 and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 1.3.x | 3.11 | 0.2 | 4.0 | Token counts are `Optional[int]`; `DeadLetterQueue.replay()` raises `AlreadyResolvedError` on a non-pending entry; a HITL approval is consumed by the gate that reads it; `run_with_hitl_gate` raises on a `None` gate result. Full text and the **Wire Contract** table in [`CHANGELOG.md`](./CHANGELOG.md) |
+| 1.3.x | 3.11 | 0.2 | 4.0 | Token counts are `Optional[int]`; `DeadLetterQueue.replay()` raises `AlreadyResolvedError` on a non-pending entry; a HITL approval is consumed by the gate that reads it; `run_with_hitl_gate` raises on a `None` gate result. Full text and the **Wire Contract** table in [`CHANGELOG.md`](../CHANGELOG.md) |
 
 ### Examples as Forks
 
@@ -2602,18 +2596,18 @@ These are documentation notes for compliance mapping. They are not a guarantee o
 
 Thematic AIMS-style mapping (not a licensed clause dump, not a certification).
 Full control → status → owner → **evidence artifact** pack:
-[`docs/iso-42001-control-map.md`](./docs/iso-42001-control-map.md).
+[`docs/iso-42001-control-map.md`](iso-42001-control-map.md).
 
 ### Compliance Notes (Multi-Framework Security Harness)
 
 Unified crosswalk for **OWASP LLM Top 10**, **NIST AI RMF**, **MITRE ATLAS**,
 and **ISO/IEC 42001** with stable `SEC-*` control IDs and a reusable test
 harness for every tenant app:
-[`docs/security-framework-map.md`](./docs/security-framework-map.md).
+[`docs/security-framework-map.md`](security-framework-map.md).
 
 Design + plan (P12, shipped 2026-07-15):
-[`docs/superpowers/specs/2026-07-15-security-compliance-harness-design.md`](./docs/superpowers/specs/2026-07-15-security-compliance-harness-design.md),
-[`docs/superpowers/plans/2026-07-15-security-compliance-harness.md`](./docs/superpowers/plans/2026-07-15-security-compliance-harness.md).
+[`docs/PRODUCT_ARCHIVE.md`](PRODUCT_ARCHIVE.md),
+[`docs/PRODUCT_ARCHIVE.md`](PRODUCT_ARCHIVE.md).
 
 | Harness entry | Purpose |
 |---|---|
@@ -2641,5 +2635,5 @@ Design + plan (P12, shipped 2026-07-15):
 | Security & privacy (AI) | Partial→Met | `SEC-PROMPT-001` / `SEC-MOD-001` / `SEC-PII-*` via harness |
 | Risk assessment | Org-owned | `.agent-rfc/security/risk_register.yaml` schema gate (`SEC-RISK-001`) |
 
-**UAE regulatory map (differentiator):** [`docs/uae-regulatory.md`](./docs/uae-regulatory.md) —
+**UAE regulatory map (differentiator):** [`docs/uae-regulatory.md`](uae-regulatory.md) —
 sovereign Falcon 3 / PDPL / HITL / fairness / ISO themes. Not legal advice.

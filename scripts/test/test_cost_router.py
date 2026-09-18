@@ -2,7 +2,7 @@
 scripts/test/test_cost_router.py — dev-mode routing + the Groq-429
 FULL-JITTER retry (TestCoverageReview-2026-07-21 gap 1).
 
-The jitter term is load-bearing: FIXES_AND_CLEANUP.md records the live
+The jitter term is load-bearing: docs/PRODUCT_BACKLOG.md records the live
 incident where a bare `2**n * 5` gave every concurrent CI job identical
 waits — they retried in lockstep and re-saturated Groq's rate window.
 These tests pin the formula `(2**attempt) * 5 + random.uniform(0, 3)` so

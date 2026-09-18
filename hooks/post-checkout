@@ -23,7 +23,7 @@ fi
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 [ -z "$REPO_ROOT" ] && exit 0
 
-# ── Developer opt-in gate for PRE-EXISTING repos (SPECS.md §7) ────────────────
+# ── Developer opt-in gate for PRE-EXISTING repos (docs/DESIGN.md › Installation Procedure) ────────────────
 # Global init.templateDir installs these hooks into every repo on the
 # machine, including a third-party project someone just `git clone`'d. A
 # repo that already has commit history and has never opted in is not ours
@@ -347,7 +347,7 @@ OWNER_ID="${AGENT_OWNER_ID:-unknown@unknown}"
 OTEL_ENDPOINT="${AGENT_PHOENIX_ENDPOINT:-http://localhost:6006}"
 
 # ── Generate .cursorrules / CLAUDE.md / Antigravity skills ───────────────────
-# Single source of truth: templates/agent-rules.yaml (SPECS.md §4, §13, §22
+# Single source of truth: templates/agent-rules.yaml (docs/DESIGN.md › Ten Operational Pillars, Antigravity Integration
 # Phase 5). Never edit .cursorrules/CLAUDE.md/.agents/skills/ directly or add
 # new IDE-rule content as inline heredocs here — edit agent-rules.yaml.
 RULES_FILE="$FRAMEWORK_DIR/templates/agent-rules.yaml"
@@ -376,7 +376,7 @@ else
   echo "⚠️  agent-rules.yaml or generate-ide-config.py not found — IDE config not generated. Re-run install-ai-stack.sh."
 fi
 
-# ── GitHub Actions — copy from workflow-templates (single source, SPECS.md §17) ─
+# ── GitHub Actions — copy from workflow-templates (single source, docs/DESIGN.md › CI/CD via GitHub Actions) ─
 # Same templates `agentsmith tenant init` uses — no inline heredocs here (they drifted).
 TMPL_DIR="$FRAMEWORK_DIR/workflow-templates"
 GITHUB_WF="$REPO_ROOT/.github/workflows"
@@ -400,7 +400,7 @@ case "$STACK" in
 esac
 
 if [ -f "$GITHUB_WF/cd-deploy.yml" ]; then
-  echo "⚠️  Legacy cd-deploy.yml found — remove it and use cd-staging.yml + cd-production.yml (OPERATIONS.md §C)."
+  echo "⚠️  Legacy cd-deploy.yml found — remove it and use cd-staging.yml + cd-production.yml (docs/UserManual.md §C)."
 fi
 
 if [ "$INSTALLED_RUNTIME" -eq 0 ] && [ -d "$TMPL_DIR" ] && [ -n "$WF_CI" ]; then
@@ -471,7 +471,7 @@ fi
 REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
 IS_PUBLIC=0
 
-# Real visibility via `gh` when available (SPECS.md §20); if gh is missing,
+# Real visibility via `gh` when available (docs/DESIGN.md › IDE Config Security (`.gitignore` Confirmation)); if gh is missing,
 # unauthenticated, or the lookup fails, fall back to treating any github.com
 # remote as potentially public — the safe direction, since the consequence
 # is only a .gitignore prompt (or a conservative auto-append in CI).
@@ -534,13 +534,13 @@ elif [ "$IS_PUBLIC" -eq 1 ]; then
   } >> "$GITIGNORE"
 fi
 
-# ── Write the developer opt-in marker (FIXES_AND_CLEANUP.md P1a) ────────────
+# ── Write the developer opt-in marker (docs/PRODUCT_BACKLOG.md P1a) ────────────
 # Reached only for a brand-new `git init` (no HEAD) or an already-opted-in
 # repo — the gate at the top of this hook skips pre-existing repos that
 # never opted in, so a totally unrelated repo someone just `git clone`'d is
 # never provisioned or opted in behind their back. Writing the marker here
 # is what makes pre-commit/commit-msg/post-commit enforce in THIS repo from
-# now on (they no-op without it), exactly as documented in UserManual.md §3.
+# now on (they no-op without it), exactly as documented in docs/UserManual.md › Applying to a Project.
 if [ ! -f "$REPO_ROOT/.agenticframework/enabled" ] && [ ! -f "$REPO_ROOT/.agenticframework/tenant.yaml" ]; then
   mkdir -p "$REPO_ROOT/.agenticframework"
   touch "$REPO_ROOT/.agenticframework/enabled"

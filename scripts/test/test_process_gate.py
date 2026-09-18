@@ -41,6 +41,11 @@ SLUGS = pg.lever_slugs(LEVERS)
 # rule has its own tests, which turn it back on (test_gate_kg.py).
 FIXTURE_CONFIG = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 FIXTURE_CONFIG["knowledge_graph"] = "off"
+# And `artifacts` in `report`, for the same reason: AgentSmith enforces one
+# document per type since its migration, and a fixture repo has none of the six
+# — every stop and sweep in these tests would block on documents they are not
+# about. test_gate_artifacts.py sets the mode each of its tests needs.
+FIXTURE_CONFIG["artifacts"] = "report"
 AGENTSMITH = pg.Config(dict(FIXTURE_CONFIG))
 REGISTRY = AGENTSMITH.load_registry(lambda _p: None)[0]
 DESIGN_PILLARS = ", ".join(f"P{p.id}" for p in REGISTRY.pillars if "design" in p.check)

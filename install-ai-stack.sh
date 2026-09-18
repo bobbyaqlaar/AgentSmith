@@ -15,7 +15,7 @@
 #    AI_STACK_FRAMEWORK_REPO=https://github.com/acme-corp/AgentSmith ./install-ai-stack.sh
 #
 #  Enterprise mode (skips mutating git's GLOBAL init.templateDir — see
-#  OPERATIONS.md Appendix A for the MDM-distributed hooks path instead):
+#  docs/UserManual.md Appendix A for the MDM-distributed hooks path instead):
 #    ./install-ai-stack.sh --mode enterprise
 #    # piped form needs `-s --` to forward args through stdin:
 #    curl -fsSL .../install-ai-stack.sh | bash -s -- --mode enterprise
@@ -30,7 +30,7 @@ set -uo pipefail
 # --mode enterprise: skips the global init.templateDir mutation entirely.
 #   Intended for shared/managed machines where IT distributes hooks via the
 #   signed MDM bundle instead (enterprise/package-hook-bundle.sh +
-#   mdm-deploy-hooks.sh, see OPERATIONS.md Appendix A) — this installer still
+#   mdm-deploy-hooks.sh, see docs/UserManual.md Appendix A) — this installer still
 #   vendors scripts/templates and installs the `agentsmith` command, just without taking over
 #   every user's global git config on a machine it doesn't fully own.
 INSTALL_MODE="developer"
@@ -70,7 +70,7 @@ FRAMEWORK_VERSION="1.3.0"
 # script substituted anywhere — it was used verbatim as a URL component in
 # release-download fallback paths (SCRIPTS_URL etc. below), which would
 # fail outright the moment any of those fallback paths actually executed
-# (Product_Archive.md 5.10).
+# (docs/PRODUCT_ARCHIVE.md 5.10).
 FRAMEWORK_REPO="${AI_STACK_FRAMEWORK_REPO:-https://github.com/bobbyaqlaar/AgentSmith}"
 FRAMEWORK_DIR="$HOME/.agent-framework"
 TEMPLATE_DIR="$HOME/.git_templates"
@@ -78,7 +78,7 @@ SCRIPTS_DIR="$FRAMEWORK_DIR/scripts"
 SHARED_DIR="$FRAMEWORK_DIR/shared"
 WORKFLOW_TEMPLATES_DIR="$FRAMEWORK_DIR/workflow-templates"
 # Standing, machine-wide Phoenix + Postgres + Ops Portal stack — shared
-# across every repo on this machine (Product_Archive.md P0.5), not
+# across every repo on this machine (docs/PRODUCT_ARCHIVE.md P0.5), not
 # scoped to any one project checkout. Managed via `agentsmith dashboard start|stop`.
 OBSERVABILITY_DIR="$FRAMEWORK_DIR/observability"
 
@@ -436,7 +436,7 @@ else
 fi
 
 # agent-rules.yaml — single source of truth for .cursorrules/CLAUDE.md/Antigravity
-# skill generation (SPECS.md §4, §13, §22 Phase 5). The post-checkout hook reads
+# skill generation (docs/DESIGN.md › Ten Operational Pillars, Antigravity Integration). The post-checkout hook reads
 # it from here via scripts/generate-ide-config.py.
 mkdir -p "$FRAMEWORK_DIR/templates"
 if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/templates/agent-rules.yaml" ]; then
@@ -485,7 +485,7 @@ fi
 # On-prem/air-gapped deployment template (Docker Compose + Traefik/Envoy
 # canary+shadow routing, Helm chart for K8s) — opt-in, vendored like
 # agent-rules.yaml above but only ever copied into a tenant repo on
-# explicit request via `agentsmith tenant onprem-scaffold` (Product_Archive.md P4
+# explicit request via `agentsmith tenant onprem-scaffold` (docs/PRODUCT_ARCHIVE.md P4
 # on-prem follow-up), never written automatically the way the CI/CD
 # workflow templates are by `agentsmith tenant init`/post-checkout.
 if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/templates/onprem-deploy" ]; then
@@ -638,7 +638,7 @@ fi
 header "Step 6: Writing Git Hook Templates"
 
 # Hooks live as standalone files in hooks/ (repo root) — never edit them as
-# inline heredocs here (SPECS.md §22 Phase 5). Copy from the local repo if
+# inline heredocs here. Copy from the local repo if
 # available, else fall back to downloading from GitHub releases, same
 # pattern as the scripts/ and workflow-templates/ installation steps above.
 if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/hooks" ]; then
@@ -670,11 +670,11 @@ success "All four git hook templates written and made executable"
 
 # ── Link global git template dir ───────────────────────────────────────────────
 # Capture the pre-install value (if any) so `agentsmith uninstall` can restore it
-# exactly, rather than just unsetting (SPECS.md §22 Phase 5).
+# exactly, rather than just unsetting.
 if [ "$INSTALL_MODE" = "enterprise" ]; then
   info "Enterprise mode (--mode enterprise): skipping global git init.templateDir."
   info "Hooks are vendored to $TEMPLATE_DIR but not linked machine-wide — distribute"
-  info "via enterprise/package-hook-bundle.sh + mdm-deploy-hooks.sh instead (OPERATIONS.md Appendix A)."
+  info "via enterprise/package-hook-bundle.sh + mdm-deploy-hooks.sh instead (docs/UserManual.md Appendix A)."
 else
   if [ ! -f "$FRAMEWORK_DIR/previous_template_dir" ]; then
     git config --global init.templateDir 2>/dev/null > "$FRAMEWORK_DIR/previous_template_dir" || true

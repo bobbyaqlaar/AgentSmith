@@ -1,5 +1,5 @@
 // portal/lib/ssoRevocationMode.ts — SSO session-status fail-open / fail-closed
-// (SEC-SSO-001, SPECS.md §30).
+// (SEC-SSO-001, docs/DESIGN.md › Enterprise Install and Compliance Pack).
 
 export type RevocationMode = "fail-open" | "fail-closed";
 

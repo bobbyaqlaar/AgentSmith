@@ -30,7 +30,7 @@ distinct because they answer different questions:
     repo, where a second gate is ordinary.
   - run_with_recoverable_step for "decide_action_activity rejected this
     specific payload" — e.g. a malformed action shape — demonstrating the
-    CRM-style edit-and-replay pattern (Product_Archive.md's HITL/DLQ
+    CRM-style edit-and-replay pattern (docs/PRODUCT_ARCHIVE.md's HITL/DLQ
     redesign) on the order-placement step specifically, since that's the
     step a downstream system could plausibly reject on a bad field.
 
@@ -82,7 +82,7 @@ class OilPricePredictionWorkflow(BaseAgentWorkflow):
         if not _HAS_TEMPORAL:
             raise RuntimeError(
                 "temporalio is not installed. Run: pip install temporalio. "
-                "See SPECS.md §25 for the production runtime spec."
+                "See docs/DESIGN.md › Production Runtime for the production runtime spec."
             )
 
         ingestion = await workflow.execute_activity(

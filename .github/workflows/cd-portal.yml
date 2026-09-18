@@ -7,7 +7,7 @@ name: "CD: Ops Portal Deploy"
 # ── GCP PROMOTION SUSPENDED (2026-08-12, until further notice) ────────────────
 # Automatic promotion on push is switched off by request. The `push:` trigger
 # below is commented out rather than deleted, and everything else — the job, the
-# WIF auth, the deploy steps, the runbooks in OPERATIONS.md — is retained
+# WIF auth, the deploy steps, the runbooks in docs/UserManual.md — is retained
 # unchanged, so resuming is uncommenting four lines.
 #
 # `workflow_dispatch` is deliberately LEFT ENABLED: suspending *automatic*

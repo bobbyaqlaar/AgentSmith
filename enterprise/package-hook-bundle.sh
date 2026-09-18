@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # enterprise/package-hook-bundle.sh — produces the signed org hook bundle
-# (SPECS.md §30):
+# (docs/DESIGN.md › Enterprise Install and Compliance Pack):
 #
 #   agenticframework-hooks-<version>.tar.gz       # hook files
 #   agenticframework-hooks-<version>.tar.gz.sig   # detached GPG signature

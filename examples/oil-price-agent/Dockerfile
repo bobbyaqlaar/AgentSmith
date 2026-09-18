@@ -2,7 +2,7 @@
 # worker (Temporal poller + /healthz). Build context must be the AgentSmith
 # repo ROOT (not this directory) so it can vendor runtime/ alongside the
 # tenant app — matches the "runtime/ is never copied at dev time, only
-# accessed via $AGENTSMITH_DIR" rule in OPERATIONS.md, except here it's
+# accessed via $AGENTSMITH_DIR" rule in docs/UserManual.md, except here it's
 # baked into the image at build time instead, since there's no shared
 # checkout inside a container.
 #
@@ -12,7 +12,7 @@
 # CI/CD: .github/actions/build-push-ghcr builds from the repo root
 # automatically if a Dockerfile exists there — for a standalone tenant repo
 # (oil-price-demo), this Dockerfile is copied to the tenant repo root, and
-# runtime/ is vendored alongside it (see OPERATIONS.md §2.2 step 2 / §D.5b).
+# runtime/ is vendored alongside it (see docs/UserManual.md › Configure Features).
 
 FROM python:3.12-slim
 

@@ -100,7 +100,7 @@ def audit_log_event(
     details: Mapping[str, Any],
     env: Optional[Mapping[str, str]] = None,
 ) -> None:
-    """Best-effort audit write (SPECS.md §30). Never raises, never blocks.
+    """Best-effort audit write (docs/DESIGN.md › Enterprise Install and Compliance Pack). Never raises, never blocks.
 
     SPECS promises bypass events reach the immutable audit log unconditionally,
     so when the portal is unconfigured or the write fails the event goes to

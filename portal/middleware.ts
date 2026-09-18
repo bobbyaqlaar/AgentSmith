@@ -1,6 +1,6 @@
 // portal/middleware.ts — dashboard auth gate.
 //
-// Default: HTTP basic auth (SPECS.md §15: "team deployment: basic auth
+// Default: HTTP basic auth (docs/DESIGN.md › Universal Observability Platform: "team deployment: basic auth
 // minimum"). Set OPS_PORTAL_USER / OPS_PORTAL_PASSWORD. If unset, the portal
 // refuses to serve requests rather than running unauthenticated.
 //
@@ -42,7 +42,7 @@ import {
 // the audit log (GET /api/audit) still requires basic auth/SSO, unaffected.
 //
 // /api/runs/ingest is runtime/llm_gateway.py's best-effort run-status push
-// (Product_Archive.md P2a) — same machine-to-machine reasoning as
+// (docs/PRODUCT_ARCHIVE.md P2a) — same machine-to-machine reasoning as
 // /api/sync/*, gated by OPS_PORTAL_SYNC_TOKEN inside the route handler.
 //
 // /api/auth/* must always be reachable unauthenticated — it IS the
@@ -51,7 +51,7 @@ import {
 // future route that merely starts with one of these literal strings — e.g.
 // /api/audit/appendix, /api/widgetry, /api/syncing — is NOT accidentally
 // swept into the unauthenticated set. Plain string-prefix matching here was
-// a latent auth-bypass footgun (see Product_Archive.md 2.6).
+// a latent auth-bypass footgun (see docs/PRODUCT_ARCHIVE.md 2.6).
 export const config = {
   matcher:
     "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/runs/ingest(?:/|$)|api/auth(?:/|$)).*)",
@@ -99,10 +99,10 @@ async function checkSsoSession(
   // Delegates to lib/sessionToken.ts instead of re-verifying the JWT inline
   // with a hardcoded cookie name — previously this duplicated oidc.ts's
   // verification logic with its own copy of the secret-reading and
-  // jwtVerify call (Product_Archive.md 4.2).
+  // jwtVerify call (docs/PRODUCT_ARCHIVE.md 4.2).
   const session = await verifySessionToken(token);
   if (!session) return null;
-  // Server-side revocation check (Product_Archive.md 4.14 / SEC-SSO-001) —
+  // Server-side revocation check (docs/PRODUCT_ARCHIVE.md 4.14 / SEC-SSO-001) —
   // see lib/sessionRevocation.ts for why this is a fetch to a Node-runtime
   // route rather than a direct DB call from this Edge-runtime middleware.
   // SSO_REVOCATION_MODE=fail-closed → 503 when session-status unreachable;
@@ -164,7 +164,7 @@ export async function middleware(request: NextRequest) {
     return new NextResponse(
       "Ops Portal misconfigured: OPS_PORTAL_USER and OPS_PORTAL_PASSWORD must be set " +
         "(or OPS_PORTAL_USERS for multi-user RBAC) before the portal will serve traffic " +
-        "(SPECS.md §15 — no unauthenticated team-shared deployments).",
+        "(docs/DESIGN.md › Universal Observability Platform — no unauthenticated team-shared deployments).",
       { status: 500 }
     );
   }
@@ -183,7 +183,7 @@ export async function middleware(request: NextRequest) {
       // short-circuits the other. `===` on a password leaks it byte by byte
       // through response timing; the multi-user path was fixed for exactly
       // that (lib/authz.verifyBasicAuthCredentials) and this one — the DEFAULT
-      // configuration, the one SPECS.md §15 calls the team-deployment
+      // configuration, the one docs/DESIGN.md › Universal Observability Platform calls the team-deployment
       // minimum — kept the plain compare. A fix at one call site and not its
       // sibling, again.
       const userOk = constantTimeEquals(user ?? "", reqUser);

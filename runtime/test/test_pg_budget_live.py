@@ -2,7 +2,7 @@
 runtime/test/test_pg_budget_live.py — Postgres budget backend against a REAL
 database (TestCoverageReview-2026-07-21 gap 5).
 
-The atomic-reservation race regression (Product_Archive.md 2.1) was only
+The atomic-reservation race regression (docs/PRODUCT_ARCHIVE.md 2.1) was only
 tested on the in-memory backend; the actual production backend's single-
 statement reserve SQL — and, since ReviewFindings C1, the shared
 connection pool under concurrent borrowers — ran in CI without a test.

@@ -5,7 +5,7 @@
 #   source ~/.agent-framework/shell/ai-compat.sh
 # Every wrapper is a plain call: the mode is recorded in ~/.agent-framework/state/
 # for every process, so nothing here exports anything. Removed in the next minor
-# release (FIXES_AND_CLEANUP.md); scripts/test/test_cli_install.py checks each
+# release (docs/PRODUCT_BACKLOG.md); scripts/test/test_cli_install.py checks each
 # wrapper names a real subcommand.
 
 ai-mode-local()             { agentsmith mode local "$@"; }

@@ -73,7 +73,7 @@ def test_load_allowlist_reads_template() -> None:
 # `security.tool_allowlist_strict` from tenant.yaml and TOOL_ALLOWLIST_STRICT
 # from the environment — so a tenant declaring deny-by-default got it on every
 # registry EXCEPT the default one, and the bare `@tool(name=...)` form is the
-# one SPECS.md and OPERATIONS.md name as the API.
+# one docs/DESIGN.md and docs/UserManual.md name as the API.
 #
 # And it was private with no accessor, so a tool registered through that form
 # could not be invoked through any registry at all: `tool()` hands back the

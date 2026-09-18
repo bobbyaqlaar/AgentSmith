@@ -1,4 +1,4 @@
-# Dedicated Worker Pool (SPECS.md §23, §30)
+# Dedicated Worker Pool (docs/DESIGN.md › Tenancy Model (Independent Repositories), Enterprise Install and Compliance Pack)
 
 Reference Kubernetes manifests for `tenant.isolation: dedicated` — a tenant
 gets its own namespace, its own worker `Deployment`, and its own

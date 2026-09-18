@@ -1,5 +1,5 @@
 // portal/lib/db.ts — shared Postgres pool. Same DATABASE_URL as
-// runtime/llm_gateway.py's Postgres budget backend (SPECS.md §26).
+// runtime/llm_gateway.py's Postgres budget backend (docs/DESIGN.md › Federated Observability).
 //
 // The pool traces its own queries (lib/tracing.ts). Instrumented HERE, inside
 // the class, rather than at the twenty-eight `getPool().query(...)` call sites

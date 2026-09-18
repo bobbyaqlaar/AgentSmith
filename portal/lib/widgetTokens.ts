@@ -1,5 +1,5 @@
 // portal/lib/widgetTokens.ts — read-only scoped tokens for the In-App Widget
-// (templates/in-app-widget/, SPECS.md §15, §26).
+// (templates/in-app-widget/, docs/DESIGN.md › Universal Observability Platform, Federated Observability).
 //
 // Security note: the token is the ONLY thing that determines which tenant's
 // data a widget request can see. Any tenant-id supplied alongside the token

@@ -1,4 +1,4 @@
-// portal/lib/authz.ts — role-based tenant access control (SPECS.md §26:
+// portal/lib/authz.ts — role-based tenant access control (docs/DESIGN.md › Federated Observability:
 // "Role-based access in the portal (viewer, operator, admin) controls which
 // tenants each user can view.").
 //

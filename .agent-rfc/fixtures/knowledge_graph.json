@@ -10,7 +10,7 @@
         "config",
         "middleware"
       ],
-      "last_modified": "2026-08-24T23:22:18Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/middleware.ts"
     },
     {
@@ -32,7 +32,7 @@
         "canAdmin",
         "getAccessFromHeaderValues"
       ],
-      "last_modified": "2026-08-24T19:29:58Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/authz.ts"
     },
     {
@@ -46,7 +46,7 @@
         "VerifiedSession",
         "verifySessionToken"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/sessionToken.ts"
     },
     {
@@ -60,7 +60,7 @@
         "interpretStatusResponse",
         "checkSessionRevocation"
       ],
-      "last_modified": "2026-08-24T23:06:55Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/ssoRevocationMode.ts"
     },
     {
@@ -120,7 +120,7 @@
         "_start_temporal_worker",
         "_start_celery_worker"
       ],
-      "last_modified": "2026-08-27T19:16:11Z",
+      "last_modified": "2026-09-18T05:09:23Z",
       "id": "runtime/worker.py"
     },
     {
@@ -180,7 +180,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "runtime/__init__.py"
     },
     {
@@ -191,7 +191,7 @@
         "temporal_address",
         "connect"
       ],
-      "last_modified": "2026-08-24T20:01:19Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/temporal_client.py"
     },
     {
@@ -233,7 +233,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-09-18T03:03:35Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -272,7 +272,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-09-18T03:03:38Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -307,7 +307,7 @@
         "invoke",
         "decorator"
       ],
-      "last_modified": "2026-08-28T19:52:08Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/tool_registry.py"
     },
     {
@@ -341,7 +341,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-09-18T03:03:12Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -418,7 +418,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-09-18T03:04:18Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -472,7 +472,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-09-18T03:04:15Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "runtime/environment.py"
     },
     {
@@ -528,7 +528,7 @@
         "_release_claim",
         "discard"
       ],
-      "last_modified": "2026-08-25T13:55:09Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "runtime/dead_letter.py"
     },
     {
@@ -539,7 +539,7 @@
         "handler",
         "_signal"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/temporal_replay.py"
     },
     {
@@ -571,7 +571,7 @@
         "parse_cloud_response",
         "_get_access_token"
       ],
-      "last_modified": "2026-09-03T21:11:20Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/provider_dispatch.py"
     },
     {
@@ -613,7 +613,7 @@
         "record_exception",
         "start_as_current_span"
       ],
-      "last_modified": "2026-09-14T19:08:30Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "scripts/local_agent_stack.py"
     },
     {
@@ -627,7 +627,7 @@
         "_annotate_shadow_result",
         "run_shadow_eval"
       ],
-      "last_modified": "2026-09-14T19:07:37Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "scripts/shadow-eval.py"
     },
     {
@@ -713,7 +713,7 @@
         "_write_results",
         "is_model_gone"
       ],
-      "last_modified": "2026-09-14T19:07:37Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "scripts/run-evals.py"
     },
     {
@@ -833,7 +833,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-09-18T03:03:47Z",
+      "last_modified": "2026-09-18T05:09:23Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -903,7 +903,7 @@
         "_entry_id",
         "sync"
       ],
-      "last_modified": "2026-09-14T19:08:30Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "scripts/sync-portal-history.py"
     },
     {
@@ -929,7 +929,7 @@
         "__init__",
         "__repr__"
       ],
-      "last_modified": "2026-08-31T20:37:14Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "scripts/cost_router.py"
     },
     {
@@ -984,7 +984,7 @@
         "main",
         "_check_drift"
       ],
-      "last_modified": "2026-09-17T19:39:42Z",
+      "last_modified": "2026-09-18T05:08:17Z",
       "id": "scripts/generate-ide-config.py"
     },
     {
@@ -1030,7 +1030,7 @@
         "set_attribute",
         "record_exception"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-18T05:09:23Z",
       "id": "scripts/multi_agent_system.py"
     },
     {
@@ -1071,14 +1071,14 @@
         "_git_repo",
         "want"
       ],
-      "last_modified": "2026-09-18T02:56:54Z",
+      "last_modified": "2026-09-18T05:07:06Z",
       "id": "scripts/verify_system.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "javascript",
       "symbols": [],
-      "last_modified": "2026-08-25T09:26:44Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "templates/in-app-widget/widget.js"
     },
     {
@@ -1191,7 +1191,7 @@
         "test_templates_tarball_carries_both_destinations",
         "test_artifacts_extract_flat"
       ],
-      "last_modified": "2026-09-14T19:07:37Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "scripts/test/test_release_artifact_contract.py"
     },
     {
@@ -1500,7 +1500,7 @@
         "test_specs_header_matches_the_installer",
         "test_changelog_has_an_entry_for_the_current_version"
       ],
-      "last_modified": "2026-09-14T19:07:37Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "scripts/test/test_version_consistency.py"
     },
     {
@@ -1720,7 +1720,7 @@
         "_trip",
         "_boom"
       ],
-      "last_modified": "2026-08-31T20:36:30Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "scripts/test/test_cost_router.py"
     },
     {
@@ -1758,7 +1758,7 @@
         "test_every_shipped_command_is_in_the_canonical_reference",
         "leaves"
       ],
-      "last_modified": "2026-09-14T19:10:16Z",
+      "last_modified": "2026-09-18T05:06:27Z",
       "id": "scripts/test/test_env_var_documentation.py"
     },
     {
@@ -2024,7 +2024,7 @@
         "_NoopActivity",
         "defn"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "examples/oil-price-agent/workflows/activities.py"
     },
     {
@@ -2037,7 +2037,7 @@
         "run",
         "_decide"
       ],
-      "last_modified": "2026-08-25T14:35:27Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "examples/oil-price-agent/workflows/oil_price_workflow.py"
     },
     {
@@ -2102,7 +2102,7 @@
         "fake_post",
         "fake_post_401"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/test/test_llm_gateway_budget.py"
     },
     {
@@ -2325,7 +2325,7 @@
         "unlisted_by_default",
         "greet"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/test/test_tool_registry.py"
     },
     {
@@ -2471,7 +2471,7 @@
         "test_get_refuses_rather_than_guessing_when_s3_is_configured",
         "__init__"
       ],
-      "last_modified": "2026-09-17T12:59:05Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/test/test_trace_redactor.py"
     },
     {
@@ -2558,7 +2558,7 @@
         "test_a_missing_address_falls_back_rather_than_raising",
         "test_no_caller_builds_its_own_temporal_connection"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/test/test_temporal_client.py"
     },
     {
@@ -2673,7 +2673,7 @@
         "test_the_scrubbed_text_keeps_the_users_own_characters",
         "custom"
       ],
-      "last_modified": "2026-08-28T20:17:01Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/test/test_input_guardrail.py"
     },
     {
@@ -2707,7 +2707,7 @@
         "test_concurrent_reserves_never_exceed_cap",
         "one"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/test/test_pg_budget_live.py"
     },
     {
@@ -2717,7 +2717,7 @@
         "test_workflow_stays_alive_and_resumes_with_human_fix",
         "test_retries_exactly_once_not_temporals_default_policy"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/test/test_recoverable_step.py"
     },
     {
@@ -2748,7 +2748,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/workflows/__init__.py"
     },
     {
@@ -2773,7 +2773,7 @@
         "human_fix_payload",
         "signal"
       ],
-      "last_modified": "2026-08-28T09:28:20Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/workflows/base_workflow.py"
     },
     {
@@ -2783,7 +2783,7 @@
         "metadata",
         "RootLayout"
       ],
-      "last_modified": "2026-06-26T21:15:31Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/layout.tsx"
     },
     {
@@ -2807,7 +2807,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T23:22:06Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -2835,7 +2835,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-24T12:09:10Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/test/auditLog.test.ts"
     },
     {
@@ -2860,7 +2860,7 @@
       "symbols": [
         "DlqEntryCard"
       ],
-      "last_modified": "2026-08-25T09:23:32Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/components/DlqEntryCard.tsx"
     },
     {
@@ -2873,7 +2873,7 @@
         "toneForRunStatus",
         "toneForDlqReason"
       ],
-      "last_modified": "2026-07-11T07:39:22Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/components/ui/Badge.tsx"
     },
     {
@@ -2899,7 +2899,7 @@
         "replayDlqEntry",
         "discardDlqEntry"
       ],
-      "last_modified": "2026-08-29T23:15:59Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/dlq.ts"
     },
     {
@@ -2912,7 +2912,7 @@
         "tableExists",
         "columnExists"
       ],
-      "last_modified": "2026-09-17T13:00:41Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/db.ts"
     },
     {
@@ -2925,7 +2925,7 @@
         "getReplayWebhookConfig",
         "upsertTenant"
       ],
-      "last_modified": "2026-09-17T13:00:01Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/tenants.ts"
     },
     {
@@ -2936,7 +2936,7 @@
         "Isolation",
         "isValidIsolation"
       ],
-      "last_modified": "2026-09-14T19:07:37Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/isolation.ts"
     },
     {
@@ -2968,7 +2968,7 @@
         "RecentTraceStats",
         "getRecentTraceStats"
       ],
-      "last_modified": "2026-08-24T23:59:52Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/phoenix.ts"
     },
     {
@@ -2981,7 +2981,7 @@
         "getTenantCost",
         "getAllTenantsCurrentSpend"
       ],
-      "last_modified": "2026-08-24T23:08:31Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/cost.ts"
     },
     {
@@ -2995,7 +2995,7 @@
         "signEvent",
         "verifySignature"
       ],
-      "last_modified": "2026-08-24T23:27:07Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/auditSignature.ts"
     },
     {
@@ -3007,7 +3007,7 @@
         "AuditEventWithVerification",
         "listAuditEvents"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/auditLog.ts"
     },
     {
@@ -3023,7 +3023,7 @@
         "getFrameworkVersionByTenant",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-08-25T20:57:40Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -3035,7 +3035,7 @@
         "revokeWidgetToken",
         "revokeWidgetTokensForTenant"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/widgetTokens.ts"
     },
     {
@@ -3045,7 +3045,7 @@
         "revokeSession",
         "isSessionRevoked"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/sessionRevocation.ts"
     },
     {
@@ -3058,7 +3058,7 @@
         "SyncEntryInput",
         "syncHistoryEntries"
       ],
-      "last_modified": "2026-09-14T19:07:37Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/issues.ts"
     },
     {
@@ -3081,7 +3081,7 @@
         "OidcIdentity",
         "handleCallback"
       ],
-      "last_modified": "2026-08-24T19:29:58Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/oidc.ts"
     },
     {
@@ -3092,7 +3092,7 @@
         "SuggestedPromotion",
         "getSuggestedPromotions"
       ],
-      "last_modified": "2026-09-17T12:59:54Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/promotions.ts"
     },
     {
@@ -3168,7 +3168,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-25T20:51:47Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/runs/ingest/route.ts"
     },
     {
@@ -3177,7 +3177,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-09-14T19:07:37Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/sync/history/route.ts"
     },
     {
@@ -3195,7 +3195,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-08-25T09:41:35Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/dlq/[taskId]/replay/route.ts"
     },
     {
@@ -3204,7 +3204,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-09-14T19:08:30Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/audit/append/route.ts"
     },
     {
@@ -3223,7 +3223,7 @@
         "POST",
         "DELETE"
       ],
-      "last_modified": "2026-08-23T19:46:16Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/tenants/[id]/widget-token/route.ts"
     },
     {
@@ -3241,7 +3241,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-08-24T23:06:29Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/auth/session-status/route.ts"
     },
     {
@@ -3250,7 +3250,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-07-11T07:39:22Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/auth/logout/route.ts"
     },
     {
@@ -3260,7 +3260,7 @@
         "dynamic",
         "GET"
       ],
-      "last_modified": "2026-08-24T23:07:30Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/auth/callback/route.ts"
     },
     {
@@ -3270,7 +3270,7 @@
         "dynamic",
         "GET"
       ],
-      "last_modified": "2026-08-24T23:07:30Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/auth/login/route.ts"
     },
     {
@@ -3280,7 +3280,7 @@
         "OPTIONS",
         "GET"
       ],
-      "last_modified": "2026-08-24T22:41:52Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/app/api/widget/status/route.ts"
     },
     {
@@ -3372,7 +3372,7 @@
         "current_identity",
         "current_tenant_id"
       ],
-      "last_modified": "2026-08-24T17:05:56Z",
+      "last_modified": "2026-09-18T05:09:23Z",
       "id": "runtime/tenancy.py"
     },
     {
@@ -3511,7 +3511,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-18T03:03:28Z",
+      "last_modified": "2026-09-18T05:09:23Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3601,7 +3601,7 @@
         "system_fingerprint",
         "prompt_attributes"
       ],
-      "last_modified": "2026-09-18T03:03:29Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "runtime/prompt_identity.py"
     },
     {
@@ -3721,7 +3721,7 @@
         "currentTraceId",
         "resolveTracesEndpoint"
       ],
-      "last_modified": "2026-09-14T19:08:30Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "portal/lib/tracing.ts"
     },
     {
@@ -3894,7 +3894,7 @@
         "metric_exporter",
         "_exporter"
       ],
-      "last_modified": "2026-09-14T19:19:23Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "runtime/otlp.py"
     },
     {
@@ -3914,7 +3914,7 @@
         "test_the_portal_resolver_still_guards_the_doubled_suffix",
         "test_no_module_hand_rolls_the_signal_path_any_more"
       ],
-      "last_modified": "2026-09-14T19:08:30Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/test/test_otlp_endpoint.py"
     },
     {
@@ -3929,7 +3929,7 @@
         "test_every_worker_entrypoint_configures_telemetry",
         "test_env_is_loaded_before_telemetry_reads_it"
       ],
-      "last_modified": "2026-08-28T19:52:08Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/test/test_telemetry_wiring.py"
     },
     {
@@ -4246,7 +4246,7 @@
         "test_every_documented_env_var_is_read_somewhere",
         "test_allowlist_entries_are_still_orphans"
       ],
-      "last_modified": "2026-09-14T19:10:31Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "scripts/test/test_documented_env_vars_exist.py"
     },
     {
@@ -4532,7 +4532,7 @@
         "test_webhooks_left_unset_are_skipped_and_the_job_still_fails",
         "test_a_configured_rollback_command_runs_and_can_read_the_failed_commit"
       ],
-      "last_modified": "2026-09-13T22:14:09Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "scripts/test/test_rollback_notify.py"
     },
     {
@@ -4607,7 +4607,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-18T02:56:56Z",
+      "last_modified": "2026-09-18T05:27:30Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4706,7 +4706,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-09-18T02:56:24Z",
+      "last_modified": "2026-09-18T05:14:52Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5014,7 +5014,7 @@
         "test_dashboard_stop_does_not_signal_a_reused_pid",
         "fake_upgrade"
       ],
-      "last_modified": "2026-09-14T19:32:01Z",
+      "last_modified": "2026-09-18T05:04:52Z",
       "id": "runtime/test/test_machine.py"
     },
     {
@@ -5030,7 +5030,7 @@
         "BypassDecision",
         "bypass_decision"
       ],
-      "last_modified": "2026-09-14T19:32:06Z",
+      "last_modified": "2026-09-18T05:04:51Z",
       "id": "runtime/machine/policy.py"
     },
     {
@@ -5088,7 +5088,7 @@
         "remove_profile_blocks",
         "uninstall"
       ],
-      "last_modified": "2026-09-14T19:32:07Z",
+      "last_modified": "2026-09-18T05:09:23Z",
       "id": "runtime/machine/ops.py"
     },
     {
@@ -5530,7 +5530,7 @@
         "render_table",
         "swap"
       ],
-      "last_modified": "2026-09-18T02:56:02Z",
+      "last_modified": "2026-09-18T05:07:06Z",
       "id": "scripts/gate_steps.py"
     },
     {
@@ -5777,10 +5777,12 @@
         "test_off_asks_for_no_line",
         "test_report_says_what_is_missing_without_refusing",
         "test_a_repo_whose_graph_is_missing_says_so_rather_than_passing",
+        "test_a_renaming_commit_has_one_scope_in_the_commit_gate_and_in_ci",
+        "test_renaming_a_gated_file_away_needs_a_design_at_commit_time_too",
         "test_agentsmith_declares_the_mode_it_ships",
         "test_the_tenant_template_runs_the_same_freshness_check"
       ],
-      "last_modified": "2026-09-18T00:18:31Z",
+      "last_modified": "2026-09-18T05:26:57Z",
       "id": "scripts/test/test_gate_kg.py"
     },
     {
@@ -5802,7 +5804,7 @@
         "record_gates_run",
         "last_gates_run"
       ],
-      "last_modified": "2026-09-18T02:56:55Z",
+      "last_modified": "2026-09-18T05:07:06Z",
       "id": "scripts/gate_history.py"
     },
     {
@@ -5821,6 +5823,7 @@
         "test_governed_names_every_missing_piece_at_once",
         "test_governed_notices_the_hooks_being_disarmed",
         "test_governed_reports_the_last_local_gates_run",
+        "test_a_filtered_gates_run_is_not_the_list_passing",
         "test_a_gates_run_from_another_commit_is_not_this_commits_evidence",
         "test_a_blocked_turn_is_recorded_as_unresolved",
         "test_the_same_fact_is_not_appended_twice_in_a_row",
@@ -5828,7 +5831,7 @@
         "test_the_line_is_the_shape_the_checker_already_reads",
         "test_the_stop_gate_writes_one"
       ],
-      "last_modified": "2026-09-18T02:56:07Z",
+      "last_modified": "2026-09-18T05:07:06Z",
       "id": "scripts/test/test_governed_tenant.py"
     },
     {
@@ -5838,6 +5841,22 @@
       "pillar": null,
       "created_at": "2026-09-18T03:02:17Z",
       "id": "rfc:reviews/governance-enforcement-g7.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "One artifact per type, and each one for its own reader",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/artifact-consolidation.md",
+      "pillar": null,
+      "created_at": "2026-09-18T05:22:15Z",
+      "id": "rfc:designs/artifact-consolidation.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 one artifact per type (G5b, AgentSmith's half, commit 1 of 2)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/artifact-consolidation.md",
+      "pillar": null,
+      "created_at": "2026-09-18T05:22:15Z",
+      "id": "rfc:reviews/artifact-consolidation.md"
     }
   ],
   "edges": [

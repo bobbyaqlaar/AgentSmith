@@ -14,9 +14,9 @@ self-improvement, and CI/CD — automatically.
 > **Scope:** this document introduces AgentSmith — objectives, architecture,
 > features, differentiators, and license. It contains no procedures beyond
 > the Quick Start: installation/configuration/operations live in
-> [OPERATIONS.md](./OPERATIONS.md), the formal specification in
-> [SPECS.md](./SPECS.md), day-to-day dev usage in
-> [UserManual.md](./UserManual.md).
+> [docs/UserManual.md](docs/UserManual.md), the formal specification in
+> [docs/DESIGN.md](docs/DESIGN.md), day-to-day dev usage in
+> [docs/UserManual.md](docs/UserManual.md).
 
 ---
 
@@ -63,7 +63,7 @@ self-improvement, and CI/CD — automatically.
 | **OpenTelemetry & Observability** | OTel span contract → Arize Phoenix — one instance per machine or team, per-project and per-tenant namespacing, owner/cost/token attribution |
 | **Ops Portal** | Cross-tenant ops dashboard — run history, cost vs cap, DLQ triage, HMAC append-only audit log, RBAC / optional SSO |
 | **Workflow Orchestration** | Durable agents via **Temporal** (primary) or **Celery** — HITL pause/resume, recoverable steps, shared or dedicated worker pools |
-| **LLM Gateway** | Single choke point for **workload** provider calls — budget reservation, degrade ladder, circuit breaker, redaction, prompt guard, moderation hook. Workers and activities must not bypass it. The eval harness (`scripts/cost_router.py`) is the one path that does not go through it, by design — see OPERATIONS.md |
+| **LLM Gateway** | Single choke point for **workload** provider calls — budget reservation, degrade ladder, circuit breaker, redaction, prompt guard, moderation hook. Workers and activities must not bypass it. The eval harness (`scripts/cost_router.py`) is the one path that does not go through it, by design — see docs/UserManual.md |
 | **Vector / RAG Memory** | Short-term conversation memory + vector store substrate (`embeddings.py` / `vector_store.py`; hash or sentence-transformers; optional pgvector) |
 | **Security Framework** | `run-security-checks.py` + `SEC-*` registry — OWASP LLM · NIST AI RMF · MITRE ATLAS · ISO/IEC 42001 evidence packs in CI (`strict: true`) |
 | **Regulations Compliance** | UAE / sovereign starter (`templates/uae-sovereign/`), PDPL pre-call scrub, fairness + adversarial eval suites, ISO thematic control map |
@@ -80,7 +80,7 @@ self-improvement, and CI/CD — automatically.
 ## Architecture
 
 Two layers, joined by one OpenTelemetry span contract
-(SPECS.md §3 has the full diagrams and the end-to-end integration flow):
+(docs/DESIGN.md › System Architecture has the full diagrams and the end-to-end integration flow):
 
 - **Layer 1 — Dev Lifecycle (workstation):** IDE guardrails, git hooks,
   local/hybrid LLM routing, PR evaluations, Knowledge Graph,
@@ -92,7 +92,7 @@ Two layers, joined by one OpenTelemetry span contract
 ### Functional layers
 
 Summary only — the canonical, reasoned mapping (including what is
-deliberately *not* built and why) is **SPECS.md §4a**.
+deliberately *not* built and why) is **docs/DESIGN.md › Architecture by Layer**.
 
 | Layer | Status | Implementation |
 |---|---|---|
@@ -144,7 +144,7 @@ git checkout
 ```
 
 Full setup (env vars, `.env` files, GitHub secrets, prerequisites):
-**OPERATIONS.md §0–1**. Daily commands: **UserManual.md §17**.
+**docs/UserManual.md › Install & Start, Create an AgentSmith-Governed Repo**. Daily commands: **docs/UserManual.md › Command Reference**.
 
 ### Opt-in model
 
@@ -160,7 +160,7 @@ files written into it.
 ## The Fourteen Pillars
 
 The operational guardrails AgentSmith enforces on every project it touches
-(full specification: SPECS.md §4):
+(full specification: docs/DESIGN.md › Ten Operational Pillars):
 
 1. **Requirements & Design** — no code without a spec in `.agent-rfc/`.
 2. **Build Architecture (Ponytail)** — native libraries over custom
@@ -215,14 +215,14 @@ commented out in `models.yaml`; uncomment one or declare your own to enable
 them. Switch modes: `agentsmith mode local` / `agentsmith mode hybrid`.
 
 In hybrid mode, prompts and completions go to cloud provider APIs; trace
-data always stays at your configured Phoenix endpoint (SPECS.md §8).
+data always stays at your configured Phoenix endpoint (docs/DESIGN.md › Multi-Agent Execution Modes).
 
 ---
 
 ## Beyond Solo Dev: Multi-Tenant, Production, Enterprise
 
 Built and tested against real infrastructure (Postgres, Redis, Temporal,
-Kubernetes, a live OIDC provider). Operator procedures: OPERATIONS.md.
+Kubernetes, a live OIDC provider). Operator procedures: docs/UserManual.md.
 
 | Layer | What it adds |
 |---|---|
@@ -262,15 +262,15 @@ Starter pack: **[templates/uae-sovereign/](./templates/uae-sovereign/)**.
 
 | Document | Owns |
 |---|---|
-| [SPECS.md](./SPECS.md) | Formal specification: architecture, functional→technical mapping, schemas, contracts, decision log, repository structure |
-| [OPERATIONS.md](./OPERATIONS.md) | Full operator lifecycle: install → create/configure repos → test → deploy (GitHub CI/CD) → monitor → HITL/DLQ → improve → maintain → shut down |
-| [UserManual.md](./UserManual.md) | Day-to-day solo/dev-mode usage + the canonical command reference |
+| [docs/DESIGN.md](docs/DESIGN.md) | Formal specification: architecture, functional→technical mapping, schemas, contracts, decision log, repository structure |
+| [docs/UserManual.md](docs/UserManual.md) | Full operator lifecycle: install → create/configure repos → test → deploy (GitHub CI/CD) → monitor → HITL/DLQ → improve → maintain → shut down |
+| [docs/UserManual.md](docs/UserManual.md) | Day-to-day solo/dev-mode usage + the canonical command reference |
 | [CHANGELOG.md](./CHANGELOG.md) | Release notes + compatibility matrix |
-| [Product_Archive.md](./Product_Archive.md) | Build history (read-only) |
-| [FIXES_AND_CLEANUP.md](./FIXES_AND_CLEANUP.md) | Remaining to-do items |
+| [docs/PRODUCT_ARCHIVE.md](docs/PRODUCT_ARCHIVE.md) | Build history (read-only) |
+| [docs/PRODUCT_BACKLOG.md](docs/PRODUCT_BACKLOG.md) | Remaining to-do items |
 | [docs/](./docs/) | Topic canon: security framework map, UAE regulatory, ISO 42001 map, delivery model, RAG/memory, team observability |
 | [docs/session-handoff/](./docs/session-handoff/) | Point-in-time notes for picking up where a work session left off |
-| Review reports (root, read-only) | Findings from specific audits, kept for their reasoning rather than their status: [ReviewFindings-2026-07-18](./ReviewFindings-2026-07-18.md) (docs↔code sync), [TestCoverageReview-2026-07-21](./TestCoverageReview-2026-07-21.md), [TestbedFeedback-2026-07-21](./TestbedFeedback-2026-07-21.md) (what building a tenant found in the framework). All items closed — current work is in FIXES_AND_CLEANUP.md |
+| Review reports (root, read-only) | Findings from specific audits, kept for their reasoning rather than their status: [ReviewFindings-2026-07-18](docs/REVIEW_LOG.md) (docs↔code sync), [TestCoverageReview-2026-07-21](docs/REVIEW_LOG.md), [TestbedFeedback-2026-07-21](docs/REVIEW_LOG.md) (what building a tenant found in the framework). All items closed — current work is in docs/PRODUCT_BACKLOG.md |
 
 ---
 

@@ -2,7 +2,7 @@
  * AgentSmith In-App Widget — <agent-status>
  *
  * Embeddable, read-only status component for tenant applications
- * (SPECS.md §15, §26). No framework dependency, no build step.
+ * (docs/DESIGN.md › Universal Observability Platform, Federated Observability). No framework dependency, no build step.
  *
  * Usage:
  *   <script src="https://cdn.agenticframework.io/widget.js"></script>

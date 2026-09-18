@@ -184,7 +184,7 @@ def test_webhooks_left_unset_are_skipped_and_the_job_still_fails(tmp_path):
 
 
 def test_a_configured_rollback_command_runs_and_can_read_the_failed_commit(tmp_path):
-    """OPERATIONS.md documents $ROLLBACK_NOTIFY_COMMIT for ROLLBACK_COMMAND."""
+    """docs/UserManual.md documents $ROLLBACK_NOTIFY_COMMIT for ROLLBACK_COMMAND."""
     bare = tmp_path / "no-checkout"
     bare.mkdir()
     marker = tmp_path / "rolled-back"

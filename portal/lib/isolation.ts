@@ -1,5 +1,5 @@
 // portal/lib/isolation.ts — the `isolation` enum shared by the tenants API
-// route and the DB CHECK constraint (SPECS.md §23). Mirrors the
+// route and the DB CHECK constraint (docs/DESIGN.md › Tenancy Model (Independent Repositories)). Mirrors the
 // `--isolation shared|dedicated` validation already in install-ai-stack.sh's
 // agentsmith tenant init.
 

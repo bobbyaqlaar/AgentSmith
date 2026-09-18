@@ -394,7 +394,12 @@ def kg_problems(files: List[str], review_text: str, read: Reader) -> List[str]:
         graph = json.loads(graph_text)
     except json.JSONDecodeError as exc:
         return [f"{KG_FIXTURE} is not valid JSON ({exc}) — rebuild it with scripts/map_codebase.py"]
-    expected = lkg.impact(graph, files)
+    # The files the change LEAVES. A deleted path is nothing a reviewer can read,
+    # and whether it is listed at all depends on who asked git: `git diff` detects
+    # renames and names only the new path, `git diff-tree` does not and names
+    # both. Found when a commit that renamed four documents passed the commit gate
+    # and failed CI with a different hash for the same change.
+    expected = lkg.impact(graph, [f for f in files if read(f) is not None])
     found = _KG_QUERY.search(review_text)
     if not found:
         return ["records no 'KG query:' line — run `python3 scripts/local_knowledge_graph.py --impact "
@@ -894,8 +899,12 @@ def cmd_commit_msg(message_file: str, amend: bool = False) -> int:
         base = [parent or _EMPTY_TREE]
     elif not git("rev-parse", "--verify", "-q", "HEAD", cwd=root, check=False).strip():
         base = [_EMPTY_TREE]
-    files = [f for f in git("diff", "--cached", "--name-only", *base, cwd=root).splitlines() if f]
-    lines = _gated_lines(git("diff", "--cached", "--numstat", *base, cwd=root), config)
+    # --no-renames: CI lists files with `git diff-tree`, which does not detect
+    # renames, so it sees a rename's OLD path as a deletion. `git diff` detects
+    # them and hid it — renaming a gated file away escaped the design's scope
+    # here and was caught only after the push. Both gates now see the same list.
+    files = [f for f in git("diff", "--cached", "--name-only", "--no-renames", *base, cwd=root).splitlines() if f]
+    lines = _gated_lines(git("diff", "--cached", "--numstat", "--no-renames", *base, cwd=root), config)
 
     added = _added_lines(git("diff", "--cached", "-U0", *base, cwd=root, check=False))
     # What this commit is measured against: the config it inherits and the lock
@@ -1111,7 +1120,7 @@ def split_record_ref(value: str) -> Tuple[Optional[str], Optional[str]]:
 
 ARTIFACT_MODES = ("off", "report", "enforce")
 
-# A pointer into another document's numbering: `SPECS.md §23`, `DESIGN.md#L120`.
+# A pointer into another document's numbering — `SPECS.md §23`, `DESIGN.md#L120`.  <!-- xref: example -->
 # Section numbers move on the next edit of the document they point into; a
 # heading name or the document alone does not.
 _XREF = re.compile(r"[\w./-]+\.md\s*(?:§|#L)\s*[\w.]*\d")

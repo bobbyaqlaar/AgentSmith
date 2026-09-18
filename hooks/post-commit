@@ -46,7 +46,7 @@ AF_PYTHON="$HOME/.agent-framework/.venv/bin/python"
 # ── 1. Update Knowledge Graph ─────────────────────────────────────────────────
 # AGENT_KG_DEFER=1 skips the rebuild for batch git operations (rebase /
 # cherry-pick chains) that would otherwise fire it once per step and block
-# the operation with unstaged KG changes (FIXES_AND_CLEANUP.md lesson;
+# the operation with unstaged KG changes (docs/PRODUCT_BACKLOG.md lesson;
 # ReviewFindings-2026-07-18 C2). Run `python3 scripts/map_codebase.py`
 # once after the batch instead. The walk itself is also incremental now
 # (unchanged files skipped by mtime), so the un-deferred per-commit cost
@@ -113,7 +113,7 @@ if [ -f "$LOG_FILE" ]; then
   # Python source — it's read via os.environ instead. The unquoted form let
   # the path expand directly into a string literal with no escaping; low
   # practical risk since the path comes from `git rev-parse --show-toplevel`,
-  # but fragile (FIXES_AND_CLEANUP.md 4.8).
+  # but fragile (docs/PRODUCT_BACKLOG.md 4.8).
   LOG_FILE="$LOG_FILE" python3 - <<'PYEOF' 2>/dev/null || true
 import json, os
 log_file = os.environ["LOG_FILE"]

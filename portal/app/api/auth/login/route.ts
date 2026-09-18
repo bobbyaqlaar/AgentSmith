@@ -1,5 +1,5 @@
 // GET /api/auth/login — starts the OIDC authorization-code+PKCE flow
-// (SPECS.md §30). Only meaningful when SSO_ENABLED=true.
+// (docs/DESIGN.md › Enterprise Install and Compliance Pack). Only meaningful when SSO_ENABLED=true.
 
 import { NextResponse } from "next/server";
 import { getOidcSettings, buildAuthorizationUrl, secureCookies } from "@/lib/oidc";

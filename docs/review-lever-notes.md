@@ -213,7 +213,7 @@ inside the tenant's own product.*
 
 **Why.** — and check the git state matches what CI will see, or the local run is not the same run. **(++++)** Run the ones CI LISTS, not the ones you remember. Enumerate the workflow's steps and work down them; a subset that passes is not a pass.
 
-*Caught: a push that failed on SPECS.md's §16 repo-tree drift check — a new
+*Caught: a push that failed on docs/DESIGN.md's §16 repo-tree drift check — a new
 module had been added to the module table and not to the tree — after a
 local run of every gate the author happened to know about. Item 4 of this
 group already says `self-test.yml` is the definitive list.*

@@ -17,7 +17,7 @@
 # lever's design/validation counterpart reaches every provisioned repo either
 # way without a second integration point.
 #
-# See SPECS.md §4 and §13 for pillar and IDE configuration specification.
+# The pillars and the IDE configuration are specified in docs/DESIGN.md › Ten Operational Pillars, Antigravity Integration.
 # The two `design_review` / `validation_review` entries under `skills:` below
 # point at docs/design-review-checklist.md and docs/validation-checklist.md,
 # which reframe docs/review-levers.md for build-time and merge-time use.

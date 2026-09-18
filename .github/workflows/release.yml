@@ -1,4 +1,4 @@
-# AgentSmith — Release CI (SPECS.md §22 Phase 5, §28).
+# AgentSmith — Release CI (docs/DESIGN.md › Framework vs Application Release).
 #
 # Triggers on a vX.Y.Z tag (set by the framework's own post-commit hook's
 # semver auto-tagging, hooks/post-commit). Builds and attaches the artifacts
@@ -18,7 +18,7 @@
 #                                tenant repo by post-checkout/agentsmith tenant init)
 #   install-ai-stack.sh         (the bootstrap script ITSELF, plus a .sha256)
 #
-# The installer is an asset because OPERATIONS.md documents fetching it from a
+# The installer is an asset because docs/UserManual.md documents fetching it from a
 # release URL and checksum-verifying it before running. It never was one: the
 # release shipped only the tarballs the installer downloads, so the documented
 # `curl .../releases/download/<tag>/install-ai-stack.sh | bash` 404'd at every
@@ -72,13 +72,13 @@ jobs:
           # The framework environment's pinned, hashed dependencies —
           # install-ai-stack.sh builds ~/.agent-framework/.venv from it.
           cp requirements.lock dist/requirements.lock
-          # In-App Widget: no cdn.agenticframework.io exists (Product_Archive.md
+          # In-App Widget: no cdn.agenticframework.io exists (docs/PRODUCT_ARCHIVE.md
           # 5.11) — ship widget.js as a release asset so tenants can self-host it
           # (e.g. <script src="/static/widget.js">) instead of pointing at a
           # domain that was never actually provisioned.
           cp templates/in-app-widget/widget.js dist/widget.js
           # The bootstrap script itself + its checksum. `shasum` writes
-          # "<hash>  <name>", and OPERATIONS.md's verification pipes this file
+          # "<hash>  <name>", and docs/UserManual.md's verification pipes this file
           # straight into `shasum -a 256 --check`, which resolves that name
           # relative to the CURRENT directory — so it has to be the bare
           # filename, hence the subshell rather than `shasum dist/install-...`.
@@ -93,7 +93,7 @@ jobs:
         # contents-only archives); this step makes a regression in the build
         # step (e.g. someone "fixing" it back to `tar -czf x.tar.gz scripts`)
         # fail CI instead of silently shipping a release that breaks every
-        # fresh `install-ai-stack.sh` run (Product_Archive.md 4.13).
+        # fresh `install-ai-stack.sh` run (docs/PRODUCT_ARCHIVE.md 4.13).
         run: |
           set -euo pipefail
           for f in dist/*.tar.gz; do
@@ -141,6 +141,6 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
-          # Per SPECS.md §28: release notes should call out span-attribute or
+          # Per docs/DESIGN.md › Framework vs Application Release: release notes should call out span-attribute or
           # hook-interface breaking changes explicitly — generate_release_notes
           # produces a baseline from merged PRs; amend manually for breaking changes.

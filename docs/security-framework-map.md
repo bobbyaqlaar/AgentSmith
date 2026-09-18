@@ -12,9 +12,9 @@ controls to four security/compliance frameworks, and how every tenant app
 **Related:**
 - [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md) — ISO theme detail + evidence checklist
 - [`docs/uae-regulatory.md`](./uae-regulatory.md) — UAE sovereign / PDPL / HITL
-- [`docs/superpowers/specs/2026-07-15-security-compliance-harness-design.md`](./superpowers/specs/2026-07-15-security-compliance-harness-design.md) — harness design
-- [`docs/superpowers/plans/2026-07-15-security-compliance-harness.md`](./superpowers/plans/2026-07-15-security-compliance-harness.md) — implementation plan
-- [`FIXES_AND_CLEANUP.md`](../FIXES_AND_CLEANUP.md) — active gaps
+- [`docs/PRODUCT_ARCHIVE.md`](PRODUCT_ARCHIVE.md) — harness design
+- [`docs/PRODUCT_ARCHIVE.md`](PRODUCT_ARCHIVE.md) — implementation plan
+- [`docs/PRODUCT_BACKLOG.md`](PRODUCT_BACKLOG.md) — active gaps
 
 ---
 
@@ -351,8 +351,8 @@ Attach to auditor requests alongside [`docs/iso-42001-control-map.md`](./iso-420
 ## Gap closure roadmap (required implementation)
 
 These gaps **must** ship for full framework coverage. Status tracked in
-[`FIXES_AND_CLEANUP.md`](../FIXES_AND_CLEANUP.md) and implemented per
-[`docs/superpowers/plans/2026-07-15-security-compliance-harness.md`](./superpowers/plans/2026-07-15-security-compliance-harness.md).
+[`docs/PRODUCT_BACKLOG.md`](PRODUCT_BACKLOG.md) and implemented per
+[`docs/PRODUCT_ARCHIVE.md`](PRODUCT_ARCHIVE.md).
 
 | Priority | Control ID | Deliverable |
 |---|---|---|

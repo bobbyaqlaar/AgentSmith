@@ -25,7 +25,7 @@ export interface TenantCost {
    *  is then an absence, not a measurement. */
   wired: boolean;
   spentUsd: number;       // current month
-  cap: number | null;     // tenants.budget_cap_usd — null until synced from tenant.yaml (Product_Archive.md P2b)
+  cap: number | null;     // tenants.budget_cap_usd — null until synced from tenant.yaml (docs/PRODUCT_ARCHIVE.md P2b)
   history: CostByPeriod[];
 }
 
@@ -36,7 +36,7 @@ export interface CurrentSpend {
 }
 
 /** One definition of "this month", used by both queries below. UTC on
- *  purpose — see OPERATIONS.md; the gateway writes the same period key. */
+ *  purpose — see docs/UserManual.md; the gateway writes the same period key. */
 function currentPeriod(): string {
   return new Date().toISOString().slice(0, 7);
 }

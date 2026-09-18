@@ -1,5 +1,5 @@
 // portal/lib/dlq.ts — dead-letter queue depth + per-entry triage for the
-// Ops Portal (Product_Archive.md HITL/DLQ redesign).
+// Ops Portal (docs/PRODUCT_ARCHIVE.md HITL/DLQ redesign).
 //
 // runtime/dead_letter.py's DeadLetterQueue is Postgres-backed and creates
 // `dlq_entries` itself (CREATE TABLE IF NOT EXISTS) the first time a worker
@@ -203,7 +203,7 @@ export async function replayDlqEntry(tenantId: string, taskId: string, editedPay
   const config = await getReplayWebhookConfig(tenantId);
   if (!config) {
     throw new ReplayNotConfiguredError(
-      `Tenant '${tenantId}' has no replay_webhook_url/secret configured — see OPERATIONS.md "Wire your platform" for HITL/DLQ.`
+      `Tenant '${tenantId}' has no replay_webhook_url/secret configured — see docs/UserManual.md "Wire your platform" for HITL/DLQ.`
     );
   }
   const body = JSON.stringify({ taskId, payload: editedPayload });

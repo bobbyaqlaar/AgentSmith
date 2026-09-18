@@ -12,7 +12,7 @@ api:
 
 log:
   level: INFO
-  format: json        # stdout JSON-lines — README.md point 4 / OPERATIONS.md on-prem logging
+  format: json        # stdout JSON-lines — README.md point 4 / docs/UserManual.md on-prem logging
 
 accessLog:
   format: json

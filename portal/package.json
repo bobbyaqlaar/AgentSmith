@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AgentSmith Ops Portal \u2014 cross-tenant operations dashboard (SPECS.md \u00a715, \u00a726)",
+  "description": "AgentSmith Ops Portal \u2014 cross-tenant operations dashboard (docs/DESIGN.md › Universal Observability Platform, Federated Observability)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

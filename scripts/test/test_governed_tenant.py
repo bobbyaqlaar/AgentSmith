@@ -178,6 +178,18 @@ def test_governed_reports_the_last_local_gates_run(tenant) -> None:
 
 
 @needs_git
+def test_a_filtered_gates_run_is_not_the_list_passing(tenant) -> None:
+    """`agentsmith gates run --only kg` passing one gate is not the gates
+    passing. Found while migrating the documents: --governed said "Governed"
+    on the strength of a one-gate run."""
+    gate_history.record_gates_run(tenant, passed=1, failed=0, skipped=0, only="repo-tree")
+
+    result = _governed(tenant)
+
+    assert result.returncode != 0
+    assert "filtered" in result.stdout and "repo-tree" in result.stdout
+
+
 def test_a_gates_run_from_another_commit_is_not_this_commits_evidence(tenant) -> None:
     gate_history.record_gates_run(tenant, passed=3, failed=0, skipped=0, commit="0" * 40)
 

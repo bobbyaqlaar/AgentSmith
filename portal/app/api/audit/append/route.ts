@@ -1,4 +1,4 @@
-// POST /api/audit/append — append a signed audit event (SPECS.md §30).
+// POST /api/audit/append — append a signed audit event (docs/DESIGN.md › Enterprise Install and Compliance Pack).
 //
 // Called from CLI/CI contexts that can't carry the dashboard's basic-auth
 // credentials: agentsmith tenant init (tenant_created), agentsmith tenant promote

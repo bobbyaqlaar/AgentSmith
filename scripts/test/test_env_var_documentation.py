@@ -21,7 +21,7 @@ repo has. A glob that reaches for a directory written in another language is
 not coverage.
 
 Adding a variable is therefore a two-line change: read it, and say what it does
-in UserManual.md's "Runtime Flags" section.
+in docs/UserManual.md's "Runtime Flags" section.
 """
 
 from __future__ import annotations
@@ -129,7 +129,7 @@ def test_every_portal_env_var_is_documented() -> None:
     assert not undocumented, (
         "environment variables the PORTAL reads but documented in no .md file:\n"
         + "\n".join(f"  {k:28} {v}" for k, v in sorted(undocumented.items()))
-        + "\n\nAdd them to portal/README.md or OPERATIONS.md's Ops Portal section, "
+        + "\n\nAdd them to portal/README.md or docs/UserManual.md's Ops Portal section, "
           "and to portal/.env.example — the file the setup steps tell you to copy."
     )
 
@@ -149,7 +149,7 @@ def test_every_env_var_the_code_reads_is_documented() -> None:
     assert not undocumented, (
         "environment variables read by the code but documented in no .md file:\n"
         + "\n".join(f"  {k:28} {v}" for k, v in sorted(undocumented.items()))
-        + "\n\nAdd them to UserManual.md's 'Runtime Flags (Environment "
+        + "\n\nAdd them to docs/UserManual.md's 'Runtime Flags (Environment "
           "Variables)' section — an undiscoverable knob is not configurable."
     )
 
@@ -161,7 +161,7 @@ def test_security_knobs_are_in_the_canonical_reference() -> None:
     `TOOL_ALLOWLIST_STRICT` is the cautionary case — a tenant CI was already
     depending on it while it appeared in no document at all.
     """
-    manual = (REPO / "UserManual.md").read_text(encoding="utf-8")
+    manual = (REPO / "docs/UserManual.md").read_text(encoding="utf-8")
     for name in (
         "PROMPT_GUARD",
         "PROMPT_DENYLIST_PATH",
@@ -172,14 +172,14 @@ def test_security_knobs_are_in_the_canonical_reference() -> None:
         "ENABLE_IP_REDACTION",
         "SECURITY_STRICT",
     ):
-        assert name in manual, f"{name} missing from UserManual.md's runtime flags"
+        assert name in manual, f"{name} missing from docs/UserManual.md's runtime flags"
 
 
 def test_fail_closed_behaviour_is_stated_not_just_the_variable() -> None:
     """Naming `TOOL_ALLOWLIST_STRICT` without saying it denies everything when
     no allowlist is loaded would leave a reader with the opposite expectation —
     strict modes are usually read as "enforce what is listed", not "deny all"."""
-    manual = (REPO / "UserManual.md").read_text(encoding="utf-8")
+    manual = (REPO / "docs/UserManual.md").read_text(encoding="utf-8")
     # The TABLE ROW, not the first mention — the section's own prose names the
     # variable too, and matching that would pass without the behaviour stated.
     row = next(
@@ -198,7 +198,7 @@ def test_fail_closed_behaviour_is_stated_not_just_the_variable() -> None:
 
 
 def test_every_shipped_command_is_in_the_canonical_reference() -> None:
-    """UserManual.md §17 is designated the canonical command reference, so a
+    """docs/UserManual.md › Command Reference is designated the canonical command reference, so a
     command the CLI ships but the manual never lists is unreachable by anyone
     who has not read the parser.
 
@@ -220,10 +220,10 @@ def test_every_shipped_command_is_in_the_canonical_reference() -> None:
         return [leaf for a in subs for name, child in a.choices.items() for leaf in leaves(child, (*path, name))]
 
     shipped = {leaf for leaf in leaves(build_parser()) if not leaf.startswith("hooks ")}  # internal, for the hooks
-    manual = (REPO / "UserManual.md").read_text(encoding="utf-8")
+    manual = (REPO / "docs/UserManual.md").read_text(encoding="utf-8")
     listed = set(re.findall(r"^\| `agentsmith ([a-z][a-z -]*?)(?: [<\[-][^`]*)?`", manual, re.M))
 
     assert len(shipped) >= 15, f"the parser walk found too few commands: {sorted(shipped)}"
     # A row may carry the command's positional choice (`agentsmith dashboard start`).
     missing = sorted(leaf for leaf in shipped if not any(row == leaf or row.startswith(leaf + " ") for row in listed))
-    assert not missing, f"commands the CLI ships but UserManual.md §17 never lists: {missing}"
+    assert not missing, f"commands the CLI ships but docs/UserManual.md › Command Reference never lists: {missing}"

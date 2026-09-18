@@ -1,4 +1,4 @@
-// portal/lib/oidc.ts — SSO/OIDC for the Ops Portal (SPECS.md §30, enterprise pack).
+// portal/lib/oidc.ts — SSO/OIDC for the Ops Portal (docs/DESIGN.md › Enterprise Install and Compliance Pack, enterprise pack).
 //
 // "When enterprise pack is enabled: Ops Portal requires SSO login (OIDC)."
 // This replaces (not augments) HTTP basic auth for the dashboard when
@@ -51,7 +51,7 @@ export function getOidcSettings(): OidcSettings | null {
   if (!issuer || !clientId || !clientSecret || !redirectUri) {
     throw new Error(
       "SSO_ENABLED=true requires SSO_ISSUER, SSO_CLIENT_ID, SSO_CLIENT_SECRET, and SSO_REDIRECT_URI " +
-        "(SPECS.md §30 org policy: sso.provider / sso.issuer / sso.client_id)."
+        "(docs/DESIGN.md › Enterprise Install and Compliance Pack org policy: sso.provider / sso.issuer / sso.client_id)."
     );
   }
   return { issuer, clientId, clientSecret, redirectUri };

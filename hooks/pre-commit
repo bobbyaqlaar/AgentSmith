@@ -87,9 +87,9 @@ while IFS= read -r file; do
 done <<< "$STAGED"
 
 # ── Guardrail 3: direct cost_router imports in runtime/ (enterprise mode) ────
-# SPECS.md line 1618: "workers MUST NOT import cost_router.py directly" — that
+# docs/DESIGN.md line 1618: "workers MUST NOT import cost_router.py directly" — that
 # rule previously existed only as a comment in runtime/llm_gateway.py and
-# runtime/worker.py, with nothing actually enforcing it (FIXES_AND_CLEANUP.md
+# runtime/worker.py, with nothing actually enforcing it (docs/PRODUCT_BACKLOG.md
 # 1.3). Any call routed through cost_router.py bypasses the per-tenant budget
 # store, degrade ladder, and audit trail entirely. Enterprise mode = an org
 # policy file exists at ~/.agent-framework/agenticframework-org.yaml.
@@ -100,7 +100,7 @@ if [ -f "$ORG_POLICY_FILE" ]; then
         if grep -E -n "^[[:space:]]*(import[[:space:]]+cost_router|from[[:space:]]+(scripts\.)?cost_router[[:space:]]+import|from[[:space:]]+scripts[[:space:]]+import[[:space:]]+cost_router)" "$file" 2>/dev/null; then
           echo "❌ ERROR ($file): direct cost_router import inside runtime/. Workers MUST go through"
           echo "   runtime/llm_gateway.py — importing cost_router.py directly bypasses budget"
-          echo "   enforcement, the degrade ladder, and the audit trail entirely (SPECS.md line 1618)."
+          echo "   enforcement, the degrade ladder, and the audit trail entirely (docs/DESIGN.md line 1618)."
           FAILED=1
         fi
         ;;
@@ -109,7 +109,7 @@ if [ -f "$ORG_POLICY_FILE" ]; then
 fi
 
 # ── Guardrail 4: enterprise RFC tracking must exist (enterprise mode) ───────
-# FIXES_AND_CLEANUP.md P1a: "If org policy present: require RFC-NNN in
+# docs/PRODUCT_BACKLOG.md P1a: "If org policy present: require RFC-NNN in
 # commit message or staged paths covered by open .agent-rfc/*.md." The
 # RFC-NNN-in-commit-message half of that check lives in hooks/commit-msg
 # instead — pre-commit has no access to the (not-yet-written) commit
@@ -121,7 +121,7 @@ if [ -f "$ORG_POLICY_FILE" ]; then
   RFC_COUNT=$(find .agent-rfc -maxdepth 1 -name "*.md" -type f 2>/dev/null | wc -l | tr -d ' ')
   if [ "${RFC_COUNT:-0}" -eq 0 ]; then
     echo "❌ ERROR: Enterprise policy requires at least one RFC under .agent-rfc/ before committing."
-    echo "   Create one: touch .agent-rfc/NNN-short-description.md (see UserManual.md §6)."
+    echo "   Create one: touch .agent-rfc/NNN-short-description.md (see docs/UserManual.md › Writing Agent Specifications (RFCs))."
     FAILED=1
   fi
 fi

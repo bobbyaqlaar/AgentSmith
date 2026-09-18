@@ -16,8 +16,8 @@ claim that AgentSmith or any tenant is ISO/IEC 42001 certified.
 
 **Related:** [`docs/uae-regulatory.md`](./uae-regulatory.md) (UAE mandates),
 [`templates/uae-sovereign/`](../templates/uae-sovereign/) (residency),
-SPECS.md §30 (enterprise pack + SOC2-oriented notes),
-[`FIXES_AND_CLEANUP.md`](../FIXES_AND_CLEANUP.md) (gaps).
+docs/DESIGN.md › Enterprise Install and Compliance Pack (enterprise pack + SOC2-oriented notes),
+[`docs/PRODUCT_BACKLOG.md`](PRODUCT_BACKLOG.md) (gaps).
 
 ---
 
@@ -139,6 +139,6 @@ pre-call scrub shipped — extend for domain/cert scope).
 
 ## SPECS cross-link
 
-Enterprise pack mechanics: SPECS.md §30.  
-SOC2-oriented short table: SPECS.md §30 “Compliance Notes”.  
-ISO/IEC 42001-oriented short table: SPECS.md §30 (summary → this file).
+Enterprise pack mechanics: docs/DESIGN.md › Enterprise Install and Compliance Pack.  
+SOC2-oriented short table: docs/DESIGN.md › Enterprise Install and Compliance Pack “Compliance Notes”.  
+ISO/IEC 42001-oriented short table: docs/DESIGN.md › Enterprise Install and Compliance Pack (summary → this file).

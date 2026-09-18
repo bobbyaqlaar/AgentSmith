@@ -1,6 +1,6 @@
 """
 runtime/test/test_trace_redactor.py — regression tests for trace redaction
-(SPECS.md §27, Product_Archive.md 1.2 / 2.2 / 2.3 / 2.8).
+(docs/DESIGN.md › Trace Redaction, docs/PRODUCT_ARCHIVE.md 1.2 / 2.2 / 2.3 / 2.8).
 
 No external infra required — these exercise TraceRedactor's pure scrubbing
 logic and the per-span tenant binding directly, without a real OTel SDK
@@ -84,7 +84,7 @@ def test_development_profile_does_not_scrub():
 
 
 def test_unrecognized_profile_value_falls_back_to_strictest():
-    """Product_Archive.md 2.8: an unrecognized profile string passed
+    """docs/PRODUCT_ARCHIVE.md 2.8: an unrecognized profile string passed
     directly must resolve to the strictest behavior, not the most
     permissive — mirrors get_environment()'s own fail-closed contract."""
     redactor = _redactor("totally-bogus-value")
@@ -94,7 +94,7 @@ def test_unrecognized_profile_value_falls_back_to_strictest():
 def test_per_span_tenant_id_used_for_hitl_blob_not_constructor_default(
     tmp_path, monkeypatch
 ):
-    """Product_Archive.md 1.2: the regression this guards against is a
+    """docs/PRODUCT_ARCHIVE.md 1.2: the regression this guards against is a
     shared worker pool binding tenant_id once at construction time and
     leaking tenant A's HITL blob under tenant B's key (or vice versa)."""
     monkeypatch.setenv("HITL_BLOB_DIR", str(tmp_path))
@@ -118,7 +118,7 @@ def test_per_span_tenant_id_used_for_hitl_blob_not_constructor_default(
 
 
 def test_blob_ref_includes_span_id_for_collision_safety(tmp_path, monkeypatch):
-    """Product_Archive.md 2.2: two sibling spans in the same trace with
+    """docs/PRODUCT_ARCHIVE.md 2.2: two sibling spans in the same trace with
     the same attr_key must not collide on the same blob ref."""
     monkeypatch.setenv("HITL_BLOB_DIR", str(tmp_path))
     monkeypatch.setenv("HITL_ENCRYPTION_KEY", "test-key-not-a-real-secret")
@@ -144,7 +144,7 @@ def test_blob_ref_includes_span_id_for_collision_safety(tmp_path, monkeypatch):
 def test_missing_hitl_key_logs_error_not_silently_swallowed(
     tmp_path, monkeypatch, caplog
 ):
-    """Product_Archive.md 2.3: a missing HITL_ENCRYPTION_KEY must be
+    """docs/PRODUCT_ARCHIVE.md 2.3: a missing HITL_ENCRYPTION_KEY must be
     visible (logged), not a silently dropped blob with a dangling ref."""
     monkeypatch.setenv("HITL_BLOB_DIR", str(tmp_path))
     monkeypatch.delenv("HITL_ENCRYPTION_KEY", raising=False)

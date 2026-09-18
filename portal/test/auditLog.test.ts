@@ -1,6 +1,6 @@
 // portal/test/auditLog.test.ts — HMAC sign/verify round-trip and tamper
-// detection for the immutable audit log (SPECS.md §30,
-// Product_Archive.md P3). Requires a real Postgres with db/schema.sql
+// detection for the immutable audit log (docs/DESIGN.md › Enterprise Install and Compliance Pack,
+// docs/PRODUCT_ARCHIVE.md P3). Requires a real Postgres with db/schema.sql
 // applied (npm run db:migrate) — same "test against real infra, not mocks"
 // pattern as templates/in-app-widget/test/widget.test.mjs and this
 // directory's authz.test.ts.
@@ -39,7 +39,7 @@ async function test(name: string, fn: () => Promise<void> | void) {
 const tenantId = `audit-test-${Date.now()}`;
 
 // audit_log.tenant_id has a FK constraint against tenants(tenant_id)
-// (Product_Archive.md 2.4) — a tenant must exist before an audit event
+// (docs/PRODUCT_ARCHIVE.md 2.4) — a tenant must exist before an audit event
 // can reference it.
 await getPool().query(
   `INSERT INTO tenants (tenant_id, name) VALUES ($1, $1) ON CONFLICT (tenant_id) DO NOTHING`,

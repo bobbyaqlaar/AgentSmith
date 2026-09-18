@@ -8,7 +8,7 @@ the vector store was correctly placed and correctly attributed; and
 `configure_metrics()` had NO CALLER ANYWHERE — not runtime/worker.py, not KYC
 Sentinel's worker, not examples/oil-price-agent. Its only three mentions in the
 repo were its own definition, its own docstring, and one line of
-docs/observability-audit.md.
+docs/REVIEW_LOG.md.
 
 Without a MeterProvider, `opentelemetry.metrics.get_meter()` returns a
 `_ProxyMeter` whose instruments buffer for a real provider that never arrives.

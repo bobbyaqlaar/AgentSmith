@@ -28,7 +28,7 @@ REPO = Path(__file__).resolve().parents[2]
 RELEASE_YML = REPO / ".github" / "workflows" / "release.yml"
 INSTALLER = REPO / "install-ai-stack.sh"
 # Docs that hand a user a release URL to run or verify.
-DOC_FILES = ("README.md", "OPERATIONS.md", "UserManual.md")
+DOC_FILES = ("README.md", "docs/UserManual.md", "docs/UserManual.md")
 
 _DOWNLOAD_URL = re.compile(r"releases/latest/download/([\w.-]+)")
 _TAR_BUILD = re.compile(r"-czf\s+dist/([\w.-]+)")
@@ -78,7 +78,7 @@ def test_the_installer_itself_is_a_release_asset() -> None:
 
     Regression: the release published only the tarballs install-ai-stack.sh
     downloads, so `curl .../releases/download/<tag>/install-ai-stack.sh | bash`
-    — the first command in OPERATIONS.md — 404'd at every version that ever
+    — the first command in docs/UserManual.md — 404'd at every version that ever
     existed. The pre-existing tests here could not catch it by construction:
     they check artifacts the installer *downloads*, and it does not download
     itself. Nothing surfaced it either, because `curl -fsSL … | bash` on a 404
@@ -91,7 +91,7 @@ def test_the_installer_itself_is_a_release_asset() -> None:
         "documented curl-bootstrap URL will 404"
     )
     assert "install-ai-stack.sh.sha256" in built, (
-        "no checksum published for the installer, but OPERATIONS.md documents "
+        "no checksum published for the installer, but docs/UserManual.md documents "
         "verifying one before executing it"
     )
 
@@ -99,7 +99,7 @@ def test_the_installer_itself_is_a_release_asset() -> None:
 def test_docs_only_reference_artifacts_the_release_builds() -> None:
     """Closes the loop the installer-only check left open.
 
-    OPERATIONS.md documented fetching `install-ai-stack.sh` and its `.sha256`
+    docs/UserManual.md documented fetching `install-ai-stack.sh` and its `.sha256`
     from a release for an entire version cycle while neither was published.
     A doc that hands someone a URL is as much a part of the release contract as
     the installer is.

@@ -13,7 +13,7 @@ what the framework already ships, and how to run it on UAE-aligned rails.
 > counsel and your compliance function before production use with national or
 > personal data.
 
-Full gap tracking and build triggers: `[FIXES_AND_CLEANUP.md](../FIXES_AND_CLEANUP.md)`
+Full gap tracking and build triggers: `[docs/PRODUCT_BACKLOG.md](PRODUCT_BACKLOG.md)`
 (UAE Regulatory gap register + Future Phase).
 
 ---
@@ -66,7 +66,7 @@ replace placeholders.
 5. **Do not** send national data through hybrid mode to non-UAE frontier APIs
    (including public Hugging Face) unless counsel has approved that path.
 
-See OPERATIONS.md (local vs hybrid mode, on-prem deploy) and SPECS.md §29
+See docs/UserManual.md (local vs hybrid mode, on-prem deploy) and docs/DESIGN.md › LLM Gateway (Production)
 (LLM Gateway / provider adapters).
 
 ---
@@ -129,7 +129,7 @@ they go live.
 | `BaseAgentWorkflow.run_with_hitl_gate`       | Explicit pause when an activity sets `needs_hitl` — workflow waits on a Temporal signal |
 | `run_with_recoverable_step` + Ops Portal DLQ | Failed high-impact steps park alive; human edits payload, Replay/Discard                |
 | HITL promotion loop                          | Production failures → golden tests → guardrails                                         |
-| HMAC-signed audit log                        | Append-only, tamper-evident record of admin/bypass/config actions (SPECS.md §30)        |
+| HMAC-signed audit log                        | Append-only, tamper-evident record of admin/bypass/config actions (docs/DESIGN.md › Enterprise Install and Compliance Pack)        |
 | Encrypted HITL blobs                         | Full payload preserved for compliance review under redaction profiles                   |
 
 
@@ -225,12 +225,12 @@ for technical standards alignment (still not a certificate).
 
 ## Related docs
 
-- [`FIXES_AND_CLEANUP.md`](../FIXES_AND_CLEANUP.md) — remaining gaps (P12 security harness ✅)
+- [`docs/PRODUCT_BACKLOG.md`](PRODUCT_BACKLOG.md) — remaining gaps (P12 security harness ✅)
 - [`templates/uae-sovereign/`](../templates/uae-sovereign/) — Falcon models.yaml, env, residency checklist
 - [`docs/security-framework-map.md`](./security-framework-map.md) — OWASP · NIST · ATLAS · ISO crosswalk + harness
 - [`docs/iso-42001-control-map.md`](./iso-42001-control-map.md) — ISO/IEC 42001 thematic map + evidence checklist
 - [`README.md`](../README.md) — Ten Pillars, HITL, enterprise layer
-- [`OPERATIONS.md`](../OPERATIONS.md) — Install, modes, on-prem, portal, security harness
-- [`SPECS.md`](../SPECS.md) — §27 redaction, §29 gateway, §30 enterprise/compliance
+- [`docs/UserManual.md`](UserManual.md) — Install, modes, on-prem, portal, security harness
+- [`docs/DESIGN.md`](DESIGN.md) — §27 redaction, §29 gateway, §30 enterprise/compliance
 - [`enterprise/README.md`](../enterprise/README.md) — Hook bundles, bypass policy
 

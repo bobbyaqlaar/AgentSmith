@@ -1,5 +1,5 @@
 // GET /api/widget/status?token=... — public, read-only, token-scoped status
-// endpoint for the In-App Widget (templates/in-app-widget/, SPECS.md §15, §26).
+// endpoint for the In-App Widget (templates/in-app-widget/, docs/DESIGN.md › Universal Observability Platform, Federated Observability).
 //
 // SECURITY: tenant scoping comes ENTIRELY from the token. There is no
 // tenant-id query/body parameter here on purpose — a forged tenant-id could
