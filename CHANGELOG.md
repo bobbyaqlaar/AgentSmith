@@ -75,6 +75,22 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the shell pre-check lets an agent ask whether the repo is armed
+
+- **`git config core.hooksPath` with no value is a read, and is no longer refused.** Neither are
+  `--get`, `--get-all`, `--get-regexp`, `--list`/`-l`, or git 2.46's `get`/`list`. The check read
+  "no value" as "the empty value" and refused the question as a write.
+- **Newly refused**: `git config --unset[-all] core.hooksPath`, `unset core.hooksPath`,
+  `--remove-section core` and `--rename-section core …` — each leaves git running `.git/hooks`,
+  which holds none of the gates. Every write form refused before is still refused.
+- **A command is read past what is in front of it.** `NAME=value` and `env` before the program, and
+  `-C <dir>`, `-c <k=v>`, `--git-dir`, `--work-tree` before git's subcommand, each hid the command:
+  `GIT_EDITOR=true git commit --no-verify` and `git -C ../repo commit --no-verify` went through.
+  `git -c` is matched case-insensitively and in its `--config-env=` and `GIT_CONFIG_KEY_<n>` /
+  `GIT_CONFIG_PARAMETERS` forms.
+- **Hook interface:** the shell hook's allow/deny contract is unchanged; which commands it denies
+  changed as above. An installed tenant gets it on reinstall (`install-ai-stack.sh`).
+
 ### Changed — a pointer into another document names something that document defines
 
 - **The cross-reference rule reads every pointer with a number in it**, with or without `§`, and

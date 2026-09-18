@@ -381,13 +381,22 @@ through `beforeShellExecution`. It refuses four things:
 | Refused | Why |
 |---|---|
 | `git commit --no-verify` / `-n`, `git push --no-verify` | skips the commit gate or the pre-push sweep |
-| `git -c core.hooksPath=… <anything>` | runs that one command with the hooks off |
-| `git config core.hooksPath <not this repo's>` | points the repo away from its gates. Re-arming it to `.githooks` is allowed — that is what the sweep asks for |
+| `git -c core.hooksPath=… <anything>`, `--config-env=core.hooksPath=…`, `GIT_CONFIG_KEY_<n>=core.hooksPath` / `GIT_CONFIG_PARAMETERS` in front of a command | runs that one command with the hooks off |
+| `git config core.hooksPath <not this repo's>` — plain, `--add`, `--replace-all`, `set`, any scope | points the repo away from its gates. Re-arming it to `.githooks` is allowed — that is what the sweep asks for |
+| `git config --unset[-all] core.hooksPath`, `unset`, `--remove-section core`, `--rename-section core …` | with no hooks path git runs `.git/hooks`, which holds none of the gates: they stop |
 | writes to `.githooks/**`, `approvals.jsonl`, `process-gates.json`, an IDE hook config | changing the gate itself, which is a gated path |
 | `agentsmith approve` | it asks at a terminal and an agent has none; refusing early beats a confusing failure |
 
-Reading any of those files is fine. `git push -n` is a dry run, not a bypass,
-and is allowed.
+Reading any of those files is fine, and so is asking git what the hooks path
+is: `git config core.hooksPath` with no value, `--get`, `--get-all`,
+`--get-regexp`, `--list`, `get`, `list`. `git push -n` is a dry run, not a
+bypass, and is allowed.
+
+**A command is read past what is in front of it**: `NAME=value` assignments and
+`env` before the program, and git's global options (`-C <dir>`, `-c <k=v>`,
+`--git-dir`, `--work-tree`) before its subcommand. Until 2026-09-18 either one
+hid the command behind it — `GIT_EDITOR=true git commit --no-verify` and
+`git -C ../repo commit --no-verify` both went through.
 
 **The line is tokenised the way a shell tokenises it**, so a bypass inside
 quotes — a test fixture, an `echo`, a script handed to an interpreter — is an
@@ -397,7 +406,8 @@ repo's own tests for itself until that was fixed.
 **Stated limit, and it decides what this is worth.** It reads the command an
 IDE is about to run, not what that command does. `bash -c "$(…)"`, a script
 file, a shell alias and a Makefile target all reach git without passing
-through. That is why the sweep exists and why the commit and CI gates are the
+through. So do `git config --edit`, a write straight into `.git/config`, an
+`export GIT_CONFIG_…` on an earlier line, and `env` given options of its own. That is why the sweep exists and why the commit and CI gates are the
 ones that cannot be talked around: this layer makes the obvious bypass visible
 and costly, not impossible.
 

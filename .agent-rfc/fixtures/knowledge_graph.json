@@ -87,7 +87,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-09-18T09:06:11Z",
+      "last_modified": "2026-09-18T10:26:05Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -173,7 +173,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-09-18T09:06:28Z",
+      "last_modified": "2026-09-18T10:26:20Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -214,7 +214,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-09-18T09:07:24Z",
+      "last_modified": "2026-09-18T10:27:14Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -233,7 +233,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-09-18T09:05:55Z",
+      "last_modified": "2026-09-18T10:25:50Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -272,7 +272,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-09-18T09:06:00Z",
+      "last_modified": "2026-09-18T10:25:54Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -341,7 +341,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-09-18T09:05:07Z",
+      "last_modified": "2026-09-18T10:25:10Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -418,7 +418,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-09-18T09:06:58Z",
+      "last_modified": "2026-09-18T10:26:49Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -442,7 +442,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-09-18T09:06:03Z",
+      "last_modified": "2026-09-18T10:25:58Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -460,7 +460,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-09-18T09:07:15Z",
+      "last_modified": "2026-09-18T10:27:06Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -472,7 +472,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-09-18T09:06:54Z",
+      "last_modified": "2026-09-18T10:26:45Z",
       "id": "runtime/environment.py"
     },
     {
@@ -505,7 +505,7 @@
         "degrade_tiers",
         "__getattr__"
       ],
-      "last_modified": "2026-09-18T09:05:40Z",
+      "last_modified": "2026-09-18T10:25:38Z",
       "id": "runtime/testing.py"
     },
     {
@@ -591,7 +591,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-09-18T09:06:22Z",
+      "last_modified": "2026-09-18T10:26:15Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -762,7 +762,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-09-18T09:06:18Z",
+      "last_modified": "2026-09-18T10:26:11Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -833,7 +833,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-09-18T09:06:17Z",
+      "last_modified": "2026-09-18T10:26:10Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -864,7 +864,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-09-18T09:06:14Z",
+      "last_modified": "2026-09-18T10:26:07Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -3428,7 +3428,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-09-18T09:06:27Z",
+      "last_modified": "2026-09-18T10:26:19Z",
       "id": "runtime/config.py"
     },
     {
@@ -3511,7 +3511,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-18T09:05:38Z",
+      "last_modified": "2026-09-18T10:25:36Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3602,7 +3602,7 @@
         "system_fingerprint",
         "prompt_attributes"
       ],
-      "last_modified": "2026-09-18T09:05:42Z",
+      "last_modified": "2026-09-18T10:25:39Z",
       "id": "runtime/prompt_identity.py"
     },
     {
@@ -4074,7 +4074,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-09-18T09:04:51Z",
+      "last_modified": "2026-09-18T10:24:56Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -5674,10 +5674,13 @@
         "_segments",
         "_redirect_targets",
         "_protects",
+        "_environment_and_command",
+        "_subcommand_at",
+        "_config_refusal",
         "_git_refusal",
         "refusal"
       ],
-      "last_modified": "2026-09-17T20:59:43Z",
+      "last_modified": "2026-09-18T10:17:10Z",
       "id": "scripts/gate_shell.py"
     },
     {
@@ -5690,6 +5693,15 @@
         "test_a_bypass_inside_quotes_is_an_argument_not_a_command",
         "test_push_dash_n_is_a_dry_run_not_a_bypass",
         "test_the_hooks_path_this_repo_uses_is_allowed_to_be_set",
+        "test_reading_the_hooks_path_is_not_refused",
+        "test_every_write_form_away_from_the_hooks_is_refused",
+        "test_removing_the_hooks_path_is_refused",
+        "test_other_config_writes_are_not_refused",
+        "test_options_before_the_subcommand_do_not_hide_it",
+        "test_every_spelling_of_hooks_off_for_one_call_is_refused",
+        "test_an_environment_prefix_does_not_hide_the_command",
+        "test_the_reason_quotes_what_it_refused",
+        "test_an_environment_prefix_on_ordinary_work_is_not_refused",
         "test_writing_to_the_gate_itself_is_refused",
         "test_reading_those_files_is_fine",
         "test_recording_an_approval_from_a_shell_is_refused",
@@ -5701,7 +5713,7 @@
         "test_cursor_wires_the_shell_hook",
         "test_claude_matches_the_shell_tool"
       ],
-      "last_modified": "2026-09-17T20:59:06Z",
+      "last_modified": "2026-09-18T10:28:49Z",
       "id": "scripts/test/test_gate_shell.py"
     },
     {
@@ -5905,6 +5917,22 @@
       "pillar": null,
       "created_at": "2026-09-18T09:08:13Z",
       "id": "rfc:reviews/xref-names.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The shell pre-check reads `git config` the way git does",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/shell-gate-config-reads.md",
+      "pillar": null,
+      "created_at": "2026-09-18T10:16:23Z",
+      "id": "rfc:designs/shell-gate-config-reads.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the shell pre-check reads `git config` the way git does",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/shell-gate-config-reads.md",
+      "pillar": null,
+      "created_at": "2026-09-18T10:28:08Z",
+      "id": "rfc:reviews/shell-gate-config-reads.md"
     }
   ],
   "edges": [

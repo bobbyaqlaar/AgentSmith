@@ -85,6 +85,136 @@ def test_the_hooks_path_this_repo_uses_is_allowed_to_be_set() -> None:
     assert _refused("git config core.hooksPath ../elsewhere") is not None
 
 
+@pytest.mark.parametrize("command", [
+    "git config core.hooksPath",
+    "git config core.hookspath",
+    "git config --get core.hooksPath",
+    "git config --get-all core.hooksPath",
+    "git config --get-regexp core.hooks",
+    "git config --get-regexp '^core\\.hookspath$'",
+    "git config --local --get core.hooksPath",
+    "git config --show-origin --get core.hooksPath",
+    "git config --show-origin core.hooksPath",
+    "git config --list",
+    "git config -l",
+    "git config --list --show-origin",
+    "git config --file .git/config core.hooksPath",
+    "git config --default .githooks --get core.hooksPath",
+    "git config get core.hooksPath",
+    "git config get --all core.hooksPath",
+    "git config list",
+    "git -C ../kyc config core.hooksPath",
+    "git config --get core.hooksPath /dev/null",   # a value pattern for the read
+])
+def test_reading_the_hooks_path_is_not_refused(command) -> None:
+    """Asking whether the repo is armed is not re-pointing it. Observed
+    2026-09-18: `git config core.hooksPath` was refused as `<empty>`."""
+    assert _refused(command) is None, command
+
+
+@pytest.mark.parametrize("command", [
+    "git config core.hooksPath /dev/null",
+    "git config core.HOOKSPATH /dev/null",
+    "git config core.hooksPath ''",
+    "git config --add core.hooksPath /dev/null",
+    "git config --replace-all core.hooksPath /dev/null",
+    "git config --global core.hooksPath /tmp/none",
+    "git config --local core.hooksPath /tmp/none",
+    "git config --file .git/config core.hooksPath /dev/null",
+    "git config -f .git/config core.hooksPath /dev/null",
+    "git config --type path core.hooksPath /dev/null",
+    "git config set core.hooksPath /dev/null",
+    "git config set --all core.hooksPath /dev/null",
+    "git -C ../kyc config core.hooksPath /dev/null",
+])
+def test_every_write_form_away_from_the_hooks_is_refused(command) -> None:
+    reason = _refused(command)
+    assert reason and "docs/process-gates.md" in reason, command
+
+
+@pytest.mark.parametrize("command", [
+    "git config --unset core.hooksPath",
+    "git config --unset-all core.hooksPath",
+    "git config --local --unset core.hooksPath",
+    "git config unset core.hooksPath",
+    "git config --remove-section core",
+    "git config remove-section core",
+    "git config --rename-section core elsewhere",
+    "git config --get --unset core.hooksPath",       # git rejects the mix; so does this
+    "git config -f .git/config unset core.hooksPath",
+    "git config --file .git/config --remove-section core",
+])
+def test_removing_the_hooks_path_is_refused(command) -> None:
+    """With no hooks path git runs .git/hooks, which holds none of the gates."""
+    reason = _refused(command)
+    assert reason and "docs/process-gates.md" in reason, command
+
+
+@pytest.mark.parametrize("command", [
+    "git config --unset user.name",
+    "git config --remove-section alias",
+    "git config user.name 'A Person'",
+    "git config --add remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'",
+    "git config --add core.hooksPath .githooks",
+    "git config set core.hooksPath .githooks",
+])
+def test_other_config_writes_are_not_refused(command) -> None:
+    """Positive controls: a parser that refused every `git config` write would
+    pass the tests above."""
+    assert _refused(command) is None, command
+
+
+@pytest.mark.parametrize("command", [
+    "git -C ../kyc commit --no-verify -m x",
+    "git -c user.name=x commit --no-verify -m x",
+    "git --git-dir ../kyc/.git commit -n -m x",
+    "git --work-tree ../kyc push --no-verify",
+])
+def test_options_before_the_subcommand_do_not_hide_it(command) -> None:
+    """The subcommand was 'the first word without a dash', so the value of
+    `-C` or `-c` was taken for it and the bypass after it went unread."""
+    assert _refused(command), command
+
+
+@pytest.mark.parametrize("command", [
+    "git -c Core.HooksPath=/dev/null commit -m x",
+    "git --config-env=core.hooksPath=EMPTY commit -m x",
+    "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git commit -m x",
+    "GIT_CONFIG_PARAMETERS=\"'core.hooksPath'='/dev/null'\" git commit -m x",
+])
+def test_every_spelling_of_hooks_off_for_one_call_is_refused(command) -> None:
+    """git reads config keys case-insensitively, and takes `-c` from
+    `--config-env` and from GIT_CONFIG_* in the environment as well."""
+    reason = _refused(command)
+    assert reason and "docs/process-gates.md" in reason, command
+
+
+@pytest.mark.parametrize("command", [
+    "GIT_EDITOR=true git commit --no-verify -m x",
+    "env git push --no-verify",
+    "LC_ALL=C env git config --unset core.hooksPath",
+    "X=1 rm .githooks/commit-msg",
+    "FOO=bar agentsmith approve .agent-rfc/designs/x.md D1",  # <!-- xref: example -->
+])
+def test_an_environment_prefix_does_not_hide_the_command(command) -> None:
+    """`NAME=value cmd` runs cmd. Reading NAME=value as the program let every
+    check here be skipped by one assignment in front."""
+    assert _refused(command), command
+
+
+def test_the_reason_quotes_what_it_refused() -> None:
+    """A refusal that misquotes the command sends the reader looking for the
+    wrong thing: the `-c` one read "`git core.hooksPath=…`" for a while."""
+    assert "`git -c core.hooksPath=/dev/null commit -m x`" in _refused("git -c core.hooksPath=/dev/null commit -m x")
+    assert "`git config --unset core.hooksPath`" in _refused("git config --unset core.hooksPath")
+    assert "`git config core.hooksPath <empty>`" in _refused("git config core.hooksPath ''")
+
+
+def test_an_environment_prefix_on_ordinary_work_is_not_refused() -> None:
+    assert _refused("GIT_EDITOR=true git rebase --continue") is None
+    assert _refused("GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=user.name GIT_CONFIG_VALUE_0=x git commit -m x") is None
+
+
 # ── writing to what the gate is made of ──────────────────────────────────────
 
 
