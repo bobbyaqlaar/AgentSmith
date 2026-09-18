@@ -2055,9 +2055,10 @@ grants — never an implicit default.
 `admin` → Administrator — each over the tenants it lists. The portal logs one line naming the
 new form when it reads an old entry.
 
-`middleware.ts` resolves access once per request and forwards the grants to handlers as one
-trusted header, `x-af-grants`. It strips any client-supplied copy first, and the retired header
-names too. A header grant naming an unknown role or malformed apps is dropped, never widened.
+`middleware.ts` resolves access once per request and forwards it to handlers as two trusted
+headers: the grants (`x-af-grants`) and who signed in (`x-af-actor` — the basic-auth username or
+the SSO email, which every audit entry names). It strips any client-supplied copy of either
+first, and the retired header names too. A header grant naming an unknown role or malformed apps is dropped, never widened.
 
 ---
 

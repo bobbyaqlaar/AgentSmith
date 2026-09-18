@@ -20,6 +20,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  ACTOR_HEADER,
   AREAS,
   GRANTS_HEADER,
   LEGACY_ROLES,
@@ -32,6 +33,7 @@ import {
   areas,
   can,
   decodeGrantsHeader,
+  encodeActorHeader,
   encodeGrantsHeader,
   getAccessForSsoEmail,
   getAccessFromHeaderValue,
@@ -210,11 +212,11 @@ test("the areas follow the permissions a user holds", () => {
   assert.deepEqual(areas(admin), [...AREAS]);
 });
 
-test("the switcher offers only areas that exist: Administration waits for its pages", () => {
-  const admin = { grants: parseGrants({ grants: [{ role: "administrator", apps: "*" }] }) };
-  assert.deepEqual(areas(admin), ["dev", "ops", "admin"], "the permission is held");
-  assert.deepEqual(workspacesFor(admin), ["dev", "ops"], "but there is nothing to show yet");
-  assert.equal(WORKSPACES.admin.built, false);
+test("the switcher offers only areas that exist", () => {
+  const admin = { grants: parseGrants({ grants: [{ role: "administrator", apps: "*" }] }), actor: null };
+  assert.deepEqual(workspacesFor(admin), ["dev", "ops", "admin"]);
+  const unbuilt = { ...WORKSPACES, admin: { ...WORKSPACES.admin, built: false } };
+  assert.deepEqual(workspacesFor(admin, unbuilt), ["dev", "ops"], "a permission alone does not make an area appear");
 });
 
 // ── The trusted header ───────────────────────────────────────────────────────
@@ -243,9 +245,22 @@ test("SECURITY: every access header a client sends is stripped, retired names in
     "x-af-tenant-scope": "*",
     accept: "text/html",
   });
+  forged.set(ACTOR_HEADER, "someone-else");
   const stripped = stripAccessHeaders(forged);
-  for (const name of [GRANTS_HEADER, ...RETIRED_HEADERS]) assert.equal(stripped.get(name), null, name);
+  for (const name of [GRANTS_HEADER, ACTOR_HEADER, ...RETIRED_HEADERS]) assert.equal(stripped.get(name), null, name);
   assert.equal(stripped.get("accept"), "text/html", "only access headers are removed");
+});
+
+test("the actor is who signed in, and survives the header whatever it contains", () => {
+  process.env.OPS_PORTAL_USERS = JSON.stringify([
+    { username: "alice", password: "pw", grants: [{ role: "developer", apps: ["acme"] }] },
+  ]);
+  assert.equal(verifyBasicAuthCredentials("alice", "pw")?.actor, "alice");
+  delete process.env.OPS_PORTAL_USERS;
+  assert.equal(getAccessForSsoEmail("Alice@Corp.com").actor, "alice@corp.com");
+  const odd = "ünïcode, commas; and %";
+  assert.equal(getAccessFromHeaderValue(null, encodeActorHeader(odd)).actor, odd);
+  assert.equal(getAccessFromHeaderValue(null, "%E0%A4%A").actor, null, "unreadable is none, not garbage");
 });
 
 test("SECURITY: a role named after an Object.prototype property is not a role", () => {
@@ -268,7 +283,7 @@ test("missing or unreadable grants header decodes to no grants (deny by default)
   assert.deepEqual(decodeGrantsHeader(null), []);
   assert.deepEqual(decodeGrantsHeader("%E0%A4%A"), []);
   assert.deepEqual(decodeGrantsHeader(encodeURIComponent("{}")), []);
-  assert.deepEqual(getAccessFromHeaderValue(null), { grants: [] });
+  assert.deepEqual(getAccessFromHeaderValue(null), { grants: [], actor: null });
 });
 
 // ── Every RBAC route scopes to a tenant ─────────────────────────────────────

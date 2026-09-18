@@ -27,7 +27,8 @@ export default async function DevAppsPage() {
           <p className="text-black/60 dark:text-white/60">No apps yet.</p>
           {can(access, "admin.apps") && (
             <p className="text-black/60 dark:text-white/60">
-              Register one under Administration › Apps, then give its CI the ingest token.
+              <Link className="text-blue-700 dark:text-blue-400 hover:underline" href="/admin/apps">Register one</Link>, then
+              give its CI the ingest token.
             </p>
           )}
         </div>

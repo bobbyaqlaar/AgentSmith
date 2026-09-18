@@ -8,10 +8,10 @@ import { areas, type Access, type Area } from "./authz";
 export const WORKSPACES: Readonly<Record<Area, { label: string; home: string; built: boolean }>> = {
   dev: { label: "Dev", home: "/dev", built: true },
   ops: { label: "Ops", home: "/ops", built: true },
-  admin: { label: "Administration", home: "/admin", built: false },
+  admin: { label: "Administration", home: "/admin", built: true },
 };
 
 /** The areas this user may enter that exist, in switcher order. */
-export function workspacesFor(access: Access): Area[] {
-  return areas(access).filter((area) => WORKSPACES[area].built);
+export function workspacesFor(access: Access, registry: typeof WORKSPACES = WORKSPACES): Area[] {
+  return areas(access).filter((area) => registry[area].built);
 }

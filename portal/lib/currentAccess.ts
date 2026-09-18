@@ -14,7 +14,7 @@
 
 import { headers } from "next/headers";
 
-import { GRANTS_HEADER, getAccessFromHeaderValue, type Access } from "./authz";
+import { ACTOR_HEADER, GRANTS_HEADER, getAccessFromHeaderValue, type Access } from "./authz";
 
 /**
  * Server-side only, and only behind middleware.ts: this header is trusted
@@ -23,5 +23,5 @@ import { GRANTS_HEADER, getAccessFromHeaderValue, type Access } from "./authz";
  */
 export function currentAccess(): Access {
   const h = headers();
-  return getAccessFromHeaderValue(h.get(GRANTS_HEADER));
+  return getAccessFromHeaderValue(h.get(GRANTS_HEADER), h.get(ACTOR_HEADER));
 }

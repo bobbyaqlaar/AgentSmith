@@ -9,6 +9,8 @@
 // even by someone with direct database access who disables the trigger.
 
 import { randomUUID } from "node:crypto";
+import type { PoolClient } from "pg";
+
 import { getPool } from "./db";
 import { signEvent, verifySignature, type AuditEvent, type AuditEventType } from "./auditSignature";
 
@@ -26,7 +28,12 @@ export interface AppendAuditEventInput {
   details?: Record<string, unknown>;
 }
 
-export async function appendAuditEvent(input: AppendAuditEventInput): Promise<AuditEvent> {
+/**
+ * Appends one signed event. Pass `client` to write it inside a transaction the
+ * caller holds — then the action and its record commit or roll back together,
+ * and neither can exist without the other.
+ */
+export async function appendAuditEvent(input: AppendAuditEventInput, client?: PoolClient): Promise<AuditEvent> {
   const unsigned: Omit<AuditEvent, "signature"> = {
     eventId: randomUUID(),
     timestamp: new Date().toISOString(),
@@ -38,7 +45,7 @@ export async function appendAuditEvent(input: AppendAuditEventInput): Promise<Au
   const signature = signEvent(unsigned);
   const event: AuditEvent = { ...unsigned, signature };
 
-  await getPool().query(
+  await (client ?? getPool()).query(
     `INSERT INTO audit_log (event_id, "timestamp", event_type, actor_id, tenant_id, details, signature)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [event.eventId, event.timestamp, event.eventType, event.actorId, event.tenantId, JSON.stringify(event.details), event.signature]

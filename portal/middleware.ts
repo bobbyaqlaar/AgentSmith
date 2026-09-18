@@ -12,8 +12,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
+  ACTOR_HEADER,
   GRANTS_HEADER,
   SINGLE_USER_GRANTS,
+  encodeActorHeader,
   encodeGrantsHeader,
   getAccessForSsoEmail,
   stripAccessHeaders,
@@ -69,8 +71,9 @@ function stripForgedAccessHeaders(request: NextRequest): Headers {
   return stripAccessHeaders(request.headers);
 }
 
-function withAccessHeaders(headers: Headers, grants: Grant[]): Headers {
+function withAccessHeaders(headers: Headers, grants: Grant[], actor: string | null): Headers {
   headers.set(GRANTS_HEADER, encodeGrantsHeader(grants));
+  headers.set(ACTOR_HEADER, encodeActorHeader(actor));
   return headers;
 }
 
@@ -144,7 +147,7 @@ export async function middleware(request: NextRequest) {
     }
     if (session) {
       const access = getAccessForSsoEmail(session.email);
-      const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.grants);
+      const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.grants, access.actor);
       return NextResponse.next({ request: { headers } });
     }
 
@@ -190,13 +193,13 @@ export async function middleware(request: NextRequest) {
       const userOk = constantTimeEquals(user ?? "", reqUser);
       const passOk = constantTimeEquals(pass ?? "", reqPass);
       if (userOk && passOk) {
-        const headers = withAccessHeaders(stripForgedAccessHeaders(request), SINGLE_USER_GRANTS);
+        const headers = withAccessHeaders(stripForgedAccessHeaders(request), SINGLE_USER_GRANTS, reqUser);
         return NextResponse.next({ request: { headers } });
       }
     } else {
       const access = verifyBasicAuthCredentials(reqUser, reqPass);
       if (access) {
-        const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.grants);
+        const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.grants, access.actor);
         return NextResponse.next({ request: { headers } });
       }
     }

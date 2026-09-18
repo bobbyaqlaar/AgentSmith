@@ -75,6 +75,17 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — Administration › Apps (portal phase 1)
+
+- `/admin/apps`: register an app (id, name, repository, provider, default branch), edit it, and
+  issue, rotate or revoke its **ingest token** — the credential its CI uses to send gate records.
+  A token is shown once, with the two repository secrets to set; rotating and revoking ask first
+  and say what stops working. Needs the Administrator role.
+- Every registration, edit and token change is written to the audit log **in the same
+  transaction** as the change, naming the person who made it. Tokens never reach the log.
+- The middleware now forwards who is signed in (`x-af-actor`) beside the grants, stripped from
+  incoming requests like them.
+
 ### Added — the portal's Dev workspace, and three areas (portal phase 1)
 
 - **The portal is one application with areas**: `/dev` (new), `/ops` (everything that was

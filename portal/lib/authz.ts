@@ -75,9 +75,13 @@ export interface Grant {
 
 export interface Access {
   grants: Grant[];
+  /** Who is signed in — the basic-auth username or the SSO email. What an audit
+   *  entry names as the actor. Null when the request carries none. */
+  actor: string | null;
 }
 
 export const GRANTS_HEADER = "x-af-grants";
+export const ACTOR_HEADER = "x-af-actor";
 /** Pre-phase-1 header names. Never set any more; still stripped from every
  *  request, so a client cannot supply one that some forgotten reader trusts. */
 export const RETIRED_HEADERS = ["x-af-role", "x-af-tenant-scope"] as const;
@@ -239,13 +243,13 @@ export function verifyBasicAuthCredentials(username: string, password: string): 
   const expected = record?.password ?? "";
   const ok = constantTimeEquals(expected, password);
   if (!record || !ok) return null;
-  return { grants: record.grants };
+  return { grants: record.grants, actor: username };
 }
 
 export function getAccessForSsoEmail(email: string | undefined): Access {
-  if (!email) return { grants: [] };
+  if (!email) return { grants: [], actor: null };
   const record = getSsoUsers().find((u) => u.email === email.toLowerCase());
-  return { grants: record ? record.grants : [] };
+  return { grants: record ? record.grants : [], actor: email.toLowerCase() };
 }
 
 // ── the trusted header ───────────────────────────────────────────────────────
@@ -284,6 +288,7 @@ export function decodeGrantsHeader(value: string | null): Grant[] {
 export function stripAccessHeaders(headers: Headers): Headers {
   const stripped = new Headers(headers);
   stripped.delete(GRANTS_HEADER);
+  stripped.delete(ACTOR_HEADER);
   for (const name of RETIRED_HEADERS) stripped.delete(name);
   return stripped;
 }
@@ -292,6 +297,19 @@ export function stripAccessHeaders(headers: Headers): Headers {
 // successful authentication. Only call this from server-side route handlers
 // and pages running behind middleware.ts — never expose the header name to
 // client code.
-export function getAccessFromHeaderValue(grantsHeader: string | null): Access {
-  return { grants: decodeGrantsHeader(grantsHeader) };
+export function getAccessFromHeaderValue(grantsHeader: string | null, actorHeader: string | null = null): Access {
+  return { grants: decodeGrantsHeader(grantsHeader), actor: decodeActorHeader(actorHeader) };
+}
+
+export function encodeActorHeader(actor: string | null): string {
+  return encodeURIComponent(actor ?? "");
+}
+
+export function decodeActorHeader(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    return decodeURIComponent(value) || null;
+  } catch {
+    return null;
+  }
 }

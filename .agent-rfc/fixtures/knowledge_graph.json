@@ -10,7 +10,7 @@
         "config",
         "middleware"
       ],
-      "last_modified": "2026-09-18T14:54:12Z",
+      "last_modified": "2026-09-18T15:19:57Z",
       "id": "portal/middleware.ts"
     },
     {
@@ -27,6 +27,7 @@
         "Grant",
         "Access",
         "GRANTS_HEADER",
+        "ACTOR_HEADER",
         "RETIRED_HEADERS",
         "can",
         "roleFor",
@@ -41,9 +42,11 @@
         "encodeGrantsHeader",
         "decodeGrantsHeader",
         "stripAccessHeaders",
-        "getAccessFromHeaderValue"
+        "getAccessFromHeaderValue",
+        "encodeActorHeader",
+        "decodeActorHeader"
       ],
-      "last_modified": "2026-09-18T14:48:46Z",
+      "last_modified": "2026-09-18T15:23:04Z",
       "id": "portal/lib/authz.ts"
     },
     {
@@ -2818,7 +2821,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-09-18T15:12:07Z",
+      "last_modified": "2026-09-18T15:21:38Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -3023,7 +3026,7 @@
         "AuditEventWithVerification",
         "listAuditEvents"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-09-18T15:23:04Z",
       "id": "portal/lib/auditLog.ts"
     },
     {
@@ -3083,7 +3086,7 @@
       "symbols": [
         "currentAccess"
       ],
-      "last_modified": "2026-09-18T14:46:57Z",
+      "last_modified": "2026-09-18T15:19:57Z",
       "id": "portal/lib/currentAccess.ts"
     },
     {
@@ -6034,12 +6037,16 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
+        "hashToken",
+        "newIngestToken",
         "createIngestToken",
         "resolveIngestToken",
         "revokeIngestTokens",
-        "bearerToken"
+        "bearerToken",
+        "IngestTokenStatus",
+        "ingestTokenStatus"
       ],
-      "last_modified": "2026-09-18T14:57:02Z",
+      "last_modified": "2026-09-18T15:23:04Z",
       "id": "portal/lib/ingestTokens.ts"
     },
     {
@@ -6123,7 +6130,7 @@
         "WORKSPACES",
         "workspacesFor"
       ],
-      "last_modified": "2026-09-18T15:13:27Z",
+      "last_modified": "2026-09-18T15:21:38Z",
       "id": "portal/lib/workspaces.ts"
     },
     {
@@ -6180,7 +6187,7 @@
         "dynamic",
         "DevAppsPage"
       ],
-      "last_modified": "2026-09-18T15:02:33Z",
+      "last_modified": "2026-09-18T15:21:38Z",
       "id": "portal/app/dev/page.tsx"
     },
     {
@@ -6319,6 +6326,131 @@
       "pillar": null,
       "created_at": "2026-09-18T15:16:47Z",
       "id": "rfc:reviews/portal-phase1-s4.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-09-18T15:18:34Z",
+      "id": "portal/test/apps.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-09-18T15:19:24Z",
+      "id": "portal/test/appsDb.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "AppFormValues",
+        "AppForm"
+      ],
+      "last_modified": "2026-09-18T15:21:06Z",
+      "id": "portal/components/AppForm.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "IngestTokenPanel"
+      ],
+      "last_modified": "2026-09-18T15:21:06Z",
+      "id": "portal/components/IngestTokenPanel.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "APP_ID",
+        "AppInput",
+        "Parsed",
+        "parseAppInput",
+        "AppExistsError",
+        "AppMissingError",
+        "createApp",
+        "updateApp",
+        "rotateIngestToken",
+        "revokeAppIngestTokens"
+      ],
+      "last_modified": "2026-09-18T15:23:04Z",
+      "id": "portal/lib/apps.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "AdminLayout"
+      ],
+      "last_modified": "2026-09-18T15:21:38Z",
+      "id": "portal/app/admin/layout.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "AdminHome"
+      ],
+      "last_modified": "2026-09-18T15:21:38Z",
+      "id": "portal/app/admin/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-09-18T15:20:18Z",
+      "id": "portal/app/api/admin/apps/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "PATCH"
+      ],
+      "last_modified": "2026-09-18T15:20:18Z",
+      "id": "portal/app/api/admin/apps/[id]/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST",
+        "DELETE"
+      ],
+      "last_modified": "2026-09-18T15:20:18Z",
+      "id": "portal/app/api/admin/apps/[id]/ingest-token/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "AdminAppsPage"
+      ],
+      "last_modified": "2026-09-18T15:21:38Z",
+      "id": "portal/app/admin/apps/page.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "dynamic",
+        "AdminAppPage"
+      ],
+      "last_modified": "2026-09-18T15:21:38Z",
+      "id": "portal/app/admin/apps/[id]/page.tsx"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 portal phase 1, S6: Administration \u203a Apps",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/portal-phase1-s6.md",
+      "pillar": null,
+      "created_at": "2026-09-18T15:24:06Z",
+      "id": "rfc:reviews/portal-phase1-s6.md"
     }
   ],
   "edges": [
@@ -7135,6 +7267,31 @@
     {
       "edge_type": "IMPORTS",
       "source": "portal/lib/devView.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/apps.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/apps.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/apps.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/apps.ts",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/apps.ts",
       "target": "portal/lib/tenants.ts"
     }
   ]
