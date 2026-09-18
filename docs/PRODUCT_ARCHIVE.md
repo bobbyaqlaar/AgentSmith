@@ -1328,7 +1328,7 @@ What happened this arc (DO NOT redo — all committed):
   5 agents, 4 model routes, F1–F8 engineered-failure demos. Runs fully offline
   (KYC_FAKE_LLM=1) and against the installed package with no AGENTSMITH_DIR.
 - Building it surfaced framework gaps G1–G10; ALL are fixed. Full analysis with
-  reproduction + fix notes: AgenticFramework/TestbedFeedback-2026-07-21.md.
+  reproduction + fix notes: docs/REVIEW_LOG.md (the testbed feedback of 2026-07-21).
 - Two earlier framework reviews are also done: docs/REVIEW_LOG.md
   (docs↔code sync + perf, P1–P3) and docs/REVIEW_LOG.md
   (test coverage gaps 1–7, all closed).
@@ -3364,3 +3364,23 @@ Plan saved to `docs/PRODUCT_ARCHIVE.md`.
 **Execution options:**
 1. **Subagent-Driven (recommended)** — fresh subagent per task, review between tasks
 2. **Inline Execution** — execute tasks in session with executing-plans checkpoints
+
+## Distilled out of the design and the manual — 2026-09-18
+
+When the design and the manual were reduced to the current system and its reasons, the history
+they carried moved here. Each entry is what the text said, and where it said it.
+
+- **Design, header.** Dated 2026-07-29; incorporated tenancy, the production runtime, the observability review, the reliability/compliance pack v1 and the security/correctness fix passes.
+- **Design, Command Interface.** The commands were Zsh/Bash functions in `~/.zshrc` until 2026-09-14, when they became subcommands of `agentsmith`.
+- **Design, Evaluation Framework.** The criteria table once specified a hand-maintained `"version"` string, bumped on every criteria change. It was never implemented — no code read or wrote the field — and the content digest replaced it.
+- **Design, tenant configuration.** An `environments:` block — `phoenix_namespace`, `eval_fail_below` and `redaction_profile` per environment — was removed from the tenant scaffold on 2026-08-24: nothing read any of it, and two of the three were actively misleading.
+- **Design, dead-letter queue.** `replay()` used to run its handler — the call that signals a live workflow — before consulting the entry's status, so a retried POST, a double-click or a resent webhook re-signalled every time, and a discarded entry could still be replayed.
+- **Design, human-in-the-loop.** Until 2026-08-25 the design documented waiting on `self._hitl_approved` directly — the pattern that let one approval satisfy every later gate.
+- **Design, security harness.** The security and compliance harness (P12) shipped on 2026-07-15; its design and plan are in the session handoffs and completed design notes above.
+- **Manual, First-Time Setup.** The installer once exported `AGENT_OWNER_ID` in `~/.zshrc`, which outranked every tenant's declared owner.
+- **Manual, Multi-Repository & Monorepo.** The manual once told readers to export `AGENT_SHARED_RFC_DIR`, claiming agents and `run-evals.py` read it. Nothing ever did.
+- **Manual, Configure Features.** The UAE sovereign Falcon 3 profile was live-verified on 2026-07-10.
+- **Manual, Test.** Before the withdrawn-model verdict existed, Groq's 2026-08-17 Llama retirement read as `NO VERDICT (judge unreachable)` for days, every run green-with-a-warning.
+- **Manual, Test.** The fairness and hallucination suites shipped with reliability pack v1 (CHANGELOG 1.0.0); the rationale for their thresholds and the pair-parity design is in its design note, above.
+- **Manual, HITL & DLQ Operations.** The manual once referred to `scripts/resolve_hitl.py`, which never existed.
+- **Manual, Monitor in Production.** The Ops Portal once reported `success` for a tenant that had never run anything.

@@ -113,7 +113,7 @@ if [ -f "$LOG_FILE" ]; then
   # Python source — it's read via os.environ instead. The unquoted form let
   # the path expand directly into a string literal with no escaping; low
   # practical risk since the path comes from `git rev-parse --show-toplevel`,
-  # but fragile (docs/PRODUCT_BACKLOG.md 4.8).
+  # but fragile.
   LOG_FILE="$LOG_FILE" python3 - <<'PYEOF' 2>/dev/null || true
 import json, os
 log_file = os.environ["LOG_FILE"]

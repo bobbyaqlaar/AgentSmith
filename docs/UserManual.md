@@ -3,7 +3,7 @@
 **For:** Developers using AgentSmith day-to-day (solo / dev mode)
 
 > **Scope:** this document owns day-to-day dev-mode usage and the
-> **canonical command reference (§17)**. Framework introduction:
+> **canonical command reference (the Command Reference section)**. Framework introduction:
 > [README.md](../README.md) · formal specification: [docs/DESIGN.md](DESIGN.md) ·
 > operator lifecycle (teams, production, CI/CD, portal, enterprise):
 > [docs/UserManual.md](UserManual.md) · versions: [CHANGELOG.md](../CHANGELOG.md)
@@ -12,27 +12,27 @@
 
 ## Contents
 
-1. [Installation](#1-installation)
-2. [First-Time Setup](#2-first-time-setup)
-3. [Applying to a Project](#3-applying-to-a-project)
-4. [Daily Operations](#4-daily-operations)
-5. [Execution Modes](#5-execution-modes)
-6. [Writing Agent Specifications (RFCs)](#6-writing-agent-specifications-rfcs)
-7. [Observability Dashboard](#7-observability-dashboard)
-8. [Running Evaluations](#8-running-evaluations)
-9. [Human-in-the-Loop (HITL) Self-Improvement](#9-human-in-the-loop-hitl-self-improvement)
-10. [Multi-Repository & Monorepo](#10-multi-repository--monorepo)
-11. [Team Setup](#11-team-setup)
-12. [CI/CD via GitHub Actions](#12-cicd-via-github-actions)
-13. [Agent Identity](#13-agent-identity)
-14. [Cost & Budget Management](#14-cost--budget-management)
-15. [Maintenance](#15-maintenance)
-16. [Troubleshooting](#16-troubleshooting)
-17. [Command Reference](#17-command-reference)
+1. [Installation](#installation)
+2. [First-Time Setup](#first-time-setup)
+3. [Applying to a Project](#applying-to-a-project)
+4. [Daily Operations](#daily-operations)
+5. [Execution Modes](#execution-modes)
+6. [Writing Agent Specifications (RFCs)](#writing-agent-specifications-rfcs)
+7. [Observability Dashboard](#observability-dashboard)
+8. [Running Evaluations](#running-evaluations)
+9. [Human-in-the-Loop (HITL) Self-Improvement](#human-in-the-loop-hitl-self-improvement)
+10. [Multi-Repository & Monorepo](#multi-repository--monorepo)
+11. [Team Setup](#team-setup)
+12. [CI/CD via GitHub Actions](#cicd-via-github-actions)
+13. [Agent Identity](#agent-identity)
+14. [Cost & Budget Management](#cost--budget-management)
+15. [Maintenance](#maintenance)
+16. [Troubleshooting](#troubleshooting)
+17. [Command Reference](#command-reference)
 
 ---
 
-## 1. Installation
+## Installation
 
 ### Prerequisites
 
@@ -87,7 +87,7 @@ agentsmith status
 
 ---
 
-## 2. First-Time Setup
+## First-Time Setup
 
 ### Set Your Identity
 
@@ -104,12 +104,10 @@ Resolution order, most specific first:
 
 Inside a tenant the declaration wins; anywhere else git already knows.
 
-**Do not export it in `~/.zshrc`.** The installer used to, and "set once,
-applies to every project on this machine" is exactly the problem: an ambient
-export outranked every tenant's declared `tenant.owner`, on every repo, while
-CI -- which has no shell profile -- got nothing at all. A declaration now wins
-over the environment, and an ignored export is reported at worker startup
-rather than silently dropped.
+**Do not export it in `~/.zshrc`.** An ambient export would outrank every
+tenant's declared `tenant.owner` on every repo, while CI — which has no shell
+profile — gets nothing at all. A declaration wins over the environment, and an
+ignored export is reported at worker startup rather than silently dropped.
 
 `AGENT_OWNER_ID` still works as a deliberate per-deployment override -- a
 container, a CI job -- where no file declares the key.
@@ -167,7 +165,7 @@ A passing check confirms: Phoenix is running, your mode's dependencies are avail
 
 ---
 
-## 3. Applying to a Project
+## Applying to a Project
 
 ### New Project
 
@@ -243,7 +241,7 @@ python3 scripts/verify_system.py
 
 ---
 
-## 4. Daily Operations
+## Daily Operations
 
 ### Starting a Session
 
@@ -268,7 +266,7 @@ agentsmith dashboard stop      # optional — Phoenix can stay running between s
 
 ---
 
-## 5. Execution Modes
+## Execution Modes
 
 ### Local Offline Mode
 
@@ -316,7 +314,7 @@ agentsmith mode off
 
 ---
 
-## 6. Writing Agent Specifications (RFCs)
+## Writing Agent Specifications (RFCs)
 
 Before an agent can modify code in any file, a corresponding spec must exist in `.agent-rfc/`.
 
@@ -357,7 +355,7 @@ apps/web/.agent-rfc/001-login-ui.md   ← Web-specific
 
 ---
 
-## 7. Observability Dashboard
+## Observability Dashboard
 
 ### Starting the Dashboard
 
@@ -396,7 +394,7 @@ Data is persisted to SQLite (local) or PostgreSQL (team). No data is lost when t
 
 ---
 
-## 8. Running Evaluations
+## Running Evaluations
 
 ### What Evals Do
 
@@ -465,7 +463,7 @@ python3 scripts/run-evals.py --suite rag_poison      # poisoned retrieved contex
 python3 scripts/verify_ttft.py                       # live Ollama time-to-first-token budget; TTFT_FAIL_ABOVE_MS (default 2000)
 ```
 
-### Security harness (P12)
+### Security harness
 
 Multi-framework `SEC-*` checks (OWASP LLM · NIST AI RMF · MITRE ATLAS ·
 ISO/IEC 42001). Canonical map: [`docs/security-framework-map.md`](security-framework-map.md).
@@ -486,7 +484,7 @@ On a new project where `.agent-rfc/fixtures/golden_evals.json` doesn't exist or 
 
 ---
 
-## 9. Human-in-the-Loop (HITL) Self-Improvement
+## Human-in-the-Loop (HITL) Self-Improvement
 
 ### The Loop
 
@@ -528,7 +526,7 @@ agentsmith promote <case-id> "<query>" "<fix>"
 
 ---
 
-## 10. Multi-Repository & Monorepo
+## Multi-Repository & Monorepo
 
 ### Multi-Repository (Multiple Separate Git Roots)
 
@@ -575,9 +573,8 @@ When an agent works on a file in `apps/api/`, it reads the API-level `.agent-rfc
 
 ### Shared RFC Store Across Repositories — NOT IMPLEMENTED
 
-This section used to tell you to `export AGENT_SHARED_RFC_DIR` and said that
-"agents and `run-evals.py` also read from this directory". They do not. Nothing
-in the framework reads that variable, and there is no shared-RFC store.
+There is no shared-RFC store: nothing in the framework reads an
+`AGENT_SHARED_RFC_DIR` variable.
 
 The instructions are removed rather than corrected because there is nothing to
 correct them to. Setting the variable did exactly nothing and reported exactly
@@ -590,7 +587,7 @@ tracked in docs/PRODUCT_BACKLOG.md.
 
 ---
 
-## 11. Team Setup
+## Team Setup
 
 Team-shared infrastructure (Phoenix with auth, shared Ops Portal, shared
 Postgres) is operator territory, not day-to-day dev usage — the canonical
@@ -602,8 +599,7 @@ procedure lives in **[the Install & Start section](UserManual.md)**
   (port 6007 = the auth sidecar; 6006 stays loopback-only).
 - An unauthenticated shared Phoenix is non-compliant (docs/DESIGN.md › Universal Observability Platform).
 
-
-## 12. CI/CD via GitHub Actions
+## CI/CD via GitHub Actions
 
 The full pipeline — what each workflow gates, GitHub Environments,
 deploy/rollback wiring, GCP via WIF — is operator territory:
@@ -620,8 +616,7 @@ What a developer needs day-to-day:
   (`AGENT_PHOENIX_ENDPOINT` optional). Greenfield repos with <3 golden cases
   skip the eval gate gracefully.
 
-
-## 13. Agent Identity
+## Agent Identity
 
 ### Setting Up Your Identity
 
@@ -688,7 +683,7 @@ This creates a full audit trail: who ran the agent, what failed, who approved th
 
 ---
 
-## 14. Cost & Budget Management
+## Cost & Budget Management
 
 ### How Cost Routing Works
 
@@ -739,7 +734,7 @@ For enterprise aggregators (Datadog/Grafana Loki), the JSON-Lines logs from `age
 
 ---
 
-## 15. Maintenance
+## Maintenance
 
 ### Bi-Weekly: Log Rotation Check
 
@@ -802,7 +797,7 @@ cd /path/to/project && agentsmith upgrade
 
 ---
 
-## 16. Troubleshooting
+## Troubleshooting
 
 ### Phoenix Won't Start
 
@@ -878,13 +873,12 @@ echo '{"config": {}, "monthly_accumulated_spend_usd": 0, "current_month_identifi
 
 ---
 
-## 17. Command Reference
+## Command Reference
 
-The canonical `agentsmith` command table — other documents link here instead of
-carrying their own copies. Every command is a subcommand of one program
-(`runtime/cli.py`), so `agentsmith <command> --help` is always current. They
-were shell functions in `~/.zshrc` until 2026-09-14; the old names map to these
-one for one (`~/.agent-framework/shell/ai-compat.sh`).
+The canonical `agentsmith` command table. Every command is a subcommand of one
+program (`runtime/cli.py`), so `agentsmith <command> --help` is always current.
+The older `ai-*` names map to these one for one
+(`~/.agent-framework/shell/ai-compat.sh`).
 
 ### Mode & Environment
 
@@ -954,7 +948,7 @@ one for one (`~/.agent-framework/shell/ai-compat.sh`).
 
 | Variable | Effect |
 |---|---|
-| `DISABLE_AI_STACK=true` | Hooks skip for that command. With an enterprise org policy installed, the policy decides instead (see §16) |
+| `DISABLE_AI_STACK=true` | Hooks skip for that command. With an enterprise org policy installed, the policy decides instead (see the Troubleshooting section) |
 | `AGENTSMITH_SWEEP_BATCH` | How many unverified commits one bypass sweep checks before deferring the rest to the next one (default 200). The sweep runs at every commit, push, session start and turn end, so this bounds what any of them costs after a long fetch; nothing is skipped — an unchecked commit stays unverified |
 | `AGENTSMITH_STATE_DIR` | Where machine state is read and written instead of `~/.agent-framework/state` — the mode, install mode and dashboard endpoint. For sandboxes and test isolation; the hooks honour it too |
 | `AGENTSMITH_IDE` | Which agent is running the process gate (`claude`, `cursor`, `antigravity`, `copilot`, `gemini`, `codex`). Set by each IDE's generated hook config; it names the caller on the gate's `agent.gate.*` spans. Unset reads as `unknown`, never as a guess |
@@ -1240,7 +1234,7 @@ HITL_ENCRYPTION_KEY=<32-byte-hex>        # generate: openssl rand -hex 32
 #### b. Tenant app `.env` — your agentic app's runtime config
 
 > **You don't have a tenant app directory yet.** This section is a reference template —
-> skip it for now and return here after you run `agentsmith tenant init` in §1. At that point
+> skip it for now and return here after you run `agentsmith tenant init` in the Create an AgentSmith-Governed Repo section. At that point
 > you'll have a directory to put this file in.
 
 > **Where:** `my-tenant-app/.env` (your own app repo root — **not** the AgentSmith root)
@@ -1331,9 +1325,9 @@ nothing about origin.
 ### Machine install, mode, and standing infra
 
 ```bash
-# Install (§0) — vendors scripts/hooks/templates to ~/.agent-framework,
+# Install (the Install & Start section) — vendors scripts/hooks/templates to ~/.agent-framework,
 # sets git's global init.templateDir (developer mode; use --mode enterprise
-# to skip that — see Appendix A).
+# to skip that — see the Enterprise Pack section).
 # While this repository is private (until it is product-ready) the release URL
 # below returns 404 — even to people with access, because curl sends no GitHub
 # login — and `curl | bash` on a 404 exits 0 having installed nothing. Install
@@ -1357,11 +1351,11 @@ agentsmith mode hybrid    # cloud frontier models, needs ANTHROPIC_API_KEY/OPENA
 agentsmith check
 ```
 
-Production-runtime extras, only if you'll exercise §2's production runtime for real — run from the **AgentSmith root**:
+Production-runtime extras, only if you'll exercise the Configure Features section's production runtime for real — run from the **AgentSmith root**:
 
 ```bash
 # Run from: AgentSmith root
-source .venv/bin/activate   # activate the venv created in §0 Prerequisites
+source .venv/bin/activate   # activate the venv created in the Install & Start section Prerequisites
 pip install psycopg2-binary redis temporalio langgraph-checkpoint-postgres cryptography
 ```
 
@@ -1422,8 +1416,8 @@ Developers and CI then point at port **6007** (the auth sidecar), not 6006:
 export AGENT_PHOENIX_ENDPOINT="http://ops:<password>@<server-ip>:6007"
 ```
 
-See [docker-compose.yml](./docker-compose.yml) and
-[docker-compose.auth.yml](./docker-compose.auth.yml) header comments for the
+See [docker-compose.yml](../docker-compose.yml) and
+[docker-compose.auth.yml](../docker-compose.auth.yml) header comments for the
 full rationale (why this is a separate file, not a Compose profile).
 
 ---
@@ -1448,7 +1442,7 @@ checkout) — see README "Opt-in model".
 > |---|---|
 > | `.agent-rfc/`, `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.agents/skills/`, Knowledge Graph seed | `post-checkout` hook fires on `git init -b main` |
 > | `.agenticframework/tenant.yaml`, `.github/workflows/` (ci-*, cd-*, eval-* reusable workflows), `.github/actions/` (composite actions the CD workflows call) | `agentsmith tenant init <id> --stack <stack>` |
-> | `.env` | You create from the §0 tenant-app `.env` template |
+> | `.env` | You create from the the Install & Start section tenant-app `.env` template |
 > | `runtime/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — accessed via `$AGENTSMITH_DIR/runtime` at run time |
 >
 > Every file in the first row above is a `templates/agent-rules.yaml` render,
@@ -1465,7 +1459,7 @@ checkout) — see README "Opt-in model".
 > mkdir $REPO_DIR/my-app && cd $REPO_DIR/my-app
 > git init -b main                               # hooks fire automatically
 > agentsmith tenant init my-app --stack python-fastapi   # scaffolds tenant.yaml + CI/CD
-> # create .env from the §0 tenant-app template, then write your worker.py and workflows/
+> # create .env from the the Install & Start section tenant-app template, then write your worker.py and workflows/
 > ```
 
 ### Design & validation playbooks (all onboarding paths)
@@ -1505,7 +1499,7 @@ agentsmith tenant init acme --stack python-fastapi
 ```
 
 Stack options: `python-fastapi` (default), `go`, `ts-react`. Add
-`--isolation dedicated` if this tenant needs its own worker pool (§4 "Dedicated isolation tier").
+`--isolation dedicated` if this tenant needs its own worker pool (the Deploy via GitHub CI/CD section "Dedicated isolation tier").
 
 This writes:
 - `.agenticframework/tenant.yaml` — tenant id, isolation tier, framework version pin, per-environment Phoenix namespaces and eval thresholds
@@ -1607,7 +1601,7 @@ asyncio.run(main())
 ```
 
 This produces a real trace in Phoenix and a real budget record — enough to
-drive the §3 UI-walkthrough's Ops Portal steps without standing up Temporal at all.
+drive the the Test section UI-walkthrough's Ops Portal steps without standing up Temporal at all.
 
 *B. With Temporal* — the full durable-workflow path, including the HITL gate and DLQ:
 
@@ -1635,7 +1629,7 @@ python3 trigger_workflow.py    # submits the workflow and waits for result
 > **If `trigger_workflow.py` fails with "Workflow execution is already running":**
 > a previous run failed mid-flight. Terminate it via the Temporal UI at
 > `http://localhost:8233` (Workflows → select the run → Terminate), then re-run.
-> See Appendix B — Troubleshooting for the CLI alternative.
+> See the Troubleshooting section for the CLI alternative.
 
 The `95` outlier in the default price series is deliberate — it's >3 standard
 deviations from the rest, which trips the HITL gate. The workflow pauses and
@@ -1654,7 +1648,7 @@ python3 resolve_hitl.py --reject  # or reject
 
 `scripts/multi_agent_system.py` / `local_agent_stack.py` are the **dev/IDE**
 path. Production agent execution uses `runtime/` instead — never deployed
-directly from this repo (tenant repos build their own worker image, §25).
+directly from this repo (tenant repos build their own worker image, docs/DESIGN.md › Production Runtime).
 
 ### LLM Gateway — models, budget, degrade ladder
 
@@ -1767,18 +1761,18 @@ an unset or unrecognized `ENVIRONMENT`**, which now resolves to
 `production` rather than `development`. It **raises** rather than silently
 falling back if `DATABASE_URL` is missing in that case — `MemorySaver`
 loses all HITL pause state on crash and is dev-only by design (docs/DESIGN.md › Production Runtime,
-§28). Local/IDE runs must set `ENVIRONMENT=development` explicitly to get
+docs/DESIGN.md › Framework vs Application Release). Local/IDE runs must set `ENVIRONMENT=development` explicitly to get
 `MemorySaver` without a `DATABASE_URL`.
 
 ### Reliability & compliance pack (runtime side)
 
-The eval-side suites are §3 "Reliability & compliance suites". These are the runtime components that
+The eval-side suites are the Test section "Reliability & compliance suites". These are the runtime components that
 shipped with the same pack — each opt-in, none changes existing callers:
 
 **Pre-call input guardrail (PDPL — `runtime/input_guardrail.py`).**
 Scrubs PII from prompts *before* the provider call inside
 `llm_gateway.complete()` — decision-path masking, distinct from
-`trace_redactor.py`'s post-call observability scrubbing (§2 "Trace redaction"). Default
+`trace_redactor.py`'s post-call observability scrubbing (the Configure Features section "Trace redaction"). Default
 patterns: Emirates ID, email, phone, Luhn-valid card numbers.
 
 ```bash
@@ -1853,7 +1847,7 @@ validates LLM text against a Pydantic model — prefer this over bare
 `BaseAgentWorkflow.run_with_self_correction()` asks the gateway for one
 corrected JSON payload on activity failure and retries the same activity
 (`max_self_correction_attempts`, default 1) before falling through to
-`run_with_recoverable_step`'s human edit-and-resume path (§7) — existing
+`run_with_recoverable_step`'s human edit-and-resume path (the HITL & DLQ Operations section) — existing
 `run_with_recoverable_step` callers are unchanged; tenants opt in per step.
 
 **Memory / RAG substrate (see [docs/rag-memory.md](rag-memory.md)).**
@@ -1870,7 +1864,7 @@ export VECTOR_BACKEND=memory           # memory (default) | postgres (needs pgve
 **TTFT on the streaming path.** `LLMGateway.complete_stream()` records
 `ttft_ms` on `CompletionResult` and span attribute `llm.gateway.ttft_ms`;
 non-streaming `complete()` is unchanged (total-call latency only). Live
-budget gate: §3's `verify_ttft.py` / `TTFT_LIVE=required`.
+budget gate: the Test section's `verify_ttft.py` / `TTFT_LIVE=required`.
 
 *Provider support:* streaming works for the direct-API providers —
 `openai`, `groq`, `ollama`, `anthropic`, `xai`, `google_ai`, and `openrouter`. The cloud-native adapters
@@ -1920,10 +1914,10 @@ gw.assert_prompt_excludes("784-1985-1234567-1")   # PII never reached the model
 
 The double is deliberately no more capable than the real gateway (it won't
 stream what the real one can't). A double that over-promises hides exactly
-the bugs a test suite exists to find — see `TestbedFeedback-2026-07-21`.
+the bugs a test suite exists to find.
 
 **UAE sovereign profile (`templates/uae-sovereign/`).** Pattern A: Falcon 3
-on Ollama (`falcon3:3b` / `falcon3:1b`, live-verified 2026-07-10); Pattern B:
+on Ollama (`falcon3:3b` / `falcon3:1b`, live-verified); Pattern B:
 a sovereign OpenAI-compatible API. Smoke test either:
 
 ```bash
@@ -1940,7 +1934,7 @@ python3 scripts/verify_system.py --check-delivery-model   # warn-only gate
 python3 scripts/delivery_evidence.py                      # writes delivery_evidence.json + .md
 ```
 
-**Multi-framework security harness (P12 — [docs/security-framework-map.md](security-framework-map.md)).**
+**Multi-framework security harness ([docs/security-framework-map.md](security-framework-map.md)).**
 Unified `SEC-*` registry drives `scripts/run-security-checks.py` (OWASP LLM,
 NIST AI RMF, MITRE ATLAS, ISO/IEC 42001). Framework Self-Test and the Python
 FastAPI tenant template run with `strict: true`.
@@ -1992,7 +1986,7 @@ python3 scripts/run-evals.py --suite rag_poison
 MODERATION_HOOK=optional python3 scripts/run-security-checks.py --mode ci --strict
 python3 scripts/verify_system.py --check-security
 
-# Delivery Model soft gate (warn-only; §2 "Reliability & compliance pack")
+# Delivery Model soft gate (warn-only; the Configure Features section "Reliability & compliance pack")
 python3 scripts/verify_system.py --check-delivery-model
 
 # Trace redaction: staging (hashed) + production (truncated + HITL blob) profiles
@@ -2031,18 +2025,18 @@ A passing run here is the same bar CI enforces — see `.github/workflows/self-t
 Three surfaces, walked through in the order an operator would actually
 hit them after a problem report comes in: trace-level detail (Phoenix) →
 cross-tenant ops view (Ops Portal) → what the end user sees (In-App
-Widget). Assumes §1's example-app run (Option A or B) already produced at least one real
+Widget). Assumes the Create an AgentSmith-Governed Repo section's example-app run (Option A or B) already produced at least one real
 trace/spend record for `oil-price-demo`, and `agentsmith dashboard start` is
 running (Phoenix + Postgres + Ops Portal).
 
 **1. Phoenix — `http://localhost:6006`**
 
 - Open the **Traces** tab for the `default` project. You should see the
-  span from §1's `gw.complete()` call (or the full workflow's three
+  span from the Create an AgentSmith-Governed Repo section's `gw.complete()` call (or the full workflow's three
   spans if you ran Option B), each carrying `tenant.id=oil-price-demo`,
   `llm.model_name`, `llm.gateway.cost_usd`.
 - Click into a span → confirm `input.value`/`output.value` are visible in
-  `development`/`staging` profiles (or redacted, per §2 "Trace redaction", if you set
+  `development`/`staging` profiles (or redacted, per the Configure Features section "Trace redaction", if you set
   `ENVIRONMENT=production` for the call).
 - **Annotations tab** (only relevant if you ran Option B and a HITL gate
   fired): this is the *other* HITL mechanism — the golden-dataset
@@ -2057,7 +2051,7 @@ running (Phoenix + Postgres + Ops Portal).
   on first trace/spend) with non-zero spend.
 - **Tenant detail** (`/tenants/oil-price-demo`) — click the tenant. Confirm:
   - **Spend this month** / **Budget cap** metric cards (cap shows `—` until
-    `tenant.yaml`'s `gateway.budget_cap_usd` is synced — see §4).
+    `tenant.yaml`'s `gateway.budget_cap_usd` is synced — see the Deploy via GitHub CI/CD section).
   - **Run status** — reflects the *last* `gw.complete()` call's outcome
     for this tenant: **Operational** after a successful call, **Degraded**/
     **Failed** otherwise. **Important:** a workflow parked on a HITL/
@@ -2074,7 +2068,7 @@ running (Phoenix + Postgres + Ops Portal).
     that does this for you, since `run_with_hitl_gate`/
     `run_with_recoverable_step` only touch the DLQ, never `agent_runs`).
   - **Phoenix: reachable** badge, plus **Last 24h: N trace(s)** with an error
-    rate badge once there's enough trace volume to compute one (§P2c).
+    rate badge once there's enough trace volume to compute one.
 - **Dead-letter queue** (`/dlq`) — see the dedicated HITL/DLQ walkthrough
   immediately below; this is the newest, most hands-on part of the portal.
 - **Audit log** (`/audit`) — confirms every admin action above (if you're
@@ -2119,10 +2113,10 @@ print('Created DLQ entry:', entry.task_id)
   `workflow_id`, since it wasn't created by a real parked workflow — Replay
   would correctly report `resumable: false` since there's no tenant
   `replay_webhook_url` configured yet either). To see a *real* resumable
-  entry and an actual live-workflow resume, run §1's example-app Option B with the
+  entry and an actual live-workflow resume, run the Create an AgentSmith-Governed Repo section's example-app Option B with the
   `95` outlier, let it park on the HITL gate, then check `/dlq/oil-price-demo`
   while it's waiting — that entry, if you wire up `runtime/replay_webhook_server.py`
-  per §7, *is* resumable.
+  per the HITL & DLQ Operations section, *is* resumable.
 
 **3. In-App Widget**
 
@@ -2196,13 +2190,10 @@ exception: it turns the build red, because it is not infrastructure weather.
 | **Some** cases errored and the rest would pass | `NO VERDICT (graded N/M — a pass needs every case)`. |
 | **The configured judge model has been withdrawn by the provider** | **FAILS (exit 1, `::error::`)** — names the model, says no later run will clear it, points at `models.yaml`'s `judge` role and at recalibration. |
 
-That fifth row exists because the first four used to be the only shapes, and a
-withdrawn model does not throw — it 404s, which reached the same `NO VERDICT
-(judge unreachable)` path as an exhausted quota. Reported identically, the two
-are opposite facts: a quota clears itself overnight, a withdrawn model never
-clears and the repo is pointing at a config error. Groq's 2026-08-17 Llama
-retirement lived there for days, every run green-with-a-warning, before this
-distinction existed. `runtime.provider_dispatch.is_model_gone` classifies it —
+That fifth row exists because a withdrawn model does not throw — it 404s — and
+reported like an exhausted quota the two are opposite facts: a quota clears
+itself overnight, a withdrawn model never clears and the repo is pointing at a
+config error. `runtime.provider_dispatch.is_model_gone` classifies it —
 phrase-based (`model_not_found`, `does not exist`, `has been deprecated`, …)
 rather than a bare status code, for the same reason `is_provider_exhausted`
 is: "404" appears in request IDs and token counts, and a 404 only counts here
@@ -2355,12 +2346,7 @@ answer turned out to be the third.
 
 ### Reliability & compliance suites (fairness, hallucination, TTFT)
 
-Shipped with the reliability pack v1 (CHANGELOG.md 1.0.0). Design + plan:
-[`docs/PRODUCT_ARCHIVE.md`](PRODUCT_ARCHIVE.md),
-[`docs/PRODUCT_ARCHIVE.md`](PRODUCT_ARCHIVE.md)
-— the rationale for the thresholds and the pair-parity design lives there, and
-it had no inbound link from anywhere, unlike its security-harness counterpart
-in SPECS. Same
+Same
 `run-evals.py` entry point as the golden suite — different fixtures,
 different thresholds, separate CI workflows:
 
@@ -2483,7 +2469,7 @@ cd templates/in-app-widget && npm install && npm test
 ENVIRONMENT=staging python3 scripts/verify_system.py --check-redaction
 ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
 
-# Reliability pack (§2, §3) — eval suites, input guardrail unit tests, TTFT
+# Reliability pack (the Configure Features section, the Test section) — eval suites, input guardrail unit tests, TTFT
 python3 scripts/run-evals.py --suite fairness
 python3 scripts/run-evals.py --suite hallucination
 python3 scripts/run-evals.py --suite adversarial
@@ -2498,10 +2484,10 @@ MODERATION_HOOK=optional python3 scripts/run-security-checks.py --mode ci --stri
 PYTHONPATH=scripts:. pytest scripts/test/test_security_*.py -q
 python3 scripts/verify_system.py --check-security
 
-# Hook bundle signing (needs a real GPG key; see Appendix A)
+# Hook bundle signing (needs a real GPG key; see the Enterprise Pack section)
 gpg --verify agenticframework-hooks-<version>.tar.gz.sig agenticframework-hooks-<version>.tar.gz
 
-# On-prem deployment template (§4) — compose/proxy/Helm syntax, no live cluster needed
+# On-prem deployment template (the Deploy via GitHub CI/CD section) — compose/proxy/Helm syntax, no live cluster needed
 python3 scripts/verify_system.py --check-onprem-deploy
 
 # Dedicated worker pool manifests — kubectl (even --dry-run=client) needs a
@@ -2522,7 +2508,7 @@ export DATABASE_URL="postgresql://test:test@localhost:55432/test"
 docker rm -f pg-test
 ```
 
-For `run_with_recoverable_step` (§7) specifically — the workflow-side
+For `run_with_recoverable_step` (the HITL & DLQ Operations section) specifically — the workflow-side
 mechanics (parking alive, retry-policy override, signal resume) can't be
 exercised by a throwaway Postgres alone; it needs a real Temporal test
 server:
@@ -2565,7 +2551,7 @@ asyncio.run(WorkflowEnvironment.start_local())  # downloads/starts the test serv
 **Through GitHub CI/CD (cloud):**
 
 ```bash
-# Scaffold a tenant repo with CI/CD wired in (§1) — or, for the example,
+# Scaffold a tenant repo with CI/CD wired in (the Create an AgentSmith-Governed Repo section) — or, for the example,
 # this is already done: examples/oil-price-agent/.agenticframework/tenant.yaml
 cd my-project
 agentsmith tenant init my-tenant --stack python-fastapi   # or ts-react | go
@@ -2708,7 +2694,7 @@ The `cd-demo-ui.yml` workflow: authenticates via WIF → builds the demo UI from
 > oil-price-demo tenant and are described here as a worked example of adding a
 > second deployable to a tenant's CD. Skip this workflow if your tenant has no
 > separate UI. The workflow templates the framework does provide are listed in
-> §1 "CI/CD workflows written per stack".
+> the Create an AgentSmith-Governed Repo section "CI/CD workflows written per stack".
 
 **Step 4 — Get the service URLs:**
 
@@ -3050,7 +3036,7 @@ need to set the right secrets on each GitHub Environment:
 the runner filesystem so any subsequent step (`gcloud`, `kubectl`, the Python
 gateway) is automatically authenticated.
 
-**One-time WIF setup:** identical to the step-by-step checklist in §4.1
+**One-time WIF setup:** identical to the step-by-step checklist in the Deploy via GitHub CI/CD section
 above (pool + provider + `github-deployer` SA + repo binding) — do it once
 per GCP project there; don't repeat it here.
 
@@ -3094,12 +3080,12 @@ DEPLOY_COMMAND = "gcloud container clusters get-credentials YOUR_CLUSTER --regio
 Set `GCP_PROJECT_ID` as a GitHub Environment variable (not secret — no
 credential, just a project identifier) so `DEPLOY_COMMAND` can reference
 `$GCP_PROJECT_ID` without hardcoding it in the workflow YAML or in
-`runtime/models.yaml` (§29 "Cloud-Native Provider Adapters").
+`runtime/models.yaml` (docs/DESIGN.md › LLM Gateway (Production) "Cloud-Native Provider Adapters").
 
 **Live-verification status**: the Vertex AI *call path* was verified
 live against a real GCP project (`gemini-2.5-flash` via
-`LLMGateway.complete(model_hint="vertex_gemini")` — §29). The
-`gcp-auth` composite action is now **fully verified end-to-end** through
+`LLMGateway.complete(model_hint="vertex_gemini")` — docs/DESIGN.md › LLM Gateway (Production)). The
+`gcp-auth` composite action is **fully verified end-to-end** through
 real GitHub Actions runs against GCP project `agentsmith-500916` on
 2026-07-01: both `bobbyaqlaar/oil-price-demo` and `bobbyaqlaar/AgentSmith`
 completed successful staging + production deploys to Cloud Run. The
@@ -3243,8 +3229,8 @@ gcloud run services describe YOUR_UI_SERVICE \
 because the stable prefix keeps mean and σ tight — a short series with the outlier included
 inflates σ and can mask the spike.
 
-**Prerequisites:** GCP secrets must be set on the `staging` GitHub Environment (see
-`docs/PRODUCT_ARCHIVE.md` §P11) before the CD workflow can deploy. See "GCP deployment specifics" above for the WIF setup.
+**Prerequisites:** the `staging` GitHub Environment carries `GCP_WORKLOAD_IDENTITY_PROVIDER`,
+`GCP_SERVICE_ACCOUNT` and `GCP_PROJECT_ID` before the CD workflow can deploy. See "GCP deployment specifics" above for the WIF setup.
 
 ---
 
@@ -3331,7 +3317,7 @@ Compose, which do support a percent. See
 `templates/onprem-deploy/kubernetes/README.md` for the vendor-extension
 workaround if a customer needs partial mirroring specifically on K8s.
 
-**Mirroring vs. shadow-eval (P1c) — these are two different things, don't
+**Mirroring vs. shadow-eval — these are two different things, don't
 conflate them:** this section's shadow *traffic* mirroring tests a new version of
 the whole app against live request shape before promotion, at the
 proxy/infrastructure layer — it has no idea what your app does with a
@@ -3385,14 +3371,12 @@ Full detail: `templates/onprem-deploy/README.md`,
 
 **CLI alternative (no UI):** `resolve_hitl.py` at the root of the oil-price-demo
 repo does the same HITL signal from the terminal — useful for scripting or when
-the UI isn't deployed yet. Both mentions used to say `scripts/resolve_hitl.py`,
-which contradicted this document's own §"Run the demo", where it is copied from
+the UI isn't deployed yet. It is copied from
 `$AGENTSMITH_DIR/examples/oil-price-agent/resolve_hitl.py` to the repo root and
-run as `python3 resolve_hitl.py`. The framework's own copy is the one under
-`examples/`; there is no `scripts/resolve_hitl.py` anywhere.
+run as `python3 resolve_hitl.py`; there is no `scripts/resolve_hitl.py`.
 
 Day-to-day operational tasks (rotating tokens/keys, checking unresolved
-issues, upgrading the framework version) are in [§9 — Maintain](#9--maintain-day-2-operations).
+issues, upgrading the framework version) are in [Maintain (Day-2 Operations)](#maintain-day-2-operations).
 
 ---
 
@@ -3475,7 +3459,7 @@ curl -X POST https://ops.example.com/api/sync/history \
 
 A tenant auto-registers on its first sync — no separate provisioning step.
 
-#### E.3 — Audit log (enterprise pack, §30)
+#### E.3 — Audit log (enterprise pack, docs/DESIGN.md › Enterprise Install and Compliance Pack)
 
 ```bash
 # .env.local
@@ -3506,7 +3490,7 @@ instead of being dropped silently. This is a local, unsigned trace for
 manual reconciliation — it is not a substitute for the portal's audit log
 and has no tamper protection.
 
-#### E.4 — SSO/OIDC (replaces basic auth, §30)
+#### E.4 — SSO/OIDC (replaces basic auth, docs/DESIGN.md › Enterprise Install and Compliance Pack)
 
 ```bash
 SSO_ENABLED=true
@@ -3587,8 +3571,8 @@ run exists for the tenant, so `running` is a real, reachable status — not
 just `success` / `degraded` / `failed`. Falls back to the most recent synced
 `.agent-history.log` entry when no `agent_runs` row exists (e.g. a tenant
 whose gateway predates this, or `OPS_PORTAL_URL` unset) — and reports
-`unknown` when there is neither, rather than the `success` it used to report
-for a tenant that has never run anything.
+`unknown` when there is neither — never `success` for a tenant that has never
+run anything.
 
 Tenant detail pages additionally show a 24h trace count and error rate
 pulled live from the tenant's own Phoenix instance via GraphQL
@@ -3618,7 +3602,7 @@ python3 scripts/shadow-eval.py --sample-rate 0.05
 Filter Phoenix to one tenant's production traffic with
 `tenant.id = "<id>" AND environment = "production"` (docs/DESIGN.md › Universal Observability Platform). The Ops
 Portal's tenant detail page adds a live 24h trace count + error rate per
-tenant (§5 above).
+tenant (the Monitor in Production section above).
 
 ---
 
@@ -3790,7 +3774,7 @@ resolution as a versioned judge-criteria learning (semantic dedup, never
 silent FIFO eviction), and marks the log entry `hitl_resolved: true`. The
 rule now gates every future PR.
 
-**2. Shadow-eval loop (passive).** The §6 sampler surfaces failing
+**2. Shadow-eval loop (passive).** The the Evals & Tracing in Production section sampler surfaces failing
 production patterns as *suggested promotions* in the Ops Portal
 (`portal/lib/promotions.ts`) — a human triages them into loop 1; nothing is
 promoted automatically.
@@ -3949,7 +3933,7 @@ supplied.
 Every attempt (granted or denied) is audit-logged as `hook_bypass` —
 best-effort to the Ops Portal when configured, falling back to
 `~/.agent-framework/local-audit-fallback.log` otherwise so a bypass attempt
-is never silently unrecorded (see §5, "Audit log").
+is never silently unrecorded (see the Monitor in Production section, "Audit log").
 
 ### G.5 — Uninstall on a managed machine
 
@@ -3998,7 +3982,7 @@ while the dev server only binds IPv4).
 **LangGraph raises "MemorySaver is prohibited"** — you set
 `ENVIRONMENT=production`/`staging` without `DATABASE_URL`, **or you simply
 didn't set `ENVIRONMENT` at all** — unset/unrecognized values resolve to
-`production` (fail-closed, see §2), not `development`. Either set
+`production` (fail-closed, see the Configure Features section), not `development`. Either set
 `DATABASE_URL`, or set `ENVIRONMENT=development` explicitly for a
 throwaway/dev run.
 

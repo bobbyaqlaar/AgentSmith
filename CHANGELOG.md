@@ -75,6 +75,18 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — the design, the manual and the README say what the system is, not how it got there
+
+- `docs/DESIGN.md`, `docs/UserManual.md` and `README.md` carry the current system and its reasons.
+  The history they carried — "used to…", "until 2026-08-25…", the incidents behind a rule — moved
+  word for word to `docs/PRODUCT_ARCHIVE.md`, under a section saying where each entry came from.
+  The rules and their reasons stayed.
+- **No section numbers:** headings are names, and every `§26`-style reference names the heading it
+  meant. Link to a heading by its name; old numbered anchors no longer exist.
+- **The installer's closing message** printed documentation paths relative to wherever it was run,
+  including a `./Readme.md` that never existed. It prints paths into the checkout, or the
+  repository when the installer was piped from a download.
+
 ### Changed — one document per type, and numbered cross-references gone (G5b, AgentSmith)
 
 - **The documents moved to where the artifact registry says they live:** `docs/DESIGN.md` (was

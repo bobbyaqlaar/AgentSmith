@@ -109,7 +109,7 @@ if [ -f "$ORG_POLICY_FILE" ]; then
 fi
 
 # ── Guardrail 4: enterprise RFC tracking must exist (enterprise mode) ───────
-# docs/PRODUCT_BACKLOG.md P1a: "If org policy present: require RFC-NNN in
+# docs/PRODUCT_ARCHIVE.md P1a: "If org policy present: require RFC-NNN in
 # commit message or staged paths covered by open .agent-rfc/*.md." The
 # RFC-NNN-in-commit-message half of that check lives in hooks/commit-msg
 # instead — pre-commit has no access to the (not-yet-written) commit

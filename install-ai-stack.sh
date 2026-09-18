@@ -15,7 +15,7 @@
 #    AI_STACK_FRAMEWORK_REPO=https://github.com/acme-corp/AgentSmith ./install-ai-stack.sh
 #
 #  Enterprise mode (skips mutating git's GLOBAL init.templateDir — see
-#  docs/UserManual.md Appendix A for the MDM-distributed hooks path instead):
+#  docs/UserManual.md › Enterprise Pack for the MDM-distributed hooks path instead):
 #    ./install-ai-stack.sh --mode enterprise
 #    # piped form needs `-s --` to forward args through stdin:
 #    curl -fsSL .../install-ai-stack.sh | bash -s -- --mode enterprise
@@ -30,7 +30,7 @@ set -uo pipefail
 # --mode enterprise: skips the global init.templateDir mutation entirely.
 #   Intended for shared/managed machines where IT distributes hooks via the
 #   signed MDM bundle instead (enterprise/package-hook-bundle.sh +
-#   mdm-deploy-hooks.sh, see docs/UserManual.md Appendix A) — this installer still
+#   mdm-deploy-hooks.sh, see docs/UserManual.md › Enterprise Pack) — this installer still
 #   vendors scripts/templates and installs the `agentsmith` command, just without taking over
 #   every user's global git config on a machine it doesn't fully own.
 INSTALL_MODE="developer"
@@ -674,7 +674,7 @@ success "All four git hook templates written and made executable"
 if [ "$INSTALL_MODE" = "enterprise" ]; then
   info "Enterprise mode (--mode enterprise): skipping global git init.templateDir."
   info "Hooks are vendored to $TEMPLATE_DIR but not linked machine-wide — distribute"
-  info "via enterprise/package-hook-bundle.sh + mdm-deploy-hooks.sh instead (docs/UserManual.md Appendix A)."
+  info "via enterprise/package-hook-bundle.sh + mdm-deploy-hooks.sh instead (docs/UserManual.md › Enterprise Pack)."
 else
   if [ ! -f "$FRAMEWORK_DIR/previous_template_dir" ]; then
     git config --global init.templateDir 2>/dev/null > "$FRAMEWORK_DIR/previous_template_dir" || true
@@ -829,8 +829,9 @@ echo "  3. Apply to a project:"
 echo "     cd /path/to/your-project && git init"
 echo ""
 echo "  Full documentation:"
-echo "     Readme:     ./Readme.md"
-echo "     User guide: ./UserManual.md"
-echo "     Spec:       ./SPECS.md"
+DOCS_AT="${INSTALLER_DIR:-https://github.com/bobbyaqlaar/AgentSmith/blob/main}"
+echo "     Readme:     $DOCS_AT/README.md"
+echo "     User guide: $DOCS_AT/docs/UserManual.md"
+echo "     Design:     $DOCS_AT/docs/DESIGN.md"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""

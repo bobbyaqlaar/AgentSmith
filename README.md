@@ -11,12 +11,9 @@ lifecycle environment on your machine or team server. Install it once and
 every project you opt in gets guardrails, observability, evaluation,
 self-improvement, and CI/CD — automatically.
 
-> **Scope:** this document introduces AgentSmith — objectives, architecture,
-> features, differentiators, and license. It contains no procedures beyond
-> the Quick Start: installation/configuration/operations live in
-> [docs/UserManual.md](docs/UserManual.md), the formal specification in
-> [docs/DESIGN.md](docs/DESIGN.md), day-to-day dev usage in
-> [docs/UserManual.md](docs/UserManual.md).
+> **What this is:** an introduction to AgentSmith — what it is for, how it is built, and what
+> sets it apart. The Quick Start below is the only procedure here; the rest is in the documents
+> listed at the end.
 
 ---
 
@@ -260,17 +257,20 @@ Starter pack: **[templates/uae-sovereign/](./templates/uae-sovereign/)**.
 
 ## Documentation
 
-| Document | Owns |
+One document per kind, each for a different question:
+
+| Document | Answers |
 |---|---|
-| [docs/DESIGN.md](docs/DESIGN.md) | Formal specification: architecture, functional→technical mapping, schemas, contracts, decision log, repository structure |
-| [docs/UserManual.md](docs/UserManual.md) | Full operator lifecycle: install → create/configure repos → test → deploy (GitHub CI/CD) → monitor → HITL/DLQ → improve → maintain → shut down |
-| [docs/UserManual.md](docs/UserManual.md) | Day-to-day solo/dev-mode usage + the canonical command reference |
-| [CHANGELOG.md](./CHANGELOG.md) | Release notes + compatibility matrix |
-| [docs/PRODUCT_ARCHIVE.md](docs/PRODUCT_ARCHIVE.md) | Build history (read-only) |
-| [docs/PRODUCT_BACKLOG.md](docs/PRODUCT_BACKLOG.md) | Remaining to-do items |
-| [docs/](./docs/) | Topic canon: security framework map, UAE regulatory, ISO 42001 map, delivery model, RAG/memory, team observability |
-| [docs/session-handoff/](./docs/session-handoff/) | Point-in-time notes for picking up where a work session left off |
-| Review reports (root, read-only) | Findings from specific audits, kept for their reasoning rather than their status: [ReviewFindings-2026-07-18](docs/REVIEW_LOG.md) (docs↔code sync), [TestCoverageReview-2026-07-21](docs/REVIEW_LOG.md), [TestbedFeedback-2026-07-21](docs/REVIEW_LOG.md) (what building a tenant found in the framework). All items closed — current work is in docs/PRODUCT_BACKLOG.md |
+| [docs/UserManual.md](docs/UserManual.md) | How do I install, use and operate it? The command reference is its last section of Part I |
+| [docs/DESIGN.md](docs/DESIGN.md) | How is it built, and why this way? |
+| [docs/PRODUCT_BACKLOG.md](docs/PRODUCT_BACKLOG.md) | What is still open? |
+| [docs/PRODUCT_ARCHIVE.md](docs/PRODUCT_ARCHIVE.md) | How did it get this way — what was decided, when, and what it replaced? |
+| [docs/REVIEW_LOG.md](docs/REVIEW_LOG.md) | What did each review find, and what closed it? |
+| [CHANGELOG.md](CHANGELOG.md) | What changed in each release, and what is compatible with what? |
+
+Reference material a tenant reads — the security framework map, the UAE regulatory notes, the
+ISO 42001 map, the delivery model, RAG and memory, team observability — is under
+[docs/](docs/).
 
 ---
 

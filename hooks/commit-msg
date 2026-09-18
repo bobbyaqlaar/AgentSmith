@@ -47,7 +47,7 @@ if [[ ! "$CLEAN_MSG" =~ $CONVENTIONAL_RE ]]; then
   exit 1
 fi
 
-# ── Enterprise: require an RFC-NNN reference (docs/PRODUCT_BACKLOG.md P1a) ────
+# ── Enterprise: require an RFC-NNN reference (docs/PRODUCT_ARCHIVE.md P1a) ────
 # Complements hooks/pre-commit's "at least one open RFC exists" guardrail —
 # this is the precise per-commit check, since this hook (unlike pre-commit)
 # actually receives the commit message.

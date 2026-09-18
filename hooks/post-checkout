@@ -534,7 +534,7 @@ elif [ "$IS_PUBLIC" -eq 1 ]; then
   } >> "$GITIGNORE"
 fi
 
-# ── Write the developer opt-in marker (docs/PRODUCT_BACKLOG.md P1a) ────────────
+# ── Write the developer opt-in marker (docs/PRODUCT_ARCHIVE.md P1a) ────────────
 # Reached only for a brand-new `git init` (no HEAD) or an already-opted-in
 # repo — the gate at the top of this hook skips pre-existing repos that
 # never opted in, so a totally unrelated repo someone just `git clone`'d is

@@ -88,6 +88,64 @@ documents was simply the first change to exercise them.
 
 ## Pass 4 — findings: 0
 
+Commit 1 verified: every move, both gate fixes, CI green on GitHub after the push.
+
+---
+
+# Commit 2 of 2 — the distillation (2026-09-18)
+
+The owner's rule applied to what is left in the documents: the design, the manual and the README
+carry the current system and its reasons; the story of how it got that way lives in the archive
+and the review log.
+
+**Built evidence:**
+
+- **Measured first.** After the moves, history was thinner than expected — 13 of 264 prose
+  paragraphs in the design, 15 of 451 in the manual. What the documents carried everywhere was the
+  *structure* that invites numbered pointing: 48 numbered headings and 137 bare `§N`
+  self-references. Those went first, mechanically and origin-aware: in the manual, Part II's
+  `§0`–`§10` meant the old operations guide and its `§29`/`§30` meant the design.
+- **The editorial pattern was one pattern.** Nearly every history-bearing paragraph was a current
+  rule followed by the story of how it became the rule ("used to…", "until 2026-08-25…"). The rule
+  and its reason stay; the dated story moves, word for word, to a new archive section that says
+  where each entry came from — 14 clauses. Nothing was deleted outright.
+- **Kept on purpose:** the design's decision table (it is current decisions with their reasons,
+  not a dated log), the GCP-promotion-suspended notice and the live-verification record (current
+  status a reader acts on), and archive entry IDs such as `P2a` in code comments — an entry ID is
+  a stable name, the minimal way to cite history, unlike a position such as `5.10`.
+- **One pointer became a statement.** The manual sent readers to the archive's P11 entry for the
+  secrets a staging deploy *requires*. A prerequisite belongs with the procedure, so the three
+  secret names are stated where the deploy is.
+- **The README is the map, once.** Its preamble and the design's no longer list the other
+  documents; the README's table says which document answers which question.
+
+## Pass 5 — findings: 4
+
+- `declared-vs-enforced` — **finding, in commit 1's claim:** I reported "zero numbered pointers
+  left" after searching only for `§`. 68 more cited archive and backlog items by number without
+  one (`docs/PRODUCT_ARCHIVE.md 5.10`) — a form the gate's own rule cannot see either. Of those, 63
+  name an entry that exists and stay as stable IDs; 5 named nothing — three hooks pointed at a
+  backlog item (`P1a`) that had closed and moved to the archive, and two cited items that exist
+  nowhere. Those comments already carried their reasoning, so the dead pointer went and the
+  explanation stayed.
+- `docs-match-behaviour` — **finding, same gap:** commit 1's rewrite skipped any old path
+  preceded by `/` or `.`, so three survived: the design pointing at `§D.6/OPERATIONS.md`, the
+  archive at `AgenticFramework/TestbedFeedback-2026-07-21.md`, and the installer's closing message
+  telling every user the spec is at `./SPECS.md`. That message was wrong twice over: `./` is
+  wherever the user ran the installer from, and its `./Readme.md` never existed on a
+  case-sensitive filesystem. It prints paths into the checkout now, or the repository when piped.
+- `docs-match-behaviour` — **finding, same gap:** commit 1 re-based only links to Markdown files
+  inside moved documents, so the manual's links to `./docker-compose.yml` pointed into `docs/`.
+- `ambiguous-signals` — **finding:** "see Appendix A" survived in the installer and the manual
+  after the appendices became named sections.
+
+## Pass 6 — findings: 0
+
+Every document over its final text: links and anchors resolve (0 broken), no numbered heading or
+`§` reference remains in the design, the manual or the README, the cross-reference rule refuses
+nothing among the added lines, `artifacts` is clean in `enforce`, every changed shell and YAML
+file parses, and the full suite passes.
+
 Every lever over the final tree: the moves, the merges and what each merged file's history note
 says, the link bases, the name forms, the exclusions, the tree in `docs/DESIGN.md`, the CI step
 that reads it, the `artifacts` mode and the G7 fix. Considered and declined: rewriting the old
@@ -114,14 +172,14 @@ Mutation-checked:          n/a for the moves — a document move has no blocking
                           own; the G7 fix's one blocking path is covered by its new test
 Fixtures re-pinned:        yes — docs/DESIGN.md's repository tree, the gates table (a step
                           name changed), .agent-rfc/fixtures/knowledge_graph.json
-KG query:                 kg:7456842d6499
+KG query:                 kg:2ebec8f194aa
 Gates run locally:         ruff, the full pytest suite, `process_gate.py artifacts` (enforce,
                           clean), the cross-reference rule over every added line, tsc in
                           portal/, the repo-tree drift gate, --governed
-Declared gaps:             (1) commit 2 of 2 is the distillation: docs/DESIGN.md and Part II
-                              of the manual still carry history that belongs in the archive,
-                              and the design's own preamble still lists four documents;
-                          (2) bare `§N` self-references inside docs/DESIGN.md (no file name)
-                              are distillation work too — the gate's rule does not see them;
+Declared gaps:             (1) the reliability pack's threshold rationale is still in the
+                              archive's design note rather than distilled into the design;
+                          (2) the cross-reference rule sees `X.md §N` and `X.md#L120`, not <!-- xref: example -->
+                              `X.md 5.10` — found in pass 5, and a rule change, so recorded in
+                              the backlog rather than made here;
                           (3) `records: single` is not part of this change, by design.
 ```
