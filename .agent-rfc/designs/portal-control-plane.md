@@ -28,6 +28,10 @@ to what that phase touches.
    holds. An approval made in the portal is committed to the app's repository directly.
 7. GitHub is supported in full. GitLab is link-only for now.
 8. Order: the Dev workspace first, then HITL, then administration and production approvals.
+9. Roles combine: one person may be Developer and Design approver — on a small project, all of
+   the development roles — and may move between them over time.
+10. Logs are stored in Postgres.
+11. HITL decisions work on a phone.
 
 ## Problem
 
@@ -72,8 +76,13 @@ one or more roles; every role except Administrator and Super user is granted **p
 | **Administrator** | Every workspace action for every app. Manage users (except Administrators and Super users), apps, tokens, integrations. |
 | **Super user** | Everything an Administrator may. Manage Administrators and Super users, recover a user's passkey access, rotate the portal's signing key, set organisation policy. |
 
+- **Roles combine, and change.** One person may hold Developer and Design approver on the same
+  app — on a small project, every development role — and an Administrator may change a user's
+  roles at any time. Nothing requires two people.
 - **Self-approval is allowed.** The approval record names the approver, and that name is the
-  point: it is who answers for the deviation.
+  point: it is who answers for the deviation. It also records **the role the approval was made
+  under**, because roles change: a trace-back months later must show that the approver held the
+  right to approve at the time, not only today.
 - **Denied is not missing.** A user without access to an app sees "You do not have access to
   <app>" with the Administrator to ask; a user asking for an app that does not exist sees "No app
   called <app>". Two screens, two next actions.
@@ -235,8 +244,8 @@ a passkey (decision 4).
 - **Traces** — recent traces per app, linking out to Phoenix. The portal does not rebuild a trace
   viewer.
 - **Incidents** — today's history entries, each with its trace-back link.
-- **Logs** — there is no log pipeline yet. The page states "Log collection is not set up" until
-  a store is chosen (see Open questions). It never shows an empty list that looks like "no errors".
+- **Logs** — phase 5, stored in Postgres (see Contracts). Until an app sends logs, its page
+  states "This app does not send logs yet" — never an empty list that looks like "no errors".
 
 ## Administration (`/admin`)
 
@@ -277,7 +286,7 @@ app's ingest token.
 ### An approval made in the portal — phase 2
 
 - The record extends today's `Approval`: `channel: "portal"`, the approver's identity, the
-  design's commit, the deviation text hash, a key id, and a **signature by the portal's signing
+  role they approved under, the design's commit, the deviation text hash, a key id, and a **signature by the portal's signing
   key** over the canonical record.
 - **The gate verifies the signature offline**, with the public key committed in the app's
   repository. A record the portal did not sign fails, however it got into the file.
@@ -299,6 +308,22 @@ app's ingest token.
   workflow.
 - **Confirmation**: the worker posts the outcome back. Only then is the decision shown as made.
 
+### Logs — phase 5
+
+- **The portal receives logs over OTLP/HTTP** (`POST /v1/logs`, the OpenTelemetry standard),
+  authenticated by the app's ingest token. An app's existing OpenTelemetry setup points its log
+  exporter there; no collector is required, and an organisation that runs one can forward to the
+  same endpoint.
+- **Stored in Postgres**, in a table partitioned by day: time, app, severity, body, attributes,
+  trace id and span id. The trace id links each line to Phoenix and to the run.
+- **Retention** is 30 days by default, set per organisation; old partitions are dropped whole.
+- **Redaction happens in the app, before export**, by the same rules as traces
+  (`runtime/trace_redactor.py`). The portal stores what it receives and does not un-redact.
+- **Limits are stated, not discovered.** Postgres serves this at the volume of one organisation's
+  apps. The page shows the rows stored and the oldest retained day. An ingest over the
+  per-app rate limit is refused with 429 and counted, so dropped logs are a number on the page,
+  not a silence.
+
 ### Runs carry their commit — phase 4
 
 `agent_runs` gains `app_commit`, reported by the runtime from the deployed build. NULL means the
@@ -313,7 +338,7 @@ addition (see `portal/lib/wireContract.ts`), within the major version.
 | 2 | Passkey sign-in and enrolment, Admin › Users and Integrations, deviation and allowlist approvals committed through the GitHub App, the gate's signed-approval rule | Phase 1; a GitHub App registered by the owner |
 | 3 | HITL queue, step-up for high risk, HITL contracts in the runtime | Phase 2 |
 | 4 | Production approvals, traces list, trace-back through `app_commit` | Phase 3 |
-| 5 | Logs | A log store, chosen |
+| 5 | Logs: OTLP/HTTP ingest, Postgres storage, the logs page with search by app, severity, time and trace | Phase 4 |
 
 ## Screens: rules every page follows
 
@@ -326,20 +351,18 @@ addition (see `portal/lib/wireContract.ts`), within the major version.
 - **Every one-way action confirms first** and says what it ends (`irreversible-needs-confirmation`).
 - **Keyboard and screen reader**: every control reachable by keyboard, every icon-only control
   labelled, focus returned to the list after a decision.
-- **Viewports**: designed for 1280 px and up; the HITL queue and decision page also work at
-  768 px, because reviewers are not always at a desk. Below 768 px, read-only.
+- **Viewports**: designed for 1280 px and up. **The HITL queue and decision page work on a phone
+  (360 px and up)**, passkey step-up included — a phone is where most people's passkeys already
+  are. On a phone the queue is a list of cards, the evidence folds into sections, and Approve and
+  Reject sit at the bottom of the screen within thumb reach, never side by side with nothing
+  between them. Every other page is usable at 768 px and read-only below it.
 - **The existing component language**: the current header, table, card and chip styles, light and
   dark. No new colours or spacing values; the verdict and risk chips reuse the portal's existing
   status colours.
 
 ## Open questions
 
-1. **Design approver vs Developer.** With self-approval allowed, a Developer can approve
-   deviations. This spec gives the Design approver one extra power: approving allowlist entries
-   (exemptions from a mechanical check). Is that the intended difference?
-2. **Log store** for phase 5 — the OpenTelemetry collector into Loki, into Postgres, or into what
-   the organisation already runs.
-3. **Below 768 px** — read-only, or HITL decisions on a phone too?
+None. The three raised on 2026-09-18 are answered in decisions 9–11.
 
 ## Pillars
 
