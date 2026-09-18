@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - runtime/llm_gateway.py
   - runtime/test/test_idempotency_boundary.py

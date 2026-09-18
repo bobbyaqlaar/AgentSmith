@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - runtime/test/test_cli.py
 ---

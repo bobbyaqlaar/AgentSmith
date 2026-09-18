@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/process_gate.py
   - scripts/gate_models.py
