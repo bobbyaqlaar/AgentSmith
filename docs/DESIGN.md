@@ -1250,6 +1250,7 @@ AgentSmith/
 │   ├── security/                # Harness internals: registry.py, report.py, runners/, schemas/
 │   ├── eval_judge.py            # Shared LLM-judge path (run-evals + shadow-eval)
 │   ├── shadow-eval.py           # 5% post-hoc production-trace sampler (the Evaluation Framework section)
+│   ├── send_dev_record.py       # The gate's record (`process_gate.py ci --json`) → the portal's Dev workspace
 │   ├── sync-portal-history.py   # .agent-history.log → Ops Portal history sync
 │   ├── delivery_model.py        # Delivery Model soft gate (ok|warn|skip)
 │   ├── delivery_evidence.py     # Promote-time evidence pack (JSON + Markdown)
