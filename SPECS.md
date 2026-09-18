@@ -1275,6 +1275,7 @@ AgentSmith/
 │   ├── gate_ides.py             # One gate, six dialects: each IDE's payload shape in, its answer shape out, its hook config generated
 │   ├── gate_shell.py            # The shell surface: refuses --no-verify, a hooksPath override, `agentsmith approve` and writes to the gate itself
 │   ├── gate_kg.py               # What a change touches, read from the graph JSON without networkx: the review's scope and its `KG query:` hash
+│   ├── gate_history.py          # Pillar 5's log, written by the stop gate and the sweep; and what the last local `agentsmith gates run` found
 │   ├── gate_steps.py            # The `# agentsmith:gate` steps in the workflows: `agentsmith gates run` and the generated checklist table
 │   ├── gate_tracing.py          # One span per gate decision, spooled to state/gate-spans and shipped at session start
 │   ├── requirements-gate.txt    # What the gate itself needs (pydantic, opentelemetry-sdk) — installed by CI and the framework env

@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import sys
@@ -307,6 +308,129 @@ def init_tenant(
         written.append(f".github/workflows/{name}")
 
     written += _copy_composite_actions(root)
+    written += _provision_governance(root, force=force)
+    return written
+
+
+# The design-and-review gates, provisioned rather than left as a page in a
+# manual (.agent-rfc/designs/governance-enforcement.md, G7). A control a tenant
+# has to install by hand is a control most tenants do not have.
+GATED_BY_STACK = {
+    "python-fastapi": ["app/**", "agents/**", "workflows/**", "scripts/**", "runtime/**", "test/**"],
+    "go": ["cmd/**", "internal/**", "pkg/**", "scripts/**"],
+    "ts-react": ["src/**", "app/**", "lib/**", "scripts/**"],
+}
+ALWAYS_GATED = [".github/**", ".githooks/**", ".agenticframework/process-gates.json",
+                ".claude/settings.json", ".cursor/hooks.json"]
+
+
+def _process_gates_config(stack: str) -> str:
+    """A tenant's gate config.
+
+    The design and review gates are LIVE from the first commit. `artifacts`,
+    `pillars` and `knowledge_graph` are `off`: a tenant switched to enforce on
+    day one is refused its first commit for documents it has not written and a
+    graph it has not built, and the first thing anyone does then is take the
+    gates out. Each is turned on deliberately.
+    """
+    return json.dumps({
+        "_about": "What the process gates cover here — AgentSmith docs/process-gates.md. "
+                  "This file is gated itself, so switching a gate off takes a design and a review.",
+        "gated": [*GATED_BY_STACK.get(stack, GATED_BY_STACK["python-fastapi"]), *ALWAYS_GATED],
+        "not_gated": ["**.md", ".agent-rfc/**", "**/node_modules/**"],
+        "registry": "@framework/templates/governance.json",
+        "artifacts": "off",
+        "pillars": "off",
+        "knowledge_graph": "off",
+        "levers_doc": "@framework/docs/review-levers.md",
+        "design_checklist": "@framework/docs/design-review-checklist.md",
+    }, indent=2) + "\n"
+
+
+def _framework_dir() -> Optional[Path]:
+    for candidate in (Path(os.environ["AGENTSMITH_DIR"]) if os.environ.get("AGENTSMITH_DIR") else None,
+                      Path.home() / ".agent-framework",
+                      Path(__file__).resolve().parent.parent):
+        if candidate is not None and (candidate / "scripts" / "process_gate.py").is_file():
+            return candidate
+    return None
+
+
+def _provision_governance(root: Path, force: bool = False) -> list[str]:
+    """The gates, armed, plus what they read: the config, the hooks, the IDE
+    hook configs, the generated rule files, a committed graph and the stubs."""
+    import shutil
+    import subprocess as sp
+
+    written: list[str] = []
+    framework = _framework_dir()
+
+    def put(rel: str, body: str) -> None:
+        target = root / rel
+        if target.exists() and not force:
+            return
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(body, encoding="utf-8")
+        written.append(rel)
+
+    stack = "python-fastapi"
+    for name in GATED_BY_STACK:
+        if (root / ".github" / "workflows" / f"ci-{name}.yml").is_file():
+            stack = name
+            break
+    put(".agenticframework/process-gates.json", _process_gates_config(stack))
+
+    if framework is not None:
+        for hook in ("process-gate", "commit-msg", "pre-commit", "pre-push"):
+            source = framework / ".githooks" / hook
+            if source.is_file() and (force or not (root / ".githooks" / hook).exists()):
+                (root / ".githooks").mkdir(parents=True, exist_ok=True)
+                shutil.copy(source, root / ".githooks" / hook)
+                (root / ".githooks" / hook).chmod(0o755)
+                written.append(f".githooks/{hook}")
+        # Armed, not merely present: a hook family nobody points git at is the
+        # `implemented-not-invoked` failure this whole programme is about.
+        sp.run(["git", "-C", str(root), "config", "core.hooksPath", ".githooks"], check=False)
+
+        sys.path.insert(0, str(framework / "scripts"))
+        try:
+            import gate_ides  # type: ignore
+
+            for ide in gate_ides.GENERATED:
+                rel = gate_ides.ADAPTERS[ide].config_path
+                existing = json.loads((root / rel).read_text(encoding="utf-8")) \
+                    if (root / rel).is_file() else None
+                body = json.dumps(gate_ides.render_config(ide, existing), indent=2) + "\n"
+                if existing is None or force:
+                    put(rel, body)
+        except Exception as exc:  # a scaffold that half-works says which half
+            print(f"  ! IDE hook configs not written ({exc})", file=sys.stderr)
+
+        for script, args in (
+            (framework / "scripts" / "generate-ide-config.py",
+             ["--repo-root", str(root), "--rules-file", str(framework / "templates" / "agent-rules.yaml")]),
+            (framework / "scripts" / "map_codebase.py", ["--quiet"]),
+        ):
+            if script.is_file():
+                done = sp.run([sys.executable, str(script), *args], cwd=root,
+                              capture_output=True, text=True, check=False)
+                if done.returncode != 0:
+                    print(f"  ! {script.name} did not complete: {done.stderr.strip()[:200]}", file=sys.stderr)
+        graph = root / ".agent-rfc" / "fixtures" / "knowledge_graph.json"
+        if not graph.is_file():
+            # A repo with no code yet still gets a graph: an empty one is a
+            # fact ("nothing mapped"), and a missing file is a gap the
+            # governed check would report forever.
+            put(".agent-rfc/fixtures/knowledge_graph.json", json.dumps(
+                {"directed": True, "multigraph": False, "graph": {}, "nodes": [], "links": []},
+                indent=2) + "\n")
+        else:
+            written.append(".agent-rfc/fixtures/knowledge_graph.json")
+
+    put("README.md", f"# {root.name}\n\nWhat this is, and how to run it.\n")
+    put("docs/PRODUCT_BACKLOG.md", "# Product backlog\n\nOne row per item: what, why, status.\n")
+    put("docs/DESIGN.md", "# Design\n\nThe living picture of this system.\n")
+    put("docs/REVIEW_LOG.md", "# Review log\n\nAppend-only: one section per change.\n")
     return written
 
 

@@ -62,6 +62,7 @@ if sys.version_info < (3, 11):
     UNUSABLE = f"Python {sys.version.split()[0]} at {sys.executable} is older than 3.11"
 else:
     try:
+        import gate_history as gh
         import gate_ides as gi
         import gate_models as gm
         import gate_kg as lkg
@@ -766,6 +767,10 @@ def cmd_stop(payload: dict) -> int:
     if not problems:
         return 0
     _record("block", "review-before-done" if not swept else "bypass-sweep")
+    # Pillar 5's log, written by the hook rather than by an agent's memory of
+    # what happened. Unresolved, so the next session start surfaces it.
+    gh.record(root, "bypass_found" if swept and not unreviewed else "stop_gate_blocked",
+              "; ".join(problems)[:400])
     heading = "Commits that never passed the gate" if swept and not unreviewed else "Unreviewed gated changes"
     text = f"{heading}:\n- " + "\n- ".join(problems)
     # Blocking a turn that is already being blocked could loop forever, so a

@@ -300,6 +300,14 @@ def run(root: Path, only: Optional[str] = None, services: bool = False,
                 break
     print(f"\ngates: {passed} passed, {failed} failed, {skipped} skipped "
           f"(of {len(steps)} tagged in the workflows)")
+    # What ran here, and against which commit — `verify_system.py --governed`
+    # reads it to tell "green" from "green for a different commit".
+    try:
+        import gate_history
+
+        gate_history.record_gates_run(where, passed=passed, failed=failed, skipped=skipped)
+    except Exception:  # fail-open: recording the run must not fail the run
+        pass
     return 1 if failed else 0
 
 

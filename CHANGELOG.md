@@ -75,6 +75,30 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — governance enforcement, slice G7: a tenant that is governed from its first commit
+
+- **`agentsmith tenant init` provisions the gates**, not just the CI workflows: a
+  `.agenticframework/process-gates.json` with stack-appropriate gated paths, the four `.githooks`
+  **armed** (`core.hooksPath` is set — a hook family nobody points git at is the
+  `implemented-not-invoked` failure this programme exists to end), the Claude Code and Cursor hook
+  configs, the generated rule files, a committed knowledge graph and the artifact stubs. It still
+  refuses to write into the framework's own checkout, and it still never overwrites a tenant's own
+  files without `--force`.
+- **The extra modes are provisioned `off`.** `artifacts`, `pillars` and `knowledge_graph` are
+  turned on deliberately: a tenant switched to `enforce` on day one is refused its first commit for
+  documents it has not written and a graph it has not built, and the first thing anyone does then
+  is take the gates out. The design and review gates are live from commit one.
+- **`verify_system.py --governed`** lists every gap at once — a check that stops at the first one
+  makes provisioning a guessing game — and separates **provisioning** gaps from **evidence** gaps:
+  a freshly scaffolded repo is "provisioned, not yet proven", not "broken".
+- **`agentsmith gates run` records what it found** in `.git/agentsmith/gates-run.json` (the commit
+  and the three counts), so `--governed` can tell "green" from "green for a different commit".
+- **Pillar 5's log is written by the hooks.** The stop gate appends when it blocks a turn and the
+  sweep appends when it finds a commit that never met a gate — unresolved `MAJOR` JSON lines, the
+  shape `agentsmith check` already reads, deduplicated so a stop hook that fires every turn does
+  not write the same fact fifty times. An agent recording its own history from memory was the one
+  thing that never happened.
+
 ### Added — governance enforcement, slice G4: reviews that use the graph
 
 - **`local_knowledge_graph.py --impact --base <ref>`** turns a diff into the files a reviewer must

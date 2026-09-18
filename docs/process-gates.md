@@ -305,6 +305,44 @@ would leave a silent hole in exactly the IDEs nobody here tests daily. Each
 IDE's golden payload is in `scripts/test/fixtures/ide-payloads/`: replace one
 with a real session's payload and the tests say whether anything else changes.
 
+## Provisioning, and knowing whether it held
+
+A control a tenant has to install by hand is a control most tenants do not
+have. `agentsmith tenant init` writes the gate config, the four `.githooks`
+**armed** (`core.hooksPath` is set), the Claude Code and Cursor hook configs,
+the generated rule files, a committed knowledge graph and the artifact stubs.
+It refuses to write into the framework's own checkout, and it never replaces a
+file the tenant already owns without `--force`.
+
+The extra modes — `artifacts`, `pillars`, `knowledge_graph` — are provisioned
+`off`. A repo switched to `enforce` on day one is refused its first commit for
+documents it has not written and a graph it has not built, and the first thing
+anyone does then is take the gates out. The design and review gates are live
+from the first commit; each of the others is turned on deliberately.
+
+```bash
+python3 scripts/verify_system.py --governed
+```
+
+lists **every** gap at once — a check that stops at the first one turns
+provisioning into a guessing game — and keeps two kinds apart:
+
+- **provisioning gaps**: a file missing, `core.hooksPath` unset, a config that
+  gates nothing or declares no registry;
+- **not yet proven**: `agentsmith gates run` has never run here, ran for a
+  different commit, or ended with failures.
+
+A freshly scaffolded repo is the second kind. "Not installed" and "installed
+but never run" are different answers, and sending someone to fix the wrong one
+is how a check loses its reader.
+
+**Pillar 5's log is written by the hooks.** The stop gate appends when it
+blocks a turn and the sweep appends when it finds a commit that never met a
+gate — unresolved `MAJOR` lines in `.agent-history.log`, which is what
+`agentsmith check` and session start already read. The same fact is not
+appended twice in a row: a stop hook fires at every turn end, and a log that
+repeats one line fifty times is one nobody reads.
+
 ## The scope a review covered
 
 The knowledge graph existed and nothing made a review use it. Where a repo

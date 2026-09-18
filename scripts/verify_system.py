@@ -849,6 +849,91 @@ def _git_tracked_files() -> Optional[set[str]]:
     return set(proc.stdout.split())
 
 
+def check_governed() -> bool:
+    """Is this repo actually governed? Every gap at once, never just the first.
+
+    A check that stops at the first missing piece turns provisioning into a
+    guessing game: fix one thing, run again, find the next. This lists them
+    (.agent-rfc/designs/governance-enforcement.md, G7).
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import gate_history  # type: ignore
+
+    root = _repo_root()
+    print("═══════════════════════════════════════════════════")
+    print("  Governed repository check")
+    print("═══════════════════════════════════════════════════\n")
+    gaps: list[str] = []
+
+    def want(rel: str, why: str) -> None:
+        if not (root / rel).exists():
+            gaps.append(f"{rel} is missing — {why}")
+
+    want(".agenticframework/process-gates.json", "the gates cover nothing until a repo declares what they cover")
+    for hook in ("process-gate", "commit-msg", "pre-commit", "pre-push"):
+        want(f".githooks/{hook}", "the commit gate and the sweep run from here")
+    want(".claude/settings.json", "the edit gate is an IDE hook")
+    want(".cursor/hooks.json", "the edit gate is an IDE hook")
+    want(".agent-rfc/fixtures/knowledge_graph.json", "a review's scope is computed from the graph")
+    want("docs/REVIEW_LOG.md", "one review log per repo (`artifacts`)")
+    want("docs/DESIGN.md", "one design artifact per repo (`artifacts`)")
+
+    armed = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=root,
+                           capture_output=True, text=True, check=False).stdout.strip()
+    if armed != ".githooks":
+        gaps.append("git config core.hooksPath is "
+                    + (f"{armed!r}" if armed else "unset")
+                    + " — the hooks are present but nothing runs them")
+
+    config_path = root / ".agenticframework" / "process-gates.json"
+    if config_path.is_file():
+        try:
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            gaps.append(f"process-gates.json is not valid JSON ({exc})")
+            config = {}
+        if not config.get("gated"):
+            gaps.append("process-gates.json gates no paths")
+        if not config.get("registry"):
+            gaps.append("process-gates.json declares no `registry` — the design-time rules are not adopted")
+
+    # Kept apart from the list above on purpose: "this control is not
+    # installed" and "this control is installed but has not been run for this
+    # commit" are different facts, and a freshly scaffolded repo is the second
+    # one. Reporting them as one number tells a new tenant its provisioning
+    # failed, which is the wrong thing to go and fix (`ambiguous-signals`).
+    unproven: list[str] = []
+    run = gate_history.last_gates_run(root)
+    if run is None:
+        unproven.append("`agentsmith gates run` has never run in this clone — run it before pushing")
+    elif run.get("commit") != gate_history.head(root):
+        unproven.append(f"the last `agentsmith gates run` was for a different commit "
+                        f"({str(run.get('commit'))[:12]}) — run it again for this one")
+    else:
+        print(f"  ℹ️   last `agentsmith gates run`: {run.get('passed')} passed, {run.get('failed')} failed, "
+              f"{run.get('skipped')} skipped")
+        if run.get("failed"):
+            unproven.append(f"the last `agentsmith gates run` had {run['failed']} failing gate(s)")
+
+    for gap in gaps:
+        print(f"  ❌  {gap}")
+    if not gaps:
+        print("  ✅  every control this repo declares is present and armed")
+    for gap in unproven:
+        print(f"  ⏳  {gap}")
+    print()
+    print("═══════════════════════════════════════════════════")
+    if gaps:
+        print(f"  🛑  {len(gaps)} gap(s) in provisioning"
+              + (f", and {len(unproven)} not yet proven" if unproven else ""))
+    elif unproven:
+        print("  ⏳  Provisioned, not yet proven — the controls are in place and armed")
+    else:
+        print("  🎉  Governed")
+    print("═══════════════════════════════════════════════════")
+    return not gaps and not unproven
+
+
 def check_kg() -> bool:
     """
     CI validation for the Knowledge Graph (Product_Archive.md P10a, Pillar 2).
@@ -1224,6 +1309,8 @@ if __name__ == "__main__":
         sys.exit(0 if check_onprem_deploy() else 1)
     if "--check-kg" in sys.argv:
         sys.exit(0 if check_kg() else 1)
+    if "--governed" in sys.argv:
+        sys.exit(0 if check_governed() else 1)
     if "--check-delivery-model" in sys.argv:
         sys.exit(0 if check_delivery_model() else 1)
     ok = run_checks()

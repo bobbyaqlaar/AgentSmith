@@ -8,6 +8,9 @@ scope:
   - scripts/gate_ides.py
   - scripts/gate_shell.py
   - scripts/gate_kg.py
+  - scripts/gate_history.py
+  - scripts/verify_system.py
+  - scripts/test/test_governed_*.py
   - scripts/local_knowledge_graph.py
   - scripts/test/test_gate_kg.py
   - scripts/test/fixtures/**
@@ -486,6 +489,33 @@ files under this one, and the stop gate's findings changed between turns.
 - `agentsmith tenant init` / sync provisions everything: `process-gates.json`, `governance.json`, `.githooks` (armed), every IDE hook config, generated rule files, a committed KG, and single-artifact stubs.
 - `verify_system.py --governed` fails until all of that is present, the rules source exists, the security posture has no placeholders and the last local `agentsmith gates` run is green.
 - Pillar 5: `.agent-history.log` entries are written by the stop and sweep hooks (bypasses, blocked turns), not by agent memory.
+
+**Amended while designing (2026-09-18): what "provisions everything" means.**
+
+- **The extra rules are provisioned OFF.** `tenant init` writes a
+  `.agenticframework/process-gates.json` whose design-and-review gates are live — trailers, the
+  design, the review, the sweep — and whose `artifacts`, `pillars` and `knowledge_graph` modes are
+  `off`. A tenant switched to `enforce` on day one would be refused its first commit for documents
+  it has not written and a graph it has not built, and the first thing anyone would do is take the
+  gates back out. Each mode is turned on deliberately, which is the adoption story every one of
+  those slices already tells.
+- **Arming is part of provisioning.** The hooks are copied and `core.hooksPath` is set, because a
+  hook family that is present and unarmed is the `implemented-not-invoked` failure this programme
+  exists to end. `tenant init` refuses to write into the framework's own checkout as it already
+  does, and that guard is not weakened for this.
+- **`--governed` answers one question with a list, not a boolean.** It reports every missing piece
+  at once — config, armed hooks, IDE configs, generated rule files, a committed graph, the
+  artifact stubs, the rules source, a security posture with no placeholders, and whether the last
+  local `agentsmith gates` run was green *for this HEAD*. A check that stops at the first gap
+  makes provisioning a guessing game.
+- **The last gates run is recorded where the run happens.** `agentsmith gates run` writes
+  `.git/agentsmith/gates-run.json` — the commit it ran against and the three counts — so
+  `--governed` can say "green", "green for a different commit" or "never run here". `.git/` on
+  purpose: it is local truth about this clone, not a fact to commit.
+- **Pillar 5's log lines are written by the hooks.** The stop gate appends when it blocks a turn
+  and the sweep appends when it finds a commit that never met a gate, as JSON lines at
+  `MAJOR`/`hitl_resolved: false`, which is the shape `agentsmith check` already surfaces. An agent
+  writing its own history from memory was the thing that never happened.
 
 ## Pillars
 

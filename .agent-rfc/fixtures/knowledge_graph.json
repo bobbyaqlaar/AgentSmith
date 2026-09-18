@@ -1062,14 +1062,16 @@
         "check_history_sync",
         "_kg_shape",
         "_git_tracked_files",
+        "check_governed",
         "check_kg",
         "check_onprem_deploy",
         "check_delivery_model",
         "_usage",
         "_run",
-        "_git_repo"
+        "_git_repo",
+        "want"
       ],
-      "last_modified": "2026-09-17T12:59:05Z",
+      "last_modified": "2026-09-18T02:56:54Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -3477,6 +3479,9 @@
         "FrameworkRootError",
         "looks_like_framework",
         "init_tenant",
+        "_process_gates_config",
+        "_framework_dir",
+        "_provision_governance",
         "_actions_dir",
         "_copy_composite_actions",
         "_cmd_tenant_init",
@@ -3503,9 +3508,10 @@
         "_cmd_approve",
         "_cmd_design_new",
         "build_parser",
-        "main"
+        "main",
+        "put"
       ],
-      "last_modified": "2026-09-17T20:45:28Z",
+      "last_modified": "2026-09-18T02:56:51Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4601,7 +4607,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-17T21:30:32Z",
+      "last_modified": "2026-09-18T02:56:56Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4700,7 +4706,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-09-18T00:07:30Z",
+      "last_modified": "2026-09-18T02:56:24Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5524,7 +5530,7 @@
         "render_table",
         "swap"
       ],
-      "last_modified": "2026-09-17T19:16:28Z",
+      "last_modified": "2026-09-18T02:56:02Z",
       "id": "scripts/gate_steps.py"
     },
     {
@@ -5784,6 +5790,54 @@
       "pillar": null,
       "created_at": "2026-09-18T00:23:47Z",
       "id": "rfc:reviews/governance-enforcement-g4.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_now",
+        "record",
+        "_git_dir",
+        "head",
+        "record_gates_run",
+        "last_gates_run"
+      ],
+      "last_modified": "2026-09-18T02:56:55Z",
+      "id": "scripts/gate_history.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "tenant",
+        "test_the_scaffold_writes_it",
+        "test_the_hooks_are_armed_not_merely_present",
+        "test_the_gates_are_live_and_the_extra_modes_are_off",
+        "test_the_scaffold_leaves_a_tenants_own_files_alone",
+        "test_a_scaffolded_tenant_can_commit_a_governed_change",
+        "_governed",
+        "test_a_fresh_tenant_is_provisioned_but_not_yet_proven",
+        "test_governed_passes_once_the_gates_have_been_run_here",
+        "test_governed_names_every_missing_piece_at_once",
+        "test_governed_notices_the_hooks_being_disarmed",
+        "test_governed_reports_the_last_local_gates_run",
+        "test_a_gates_run_from_another_commit_is_not_this_commits_evidence",
+        "test_a_blocked_turn_is_recorded_as_unresolved",
+        "test_the_same_fact_is_not_appended_twice_in_a_row",
+        "test_a_different_fact_is_appended",
+        "test_the_line_is_the_shape_the_checker_already_reads",
+        "test_the_stop_gate_writes_one"
+      ],
+      "last_modified": "2026-09-18T02:56:07Z",
+      "id": "scripts/test/test_governed_tenant.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 governance enforcement, G7 (a tenant governed from its first commit)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/governance-enforcement-g7.md",
+      "pillar": null,
+      "created_at": "2026-09-18T03:02:17Z",
+      "id": "rfc:reviews/governance-enforcement-g7.md"
     }
   ],
   "edges": [
@@ -6510,6 +6564,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_idempotency_boundary.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_governed_tenant.py",
       "target": "runtime/__init__.py"
     }
   ]

@@ -418,6 +418,7 @@ GATE_FILES = {
     "scripts/gate_pillars.py": REPO / "scripts/gate_pillars.py",
     "scripts/gate_shell.py": REPO / "scripts/gate_shell.py",
     "scripts/gate_kg.py": REPO / "scripts/gate_kg.py",
+    "scripts/gate_history.py": REPO / "scripts/gate_history.py",
     "scripts/local_knowledge_graph.py": REPO / "scripts/local_knowledge_graph.py",
     # local_knowledge_graph's CLI reaches for the shared helpers; the GATE does
     # not — it imports gate_kg.py, which is why that split exists.
