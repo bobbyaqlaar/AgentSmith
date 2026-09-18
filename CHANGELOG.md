@@ -75,6 +75,22 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — a pointer into another document names something that document defines
+
+- **The cross-reference rule reads every pointer with a number in it**, with or without `§`, and
+  with a backtick or quote between the file and the number. It looks in the document it points
+  into: a heading containing the token, or the first word of a table row or bold list item, is a
+  name and passes. A line number, a document the repo does not have, and a number that only
+  numbers a heading or row are refused.
+- **`append_only`** is a new field on an artifact type in `templates/governance.json` (set on the
+  archive, the review log and the changelog). In those, a numbered entry never moves, so a pointer
+  to it by number passes. **If your repo re-declares one of these types in `extends.artifacts`,
+  add `append_only: true` to it**, or pointers to its numbered entries are refused.
+- **CI and the pre-push sweep read the pointers of a commit that touches no gated path.** They
+  skipped such commits whole, so a docs-only commit that bypassed the commit gate was never read.
+- Six dead pointers fixed, and the lettered section numbers left in `docs/UserManual.md`
+  headings are gone.
+
 ### Fixed — the mutation gate reads the same on a developer machine as in CI
 
 - `mutation_check.py` reported a surviving `tenant_scaffold` mutant wherever AgentSmith was

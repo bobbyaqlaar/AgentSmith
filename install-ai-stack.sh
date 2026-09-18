@@ -78,7 +78,7 @@ SCRIPTS_DIR="$FRAMEWORK_DIR/scripts"
 SHARED_DIR="$FRAMEWORK_DIR/shared"
 WORKFLOW_TEMPLATES_DIR="$FRAMEWORK_DIR/workflow-templates"
 # Standing, machine-wide Phoenix + Postgres + Ops Portal stack — shared
-# across every repo on this machine (docs/PRODUCT_ARCHIVE.md P0.5), not
+# across every repo on this machine, not
 # scoped to any one project checkout. Managed via `agentsmith dashboard start|stop`.
 OBSERVABILITY_DIR="$FRAMEWORK_DIR/observability"
 

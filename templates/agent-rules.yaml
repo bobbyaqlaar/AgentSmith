@@ -320,6 +320,7 @@ artifacts:
     - id: archive
       path: docs/PRODUCT_ARCHIVE.md
       patterns: ["*ARCHIVE*.md"]
+      append_only: true
       note: Done items with a date and the evidence.
     - id: design
       path: docs/DESIGN.md
@@ -328,6 +329,7 @@ artifacts:
     - id: review_log
       path: docs/REVIEW_LOG.md
       patterns: ["*REVIEW*.md", "ReviewFindings*.md", "TestCoverageReview*.md", "TestbedFeedback*.md"]
+      append_only: true
       note: Append-only — passes, sign-offs, audits, bypass repairs.
     - id: user_manual
       path: docs/UserManual.md
@@ -337,6 +339,7 @@ artifacts:
       path: CHANGELOG.md
       patterns: ["CHANGELOG*.md"]
       required: false
+      append_only: true
       note: Only where the repo releases to tenants.
     - id: test_script
       path: docs/manual-test-script.md

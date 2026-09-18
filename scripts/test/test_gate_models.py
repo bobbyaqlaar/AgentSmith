@@ -41,6 +41,13 @@ def test_the_committed_registry_is_what_agent_rules_compiles_to():
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_the_append_only_records_are_the_ones_whose_numbers_never_move():
+    """A bare number in a pointer is a name only in these (process_gate.cross_reference_problems):
+    everywhere else it labels a numbered heading or row, which moves."""
+    registry = _registry()
+    assert {a.id for a in registry.artifacts.types if a.append_only} == {"archive", "review_log", "changelog"}
+
+
 def test_every_pillar_says_where_it_is_enforced():
     registry = _registry()
     assert [p.id for p in registry.pillars] == [p["id"] for p in RULES["pillars"]]

@@ -7,6 +7,25 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — a pointer names something its target defines (2026-09-18)
+
+Design: `.agent-rfc/designs/xref-names.md`; review: `.agent-rfc/reviews/xref-names.md`. The owner
+chose to tell a name from a position by looking in the target (option (a)), not by the number's
+shape.
+
+- **The rule widened.** It saw `§` and `#L` only; a pointer with neither, or with a backtick
+  between the file and the `§`, passed unread. It now reads both, and a pointer passes only when
+  its target defines the token as a name. A number at the start of a heading or row counts only
+  in an append-only record (`append_only` in the registry).
+- **CI and the sweep** skipped commits touching no gated path, so a docs-only commit that bypassed
+  the commit gate had its pointers read by nothing.
+- **The sweep over every tracked file** found six dead pointers in living files — the portal
+  README's pointer to a manual section G5b had renumbered away among them — and 14 lettered
+  headings (`E.1 — Setup`) in the manual that G5b's numbering pass missed. Records of history,
+  test fixtures holding legacy text and deliberate test examples were left as written.
+
+---
+
 ## Completed — the mutation gate reads the same locally as in CI (2026-09-18)
 
 Design: `.agent-rfc/designs/version-marker-test.md`; review: `.agent-rfc/reviews/version-marker-test.md`.

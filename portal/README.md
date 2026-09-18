@@ -1,8 +1,9 @@
 # Ops Portal
 
 Cross-tenant operations dashboard for AgentSmith (docs/DESIGN.md › Universal Observability Platform, Federated Observability).
-Full setup/operate walkthrough, including a click-through of every page
-against a real example tenant: `docs/UserManual.md` §2.3b and Part E.
+Full setup/operate walkthrough: `docs/UserManual.md` › Ops Portal. A
+click-through of every page against a real example tenant:
+`docs/UserManual.md` › Manual test walkthrough: the UIs.
 
 ## Purpose
 

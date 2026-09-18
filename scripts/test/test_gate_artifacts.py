@@ -26,7 +26,10 @@ from pathlib import Path
 
 import pytest
 
-from test_process_gate import REPO, _git, _write, needs_git
+from test_process_gate import REPO, _ci, _git, _write, needs_git
+
+import gate_models as gm
+import process_gate as pg
 
 pytestmark = needs_git
 
@@ -52,10 +55,10 @@ LAYOUT = {
             {"id": "readme", "path": "README.md", "patterns": ["README*.md", "docs/README*.md"]},
             {"id": "backlog", "path": "docs/PRODUCT_BACKLOG.md", "patterns": ["*BACKLOG*.md", "*TODO*.md"]},
             {"id": "design", "path": "docs/DESIGN.md", "patterns": ["SPECS*.md", "*DESIGN*.md"]},
-            {"id": "review_log", "path": "docs/REVIEW_LOG.md", "patterns": ["*REVIEW*.md"]},
-            {"id": "archive", "path": None, "patterns": ["*ARCHIVE*.md"], "required": False},
+            {"id": "review_log", "path": "docs/REVIEW_LOG.md", "patterns": ["*REVIEW*.md"], "append_only": True},
+            {"id": "archive", "path": None, "patterns": ["*ARCHIVE*.md"], "required": False, "append_only": True},
             {"id": "user_manual", "path": None, "patterns": [], "required": False},
-            {"id": "changelog", "path": None, "patterns": ["CHANGELOG*.md"], "required": False},
+            {"id": "changelog", "path": None, "patterns": ["CHANGELOG*.md"], "required": False, "append_only": True},
             {"id": "test_script", "path": None, "patterns": [], "required": False},
         ],
         "reference": ["docs/reference/*.md", ".agent-rfc/**/*.md"],
@@ -205,6 +208,140 @@ def test_a_heading_name_is_a_fine_reference(repo_with_artifacts):
     result = _git(repo_with_artifacts, "commit", "-qm", "docs: name the heading", check=False)
 
     assert result.returncode == 0, result.stderr
+
+
+# ── what a pointer may name (option (a): look in the target) ─────────────────
+#
+# Unit tests on the verdict, with the target documents written here: whether a
+# number is a name or a position is a property of the document it points into.
+
+RECORDS = gm.Artifacts(types=[
+    gm.Artifact(id="archive", path="docs/PRODUCT_ARCHIVE.md", append_only=True),
+    gm.Artifact(id="changelog", path="CHANGELOG.md", append_only=True),
+    gm.Artifact(id="design", path="docs/DESIGN.md"),
+])
+DOCS = {
+    "docs/PRODUCT_ARCHIVE.md": (
+        "# Archive\n\n## P10 — Pillars in CI\n\n"
+        "| 4.14 | Session revocation | `revoked_sessions` |\n"
+        "| ~~5.10~~ | ~~`<org>` placeholder~~ | Done |\n"
+        "| P10a (Pillar 2) | map_codebase.py never invoked |\n\n"
+        "- **2.3 HITL blob I/O errors:** a missing key raises.\n\n"
+        "```bash\n# the graph, rebuilt (4.13)\n```\n"
+    ),
+    "CHANGELOG.md": "# Changelog\n\n## [1.1.0] — 2026-07-29\n",
+    "docs/DESIGN.md": (
+        "# Design\n\n## 5.10 Numbered heading\n\n## 2. Strict Bias\n\n"
+        "| 2 | Bias & fairness | Partial |\n\n## G3 — the sweep\n\n#### E.1 — Setup\n"
+    ),
+    "docs/a/c.md": "# C\n\n| R4 | an item |\n",
+}
+
+
+def _xref(line: str, source: str = "README.md", records=RECORDS) -> list:
+    return pg.cross_reference_problems([(source, line)], DOCS.get, records)
+
+
+@pytest.mark.parametrize("line", [
+    "the entry `docs/PRODUCT_ARCHIVE.md 4.14`",            # a table row's ID in an append-only record
+    "see docs/PRODUCT_ARCHIVE.md 5.10.",                    # struck through, still the entry's ID
+    "(docs/PRODUCT_ARCHIVE.md P10a)",                       # a non-numeric ID
+    "docs/PRODUCT_ARCHIVE.md 2.3: a missing key is logged",  # a list item's bold lead
+    "`CHANGELOG.md` 1.1.0 (what the review found)",         # a release, behind a backtick
+    "docs/DESIGN.md § G3",                                  # a non-numeric name in a living doc  <!-- xref: example -->
+    "`DEVLOG.md` 2026-09-12",                               # a date, not a pointer
+])
+def test_a_pointer_to_a_name_the_target_defines_passes(line):
+    assert _xref(line) == []
+
+
+# In order: a line number; a numbered heading; a numbered heading that a table
+# row repeats; a lettered part's numbering; a number only a code block holds;
+# a number that is only part of a defined one (4.14); a document not in the repo.
+@pytest.mark.parametrize("line, why", [
+    ("see docs/DESIGN.md#L120", "line number"),  # <!-- xref: example -->
+    ("see docs/DESIGN.md 5.10", "not a name"),  # <!-- xref: example -->
+    ("see `docs/DESIGN.md` §2", "not a name"),  # <!-- xref: example -->
+    ("see docs/DESIGN.md E.1", "not a name"),  # <!-- xref: example -->
+    ("see docs/PRODUCT_ARCHIVE.md 4.13", "not a name"),  # <!-- xref: example -->
+    ("see docs/PRODUCT_ARCHIVE.md 4.1", "not a name"),  # <!-- xref: example -->
+    ("`docs/UserManual.md` §2.3b and Part E", "not in this repo"),  # <!-- xref: example -->
+])
+def test_a_pointer_to_anything_else_is_refused(line, why):
+    problems = _xref(line)
+    assert len(problems) == 1 and why in problems[0], problems
+
+
+def test_a_target_is_found_beside_the_line_first():
+    assert _xref("c.md R4", source="docs/a/b.md") == []  # <!-- xref: example -->
+    assert "not in this repo" in _xref("c.md R4", source="docs/b.md")[0]  # <!-- xref: example -->
+
+
+def test_without_a_registry_every_document_is_living():
+    """The stricter reading: nothing is append-only unless the registry says so."""
+    assert "not a name" in _xref("docs/PRODUCT_ARCHIVE.md 4.14", records=None)[0]
+    assert _xref("docs/PRODUCT_ARCHIVE.md P10a", records=None) == []
+
+
+def test_each_pointer_on_a_line_is_judged():
+    line = "docs/DESIGN.md 5.10 and docs/PRODUCT_ARCHIVE.md 4.13, but CHANGELOG.md 1.1.0"  # <!-- xref: example -->
+    assert len(_xref(line)) == 2
+
+
+def test_the_example_marker_still_exempts_a_line():
+    assert _xref("never `docs/DESIGN.md#L120` <!-- xref: example -->") == []
+
+
+def test_added_lines_carry_the_file_they_are_in():
+    """A pointer resolves beside its own file, so each line needs its file; and
+    a line whose content begins `++` is content, not a diff header."""
+    diff = (
+        "diff --git a/docs/a.md b/docs/a.md\n--- a/docs/a.md\n+++ b/docs/a.md\n@@ -0,0 +1,2 @@\n"
+        "+first\n+++ not a header\n"
+        "diff --git a/b.py b/b.py\nnew file mode 100644\n--- /dev/null\n+++ b/b.py\n@@ -0,0 +1 @@\n"
+        "+second\n"
+    )
+    assert pg._added_lines(diff) == [("docs/a.md", "first"), ("docs/a.md", "++ not a header"), ("b.py", "second")]
+
+
+def test_a_name_in_an_append_only_log_passes_the_commit_gate(repo_with_artifacts):
+    """End to end: the registry's `append_only` reaches the commit gate. The
+    entry is a numbered row, which is a name only in an append-only document —
+    `## Pass 4` would pass anywhere and prove nothing about the registry."""
+    _write(repo_with_artifacts, "docs/REVIEW_LOG.md", "# Review log\n\n| 4 | the fourth pass |\n")
+    _write(repo_with_artifacts, "docs/DESIGN.md", "# Design\n\nSee docs/REVIEW_LOG.md §4 for the passes.\n")
+    _git(repo_with_artifacts, "add", "-A")
+    result = _git(repo_with_artifacts, "commit", "-qm", "docs: point at a log entry", check=False)
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_the_backtick_form_is_refused_by_the_commit_gate(repo_with_artifacts):
+    """`portal/README.md` carried this past the old rule: a backtick between the
+    file and the `§`."""
+    text = "# Design\n\nSee `docs/UserManual.md` §2.3b.\n"  # <!-- xref: example -->
+    _write(repo_with_artifacts, "docs/DESIGN.md", text)
+    _git(repo_with_artifacts, "add", "-A")
+    result = _git(repo_with_artifacts, "commit", "-qm", "docs: a dead pointer", check=False)
+
+    assert result.returncode != 0
+    assert "docs/UserManual.md" in result.stderr
+
+
+def test_ci_reads_the_pointers_of_a_commit_that_touches_no_gated_path(repo_with_artifacts):
+    """Documents are mostly ungated. CI and the sweep skipped such a commit
+    whole, so a pointer the commit gate would refuse got past both when that
+    gate was bypassed."""
+    base = _git(repo_with_artifacts, "rev-parse", "HEAD").stdout.strip()
+    text = "# Design\n\nSee docs/REVIEW_LOG.md#L4.\n"  # <!-- xref: example -->
+    _write(repo_with_artifacts, "docs/DESIGN.md", text)
+    _git(repo_with_artifacts, "add", "-A")
+    _git(repo_with_artifacts, "commit", "-qm", "docs: sneak a pointer", "--no-verify")
+
+    result = _ci(repo_with_artifacts, base)
+
+    assert result.returncode == 1
+    assert "docs: sneak a pointer" in result.stdout and "line number" in result.stdout
 
 
 # ── the framework's own registry ─────────────────────────────────────────────

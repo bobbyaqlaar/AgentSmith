@@ -110,7 +110,7 @@ ops runbooks / audit packs — not slide decks.
 - [ ] PII (Emirates ID, names) scrubbed **before** gateway until pre-call
       guardrail ships — see FIXES Security & Guardrails
 - [ ] Fairness/bias evidence plan if agent decides about people — see FIXES
-      Data Bias & Fairness + `docs/uae-regulatory.md` §2
+      Data Bias & Fairness + `docs/uae-regulatory.md` › Strict Bias and Fairness Enforcement
 
 ### Deploy packaging
 

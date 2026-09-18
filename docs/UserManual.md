@@ -1382,14 +1382,14 @@ An unauthenticated shared Phoenix instance is non-compliant (docs/DESIGN.md › 
 the base `docker-compose.yml` binds Phoenix's own port to `127.0.0.1` only,
 so by default it's **not reachable from other machines at all**.
 
-#### B.1 — Solo dev (unchanged)
+#### Solo dev (unchanged)
 
 ```bash
 docker compose up -d
 curl http://localhost:6006/healthz   # works — you're on localhost
 ```
 
-#### B.2 — Team server: add the auth overlay
+#### Team server: add the auth overlay
 
 ```bash
 # Generate a bcrypt hash for the basic-auth password. The hash contains
@@ -3385,7 +3385,7 @@ issues, upgrading the framework version) are in [Maintain (Day-2 Operations)](#m
 Cross-tenant cost/issues dashboard. Full detail:
 [portal/README.md](../portal/README.md).
 
-#### E.1 — Setup
+#### Ops Portal setup
 
 ```bash
 cd portal
@@ -3447,7 +3447,7 @@ not listed in `OPS_PORTAL_SSO_USERS` gets `viewer` with **zero** tenant
 access, not full access — there is no implicit-admin fallback for "any
 authenticated user." See docs/DESIGN.md › Federated Observability "Role-Based Access Control".
 
-#### E.2 — Wire tenant history sync
+#### Wire tenant history sync
 
 In each tenant's CD workflow (or a local `agentsmith check` run):
 
@@ -3459,7 +3459,7 @@ curl -X POST https://ops.example.com/api/sync/history \
 
 A tenant auto-registers on its first sync — no separate provisioning step.
 
-#### E.3 — Audit log (enterprise pack, docs/DESIGN.md › Enterprise Install and Compliance Pack)
+#### Audit log (enterprise pack, docs/DESIGN.md › Enterprise Install and Compliance Pack)
 
 ```bash
 # .env.local
@@ -3490,7 +3490,7 @@ instead of being dropped silently. This is a local, unsigned trace for
 manual reconciliation — it is not a substitute for the portal's audit log
 and has no tamper protection.
 
-#### E.4 — SSO/OIDC (replaces basic auth, docs/DESIGN.md › Enterprise Install and Compliance Pack)
+#### SSO/OIDC (replaces basic auth, docs/DESIGN.md › Enterprise Install and Compliance Pack)
 
 ```bash
 SSO_ENABLED=true
@@ -3513,7 +3513,7 @@ on; `SSO_REVOCATION_MODE=fail-closed` prefers availability loss over a missed
 revoke when `session-status` is down (SEC-SSO-001 / docs/DESIGN.md › Enterprise Install and Compliance Pack).
 
 Each SSO identity's role and tenant access are resolved via
-`OPS_PORTAL_SSO_USERS` (see E.1 above) — logging in via SSO grants
+`OPS_PORTAL_SSO_USERS` (see Ops Portal setup above) — logging in via SSO grants
 `viewer`/no-tenants by default, not admin access, until the identity is
 added to that list.
 
@@ -3532,7 +3532,7 @@ session's 8h TTL already bounds the exposure of a missed revocation.
 Embeddable, read-only status component for tenant end users. Full detail:
 [templates/in-app-widget/README.md](../templates/in-app-widget/README.md).
 
-#### F.1 — Mint a token
+#### Mint a token
 
 ```bash
 curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" -X POST https://ops.example.com/api/tenants/acme/widget-token
@@ -3541,7 +3541,7 @@ curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" -X POST https://ops.example.com/
 
 Minting (and revoking) widget tokens requires the `admin` role.
 
-#### F.1a — Revoke a leaked token
+#### Revoke a leaked token
 
 The portal never retains a token's plaintext after minting (only its hash),
 so revocation is by tenant, not by the specific token string — it revokes
@@ -3554,7 +3554,7 @@ curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" -X DELETE https://ops.example.co
 
 Mint a replacement and update the tenant's embed snippet afterward.
 
-#### F.2 — Embed
+#### Embed the widget
 
 ```html
 <!-- Self-hosted: download widget.js from a tagged release and serve it yourself -->
@@ -3873,14 +3873,14 @@ generated configs/fixtures, leaves your source untouched.
 Optional governance layer (docs/DESIGN.md › Enterprise Install and Compliance Pack). Full detail:
 [enterprise/README.md](../enterprise/README.md).
 
-### G.1 — Generate an org signing key (once)
+### Generate an org signing key (once)
 
 ```bash
 gpg --full-generate-key
 gpg --armor --export it-sec@example.com > org-public-key.asc   # distribute to MDM
 ```
 
-### G.2 — Package and sign the hook bundle
+### Package and sign the hook bundle
 
 ```bash
 # On a machine with hooks already installed:
@@ -3893,7 +3893,7 @@ gpg --armor --export it-sec@example.com > org-public-key.asc   # distribute to M
 Produces `agenticframework-hooks-1.0.0.tar.gz` + `.sig`,
 `agenticframework-org.yaml`, `mdm-deploy-hooks.sh`.
 
-### G.3 — MDM deploys to every managed machine
+### MDM deploys to every managed machine
 
 ```bash
 ./mdm-deploy-hooks.sh 1.0.0 --org-pubkey ./org-public-key.asc
@@ -3904,7 +3904,7 @@ tampered or unsigned bundle is refused, not installed. Sets
 `git config --global init.templateDir`, installs
 `~/.agent-framework/agenticframework-org.yaml`.
 
-### G.4 — Bypass policy enforcement
+### Bypass policy enforcement
 
 Once the org policy is installed, `hooks.bypass_policy` is enforced by the git
 hooks themselves (a commit or checkout run with `DISABLE_AI_STACK=true`, or on a
@@ -3935,7 +3935,7 @@ best-effort to the Ops Portal when configured, falling back to
 `~/.agent-framework/local-audit-fallback.log` otherwise so a bypass attempt
 is never silently unrecorded (see the Monitor in Production section, "Audit log").
 
-### G.5 — Uninstall on a managed machine
+### Uninstall on a managed machine
 
 ```bash
 agentsmith uninstall

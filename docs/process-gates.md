@@ -461,12 +461,27 @@ the list is not found. Every design question still gets asked.
 
 ## Cross-references
 
-A pointer into another document's numbering rots the next time that document is
-edited. On the lines a change ADDS, the gate refuses `SPECS.md §23`, <!-- xref: example -->
-`DESIGN.md#L120` and the like; name the document, or a heading inside it. <!-- xref: example --> Lines
-already in the repo are left alone — they go as each document moves — and a line
-that must show a bad pointer as an example carries `<!-- xref: example -->`. The
-rule follows the `artifacts` mode above.
+A pointer into another document by a number rots when the number is a position:
+the next edit of that document renumbers it. On the lines a change ADDS, the
+gate reads each pointer — a Markdown file name followed by something with a
+digit in it, such as `SPECS.md §23`, `docs/PRODUCT_ARCHIVE.md 4.14` or <!-- xref: example -->
+`CHANGELOG.md` 1.1.0 — and looks in the document it names. <!-- xref: example -->
+
+- **A line number** (`DESIGN.md#L120`) is always refused. <!-- xref: example -->
+- **A document this repo does not have** is refused; name it by its path from
+  the repo root.
+- **Otherwise the target must define the token as a name:** a heading that
+  contains it, or the first word of a table row or of a bold list item.
+  Fenced code does not count.
+- **A number in that first place** — `5.10`, `2.3b`, `E.1` — is a name only in
+  a document the registry marks `append_only` (the archive, the review log,
+  the changelog), whose entries never move. Anywhere else it numbers a heading
+  or a row, which is a position, and is refused.
+
+Name the heading instead: `docs/DESIGN.md › Section Name`. Lines already in the
+repo are left alone — they go as each document moves — and a line that must
+show a bad pointer as an example carries `<!-- xref: example -->`. The rule
+follows the `artifacts` mode above.
 
 ## Where the records live
 

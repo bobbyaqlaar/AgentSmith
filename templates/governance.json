@@ -213,6 +213,7 @@
         "patterns": [
           "*ARCHIVE*.md"
         ],
+        "append_only": true,
         "note": "Done items with a date and the evidence."
       },
       {
@@ -234,6 +235,7 @@
           "TestCoverageReview*.md",
           "TestbedFeedback*.md"
         ],
+        "append_only": true,
         "note": "Append-only — passes, sign-offs, audits, bypass repairs."
       },
       {
@@ -252,6 +254,7 @@
           "CHANGELOG*.md"
         ],
         "required": false,
+        "append_only": true,
         "note": "Only where the repo releases to tenants."
       },
       {
