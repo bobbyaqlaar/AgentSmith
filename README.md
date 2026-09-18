@@ -4,12 +4,30 @@
 
 # AgentSmith
 
-**One install. Every agent. Every project.**
+**The governance layer across the lifecycle of an app or agent — from design to operate.**
 
-AgentSmith is a single-command setup that provisions the complete AI agent
-lifecycle environment on your machine or team server. Install it once and
-every project you opt in gets guardrails, observability, evaluation,
-self-improvement, and CI/CD — automatically.
+AgentSmith makes development with AI coding agents secure, reliable and
+explainable, and carries the same rules into production:
+
+- **Design and build.** No code before a written design that answers every
+  pillar. While an AI coding agent works, AgentSmith holds its IDE to that
+  design; review passes and CI gates check the same rules before anything
+  merges. Every decision, deviation and approval is recorded in git, so why the
+  code is the way it is can always be answered.
+- **Operate.** The running app gets the same rules as guardrails — budgets,
+  prompt and tool controls, PII handling, human-in-the-loop for high-impact
+  actions — and is observable: traces, cost, run status and incidents for every
+  app, in one Ops Portal.
+
+AgentSmith is not a CI/CD system or a monitoring stack. It runs on the ones you
+have — GitHub Actions, OpenTelemetry, Phoenix — and git stays the record of
+every change. Install it once per machine, and every app you opt in is governed
+from its first commit.
+
+**Where observability stands.** Tracing (Phoenix, OpenTelemetry), spend, run
+status, incident history, dead-letter replay and a tamper-evident audit log ship
+today. Log-based monitoring and the administration and approval pages of the
+portal are the next stage.
 
 > **What this is:** an introduction to AgentSmith — what it is for, how it is built, and what
 > sets it apart. The Quick Start below is the only procedure here; the rest is in the documents
