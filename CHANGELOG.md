@@ -75,6 +75,24 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — `tenant init` starts from an architecture, and its first commit goes in
+
+- **`--architecture STYLE`** — `layered` (n-tier), `modular-monolith`, `hexagonal` (clean
+  architecture, ports and adapters, onion), `microservice`, `event-driven` — and **`--agentic`**,
+  which adds the agent layer to any of them. The choice writes `docs/DESIGN.md`'s Architecture
+  section (layers with paths for the stack, dependency direction, tests, what to watch for; with
+  `--agentic`, where agents, tools and workflows sit and their rules) and a session-start line.
+  The catalogue is `templates/architectures.yaml`.
+- **Fixed: a new tenant's first commit was refused.** `tenant init` armed the design and review
+  gates, and its own scaffold touched gated paths, so the first commit needed a design and a
+  review nobody had. It now writes the scaffold's design (`.agent-rfc/designs/scaffold.md`,
+  scoped to what it wrote, closed) and a hash of every file it wrote
+  (`.agenticframework/scaffold.json`). The gate accepts `Review: n/a: generated scaffold` only on
+  the first commit and only while every gated file matches — as a visible note. `tenant init`
+  prints the exact commit to make.
+- A machine install too old to have `templates/governance.json` gets a warning naming the fix
+  instead of a crash.
+
 ### Added — sending the gate's record to the portal (portal phase 1)
 
 - `scripts/send_dev_record.py FILE` posts what `process_gate.py ci --json` wrote to the portal,

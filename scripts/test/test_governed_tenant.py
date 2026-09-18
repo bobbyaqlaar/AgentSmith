@@ -99,9 +99,10 @@ def test_the_scaffold_leaves_a_tenants_own_files_alone(tenant) -> None:
 
 
 @needs_git
-def test_a_scaffolded_tenant_can_commit_a_governed_change(tenant) -> None:
-    """The point of provisioning: the gates hold, and a change that follows
-    them goes in without anyone editing the config first."""
+def test_code_committed_with_the_scaffold_and_no_design_is_refused(tenant) -> None:
+    """The gates hold from the first commit: code added alongside the scaffold,
+    with no design, does not go in. The untouched scaffold itself does — see
+    test_scaffold_review.py, which commits one through the real hooks."""
     (tenant / "app").mkdir(exist_ok=True)
     (tenant / "app" / "main.py").write_text("print(1)\n", encoding="utf-8")
     subprocess.run(["git", "-C", str(tenant), "add", "-A"], check=True)

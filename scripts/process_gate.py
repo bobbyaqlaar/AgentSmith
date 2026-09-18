@@ -412,6 +412,43 @@ def kg_problems(files: List[str], review_text: str, read: Reader) -> List[str]:
     return []
 
 
+# ── A new tenant's first commit ──────────────────────────────────────────────
+#
+# `tenant init` arms the gates, so its own scaffold needs a design (it writes
+# one) and a review. A tool-written review would claim a person looked; instead
+# the scaffold's review is `n/a: generated scaffold`, accepted only where it is
+# checkable (.agent-rfc/designs/tenant-architecture.md): the repository's first
+# commit, every gated file byte-for-byte what the manifest says tenant init
+# wrote. The manifest is not signed — rewriting a file AND its hash defeats it,
+# deliberately and once — so an accepted scaffold is a note, never silence.
+
+SCAFFOLD_MANIFEST = ".agenticframework/scaffold.json"
+_SCAFFOLD_REVIEW = re.compile(r"^n/?a\s*:\s*generated scaffold\s*$", re.I)
+
+
+def scaffold_problems(gated: List[str], read: Reader, root_commit: bool) -> List[str]:
+    """Why this commit is not the untouched scaffold — empty when it is."""
+    if not root_commit:
+        return ["is accepted only on a repository's first commit, and this commit has a parent — "
+                "record a review in .agent-rfc/reviews/"]
+    text = read(SCAFFOLD_MANIFEST)
+    if text is None:
+        return [f"{SCAFFOLD_MANIFEST} is not in this commit, so nothing vouches for the scaffold — "
+                "record a review in .agent-rfc/reviews/"]
+    try:
+        files = json.loads(text).get("files") or {}
+    except (ValueError, AttributeError):
+        return [f"{SCAFFOLD_MANIFEST} is not a scaffold manifest — record a review in .agent-rfc/reviews/"]
+    problems = []
+    for path in gated:
+        body = read(path)
+        if path not in files:
+            problems.append(f"{path} is not part of the scaffold `tenant init` wrote — review it")
+        elif body is None or hashlib.sha256(body.encode("utf-8")).hexdigest() != files[path]:
+            problems.append(f"{path} is not what `tenant init` wrote (its hash differs) — review it")
+    return problems
+
+
 def record_text(kind: str, value: str, read: Reader, single: bool
                 ) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
     """The text a `Design:` or `Review:` trailer points at, in this commit.
@@ -446,8 +483,12 @@ def check_change(
     added: Optional[List[Tuple[str, str]]] = None,
     previous: Optional[Reader] = None,
     evidence: Optional["gp.Resolver"] = None,
+    root_commit: bool = False,
 ) -> Tuple[List[str], List[str]]:
-    """One commit's worth of files against its message. -> (errors, notes)."""
+    """One commit's worth of files against its message. -> (errors, notes).
+
+    `root_commit` — the repository's first commit, the only one that may claim
+    to be `tenant init`'s untouched scaffold (`scaffold_problems`)."""
     # The cross-reference rule is about documents, which are mostly ungated, so
     # it runs before the gated-paths shortcut below.
     xref: List[str] = []
@@ -534,6 +575,13 @@ def check_change(
     review_value = trailer(message, "Review")
     if review_value is None:
         errors.append(f"missing 'Review: {review_wanted}' trailer")
+    elif _SCAFFOLD_REVIEW.match(review_value):
+        problems = scaffold_problems(gated, read, root_commit)
+        if problems:
+            errors.extend(f"Review: n/a: generated scaffold — {p}" for p in problems)
+        else:
+            notes.append(f"Review: n/a: generated scaffold — {len(gated)} gated file(s) match "
+                         f"{SCAFFOLD_MANIFEST}, as `agentsmith tenant init` wrote them")
     elif not na("Review", review_value):
         path, file_path, text, problem = record_text("Review", review_value, read, single)
         if problem:
@@ -944,7 +992,8 @@ def cmd_commit_msg(message_file: str, amend: bool = False) -> int:
     # moment it is staged.
     previous = _reader_at(root, base[0])
     evidence = gp.evidence_resolver(root, "") if config.pillar_policy.mode != "off" else None
-    errors, notes = check_change(files, lines, message, read, config, added, previous, evidence)
+    errors, notes = check_change(files, lines, message, read, config, added, previous, evidence,
+                                 root_commit=base[0] == _EMPTY_TREE)
 
     # A commit that skipped the gate blocks the next commit — unless the next
     # commit is the repair. pre-commit cannot decide that (no message yet), so
@@ -1197,7 +1246,8 @@ def check_commits(root: Path, commits: List[str], records: Optional[List[Dict[st
         parent = git("rev-parse", "--verify", "-q", f"{commit}^", cwd=root, check=False).strip()
         previous = _reader_at(root, parent) if parent else None
         evidence = gp.evidence_resolver(root, commit) if config.pillar_policy.mode != "off" else None
-        errors, notes = check_change(files, lines, message, read, config, added, previous, evidence)
+        errors, notes = check_change(files, lines, message, read, config, added, previous, evidence,
+                                     root_commit=not parent)
         if errors:
             failures.append((commit, subject, errors))
         escapes.extend((commit, subject, n) for n in notes)

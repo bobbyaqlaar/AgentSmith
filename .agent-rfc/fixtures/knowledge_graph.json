@@ -3458,6 +3458,8 @@
         "FrameworkRootError",
         "looks_like_framework",
         "init_tenant",
+        "_scaffold_files",
+        "_write_scaffold_records",
         "_process_gates_config",
         "_framework_dir",
         "_provision_governance",
@@ -3490,7 +3492,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-18T15:42:39Z",
+      "last_modified": "2026-09-18T16:29:39Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4534,6 +4536,7 @@
         "trailer",
         "resolve_record",
         "kg_problems",
+        "scaffold_problems",
         "record_text",
         "check_change",
         "git",
@@ -4598,7 +4601,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-18T15:29:34Z",
+      "last_modified": "2026-09-18T16:30:08Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5832,7 +5835,7 @@
         "test_the_hooks_are_armed_not_merely_present",
         "test_the_gates_are_live_and_the_extra_modes_are_off",
         "test_the_scaffold_leaves_a_tenants_own_files_alone",
-        "test_a_scaffolded_tenant_can_commit_a_governed_change",
+        "test_code_committed_with_the_scaffold_and_no_design_is_refused",
         "_governed",
         "test_a_fresh_tenant_is_provisioned_but_not_yet_proven",
         "test_governed_passes_once_the_gates_have_been_run_here",
@@ -5847,7 +5850,7 @@
         "test_the_line_is_the_shape_the_checker_already_reads",
         "test_the_stop_gate_writes_one"
       ],
-      "last_modified": "2026-09-18T05:07:06Z",
+      "last_modified": "2026-09-18T16:22:28Z",
       "id": "scripts/test/test_governed_tenant.py"
     },
     {
@@ -6494,6 +6497,83 @@
       "pillar": null,
       "created_at": "2026-09-18T15:30:47Z",
       "id": "rfc:reviews/portal-phase1-s7.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_catalogue_path",
+        "_Frozen",
+        "Layer",
+        "Style",
+        "Component",
+        "Agentic",
+        "Catalogue",
+        "catalogue",
+        "resolve_style",
+        "_paths",
+        "render_design_md",
+        "_scaffold_answers",
+        "render_scaffold_design",
+        "session_start_line"
+      ],
+      "last_modified": "2026-09-18T16:29:39Z",
+      "id": "runtime/architectures.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "scaffold",
+        "_git",
+        "_commit",
+        "test_the_untouched_scaffold_goes_in_as_the_first_commit",
+        "test_the_scaffold_records_its_architecture",
+        "test_an_edited_scaffold_file_needs_a_real_review",
+        "test_code_added_to_the_first_commit_needs_a_real_review",
+        "test_a_file_the_tenant_already_had_is_not_vouched_for",
+        "test_a_later_commit_cannot_claim_to_be_the_scaffold",
+        "test_without_the_manifest_there_is_nothing_to_verify",
+        "test_the_scaffold_design_authorises_no_later_edit",
+        "test_ci_reaches_the_same_verdict_on_the_root_commit"
+      ],
+      "last_modified": "2026-09-18T16:29:55Z",
+      "id": "scripts/test/test_scaffold_review.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_the_catalogue_offers_the_five_styles",
+        "test_the_names_people_use_resolve_to_a_style",
+        "test_an_unknown_style_is_refused_with_the_choices",
+        "test_every_dependency_names_a_layer_of_the_same_style",
+        "test_every_style_says_where_the_agent_layer_sits",
+        "test_the_design_section_names_real_paths_for_the_stack",
+        "test_the_agentic_overlay_adds_the_agent_layer_and_where_it_sits",
+        "test_without_a_style_the_design_says_one_is_still_to_choose",
+        "test_the_scaffold_design_answers_every_design_pillar_and_scopes_exactly_the_scaffold",
+        "test_an_agentic_scaffold_design_says_the_agent_rules_are_recorded",
+        "test_the_session_start_line_names_the_style_and_its_rule"
+      ],
+      "last_modified": "2026-09-18T16:31:11Z",
+      "id": "runtime/test/test_architectures.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A new tenant starts from its architecture, and its first commit can go in",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/tenant-architecture.md",
+      "pillar": null,
+      "created_at": "2026-09-18T16:39:14Z",
+      "id": "rfc:designs/tenant-architecture.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 a new tenant starts from its architecture, and its first commit can go in",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/tenant-architecture.md",
+      "pillar": null,
+      "created_at": "2026-09-18T16:39:14Z",
+      "id": "rfc:reviews/tenant-architecture.md"
     }
   ],
   "edges": [
@@ -7336,6 +7416,16 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/apps.ts",
       "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_scaffold_review.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_architectures.py",
+      "target": "runtime/__init__.py"
     }
   ]
 }

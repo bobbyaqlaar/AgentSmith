@@ -323,6 +323,24 @@ the generated rule files, a committed knowledge graph and the artifact stubs.
 It refuses to write into the framework's own checkout, and it never replaces a
 file the tenant already owns without `--force`.
 
+**The first commit.** The scaffold touches gated paths, so it needs a design and
+a review like any change. `tenant init` writes the design —
+`.agent-rfc/designs/scaffold.md`, scoped to exactly the files it wrote and
+`done`, so it covers that commit and authorises nothing after it — and records a
+SHA-256 of every file it wrote in `.agenticframework/scaffold.json`. The review
+is `Review: n/a: generated scaffold`, which the gate accepts only on the
+repository's first commit and only when every gated file in it matches its hash.
+An edited scaffold file, a file the tenant already had, or code added alongside
+fails with the file named, and needs a real review. An accepted scaffold is a
+note — the commit's verdict is `passed_with_notes`, and CI lists it. The limit:
+the manifest is not signed, so someone who rewrites a file *and* its hash defeats
+it, once, on the root commit, in plain sight in the manifest — the same kind of
+escape as `n/a` for a small change.
+
+`--architecture` (`layered`, `modular-monolith`, `hexagonal`, `microservice`,
+`event-driven`) and `--agentic` shape `docs/DESIGN.md`'s Architecture section and
+add one session-start line naming the style and its first rule.
+
 The extra modes — `artifacts`, `pillars`, `knowledge_graph` — are provisioned
 `off`. A repo switched to `enforce` on day one is refused its first commit for
 documents it has not written and a graph it has not built, and the first thing
@@ -594,7 +612,9 @@ For a commit touching gated paths, the commit gate and CI require:
 
 **`n/a: <reason>`** is accepted for either trailer when the commit changes at
 most 20 gated lines (a typo, a version pin). CI lists every such commit in its
-summary, so the escape stays visible.
+summary, so the escape stays visible. **`Review: n/a: generated scaffold`** is
+accepted at any size, but only for a repository's untouched first commit — see
+Provisioning, above.
 
 ## When a gate blocks you
 

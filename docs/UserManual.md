@@ -1495,11 +1495,42 @@ pointer to `.cursorrules`.
 
 ```bash
 cd /path/to/your-tenant-repo   # must be a git repo
-agentsmith tenant init acme --stack python-fastapi
+agentsmith tenant init acme --stack python-fastapi --architecture hexagonal --agentic
 ```
 
 Stack options: `python-fastapi` (default), `go`, `ts-react`. Add
 `--isolation dedicated` if this tenant needs its own worker pool (the Deploy via GitHub CI/CD section "Dedicated isolation tier").
+
+**Architecture.** `--architecture` names the application's structural style, and `--agentic` adds
+the agent layer on top of any of them:
+
+| Style | Also known as | Fits |
+|---|---|---|
+| `layered` | n-tier | CRUD-heavy work with modest domain logic, one deployable |
+| `modular-monolith` | modulith | One deployable, modules by business capability with narrow interfaces |
+| `hexagonal` | clean architecture, ports and adapters, onion | Substantial domain logic that must outlive its frameworks and providers |
+| `microservice` | | One independently deployable service with its own data and contract |
+| `event-driven` | | Work spanning components or time; producers and consumers joined by events |
+
+The style becomes the Architecture section of `docs/DESIGN.md` — the layers with their paths for
+your stack, the direction dependencies may point, where tests go, what to watch for — and one line
+every agent session starts with. `--agentic` adds the agent layer: where agents, tools and
+workflows sit in that style, and their rules (every model call through the gateway, tools
+deny-by-default, retrieved content treated as data, a human for high-impact actions, an independent
+judge). Both are optional; without a style, `docs/DESIGN.md` says one is still to be chosen.
+
+**The first commit.** The gates are armed by the scaffold, so the scaffold itself needs a design
+and a review. `tenant init` writes the design (`.agent-rfc/designs/scaffold.md`, scoped to exactly
+what it wrote, and closed) and records a hash of every file it wrote in
+`.agenticframework/scaffold.json`. Commit it as the run prints:
+
+```bash
+git add -A && git commit -m "chore: scaffold acme" -m "Design: .agent-rfc/designs/scaffold.md" -m "Review: n/a: generated scaffold"
+```
+
+The gate accepts that review only on the repository's first commit and only while every gated file
+still matches its hash; change one, or add code, and it asks for a real review. Add code in the
+next commit, under a design of its own.
 
 This writes:
 - `.agenticframework/tenant.yaml` — tenant id, isolation tier, framework version pin, per-environment Phoenix namespaces and eval thresholds
@@ -1507,7 +1538,8 @@ This writes:
 - `.github/actions/{gcp-auth,build-push-ghcr,deploy-placeholder,rollback-notify,install-python-deps}` — composite actions the workflows reference as `uses: ./.github/actions/<name>` (resolved inside this repo)
 - Copy security templates from `fixtures/security/templates/` into `.agent-rfc/security/` (risk register, agency manifest, tool allowlist, NIST profile) — see [docs/security-framework-map.md](security-framework-map.md). **CI is red until you edit two of them:** the strict harness fails on the shipped placeholder `risk_register.yaml` and `agency_manifest.yaml`, on every stack
 
-Re-running is idempotent — existing files are never overwritten.
+Re-running is idempotent — existing files are never overwritten (`--force` replaces them, and
+regenerates the scaffold's design and manifest).
 
 ### Configure GitHub Environments
 

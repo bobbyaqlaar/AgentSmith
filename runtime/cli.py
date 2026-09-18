@@ -241,8 +241,15 @@ def init_tenant(
     isolation: str = "shared",
     force: bool = False,
     allow_framework_root: bool = False,
+    architecture: Optional[str] = None,
+    agentic: bool = False,
 ) -> list[str]:
     """Scaffold a tenant. Returns the paths written, relative to `root`.
+
+    `architecture` is a structural style (or a common name for one — `clean`,
+    `n-tier`, …) and `agentic` adds the agent layer on top of it
+    (.agent-rfc/designs/tenant-architecture.md). Both shape docs/DESIGN.md and
+    the design written for the scaffold commit.
 
     Never overwrites without `force`: a tenant.yaml is edited by hand after
     generation, and silently replacing it would discard a declared posture.
@@ -271,6 +278,9 @@ def init_tenant(
         raise ValueError(f"isolation must be one of {ISOLATIONS}, got {isolation!r}")
     if stack not in STACKS:
         raise ValueError(f"stack must be one of {STACKS}, got {stack!r}")
+    from runtime import architectures
+
+    style = architectures.resolve_style(architecture) if architecture else None
 
     written: list[str] = []
     cfg_dir = root / ".agenticframework"
@@ -308,8 +318,78 @@ def init_tenant(
         written.append(f".github/workflows/{name}")
 
     written += _copy_composite_actions(root)
-    written += _provision_governance(root, force=force)
+    written += _provision_governance(
+        root, force=force,
+        design_md=architectures.render_design_md(tenant_id, stack, style, agentic),
+        session_start=architectures.session_start_line(style, agentic),
+    )
+    written += _write_scaffold_records(root, tenant_id, stack, style, agentic, written, force)
     return written
+
+
+SCAFFOLD_DESIGN = ".agent-rfc/designs/scaffold.md"
+SCAFFOLD_MANIFEST = ".agenticframework/scaffold.json"
+
+
+def _scaffold_files(root: Path, written: list[str]) -> list[str]:
+    """Every file behind `written` — a composite action is listed as its directory."""
+    files: set[str] = set()
+    for rel in written:
+        path = root / rel
+        if path.is_dir():
+            files.update(p.relative_to(root).as_posix() for p in path.rglob("*") if p.is_file())
+        elif path.is_file():
+            files.add(rel)
+    return sorted(files)
+
+
+def _write_scaffold_records(root: Path, tenant_id: str, stack: str, style: Optional[str], agentic: bool,
+                            written: list[str], force: bool) -> list[str]:
+    """The scaffold commit's design, and the manifest that lets its review be
+    `n/a: generated scaffold` (scripts/process_gate.py scaffold_problems).
+
+    The manifest lists only files this run wrote: a file the tenant already had
+    is theirs, and the gate asks for a real review of it."""
+    import hashlib
+
+    framework = _framework_dir()
+    if framework is None:
+        return []
+    files = _scaffold_files(root, written)
+    records: list[str] = []
+    registry_path = framework / "templates" / "governance.json"
+    design = root / SCAFFOLD_DESIGN
+    if not registry_path.is_file():
+        # An install from before the registry existed: the gate it runs cannot
+        # read its rules either. Say so rather than write a design that answers
+        # pillars nobody can list.
+        print(f"  ! {SCAFFOLD_DESIGN} not written: {registry_path} is missing — re-run "
+              "install-ai-stack.sh from a current AgentSmith checkout", file=sys.stderr)
+    elif design.exists() and not force:
+        print(f"  = {SCAFFOLD_DESIGN} exists — left untouched")
+    else:
+        from runtime import architectures
+
+        design.parent.mkdir(parents=True, exist_ok=True)
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        design.write_text(architectures.render_scaffold_design(
+            tenant_id, stack, style, agentic, files, registry.get("pillars", [])), encoding="utf-8")
+        records.append(SCAFFOLD_DESIGN)
+    manifest = {
+        "_about": "What `agentsmith tenant init` wrote, by SHA-256. The first commit's review may be "
+                  "`n/a: generated scaffold` only while every gated file still matches — see AgentSmith "
+                  "docs/process-gates.md.",
+        "generated_by": "agentsmith tenant init",
+        "framework_version": _default_framework_version(),
+        "tenant": tenant_id,
+        "stack": stack,
+        "architecture": style,
+        "agentic": agentic,
+        "files": {f: hashlib.sha256((root / f).read_bytes()).hexdigest() for f in files},
+    }
+    (root / SCAFFOLD_MANIFEST).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    records.append(SCAFFOLD_MANIFEST)
+    return records
 
 
 # The design-and-review gates, provisioned rather than left as a page in a
@@ -324,7 +404,7 @@ ALWAYS_GATED = [".github/**", ".githooks/**", ".agenticframework/process-gates.j
                 ".claude/settings.json", ".cursor/hooks.json"]
 
 
-def _process_gates_config(stack: str) -> str:
+def _process_gates_config(stack: str, session_start: Optional[str] = None) -> str:
     """A tenant's gate config.
 
     The design and review gates are LIVE from the first commit. `artifacts`,
@@ -333,7 +413,7 @@ def _process_gates_config(stack: str) -> str:
     graph it has not built, and the first thing anyone does then is take the
     gates out. Each is turned on deliberately.
     """
-    return json.dumps({
+    config = {
         "_about": "What the process gates cover here — AgentSmith docs/process-gates.md. "
                   "This file is gated itself, so switching a gate off takes a design and a review.",
         "gated": [*GATED_BY_STACK.get(stack, GATED_BY_STACK["python-fastapi"]), *ALWAYS_GATED],
@@ -344,7 +424,11 @@ def _process_gates_config(stack: str) -> str:
         "knowledge_graph": "off",
         "levers_doc": "@framework/docs/review-levers.md",
         "design_checklist": "@framework/docs/design-review-checklist.md",
-    }, indent=2) + "\n"
+    }
+    if session_start:
+        # The structural style and its first rule, in every agent session's context.
+        config["extends"] = {"session_start": [session_start]}
+    return json.dumps(config, indent=2) + "\n"
 
 
 def _framework_dir() -> Optional[Path]:
@@ -356,7 +440,8 @@ def _framework_dir() -> Optional[Path]:
     return None
 
 
-def _provision_governance(root: Path, force: bool = False) -> list[str]:
+def _provision_governance(root: Path, force: bool = False, design_md: Optional[str] = None,
+                          session_start: Optional[str] = None) -> list[str]:
     """The gates, armed, plus what they read: the config, the hooks, the IDE
     hook configs, the generated rule files, a committed graph and the stubs."""
     import shutil
@@ -378,7 +463,7 @@ def _provision_governance(root: Path, force: bool = False) -> list[str]:
         if (root / ".github" / "workflows" / f"ci-{name}.yml").is_file():
             stack = name
             break
-    put(".agenticframework/process-gates.json", _process_gates_config(stack))
+    put(".agenticframework/process-gates.json", _process_gates_config(stack, session_start))
 
     if framework is not None:
         for hook in ("process-gate", "commit-msg", "pre-commit", "pre-push"):
@@ -429,7 +514,9 @@ def _provision_governance(root: Path, force: bool = False) -> list[str]:
 
     put("README.md", f"# {root.name}\n\nWhat this is, and how to run it.\n")
     put("docs/PRODUCT_BACKLOG.md", "# Product backlog\n\nOne row per item: what, why, status.\n")
-    put("docs/DESIGN.md", "# Design\n\nThe living picture of this system.\n")
+    if (root / "docs" / "DESIGN.md").exists() and not force and design_md is not None:
+        print("  = docs/DESIGN.md exists — left untouched; its architecture section is not written")
+    put("docs/DESIGN.md", design_md or "# Design\n\nThe living picture of this system.\n")
     put("docs/REVIEW_LOG.md", "# Review log\n\nAppend-only: one section per change.\n")
     return written
 
@@ -490,6 +577,8 @@ def _cmd_tenant_init(args: argparse.Namespace) -> int:
             isolation=args.isolation,
             force=args.force,
             allow_framework_root=args.allow_framework_root,
+            architecture=args.architecture,
+            agentic=args.agentic,
         )
     except FrameworkRootError as exc:
         print(f"agentsmith: refusing to scaffold here.\n{exc}", file=sys.stderr)
@@ -499,7 +588,16 @@ def _cmd_tenant_init(args: argparse.Namespace) -> int:
         return 2
     for path in written:
         print(f"  + {path}")
-    print(f"\nTenant '{args.tenant_id}' scaffolded ({args.stack}, {args.isolation}).")
+    print(f"\nTenant '{args.tenant_id}' scaffolded ({args.stack}, {args.isolation}"
+          f"{', ' + args.architecture if args.architecture else ''}{', agentic' if args.agentic else ''}).")
+    if SCAFFOLD_MANIFEST in written:
+        print(
+            "\nThe gates are armed, and this scaffold is their first commit. Commit it exactly as written:\n"
+            f'  git add -A && git commit -m "chore: scaffold {args.tenant_id}" '
+            f'-m "Design: {SCAFFOLD_DESIGN}" -m "Review: n/a: generated scaffold"\n'
+            "The gate accepts that review only while every scaffolded file is unchanged; add code in the "
+            "next commit, under a design of its own."
+        )
     if ".agenticframework/tenant.yaml" in written:
         # Declared in docs/UserManual.md, the portal's audit route and its event
         # types since the shell-function days, and written by nothing once the
@@ -720,6 +818,18 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("tenant_id")
     init.add_argument("--stack", default="python-fastapi", choices=list(STACKS))
     init.add_argument("--isolation", default="shared", choices=list(ISOLATIONS))
+    init.add_argument(
+        "--architecture",
+        default=None,
+        metavar="STYLE",
+        help="structural style: layered, modular-monolith, hexagonal, microservice, event-driven "
+        "(also clean, ports-and-adapters, onion, n-tier)",
+    )
+    init.add_argument(
+        "--agentic",
+        action="store_true",
+        help="add the agent layer: agents, allowlisted tools, the model gateway, durable workflows, evals",
+    )
     init.add_argument("--root", default=None, help="target repo (default: cwd)")
     init.add_argument("--force", action="store_true", help="overwrite existing files")
     init.add_argument(

@@ -1,0 +1,239 @@
+# templates/architectures.yaml — the structural styles `agentsmith tenant init
+# --architecture` offers, and the agentic overlay `--agentic` adds to any of
+# them (.agent-rfc/designs/tenant-architecture.md).
+#
+# One catalogue, read by runtime/architectures.py and nothing else. Paths are
+# relative to the stack's source root (app/ for python-fastapi, src/ for
+# ts-react, internal/ for go), written as <src>/…
+#
+# Each layer names the layers it may depend on. That list is the style's
+# dependency rule: anything not listed is a dependency pointing the wrong way.
+
+styles:
+  layered:
+    name: Layered (n-tier)
+    aliases: [n-tier]
+    summary: >-
+      Horizontal layers, each depending only on the layer beneath it: the request enters at the
+      top and the database is reached at the bottom.
+    fits: >-
+      CRUD-heavy applications with modest domain logic, a small team, and one deployable. The most
+      familiar shape, and the cheapest to start.
+    layers:
+      - name: Presentation
+        path: <src>/api/
+        holds: HTTP handlers, request and response models, input validation
+        may_depend_on: [Application]
+      - name: Application
+        path: <src>/services/
+        holds: use cases and transactions — what the system does, in order
+        may_depend_on: [Domain, Data access]
+      - name: Domain
+        path: <src>/domain/
+        holds: business entities and rules
+        may_depend_on: []
+      - name: Data access
+        path: <src>/data/
+        holds: repositories, queries, the database client
+        may_depend_on: [Domain]
+    rules:
+      - A layer calls only the layers it lists; a handler never queries the database directly.
+      - Domain rules live in the domain layer, not in handlers or SQL.
+      - A request model is not a database row — convert at the layer boundary.
+    tests: >-
+      Unit-test the domain and application layers without a database; one integration test per
+      repository against a real database; a few end-to-end tests through the API.
+    watch:
+      - Logic drifting into handlers ("fat controllers").
+      - The domain turning into plain data holders while rules spread across services.
+
+  modular-monolith:
+    name: Modular monolith
+    aliases: [modulith]
+    summary: >-
+      One deployable, divided into modules by business capability. Each module owns its data and
+      exposes a narrow public interface; the others use only that.
+    fits: >-
+      A growing product that wants clear ownership and boundaries without the operating cost of
+      distributed services — and that may split a module out later.
+    layers:
+      - name: Module interface
+        path: <src>/modules/<capability>/api/
+        holds: the module's public functions and data types — all another module may import
+        may_depend_on: [Module internals, Shared kernel]
+      - name: Module internals
+        path: <src>/modules/<capability>/internal/
+        holds: the module's services, domain and persistence
+        may_depend_on: [Shared kernel]
+      - name: Shared kernel
+        path: <src>/shared/
+        holds: the few types and utilities every module agrees on
+        may_depend_on: []
+    rules:
+      - A module imports another module's interface, never its internals.
+      - Each module owns its tables; no module reads another's tables directly.
+      - Modules talk through interfaces or in-process events, never through shared mutable state.
+      - Keep the shared kernel small — everything added there couples every module.
+    tests: >-
+      Test each module through its interface; one test per module asserts it imports no other
+      module's internals.
+    watch:
+      - A "common" module that quietly becomes a second monolith.
+      - A cross-module query that joins another module's tables for convenience.
+
+  hexagonal:
+    name: Hexagonal (clean architecture, ports and adapters)
+    aliases: [clean, clean-architecture, ports-and-adapters, onion]
+    summary: >-
+      The domain at the centre, knowing nothing of frameworks, databases or providers. The
+      application talks to the outside world through ports it defines; adapters implement them.
+      Dependencies point inward.
+    fits: >-
+      Substantial domain logic that must outlive its frameworks and providers, and that must be
+      testable without them — including applications whose model provider may change.
+    layers:
+      - name: Domain
+        path: <src>/domain/
+        holds: entities, value objects and business rules — no framework imports
+        may_depend_on: []
+      - name: Application
+        path: <src>/application/
+        holds: use cases, orchestrating the domain through ports
+        may_depend_on: [Domain, Ports]
+      - name: Ports
+        path: <src>/ports/
+        holds: the interfaces the application needs (repositories, gateways, notifiers)
+        may_depend_on: [Domain]
+      - name: Inbound adapters
+        path: <src>/adapters/inbound/
+        holds: HTTP, CLI and message handlers that call the application
+        may_depend_on: [Application, Domain]
+      - name: Outbound adapters
+        path: <src>/adapters/outbound/
+        holds: implementations of the ports — database, model gateway, queues, third-party APIs
+        may_depend_on: [Ports, Domain]
+    rules:
+      - Dependencies point inward — the domain imports nothing outside itself.
+      - The application depends on ports, never on an adapter.
+      - Wiring (which adapter implements which port) happens in one composition root.
+      - A framework or provider type never crosses into the domain.
+    tests: >-
+      Unit-test domain and application with in-memory fakes of the ports; test each outbound
+      adapter against the real thing; a thin end-to-end test through an inbound adapter.
+    watch:
+      - Ports that mirror one vendor's API rather than what the application needs.
+      - Anaemic ports-and-adapters ceremony around a CRUD app that does not need it.
+
+  microservice:
+    name: Microservice
+    aliases: [service]
+    summary: >-
+      One independently deployable service in a larger system: its own data, its own versioned
+      contract, and nothing shared with other services but that contract.
+    fits: >-
+      A capability owned by one team that must deploy and scale on its own, in a system that
+      already runs several services.
+    layers:
+      - name: API
+        path: <src>/api/
+        holds: the service's endpoints and their request and response models
+        may_depend_on: [Service]
+      - name: Contracts
+        path: <src>/contracts/
+        holds: the versioned API and event schemas other services depend on
+        may_depend_on: []
+      - name: Service
+        path: <src>/service/
+        holds: the capability's use cases and rules
+        may_depend_on: [Contracts, Clients, Data]
+      - name: Clients
+        path: <src>/clients/
+        holds: calls to other services — with timeouts, retries and circuit breakers
+        may_depend_on: [Contracts]
+      - name: Data
+        path: <src>/data/
+        holds: this service's own store; no other service reads it
+        may_depend_on: []
+    rules:
+      - The service owns its data; no other service reads its database.
+      - The contract is versioned; a breaking change is a new version, not an edit.
+      - Every outbound call has a timeout and a retry policy, and handlers are idempotent.
+      - Trace context propagates on every call in and out.
+      - Configuration comes from the environment; the same image runs in every environment.
+    tests: >-
+      Unit tests for the service layer; contract tests pinning the API and event schemas; one
+      test per client against a stub of the other service.
+    watch:
+      - A distributed monolith — services that must deploy together.
+      - Chatty synchronous calls where an event would do.
+
+  event-driven:
+    name: Event-driven
+    aliases: [event-driven-architecture, eda]
+    summary: >-
+      Components communicate by publishing and consuming events rather than calling each other.
+      The event schema is the contract; producers do not know their consumers.
+    fits: >-
+      Workflows that span components or time, fan-out to several consumers, and systems that must
+      absorb load spikes and tolerate a consumer being down.
+    layers:
+      - name: Events
+        path: <src>/events/
+        holds: the versioned event schemas — the contract
+        may_depend_on: []
+      - name: Producers
+        path: <src>/producers/
+        holds: code that records a change and publishes its event
+        may_depend_on: [Events, Domain]
+      - name: Consumers
+        path: <src>/consumers/
+        holds: handlers that react to events
+        may_depend_on: [Events, Domain]
+      - name: Domain
+        path: <src>/domain/
+        holds: the rules producers and consumers apply
+        may_depend_on: []
+    rules:
+      - Every consumer is idempotent — delivery is at least once.
+      - Publish through an outbox, so the state change and its event commit together.
+      - A message a consumer cannot process goes to a dead-letter queue, never dropped.
+      - Event schemas are versioned; consumers tolerate fields they do not know.
+    tests: >-
+      Unit-test each consumer with the same event delivered twice and out of order; schema tests
+      pinning every event version.
+    watch:
+      - Hidden coupling through event payloads that carry another component's internals.
+      - Losing the thread of a workflow — every event carries a correlation id.
+
+agentic:
+  name: Agentic application
+  summary: >-
+    Language-model agents do part of the work: they reason over inputs, call tools, and hand
+    high-impact decisions to people. The agent layer adds components and rules on top of the
+    structural style; it does not replace it.
+  components:
+    - name: Agents
+      path: <src>/agents/
+      holds: one module per agent — its role, its prompt, the model route it uses (models.yaml)
+    - name: Tools
+      path: <src>/tools/
+      holds: the functions agents may call, each registered and listed in the allowlist
+    - name: Workflows
+      path: <src>/workflows/
+      holds: durable workflows — retries, recoverable steps, human-in-the-loop gates
+    - name: Evaluations
+      path: .agent-rfc/fixtures/
+      holds: golden, fairness, hallucination and adversarial cases the CI gates grade
+  rules:
+    - Every model call goes through the LLM gateway — budgets, the degrade ladder, redaction and the prompt guard apply only there.
+    - A tool is denied unless it is in `.agent-rfc/security/tool_allowlist.yaml`.
+    - Retrieved documents and tool output are data, never instructions.
+    - A high-impact action waits for a human decision; a step that fails validation parks in the dead-letter queue for a human to fix, rather than being guessed at.
+    - The judge that grades an agent's output is a different model, from a different vendor, than the agent.
+    - Every model call and tool call emits a span.
+  placement:
+    layered: Agents and workflows sit in the application layer; the gateway and tools are data-access-level clients.
+    modular-monolith: Each agent belongs to the module whose capability it serves; tools are that module's internals, exposed only through its interface.
+    hexagonal: Agents are application services; the model gateway and every tool are outbound adapters behind ports the application defines.
+    microservice: The service's agents are its service layer; tools that call other services are its clients, with their timeouts and retries.
+    event-driven: An agent is a consumer; its decisions are published as events, and a human decision is an event too.
