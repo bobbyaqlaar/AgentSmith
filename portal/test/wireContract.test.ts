@@ -117,28 +117,29 @@ test("versionBreakdown does not silently drop the unversioned rows", () => {
   assert.equal(rows.reduce((n, r) => n + r.count, 0), 2);
 });
 
-// ── The threshold is a guess until the release is cut ────────────────────────
+// ── The threshold names a release that shipped ───────────────────────────────
 
-test("FIRST_VERSIONED_RELEASE is still ahead of the newest shipped version", () => {
-  // It names the PENDING release. Once that release is cut, the CHANGELOG's
-  // compatibility matrix gains a row for it — and if this constant is still
-  // pointing at something newer than the newest shipped row, or has fallen
-  // behind it, every "not reported by this version" answer above is wrong.
+test("FIRST_VERSIONED_RELEASE names a shipped release, and the wire table dates the version to it", () => {
+  // While 1.3.0 was pending this checked the constant was not behind the newest
+  // release — true only until the next one shipped (2.0.0 failed it). What stays
+  // true: it names a release the compatibility matrix lists, and the Wire
+  // Contract table dates the version on the wire to that same release. Either
+  // drifting makes every "not reported by this version" answer above wrong.
   const changelog = readFileSync(join(REPO, "CHANGELOG.md"), "utf8");
   const rows = [...changelog.matchAll(/^\| (\d+\.\d+)\.x \|/gm)].map((m) => m[1]);
   assert.ok(rows.length > 0, "no compatibility-matrix rows found in CHANGELOG.md");
 
   const [major, minor] = FIRST_VERSIONED_RELEASE.split(".").map(Number);
-  const newest = rows[0].split(".").map(Number);
-  const pendingIsNewer =
-    major > newest[0] || (major === newest[0] && minor > newest[1]);
-  const pendingIsShipped =
-    major === newest[0] && minor === newest[1];
   assert.ok(
-    pendingIsNewer || pendingIsShipped,
-    `FIRST_VERSIONED_RELEASE=${FIRST_VERSIONED_RELEASE} is older than the ` +
-      `newest shipped matrix row ${rows[0]}.x — the wire contract table has ` +
-      `fallen behind the releases it describes`,
+    rows.includes(`${major}.${minor}`),
+    `FIRST_VERSIONED_RELEASE=${FIRST_VERSIONED_RELEASE} is not a release in the ` +
+      `compatibility matrix (${rows.join(", ")})`,
+  );
+  const escaped = FIRST_VERSIONED_RELEASE.replace(/\./g, "\\.");
+  assert.match(
+    changelog,
+    new RegExp(`^\\| ${escaped} \\| \`frameworkVersion\``, "m"),
+    "the Wire Contract table dates `frameworkVersion` to a different release",
   );
 });
 

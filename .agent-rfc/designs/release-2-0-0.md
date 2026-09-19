@@ -1,8 +1,10 @@
 ---
-status: done
+status: active
 scope:
   - pyproject.toml
   - install-ai-stack.sh
+  - portal/test/wireContract.test.ts
+  - portal/lib/wireContract.ts
 ---
 # Release 2.0.0
 
@@ -26,6 +28,10 @@ across a MAJOR boundary.
   a `2.0.x` row in the compatibility matrix naming what breaks and what does not; one Wire
   Contract row for the Dev record the portal now ingests. `docs/DESIGN.md` mirrors the current row.
 - `docs/PRODUCT_BACKLOG.md`: the release is the latest; the "cut a release" row closes.
+- `portal/test/wireContract.test.ts` checked that `FIRST_VERSIONED_RELEASE` was not behind the
+  newest release — right while 1.3.0 was pending, wrong once a later release ships. It now checks
+  the constant names a release that shipped, which is what stays true (found by Self-Test on the
+  release push).
 - An annotated tag `v2.0.0` on the release commit, pushed with `main`; `release.yml` builds the
   artifacts from it.
 

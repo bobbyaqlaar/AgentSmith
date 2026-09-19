@@ -27,10 +27,10 @@
 export type WireField = "inputTokens" | "outputTokens" | "costUsd" | "traceId";
 
 /**
- * The pending release — the one that first reports `framework_version` and the
- * fields above. Declared once because it is a guess until the release is cut;
- * `test/wireContract.test.ts` fails if the CHANGELOG's compatibility matrix
- * gains a row that disagrees, so the guess cannot quietly become wrong.
+ * The release that first reports `framework_version` and the fields above.
+ * `test/wireContract.test.ts` fails if it stops naming a release in the
+ * CHANGELOG's compatibility matrix, or if the Wire Contract table dates the
+ * version on the wire to another release.
  */
 export const FIRST_VERSIONED_RELEASE = "1.3.0";
 
