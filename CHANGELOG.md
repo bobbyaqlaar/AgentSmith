@@ -27,6 +27,7 @@ mistake.
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
+| 2.0.x | 3.11 | 0.2 | 4.0 | **MAJOR.** The installer no longer puts the 18 `ai-*` shell functions in your shell profile, and removes the block older installs appended (backup `*.agentsmith-bak`): use `agentsmith <subcommand>`, or `source ~/.agent-framework/shell/ai-compat.sh` for the old names. The framework runs in its own environment, `~/.agent-framework/.venv` (uv recommended). The core documents moved (`SPECS.md` → `docs/DESIGN.md`, `FIXES_AND_CLEANUP.md` → `docs/PRODUCT_BACKLOG.md`, `Product_Archive.md` → `docs/PRODUCT_ARCHIVE.md`) and numbered section anchors are gone — update links from outside. **Hook interface:** `.githooks/commit-msg`, `pre-commit` and `pre-push` run a repository's earlier hooks after the gate (`agentsmith.chainHooksPath`); `hooks/*` run with the framework environment. `tenant init` arms the design and review gates, so a new tenant's first commit carries the trailers it prints. `requirements.txt` drops `arize-phoenix`, `openinference-instrumentation-*` and `langchain-community` — nothing imported them. A tenant pinned to 1.x is unaffected until it moves; the startup version check warns across the boundary |
 | 1.3.x | 3.11 | 0.2 | 4.0 | **Breaking, in a MINOR — see the note above.** `CompletionResult.input_tokens`/`output_tokens` are `Optional[int]` — a provider that reports no `usage` now yields `None` where 1.2.x yielded `0`, so a consumer doing arithmetic on them must handle `None`; `DeadLetterQueue.replay()` raises `AlreadyResolvedError` when the entry is not `pending` instead of replaying it; a HITL approval is consumed by the gate that reads it and no longer satisfies later gates (`hitl_approved_for(gate_id, approved)` addresses one explicitly); `run_with_hitl_gate` raises when the gate activity returns `None` rather than treating it as "no review needed"; `audit_token_velocity_circuit` raises `ValueError` on `None` token counts |
 | 1.2.x | 3.11 | 0.2 | 4.0 | `AGENT_JUDGE_MODEL` no longer overrides a declared `judge` role; a tenant `models.yaml` entry with a different `id` REPLACES the framework entry rather than merging into it; `--strict` fails a control declaring `met`/`partial` with no runner |
 | 1.1.x | 3.11 | 0.2 | 4.0 | Default model registry is local-only; `local_large`/`local_small` roles removed |
@@ -49,6 +50,7 @@ version is itself on both wires from 1.3.0.
 
 | Emitted since | Field | Wire |
 |---|---|---|
+| 2.0.0 | the Dev record — each commit's gate verdict, design, pillars, review passes (`process_gate.py ci --json`, `schema` 1) | Dev ingest POST |
 | 1.3.0 | `agentsmith.framework.version` | OTel Resource |
 | 1.3.0 | `frameworkVersion` → `agent_runs.framework_version` | run-status POST |
 | 1.3.0 | `llm.usage.input_tokens` / `output_tokens` / `total_tokens`, gated on `llm.usage.reported` | span |
@@ -74,6 +76,14 @@ version table being consulted.
 
 
 ## [Unreleased]
+
+## [2.0.0] — 2026-09-19
+
+The governance release: design before code and review before merge, enforced from the IDE to CI;
+`tenant init` from an architecture and `tenant adopt` for an existing repository; the portal as one
+application with Dev, Ops and Administration; one `agentsmith` command in place of the shell
+functions; and the onboarding fixes found by running every stack's CI for real. **A MAJOR**: read
+the 2.0.x row of the compatibility matrix before upgrading a machine or a tenant.
 
 ### Added — `agentsmith tenant adopt`: an existing repository comes under the gates
 

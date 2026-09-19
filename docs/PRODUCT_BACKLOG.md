@@ -11,10 +11,10 @@
 > spent a week claiming the testbed deploy had not started, six days after it
 > had.
 
-## Current state (2026-09-14)
+## Current state (2026-09-19)
 
-**v1.3.0 is the latest release** (2026-08-27); `main` carries the onboarding
-audit's fixes under `CHANGELOG.md` [Unreleased], not yet released.
+**v2.0.0 is the latest release** (2026-09-19) — the governance release, a MAJOR
+(`CHANGELOG.md` › 2.0.x in the compatibility matrix).
 **AgentSmith, KYC Sentinel and AqlaarTeleologyStudio are private** since
 2026-09-13, until AgentSmith is product-ready — see the install item below.
 
@@ -61,7 +61,6 @@ Evidence: OTS template slices S1/S2 (no spans, dataclasses, KG skipped, CI subse
 | G4 | `--impact` maps a diff to the files a review must read, the lever groups and a `KG query:` hash the sign-off carries and the commit gate recomputes; session start prints the scope; the tenant CI template runs the same freshness check, blocking | **Done 2026-09-18** — review `.agent-rfc/reviews/governance-enforcement-g4.md`. Provisioning a graph at onboarding stays in G7 |
 | G7 | `tenant init` provisions the config, the armed hooks, the IDE hook configs, the rule files, a committed KG and the artifact stubs; `verify_system.py --governed` lists provisioning gaps and evidence gaps separately; the stop gate and the sweep write `.agent-history.log` | **Done 2026-09-18** — review `.agent-rfc/reviews/governance-enforcement-g7.md`. G1–G7 are complete; G5b's migrations are what remain |
 | Later | Antigravity, VS Code Copilot, Gemini CLI and Codex: confirm each hook CONFIG schema from a real session, then generate their configs. The adapters and fixtures are in place; what is missing is the shape of the file each tool reads | Trigger: when a session on that IDE can paste one |
-| Now | The gates workflow `tenant adopt` writes checks out AgentSmith at `v<installed version>` by default, and no release carries the rule that accepts the adoption commit (it is unreleased after v1.3.0) — so an adopted repository's first CI run fails that commit. Cut a release, or pass `--framework-ref` a commit that has it | Trigger: before adopting a real repository |
 | Later | husky's `prepare` script points `core.hooksPath` back at `.husky` on every `npm install`, disarming the gates in an adopted repository; `tenant adopt` warns, and the sweep re-arms only an unset path. Re-arm from a husky-compatible hook, or teach the sweep to re-arm a path it did not set | Trigger: the first adopted repository that uses husky |
 | Later | The tenant CI templates (`ci-<stack>.yml`) still run no process-gate job; `workflow-templates/agentsmith-gates.yml` is one `tenant init` could also write | Trigger: the next tenant CI template change |
 | Now | KYC Sentinel's CI runs the framework gate with a bare `python3`, which exits 3 since G1. Add `pip install -r scripts/requirements-gate.txt` (or `AGENTSMITH_PYTHON`) to its process-gates job | Trigger: before KYC's next push |

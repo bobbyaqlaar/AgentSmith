@@ -16,6 +16,8 @@ Design: `.agent-rfc/designs/tenant-adopt.md`; review: `.agent-rfc/reviews/tenant
   exemption moved from "the root commit" to "the commit that arms the gates".
 - **Hooks are chained, not replaced**, closing the backlog row "A `tenant init` repository is never
   vendored": `tenant init` now runs the machine's `post-checkout` before its first commit.
+- **Released in 2.0.0 (2026-09-19)**, closing the backlog row that held adoption until a release
+  carried the rule accepting the adoption commit.
 - **Found by the vendoring test:** a vendored copy of the gate resolved `@framework/` to the
   tenant's own repository and could not find the registry — latent since G7, because no tenant
   had ever been both vendored and gated.

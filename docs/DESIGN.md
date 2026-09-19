@@ -9,7 +9,7 @@
 > install and operate it is in [docs/UserManual.md](UserManual.md); how it came to be this way
 > is in [docs/PRODUCT_ARCHIVE.md](PRODUCT_ARCHIVE.md).
 
-**Version:** 1.3.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
+**Version:** 2.0.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
 `pyproject.toml` — pinned together by
 `scripts/test/test_version_consistency.py`)
 **Status:** Current.
@@ -2211,7 +2211,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 1.3.x | 3.11 | 0.2 | 4.0 | Token counts are `Optional[int]`; `DeadLetterQueue.replay()` raises `AlreadyResolvedError` on a non-pending entry; a HITL approval is consumed by the gate that reads it; `run_with_hitl_gate` raises on a `None` gate result. Full text and the **Wire Contract** table in [`CHANGELOG.md`](../CHANGELOG.md) |
+| 2.0.x | 3.11 | 0.2 | 4.0 | **MAJOR.** The `ai-*` shell functions are no longer installed (use `agentsmith <subcommand>`, or the `ai-compat.sh` shim); the framework runs in `~/.agent-framework/.venv`; the core documents moved and numbered anchors are gone; the gate hooks chain a repository's earlier hooks; `tenant init` arms the design and review gates. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
 
 ### Examples as Forks
 
