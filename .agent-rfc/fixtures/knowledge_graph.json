@@ -3968,7 +3968,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-25T20:53:37Z",
+      "last_modified": "2026-09-19T15:07:57Z",
       "id": "portal/test/wireContract.test.ts"
     },
     {
@@ -3983,7 +3983,7 @@
         "explainAbsent",
         "versionBreakdown"
       ],
-      "last_modified": "2026-08-25T20:52:41Z",
+      "last_modified": "2026-09-19T15:08:14Z",
       "id": "portal/lib/wireContract.ts"
     },
     {
@@ -4106,10 +4106,12 @@
         "_has_timeout_plugin",
         "_last_line",
         "run_suite",
+        "changed_files",
+        "select_suites",
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-18T21:08:14Z",
+      "last_modified": "2026-09-19T18:38:57Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -6691,6 +6693,52 @@
       "pillar": null,
       "created_at": "2026-09-18T21:08:27Z",
       "id": "rfc:reviews/tenant-adopt.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_suite",
+        "test_a_suite_without_watch_always_runs",
+        "test_a_watched_suite_is_skipped_when_nothing_it_watches_changed",
+        "test_a_watched_suite_runs_when_a_watched_file_changed",
+        "test_unknown_changes_run_everything",
+        "history",
+        "test_the_changed_files_come_from_git",
+        "test_uncommitted_and_new_files_count_as_changed",
+        "test_a_base_the_clone_cannot_use_means_unknown",
+        "test_the_tenant_adopt_suite_watches_everything_it_mutates_and_tests",
+        "test_only_the_slow_suite_is_narrowed",
+        "test_the_cli_names_a_skipped_suite_and_does_not_count_it_as_caught",
+        "test_the_cli_says_why_it_ran_everything",
+        "git"
+      ],
+      "last_modified": "2026-09-19T18:37:34Z",
+      "id": "scripts/test/test_mutation_check_scope.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The slow mutation suite runs when what it protects changes",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/mutation-ci-scope.md",
+      "pillar": null,
+      "created_at": "2026-09-19T18:39:22Z",
+      "id": "rfc:designs/mutation-ci-scope.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Release 2.0.0",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/release-2-0-0.md",
+      "pillar": null,
+      "created_at": "2026-09-19T18:39:22Z",
+      "id": "rfc:designs/release-2-0-0.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 release 2.0.0",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/release-2-0-0.md",
+      "pillar": null,
+      "created_at": "2026-09-19T18:39:22Z",
+      "id": "rfc:reviews/release-2-0-0.md"
     }
   ],
   "edges": [

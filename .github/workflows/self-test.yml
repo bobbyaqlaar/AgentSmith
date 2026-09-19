@@ -53,6 +53,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The curated mutation step compares against the push's base, which a
+          # one-commit checkout does not have (it would then run every suite).
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           # One version, in .python-version — the one uv builds
@@ -81,9 +85,16 @@ jobs:
           mypy
       - name: "mutation_check.py (curated — the properties we chose to defend)"
         # agentsmith:gate
+        # A suite that declares `watch` (tenant_adopt: about twelve minutes of
+        # end-to-end tests) runs only when a file it watches changed since the
+        # base, and is named when skipped; every other suite always runs, and a
+        # base this clone cannot use runs them all
+        # (.agent-rfc/designs/mutation-ci-scope.md).
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           pip install pytest pytest-asyncio pydantic pyyaml httpx tenacity tiktoken
-          python3 scripts/mutation_check.py
+          python3 scripts/mutation_check.py --changed-since "$BASE"
       - name: "mutmut (exhaustive — ADVISORY, never gates a merge)"
         # Advisory on purpose. A surviving mutant is a question — "is this line
         # asserted, and should it be?" — not a defect, and a job that fails the

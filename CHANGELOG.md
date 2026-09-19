@@ -77,6 +77,20 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — the slow mutation suite runs when what it protects changes
+
+- **`scripts/mutation_check.py --changed-since REF`** skips a suite that declares `watch` when
+  none of the files it watches changed since `REF` — committed, uncommitted or new — and names
+  each skipped suite; the closing line never counts a skipped suite as caught. A suite without
+  `watch` always runs, and a `REF` the clone cannot use (none, the all-zeros SHA of a new branch,
+  a commit it does not have) runs every suite and says so. Without the flag, nothing changes.
+- **Only `tenant_adopt` declares `watch`**: its end-to-end tests took Self-Test's curated
+  mutation step from about 2 minutes to 14. It watches the hooks, the adopt and tenant code, the
+  gate, the gates workflow template, its tests and the harness itself.
+- Self-Test passes the push's base, and its Python job fetches full history so that base exists.
+- **Fixed:** with every suite skipped, the harness's uncommitted-changes check read the whole
+  repository — `git status --` with no paths — and refused to run.
+
 ## [2.0.0] — 2026-09-19
 
 The governance release: design before code and review before merge, enforced from the IDE to CI;
