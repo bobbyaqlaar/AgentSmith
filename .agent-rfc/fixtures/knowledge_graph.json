@@ -3473,6 +3473,7 @@
         "_cmd_tenant_adopt",
         "_cmd_gate",
         "_cmd_conformance",
+        "_cmd_sync",
         "_cmd_doctor",
         "_cmd_mode",
         "_cmd_check",
@@ -3499,7 +3500,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-23T09:51:01Z",
+      "last_modified": "2026-09-23T22:10:57Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4116,7 +4117,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-23T09:46:47Z",
+      "last_modified": "2026-09-23T21:56:51Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4550,6 +4551,7 @@
         "resolve_record",
         "kg_problems",
         "_manifest_author",
+        "manifest_problems",
         "scaffold_problems",
         "record_text",
         "check_change",
@@ -4615,7 +4617,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-23T08:57:59Z",
+      "last_modified": "2026-09-23T22:08:59Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5060,7 +5062,7 @@
         "upgrade",
         "git"
       ],
-      "last_modified": "2026-09-16T05:18:57Z",
+      "last_modified": "2026-09-23T22:10:28Z",
       "id": "runtime/machine/upgrade.py"
     },
     {
@@ -6558,7 +6560,7 @@
         "test_init_runs_only_the_machines_post_checkout",
         "test_a_forced_rerun_still_vouches_for_what_the_first_run_wrote"
       ],
-      "last_modified": "2026-09-18T21:06:21Z",
+      "last_modified": "2026-09-23T21:53:57Z",
       "id": "scripts/test/test_scaffold_review.py"
     },
     {
@@ -6899,6 +6901,61 @@
       "pillar": null,
       "created_at": "2026-09-23T12:16:52Z",
       "id": "rfc:reviews/provider-resolution.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "SyncError",
+        "Plan",
+        "_manifest",
+        "is_adopted",
+        "_digest",
+        "plan_sync",
+        "describe",
+        "sync",
+        "_changed",
+        "commit_command"
+      ],
+      "last_modified": "2026-09-23T22:09:58Z",
+      "id": "runtime/sync.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_git",
+        "tenant",
+        "moved_on",
+        "_sync",
+        "test_a_tenant_whose_hooks_drifted_is_brought_current",
+        "test_the_sync_commit_passes_the_tenants_own_gates",
+        "test_a_file_the_tenant_edited_is_not_vouched_for",
+        "test_a_sync_lists_only_what_moved",
+        "test_restoring_a_hand_edited_hook_leaves_nothing_to_commit",
+        "test_a_second_sync_writes_nothing",
+        "test_an_adopted_repository_is_never_vendored_into",
+        "test_the_manifest_records_what_this_sync_wrote",
+        "test_upgrade_refuses_to_vendor_into_an_adopted_repository"
+      ],
+      "last_modified": "2026-09-23T22:07:26Z",
+      "id": "scripts/test/test_framework_sync.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "One command keeps a tenant current, and its own gates accept it",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/framework-sync.md",
+      "pillar": null,
+      "created_at": "2026-09-23T22:20:58Z",
+      "id": "rfc:designs/framework-sync.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 one command keeps a tenant current, and its own gates accept it",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/framework-sync.md",
+      "pillar": null,
+      "created_at": "2026-09-23T22:20:59Z",
+      "id": "rfc:reviews/framework-sync.md"
     }
   ],
   "edges": [
@@ -7775,6 +7832,16 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_conformance.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/sync.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_framework_sync.py",
       "target": "runtime/__init__.py"
     }
   ]

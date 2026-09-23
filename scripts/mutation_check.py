@@ -876,6 +876,45 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
         ),
     ),
+
+    # .agent-rfc/designs/framework-sync.md — one command keeps a tenant current,
+    # and the tenant's own gates accept the commit it prints.
+    Suite(
+        name="framework_sync",
+        tests=("scripts/test/test_framework_sync.py",),
+        mutations=(
+            Mutation(
+                "any commit may claim to be a framework sync",
+                "scripts/process_gate.py",
+                "    elif _SYNC_REVIEW.match(review_value):\n        problems = manifest_problems(gated, read)",
+                "    elif _SYNC_REVIEW.match(review_value):\n        problems = []",
+            ),
+            Mutation(
+                "a sync claims to have written files it did not touch",
+                "runtime/sync.py",
+                "    written = [path for path in dict.fromkeys(written) if _changed(root, path)]",
+                "    written = list(dict.fromkeys(written))",
+            ),
+            Mutation(
+                "a stale hook is not noticed, so a sync never refreshes anything",
+                "runtime/sync.py",
+                "        if here.is_file() and hook.is_file() and _digest(here) != _digest(hook):",
+                "        if False:",
+            ),
+            Mutation(
+                "upgrade vendors into an adopted repository again",
+                "runtime/machine/upgrade.py",
+                "    if is_adopted(repo):",
+                "    if False:",
+            ),
+            Mutation(
+                "the manifest stops recording which command wrote it",
+                "runtime/cli.py",
+                '    command = generated_by or ("agentsmith tenant adopt" if adopted else "agentsmith tenant init")',
+                '    command = "agentsmith tenant adopt" if adopted else "agentsmith tenant init"',
+            ),
+        ),
+    ),
 )
 
 

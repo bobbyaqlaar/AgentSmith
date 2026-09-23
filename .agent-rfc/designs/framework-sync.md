@@ -7,6 +7,7 @@ scope:
   - runtime/machine/upgrade.py
   - scripts/process_gate.py
   - scripts/test/test_framework_sync.py
+  - scripts/test/test_scaffold_review.py
   - scripts/test/test_ai_stack_upgrade.py
   - scripts/mutation_check.py
   - docs/process-gates.md
@@ -46,11 +47,14 @@ else:
 
 - the gate hooks (`.githooks/*`, `chain` included) and the arming, through the same
   `install_gate_hooks` that `init` and `adopt` use;
-- `.agenticframework/providers.json`, and the gates workflow where the repository has one;
-- the IDE hook configs, merged as `adopt` merges them;
-- the generated rule files' managed block, left alone where the repository owns the file;
+- `.agenticframework/providers.json`, where the repository has none yet;
 - for a **vendored** tenant only, the vendored trees and the version pin — delegated to
   `runtime/machine/upgrade.py`, which keeps one implementation of vendoring.
+
+**Not in this slice:** the IDE hook configs, the rule files' managed block and the gates workflow.
+Each is merged into a file the tenant also edits, and a wrong merge there is worse than a stale
+block; the hooks and the declaration are what the gates themselves depend on. They are the next
+step, not a half-done part of this one.
 
 It prints a plan first, as `adopt` does — created, replaced, left alone — writes nothing without a
 yes (`--yes` off a terminal), rewrites `.agenticframework/scaffold.json` with a hash of every file
@@ -90,7 +94,7 @@ is for what a tenant genuinely holds a copy of.
 - P10 n/a — no model call.
 - P11 applies — `sync` writes only files this framework owns, from the framework's own copies, never from anything the repository under sync supplies (`runtime/sync.py`).
 - P12 applies — nothing written holds a credential; the gates workflow reads secrets by name only, in `workflow-templates/agentsmith-gates.yml`.
-- P13 applies — the new review escape is hash-verified against the manifest and is a visible note, and a file that does not match falls back to the normal rule (`scaffold_problems` in `scripts/process_gate.py`).
+- P13 applies — the new review escape is hash-verified against the manifest and is a visible note, and a file that does not match falls back to the normal rule (`manifest_problems` in `scripts/process_gate.py`).
 - P14 applies — the manifest is rewritten with each sync, and `.agent-rfc/fixtures/knowledge_graph.json` is re-pinned with this change.
 - P15 applies — "nothing to do" and "refused" are different answers, and the plan says which files were left alone and why (`runtime/sync.py`).
 - P16 applies — a sync that cannot arm the gates refuses before writing, as `tenant adopt` does (`missing_gate_hooks` in `runtime/cli.py`).

@@ -89,7 +89,7 @@ def test_code_added_to_the_first_commit_needs_a_real_review(scaffold):
     result = _commit(scaffold, *FIRST_COMMIT)
 
     assert result.returncode != 0
-    assert "app/main.py is not part of the scaffold" in result.stderr, result.stderr
+    assert "app/main.py is not part of what" in result.stderr, result.stderr
 
 
 def test_a_file_the_tenant_already_had_is_not_vouched_for(tmp_path, monkeypatch):
@@ -111,7 +111,7 @@ def test_a_file_the_tenant_already_had_is_not_vouched_for(tmp_path, monkeypatch)
 
     result = _commit(root, *FIRST_COMMIT)
 
-    assert result.returncode != 0 and "app/main.py is not part of the scaffold" in result.stderr
+    assert result.returncode != 0 and "app/main.py is not part of what" in result.stderr
 
 
 def test_a_later_commit_cannot_claim_to_be_the_scaffold(scaffold):

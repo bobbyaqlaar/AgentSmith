@@ -77,6 +77,21 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — `agentsmith sync`: one command keeps a tenant current
+
+- **What a tenant holds as copies stopped drifting.** The gate hooks changed six times in 90 days
+  and the workflow templates 33, and nothing refreshed a tenant's copies: only the vendored trees
+  and the version pin had a path. `agentsmith sync` refreshes what this framework owns — the gate
+  hooks, the provider declaration, the vendored trees for a vendored tenant — prints a plan first,
+  and writes nothing on a second run.
+- **The tenant's own gates accept the result.** `Review: n/a: framework sync <version>` is accepted
+  while every gated file in the commit matches the manifest, as the generated scaffold already is,
+  and is recorded as a visible note. Upgrading no longer means writing a design and a review for
+  framework code the tenant did not write.
+- **Fixed:** `agentsmith upgrade` would have vendored `scripts/` and `runtime/` into a repository
+  brought in by `tenant adopt` — it checked for a package pin but not for the adoption manifest.
+  Both commands now read it.
+
 ### Added — a repository names who governs it
 
 Second slice of `.agent-rfc/designs/governance-providers.md`: the contract existed, and now a

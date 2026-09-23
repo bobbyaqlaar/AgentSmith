@@ -138,6 +138,23 @@ so a missing config means it was removed.
 | AqlaarTeleologyStudio | `apps/`, `services/`, `runtime/`, `scripts/`, `infra/`, `fixtures/`, `.github/`, config files | its own (inherited and extended) | none |
 | KYC Sentinel | `agents/`, `workflows/`, `test/`, `scripts/`, `corpus/`, `fixtures/`, `.github/`, root `*.py`, config files | `@framework/` | none |
 
+## Keeping a tenant current — `agentsmith sync`
+
+A tenant holds copies: the gate hooks, the IDE hook configs, the generated rule files, and — a
+vendored tenant — the framework's own code. `agentsmith sync` refreshes what this framework owns
+in the repository it is run in, and nothing else, then prints the commit. Run twice, the second run
+writes nothing.
+
+**Its commit passes the tenant's own gates.** `Review: n/a: framework sync <version>` is accepted
+while every gated file in the commit matches `.agenticframework/scaffold.json` — the same hash rule
+the generated scaffold uses, and a visible note, not silence. A file the tenant edited is not in
+that manifest, or no longer matches it, and gets the normal rule with its name. The limit is the
+scaffold's: the manifest is not signed, so rewriting a file *and* its hash defeats it, deliberately
+and in plain sight.
+
+An adopted repository is never vendored into, by `sync` or by `agentsmith upgrade`: both read the
+manifest's `generated_by`.
+
 ## A provider, not a path — `contract/gate/v1`
 
 The gate answers three questions: may this edit happen, may this turn end, and what should a
