@@ -3471,6 +3471,8 @@
         "_copy_composite_actions",
         "_cmd_tenant_init",
         "_cmd_tenant_adopt",
+        "_cmd_gate",
+        "_cmd_conformance",
         "_cmd_doctor",
         "_cmd_mode",
         "_cmd_check",
@@ -3497,7 +3499,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-23T05:08:20Z",
+      "last_modified": "2026-09-23T09:23:07Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4114,7 +4116,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-23T04:30:20Z",
+      "last_modified": "2026-09-23T09:06:10Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4613,7 +4615,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-23T05:13:25Z",
+      "last_modified": "2026-09-23T08:57:59Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5176,6 +5178,7 @@
         "Allowance",
         "PillarPolicy",
         "GateEvent",
+        "Decision",
         "Ide",
         "Signoff",
         "Records",
@@ -5197,7 +5200,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-09-18T14:32:10Z",
+      "last_modified": "2026-09-23T08:57:51Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -5609,6 +5612,8 @@
         "_antigravity_render",
         "_codex_render",
         "Adapter",
+        "_neutral_parse",
+        "_neutral_render",
         "resolve",
         "parse",
         "render",
@@ -5616,7 +5621,7 @@
         "_command",
         "render_config"
       ],
-      "last_modified": "2026-09-17T21:07:18Z",
+      "last_modified": "2026-09-23T09:06:48Z",
       "id": "scripts/gate_ides.py"
     },
     {
@@ -6785,6 +6790,75 @@
       "pillar": null,
       "created_at": "2026-09-23T05:14:31Z",
       "id": "rfc:reviews/installed-architectures.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_contract_dir",
+        "Case",
+        "Result",
+        "Report",
+        "cases",
+        "fixture",
+        "build_fixture",
+        "_ask",
+        "_judge",
+        "run",
+        "passed",
+        "render"
+      ],
+      "last_modified": "2026-09-23T09:23:07Z",
+      "id": "runtime/conformance.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_agentsmith_passes_its_own_conformance_suite",
+        "test_the_neutral_decision_matches_what_the_ide_adapters_are_given",
+        "test_the_published_schemas_match_the_models_they_describe"
+      ],
+      "last_modified": "2026-09-23T09:00:32Z",
+      "id": "scripts/test/test_gate_contract.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_stub",
+        "test_the_contract_ships_its_cases_and_fixture",
+        "test_a_provider_that_always_allows_fails_the_cases_that_must_refuse",
+        "test_a_provider_that_cannot_run_is_reported_as_that_not_as_a_wrong_answer",
+        "test_a_refusal_with_no_reason_is_not_an_answer",
+        "test_a_provider_whose_output_is_not_a_decision_fails_with_what_it_printed"
+      ],
+      "last_modified": "2026-09-23T09:00:02Z",
+      "id": "runtime/test/test_conformance.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A tenant hooks onto a governance provider, not onto AgentSmith",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/governance-providers.md",
+      "pillar": null,
+      "created_at": "2026-09-23T09:22:32Z",
+      "id": "rfc:designs/governance-providers.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The gate port: a contract a provider satisfies, and a suite that proves it",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/gate-port.md",
+      "pillar": null,
+      "created_at": "2026-09-23T09:22:32Z",
+      "id": "rfc:designs/gate-port.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the gate port: a contract a provider satisfies",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/gate-port.md",
+      "pillar": null,
+      "created_at": "2026-09-23T09:22:32Z",
+      "id": "rfc:reviews/gate-port.md"
     }
   ],
   "edges": [
@@ -7651,6 +7725,16 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_hook_chain.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_conformance.py",
       "target": "runtime/__init__.py"
     }
   ]

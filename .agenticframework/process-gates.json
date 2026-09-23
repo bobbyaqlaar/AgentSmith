@@ -1,5 +1,5 @@
 {
-  "_about": "What the process gates cover in this repository — scripts/process_gate.py, docs/process-gates.md. This file is gated itself.",
+  "_about": "What the process gates cover in this repository \u2014 scripts/process_gate.py, docs/process-gates.md. This file is gated itself.",
   "gated": [
     "scripts/**",
     "runtime/**",
@@ -8,6 +8,7 @@
     "workflow-templates/**",
     ".github/**",
     "templates/**",
+    "contract/**",
     "enterprise/**",
     "examples/**",
     "fixtures/**",
@@ -43,12 +44,12 @@
       {
         "check": "P3-tracing",
         "path": ".github/scratch-tenants/apps/python-fastapi/app/main.py",
-        "why": "liveness probe in a generated tenant scaffold — a span per kubelet probe is noise, not observability"
+        "why": "liveness probe in a generated tenant scaffold \u2014 a span per kubelet probe is noise, not observability"
       },
       {
         "check": "P3-tracing",
         "path": ".github/scratch-tenants/apps/python-uv/app/main.py",
-        "why": "liveness probe in a generated tenant scaffold — a span per kubelet probe is noise, not observability"
+        "why": "liveness probe in a generated tenant scaffold \u2014 a span per kubelet probe is noise, not observability"
       }
     ]
   },

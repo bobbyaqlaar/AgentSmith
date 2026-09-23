@@ -810,6 +810,45 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
         ),
     ),
+
+    # .agent-rfc/designs/gate-port.md — the contract a provider satisfies, and
+    # the suite that proves it. Fast: the fixture is five events in a temp repo.
+    Suite(
+        name="gate_contract",
+        tests=(
+            "scripts/test/test_gate_contract.py",
+            "runtime/test/test_conformance.py",
+        ),
+        mutations=(
+            Mutation(
+                "the adapter goes back to saying `allow` by staying silent",
+                "runtime/cli.py",
+                '    if done.returncode == 0 and not done.stdout.strip():\n'
+                '        print(json.dumps({"decision": "allow", "text": ""}))\n'
+                "        return 0\n",
+                "",
+            ),
+            Mutation(
+                "the neutral profile answers in an IDE's dialect",
+                "scripts/gate_ides.py",
+                "    return gm.Decision(decision=\"block\" if decision == \"block\" else decision, "
+                "text=text).model_dump_json()",
+                "    return _claude_render(decision, text, repeat)",
+            ),
+            Mutation(
+                "a refusal with no reason passes conformance",
+                "runtime/conformance.py",
+                '    if decision in ("deny", "block") and not text.strip():',
+                "    if False:",
+            ),
+            Mutation(
+                "a provider that cannot run is scored as a wrong answer",
+                "runtime/conformance.py",
+                "    if code == CANNOT_RUN:",
+                "    if False:",
+            ),
+        ),
+    ),
 )
 
 

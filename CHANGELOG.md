@@ -77,6 +77,26 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the gate contract: a provider a tenant hooks onto, not a framework it copies
+
+First slice of `.agent-rfc/designs/governance-providers.md`, so a repository can be governed by
+AgentSmith **or another platform** that answers the same questions.
+
+- **`contract/gate/v1/`** publishes what a gate provider does: a command taking one of three events
+  (`session-start`, `pre-edit`, `stop`), the event as JSON on stdin, one decision — `allow`,
+  `deny`, `block`, `context` — as JSON on stdout, exit 3 for "this provider cannot run here". The
+  event and decision schemas are generated from the models the gate already uses. IDE dialects stay
+  the provider's business: a second platform implements one protocol, not six.
+- **`agentsmith conformance --provider "<command>"`** builds the fixture repository the contract
+  carries and replays its five cases against any provider, reporting per case. The fixture holds
+  its own rules registry and levers document, so a run needs nothing from a provider's install.
+- **`agentsmith gate <event>`** is AgentSmith's own adapter — the neutral profile over the same
+  decision path every IDE dialect goes through — and it passes the suite. Where the hooks say
+  "allow" by staying silent, the profile says it: silence cannot be told from a crash.
+- The contract is versioned apart from any provider that implements it, so a provider's major
+  release does not reach a tenant's files. `commit-msg`, `sweep` and `ci` stay out of v1 on
+  purpose — pinning their arguments now would pin one CLI rather than a protocol.
+
 ### Fixed — an installed machine can actually arm a tenant's gates
 
 Found by adopting a real scratch tenant with the installed `agentsmith`, the first run of either

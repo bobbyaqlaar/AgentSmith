@@ -1,0 +1,58 @@
+{
+  "additionalProperties": false,
+  "description": "A gate event: what the caller is asking about (contract/gate/v1/protocol.md).",
+  "properties": {
+    "kind": {
+      "enum": [
+        "edit",
+        "shell",
+        "other"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "paths": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Paths",
+      "type": "array"
+    },
+    "command": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Command"
+    },
+    "cwd": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cwd"
+    },
+    "stop_active": {
+      "default": false,
+      "title": "Stop Active",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "kind"
+  ],
+  "title": "GateEvent",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/gate/v1/event.schema.json"
+}

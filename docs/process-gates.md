@@ -138,6 +138,19 @@ so a missing config means it was removed.
 | AqlaarTeleologyStudio | `apps/`, `services/`, `runtime/`, `scripts/`, `infra/`, `fixtures/`, `.github/`, config files | its own (inherited and extended) | none |
 | KYC Sentinel | `agents/`, `workflows/`, `test/`, `scripts/`, `corpus/`, `fixtures/`, `.github/`, root `*.py`, config files | `@framework/` | none |
 
+## A provider, not a path — `contract/gate/v1`
+
+The gate answers three questions: may this edit happen, may this turn end, and what should a
+session know. `contract/gate/v1/protocol.md` publishes them as a protocol — one command, one event
+on stdin, one decision on stdout, exit 3 for "cannot run here" — so a repository can be governed
+by AgentSmith or by another platform that answers the same way. `agentsmith gate <event>` is this
+framework's adapter, and `agentsmith conformance --provider "<command>"` replays the contract's
+cases against any provider, in a fixture repository the contract carries.
+
+The contract is versioned apart from the provider: a provider's major release does not reach a
+tenant's files. What a tenant needs to *name* a provider — `providers.yaml` and a launcher that
+reads it — is the next slice (`.agent-rfc/designs/governance-providers.md`).
+
 ## Finding the script — `.githooks/process-gate`
 
 Every caller — the three Claude Code hooks and `.githooks/commit-msg` — runs

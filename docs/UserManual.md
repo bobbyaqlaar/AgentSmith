@@ -947,6 +947,8 @@ The older `ai-*` names map to these one for one
 |---|---|---|
 | `agentsmith tenant init` | `<id> [--stack STACK] [--isolation shared\|dedicated]` | Scaffolds `.agenticframework/tenant.yaml` and per-environment CI/CD workflows in the current repo. |
 | `agentsmith tenant adopt` | `<id> [--stack STACK] [--architecture STYLE] [--agentic] [--gate GLOB]… [--framework-ref TAG] [--yes]` | Brings an existing repo under the gates: prints what it found and would do, then — on a yes — gates its code, keeps its hooks, CI, rules and design doc, and prints the adoption commit. |
+| `agentsmith gate` | `<session-start\|pre-edit\|stop>` | Answer one gate event in the neutral profile of the gate contract (`contract/gate/v1/protocol.md`): the event as JSON on stdin, the decision as JSON on stdout. This is what a tenant names as its provider; exit 3 means this machine cannot run the gate. |
+| `agentsmith conformance` | `--provider "<command>"` | Build the contract's fixture repository, replay its cases against that command, and report per case. Run it against another platform's adapter, or against `agentsmith gate`. |
 | `agentsmith tenant promote` | `<id> --from staging --to production` | Verifies the staging eval gate, then opens a `develop → main` promotion PR. No direct push to `main`. Refuses if `<id>` doesn't exactly match the current repo's `.agenticframework/tenant.yaml` — a same-prefix tenant id (e.g. `acme` vs. `acme-sandbox`) is not a match. |
 
 ### Runtime Flags (Environment Variables)

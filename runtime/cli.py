@@ -766,6 +766,59 @@ def _cmd_tenant_adopt(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_gate(args: argparse.Namespace) -> int:
+    """`agentsmith gate <event>` — AgentSmith as a gate provider
+    (contract/gate/v1/protocol.md). The neutral profile over the same decision
+    path every IDE dialect goes through: one implementation of what a rule means.
+
+    Exit 3 — the contract's "this provider cannot run here" — when the gate
+    itself is not on this machine, so a caller can try the next provider."""
+    import subprocess as sp
+
+    framework = _framework_dir()
+    gate = None
+    for candidate in (Path.cwd() / "scripts", framework / "scripts" if framework else None):
+        if candidate is not None and (candidate / "process_gate.py").is_file():
+            gate = candidate / "process_gate.py"
+            break
+    if gate is None:
+        print("agentsmith gate: no process_gate.py in this repo, $AGENTSMITH_DIR or ~/.agent-framework — "
+              "run install-ai-stack.sh", file=sys.stderr)
+        return 3
+    done = sp.run([sys.executable, str(gate), args.event, "--ide", "neutral"],
+                  input=sys.stdin.read() if not sys.stdin.isatty() else "{}",
+                  capture_output=True, text=True, check=False)
+    sys.stderr.write(done.stderr)
+    if done.returncode == 3:
+        return 3
+    # The hooks say "allow" by staying silent, which a caller cannot tell from a
+    # crash that printed nothing. The contract's profile is explicit, so the
+    # adapter says it (contract/gate/v1/protocol.md).
+    if done.returncode == 0 and not done.stdout.strip():
+        print(json.dumps({"decision": "allow", "text": ""}))
+        return 0
+    sys.stdout.write(done.stdout)
+    return done.returncode
+
+
+def _cmd_conformance(args: argparse.Namespace) -> int:
+    """`agentsmith conformance --provider "<command>"` — does that command
+    satisfy the gate contract? Run it against another platform's adapter, or
+    against this one (scripts/test/test_gate_contract.py does)."""
+    import tempfile
+
+    from runtime.conformance import run
+
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            report = run(args.provider, Path(tmp) / "fixture")
+        except FileNotFoundError as exc:
+            print(f"agentsmith: {exc}", file=sys.stderr)
+            return 2
+    print(report.render())
+    return 0 if report.passed else 1
+
+
 def _cmd_doctor(args: argparse.Namespace) -> int:
     """Delegates to verify_system, which already owns every check.
 
@@ -990,6 +1043,15 @@ def build_parser() -> argparse.ArgumentParser:
     adopt.add_argument("--root", default=None, help="target repo (default: cwd)")
     adopt.add_argument("--yes", action="store_true", help="adopt without asking (required off a terminal)")
     adopt.set_defaults(func=_cmd_tenant_adopt)
+
+    gate = sub.add_parser("gate", help="answer a gate event (contract/gate/v1 — the neutral profile)")
+    gate.add_argument("event", choices=("session-start", "pre-edit", "stop"))
+    gate.set_defaults(func=_cmd_gate)
+
+    conformance = sub.add_parser("conformance", help="does a command satisfy the gate contract?")
+    conformance.add_argument("--provider", required=True, metavar="COMMAND",
+                             help='the provider to test, e.g. "agentsmith gate"')
+    conformance.set_defaults(func=_cmd_conformance)
 
     promote_tenant = tenant.add_parser("promote", help="gate on staging evals, then open the develop → main PR")
     promote_tenant.add_argument("tenant_id")

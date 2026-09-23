@@ -1356,6 +1356,7 @@ AgentSmith/
 │   ├── onprem-deploy/
 │   └── in-app-widget/           # Embeddable end-user status widget + Ops Portal API
 ├── portal/                      # Ops Portal (Next.js + TypeScript + Tailwind)
+├── contract/                    # The gate contract a provider satisfies (contract/gate/v1/protocol.md) — versioned apart from this implementation
 ├── workflow-templates/          # Tenant CI/CD templates (ci-* / cd-* / eval-* reusable workflows) — the CI/CD via GitHub Actions section
 ├── examples/
 │   ├── oil-price-agent/         # Reference tenant app (fork per customer)

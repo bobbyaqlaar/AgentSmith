@@ -1,0 +1,41 @@
+{
+  "_about": "What a gate provider must answer, in the repository contract/gate/v1/fixture.json builds. Each case pins a different rule, not a different wording: `text` is never matched, because a provider words its own answers — only `deny` and `block` must carry some text, since a refusal with no reason is not an answer.",
+  "cases": [
+    {
+      "name": "an edit to a path no gate governs",
+      "event_name": "pre-edit",
+      "event": { "kind": "edit", "paths": ["docs/notes.md"] },
+      "expect": "allow",
+      "why": "the configuration governs src/ only; everything else is the repository's own business"
+    },
+    {
+      "name": "an edit to a governed path that no design covers",
+      "event_name": "pre-edit",
+      "event": { "kind": "edit", "paths": ["src/other.py"] },
+      "expect": "deny",
+      "why": "design before code: the governed change has no design, so the edit is refused"
+    },
+    {
+      "name": "an edit to a governed path an active design covers",
+      "event_name": "pre-edit",
+      "event": { "kind": "edit", "paths": ["src/covered.py"] },
+      "expect": "allow",
+      "why": "the design in the fixture is active and its scope covers this path"
+    },
+    {
+      "name": "a turn ending with governed changes and no review",
+      "event_name": "stop",
+      "event": { "kind": "other" },
+      "arrange": { "write": { "src/covered.py": "VALUE = 99\n" } },
+      "expect": "block",
+      "why": "review before done: the turn leaves a governed change no review record vouches for"
+    },
+    {
+      "name": "a session starting",
+      "event_name": "session-start",
+      "event": { "kind": "other" },
+      "expect": "context",
+      "why": "not a refusal: the session is told the rules it is about to work under"
+    }
+  ]
+}

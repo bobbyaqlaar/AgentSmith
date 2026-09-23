@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "description": "A gate decision: the answer, and the text a person reads (contract/gate/v1/protocol.md).",
+  "properties": {
+    "decision": {
+      "enum": [
+        "allow",
+        "deny",
+        "block",
+        "context"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "text": {
+      "default": "",
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "decision"
+  ],
+  "title": "Decision",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/gate/v1/decision.schema.json"
+}
