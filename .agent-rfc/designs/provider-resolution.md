@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - .githooks/process-gate
   - runtime/adopt.py
