@@ -63,9 +63,16 @@ Both from this repository's own gates, refusing the commit that carried them.
   with `extra="forbid"`, so a malformed case is named on the way in rather than at the point it is
   replayed. `Result` and `Report` stay dataclasses: the runner builds them itself.
 
-## Pass 4 — findings: 0
+## Pass 4 — findings: 1
 
-The rename and the model, and the suites over both.
+- `no-redundant-artifacts` — **finding:** the renamed `protocol.md` was then neither an artifact
+  nor declared reference documentation, which the artifact check reports at `enforce`. It is
+  declared in this repository's `extends.artifacts.reference`: the contract is reference material
+  a provider reads, not one of the repository's own documents. `agentsmith artifacts` is clean.
+
+## Pass 5 — findings: 0
+
+The rename, the model, the declaration, and the suites over all three.
 
 ## Sign-off (validation-checklist Step 4)
 
@@ -82,7 +89,7 @@ Group 7 · Auth & session integrity    [x] n/a — no cookie, bearer or session
 Tests added/updated:      runtime/test/test_conformance.py (5), scripts/test/test_gate_contract.py (3)
 Mutation-checked:          yes — gate_contract, 4 mutations, all caught
 Fixtures re-pinned:        .agent-rfc/fixtures/knowledge_graph.json
-KG query:                 kg:a3d4450c3f60
+KG query:                 kg:a5cbba1d4adb
 Gates run locally:         ruff, mypy in a clean environment, the repo-tree check, the gate/IDE/CLI
                           suites, the full pytest run, and the conformance suite itself
 Declared gaps:             (1) v1 covers the three hook events only; (2) no tenant-side provider
