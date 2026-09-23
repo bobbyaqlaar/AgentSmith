@@ -3499,7 +3499,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-23T09:23:07Z",
+      "last_modified": "2026-09-23T09:51:01Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4116,7 +4116,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-23T09:06:10Z",
+      "last_modified": "2026-09-23T09:46:47Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -5621,7 +5621,7 @@
         "_command",
         "render_config"
       ],
-      "last_modified": "2026-09-23T09:06:48Z",
+      "last_modified": "2026-09-23T09:52:38Z",
       "id": "scripts/gate_ides.py"
     },
     {
@@ -6618,6 +6618,7 @@
         "_skill_files",
         "describe",
         "generated_by_agentsmith",
+        "providers_declaration",
         "merge_rules_block",
         "_test_command",
         "_project_name",
@@ -6627,7 +6628,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-23T05:14:15Z",
+      "last_modified": "2026-09-23T10:00:48Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6658,9 +6659,10 @@
         "test_ci_lists_the_history_before_adoption_and_notes_the_adoption",
         "test_the_machines_provisioning_hooks_are_not_chained_into_an_adopted_repository",
         "test_vendored_framework_code_is_not_gated",
-        "test_adopt_refuses_when_the_install_cannot_arm_the_gates"
+        "test_adopt_refuses_when_the_install_cannot_arm_the_gates",
+        "test_adopt_declares_who_governs_the_repository"
       ],
-      "last_modified": "2026-09-23T05:13:47Z",
+      "last_modified": "2026-09-23T09:42:08Z",
       "id": "scripts/test/test_tenant_adopt.py"
     },
     {
@@ -6808,7 +6810,7 @@
         "passed",
         "render"
       ],
-      "last_modified": "2026-09-23T09:23:07Z",
+      "last_modified": "2026-09-23T10:02:25Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -6859,6 +6861,44 @@
       "pillar": null,
       "created_at": "2026-09-23T09:22:32Z",
       "id": "rfc:reviews/gate-port.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "repo",
+        "_declare",
+        "_provider",
+        "_ask",
+        "test_the_declared_provider_answers",
+        "test_the_operator_escape_wins_over_the_declaration",
+        "_gates_src",
+        "_claude_edit",
+        "test_a_provider_that_cannot_run_falls_through_to_the_framework",
+        "test_declaring_none_governs_nothing_and_says_so_rather_than_falling_back",
+        "test_no_declaration_behaves_exactly_as_before",
+        "test_the_arguments_reach_the_provider_unchanged",
+        "test_the_declaration_is_read_whichever_way_it_is_written",
+        "test_commit_msg_is_not_a_contract_event_and_keeps_the_frameworks_own_path"
+      ],
+      "last_modified": "2026-09-23T10:02:56Z",
+      "id": "scripts/test/test_provider_resolution.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A tenant names its provider",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/provider-resolution.md",
+      "pillar": null,
+      "created_at": "2026-09-23T12:16:52Z",
+      "id": "rfc:designs/provider-resolution.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 a tenant names its provider",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/provider-resolution.md",
+      "pillar": null,
+      "created_at": "2026-09-23T12:16:52Z",
+      "id": "rfc:reviews/provider-resolution.md"
     }
   ],
   "edges": [

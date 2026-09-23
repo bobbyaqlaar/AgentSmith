@@ -77,6 +77,25 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — a repository names who governs it
+
+Second slice of `.agent-rfc/designs/governance-providers.md`: the contract existed, and now a
+repository can point at a provider that satisfies it.
+
+- **`.agenticframework/providers.json`** (`contract/gate/v1/providers.schema.json`) declares the
+  `gate` command and the provider range the repository expects. `tenant init` and `tenant adopt`
+  write it naming this framework, so a repository states its provider instead of implying it.
+- **`.githooks/process-gate`** asks, for the three contract events, `$GOVERNANCE_PROVIDER`, then
+  that command, then this framework's own paths. **An answer is a decision on stdout**: a provider
+  that prints none has not answered — missing, unable to run here, or installed but too old to
+  know the event — and the next step is tried. Naming a provider is therefore additive, never a
+  migration. `"gate": "none"` declares the repository ungoverned and never falls back, because
+  that is a different answer from "no provider could run".
+- `commit-msg`, `sweep` and `ci` keep this framework's resolution: contract v1 does not define
+  them, and routing them through a provider would pin one CLI as the protocol.
+- **Fixed:** the neutral profile crashed on a payload in another IDE's dialect instead of refusing
+  it. A provider handed something it cannot read now denies, as every other adapter does.
+
 ### Added — the gate contract: a provider a tenant hooks onto, not a framework it copies
 
 First slice of `.agent-rfc/designs/governance-providers.md`, so a repository can be governed by

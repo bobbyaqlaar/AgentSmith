@@ -148,8 +148,22 @@ framework's adapter, and `agentsmith conformance --provider "<command>"` replays
 cases against any provider, in a fixture repository the contract carries.
 
 The contract is versioned apart from the provider: a provider's major release does not reach a
-tenant's files. What a tenant needs to *name* a provider — `providers.yaml` and a launcher that
-reads it — is the next slice (`.agent-rfc/designs/governance-providers.md`).
+tenant's files.
+
+**A repository names its provider** in `.agenticframework/providers.json`, which `tenant init` and
+`tenant adopt` write:
+
+```json
+{ "contract": 1, "providers": { "gate": { "command": "agentsmith gate", "version": "^2" } } }
+```
+
+For the three contract events the launcher asks `$GOVERNANCE_PROVIDER`, then that command, then
+this framework's own paths. **An answer is a decision on stdout**: a provider that prints none has
+not answered — it is missing, cannot run here, or is too old to know the event — and the next step
+is tried, so naming a provider is additive rather than a migration. `"gate": "none"` declares the
+repository ungoverned and never falls back, because that is a different answer from "no provider
+could run". `commit-msg`, `sweep` and `ci` are not in contract v1 and keep this framework's own
+resolution.
 
 ## Finding the script — `.githooks/process-gate`
 

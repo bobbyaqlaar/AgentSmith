@@ -33,6 +33,10 @@ from typing import Optional, Sequence
 from runtime.cli import GATE_HOOKS
 
 ADOPTION_DESIGN = ".agent-rfc/designs/adoption.md"
+PROVIDERS = ".agenticframework/providers.json"
+# The contract version a repository adopted today speaks, and this framework's
+# own major as the range it expects (contract/gate/v1/protocol.md).
+GATE_CONTRACT = 1
 GATES_WORKFLOW = ".github/workflows/agentsmith-gates.yml"
 
 # Client-side hooks git runs that a stub may stand in for. A known list, so a
@@ -273,7 +277,8 @@ def plan_adoption(tenant_id: str, root: Path, *, stack: Optional[str] = None, ar
         return present if (root / rel).exists() else "create"
 
     actions = [(".agenticframework/tenant.yaml", fate(".agenticframework/tenant.yaml", "leave")),
-               (".agenticframework/process-gates.json", "create")]
+               (".agenticframework/process-gates.json", "create"),
+               (PROVIDERS, fate(PROVIDERS, "leave"))]
     actions += [(f".githooks/{name}", "create") for name in GATE_HOOKS]
     if plan.prior_hooks is not None:
         actions += [(f".githooks/{name}", "create") for name in stub_names(plan.prior_hooks, provisioning=False)]
@@ -360,6 +365,23 @@ def generated_by_agentsmith(text: str) -> bool:
     return any("Auto-generated" in line and "agent-rules.yaml" in line for line in head)
 
 
+def providers_declaration(command: str = "agentsmith gate") -> str:
+    """Who governs this repository, as `contract/gate/v1/providers.schema.json`
+    describes it. Named rather than implied: the hooks ask the declaration, and
+    another platform's command goes here instead
+    (.agent-rfc/designs/provider-resolution.md)."""
+    from runtime.cli import _default_framework_version
+
+    major = _default_framework_version().split(".")[0]
+    return json.dumps({
+        "_about": "Who governs this repository. The hooks ask this before they ask the framework's own "
+                  "paths; `\"gate\": \"none\"` declares the repository ungoverned. See "
+                  "contract/gate/v1/protocol.md.",
+        "contract": GATE_CONTRACT,
+        "providers": {"gate": {"command": command, "version": f"^{major}"}},
+    }, indent=2) + "\n"
+
+
 def merge_rules_block(existing: str, generated: str) -> str:
     """`existing` with the generated rules in one marked block at its end —
     replacing the block a previous run left, never adding a second."""
@@ -437,6 +459,8 @@ def adopt(plan: Plan) -> list[str]:
         put(".agenticframework/tenant.yaml", tenant_yaml(plan.tenant_id))
     put(".agenticframework/process-gates.json",
         _process_gates_config(plan.stack, architectures.session_start_line(plan.style, plan.agentic), plan.gated))
+    if not (root / PROVIDERS).exists():
+        put(PROVIDERS, providers_declaration())
 
     written += install_gate_hooks(root, framework, prior=plan.prior_hooks, provisioning=False)
 

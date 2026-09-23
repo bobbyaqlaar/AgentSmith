@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/gate/v1/providers.schema.json",
+  "title": "providers.json",
+  "description": "What a repository declares about who governs it: .agenticframework/providers.json (contract/gate/v1/protocol.md). A port this version does not read is ignored, so declaring one early costs nothing.",
+  "type": "object",
+  "required": ["contract", "providers"],
+  "additionalProperties": true,
+  "properties": {
+    "_about": { "type": "string" },
+    "contract": {
+      "description": "The contract version this repository speaks. A provider's own version moves independently.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "providers": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "gate": {
+          "description": "Who answers the three gate events, or \"none\": this repository declares itself ungoverned, and the hooks do nothing rather than fall back to whatever is installed.",
+          "oneOf": [
+            { "const": "none" },
+            {
+              "type": "object",
+              "required": ["command"],
+              "additionalProperties": false,
+              "properties": {
+                "command": {
+                  "description": "The command to run, as a shell word list: `agentsmith gate`, `mygov gate --quiet`. It is run with the event appended and the payload on stdin.",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "description": "The provider versions this repository expects, as a range. Recorded for a person and for tooling; the launcher does not enforce it.",
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

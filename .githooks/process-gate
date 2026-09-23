@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
-# .githooks/process-gate <subcommand> [args] — find scripts/process_gate.py and run it.
+# .githooks/process-gate <subcommand> [args] — ask this repository's gate.
 #
 # The one launcher every caller uses — the Claude Code hooks in
 # .claude/settings.json and .githooks/commit-msg — in AgentSmith and in every
-# tenant, copied verbatim (docs/process-gates.md). Where the script is differs
-# by how a repo consumes AgentSmith, so it is looked up, in this order:
+# tenant, copied verbatim (docs/process-gates.md).
+#
+# For the three contract events (session-start, pre-edit, stop) it asks, in
+# order: $GOVERNANCE_PROVIDER, the `gate` command this repository declares in
+# .agenticframework/providers.json, then the paths below. A provider that exits
+# 3, 126 or 127 cannot run here, and the next step is tried
+# (contract/gate/v1/protocol.md).
+#
+# Everything else — and any event no provider answered — runs AgentSmith's own
+# script, looked up in this order:
 #
 #   1. <repo>/scripts/process_gate.py      AgentSmith itself; vendored tenants (OTS)
 #   2. $AGENTSMITH_DIR/scripts/            a framework checkout (installed-mode CI)
@@ -24,6 +32,54 @@ subcommand="${1:-}"
 # committed to when a session in one repo commits in another.
 root="$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-$PWD}")"
 
+# ── The repository's declared gate provider (contract/gate/v1/protocol.md) ────
+# A repository says who governs it in .agenticframework/providers.json, so its
+# hooks name a provider rather than this framework's paths
+# (.agent-rfc/designs/provider-resolution.md). Read with sed because this runs
+# before any interpreter is known to exist. Only the three contract events go to
+# a provider; commit-msg, sweep and ci are not in contract v1 and keep the
+# resolution below.
+declared_gate() {
+  local file="$root/.agenticframework/providers.json"
+  [ -f "$file" ] || return 0
+  # The `gate` port's value: either "none" or an object with a "command".
+  local block
+  block="$(tr -d '\n' < "$file" | sed -n 's/.*"gate"[[:space:]]*:[[:space:]]*\(.*\)/\1/p')"
+  case "$block" in
+    '"none"'*) echo "none" ;;
+    *) printf '%s' "$block" | sed -n 's/^[^}]*"command"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' ;;
+  esac
+}
+
+provider=""
+case "$subcommand" in
+  session-start|pre-edit|stop)
+    provider="${GOVERNANCE_PROVIDER:-$(declared_gate)}"
+    if [ "$provider" = "none" ]; then
+      # Declared ungoverned: not the same as "no provider could run", so this
+      # never falls through to the framework's own gate.
+      exit 0
+    fi
+    if [ -n "$provider" ]; then
+      payload="$(cat)"
+      answer="$(printf '%s' "$payload" | $provider "$@")"
+      code=$?
+      # An answer is a decision on stdout. A provider that printed none did not
+      # answer — exit 3 ("cannot run here"), 126/127 (not executable, not
+      # there), or a version too old to know this event, which is how an
+      # installed provider behaves the day the contract grows. Each falls
+      # through to the framework's own gate, which is what makes naming a
+      # provider safe rather than a migration (contract/gate/v1/protocol.md).
+      if [ -n "$answer" ]; then
+        printf '%s\n' "$answer"
+        exit "$code"
+      fi
+      # The payload is already drained; replay it below.
+      replayed="$payload"
+    fi
+    ;;
+esac
+
 gate=""
 for dir in "$root/scripts" "${AGENTSMITH_DIR:+$AGENTSMITH_DIR/scripts}" "$HOME/.agent-framework/scripts"; do
   if [ -n "$dir" ] && [ -f "$dir/process_gate.py" ]; then
@@ -41,7 +97,9 @@ if [ -z "$gate" ]; then
   why="scripts/process_gate.py not found in this repo, \$AGENTSMITH_DIR or ~/.agent-framework — set AGENTSMITH_DIR to an AgentSmith checkout, or re-run its install-ai-stack.sh"
 else
   case "$subcommand" in
-    session-start|pre-edit|stop) payload="$(cat)" ;;
+    # `replayed` is set when a declared provider already drained stdin and then
+    # said it could not run here.
+    session-start|pre-edit|stop) payload="${replayed-$(cat)}" ;;
     *) payload="" ;;
   esac
   tried=""

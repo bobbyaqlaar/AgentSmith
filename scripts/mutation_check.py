@@ -818,6 +818,8 @@ CATALOGUE: tuple[Suite, ...] = (
         tests=(
             "scripts/test/test_gate_contract.py",
             "runtime/test/test_conformance.py",
+            "scripts/test/test_provider_resolution.py",
+            "scripts/test/test_tenant_adopt.py",
         ),
         mutations=(
             Mutation(
@@ -840,6 +842,31 @@ CATALOGUE: tuple[Suite, ...] = (
                 "runtime/conformance.py",
                 '    if decision in ("deny", "block") and not text.strip():',
                 "    if False:",
+            ),
+            Mutation(
+                "a provider that printed no decision is taken as having answered — a provider too old "
+                "for the event leaves the repository ungated",
+                ".githooks/process-gate",
+                '      if [ -n "$answer" ]; then',
+                "      if true; then",
+            ),
+            Mutation(
+                "a repository that declared itself ungoverned falls back to the framework anyway",
+                ".githooks/process-gate",
+                '    if [ "$provider" = "none" ]; then',
+                "    if false; then",
+            ),
+            Mutation(
+                "the declaration is ignored and the framework's own paths always win",
+                ".githooks/process-gate",
+                '    provider="${GOVERNANCE_PROVIDER:-$(declared_gate)}"',
+                '    provider=""',
+            ),
+            Mutation(
+                "adopt stops declaring who governs the repository",
+                "runtime/adopt.py",
+                "    if not (root / PROVIDERS).exists():\n        put(PROVIDERS, providers_declaration())",
+                "    pass",
             ),
             Mutation(
                 "a provider that cannot run is scored as a wrong answer",

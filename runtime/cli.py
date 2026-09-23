@@ -785,7 +785,10 @@ def _cmd_gate(args: argparse.Namespace) -> int:
         print("agentsmith gate: no process_gate.py in this repo, $AGENTSMITH_DIR or ~/.agent-framework — "
               "run install-ai-stack.sh", file=sys.stderr)
         return 3
-    done = sp.run([sys.executable, str(gate), args.event, "--ide", "neutral"],
+    # The dialect the caller asked for, or the contract's neutral profile. A
+    # provider that serves IDE hooks accepts --ide and translates; conformance
+    # pins the neutral profile (contract/gate/v1/protocol.md).
+    done = sp.run([sys.executable, str(gate), args.event, "--ide", args.ide or "neutral"],
                   input=sys.stdin.read() if not sys.stdin.isatty() else "{}",
                   capture_output=True, text=True, check=False)
     sys.stderr.write(done.stderr)
@@ -1046,6 +1049,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     gate = sub.add_parser("gate", help="answer a gate event (contract/gate/v1 — the neutral profile)")
     gate.add_argument("event", choices=("session-start", "pre-edit", "stop"))
+    gate.add_argument("--ide", default=None,
+                      help="the dialect the payload is in (default: the contract's neutral profile)")
     gate.set_defaults(func=_cmd_gate)
 
     conformance = sub.add_parser("conformance", help="does a command satisfy the gate contract?")

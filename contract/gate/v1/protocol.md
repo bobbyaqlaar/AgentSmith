@@ -18,11 +18,27 @@ major release does not reach the tenant's files.
 - **stdin** is one event, `event.schema.json`.
 - **stdout** is one decision, `decision.schema.json`, and nothing else.
 - **exit 0** a decision was made — the answer is on stdout, including `allow`.
-- **exit 3** this provider cannot run here (not installed, no interpreter, wrong repository). The
-  caller may try the next provider. It is **not** a refusal: a provider that means "no" says
-  `deny` and exits 0.
-- any other exit code is a fault: the caller treats it as "could not decide" and fails closed for
-  `pre-edit`.
+- **exit 3** this provider cannot run here (not installed, no interpreter, wrong repository). It is
+  **not** a refusal: a provider that means "no" says `deny` and exits 0.
+
+**An answer is a decision on stdout.** A caller that gets no decision treats the provider as not
+having answered, whatever the exit code, and may try the next one. That covers exit 3, a command
+that is not there (127) or not executable (126), and — the case that matters in practice — a
+provider installed but too old to know the event, which exits with a usage error. A provider is
+never wrong to print a decision and exit 0.
+
+## Resolution
+
+A repository declares its provider in `.agenticframework/providers.json`
+(`providers.schema.json`). A caller asks, in order:
+
+1. `$GOVERNANCE_PROVIDER` — an operator escape for trying a provider without editing the
+   repository. It is an operator's variable, never something fetched content sets;
+2. the `gate` command in the declaration;
+3. whatever the caller falls back to — for AgentSmith's own launcher, its own script.
+
+`"gate": "none"` declares the repository ungoverned: the hooks do nothing, and there is no
+fall-back, because "declared ungoverned" and "no provider could run" are different answers.
 
 ### The four decisions
 

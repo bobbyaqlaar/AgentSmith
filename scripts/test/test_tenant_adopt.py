@@ -271,8 +271,10 @@ def test_after_adoption_the_edit_gate_reaches_existing_code(legacy):
     assert _adoption_commit(legacy, _adopt(legacy)).returncode == 0
     payload = {"tool_name": "Edit", "tool_input": {"file_path": str(legacy / "mypkg/core.py")}, "cwd": str(legacy)}
 
-    result = subprocess.run(["bash", str(legacy / ".githooks/process-gate"), "pre-edit"], input=json.dumps(payload),
-                            capture_output=True, text=True, check=False, cwd=legacy)
+    # `--ide claude` is what the generated .claude/settings.json passes: the
+    # dialect the payload is in. The provider translates it and answers in it.
+    result = subprocess.run(["bash", str(legacy / ".githooks/process-gate"), "pre-edit", "--ide", "claude"],
+                            input=json.dumps(payload), capture_output=True, text=True, check=False, cwd=legacy)
 
     assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
 
@@ -372,3 +374,19 @@ def test_adopt_refuses_when_the_install_cannot_arm_the_gates(legacy, tmp_path, m
         _plan(legacy)
 
     assert _status(legacy) == before, "nothing written"
+
+
+def test_adopt_declares_who_governs_the_repository(legacy):
+    """The repository names its provider rather than implying AgentSmith's file
+    layout (.agent-rfc/designs/provider-resolution.md)."""
+    plan = _plan(legacy)
+    assert dict(plan.actions)[".agenticframework/providers.json"] == "create"
+
+    written = _adopt(legacy)
+
+    assert ".agenticframework/providers.json" in written
+    declared = json.loads((legacy / ".agenticframework/providers.json").read_text())
+    assert declared["contract"] == 1
+    assert declared["providers"]["gate"]["command"] == "agentsmith gate"
+    assert declared["providers"]["gate"]["version"].startswith("^")
+    assert _adoption_commit(legacy, written).returncode == 0, "it is part of the adoption commit"
