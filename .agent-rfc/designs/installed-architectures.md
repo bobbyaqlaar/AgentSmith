@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - install-ai-stack.sh
   - runtime/cli.py
