@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - contract/gate/v1/protocol.md
   - contract/gate/v1/event.schema.json
