@@ -398,6 +398,30 @@ else
   warn "and re-runs install-ai-stack.sh."
 fi
 
+# The gate's own hooks. `agentsmith tenant init` / `tenant adopt` copy these
+# into a tenant and arm core.hooksPath at them; a machine without them provisions
+# a tenant with NO hooks at all, since a hooks path overrides .git/hooks
+# (.agent-rfc/designs/installed-architectures.md). Kept beside the framework's
+# own copy, not in ~/.git_templates, which is for the four machine hooks.
+GITHOOKS_DIR="$FRAMEWORK_DIR/.githooks"
+mkdir -p "$GITHOOKS_DIR"
+if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/.githooks" ]; then
+  cp -r "$INSTALLER_DIR/.githooks/." "$GITHOOKS_DIR/"
+  chmod +x "$GITHOOKS_DIR"/* 2>/dev/null || true
+  success "Process-gate hooks copied from local repo"
+elif [ -n "$(ls -A "$GITHOOKS_DIR" 2>/dev/null)" ]; then
+  success "Process-gate hooks already present in ~/.agent-framework/.githooks/"
+else
+  info "Downloading process-gate hooks from GitHub..."
+  GITHOOKS_URL="${FRAMEWORK_REPO}/releases/latest/download/githooks.tar.gz"
+  if command_exists curl && curl -fsSL "$GITHOOKS_URL" | tar -xz -C "$GITHOOKS_DIR" 2>/dev/null; then
+    chmod +x "$GITHOOKS_DIR"/* 2>/dev/null || true
+    success "Process-gate hooks downloaded from GitHub"
+  else
+    warn "No .githooks found — agentsmith tenant init/adopt will refuse to arm the gates until they're added to ~/.agent-framework/.githooks/"
+  fi
+fi
+
 if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/workflow-templates" ]; then
   cp -r "$INSTALLER_DIR/workflow-templates/." "$WORKFLOW_TEMPLATES_DIR/"
   success "Workflow templates copied from local repo"
@@ -446,7 +470,13 @@ if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/templates/agent-rules.yaml" ]
   # has rule files and a gate that disagree.
   [ -f "$INSTALLER_DIR/templates/governance.json" ] && \
     cp "$INSTALLER_DIR/templates/governance.json" "$FRAMEWORK_DIR/templates/governance.json"
-  success "agent-rules.yaml + governance.json copied from local repo"
+  # architectures.yaml is the catalogue `agentsmith tenant init/adopt
+  # --architecture` renders. Read by name like the two above, so it ships with
+  # them: without it, --architecture fails anywhere but a checkout
+  # (scripts/test/test_installer_templates.py).
+  [ -f "$INSTALLER_DIR/templates/architectures.yaml" ] && \
+    cp "$INSTALLER_DIR/templates/architectures.yaml" "$FRAMEWORK_DIR/templates/architectures.yaml"
+  success "agent-rules.yaml + governance.json + architectures.yaml copied from local repo"
 elif [ -f "$FRAMEWORK_DIR/templates/agent-rules.yaml" ]; then
   success "agent-rules.yaml already present in ~/.agent-framework/templates/"
 else

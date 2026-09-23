@@ -459,3 +459,55 @@ def test_a_released_version_is_declared_unchanged(monkeypatch):
     monkeypatch.setattr(runtime.version, "framework_version", lambda: "1.3.0")
     declared = yaml.safe_load(cli.tenant_yaml("acme"))["framework"]["version"]
     assert declared == "1.3.0"
+
+
+# ── A machine install missing a template (.agent-rfc/designs/installed-architectures.md) ──
+
+
+@pytest.mark.parametrize("command", ["init", "adopt"])
+def test_a_missing_template_is_a_message_not_a_traceback(command, monkeypatch, tmp_path, capsys):
+    """`--architecture` reads templates/architectures.yaml, which an install
+    that predates it does not have. The error names the file and the fix; it
+    reached the user as a traceback until 2026-09-23."""
+    missing = FileNotFoundError("templates/architectures.yaml not found in $AGENTSMITH_DIR, "
+                                "~/.agent-framework or this checkout — re-run install-ai-stack.sh")
+    if command == "init":
+        monkeypatch.setattr(cli, "init_tenant", lambda *a, **k: (_ for _ in ()).throw(missing))
+        args = argparse.Namespace(tenant_id="acme", root=str(tmp_path), stack="python-fastapi",
+                                  isolation="shared", force=False, allow_framework_root=False,
+                                  architecture="hexagonal", agentic=False)
+        code = cli._cmd_tenant_init(args)
+    else:
+        import runtime.adopt as adopt
+
+        monkeypatch.setattr(adopt, "plan_adoption", lambda *a, **k: (_ for _ in ()).throw(missing))
+        args = argparse.Namespace(tenant_id="acme", root=str(tmp_path), stack=None, architecture="hexagonal",
+                                  agentic=False, gate=None, framework_ref=None, yes=True)
+        code = cli._cmd_tenant_adopt(args)
+
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "architectures.yaml" in err and "install-ai-stack.sh" in err
+    assert "Traceback" not in err
+
+
+def test_an_empty_framework_never_arms_an_empty_hooks_directory(tmp_path):
+    """Found adopting a real tenant from an installed machine: the install
+    carried no .githooks/, so `install_gate_hooks` copied nothing, armed
+    core.hooksPath anyway, and the tenant had neither the gates nor the
+    machine's hooks. Arming is what makes the gates real — it must not happen
+    over an empty directory (.agent-rfc/designs/installed-architectures.md)."""
+    import subprocess as sp
+
+    framework = tmp_path / "framework"      # no .githooks/ in it
+    framework.mkdir()
+    root = tmp_path / "repo"
+    root.mkdir()
+    sp.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)
+
+    with pytest.raises(FileNotFoundError, match=r"\.githooks"):
+        cli.install_gate_hooks(root, framework)
+
+    armed = sp.run(["git", "-C", str(root), "config", "--get", "core.hooksPath"],
+                   capture_output=True, text=True, check=False)
+    assert armed.stdout.strip() == "", "core.hooksPath was armed with no hooks to run"

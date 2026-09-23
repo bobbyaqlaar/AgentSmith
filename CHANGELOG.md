@@ -77,6 +77,30 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — an installed machine can actually arm a tenant's gates
+
+Found by adopting a real scratch tenant with the installed `agentsmith`, the first run of either
+tenant command outside a checkout. All three were invisible to the tests, which set
+`$AGENTSMITH_DIR` to a checkout.
+
+- **The gate's hooks were never installed.** `install-ai-stack.sh` writes the four machine hooks
+  to `~/.git_templates/hooks` and never copied `.githooks/` anywhere, and the release carried no
+  archive of it either. `tenant init` and `tenant adopt` therefore copied no hooks into a tenant,
+  armed `core.hooksPath` at the empty directory regardless, and said nothing — leaving that
+  repository with neither the gates nor the machine's hooks, since a hooks path overrides
+  `.git/hooks`. True for every installed machine since the gates were armed. The installer now
+  copies `.githooks/` (and fetches `githooks.tar.gz`, which the release now builds), and
+  **nothing arms a hooks directory it could not fill**: both commands refuse, name the missing
+  hooks and the fix, and `tenant adopt` checks before it writes anything.
+- **`--architecture` failed on an installed machine**, for `tenant init` as much as for
+  `tenant adopt`: `templates/architectures.yaml` was not among the templates the installer copies
+  by name. It is now, and a missing template reaches the user as one line naming the file and the
+  fix rather than a traceback.
+- **`tenant adopt` gated vendored framework code.** In a tenant carrying AgentSmith's own
+  `scripts/` and `runtime/`, gating them would have made the next re-vendoring need a design and
+  a review of framework code. Detection skips a directory holding the framework's marker files,
+  and the plan says which it left out and why.
+
 ### Changed — the slow mutation suite runs when what it protects changes
 
 - **`scripts/mutation_check.py --changed-since REF`** skips a suite that declares `watch` when

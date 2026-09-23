@@ -756,10 +756,57 @@ CATALOGUE: tuple[Suite, ...] = (
                 "            earlier = {}",
             ),
             Mutation(
+                "adopt gates the vendored framework code it finds",
+                "runtime/adopt.py",
+                "and head not in vendored:",
+                "and head not in ():",
+            ),
+            Mutation(
+                "adopt writes over a repository even when the gates cannot be armed",
+                "runtime/adopt.py",
+                "    missing = missing_gate_hooks(framework)\n    if missing:",
+                "    missing = []\n    if missing:",
+            ),
+            Mutation(
                 "the gate's note stops naming the command that wrote the files",
                 "scripts/process_gate.py",
                 'as `{_manifest_author(read)}` wrote them")',
                 'as `agentsmith tenant init` wrote them")',
+            ),
+        ),
+    ),
+    # .agent-rfc/designs/installed-architectures.md — what an installed machine
+    # (not a checkout) must carry for `tenant init` / `tenant adopt` to work.
+    Suite(
+        name="installed_machine",
+        tests=(
+            "scripts/test/test_installer_templates.py",
+            "runtime/test/test_cli.py",
+        ),
+        mutations=(
+            Mutation(
+                "the installer stops shipping the gate's hooks — every tenant is armed at an empty directory",
+                "install-ai-stack.sh",
+                'cp -r "$INSTALLER_DIR/.githooks/." "$GITHOOKS_DIR/"',
+                'true "$INSTALLER_DIR"',
+            ),
+            Mutation(
+                "the installer stops shipping the architecture catalogue",
+                "install-ai-stack.sh",
+                'cp "$INSTALLER_DIR/templates/architectures.yaml" "$FRAMEWORK_DIR/templates/architectures.yaml"',
+                "true",
+            ),
+            Mutation(
+                "an install with no gate hooks arms core.hooksPath anyway",
+                "runtime/cli.py",
+                "    missing_gate_hooks(framework, raising=True)",
+                "    missing_gate_hooks(framework)",
+            ),
+            Mutation(
+                "the release stops shipping the gate's hooks",
+                ".github/workflows/release.yml",
+                "tar -czf dist/githooks.tar.gz -C .githooks .",
+                "true",
             ),
         ),
     ),

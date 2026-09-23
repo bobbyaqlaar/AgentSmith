@@ -495,6 +495,20 @@ def _framework_dir() -> Optional[Path]:
 GATE_HOOKS = ("process-gate", "commit-msg", "pre-commit", "pre-push", "chain")
 
 
+def missing_gate_hooks(framework: Path, raising: bool = False) -> list[str]:
+    """The gate hooks this framework cannot supply. `raising` turns a non-empty
+    answer into the error the caller should not write past
+    (.agent-rfc/designs/installed-architectures.md)."""
+    missing = [hook for hook in GATE_HOOKS if not (framework / ".githooks" / hook).is_file()]
+    if missing and raising:
+        raise FileNotFoundError(
+            f"{framework}/.githooks/ has no {', '.join(missing)} — the gates cannot be armed from this "
+            "install. Re-run install-ai-stack.sh from a current AgentSmith checkout, or point "
+            "$AGENTSMITH_DIR at one."
+        )
+    return missing
+
+
 def install_gate_hooks(root: Path, framework: Path, prior: Optional[Path] = None, force: bool = False,
                        provisioning: bool = True) -> list[str]:
     """The gate's hooks, copied in and armed; `prior`'s hooks chained behind
@@ -502,6 +516,7 @@ def install_gate_hooks(root: Path, framework: Path, prior: Optional[Path] = None
     machine's post-checkout and post-commit). Returns the paths written."""
     import subprocess as sp
 
+    missing_gate_hooks(framework, raising=True)
     written = []
     for hook in GATE_HOOKS:
         source = framework / ".githooks" / hook
@@ -511,7 +526,10 @@ def install_gate_hooks(root: Path, framework: Path, prior: Optional[Path] = None
             (root / ".githooks" / hook).chmod(0o755)
             written.append(f".githooks/{hook}")
     # Armed, not merely present: a hook family nobody points git at is the
-    # `implemented-not-invoked` failure this whole programme is about.
+    # `implemented-not-invoked` failure this whole programme is about. Armed only
+    # once the hooks are there: a hooks path overrides .git/hooks, so arming an
+    # empty directory leaves a repository with no hooks at all — which is what a
+    # machine install without .githooks/ used to do, silently.
     sp.run(["git", "-C", str(root), "config", "core.hooksPath", ".githooks"], check=False)
     if prior is not None:
         from runtime.adopt import chain_hooks
@@ -653,7 +671,9 @@ def _cmd_tenant_init(args: argparse.Namespace) -> int:
     except FrameworkRootError as exc:
         print(f"agentsmith: refusing to scaffold here.\n{exc}", file=sys.stderr)
         return 3
-    except ValueError as exc:
+    except (ValueError, FileNotFoundError) as exc:
+        # FileNotFoundError: a machine install missing a template the catalogue
+        # needs. It names the file and the fix; a traceback would not.
         print(f"agentsmith: {exc}", file=sys.stderr)
         return 2
     for path in written:
@@ -710,7 +730,9 @@ def _cmd_tenant_adopt(args: argparse.Namespace) -> int:
     try:
         plan = plan_adoption(args.tenant_id, root, stack=args.stack, architecture=args.architecture,
                              agentic=args.agentic, gate=args.gate, framework_ref=args.framework_ref)
-    except ValueError as exc:  # AdoptError, an unknown style, a bad tenant id
+    except (ValueError, FileNotFoundError) as exc:
+        # AdoptError, an unknown style, a bad tenant id, or a machine install
+        # missing a template — each says what to do; none is a traceback.
         print(f"agentsmith: {exc}", file=sys.stderr)
         return 2
     print(describe(plan))

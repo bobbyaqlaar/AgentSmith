@@ -330,6 +330,12 @@ the generated rule files, a committed knowledge graph and the artifact stubs.
 It refuses to write into the framework's own checkout, and it never replaces a
 file the tenant already owns without `--force`.
 
+**The gates are armed only when the hooks are there.** Both commands copy `.githooks/*` out of
+the framework — a checkout, `$AGENTSMITH_DIR`, or `~/.agent-framework`, which
+`install-ai-stack.sh` fills. An install too old to carry them makes both refuse, naming the
+missing hooks and the fix: a `core.hooksPath` pointing at an empty directory would leave the
+repository with no hooks at all, the machine's included.
+
 **The hooks a repository already ran keep running.** `core.hooksPath` names one
 directory, so arming `.githooks` used to switch off whatever ran before. `tenant
 init` and `tenant adopt` record that directory in `agentsmith.chainHooksPath`
@@ -367,7 +373,10 @@ to reopen that door is itself a change to a gated file.
 **An existing repository — `agentsmith tenant adopt`.** It detects before it
 writes and prints the plan: the stack, the paths to gate (the top-level
 directories and root files git tracks for that stack, or `--gate`), the prior
-hooks, and per file whether it is created, merged or left alone. Nothing is
+hooks, and per file whether it is created, merged or left alone. Vendored
+AgentSmith code (`scripts/`, `runtime/` as `hooks/post-checkout` wrote them) is
+not gated, and the plan says so: it is the framework's, and gating it would make
+the next re-vendoring need a design and a review of framework code. Nothing is
 written without a yes (`--yes` off a terminal). It merges rather than skips: the
 gates into an existing `.claude/settings.json`, the generated rules into an
 existing `CLAUDE.md` or `AGENTS.md` between `agentsmith:rules` markers, and an

@@ -58,6 +58,12 @@ jobs:
           mkdir -p dist
           tar --exclude='__pycache__' -czf dist/scripts.tar.gz -C scripts .
           tar -czf dist/hooks.tar.gz -C hooks .
+          # The gate's hooks, which `agentsmith tenant init`/`adopt` copy into a
+          # tenant and arm core.hooksPath at. hooks.tar.gz above is the four
+          # MACHINE hooks (~/.git_templates) — a different set, and shipping only
+          # those left every install-from-release unable to arm any tenant
+          # (.agent-rfc/designs/installed-architectures.md).
+          tar -czf dist/githooks.tar.gz -C .githooks .
           tar -czf dist/workflow-templates.tar.gz -C workflow-templates .
           # The WHOLE templates/ tree, not just agent-rules.yaml.
           # install-ai-stack.sh fetches this same tarball twice — once for

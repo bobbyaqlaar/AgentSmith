@@ -153,6 +153,7 @@ def test_artifacts_extract_flat() -> None:
     specs = {
         "scripts.tar.gz": REPO / "scripts",
         "hooks.tar.gz": REPO / "hooks",
+        "githooks.tar.gz": REPO / ".githooks",
         "workflow-templates.tar.gz": REPO / "workflow-templates",
         "templates.tar.gz": REPO / "templates",
         "github-actions.tar.gz": REPO / ".github" / "actions",

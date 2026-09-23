@@ -334,3 +334,41 @@ def test_the_machines_provisioning_hooks_are_not_chained_into_an_adopted_reposit
     _git(legacy, "checkout", "-q", "--", "mypkg/core.py")
     assert not (legacy / "scripts").exists() and not (legacy / "runtime").exists()
     assert _status(legacy) == "", "nothing ran after the commit to leave the tree dirty"
+
+
+def test_vendored_framework_code_is_not_gated(legacy):
+    """A tenant provisioned the old way carries AgentSmith's own scripts/ and
+    runtime/, copied in by hooks/post-checkout. Gating them would make the next
+    re-vendoring need a design and a review of framework code
+    (.agent-rfc/designs/installed-architectures.md). Found adopting a real
+    scratch tenant, which the synthetic fixtures had no vendored code to show."""
+    _write(legacy, "scripts/run-security-checks.py", "# vendored AgentSmith harness\n")
+    _write(legacy, "scripts/agent_logger.py", "# vendored\n")
+    _write(legacy, "runtime/llm_gateway.py", "# vendored AgentSmith runtime\n")
+    _git(legacy, "add", "-A")
+    _git(legacy, "commit", "-q", "-m", "chore: vendored")
+
+    plan = _plan(legacy)
+
+    assert "scripts/**" not in plan.gated and "runtime/**" not in plan.gated
+    assert "mypkg/**" in plan.gated, "the repository's own code is still gated"
+    assert any("vendored" in w and "scripts/" in w for w in plan.warnings), plan.warnings
+
+
+def test_adopt_refuses_when_the_install_cannot_arm_the_gates(legacy, tmp_path, monkeypatch):
+    """An install with no .githooks/ would leave the repository armed at an
+    empty directory — no gates, and not its own hooks either, since a hooks path
+    overrides .git/hooks. Refused in the plan, before anything is written
+    (.agent-rfc/designs/installed-architectures.md)."""
+    from runtime.adopt import AdoptError
+
+    install = tmp_path / "install"
+    (install / "scripts").mkdir(parents=True)
+    (install / "scripts" / "process_gate.py").write_text("# the gate, without the hooks that run it\n")
+    monkeypatch.setenv("AGENTSMITH_DIR", str(install))
+    before = _status(legacy)
+
+    with pytest.raises(AdoptError, match="cannot be armed"):
+        _plan(legacy)
+
+    assert _status(legacy) == before, "nothing written"
