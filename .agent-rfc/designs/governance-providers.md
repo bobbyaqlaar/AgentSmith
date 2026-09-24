@@ -1,14 +1,17 @@
 ---
-status: active
+status: done
 scope:
   - .agent-rfc/designs/governance-providers.md
 ---
 # A tenant hooks onto a governance provider, not onto AgentSmith
 
-**Nothing is built from this design until the owner says go.** It is the architecture asked for on
-2026-09-23: tenants should be able to hook onto AgentSmith *or any other platform* that provides
-the pillars — observability, security, design and review governance — with the least friction,
-including across AgentSmith's own major releases.
+The architecture asked for on 2026-09-23: tenants should be able to hook onto AgentSmith *or any
+other platform* that provides the pillars — observability, security, design and review governance —
+with the least friction, including across AgentSmith's own major releases.
+
+**Shipped 2026-09-24 in five slices**, closed by `.agent-rfc/reviews/governance-providers.md`, which
+records what the arc delivered, the three claims here that the code corrected, and the boundaries it
+did not cross. Prose below is the architecture as built.
 
 ## Problem
 
@@ -53,15 +56,20 @@ port. They stay an optional versioned package, chosen independently of the gover
 
 One declaration, and nothing else that names a vendor:
 
-```yaml
-# .agenticframework/providers.yaml
-contract: 1
-providers:
-  gate:      { command: "agentsmith gate", version: "^2" }
-  rules:     { command: "agentsmith rules" }
-  records:   { url: "${GOVERNANCE_PORTAL_URL}", schema: "dev-record@1" }
-  telemetry: { otlp: "${OTEL_EXPORTER_OTLP_ENDPOINT}" }
-  security:  { command: "agentsmith security" }
+```json
+// .agenticframework/providers.json — JSON, not YAML: the launcher is bash and
+// must resolve a provider before any interpreter is known to exist, so it
+// sed-parses this file. Shipped shape: only `gate` is read today.
+{
+  "contract": 1,
+  "providers": {
+    "gate":      { "command": "agentsmith gate", "version": "^2" },
+    "rules":     { "command": "agentsmith rules" },
+    "records":   { "url": "${GOVERNANCE_PORTAL_URL}", "schema": "dev-record@1" },
+    "telemetry": { "otlp": "${OTEL_EXPORTER_OTLP_ENDPOINT}" },
+    "security":  { "command": "agentsmith security" }
+  }
+}
 ```
 
 Any port may be `none`: a repository may want the gates and not the telemetry. The git hooks become
@@ -69,10 +77,13 @@ one generic stub that runs the resolved gate command; the CI workflow runs the s
 names AgentSmith, so neither drifts when AgentSmith changes.
 
 **Resolution order** for a command provider, first that answers: `$GOVERNANCE_PROVIDER` (an escape
-for CI and for trying a provider out), the command on `PATH`, the machine install, a checkout named
-by `$AGENTSMITH_DIR`. A provider that cannot be resolved **fails closed for the gate** exactly as
-the launcher does today — an edit denied, a commit and push blocked — and open for telemetry, which
-must never block a commit.
+for CI and for trying a provider out), then the `gate` command this repository declares, then
+AgentSmith's own paths — a vendored `scripts/`, `$AGENTSMITH_DIR`, `~/.agent-framework`. A declared
+command is itself resolved through `PATH`, which is why that is not a separate step. An answer is a
+**decision on stdout**: a provider that prints none has not answered, whatever it exits with, so one
+too old to know the subcommand falls through rather than being read as having allowed. The gate
+**fails closed** — an edit denied, a commit and push blocked — and telemetry fails open, which must
+never block a commit.
 
 ### Why this answers the major-release question
 
@@ -81,10 +92,22 @@ Two version lines, deliberately independent:
 - **the contract** — a small integer, changes rarely, and is what the tenant pins;
 - **the provider** — semver, changes often, pinned as a range (`^2`).
 
-AgentSmith 2.x and 3.x both speak contract 1. **A major AgentSmith release then touches no tenant
-file at all**, and friction appears only when the *contract* changes — the one case that deserves a
-deliberate migration. That is a stronger guarantee than any sync command, because there is nothing
-left to sync.
+AgentSmith 2.x and 3.x both speak contract 1. The end state is that **a major AgentSmith release
+touches no tenant file at all**, with friction only when the *contract* changes — the one case that
+deserves a deliberate migration.
+
+**What shipped reaches that goal by the other route, and it is worth stating exactly.** A tenant
+today still holds the gate hooks, two workflows, the rule files' managed block and the IDE hook
+configs, because only the gate port is resolved. What changed is that every one of those is
+framework-owned, hash-verified and refreshed **without a person**: `agentsmith sync` writes them,
+`Review: n/a: framework sync <version>` gets the commit past the tenant's own gates by hash, and
+`agentsmith-sync.yml` opens the pull request weekly. A major release costs a tenant **one merged
+pull request**, against the six manual steps and two design/review cycles it cost before. "Nothing
+left to sync" needs the remaining four ports; one merged PR does not.
+
+The declared range (`version: "^2"`) is recorded for a person and for tooling. The launcher does not
+enforce it — `contract/gate/v1/providers.schema.json` says so in the field itself — so today the two
+version lines are a convention the contract integer carries, not a check.
 
 ### What makes "or another platform" real rather than claimed
 
