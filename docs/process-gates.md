@@ -159,6 +159,11 @@ that manifest, or no longer matches it, and gets the normal rule with its name. 
 scaffold's: the manifest is not signed, so rewriting a file *and* its hash defeats it, deliberately
 and in plain sight.
 
+**A tenant does not have to remember.** `agentsmith-sync.yml`, written at adoption, runs weekly:
+it syncs to AgentSmith's latest release and opens a pull request, on one branch, so an ignored
+proposal is updated rather than duplicated. It proposes only — merging is a person's decision, and
+the tenant's own gates run over the pull request.
+
 An adopted repository is never vendored into, by `sync` or by `agentsmith upgrade`: both read the
 manifest's `generated_by`.
 

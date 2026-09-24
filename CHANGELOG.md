@@ -77,6 +77,19 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — a tenant is told when it is behind, as a pull request
+
+- **`agentsmith-sync.yml`**, written at adoption and kept current like everything else the
+  framework owns, runs weekly and on demand: it brings the repository up to AgentSmith's **latest
+  release** and opens a pull request. It never pushes to the default branch — a person merges, and
+  the repository's own gates judge the result like any other change.
+- **One branch**, so a second run updates the open proposal rather than adding another: a tenant
+  that ignores it for a month has one pull request to decide about, not four.
+- **"Nothing to sync" ends the run**, and says so; it is not a failure.
+- It needs the `AGENTSMITH_READ_TOKEN` secret the gates workflow already uses, and the repository
+  setting that lets Actions open pull requests. Both are named in the workflow's own error messages
+  rather than left as a permissions traceback.
+
 ### Changed — a sync refreshes the files a tenant shares with the framework
 
 - **The IDE hook configs, the rule files' managed block and the gates workflow** are refreshed too,

@@ -881,7 +881,11 @@ CATALOGUE: tuple[Suite, ...] = (
     # and the tenant's own gates accept the commit it prints.
     Suite(
         name="framework_sync",
-        tests=("scripts/test/test_framework_sync.py",),
+        tests=(
+            "scripts/test/test_framework_sync.py",
+            "scripts/test/test_sync_workflow.py",
+            "scripts/test/test_tenant_adopt.py",
+        ),
         mutations=(
             Mutation(
                 "any commit may claim to be a framework sync",
@@ -922,6 +926,18 @@ CATALOGUE: tuple[Suite, ...] = (
                 "runtime/sync.py",
                 "        if rel in _MERGED and here.is_file():",
                 "        if False:",
+            ),
+            Mutation(
+                "adopt stops writing the sync workflow — a tenant never hears it is behind",
+                "runtime/adopt.py",
+                "    for workflow in (GATES_WORKFLOW, SYNC_WORKFLOW):\n        if (root / workflow).exists():",
+                "    for workflow in (GATES_WORKFLOW,):\n        if (root / workflow).exists():",
+            ),
+            Mutation(
+                "the sync workflow is not kept current, so it proposes from a stale copy of itself",
+                "runtime/sync.py",
+                "    for workflow in (GATES_WORKFLOW, SYNC_WORKFLOW):\n        template = _workflow_template(",
+                "    for workflow in (GATES_WORKFLOW,):\n        template = _workflow_template(",
             ),
             Mutation(
                 "upgrade vendors into an adopted repository again",

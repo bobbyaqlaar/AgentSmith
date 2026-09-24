@@ -169,7 +169,7 @@ def _shared_files(plan: Plan) -> dict[str, str]:
     import json as _json
     import sys as _sys
 
-    from runtime.adopt import GATES_WORKFLOW, generated_rules
+    from runtime.adopt import GATES_WORKFLOW, SYNC_WORKFLOW, generated_rules
 
     root, framework = plan.root, plan.framework
     shared: dict[str, str] = dict(generated_rules(root, framework, plan.stack))
@@ -186,18 +186,20 @@ def _shared_files(plan: Plan) -> dict[str, str]:
     except Exception as exc:  # a framework too old to render them says so, and the rest still syncs
         plan.notes.append(f"IDE hook configs not refreshed ({exc})")
 
-    template = _gates_template(framework)
-    if template is not None and (root / GATES_WORKFLOW).is_file():
-        shared[GATES_WORKFLOW] = template.read_text(encoding="utf-8").replace(
-            "{{FRAMEWORK_REF}}", f"v{plan.version}")
+    for workflow in (GATES_WORKFLOW, SYNC_WORKFLOW):
+        template = _workflow_template(framework, Path(workflow).name)
+        if template is not None and (root / workflow).is_file():
+            # The gates workflow carries the release it runs, so a tenant that
+            # upgrades starts running the new provider in CI; the sync workflow
+            # follows the latest release and has nothing to substitute.
+            shared[workflow] = template.read_text(encoding="utf-8").replace(
+                "{{FRAMEWORK_REF}}", f"v{plan.version}")
     return shared
 
 
-def _gates_template(framework: Path) -> Optional[Path]:
-    from runtime.adopt import GATES_WORKFLOW
+def _workflow_template(framework: Path, name: str) -> Optional[Path]:
     from runtime.cli import _templates_dir
 
-    name = Path(GATES_WORKFLOW).name
     for directory in (_templates_dir(), framework / "workflow-templates"):
         if directory is not None and (directory / name).is_file():
             return directory / name

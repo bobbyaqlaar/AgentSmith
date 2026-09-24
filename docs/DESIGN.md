@@ -1317,6 +1317,7 @@ AgentSmith/
 │   ├── architectures.py         # The structural styles `tenant init`/`adopt` record (templates/architectures.yaml)
 │   ├── adopt.py                 # `agentsmith tenant adopt` — an existing repository under the gates
 │   ├── conformance.py           # Does a command satisfy the gate contract? (contract/gate/v1/protocol.md)
+│   ├── sync.py                  # `agentsmith sync` — a tenant's copies of the framework, brought current
 │   ├── machine/                 # the commands' logic + ~/.agent-framework/state (mode, policy, upgrade)
 │   ├── metrics.py               # OTel counters/histograms — rates spans cannot answer
 │   ├── otlp.py                  # one endpoint resolver for both signals, four callers

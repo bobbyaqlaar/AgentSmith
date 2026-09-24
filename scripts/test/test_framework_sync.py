@@ -307,3 +307,17 @@ def test_everything_a_sync_refreshed_goes_in_one_commit_the_gates_accept(tenant)
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "framework sync" in result.stdout + result.stderr
+
+
+def test_the_sync_workflow_is_refreshed_like_everything_else_the_framework_owns(tenant):
+    """It keeps itself current by the rule it exists to run."""
+    from runtime.adopt import SYNC_WORKFLOW
+
+    stale = tenant / SYNC_WORKFLOW
+    stale.write_text(stale.read_text().replace("agentsmith/sync", "agentsmith/old-branch"))
+    _as_an_older_framework_left_it(tenant, SYNC_WORKFLOW)
+
+    written = _sync(tenant)
+
+    assert SYNC_WORKFLOW in written
+    assert "agentsmith/old-branch" not in stale.read_text()

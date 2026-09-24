@@ -3500,7 +3500,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-24T02:26:09Z",
+      "last_modified": "2026-09-24T04:33:46Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4117,7 +4117,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-24T02:12:19Z",
+      "last_modified": "2026-09-24T04:11:04Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4617,7 +4617,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-24T02:21:05Z",
+      "last_modified": "2026-09-24T04:15:31Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5062,7 +5062,7 @@
         "upgrade",
         "git"
       ],
-      "last_modified": "2026-09-24T02:25:26Z",
+      "last_modified": "2026-09-24T04:31:45Z",
       "id": "runtime/machine/upgrade.py"
     },
     {
@@ -6631,7 +6631,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-24T02:05:14Z",
+      "last_modified": "2026-09-24T04:27:48Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6663,9 +6663,10 @@
         "test_the_machines_provisioning_hooks_are_not_chained_into_an_adopted_repository",
         "test_vendored_framework_code_is_not_gated",
         "test_adopt_refuses_when_the_install_cannot_arm_the_gates",
-        "test_adopt_declares_who_governs_the_repository"
+        "test_adopt_declares_who_governs_the_repository",
+        "test_adopt_writes_the_sync_workflow_so_a_tenant_hears_about_upgrades"
       ],
-      "last_modified": "2026-09-23T09:42:08Z",
+      "last_modified": "2026-09-24T04:07:24Z",
       "id": "scripts/test/test_tenant_adopt.py"
     },
     {
@@ -6917,13 +6918,13 @@
         "_generated_whole",
         "_with_block",
         "_shared_files",
-        "_gates_template",
+        "_workflow_template",
         "describe",
         "sync",
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-09-24T02:24:42Z",
+      "last_modified": "2026-09-24T04:29:47Z",
       "id": "runtime/sync.py"
     },
     {
@@ -6950,9 +6951,10 @@
         "test_a_tenants_own_settings_do_not_freeze_their_gate_wiring",
         "test_a_file_the_tenant_edited_is_left_alone_and_named",
         "test_the_gates_workflow_follows_the_framework_it_runs",
-        "test_everything_a_sync_refreshed_goes_in_one_commit_the_gates_accept"
+        "test_everything_a_sync_refreshed_goes_in_one_commit_the_gates_accept",
+        "test_the_sync_workflow_is_refreshed_like_everything_else_the_framework_owns"
       ],
-      "last_modified": "2026-09-24T02:18:55Z",
+      "last_modified": "2026-09-24T04:07:24Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -6986,6 +6988,41 @@
       "pillar": null,
       "created_at": "2026-09-24T02:34:54Z",
       "id": "rfc:reviews/sync-merged-files.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "workflow",
+        "steps",
+        "_script",
+        "test_it_runs_weekly_and_on_demand",
+        "test_it_proposes_and_never_pushes_to_the_default_branch",
+        "test_the_commit_carries_the_trailers_the_gate_accepts",
+        "test_nothing_to_sync_ends_the_run_rather_than_failing",
+        "test_it_follows_the_latest_release_rather_than_a_pin",
+        "test_one_branch_so_a_second_run_updates_the_open_proposal",
+        "test_it_names_what_it_needs_and_asks_for_no_more",
+        "test_the_template_is_what_a_tenant_gets"
+      ],
+      "last_modified": "2026-09-24T04:08:04Z",
+      "id": "scripts/test/test_sync_workflow.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A tenant is told when it is behind, as a pull request",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/sync-pull-request.md",
+      "pillar": null,
+      "created_at": "2026-09-24T04:48:35Z",
+      "id": "rfc:designs/sync-pull-request.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 a tenant is told when it is behind, as a pull request",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/sync-pull-request.md",
+      "pillar": null,
+      "created_at": "2026-09-24T04:48:35Z",
+      "id": "rfc:reviews/sync-pull-request.md"
     }
   ],
   "edges": [

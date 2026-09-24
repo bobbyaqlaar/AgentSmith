@@ -390,3 +390,18 @@ def test_adopt_declares_who_governs_the_repository(legacy):
     assert declared["providers"]["gate"]["command"] == "agentsmith gate"
     assert declared["providers"]["gate"]["version"].startswith("^")
     assert _adoption_commit(legacy, written).returncode == 0, "it is part of the adoption commit"
+
+
+def test_adopt_writes_the_sync_workflow_so_a_tenant_hears_about_upgrades(legacy):
+    """A tenant only learns it is behind when someone thinks to check; the
+    scheduled workflow is what removes that (.agent-rfc/designs/sync-pull-request.md)."""
+    from runtime.adopt import SYNC_WORKFLOW
+
+    plan = _plan(legacy)
+    assert dict(plan.actions)[SYNC_WORKFLOW] == "create"
+
+    written = _adopt(legacy)
+
+    assert SYNC_WORKFLOW in written
+    assert "gh pr create" in (legacy / SYNC_WORKFLOW).read_text()
+    assert _adoption_commit(legacy, written).returncode == 0

@@ -38,6 +38,10 @@ PROVIDERS = ".agenticframework/providers.json"
 # own major as the range it expects (contract/gate/v1/protocol.md).
 GATE_CONTRACT = 1
 GATES_WORKFLOW = ".github/workflows/agentsmith-gates.yml"
+# Weekly, it brings the repository up to the framework's latest release and
+# opens a pull request (.agent-rfc/designs/sync-pull-request.md). Written here
+# so a tenant hears about an upgrade without anyone remembering to look.
+SYNC_WORKFLOW = ".github/workflows/agentsmith-sync.yml"
 
 # Client-side hooks git runs that a stub may stand in for. A known list, so a
 # helper file beside the hooks (husky.sh, a README) is never mistaken for one.
@@ -304,6 +308,7 @@ def plan_adoption(tenant_id: str, root: Path, *, stack: Optional[str] = None, ar
     existing = sorted(p.name for p in workflows.glob("*.y*ml")) if workflows.is_dir() else []
     actions += [(f".github/workflows/{name}", "leave") for name in existing if name != Path(GATES_WORKFLOW).name]
     actions.append((GATES_WORKFLOW, fate(GATES_WORKFLOW, "leave")))
+    actions.append((SYNC_WORKFLOW, fate(SYNC_WORKFLOW, "leave")))
     actions += [(".agent-rfc/fixtures/knowledge_graph.json", fate(".agent-rfc/fixtures/knowledge_graph.json",
                                                                    "merge")),
                 (ADOPTION_DESIGN, "create"), (".agenticframework/scaffold.json", "create")]
@@ -495,14 +500,16 @@ def adopt(plan: Plan) -> list[str]:
     elif "## Architecture (target)" not in design.read_text(encoding="utf-8"):
         put("docs/DESIGN.md", design.read_text(encoding="utf-8").rstrip("\n") + "\n\n" + section)
 
-    if not (root / GATES_WORKFLOW).exists():
-        name = Path(GATES_WORKFLOW).name
+    for workflow in (GATES_WORKFLOW, SYNC_WORKFLOW):
+        if (root / workflow).exists():
+            continue
+        name = Path(workflow).name
         template = next((d / name for d in (_templates_dir(), framework / "workflow-templates")
                          if d is not None and (d / name).is_file()), None)
         if template is None:
             print(f"  ! {name} template not found — re-run install-ai-stack.sh", file=sys.stderr)
-        else:
-            put(GATES_WORKFLOW, template.read_text(encoding="utf-8").replace("{{FRAMEWORK_REF}}", plan.framework_ref))
+            continue
+        put(workflow, template.read_text(encoding="utf-8").replace("{{FRAMEWORK_REF}}", plan.framework_ref))
 
     graph = ".agent-rfc/fixtures/knowledge_graph.json"
     mapper = framework / "scripts" / "map_codebase.py"
