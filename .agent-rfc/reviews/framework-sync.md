@@ -61,10 +61,43 @@ Considered and declined:
   visibly, exactly as for the generated scaffold;
 - a tenant still runs `sync` itself: nothing opens a pull request for it.
 
+## Pass 4 — findings: 1
+
+CI run 35962361559 refused the change, and it was right to. `mutation_check.py` reported
+`tenant_adopt: STALE TARGET (2 matches, expected 1)` for "the gate's note stops naming the command
+that wrote the files": this slice added the `framework sync` escape by **copying** the scaffold
+escape's note, so the mutation had two places to land and could no longer prove anything.
+
+- `one-catalog` — **finding:** the two escapes shared a hash check (`manifest_problems`) but each
+  carried its own copy of the sentence that reports it, which is how Pass 3 could sign Group 1 as
+  "one hash check behind both escapes" while the words a tenant reads were duplicated. Fixed:
+  `vouched_note(label, gated, read)` in `scripts/process_gate.py` is the one place that sentence is
+  written, and both escapes call it. The mutation target resolves to one line again, so the
+  property is defended rather than merely declared.
+
+Worth recording about *how* this was caught: the suite watches `runtime/adopt.py` and
+`scripts/process_gate.py`, so it was skipped on the intervening docs-only push (run 35923740233,
+named out loud, 79 mutations) and ran on the push that touched them. The narrowing deferred the
+signal by one push; it did not lose it.
+
+## Pass 5 — findings: 0
+
+The extracted helper and its two call sites. Considered and declined:
+
+- Re-pointing the mutation at one of the two copies, which is what the tool's message offers. It
+  would make the run green and leave a second copy of the message no mutation touches.
+- Giving the two escapes different wording so each target is unique. They report the same fact —
+  every gated file matches the manifest — and saying it two ways would be a signal-integrity bug
+  dressed up as a fix.
+
+**Stated limits:** unchanged from Pass 3; this pass changed the gate's wording path only, and
+`scripts/test/test_scaffold_review.py` still pins the message both escapes now share.
+
 ## Sign-off (validation-checklist Step 4)
 
 ```
-Group 1 · DRY & shared code           [x] checked — one hash check behind both escapes; hooks from
+Group 1 · DRY & shared code           [x] checked — one hash check AND one sentence behind both
+                                          escapes (`vouched_note`, Pass 4); hooks from
                                           install_gate_hooks; vendoring from upgrade
 Group 2 · Quality / safety            [x] checked
 Group 3 · Architecture / hygiene      [x] checked
@@ -75,9 +108,10 @@ Group 7 · Auth & session integrity    [x] n/a — no cookie, bearer or session
 
 Tests added/updated:      scripts/test/test_framework_sync.py (9), scripts/test/test_scaffold_review.py
                           (2 re-pinned to the shared message)
-Mutation-checked:          yes — framework_sync, 5 mutations, all caught after three test fixes
+Mutation-checked:          yes — framework_sync (10) and tenant_adopt (20), all caught; the
+                          tenant_adopt target is unique again
 Fixtures re-pinned:        .agent-rfc/fixtures/knowledge_graph.json
-KG query:                 kg:15989e6292fb
+KG query:                 kg:3e2fc8d5056a
 Gates run locally:         ruff, mypy in a clean environment, the repo-tree check, the sync, scaffold,
                           adopt and gate suites, and the full pytest run
 Declared gaps:             (1) IDE configs, rule blocks and the gates workflow are not refreshed yet;

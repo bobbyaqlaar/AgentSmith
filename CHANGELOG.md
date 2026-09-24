@@ -118,6 +118,10 @@ version table being consulted.
 - **Fixed:** `agentsmith upgrade` would have vendored `scripts/` and `runtime/` into a repository
   brought in by `tenant adopt` — it checked for a package pin but not for the adoption manifest.
   Both commands now read it.
+- **Internal, no change to what the gate says:** the sentence both hash-verified escapes end on —
+  "*N* gated file(s) match `.agenticframework/scaffold.json`, as `<command>` wrote them" — is
+  written in one place (`vouched_note`). The sync escape had arrived as a copy of the scaffold
+  escape's, which left the property with two homes and one test.
 
 ### Added — a repository names who governs it
 
