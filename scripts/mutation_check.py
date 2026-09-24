@@ -885,8 +885,15 @@ CATALOGUE: tuple[Suite, ...] = (
             "scripts/test/test_framework_sync.py",
             "scripts/test/test_sync_workflow.py",
             "scripts/test/test_tenant_adopt.py",
+            "scripts/test/test_workflow_template_wiring.py",
         ),
         mutations=(
+            Mutation(
+                "a tenant must hold a secret to check out a PUBLIC provider",
+                "workflow-templates/agentsmith-sync.yml",
+                "          token: ${{ secrets.AGENTSMITH_READ_TOKEN || github.token }}",
+                "          token: ${{ secrets.AGENTSMITH_READ_TOKEN }}",
+            ),
             Mutation(
                 "any commit may claim to be a framework sync",
                 "scripts/process_gate.py",

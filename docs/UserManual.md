@@ -788,8 +788,9 @@ agentsmith scrub /path/to/project
 ### As Needed: Upgrade the Framework
 
 ```bash
-# While the repo is private: `./install-ai-stack.sh` from an updated checkout
-# instead (see Install the Framework).
+# If AgentSmith is private for you, this returns 404 and installs nothing —
+# run `./install-ai-stack.sh` from an updated checkout instead (see Install
+# the Framework).
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 
 # Re-apply to an opted-in project: plain `git checkout` re-fires the hook, which

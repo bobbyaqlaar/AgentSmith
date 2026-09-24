@@ -1137,9 +1137,11 @@
         "test_ts_react_template_assumes_no_particular_test_runner_or_script_names",
         "test_hook_actually_writes_every_callee_into_a_fresh_tenant",
         "test_every_stacks_ci_runs_the_strict_security_harness",
-        "test_governance_steps_block_on_failure"
+        "test_governance_steps_block_on_failure",
+        "test_the_provider_checkout_falls_back_to_the_runs_own_token",
+        "test_a_template_does_not_state_the_provider_is_private"
       ],
-      "last_modified": "2026-09-18T00:02:24Z",
+      "last_modified": "2026-09-24T21:53:11Z",
       "id": "scripts/test/test_workflow_template_wiring.py"
     },
     {
@@ -3486,7 +3488,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-24T07:58:14Z",
+      "last_modified": "2026-09-24T22:25:17Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4103,7 +4105,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-24T04:11:04Z",
+      "last_modified": "2026-09-24T21:56:56Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4604,7 +4606,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-24T07:32:05Z",
+      "last_modified": "2026-09-24T22:05:07Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5049,7 +5051,7 @@
         "upgrade",
         "git"
       ],
-      "last_modified": "2026-09-24T07:55:31Z",
+      "last_modified": "2026-09-24T22:23:13Z",
       "id": "runtime/machine/upgrade.py"
     },
     {
@@ -6618,7 +6620,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-24T07:49:29Z",
+      "last_modified": "2026-09-24T22:19:08Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6911,7 +6913,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-09-24T07:52:08Z",
+      "last_modified": "2026-09-24T22:21:10Z",
       "id": "runtime/sync.py"
     },
     {
@@ -7018,6 +7020,38 @@
       "pillar": null,
       "created_at": "2026-09-24T19:07:58Z",
       "id": "rfc:designs/code-volume-sweep.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A tenant checks the provider out whether or not it is private",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/public-provider-checkout.md",
+      "pillar": null,
+      "created_at": "2026-09-24T22:26:10Z",
+      "id": "rfc:designs/public-provider-checkout.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 a tenant hooks onto a governance provider, not onto AgentSmith",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/governance-providers.md",
+      "pillar": null,
+      "created_at": "2026-09-24T22:26:11Z",
+      "id": "rfc:reviews/governance-providers.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 a tenant checks the provider out whether or not it is private",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/public-provider-checkout.md",
+      "pillar": null,
+      "created_at": "2026-09-24T22:26:11Z",
+      "id": "rfc:reviews/public-provider-checkout.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 code volume sweep",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/code-volume-sweep.md",
+      "pillar": null,
+      "created_at": "2026-09-24T22:26:11Z",
+      "id": "rfc:reviews/code-volume-sweep.md"
     }
   ],
   "edges": [

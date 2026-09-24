@@ -763,7 +763,8 @@ def _cmd_tenant_adopt(args: argparse.Namespace) -> int:
         f"  {commit_command(written)}\n"
         "The gate accepts that review only on this commit and only while every file still matches. From the next "
         "commit on, a change to gated code — existing code included — needs a design and a review.\n"
-        "The gates workflow needs the AGENTSMITH_READ_TOKEN repository secret to check out AgentSmith."
+        "The gates workflow checks out AgentSmith with this run's own token; if AgentSmith is private, "
+        "set the AGENTSMITH_READ_TOKEN repository secret (Contents: read)."
     )
     return 0
 

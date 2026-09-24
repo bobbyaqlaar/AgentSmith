@@ -5,8 +5,10 @@
 # local commit-msg hook runs the same function, but only in a clone that armed
 # it; this is the check no clone can skip. An adopted repository is not vendored
 # into, so the gate runs from a checkout of AgentSmith at the release this
-# repository targets. AgentSmith is private: AGENTSMITH_READ_TOKEN is a
-# fine-grained token with Contents: read on it, set as a repository secret.
+# repository targets. AGENTSMITH_READ_TOKEN is for a PRIVATE provider: a
+# fine-grained token with Contents: read on it, set as a repository secret. A
+# public provider needs no secret — the run's own token reads it — so the
+# checkout below falls back rather than requiring one.
 name: "AgentSmith gates"
 
 on:
@@ -25,7 +27,7 @@ jobs:
         with:
           repository: bobbyaqlaar/AgentSmith
           ref: "{{FRAMEWORK_REF}}"
-          token: ${{ secrets.AGENTSMITH_READ_TOKEN }}
+          token: ${{ secrets.AGENTSMITH_READ_TOKEN || github.token }}
           path: .agentsmith-framework
       - uses: actions/setup-python@v5
         with:

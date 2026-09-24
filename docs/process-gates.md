@@ -438,8 +438,9 @@ gates into an existing `.claude/settings.json`, the generated rules into an
 existing `CLAUDE.md` or `AGENTS.md` between `agentsmith:rules` markers, and an
 `## Architecture (target)` section into an existing `docs/DESIGN.md`. It leaves the
 repository's CI alone and adds `.github/workflows/agentsmith-gates.yml`, which
-runs the gate from a checkout of AgentSmith at the release it names (secret
-`AGENTSMITH_READ_TOKEN`). An adopted repository is never vendored into, and the
+runs the gate from a checkout of AgentSmith at the release it names — with the run's own
+token, falling back to the `AGENTSMITH_READ_TOKEN` secret only when the provider is
+private. An adopted repository is never vendored into, and the
 machine's own `post-checkout` and `post-commit` are not chained into it. The
 adoption commit carries `.agent-rfc/designs/adoption.md` and the manifest, and
 stages exactly what adopt wrote; history before it is `before_adoption`.

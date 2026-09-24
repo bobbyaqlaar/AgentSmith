@@ -218,6 +218,12 @@ and `docs/PRODUCT_ARCHIVE.md`. Each was checked still open on 2026-09-14.
   goes public — then remove those notes — or the first collaborator who is not
   on this machine needs to install, at which point `gh release download` (which
   carries the login) should replace the anonymous URLs.
+  *2026-09-25: the owner is flipping the repository to public. This item closes
+  on that flip and not before — verify anonymously (`curl -sI` the release asset
+  with no credential) rather than assuming, then remove the notes from README,
+  UserManual and OPERATIONS. The tenant workflows no longer wait on it: they take
+  the run's own token and fall back to the secret only for a private provider
+  (`.agent-rfc/designs/public-provider-checkout.md`).*
 - **KYC Sentinel's CI tests framework HEAD while it deploys v1.3.0.** Its
   `ci.yml` checks out `bobbyaqlaar/AgentSmith` with no `ref`, but its
   requirements pin `agentsmith-runtime @ …@v1.3.0`. **Trigger:** the next

@@ -326,3 +326,45 @@ def test_governance_steps_block_on_failure(template) -> None:
             + ("passes on failure — a governance gate that cannot fail is not a gate"
                if blocks else "is expected to be non-blocking; if that changed, update this test with the reason")
         )
+
+
+# ── The provider checkout works whether or not AgentSmith is private ─────────
+#
+# .agent-rfc/designs/governance-providers.md decision 4 promised that going
+# public "removes a step without changing a tenant". It was recorded and never
+# implemented: both templates passed `token: ${{ secrets.AGENTSMITH_READ_TOKEN }}`
+# outright, and an unset secret renders as the EMPTY STRING — which replaces the
+# run's default token rather than falling back to it. So a tenant that dropped a
+# secret it no longer needed would have got a broken checkout on the day the
+# provider went public (.agent-rfc/designs/public-provider-checkout.md).
+
+_PROVIDER_TEMPLATES = ("agentsmith-gates.yml", "agentsmith-sync.yml")
+
+
+@pytest.mark.parametrize("name", _PROVIDER_TEMPLATES)
+def test_the_provider_checkout_falls_back_to_the_runs_own_token(name: str) -> None:
+    """Every use of the secret offers `github.token` when it is unset."""
+    text = (TEMPLATES / name).read_text(encoding="utf-8")
+    bare = [
+        (n, line.strip())
+        for n, line in enumerate(text.splitlines(), 1)
+        if "secrets.AGENTSMITH_READ_TOKEN" in line
+        and not line.strip().startswith("#")
+        and "github.token" not in line
+    ]
+    assert not bare, (
+        f"{name} requires AGENTSMITH_READ_TOKEN outright at {bare} — a public provider needs no "
+        "secret, and an unset one is the empty string, not a fallback. Use "
+        "`${{ secrets.AGENTSMITH_READ_TOKEN || github.token }}`"
+    )
+
+
+@pytest.mark.parametrize("name", _PROVIDER_TEMPLATES)
+def test_a_template_does_not_state_the_provider_is_private(name: str) -> None:
+    """The comment said "AgentSmith is private" as a fact about the world. A
+    file that dates itself to a visibility goes stale the day it changes; what
+    does not change is what the secret is FOR."""
+    text = (TEMPLATES / name).read_text(encoding="utf-8").lower()
+    assert "agentsmith is private" not in text, (
+        f"{name} states the provider's visibility as a fact — say what the secret is for instead"
+    )

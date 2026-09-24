@@ -77,6 +77,26 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — a tenant checks the provider out whether or not it is private
+
+- **The gates and sync workflows no longer require `AGENTSMITH_READ_TOKEN`.** All three uses become
+  `${{ secrets.AGENTSMITH_READ_TOKEN || github.token }}`: against a **public** AgentSmith a tenant
+  needs no secret at all, because the run's own token can read any public repository; against a
+  private one the secret is still required and the error still names it. A tenant survives a
+  visibility change in either direction without editing anything.
+- **Why it mattered now.** `.agent-rfc/designs/governance-providers.md` decision 4 promised exactly
+  this — "going public later removes a step without changing a tenant" — and it was recorded rather
+  than built. Both templates passed the secret outright, and an unset secret renders as the **empty
+  string**, which replaces the default token instead of falling back to it. A tenant that dropped a
+  secret it no longer needed would have got a broken checkout on the day the repository went public.
+- **The review that passed it is corrected in the same commit.**
+  `.agent-rfc/reviews/governance-providers.md` Pass 3 asserted all four decisions held; three were
+  checked against the code and this one was taken from the decision list. A decision list is a plan,
+  not evidence.
+- The workflow comments, `docs/process-gates.md`, `docs/UserManual.md` and the message
+  `agentsmith tenant adopt` prints no longer state the provider's visibility as a fact — they say
+  what the secret is for, so they do not go stale when it changes.
+
 ### Changed — a review pass against the levers, and a new lever for code volume
 
 - **New review lever, `every-line-earns-its-place`.** Read the diff as an expert would: a wrapper

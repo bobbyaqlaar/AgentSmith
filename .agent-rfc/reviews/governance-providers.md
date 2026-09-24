@@ -61,13 +61,30 @@ Checked the four things a closing review of an architecture should check, and fo
 - **the item the design listed under "what this does not fix by itself"** — `agentsmith upgrade`
   refusing its own commit in a gated tenant — is fixed, by the hash-verified escape that design
   called for, in `framework-sync.md`;
-- **the decisions taken hold.** Vendoring still works and no tenant was forced to migrate; the
-  contract lives in `contract/` with its own integer and ships as a release asset; the gate port
-  went first and was proven end to end on a scratch tenant; both visibilities are supported, the
-  workflow using the token when set;
+- **three of the four decisions taken hold.** Vendoring still works and no tenant was forced to
+  migrate; the contract lives in `contract/` with its own integer and ships as a release asset; the
+  gate port went first and was proven end to end on a scratch tenant. **Decision 4 did not** — see
+  the correction below;
 - **"or another platform" is checkable rather than asserted** — `agentsmith conformance --provider
   "<command>"` runs five golden cases from `contract/gate/v1/cases.json`, and AgentSmith's own
   adapter is scored by the same suite (`test_agentsmith_passes_its_own_conformance_suite`).
+
+## Pass 4 — findings: 1 (2026-09-25, before the repository went public)
+
+1. `declared-vs-enforced` — **Pass 3 above passed decision 4 without checking it, and it was false.**
+   "Both visibilities are supported, the gate workflow using the token when it is set and a plain
+   checkout when the provider repository is public" was recorded in the design and implemented
+   nowhere: `workflow-templates/agentsmith-gates.yml` and `agentsmith-sync.yml` both passed
+   `token: ${{ secrets.AGENTSMITH_READ_TOKEN }}` outright, and an unset secret renders as the empty
+   string — which replaces the run's default token rather than falling back to it. I checked the
+   other three decisions against the code and took this one from the decision list. **A decision
+   list is a plan, not evidence**, and that is the lesson worth more than the fix.
+
+   It surfaced the day it mattered: the owner asked to make the repository public, which is exactly
+   the flip decision 4 promised would cost a tenant nothing. Repaired in
+   `.agent-rfc/designs/public-provider-checkout.md` — all three sites take
+   `${{ secrets.AGENTSMITH_READ_TOKEN || github.token }}`, so a public provider needs no secret, a
+   private one still does, and a tenant survives the flip in either direction.
 
 ## Stated limits
 

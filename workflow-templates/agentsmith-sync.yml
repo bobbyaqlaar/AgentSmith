@@ -7,9 +7,10 @@
 # latest release, and opens a PULL REQUEST. It never pushes to the default
 # branch: a person merges, and this repository's own gates judge the result.
 #
-# It needs AGENTSMITH_READ_TOKEN (the same secret the gates workflow uses) and,
-# in Settings → Actions → General, "Allow GitHub Actions to create and approve
-# pull requests".
+# It needs, in Settings → Actions → General, "Allow GitHub Actions to create
+# and approve pull requests". AGENTSMITH_READ_TOKEN — the same secret the gates
+# workflow uses — is required only while the provider is private; against a
+# public one the run's own token reads the release and the checkout.
 name: "AgentSmith sync"
 
 "on":
@@ -32,11 +33,11 @@ jobs:
       - name: "Which release is current?"
         id: release
         env:
-          GH_TOKEN: ${{ secrets.AGENTSMITH_READ_TOKEN }}
+          GH_TOKEN: ${{ secrets.AGENTSMITH_READ_TOKEN || github.token }}
         run: |
           tag="$(gh api repos/bobbyaqlaar/AgentSmith/releases/latest --jq .tag_name)"
           if [ -z "$tag" ]; then
-            echo "::error::could not read AgentSmith's latest release — is AGENTSMITH_READ_TOKEN set, with Contents: read?"
+            echo "::error::could not read AgentSmith's latest release — if the provider is private, set AGENTSMITH_READ_TOKEN with Contents: read"
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -45,7 +46,7 @@ jobs:
         with:
           repository: bobbyaqlaar/AgentSmith
           ref: ${{ steps.release.outputs.tag }}
-          token: ${{ secrets.AGENTSMITH_READ_TOKEN }}
+          token: ${{ secrets.AGENTSMITH_READ_TOKEN || github.token }}
           path: .agentsmith-framework
 
       - uses: actions/setup-python@v5
