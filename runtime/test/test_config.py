@@ -348,8 +348,15 @@ def test_one_root_finder_and_a_tenant_beats_its_parent_repo(tmp_path: Path):
 
     The structural duplicate sweep in pass 3 missed all five: their bodies are
     under its four-statement threshold. A sweep's blind spot is a finding too.
+
+    That sweep unified the LOGIC and left three byte-identical 12-line shims
+    that did nothing but call the survivor, so the second half of this test used
+    to call them and pass. It now asserts what it meant to: no module under
+    `runtime/` defines a root finder at all. The one deliberate mirror lives in
+    `scripts/_shared.py`, across a package boundary that cannot be imported
+    over, and `test_shared_root_matches_runtime_root` pins that one.
     """
-    import os
+    import ast
 
     from runtime.config import repo_root
 
@@ -361,24 +368,19 @@ def test_one_root_finder_and_a_tenant_beats_its_parent_repo(tmp_path: Path):
     assert repo_root(tenant) == tenant, "the tenant wins over the repo containing it"
     assert repo_root(outer) == outer
 
-    # And every module now asks the same function.
-    from runtime import llm_gateway, moderation, tracing
-    from _shared import _repo_root as shared_root
-
-    cwd = Path.cwd()
-    try:
-        os.chdir(tenant)
-        answers = {
-            llm_gateway._repo_root(),
-            moderation._repo_root(),
-            tracing._repo_root(),
-            shared_root(),
-            repo_root(),
-        }
-    finally:
-        os.chdir(cwd)
-    assert len(answers) == 1, f"root finders disagree: {answers}"
-    assert answers.pop() == tenant
+    # And no module under runtime/ has a root finder of its own to disagree with.
+    runtime_dir = Path(__file__).resolve().parents[1]
+    redefined = []
+    for module in sorted(runtime_dir.rglob("*.py")):
+        if module.name == "config.py" or "test" in module.parts[len(runtime_dir.parts) - 1:]:
+            continue
+        for node in ast.parse(module.read_text(encoding="utf-8")).body:
+            if isinstance(node, ast.FunctionDef) and node.name in ("repo_root", "_repo_root"):
+                redefined.append(f"{module.relative_to(runtime_dir.parent)}:{node.lineno}")
+    assert not redefined, (
+        "these define their own root finder instead of importing "
+        f"runtime.config.repo_root: {redefined}"
+    )
 
 
 def test_one_truthy_catalog_across_the_runtime():

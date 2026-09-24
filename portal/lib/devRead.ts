@@ -6,25 +6,13 @@
 // latest design snapshot carries no approval id.
 
 import { getPool } from "./db";
-import type { DevDesign, DevReview, DevVerdict } from "./devIngest";
+import type { DevCommit, DevDesign, DevReview, DevVerdict } from "./devIngest";
 import { unrepairedFailures } from "./devView";
 import { listTenants, type Tenant } from "./tenants";
 
-export interface DevCommitRow {
-  sha: string;
-  parentSha: string | null;
-  subject: string;
-  authorName: string | null;
-  authorEmail: string | null;
-  committedAt: string | null;
-  adopted: boolean;
-  gated: boolean;
-  verdict: DevVerdict;
-  errors: string[];
-  notes: string[];
-  repairs: string[];
-  design: DevDesign | null;
-  review: DevReview | null;
+/** A stored `DevCommit`, plus when this portal received it. Extended rather
+ *  than restated: a field added to DevCommit was previously invisible here. */
+export interface DevCommitRow extends DevCommit {
   receivedAt: string;
 }
 

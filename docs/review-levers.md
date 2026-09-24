@@ -23,6 +23,7 @@ drops the mark the day it catches something. Cite one from code as
 - `one-catalog` — **(+)** A catalog belongs to one module; a second copy will drift.
 - `pin-unremovable-duplicates` — **(++)** A duplicate you cannot remove must be pinned by a test that PARSES the other side.
 - `merge-the-right-copy` — **(++++)** Merging N copies: keep the one already correct, and expect inputs none of them saw alone.
+- `every-line-earns-its-place` — **(2026-09-24)** Read the diff as an expert would: a wrapper with one caller, a comment restating the line under it, a branch no input reaches, a docstring longer than the code. Delete rather than explain — but shorter, never denser: a line removed must not move its cost into the reader.
 
 ## 2 · Quality / safety
 

@@ -891,10 +891,6 @@ promote-learning.py:
 agentsmith evals re-runs to validate fix
 ```
 
-### CD Golden Dataset Commits
-
-Bot commits to golden dataset fixtures must go through a pull request in the tenant repo — not direct push to `main`. Branch protection applies. Remove `[skip ci]` from eval fixture update commits; CI must validate the new cases.
-
 ---
 
 ## Knowledge Graph
@@ -907,9 +903,9 @@ Node types:
 - `ProductionIncident` — distilled lessons from `.agent-history.log`
 
 Edge relation types:
-- `IMPORTS` — file-to-file import relationship
-- `IMPLEMENTS` — file implements guardrail
-- `CAUSED_INCIDENT` — file linked to a production incident
+- `IMPORTS` — file-to-file import relationship. The only edge a committed graph holds.
+- `CAUSED_INCIDENT` — file linked to a production incident. Written by
+  `inject_production_learning`; the HITL loop does not call it yet.
 
 ### Storage Path
 
@@ -1543,7 +1539,8 @@ Staging smoke failure blocks promotion to `main`.
 
 ### CD Golden Dataset Commits
 
-The CD workflow opens a pull request for fixture changes — it does not push directly to `main`:
+The CD workflow opens a pull request for fixture changes — it does not push directly to `main`, so
+branch protection in the tenant repo applies to bot commits like any other:
 
 ```yaml
 - name: Open PR for golden dataset updates

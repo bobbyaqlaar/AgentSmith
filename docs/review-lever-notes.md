@@ -55,7 +55,28 @@ resolved traces, it had never had to handle a base naming a DIFFERENT
 signal; asking it for metrics would have produced `/v1/traces/v1/metrics`,
 a case that did not exist until the two signals shared a resolver.*
 
-## Group 2 · Quality / safety
+### `every-line-earns-its-place` — Read it as an expert would, then delete
+
+**Why.** An agent writes more than a person would. It restates the line above in
+a comment, wraps one call in a named function so the call site reads like prose,
+keeps the branch it wrote before it knew the input could not reach it, and
+explains in eight lines what two lines would have said. None of it is wrong, so
+no test fails and no lever catches it — it accumulates as volume, and volume is
+what makes a repository unreadable. The lever asks the question a senior
+reviewer asks: what would this look like if somebody had to maintain it?
+
+The counterweight matters as much as the rule. Fewer lines is not fewer
+characters: a comprehension nobody can read, a ternary chain, a clever regex
+that replaces an obvious loop — those move the cost from the file to the reader,
+who pays it every time. Delete what is redundant; keep what is load-bearing,
+including a comment that records WHY, which the code cannot say.
+
+*Caught on the pass that added it: `docs/review-lever-notes.md` carried every
+group heading from 2 to 6 TWICE — the stray copy, a blank line and a separator
+before the real one — so the document that teaches this repo to review itself
+had fifteen lines saying nothing and a table of contents that disagreed with
+itself. Nothing tested it, because `test_lever_notes.py` parses `###` slugs and
+never looks at `##`.*
 
 ---
 
@@ -118,8 +139,6 @@ including from its other writer.*
 closes the literal and `do shell script` follows; the body reaching that
 sink is `"\n".join(state["issues"])` — the Validator agent's own model
 output. Confirmed by running it: the payload wrote a file.*
-
-## Group 3 · Architecture / product hygiene
 
 ---
 
@@ -186,8 +205,6 @@ defect to be fixed rather than as the independence the pin exists to
 provide. A review that calls a designed separation a bug will propose
 coupling as the remedy.*
 
-## Group 4 · Process (how work is done)
-
 ---
 
 ## Group 4 · Process (how work is done)
@@ -217,8 +234,6 @@ inside the tenant's own product.*
 module had been added to the module table and not to the tree — after a
 local run of every gate the author happened to know about. Item 4 of this
 group already says `self-test.yml` is the definitive list.*
-
-## Group 5 · Intuitive UI
 
 ---
 
@@ -274,8 +289,6 @@ to claim a clean result you do not have.*
 **Why.** `one-catalog` and `single-source-of-truth` (Groups 1 and 3) already say a concept belongs in one place; a new screen inventing its own spacing and button style is the UI version of a second implementation of "what a button looks like here," and it will drift from the first one the same way any duplicated logic does.
 
 *Not yet caught. `(unevidenced)`.*
-
-## Group 6 · Signal integrity — does green mean green?
 
 ---
 

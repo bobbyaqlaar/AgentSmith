@@ -58,6 +58,15 @@ new content here — the RULE lives in one place.
 - **`one-catalog`** — A new constant, enum, or lookup table gets ONE home,
   decided before the first call site is written. Deciding this after three
   call sites exist means picking which two must be migrated.
+- **`every-line-earns-its-place`** — Decide what the change looks like when it
+  is FINISHED, not when it first works. A wrapper with one caller, a comment
+  restating the line under it, a branch no input reaches, a docstring longer
+  than the code it describes: each is cheap to write and permanent to read.
+  When a change unifies duplicated logic, the shims and the prose about the old
+  duplication are part of what it removes, or the duplication just moves. The
+  counterweight is not negotiable: shorter, never denser — a comment recording
+  WHY is load-bearing, and golfing a loop into an unreadable expression moves
+  the cost to every future reader instead of paying it once here.
 - **`pin-unremovable-duplicates`** — If a duplicate genuinely cannot be
   removed (two runtimes, a vendored bundle, an air-gapped copy), design the
   drift test alongside the duplicate, in the same change — not as a follow-up

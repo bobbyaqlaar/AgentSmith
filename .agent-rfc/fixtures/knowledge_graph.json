@@ -141,8 +141,8 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "_repo_root",
         "_NoopSpan",
+        "NoopTracer",
         "agent_span",
         "_stamp",
         "tool_payloads_enabled",
@@ -155,12 +155,16 @@
         "current_trace_id",
         "traceparent",
         "inject_context",
+        "__enter__",
+        "__exit__",
         "set_attribute",
+        "set_status",
         "record_exception",
         "is_recording",
+        "start_as_current_span",
         "on_start"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-24T19:12:58Z",
       "id": "runtime/tracing.py"
     },
     {
@@ -261,7 +265,6 @@
         "register_output_moderator",
         "get_output_moderator",
         "ModerationHookImportError",
-        "_repo_root",
         "declared_hook_path",
         "load_declared_moderator",
         "_ensure_declared_moderator",
@@ -269,7 +272,7 @@
         "apply_output_moderation",
         "__init__"
       ],
-      "last_modified": "2026-08-29T21:36:08Z",
+      "last_modified": "2026-09-24T19:02:02Z",
       "id": "runtime/moderation.py"
     },
     {
@@ -381,7 +384,6 @@
         "CompletionResult",
         "_CachedCompletion",
         "BudgetExceededError",
-        "_repo_root",
         "_load_yaml",
         "_active_profile_name",
         "_roles_from_doc",
@@ -432,7 +434,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-09-18T15:43:51Z",
+      "last_modified": "2026-09-24T19:02:02Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -613,21 +615,13 @@
       "language": "python",
       "symbols": [
         "_setup_otel",
-        "_NoopSpan",
-        "_NoopTracer",
         "PipelineState",
         "_architect_node",
         "_developer_node",
         "_validator_node",
-        "run_pipeline",
-        "__enter__",
-        "__exit__",
-        "set_attribute",
-        "set_status",
-        "record_exception",
-        "start_as_current_span"
+        "run_pipeline"
       ],
-      "last_modified": "2026-09-18T05:04:52Z",
+      "last_modified": "2026-09-24T19:08:30Z",
       "id": "scripts/local_agent_stack.py"
     },
     {
@@ -682,15 +676,13 @@
         "upsert_guardrail",
         "inject_production_learning",
         "add_import",
-        "link_file_to_guardrail",
         "remove_file",
         "fetch_subgraph_context_window",
         "find_files_by_symbol",
         "impacted_files",
-        "stats",
-        "as_json"
+        "stats"
       ],
-      "last_modified": "2026-09-17T21:27:11Z",
+      "last_modified": "2026-09-24T19:16:43Z",
       "id": "scripts/local_knowledge_graph.py"
     },
     {
@@ -749,13 +741,11 @@
       "symbols": [
         "_golden_path",
         "_criteria_path",
-        "_log_path",
         "promote",
-        "_mark_log_resolved",
         "_load_json",
         "_save_json"
       ],
-      "last_modified": "2026-09-14T19:08:30Z",
+      "last_modified": "2026-09-24T19:16:08Z",
       "id": "scripts/promote-learning.py"
     },
     {
@@ -1035,16 +1025,9 @@
         "route_after_hitl",
         "_get_checkpointer",
         "build_graph",
-        "run_pipeline",
-        "_Noop",
-        "start_as_current_span",
-        "_Span",
-        "__enter__",
-        "__exit__",
-        "set_attribute",
-        "record_exception"
+        "run_pipeline"
       ],
-      "last_modified": "2026-09-18T05:09:23Z",
+      "last_modified": "2026-09-24T19:08:47Z",
       "id": "scripts/multi_agent_system.py"
     },
     {
@@ -1826,7 +1809,7 @@
         "_render_security_report_md",
         "write_evidence_pack"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-24T19:15:59Z",
       "id": "scripts/security/report.py"
     },
     {
@@ -2181,13 +2164,17 @@
         "test_each_tool_call_gets_its_own_child_span",
         "test_denied_tool_records_allowed_false",
         "test_tool_call_outside_a_step_emits_no_lone_span",
+        "test_a_reference_stack_configures_tracing_through_the_helper",
+        "test_a_reference_stack_keeps_the_documented_session_attribute",
+        "test_configure_tracing_installs_the_redactor_and_the_identity_processor",
+        "test_the_noop_tracer_survives_the_way_callers_use_it",
         "adder",
         "sanctions",
         "registry_lookup",
         "wire_transfer",
         "solo"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-24T19:12:42Z",
       "id": "runtime/test/test_tracing.py"
     },
     {
@@ -2770,7 +2757,6 @@
       "language": "python",
       "symbols": [
         "_dlq_task_id",
-        "AgentWorkflowInput",
         "AgentWorkflowResult",
         "BaseAgentWorkflow",
         "dlq_enqueue_activity",
@@ -2787,7 +2773,7 @@
         "human_fix_payload",
         "signal"
       ],
-      "last_modified": "2026-09-18T05:04:52Z",
+      "last_modified": "2026-09-24T19:11:00Z",
       "id": "runtime/workflows/base_workflow.py"
     },
     {
@@ -3407,7 +3393,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-09-18T15:43:21Z",
+      "last_modified": "2026-09-24T19:11:00Z",
       "id": "runtime/config.py"
     },
     {
@@ -3444,7 +3430,7 @@
         "test_one_truthy_catalog_across_the_runtime",
         "_build"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-24T19:02:45Z",
       "id": "runtime/test/test_config.py"
     },
     {
@@ -3500,7 +3486,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-24T04:33:46Z",
+      "last_modified": "2026-09-24T07:58:14Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4553,6 +4539,7 @@
         "_manifest_author",
         "manifest_problems",
         "scaffold_problems",
+        "vouched_note",
         "record_text",
         "check_change",
         "git",
@@ -4617,7 +4604,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-24T04:15:31Z",
+      "last_modified": "2026-09-24T07:32:05Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5062,7 +5049,7 @@
         "upgrade",
         "git"
       ],
-      "last_modified": "2026-09-24T04:31:45Z",
+      "last_modified": "2026-09-24T07:55:31Z",
       "id": "runtime/machine/upgrade.py"
     },
     {
@@ -6176,7 +6163,7 @@
         "listIngestRuns",
         "listGateFailures"
       ],
-      "last_modified": "2026-09-18T15:13:27Z",
+      "last_modified": "2026-09-24T19:14:07Z",
       "id": "portal/lib/devRead.ts"
     },
     {
@@ -6631,7 +6618,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-24T04:27:48Z",
+      "last_modified": "2026-09-24T07:49:29Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6924,7 +6911,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-09-24T04:29:47Z",
+      "last_modified": "2026-09-24T07:52:08Z",
       "id": "runtime/sync.py"
     },
     {
@@ -7023,6 +7010,14 @@
       "pillar": null,
       "created_at": "2026-09-24T04:48:35Z",
       "id": "rfc:reviews/sync-pull-request.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Code volume sweep",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/code-volume-sweep.md",
+      "pillar": null,
+      "created_at": "2026-09-24T19:07:58Z",
+      "id": "rfc:designs/code-volume-sweep.md"
     }
   ],
   "edges": [

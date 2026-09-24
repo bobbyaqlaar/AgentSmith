@@ -77,6 +77,39 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — a review pass against the levers, and a new lever for code volume
+
+- **New review lever, `every-line-earns-its-place`.** Read the diff as an expert would: a wrapper
+  with one caller, a comment restating the line under it, a branch no input reaches, a docstring
+  longer than the code. Delete rather than explain — but shorter, never denser. It has a
+  design-phase counterpart in `docs/design-review-checklist.md` and notes in
+  `docs/review-lever-notes.md`, and it earned its place on the pass that added it.
+- **Spans from the two reference stacks are redacted now.** `scripts/local_agent_stack.py` and
+  `scripts/multi_agent_system.py` each assembled a `TracerProvider` by hand — which is the thing
+  `runtime.tracing.configure_tracing` exists to prevent — and each omitted `AgentIdentityProcessor`
+  and `TraceRedactor`. `README.md` offers both files as "a shape to copy", so the shape on offer
+  exported **unredacted** spans. Both now call `configure_tracing`, which grew an
+  `extra_resource_attributes` argument for the case those two have: an attribute genuinely fixed
+  for a single-run process. `agent.session_id` and `tenant.id` are unchanged on the resource.
+- **`runtime.tracing.NoopTracer`** replaces the two hand-rolled no-op tracers those files carried;
+  `_NoopSpan` gained `__enter__`/`__exit__`/`set_status`, which it had never needed while nothing
+  used it through `with`.
+- **One HITL resolver.** `promote-learning.py` carried a near-verbatim copy of
+  `AgentLogger.resolve_hitl`, and the copy was the only one anything called. It calls the original.
+- **Three delegating `_repo_root` shims deleted** from `runtime/{tracing,llm_gateway,moderation}.py`.
+  The five disagreeing implementations were unified into `runtime.config.repo_root` some time ago;
+  each caller kept a 12-line shim that only called it, carrying a nine-line docstring about the
+  incident. `test_one_root_finder_and_a_tenant_beats_its_parent_repo` now asserts that no module
+  under `runtime/` defines a root finder at all, rather than calling the shims and passing.
+- **`docs/DESIGN.md` describes the knowledge graph the code builds.** An `IMPLEMENTS` edge was
+  documented in two places and created by `link_file_to_guardrail`, which nothing called — so no
+  graph has ever held one. The method and the claim are gone; `CAUSED_INCIDENT` stays, marked as
+  written only by a function the HITL loop does not call yet.
+- **Smaller:** `_filter_controls` reads the framework name off `FrameworkTags` instead of restating
+  the four in an if/elif chain that answered an unknown framework with an empty list;
+  `portal/lib/devRead.ts` extends `DevCommit` instead of restating its fourteen fields; the unused
+  `AgentWorkflowInput` dataclass and a doubled `### CD Golden Dataset Commits` section are removed.
+
 ### Added — a tenant is told when it is behind, as a pull request
 
 - **`agentsmith-sync.yml`**, written at adoption and kept current like everything else the
