@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - workflow-templates/agentsmith-sync.yml
   - runtime/adopt.py
