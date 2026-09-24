@@ -64,6 +64,23 @@ def _digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def ownership(root: Path, rel: str) -> str:
+    """Whose file is this? The manifest is the record, and there are three
+    answers (.agent-rfc/designs/sync-merged-files.md):
+
+        ours      the framework wrote it and nobody has touched it — refresh it
+        edited    the framework wrote it and the tenant changed it — leave it, and say so
+        theirs    never ours — leave it, silently
+    """
+    recorded = (_manifest(root).get("files") or {}).get(rel)
+    if recorded is None:
+        return "theirs"
+    here = root / rel
+    if not here.is_file():
+        return "ours"  # it was ours and is gone: writing it back is the refresh
+    return "ours" if _digest(here) == recorded else "edited"
+
+
 def plan_sync(root: Path, *, tenant_id: Optional[str] = None, framework: Optional[Path] = None) -> Plan:
     """What `sync` would refresh here. Writes nothing.
 
@@ -95,11 +112,96 @@ def plan_sync(root: Path, *, tenant_id: Optional[str] = None, framework: Optiona
         here = root / ".githooks" / hook.name
         if here.is_file() and hook.is_file() and _digest(here) != _digest(hook):
             plan.stale.append(f".githooks/{hook.name}")
+
+    # The files the tenant shares with the framework. `ownership` decides: a
+    # file they have edited is named and left, never clobbered.
+    for rel, text in _shared_files(plan).items():
+        state = ownership(root, rel)
+        here = root / rel
+        if rel in _MERGED and here.is_file():
+            if here.read_text(encoding="utf-8") != text:  # `text` already keeps their keys
+                plan.stale.append(rel)
+            continue
+        if rel in _RULE_FILES and here.is_file() and not _generated_whole(here):
+            # Their file, our block: the block is refreshed, the rest is theirs,
+            # so the file's own hash is not the question.
+            if here.read_text(encoding="utf-8") != _with_block(here, text):
+                plan.stale.append(rel)
+            continue
+        if state == "edited":
+            plan.notes.append(f"{rel} was edited here since the framework wrote it — left alone. "
+                              "Revert it and re-run to take the framework's version")
+        elif state == "ours" and (not here.is_file() or here.read_text(encoding="utf-8") != text):
+            plan.stale.append(rel)
     if plan.vendored:
         plan.notes.append("vendored tenant: scripts/, runtime/, templates/ and fixtures/ are refreshed too")
     else:
         plan.notes.append("adopted repository: nothing is vendored into it")
     return plan
+
+
+_RULE_FILES = ("CLAUDE.md", "AGENTS.md", "GEMINI.md", ".cursorrules", ".github/copilot-instructions.md")
+# Files where the framework owns a REGION and the tenant owns the rest, so the
+# file's own hash is not the question: the rule files' marked block, and Claude's
+# settings, where `render_config` replaces the hooks and keeps permissions and
+# everything else. Judging these by the whole file would freeze a tenant's gate
+# wiring the moment they edited their own permissions
+# (.agent-rfc/designs/sync-merged-files.md). Cursor's config is not here: the
+# framework renders it whole, so a tenant who rewrote it owns it.
+_MERGED = (".claude/settings.json",)
+
+
+def _generated_whole(path: Path) -> bool:
+    from runtime.adopt import generated_by_agentsmith
+
+    return generated_by_agentsmith(path.read_text(encoding="utf-8"))
+
+
+def _with_block(path: Path, generated: str) -> str:
+    from runtime.adopt import merge_rules_block
+
+    return merge_rules_block(path.read_text(encoding="utf-8"), generated)
+
+
+def _shared_files(plan: Plan) -> dict[str, str]:
+    """What the framework would write today for the files a tenant also edits:
+    the IDE hook configs, the rule files, and the gates workflow."""
+    import json as _json
+    import sys as _sys
+
+    from runtime.adopt import GATES_WORKFLOW, generated_rules
+
+    root, framework = plan.root, plan.framework
+    shared: dict[str, str] = dict(generated_rules(root, framework, plan.stack))
+
+    _sys.path.insert(0, str(framework / "scripts"))
+    try:
+        import gate_ides as gi  # type: ignore
+
+        for ide in gi.GENERATED:
+            rel = gi.ADAPTERS[ide].config_path
+            here = root / rel
+            existing = _json.loads(here.read_text(encoding="utf-8")) if here.is_file() else None
+            shared[rel] = _json.dumps(gi.render_config(ide, existing), indent=2) + "\n"
+    except Exception as exc:  # a framework too old to render them says so, and the rest still syncs
+        plan.notes.append(f"IDE hook configs not refreshed ({exc})")
+
+    template = _gates_template(framework)
+    if template is not None and (root / GATES_WORKFLOW).is_file():
+        shared[GATES_WORKFLOW] = template.read_text(encoding="utf-8").replace(
+            "{{FRAMEWORK_REF}}", f"v{plan.version}")
+    return shared
+
+
+def _gates_template(framework: Path) -> Optional[Path]:
+    from runtime.adopt import GATES_WORKFLOW
+    from runtime.cli import _templates_dir
+
+    name = Path(GATES_WORKFLOW).name
+    for directory in (_templates_dir(), framework / "workflow-templates"):
+        if directory is not None and (directory / name).is_file():
+            return directory / name
+    return None
 
 
 def describe(plan: Plan) -> str:
@@ -119,6 +221,17 @@ def sync(plan: Plan) -> list[str]:
     # The hooks, from the one implementation `init` and `adopt` use. `force`,
     # because refreshing a stale copy is the point.
     install_gate_hooks(root, plan.framework, force=True, provisioning=False)
+    shared = _shared_files(plan)
+    for rel in plan.stale:
+        text = shared.get(rel)
+        if text is None:
+            continue  # a hook: `install_gate_hooks` has just rewritten it
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if rel in _RULE_FILES and target.is_file() and not _generated_whole(target):
+            target.write_text(_with_block(target, text), encoding="utf-8")
+        else:
+            target.write_text(text, encoding="utf-8")
     written += plan.stale
     if not (root / PROVIDERS).exists():
         (root / PROVIDERS).write_text(providers_declaration(), encoding="utf-8")

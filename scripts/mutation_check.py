@@ -902,6 +902,28 @@ CATALOGUE: tuple[Suite, ...] = (
                 "        if False:",
             ),
             Mutation(
+                "a file the tenant edited is refreshed anyway — their work is clobbered",
+                "runtime/sync.py",
+                '        if state == "edited":',
+                "        if False:",
+            ),
+            Mutation(
+                "a rule file is rewritten whole, losing the tenant's own prose around the block",
+                "runtime/sync.py",
+                "        if rel in _RULE_FILES and target.is_file() and not _generated_whole(target):\n"
+                "            target.write_text(_with_block(target, text), encoding=\"utf-8\")\n"
+                "        else:\n"
+                "            target.write_text(text, encoding=\"utf-8\")",
+                '        target.write_text(text, encoding="utf-8")',
+            ),
+            Mutation(
+                "Claude's settings are judged by the whole file, so a tenant's own permissions "
+                "freeze their gate wiring",
+                "runtime/sync.py",
+                "        if rel in _MERGED and here.is_file():",
+                "        if False:",
+            ),
+            Mutation(
                 "upgrade vendors into an adopted repository again",
                 "runtime/machine/upgrade.py",
                 "    if is_adopted(repo):",

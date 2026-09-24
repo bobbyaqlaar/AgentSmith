@@ -145,6 +145,13 @@ vendored tenant — the framework's own code. `agentsmith sync` refreshes what t
 in the repository it is run in, and nothing else, then prints the commit. Run twice, the second run
 writes nothing.
 
+It refreshes the gate hooks, the provider declaration, the IDE hook configs, the rule files'
+managed block and the gates workflow — and, for a vendored tenant, the vendored trees. **The
+manifest decides whose file each one is:** written by the framework and untouched, it is refreshed;
+edited here since, it is left alone and named; never ours, it is left alone. The exceptions are the
+regions the framework owns inside a tenant's own file — the `agentsmith:rules` block and the `hooks`
+key in `.claude/settings.json` — which are refreshed whatever else changed around them.
+
 **Its commit passes the tenant's own gates.** `Review: n/a: framework sync <version>` is accepted
 while every gated file in the commit matches `.agenticframework/scaffold.json` — the same hash rule
 the generated scaffold uses, and a visible note, not silence. A file the tenant edited is not in

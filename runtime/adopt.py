@@ -404,37 +404,47 @@ def _project_name(root: Path) -> str:
     return url.rsplit("/", 1)[-1].removesuffix(".git") if url else root.resolve().name
 
 
-def _write_rules(plan: Plan, framework: Path) -> list[str]:
-    """Generate the rule files beside the repository, then copy in the ones it
-    lacks and merge the ones it has."""
-    root, written = plan.root, []
+def generated_rules(root: Path, framework: Path, stack: str) -> dict[str, str]:
+    """What the framework's rule files say right now, rendered beside the
+    repository rather than into it: `{path: text}`.
+
+    One renderer for `adopt`, which writes these, and `sync`, which compares
+    them — two would disagree about what the rules say
+    (.agent-rfc/designs/sync-merged-files.md)."""
     with tempfile.TemporaryDirectory() as tmp:
         scratch = Path(tmp)
         shutil.copytree(root / ".agenticframework", scratch / ".agenticframework")
         done = subprocess.run(
             [sys.executable, str(framework / "scripts" / "generate-ide-config.py"), "--repo-root", str(scratch),
-             "--rules-file", str(framework / "templates" / "agent-rules.yaml"), "--stack", plan.stack,
-             "--project-name", _project_name(root), "--test-cmd", _test_command(root, plan.stack)],
+             "--rules-file", str(framework / "templates" / "agent-rules.yaml"), "--stack", stack,
+             "--project-name", _project_name(root), "--test-cmd", _test_command(root, stack)],
             capture_output=True, text=True, check=False)
         if done.returncode != 0:
             print(f"  ! agent rules not generated: {done.stderr.strip()[:300]}", file=sys.stderr)
-            return []
-        for generated in sorted(p for p in scratch.rglob("*") if p.is_file()):
-            rel = generated.relative_to(scratch).as_posix()
-            if rel.startswith(".agenticframework/"):
-                continue
-            target = root / rel
-            text = generated.read_text(encoding="utf-8")
-            if not target.exists():
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(text, encoding="utf-8")
-            elif rel in RULE_FILES:
-                existing = target.read_text(encoding="utf-8")
-                target.write_text(text if generated_by_agentsmith(existing) else merge_rules_block(existing, text),
-                                  encoding="utf-8")
-            else:
-                continue
-            written.append(rel)
+            return {}
+        return {
+            generated.relative_to(scratch).as_posix(): generated.read_text(encoding="utf-8")
+            for generated in sorted(p for p in scratch.rglob("*") if p.is_file())
+            if not generated.relative_to(scratch).as_posix().startswith(".agenticframework/")
+        }
+
+
+def _write_rules(plan: Plan, framework: Path) -> list[str]:
+    """Generate the rule files, then copy in the ones the repository lacks and
+    merge the ones it has."""
+    root, written = plan.root, []
+    for rel, text in generated_rules(root, framework, plan.stack).items():
+        target = root / rel
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+        elif rel in RULE_FILES:
+            existing = target.read_text(encoding="utf-8")
+            target.write_text(text if generated_by_agentsmith(existing) else merge_rules_block(existing, text),
+                              encoding="utf-8")
+        else:
+            continue
+        written.append(rel)
     return written
 
 

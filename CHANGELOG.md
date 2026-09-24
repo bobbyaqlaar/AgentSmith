@@ -77,6 +77,20 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — a sync refreshes the files a tenant shares with the framework
+
+- **The IDE hook configs, the rule files' managed block and the gates workflow** are refreshed too,
+  including the workflow's `ref:` — so a tenant that upgrades runs the new provider in CI rather
+  than the release it was adopted from.
+- **The manifest decides ownership**, and there are three answers: a file the framework wrote that
+  nobody has touched is refreshed; one the tenant has since edited is **left alone and named**, with
+  what to do about it; one the framework never wrote is left alone silently. A sync cannot surprise
+  anyone.
+- **Except where the framework owns a region rather than a file:** the rules block between the
+  `agentsmith:rules` markers, and the `hooks` key in `.claude/settings.json`. Those are refreshed
+  whatever else the tenant has changed around them — judging the whole file would freeze a tenant's
+  gate wiring the moment they edited their own permissions.
+
 ### Added — `agentsmith sync`: one command keeps a tenant current
 
 - **What a tenant holds as copies stopped drifting.** The gate hooks changed six times in 90 days

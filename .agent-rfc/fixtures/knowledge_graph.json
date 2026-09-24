@@ -3500,7 +3500,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-23T22:10:57Z",
+      "last_modified": "2026-09-24T02:26:09Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4117,7 +4117,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-23T21:56:51Z",
+      "last_modified": "2026-09-24T02:12:19Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4617,7 +4617,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-23T22:08:59Z",
+      "last_modified": "2026-09-24T02:21:05Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5062,7 +5062,7 @@
         "upgrade",
         "git"
       ],
-      "last_modified": "2026-09-23T22:10:28Z",
+      "last_modified": "2026-09-24T02:25:26Z",
       "id": "runtime/machine/upgrade.py"
     },
     {
@@ -6624,13 +6624,14 @@
         "merge_rules_block",
         "_test_command",
         "_project_name",
+        "generated_rules",
         "_write_rules",
         "adopt",
         "commit_command",
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-23T10:00:48Z",
+      "last_modified": "2026-09-24T02:05:14Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6911,13 +6912,18 @@
         "_manifest",
         "is_adopted",
         "_digest",
+        "ownership",
         "plan_sync",
+        "_generated_whole",
+        "_with_block",
+        "_shared_files",
+        "_gates_template",
         "describe",
         "sync",
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-09-23T22:09:58Z",
+      "last_modified": "2026-09-24T02:24:42Z",
       "id": "runtime/sync.py"
     },
     {
@@ -6936,9 +6942,17 @@
         "test_a_second_sync_writes_nothing",
         "test_an_adopted_repository_is_never_vendored_into",
         "test_the_manifest_records_what_this_sync_wrote",
-        "test_upgrade_refuses_to_vendor_into_an_adopted_repository"
+        "test_upgrade_refuses_to_vendor_into_an_adopted_repository",
+        "_as_an_older_framework_left_it",
+        "_stale_rules",
+        "test_a_stale_rules_block_is_refreshed_and_the_tenants_prose_survives",
+        "test_the_ide_hook_wiring_is_refreshed_and_the_tenants_settings_survive",
+        "test_a_tenants_own_settings_do_not_freeze_their_gate_wiring",
+        "test_a_file_the_tenant_edited_is_left_alone_and_named",
+        "test_the_gates_workflow_follows_the_framework_it_runs",
+        "test_everything_a_sync_refreshed_goes_in_one_commit_the_gates_accept"
       ],
-      "last_modified": "2026-09-23T22:07:26Z",
+      "last_modified": "2026-09-24T02:18:55Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -6956,6 +6970,22 @@
       "pillar": null,
       "created_at": "2026-09-23T22:20:59Z",
       "id": "rfc:reviews/framework-sync.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A sync refreshes what it owns, and never clobbers what it does not",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/sync-merged-files.md",
+      "pillar": null,
+      "created_at": "2026-09-24T02:34:54Z",
+      "id": "rfc:designs/sync-merged-files.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 a sync refreshes what it owns, and never clobbers what it does not",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/sync-merged-files.md",
+      "pillar": null,
+      "created_at": "2026-09-24T02:34:54Z",
+      "id": "rfc:reviews/sync-merged-files.md"
     }
   ],
   "edges": [
