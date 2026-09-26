@@ -77,6 +77,29 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — two pillars were enforced on every design and specified nowhere
+
+- **P15 (Ambiguous Signals) and P16 (Recovery Paths) now have specifications.** `templates/governance.json`
+  defines 16 pillars and a design must answer the 14 whose `check` contains `design` — P1–P4 and
+  P7–P16. `README.md` listed fourteen, but a **different** fourteen: it included P5 and P6, which are
+  `check: [review]` and never asked of a design, and omitted these two, which are. A contributor could
+  read both canonical documents, write a design answering everything they describe, and have the gate
+  reject it for two pillars they had never seen.
+- **`docs/DESIGN.md`'s pillar heading said "Ten Operational Pillars" and the section documented
+  fourteen**, with two more prose references to "the Ten Pillars" and a `README.md` cross-reference
+  naming the section by that stale title. The heading is now count-free, states the 16/14 split and
+  names `check: [design]` as the authority, so it cannot go stale the same way again.
+- `docs/PRODUCT_BACKLOG.md`'s public-article plan said "Ten Pillars" and is corrected.
+
+### Added — the pillar registry is pinned against both documents
+
+- **`scripts/test/test_design_and_validation_docs.py`** gains three tests reading the same
+  `templates/governance.json` that `scripts/gate_models.py` reads, so they cannot drift from the gate:
+  every registry pillar has a `docs/DESIGN.md` section, every design-question pillar is in README's
+  list (keyed on `check`, not on a count, so a new pillar fails until documented), and no document
+  states a count the registry contradicts — asserted against the wrong spellings rather than for the
+  right one. Each was confirmed failing against a reverted fix.
+
 ### Fixed — three passes of the documentation against the code
 
 - **`docs/DESIGN.md` documented `resolve()`'s precedence backwards**, and this is the one that

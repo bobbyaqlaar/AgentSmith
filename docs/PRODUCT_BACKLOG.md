@@ -138,7 +138,7 @@ round-trip) need "Running live" above.
 
 **Article content:**
 
-1. The framework architecture — Ten Pillars, multi-agent, eval scorecard.
+1. The framework architecture — the sixteen pillars, multi-agent, eval scorecard.
 2. Building KYC Sentinel: why KYC is the domain where compliance features are
    load-bearing rather than decorative (`docs/testbed-tenant-spec.md` opening).
 3. What building a tenant found in the framework — G1–G10, then the 1.1.0

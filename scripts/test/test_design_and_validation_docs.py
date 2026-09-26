@@ -240,3 +240,62 @@ def test_installer_vendors_the_review_levers_the_process_gate_reads() -> None:
     copy = text[text.index('cp "$INSTALLER_DIR/docs/design-review-checklist.md"'):]
     copy = copy[: copy.index('"$FRAMEWORK_DIR/docs/"')]
     assert '"$INSTALLER_DIR/docs/review-levers.md"' in copy
+
+
+# ── The pillar registry is restated in two documents ─────────────────────────
+#
+# `templates/governance.json` is the registry the gate reads; README.md and
+# docs/DESIGN.md restate it in prose for a reader. That is
+# `pin-unremovable-duplicates`: prose cannot be merged into JSON, so it is pinned
+# by parsing both. Found `docs/DESIGN.md` titled "Ten Operational Pillars" while
+# documenting fourteen, README titled "The Fourteen Pillars" while listing a
+# different fourteen, and **P15 and P16 answered in every design and specified in
+# neither** (.agent-rfc/designs/docs-vs-code-audit-2.md).
+
+REGISTRY = ROOT / "templates" / "governance.json"
+
+
+def _registry_pillars() -> list[dict]:
+    import json
+
+    pillars = json.loads(REGISTRY.read_text(encoding="utf-8"))["pillars"]
+    assert len(pillars) > 10, f"parsed only {len(pillars)} pillars — the query is broken"
+    return pillars
+
+
+def test_every_pillar_the_gate_knows_has_a_section_in_the_design_doc() -> None:
+    design = (ROOT / "docs" / "DESIGN.md").read_text(encoding="utf-8")
+    missing = [f"P{p['id']} {p['name']}" for p in _registry_pillars()
+               if f"### Pillar {p['id']} —" not in design]
+    assert not missing, (
+        f"these pillars have no section in docs/DESIGN.md: {missing}. A design must answer every "
+        "pillar whose `check` includes `design`, so one with no specification is a question a "
+        "contributor cannot look up"
+    )
+
+
+def test_every_pillar_a_design_must_answer_is_listed_in_the_readme() -> None:
+    """The gate asks a pillar when its `check` contains `design` — the same source
+    `scripts/gate_models.py` reads, so this cannot drift from the gate."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    asked = [p for p in _registry_pillars() if "design" in (p.get("check") or [])]
+    assert asked, "no pillar is a design question — the registry shape changed"
+    missing = [f"P{p['id']} {p['name']}" for p in asked
+               if not re.search(rf"^{p['id']}\. \*\*", readme, re.M)]
+    assert not missing, f"README.md's pillar list omits: {missing}"
+
+
+def test_no_document_states_a_stale_pillar_count() -> None:
+    """The heading said "Ten" for four pillars longer than it was true. A count in
+    prose is a second copy of `len(pillars)`; these are the spellings that were
+    wrong, so they stay asserted against rather than trusted."""
+    total = len(_registry_pillars())
+    spellings = {10: "Ten", 14: "Fourteen", 16: "Sixteen"}
+    wrong = {n: word for n, word in spellings.items() if n != total}
+    for doc in ("README.md", "docs/DESIGN.md", "docs/UserManual.md"):
+        text = (ROOT / doc).read_text(encoding="utf-8")
+        for n, word in wrong.items():
+            for phrase in (f"{word} Operational Pillars", f"{word} Pillars"):
+                assert phrase not in text, (
+                    f"{doc} says '{phrase}' but the registry defines {total} pillars"
+                )

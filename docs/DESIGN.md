@@ -221,7 +221,13 @@ Observability + improvement               (loop closes)
 
 ---
 
-## Ten Operational Pillars
+## Operational Pillars
+
+**Sixteen pillars; fourteen are answered in every design.** A pillar is a design question when its
+`check` list in `templates/governance.json` contains `design` — `scripts/gate_models.py` reads that
+and nothing else, so this document and the gate cannot disagree about which are asked. P5 and P6 are
+`check: [review]`: standing rules a review pass works down, not questions a design answers. The
+count is not in the heading on purpose — it was "Ten" for four pillars longer than it was true.
 
 ### Pillar 1 — Requirements & Design
 
@@ -403,11 +409,37 @@ Before re-pinning, check WHICH projection of the output each fixture holds.
 Different suites pin different views of the same result — a decision record
 versus a rationale alone — and regenerating one against another's shape silently
 changes what the suite measures while looking like routine maintenance.
+
+### Pillar 15 — Ambiguous Signals
+
+**Purpose:** One value must never mean two things.
+
+"Measured zero" and "never measured" are different facts, and a single
+representation for both turns a gap into a number somebody acts on. Every new
+result, count or message states what it covered: a rate names its denominator, a
+"nothing found" names the scope it searched, and a check that could not run says
+so rather than reporting a pass.
+
+The design answers what each new result reads as **when the check did not run**.
+That is the case nobody writes a test for, and the one an operator meets first.
+
+### Pillar 16 — Recovery Paths
+
+**Purpose:** A fallback that fails must still hand control somewhere.
+
+Every repair step — a retry, a degrade rung, a cache miss, a re-arm — has its own
+failure, and the question is where control goes then and what state the next rung
+receives. A recovery path that raises inside its own handler loses both the
+original failure and the repair.
+
+The design answers this per fallback, not once: the interesting answer is usually
+that the second rung receives state the first rung half-changed.
+
 ---
 
 ## Architecture by Layer
 
-the Ten Operational Pillars section's Ten Pillars are this framework's own operational guardrails. This
+the Operational Pillars section's pillars are this framework's own operational guardrails. This
 section is a different, complementary cut: the **functional and
 non-functional layers** any agentic application needs, each mapped to the
 §-numbered section below that specifies it precisely, plus what's
@@ -928,7 +960,7 @@ kg.fetch_subgraph_context_window("path/to/target_module.py", hops=2)
 ### Role in the Functional Stack — Long-Term Memory
 
 The Knowledge Graph is the **long-term, structured half of Functional Layer 3
-(Memory Management)** (see the Ten Operational Pillars section). It is not conversation memory and not a vector
+(Memory Management)** (see the Operational Pillars section). It is not conversation memory and not a vector
 store — it is a graph-structured knowledge base over the codebase that
 persists across sessions on disk, independent of any one agent run.
 

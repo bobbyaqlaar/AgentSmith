@@ -248,10 +248,11 @@ files written into it.
 
 ---
 
-## The Fourteen Pillars
+## The Sixteen Pillars
 
 The operational guardrails AgentSmith enforces on every project it touches
-(full specification: docs/DESIGN.md › Ten Operational Pillars):
+(full specification: docs/DESIGN.md › Operational Pillars). **Fourteen of the sixteen are answered
+in every design** — P5 and P6 are standing rules a review pass works down instead:
 
 1. **Requirements & Design** — no code without a spec in `.agent-rfc/`.
 2. **Build Architecture (Ponytail)** — native libraries over custom
@@ -285,6 +286,11 @@ The operational guardrails AgentSmith enforces on every project it touches
     remainder declared a gap.
 14. **Fixture and Baseline Drift** — re-pin baselines in the same change, after
     checking which projection of the output each fixture holds.
+15. **Ambiguous Signals** — one value must not mean two things. "Measured zero" and
+    "never measured" are different facts, and a check that could not run says so
+    rather than reporting a pass.
+16. **Recovery Paths** — every fallback has its own failure. Where does control go
+    then, and what state does the next rung receive?
 
 ---
 
