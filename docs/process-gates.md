@@ -663,8 +663,10 @@ read, so there is one set of rules, not two.
 The commit gate is skippable: `git commit --no-verify`, a clone that never ran
 `git config core.hooksPath .githooks`, a rebase or cherry-pick (git runs no
 `commit-msg` for those), or git run from a shell no IDE gates. Branch protection
-would catch it on the way out, and a private repository on a free plan does not
-have it — so the check runs again, locally, at every touchpoint.
+catches it on the way out, and GitHub offers it on a **public** repository at no
+cost — so requiring the `process-gates` check on `main` is what turns "reported"
+into "refused". The local re-checks below exist because that protection is a
+repository setting nobody can rely on being present, not a substitute for it.
 
 `process_gate.py sweep` re-checks every commit reachable from a local branch
 that it has not checked before, using the same per-commit code the CI gate uses.

@@ -77,6 +77,48 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — a template fixed in the checkout now reaches the tenant
+
+- **`_templates_dir` and `_actions_dir` preferred the machine install over the checkout they were
+  running from**, under docstrings claiming the opposite — `_templates_dir`'s said "the installed
+  location first, then the checkout — so a developer running from a clone gets their own templates
+  rather than the machine's stale copy", which is the reverse of what the code did. Found by adopting
+  a throwaway repository after fixing `agentsmith-gates.yml`: the tenant got the **old** workflow,
+  because `~/.agent-framework` had one, while `agentsmith-sync.yml` got the fix, because the install
+  did not have that file at all. One fixed template reached a tenant and the other did not.
+- **`_actions_dir` was worse.** On the machine this was found on, the installed `github-actions/`
+  held **three of the five** composite actions: `install-python-deps` and `rollback-notify` were
+  added to the checkout and never re-installed. A tenant adopted there received workflows calling
+  two actions that were never copied in, which GitHub rejects at the first `uses:` — the whole
+  workflow, not one step. CI never saw it: the scratch tenants run `install-ai-stack.sh` first, so
+  their install is never stale.
+- **The adopt suite could not see either.** Its fixture points `HOME` at an empty directory, so
+  `~/.agent-framework` never exists and every test resolved from the checkout whatever the order
+  was. `test_this_checkouts_copies_beat_the_machines_installed_ones` builds the condition the
+  fixture removes, for both resolvers, and was confirmed to fail against the old order.
+
+### Changed — the README describes the architecture that shipped
+
+- **`README.md` leads with the contract.** A new *How a repository is governed* section: a
+  repository declares `.agenticframework/providers.json`, the hooks resolve a provider at run time,
+  AgentSmith is the reference implementation of `contract/gate/v1`, and
+  `agentsmith conformance --provider "<command>"` is how another platform proves it satisfies the
+  same contract. A five-port table separates **declared and resolved** (the gate) from *a contract
+  in place* (rules, telemetry, records, security), and says plainly that the commit, push and CI
+  gates are not in the contract yet — so a third-party provider can govern an editing session and
+  not a commit.
+- **Quick Start leads with `agentsmith tenant adopt`**, the case most repositories are in. The
+  opt-in vendoring path stays, named as the other transport rather than the default.
+- **`providers.json` and `scaffold.json` are documented** in `docs/DESIGN.md`'s config table and in
+  the manual's adopt section. Neither had appeared in any user-facing document.
+- **Three stale "while this repository is private" install notes removed** (`README.md`,
+  `docs/UserManual.md` ×2) — siblings of the one the previous slice fixed, missed because the sweep
+  grepped a phrase they do not use.
+- **Branch protection is an available action, not a limitation.** `docs/process-gates.md` said a
+  private repository on a free plan does not have it; on a public one it is free, so requiring the
+  `process-gates` check on `main` is what turns *reported* into *refused*. The backlog item whose
+  trigger was "making the repo public" is marked fired, with what to do and whose call it is.
+
 ### Fixed — a tenant checks the provider out whether or not it is private
 
 - **The gates and sync workflows no longer require `AGENTSMITH_READ_TOKEN`.** All three uses become

@@ -101,7 +101,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-09-18T15:43:07Z",
+      "last_modified": "2026-09-25T04:03:52Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -191,7 +191,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-09-18T15:43:22Z",
+      "last_modified": "2026-09-25T04:04:10Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -232,7 +232,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-09-18T15:44:16Z",
+      "last_modified": "2026-09-25T04:05:07Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -251,7 +251,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-09-18T15:42:53Z",
+      "last_modified": "2026-09-25T04:03:35Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -289,7 +289,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-09-18T15:42:57Z",
+      "last_modified": "2026-09-25T04:03:40Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -358,7 +358,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-09-18T15:42:12Z",
+      "last_modified": "2026-09-25T04:02:44Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -434,7 +434,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-09-24T19:02:02Z",
+      "last_modified": "2026-09-25T04:04:40Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -458,7 +458,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-09-18T15:43:00Z",
+      "last_modified": "2026-09-25T04:03:43Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -476,7 +476,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-09-18T15:44:08Z",
+      "last_modified": "2026-09-25T04:04:58Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -488,7 +488,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-09-18T15:43:47Z",
+      "last_modified": "2026-09-25T04:04:36Z",
       "id": "runtime/environment.py"
     },
     {
@@ -521,7 +521,7 @@
         "degrade_tiers",
         "__getattr__"
       ],
-      "last_modified": "2026-09-18T15:42:40Z",
+      "last_modified": "2026-09-25T04:03:20Z",
       "id": "runtime/testing.py"
     },
     {
@@ -607,7 +607,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-09-18T15:43:17Z",
+      "last_modified": "2026-09-25T04:04:04Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -766,7 +766,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-09-18T15:43:13Z",
+      "last_modified": "2026-09-25T04:03:59Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -837,7 +837,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-09-18T15:43:12Z",
+      "last_modified": "2026-09-25T04:03:57Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -868,7 +868,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-09-18T15:43:10Z",
+      "last_modified": "2026-09-25T04:03:55Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -3395,7 +3395,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-09-24T19:11:00Z",
+      "last_modified": "2026-09-25T04:04:09Z",
       "id": "runtime/config.py"
     },
     {
@@ -3488,7 +3488,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-24T22:25:17Z",
+      "last_modified": "2026-09-26T07:20:10Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3581,7 +3581,7 @@
         "system_fingerprint",
         "prompt_attributes"
       ],
-      "last_modified": "2026-09-18T15:42:41Z",
+      "last_modified": "2026-09-25T04:03:22Z",
       "id": "runtime/prompt_identity.py"
     },
     {
@@ -4053,7 +4053,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-09-18T15:41:58Z",
+      "last_modified": "2026-09-25T04:02:28Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -4606,7 +4606,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-24T22:05:07Z",
+      "last_modified": "2026-09-25T05:11:21Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5051,7 +5051,7 @@
         "upgrade",
         "git"
       ],
-      "last_modified": "2026-09-24T22:23:13Z",
+      "last_modified": "2026-09-25T05:45:33Z",
       "id": "runtime/machine/upgrade.py"
     },
     {
@@ -5612,7 +5612,7 @@
         "_command",
         "render_config"
       ],
-      "last_modified": "2026-09-23T09:52:38Z",
+      "last_modified": "2026-09-25T04:58:04Z",
       "id": "scripts/gate_ides.py"
     },
     {
@@ -6620,7 +6620,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-24T22:19:08Z",
+      "last_modified": "2026-09-25T05:40:31Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6642,6 +6642,7 @@
         "test_the_rules_block_is_replaced_not_repeated",
         "test_the_gates_are_armed_and_the_old_hooks_chained",
         "test_the_gates_workflow_runs_the_gate_from_a_framework_checkout",
+        "test_this_checkouts_copies_beat_the_machines_installed_ones",
         "_adoption_commit",
         "test_the_adoption_commit_goes_in_though_it_is_not_the_first",
         "test_the_printed_commit_stages_by_name",
@@ -6655,7 +6656,7 @@
         "test_adopt_declares_who_governs_the_repository",
         "test_adopt_writes_the_sync_workflow_so_a_tenant_hears_about_upgrades"
       ],
-      "last_modified": "2026-09-24T04:07:24Z",
+      "last_modified": "2026-09-26T07:22:23Z",
       "id": "scripts/test/test_tenant_adopt.py"
     },
     {
@@ -6803,7 +6804,7 @@
         "passed",
         "render"
       ],
-      "last_modified": "2026-09-23T10:02:25Z",
+      "last_modified": "2026-09-25T05:04:01Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -6913,7 +6914,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-09-24T22:21:10Z",
+      "last_modified": "2026-09-25T05:43:28Z",
       "id": "runtime/sync.py"
     },
     {
@@ -7052,6 +7053,22 @@
       "pillar": null,
       "created_at": "2026-09-24T22:26:11Z",
       "id": "rfc:reviews/code-volume-sweep.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The front door describes the architecture that shipped",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/public-front-door.md",
+      "pillar": null,
+      "created_at": "2026-09-26T07:47:05Z",
+      "id": "rfc:designs/public-front-door.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the front door describes the architecture that shipped",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/public-front-door.md",
+      "pillar": null,
+      "created_at": "2026-09-26T07:47:05Z",
+      "id": "rfc:reviews/public-front-door.md"
     }
   ],
   "edges": [

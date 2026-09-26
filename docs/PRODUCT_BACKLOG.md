@@ -197,9 +197,14 @@ and `docs/PRODUCT_ARCHIVE.md`. Each was checked still open on 2026-09-14.
 - **The process gates report a bad push; they cannot refuse one.** Making
   Self-Test's `process-gates` a required check on `main` (and merging through
   pull requests) needs branch protection, which GitHub offers private repos only
-  on Pro — verified 2026-09-14. **Trigger:** upgrading to Pro or making the repo
-  public: then protect `main`, require `process-gates`, and stop pushing to it
-  directly.
+  on Pro — verified 2026-09-14. **Trigger: FIRED** — the owner is making the
+  repository public (2026-09-26), and branch protection is free on a public
+  repository. This is the single largest governance change available right now:
+  every gate in this repository currently *reports*. To make it refuse: protect
+  `main`, require the `process-gates` check, require a pull request, and stop
+  pushing to `main` directly. Owner's action — it is a repository setting, and
+  it changes how this repository is worked in, so it is not something to switch
+  on as a side effect of anything else.
 - **New tenants do not get the process gates automatically.** AqlaarTeleologyStudio
   and KYC Sentinel adopted them by hand on 2026-09-14 (`docs/process-gates.md`
   § Rolling out to a tenant). `agentsmith tenant init` and `hooks/post-checkout`

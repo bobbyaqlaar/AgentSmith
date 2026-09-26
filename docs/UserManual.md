@@ -56,11 +56,7 @@ docker --version
 ### Install the Framework
 
 ```bash
-# While this repository is private (until it is product-ready) the release URL
-# below returns 404 — even to people with access, because curl sends no GitHub
-# login — and `curl | bash` on a 404 exits 0 having installed nothing. Install
-# from a checkout instead, which needs no release download:
-#   gh repo clone bobbyaqlaar/AgentSmith && ./AgentSmith/install-ai-stack.sh
+# From a checkout instead (no release download): ./install-ai-stack.sh
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 ```
 
@@ -1338,11 +1334,7 @@ nothing about origin.
 # Install (the Install & Start section) — vendors scripts/hooks/templates to ~/.agent-framework,
 # sets git's global init.templateDir (developer mode; use --mode enterprise
 # to skip that — see the Enterprise Pack section).
-# While this repository is private (until it is product-ready) the release URL
-# below returns 404 — even to people with access, because curl sends no GitHub
-# login — and `curl | bash` on a 404 exits 0 having installed nothing. Install
-# from a checkout instead, which needs no release download:
-#   gh repo clone bobbyaqlaar/AgentSmith && ./AgentSmith/install-ai-stack.sh
+# From a checkout instead (no release download): ./install-ai-stack.sh
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 # Nothing to reload: `agentsmith` is linked at ~/.local/bin (the installer says
 # if that is not on your PATH).
@@ -1567,6 +1559,23 @@ cd /path/to/existing-repo
 agentsmith tenant adopt acme --architecture hexagonal
 ```
 
+**What it writes, and why it is not a copy of AgentSmith.** The file that matters is
+`.agenticframework/providers.json`: the repository's declaration of *who governs it*
+(`contract/gate/v1/providers.schema.json`).
+
+```json
+{
+  "contract": 1,
+  "providers": { "gate": { "command": "agentsmith gate", "version": "^2" } }
+}
+```
+
+`.githooks/process-gate` reads that before it falls back to the framework's own paths, so the hooks
+name a provider rather than a file layout. Point `gate.command` at another platform's command and
+this repository is governed by that platform instead — `agentsmith conformance --provider "<command>"`
+scores it against the contract first. `"gate": "none"` declares the repository deliberately
+ungoverned, and is never overridden by a fallback.
+
 It reads the repo and prints a plan before writing anything: the stack, the paths it will gate
 (each top-level directory git tracks source files in, plus source files at the root — or exactly
 the `--gate GLOB`s you pass), the hooks the repo already runs, and for every file whether it will
@@ -1577,10 +1586,12 @@ What it keeps:
 - **Your hooks** (husky, pre-commit, `.git/hooks`) keep running, after the gate. AgentSmith's own
   `post-checkout` and `post-commit`, which `git init` copies in, are left out: they would vendor
   framework code and CI workflows into your repo.
-- **Your CI** is left alone. One workflow is added, `.github/workflows/agentsmith-gates.yml`, which
-  checks out AgentSmith at the release it names and runs the gate over every push. Set the
-  `AGENTSMITH_READ_TOKEN` repository secret (Contents: read on AgentSmith) for it to run.
-  Nothing is vendored into the repo.
+- **Your CI** is left alone. Two workflows are added: `.github/workflows/agentsmith-gates.yml`, which
+  checks out AgentSmith at the release it names and runs the gate over every push, and
+  `agentsmith-sync.yml`, which weekly brings the repository up to the framework's latest release and
+  opens a pull request. Both check AgentSmith out with the run's own token; if AgentSmith is private
+  to you, set the `AGENTSMITH_READ_TOKEN` repository secret (Contents: read). Nothing is vendored
+  into the repo.
 - **Your agent rules**: an existing `CLAUDE.md`, `AGENTS.md`, `.cursorrules` gets AgentSmith's rules
   appended in a marked block, replaced on a re-run.
 - **Your Claude settings**: the gate hooks are added; permissions and everything else stay.

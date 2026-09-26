@@ -566,6 +566,8 @@ See Section 25 for full specification (the Trace Redaction section redaction, th
 | `.agent-rfc/fixtures/knowledge_graph.json` | NetworkX `node_link_data` JSON | Auto-updated by `map_codebase.py` on every commit/checkout |
 | `.agent-rfc/fixtures/token_velocity_cache.json` | `{config, monthly_accumulated_spend_usd, current_month_identifier, events}` | Dev session budget; monthly auto-reset |
 | `.agenticframework/tenant.yaml` | Tenant config schema | See Section 23 |
+| `.agenticframework/providers.json` | `{contract: int, providers: {<port>: {command\|url\|otlp, version?} \| "none"}}` — schema at `contract/gate/v1/providers.schema.json` | **Who governs this repository.** Written by `agentsmith tenant adopt`, refreshed by `agentsmith sync`, read by `.githooks/process-gate` before it falls back to the framework's own paths. `"gate": "none"` declares a repository deliberately ungoverned and is never overridden. `version` is recorded for a person and for tooling; the launcher does not enforce it |
+| `.agenticframework/scaffold.json` | `{generated_by, files: {<path>: <sha256>}}` | What the framework wrote and its hash at the time. Two gate escapes verify against it — `Review: n/a: generated scaffold` on the arming commit, `Review: n/a: framework sync <version>` on any upgrade — and `agentsmith sync` uses it to decide ownership: bytes match, refresh; bytes differ, leave and say so; absent, never ours. Unsigned by design: rewriting a file *and* its hash defeats it visibly |
 | `.agent-history.log` | JSON-Lines; `MAJOR`/`CRITICAL` never pruned until `hitl_resolved: true` | Synced to Ops Portal unresolved queue |
 
 ---
@@ -1407,7 +1409,10 @@ AgentSmith/
 ├── .cursor/                     # Cursor's hook config, generated from templates/governance.json → ides (preToolUse+Write is the edit gate, beforeShellExecution the shell one)
 │   └── hooks.json
 ├── .agenticframework/
-│   └── process-gates.json       # What this repo's process gates cover (docs/process-gates.md)
+│   ├── process-gates.json       # What this repo's process gates cover (docs/process-gates.md)
+│   └── approvals.jsonl          # Deviations the owner approved at a TTY (`agentsmith approve`)
+│                                # No providers.json here: AgentSmith IS the provider, so its hooks
+│                                # resolve to its own scripts/ — a TENANT gets one from `tenant adopt`
 ├── init-db/                     # Postgres bootstrap for docker-compose.yml (creates agenticframework DB)
 ├── pyproject.toml               # Packages runtime/ as `agentsmith-runtime` (the Production Runtime section) — pip-installable by tenants
 ├── .python-version              # The Python version: the framework environment, requirements.lock and Self-Test all use it

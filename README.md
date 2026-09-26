@@ -24,6 +24,9 @@ have — GitHub Actions, OpenTelemetry, Phoenix — and git stays the record of
 every change. Install it once per machine, and every app you opt in is governed
 from its first commit.
 
+A governed repository points at a **provider**, not at AgentSmith's files, so the coupling is to a
+published contract rather than to a file layout — see *How a repository is governed* below.
+
 **Where the portal stands.** One portal with three areas. **Dev** shows, for
 every app, how each change was designed, reviewed and gated — sent by the app's
 CI. **Ops** shows tracing (Phoenix, OpenTelemetry), spend, run status, incident
@@ -97,8 +100,9 @@ monitoring.
 
 ## Architecture
 
-Two layers, joined by one OpenTelemetry span contract
-(docs/DESIGN.md › System Architecture has the full diagrams and the end-to-end integration flow):
+Two layers, joined by one OpenTelemetry span contract — and reached by a tenant through the gate
+contract above (docs/DESIGN.md › System Architecture has the full diagrams and the end-to-end
+integration flow):
 
 - **Layer 1 — Dev Lifecycle (workstation):** IDE guardrails, git hooks,
   local/hybrid LLM routing, PR evaluations, Knowledge Graph,
@@ -134,17 +138,67 @@ deliberately *not* built and why) is **docs/DESIGN.md › Architecture by Layer*
 
 ---
 
+## How a repository is governed
+
+AgentSmith is the reference implementation of a **contract**, not a set of files you copy.
+
+A governed repository holds one declaration — `.agenticframework/providers.json`, written by
+`agentsmith tenant adopt`:
+
+```json
+{
+  "_about": "Who governs this repository. The hooks ask this before they ask the framework's own paths…",
+  "contract": 1,
+  "providers": {
+    "gate": { "command": "agentsmith gate", "version": "^2" }
+  }
+}
+```
+
+The git hooks ask *that* — not AgentSmith's paths. At the three events the contract covers
+(`session-start`, `pre-edit`, `stop`) the resolved provider receives a JSON `GateEvent` on stdin and
+answers with a `Decision` on stdout: allow, deny, block, or extra context. `"gate": "none"` declares
+a repository deliberately ungoverned, and is never overridden by a fallback.
+
+The commit, push and CI gates are **not** yet part of the contract: they still run AgentSmith's own
+`process_gate.py`. So today a third-party provider can govern an editing session and not a commit —
+the table below says which is which, and that boundary is the honest state of the architecture
+rather than a detail.
+
+Two things follow:
+
+- **Another platform can govern your repository.** The contract is published under
+  [`contract/gate/v1/`](contract/gate/v1/) with a schema, golden cases and a conformance suite.
+  `agentsmith conformance --provider "<your command>"` scores any implementation against the same
+  five cases AgentSmith's own adapter is scored against — so "or another provider" is checkable
+  rather than claimed.
+- **A major AgentSmith release costs you one merged pull request.** Everything a tenant still holds
+  — the gate hooks, the IDE hook wiring, the rules block, the workflows — is framework-owned and
+  recorded with its hash. `agentsmith sync` refreshes exactly those, leaves anything you edited
+  alone and says so, and a weekly workflow opens the pull request for you. The commit it writes is
+  accepted by your own gates *by hash*, not by asking you to review framework code you did not
+  write.
+
+**Where the ports stand.** Five things a tenant needs from a governance platform; one is resolved
+through the contract today, and the rest are contracts in place that still resolve to AgentSmith:
+
+| Port | What it provides | Status |
+|---|---|---|
+| **Gate** | a decision at `session-start`, `pre-edit`, `stop` | **declared and resolved** via `contract/gate/v1`; the commit, push and CI gates are not in the contract and run AgentSmith's own gate |
+| **Telemetry** | spans, metrics, resource attributes | already vendor-neutral — OTLP and the span contract in CHANGELOG.md |
+| **Rules** | what the agent is told | a contract in place (`templates/governance.json`, the `agentsmith:rules` markers); not yet published as a schema |
+| **Records** | what CI decided, per commit | a contract in place — the dev record, versioned `schema: 1` |
+| **Security and evals** | artifact schemas and a harness verdict | a contract in place — the `SEC-*` registry and evidence packs |
+
+---
+
 ## Quick Start
 
 ```bash
 # 1. Install (once per machine) — latest published release
-# While this repository is private (until it is product-ready) the release URL
-# below returns 404 — even to people with access, because curl sends no GitHub
-# login — and `curl | bash` on a 404 exits 0 having installed nothing. Install
-# from a checkout instead, which needs no release download:
-#   gh repo clone bobbyaqlaar/AgentSmith && ./AgentSmith/install-ai-stack.sh
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 # → the `agentsmith` command at ~/.local/bin; nothing is added to your shell profile
+# From a checkout instead (no release download): ./install-ai-stack.sh
 
 # 2. Mode + dashboard  (identity needs no export: it resolves from
 #    tenant.yaml `tenant.owner`, else `git config user.email`; the mode is
@@ -152,25 +206,44 @@ curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/in
 agentsmith mode local          # or agentsmith mode hybrid (cloud APIs)
 agentsmith dashboard start     # → http://localhost:6006
 
-# 3. Apply to a project — opt in, then check out. `git init` alone provisions
-#    nothing: git does not run post-checkout on init, and needs a commit first.
-mkdir my-project && cd my-project && git init -b main
-git commit --allow-empty -m "chore: init"
-mkdir -p .agenticframework && touch .agenticframework/enabled
-git checkout
-# → IDE rules, CI workflows, vendored scripts/ + runtime/, Knowledge Graph
+# 3. Bring a repository under the gates — the usual case, an existing one
+cd my-existing-repo
+agentsmith tenant adopt my-app          # prints a plan; --yes to write it
+# → .agenticframework/providers.json, armed gate hooks (your own hooks still run),
+#   IDE hook wiring, a rules block appended to your CLAUDE.md, two workflows.
+#   Nothing of AgentSmith's code is copied into your tree.
+git commit …                            # adopt prints the exact command
+
+# 4. Stay current — or let the weekly workflow open the pull request
+agentsmith sync                         # plan; --yes to write
 ```
 
 Full setup (env vars, `.env` files, GitHub secrets, prerequisites):
 **docs/UserManual.md › Install & Start, Create an AgentSmith-Governed Repo**. Daily commands: **docs/UserManual.md › Command Reference**.
 
+### The other transport: a vendored repository
+
+A repository can instead hold AgentSmith's own `scripts/` and `runtime/` in its tree. This is how
+onboarding worked first, it is deliberately still supported, and it is what `agentsmith tenant init`
+plus the machine hooks give you:
+
+```bash
+mkdir my-project && cd my-project && git init -b main
+git commit --allow-empty -m "chore: init"   # git runs no post-checkout on init
+mkdir -p .agenticframework && touch .agenticframework/enabled
+git checkout                                # → IDE rules, CI workflows, vendored code, Knowledge Graph
+```
+
+Prefer `tenant adopt` unless you specifically want the framework's code in your repository: a
+vendored tree is a copy, and a copy is the thing that drifts. `agentsmith sync` refreshes both.
+
 ### Opt-in model
 
 Hooks install machine-wide, but only *provision and enforce* in repos that
 opted in: a brand-new `git init` opts in automatically; a pre-existing or
-cloned repo is left untouched until you opt it in explicitly
-(`mkdir -p .agenticframework && touch .agenticframework/enabled`, then any
-checkout). Cloning an unrelated open-source project never gets AgentSmith
+cloned repo is left untouched until you opt it in explicitly — by
+`agentsmith tenant adopt`, or by `touch .agenticframework/enabled` and a
+checkout. Cloning an unrelated open-source project never gets AgentSmith
 files written into it.
 
 ---
@@ -288,6 +361,7 @@ One document per kind, each for a different question:
 | [docs/PRODUCT_ARCHIVE.md](docs/PRODUCT_ARCHIVE.md) | How did it get this way — what was decided, when, and what it replaced? |
 | [docs/REVIEW_LOG.md](docs/REVIEW_LOG.md) | What did each review find, and what closed it? |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release, and what is compatible with what? |
+| [contract/gate/v1/protocol.md](contract/gate/v1/protocol.md) | What must a governance provider do to satisfy the gate contract? |
 
 Reference material a tenant reads — the security framework map, the UAE regulatory notes, the
 ISO 42001 map, the delivery model, RAG and memory, team observability — is under

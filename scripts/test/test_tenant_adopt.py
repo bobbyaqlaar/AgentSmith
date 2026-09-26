@@ -221,9 +221,55 @@ def test_the_gates_workflow_runs_the_gate_from_a_framework_checkout(legacy):
 
     workflow = (legacy / ".github/workflows/agentsmith-gates.yml").read_text()
     assert 'ref: "v9.9.9"' in workflow
-    assert "secrets.AGENTSMITH_READ_TOKEN" in workflow
     assert "process_gate.py ci" in workflow and "send_dev_record.py" in workflow
     assert "{{FRAMEWORK_REF}}" not in workflow
+    # On the emitted file, not the template. `secrets.AGENTSMITH_READ_TOKEN`
+    # alone was satisfied by the bare form too, which is why this test was green
+    # while a real adoption wrote a workflow that required the secret.
+    assert "secrets.AGENTSMITH_READ_TOKEN || github.token" in workflow, (
+        "a tenant must not need a secret to check out a PUBLIC provider"
+    )
+
+
+@pytest.mark.parametrize(
+    "resolver, stale_rel, want_rel",
+    [
+        ("_templates_dir", ".agent-framework/workflow-templates", "workflow-templates"),
+        ("_actions_dir", ".agent-framework/github-actions", ".github/actions"),
+    ],
+)
+def test_this_checkouts_copies_beat_the_machines_installed_ones(
+    tmp_path, monkeypatch, resolver, stale_rel, want_rel
+):
+    """Both resolvers, because they were wrong together and cite each other.
+
+    `_actions_dir`'s docstring said "the same order, for the same reason, as
+    `_templates_dir`" — so fixing one and not the other would have left the
+    cross-reference lying. On the machine this was found on the installed
+    `github-actions/` held three of five composite actions, so a tenant adopted
+    there got workflows calling two that were never copied in: GitHub rejects
+    the whole workflow at the first `uses:`.
+
+    It sets its own HOME because `legacy` points HOME at an EMPTY directory, so
+    ~/.agent-framework never exists and every other adopt test resolves from the
+    checkout whatever the order is. The suite could not see the defect at all:
+    fixing `workflow-templates/agentsmith-gates.yml` here left a real adoption
+    writing the old file, while `agentsmith-sync.yml` — which the install did not
+    have — picked the fix up. One fixed template reached a tenant, the other did
+    not, and nothing was red
+    (.agent-rfc/designs/public-front-door.md).
+    """
+    import runtime.cli as cli
+
+    stale = tmp_path / "home" / stale_rel
+    stale.mkdir(parents=True)
+    (stale / "marker.yml").write_text("stale\n", encoding="utf-8")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+
+    assert getattr(cli, resolver)() == REPO / want_rel, (
+        f"{resolver} preferred the machine's installed copy over this checkout's — a fix here would "
+        "not reach a tenant adopted on this machine"
+    )
 
 
 # ── The adoption commit, and after it ────────────────────────────────────────
