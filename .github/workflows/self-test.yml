@@ -322,7 +322,12 @@ jobs:
           cache: "npm"
           cache-dependency-path: portal/package-lock.json
       - run: npm ci
-      - run: npx tsc --noEmit
+      - name: "npx tsc --noEmit — the portal type-checks"
+        # agentsmith:gate no-services
+        # One qualifier per tag (gate_steps.Step.needs is a single value), and
+        # `no-services` is the useful one here: a type check wants no database,
+        # and npx ships wherever node does.
+        run: npx tsc --noEmit
       - run: npm run db:migrate
       - name: "npm test — cross-tenant isolation (no DB required)"
         # agentsmith:gate no-services
@@ -330,7 +335,9 @@ jobs:
       - name: "npm run test:db — audit log HMAC sign/verify + tamper detection"
         # agentsmith:gate needs=npm
         run: npm run test:db
-      - run: npm run build
+      - name: "npm run build — the portal builds"
+        # agentsmith:gate needs=npm
+        run: npm run build
       - name: "Start portal for history-sync check"
         env:
           OPS_PORTAL_SYNC_TOKEN: "ci-test-sync-token-not-a-real-secret"
@@ -352,6 +359,7 @@ jobs:
           python-version-file: ".python-version"
       - run: pip install httpx pyyaml
       - name: "verify_system.py --check-history-sync (against the live portal above)"
+        # agentsmith:gate
         working-directory: ${{ github.workspace }}
         env:
           OPS_PORTAL_URL: "http://localhost:3000"
@@ -378,4 +386,6 @@ jobs:
           cache: "npm"
           cache-dependency-path: templates/in-app-widget/package-lock.json
       - run: npm ci
-      - run: npm test
+      - name: "npm test — the in-app widget"
+        # agentsmith:gate needs=npm
+        run: npm test

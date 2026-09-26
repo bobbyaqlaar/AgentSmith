@@ -119,8 +119,12 @@ CI stays the authority.
 | verify_system.py --check-idempotency | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `python3 scripts/verify_system.py --check-idempotency` | needs services |
 | verify_system.py --check-dlq | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `python3 scripts/verify_system.py --check-dlq` | needs services |
 | bash -n / zsh -n syntax check | `.github/workflows/self-test.yml` · Shell scripts | (script) | yes |
+| npx tsc --noEmit — the portal type-checks | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npx tsc --noEmit` | yes |
 | npm test — cross-tenant isolation (no DB required) | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npm test` | yes |
 | npm run test:db — audit log HMAC sign/verify + tamper detection | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npm run test:db` | needs services |
+| npm run build — the portal builds | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npm run build` | needs services |
+| verify_system.py --check-history-sync (against the live portal above) | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `python3 scripts/verify_system.py --check-history-sync` | needs services |
+| npm test — the in-app widget | `.github/workflows/self-test.yml` · In-App Widget | `npm test` | needs npm |
 <!-- END agentsmith:gates -->
 
 For a tenant repo, the equivalent is `make test`, the F-scenario drivers, the

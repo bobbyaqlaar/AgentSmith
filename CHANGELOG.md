@@ -77,6 +77,26 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the local gate runner's green did not mean CI's green
+
+- **Four blocking CI checks carried no `# agentsmith:gate`**, so `agentsmith gates run` could not run
+  them and the generated checklist table did not list them: the portal's `npx tsc --noEmit` and
+  `npm run build`, `verify_system.py --check-history-sync`, and the in-app widget's whole `npm test`.
+  The portal job tagged **both** its `npm test` steps and neither of its other two, so the pattern was
+  understood and applied unevenly. A developer could read "0 failed" locally and fail CI on a type
+  error. All four are tagged, and `test_every_blocking_check_in_this_repos_ci_carries_the_tag` fails on
+  any blocking step that is neither tagged nor on an explicit setup list.
+- **The published gate contract was pinned against a copy of itself on one half.**
+  `test_the_published_schemas_match_the_models_they_describe` read `gm.GateEvent.model_fields` for the
+  event schema and then compared the decision schema against `{"decision", "text"}` and the four
+  verdicts written out in the test — under a docstring saying "not written twice". `Decision` could
+  have gained a field or a fifth verdict and `contract/gate/v1/decision.schema.json`, which a third
+  party implements against, could have gone stale with the test green. Both halves now read the model.
+- **`contract/gate/v1/providers.schema.json` was referenced by no test.** It is published so another
+  platform can write a conforming declaration, and `tenant adopt` writes one — with nothing checking
+  they agree. What adopt writes is now validated against it, including the `"gate": "none"` form, and a
+  second test asserts the schema rejects three declarations the launcher could not read.
+
 ### Fixed — sweeps that matched nothing, and a gate message that blamed the wrong line
 
 - **A test glob that matched nothing, and a guard for the class.** `examples/**/test*.py` had never

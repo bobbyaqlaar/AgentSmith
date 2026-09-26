@@ -51,11 +51,65 @@ def test_the_neutral_decision_matches_what_the_ide_adapters_are_given():
 
 
 def test_the_published_schemas_match_the_models_they_describe():
-    """The schemas are generated from the Pydantic models, not written twice."""
+    """The schemas are generated from the Pydantic models, not written twice.
+
+    Both sides are READ. The event half always was; the decision half compared
+    against `{"decision", "text"}` and `{"allow", "deny", "block", "context"}`
+    written out here — a third copy of the catalogue, which
+    `pin-unremovable-duplicates` names exactly: "a test that hardcodes the second
+    copy is just a third copy". `Decision` could have gained a field, or a fifth
+    verdict, and the published contract a third party implements against could
+    have gone stale with this test green
+    (.agent-rfc/designs/gate-tag-coverage.md).
+    """
+    import typing
+
     import gate_models as gm
 
     event_schema = json.loads((REPO / "contract/gate/v1/event.schema.json").read_text())
     assert set(event_schema["properties"]) == set(gm.GateEvent.model_fields)
+
     decision_schema = json.loads((REPO / "contract/gate/v1/decision.schema.json").read_text())
-    assert set(decision_schema["properties"]) == {"decision", "text"}
-    assert set(decision_schema["properties"]["decision"]["enum"]) == {"allow", "deny", "block", "context"}
+    assert set(decision_schema["properties"]) == set(gm.Decision.model_fields)
+
+    verdicts = set(typing.get_args(gm.Decision.model_fields["decision"].annotation))
+    assert verdicts, "Decision.decision is no longer a Literal — read its values another way"
+    assert set(decision_schema["properties"]["decision"]["enum"]) == verdicts
+
+
+def test_what_adopt_writes_validates_against_the_published_providers_schema():
+    """`contract/gate/v1/providers.schema.json` was referenced by no test.
+
+    It is published so a third party can write a conforming declaration, and
+    `agentsmith tenant adopt` writes one — with nothing checking the two agree.
+    A field renamed on either side would have shipped a schema that rejects the
+    framework's own output (.agent-rfc/designs/gate-tag-coverage.md).
+    """
+    import jsonschema
+
+    from runtime.adopt import providers_declaration
+
+    schema = json.loads((REPO / "contract/gate/v1/providers.schema.json").read_text(encoding="utf-8"))
+    written = json.loads(providers_declaration())
+    jsonschema.validate(written, schema)
+
+    # And the declaration a repository uses to opt OUT must conform too, since
+    # `"gate": "none"` is the one value the launcher must never override.
+    ungoverned = {**written, "providers": {"gate": "none"}}
+    jsonschema.validate(ungoverned, schema)
+
+
+def test_the_providers_schema_rejects_a_declaration_the_launcher_cannot_read():
+    """A schema that accepts anything pins nothing."""
+    import jsonschema
+    import pytest as _pytest
+
+    schema = json.loads((REPO / "contract/gate/v1/providers.schema.json").read_text(encoding="utf-8"))
+    for bad, why in (
+        ({"providers": {"gate": {"command": "x"}}}, "no contract version"),
+        ({"contract": 1, "providers": {"gate": {}}}, "a gate provider with no command"),
+        ({"contract": "one", "providers": {"gate": "none"}}, "a contract version that is not a number"),
+    ):
+        with _pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(bad, schema)
+            raise AssertionError(f"the schema accepted a declaration with {why}")

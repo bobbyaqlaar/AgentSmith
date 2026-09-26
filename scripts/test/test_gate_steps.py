@@ -344,3 +344,69 @@ def test_the_cli_lists_them() -> None:
     )
     assert result.returncode == 0, result.stderr
     assert "ruff" in result.stdout
+
+
+# ── A blocking CI step that is a CHECK must be tagged ────────────────────────
+
+
+# Setup, not checks: installing dependencies, applying migrations, starting a
+# server. Listed rather than pattern-matched, so adding a step means deciding
+# which it is, and a genuine check cannot arrive untagged by resembling setup.
+_SETUP_STEPS = frozenset({
+    "pip install -r scripts/requirements-gate.txt",
+    "pip install --require-hashes -r requirements.lock",
+    "pip install httpx pyyaml",
+    "npm ci",
+    "npm run db:migrate",
+    "Send the gate's record to the portal",
+    "Start portal for history-sync check",
+})
+
+
+def test_every_blocking_check_in_this_repos_ci_carries_the_tag() -> None:
+    """`agentsmith gates run`'s green must mean CI's green.
+
+    The portal job tagged both its `npm test` steps and not `npx tsc --noEmit`,
+    `npm run build` or the history-sync check; the widget job tagged nothing at
+    all. Four blocking checks were invisible to the local runner, so a developer
+    could see "0 failed" and still fail CI on a type error
+    (.agent-rfc/designs/gate-tag-coverage.md).
+    """
+    import yaml
+
+    workflow = REPO / ".github" / "workflows" / "self-test.yml"
+    raw = workflow.read_text(encoding="utf-8")
+    doc = yaml.safe_load(raw)
+    jobs = doc.get("jobs") or {}
+    assert len(jobs) >= 5, f"parsed {len(jobs)} jobs — the query is broken"
+
+    untagged, run_steps = [], 0
+    for job_key, spec in jobs.items():
+        for step in spec.get("steps") or []:
+            script = step.get("run")
+            if not script:
+                continue                       # `uses:` — an action, never tagged
+            run_steps += 1
+            name = (step.get("name") or "").strip('"')
+            first = script.strip().splitlines()[0].strip()
+            if name in _SETUP_STEPS or first in _SETUP_STEPS:
+                continue
+            if step.get("continue-on-error") or "|| true" in script:
+                continue                       # advisory by construction
+            if gs.TAG not in _step_block(raw, name, first):
+                untagged.append(f"[{job_key}] {name or first}")
+    assert run_steps >= 20, f"found only {run_steps} run-steps — the query is broken"
+    assert not untagged, (
+        "these CI steps block a merge and carry no `# agentsmith:gate`, so "
+        f"`agentsmith gates run` cannot run them: {untagged}. Tag them, or add them "
+        "to _SETUP_STEPS if they are setup rather than a check"
+    )
+
+
+def _step_block(raw: str, name: str, first_line: str) -> str:
+    """The raw YAML around a step, where its tag comment lives."""
+    anchor = f'name: "{name}"' if name else f"run: {first_line}"
+    index = raw.find(anchor)
+    if index == -1:
+        index = raw.find(first_line)
+    return raw[index: index + 400] if index != -1 else ""

@@ -5213,7 +5213,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-09-26T10:49:54Z",
+      "last_modified": "2026-09-26T13:59:45Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -5598,9 +5598,11 @@
         "test_the_frameworks_own_workflow_tags_its_gates",
         "test_the_tenant_templates_tag_theirs",
         "test_this_repos_gates_are_its_own_ci_not_the_templates",
-        "test_the_cli_lists_them"
+        "test_the_cli_lists_them",
+        "test_every_blocking_check_in_this_repos_ci_carries_the_tag",
+        "_step_block"
       ],
-      "last_modified": "2026-09-17T19:16:13Z",
+      "last_modified": "2026-09-26T13:53:07Z",
       "id": "scripts/test/test_gate_steps.py"
     },
     {
@@ -6645,7 +6647,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-25T05:40:31Z",
+      "last_modified": "2026-09-26T14:02:14Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6838,9 +6840,11 @@
       "symbols": [
         "test_agentsmith_passes_its_own_conformance_suite",
         "test_the_neutral_decision_matches_what_the_ide_adapters_are_given",
-        "test_the_published_schemas_match_the_models_they_describe"
+        "test_the_published_schemas_match_the_models_they_describe",
+        "test_what_adopt_writes_validates_against_the_published_providers_schema",
+        "test_the_providers_schema_rejects_a_declaration_the_launcher_cannot_read"
       ],
-      "last_modified": "2026-09-23T09:00:32Z",
+      "last_modified": "2026-09-26T14:00:45Z",
       "id": "scripts/test/test_gate_contract.py"
     },
     {
@@ -7158,6 +7162,22 @@
       "pillar": null,
       "created_at": "2026-09-26T11:18:27Z",
       "id": "rfc:reviews/sibling-sweep.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "`agentsmith gates run`'s green was not CI's green",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/gate-tag-coverage.md",
+      "pillar": null,
+      "created_at": "2026-09-26T14:41:19Z",
+      "id": "rfc:designs/gate-tag-coverage.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 `agentsmith gates run`'s green was not CI's green",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/gate-tag-coverage.md",
+      "pillar": null,
+      "created_at": "2026-09-26T14:41:19Z",
+      "id": "rfc:reviews/gate-tag-coverage.md"
     }
   ],
   "edges": [
