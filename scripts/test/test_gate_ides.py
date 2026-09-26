@@ -41,6 +41,12 @@ def _fixture(ide: str, event: str) -> dict:
 # ── the six are declared in one place ────────────────────────────────────────
 
 
+def test_the_ide_catalogue_is_not_empty() -> None:
+    """Two tests below iterate `gi.IDES`; emptying it would pass both over
+    nothing (.agent-rfc/designs/sibling-sweep.md)."""
+    assert len(gi.IDES) >= 6, f"the IDE catalogue holds {len(gi.IDES)}"
+
+
 def test_every_ide_has_a_parser_a_renderer_and_a_config_target() -> None:
     for ide in gi.IDES:
         adapter = gi.ADAPTERS[ide]

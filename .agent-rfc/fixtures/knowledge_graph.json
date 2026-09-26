@@ -1141,7 +1141,7 @@
         "test_the_provider_checkout_falls_back_to_the_runs_own_token",
         "test_a_template_does_not_state_the_provider_is_private"
       ],
-      "last_modified": "2026-09-24T21:53:11Z",
+      "last_modified": "2026-09-26T10:52:09Z",
       "id": "scripts/test/test_workflow_template_wiring.py"
     },
     {
@@ -1751,6 +1751,7 @@
         "_strip_shell_comments",
         "_shell_inputs",
         "_portal_source_files",
+        "doc_files",
         "_documented_text",
         "test_the_portal_sweep_actually_finds_portal_files",
         "test_every_portal_env_var_is_documented",
@@ -1763,7 +1764,7 @@
         "test_every_shell_environment_input_is_documented",
         "leaves"
       ],
-      "last_modified": "2026-09-26T09:53:29Z",
+      "last_modified": "2026-09-26T11:15:40Z",
       "id": "scripts/test/test_env_var_documentation.py"
     },
     {
@@ -4008,9 +4009,10 @@
         "_test_sources",
         "test_the_sweep_reads_the_test_suite",
         "test_no_framework_test_depends_on_a_sibling_checkout",
-        "test_no_tenant_directory_is_named_as_a_path"
+        "test_no_tenant_directory_is_named_as_a_path",
+        "test_every_ls_files_glob_in_a_test_matches_something"
       ],
-      "last_modified": "2026-08-27T19:43:30Z",
+      "last_modified": "2026-09-26T10:50:12Z",
       "id": "scripts/test/test_no_tenant_repo_dependency.py"
     },
     {
@@ -4236,7 +4238,7 @@
         "test_allowlist_entries_are_still_orphans",
         "test_the_sweep_reaches_extensionless_shell"
       ],
-      "last_modified": "2026-09-26T10:14:54Z",
+      "last_modified": "2026-09-26T11:16:02Z",
       "id": "scripts/test/test_documented_env_vars_exist.py"
     },
     {
@@ -4529,7 +4531,7 @@
         "test_webhooks_left_unset_are_skipped_and_the_job_still_fails",
         "test_a_configured_rollback_command_runs_and_can_read_the_failed_commit"
       ],
-      "last_modified": "2026-09-18T05:04:52Z",
+      "last_modified": "2026-09-26T10:52:09Z",
       "id": "scripts/test/test_rollback_notify.py"
     },
     {
@@ -5211,7 +5213,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-09-23T08:57:51Z",
+      "last_modified": "2026-09-26T10:49:54Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -5290,9 +5292,11 @@
         "test_an_approval_record_not_made_by_the_command_is_rejected",
         "test_a_malformed_approvals_line_is_named_not_skipped",
         "test_a_complete_signoff_passes",
-        "test_an_incomplete_signoff_is_named"
+        "test_an_incomplete_signoff_is_named",
+        "test_a_malformed_pillar_answer_is_quoted_not_read_as_missing",
+        "test_a_pillar_that_is_genuinely_absent_is_still_reported_as_absent"
       ],
-      "last_modified": "2026-09-18T08:34:37Z",
+      "last_modified": "2026-09-26T10:49:22Z",
       "id": "scripts/test/test_gate_models.py"
     },
     {
@@ -5640,6 +5644,7 @@
       "language": "python",
       "symbols": [
         "_fixture",
+        "test_the_ide_catalogue_is_not_empty",
         "test_every_ide_has_a_parser_a_renderer_and_a_config_target",
         "test_the_registry_names_the_same_six",
         "test_every_ide_has_a_golden_payload_for_every_event",
@@ -5667,7 +5672,7 @@
         "test_claudes_config_still_denies_when_the_launcher_cannot_run",
         "test_an_unverified_config_schema_is_refused_rather_than_guessed"
       ],
-      "last_modified": "2026-09-17T21:07:18Z",
+      "last_modified": "2026-09-26T10:52:09Z",
       "id": "scripts/test/test_gate_ides.py"
     },
     {
@@ -7137,6 +7142,22 @@
       "pillar": null,
       "created_at": "2026-09-26T10:28:09Z",
       "id": "rfc:reviews/audit-notes-resolved.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Siblings of the three defects the last slice fixed",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/sibling-sweep.md",
+      "pillar": null,
+      "created_at": "2026-09-26T11:18:27Z",
+      "id": "rfc:designs/sibling-sweep.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 siblings of the three defects the last slice fixed",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/sibling-sweep.md",
+      "pillar": null,
+      "created_at": "2026-09-26T11:18:27Z",
+      "id": "rfc:reviews/sibling-sweep.md"
     }
   ],
   "edges": [

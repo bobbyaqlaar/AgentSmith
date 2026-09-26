@@ -36,7 +36,10 @@ _EXPR = re.compile(r"\$\{\{\s*([^}]+?)\s*\}\}")
 
 
 def _steps() -> list[dict]:
-    return yaml.safe_load(ACTION.read_text(encoding="utf-8"))["runs"]["steps"]
+    steps = yaml.safe_load(ACTION.read_text(encoding="utf-8"))["runs"]["steps"]
+    # `steps: []` would make every sweep over this list pass over nothing.
+    assert steps, f"{ACTION.name} declares no steps"
+    return steps
 
 
 def _run_action(

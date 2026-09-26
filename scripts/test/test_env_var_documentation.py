@@ -159,11 +159,31 @@ def _portal_source_files() -> list[Path]:
     return [REPO / p for p in out if "/test/" not in p]
 
 
-def _documented_text() -> str:
+# What counts as DOCUMENTATION, for both directions of this control.
+#
+# `.agent-rfc/**` is excluded: designs and reviews are RECORDS of how work was
+# done, not a reader's reference, and they legitimately discuss code identifiers.
+# A review record naming `SEMVER_LOOP_GUARD` and then `CODE_SUFFIXES` tripped the
+# reverse check twice — the second is a Python constant in a test file, not an
+# environment variable at all, and neither test can tell the difference from an
+# all-caps token. Excluding records rather than listing each one keeps the two
+# directions symmetrical: `.agent-rfc` was already documentation to the forward
+# check and would not have been to the reverse one
+# (.agent-rfc/designs/sibling-sweep.md).
+_RECORDS = (".agent-rfc/",)
+
+
+def doc_files() -> list[str]:
+    """Tracked markdown a reader would look in, records excluded. Shared with
+    `test_documented_env_vars_exist.py`, so "documented" means one thing."""
     out = subprocess.run(
         ["git", "-C", str(REPO), "ls-files", "*.md"], capture_output=True, text=True, check=False
     ).stdout.split()
-    return "".join((REPO / p).read_text(errors="ignore") for p in out if (REPO / p).exists())
+    return [p for p in out if not p.startswith(_RECORDS)]
+
+
+def _documented_text() -> str:
+    return "".join((REPO / p).read_text(errors="ignore") for p in doc_files() if (REPO / p).exists())
 
 
 def test_the_portal_sweep_actually_finds_portal_files() -> None:

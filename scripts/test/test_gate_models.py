@@ -233,3 +233,25 @@ def test_a_complete_signoff_passes():
 def test_an_incomplete_signoff_is_named(mutate, expected):
     errors = gm.check_signoff(mutate(SIGNOFF), _registry())
     assert any(expected in e for e in errors), errors
+
+
+def test_a_malformed_pillar_answer_is_quoted_not_read_as_missing():
+    """`_ANSWER` drops a line it cannot parse, and `check_pillars` then reported
+    the pillar as unanswered — telling the author they omitted something that is
+    on the page. Sibling of the `_PASS` defect in scripts/process_gate.py
+    (.agent-rfc/designs/sibling-sweep.md).
+    """
+    section = "- P1 applies — `scripts/x.py`\n- P3: applies — `scripts/x.py`\n"
+    registry = gm.Registry.model_validate(json.loads(REGISTRY_PATH.read_text(encoding="utf-8")))
+    errors = gm.check_pillars(section, registry, "")
+    assert any("did not parse as a pillar answer" in e for e in errors), errors
+    assert any("- P3: applies" in e for e in errors), (
+        "the message must quote the line the author wrote", errors)
+
+
+def test_a_pillar_that_is_genuinely_absent_is_still_reported_as_absent():
+    """The diagnosis above must not swallow the case it was confused with."""
+    registry = gm.Registry.model_validate(json.loads(REGISTRY_PATH.read_text(encoding="utf-8")))
+    errors = gm.check_pillars("- P1 applies — `scripts/x.py`\n", registry, "")
+    assert any("does not answer P3" in e for e in errors), errors
+    assert not any("did not parse" in e for e in errors), errors

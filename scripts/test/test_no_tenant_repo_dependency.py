@@ -42,7 +42,11 @@ _ESCAPES = (
 
 def _test_sources() -> list[Path]:
     out = subprocess.run(
-        ["git", "ls-files", "runtime/test/*.py", "scripts/test/*.py", "examples/**/test*.py"],
+        # No `examples/**/test*.py`: it matched nothing for as long as it was here
+        # — there are no tests under examples/ — and `test_the_sweep_reads_the_test_suite`'s
+        # floor was satisfied by the other two, so the dead member was invisible.
+        # `test_every_ls_files_glob_in_a_test_matches_something` now guards the class.
+        ["git", "ls-files", "runtime/test/*.py", "scripts/test/*.py"],
         cwd=ROOT, capture_output=True, text=True, check=False,
     ).stdout.split()
     return [ROOT / p for p in out]
@@ -88,4 +92,47 @@ def test_no_tenant_directory_is_named_as_a_path() -> None:
                 offenders.append(f"{path.relative_to(ROOT)}:{n}: {stripped}")
     assert not offenders, (
         "these build a path from a tenant's directory name:\n  " + "\n  ".join(offenders)
+    )
+
+
+# ── Every sweep in the suite must reach something ─────────────────────────────
+
+
+def test_every_ls_files_glob_in_a_test_matches_something() -> None:
+    """A glob that matches nothing is a broken query, not clean coverage.
+
+    Three instances in two days, each found only when something else failed:
+    `portal/*.py` in the env-var test (the portal is TypeScript), `.sh` in the
+    suffix list of the reverse env-var test while every git hook is
+    extensionless, and `examples/**/test*.py` here. Each sat behind an aggregate
+    assertion — a count floor, or a list of other suffixes — that the surviving
+    members satisfied. So the class gets a guard rather than a fourth fix
+    (.agent-rfc/designs/sibling-sweep.md).
+    """
+    sources = subprocess.run(
+        ["git", "ls-files", "scripts/test/*.py", "runtime/test/*.py"],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    ).stdout.split()
+    assert len(sources) > 40, f"the sweep over tests found {len(sources)} files"
+
+    call = re.compile(r'"ls-files"\s*,\s*((?:\s*"[^"]+"\s*,?)+)')
+    empty, checked = [], 0
+    for rel in sources:
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        for match in call.finditer(text):
+            for glob in re.findall(r'"([^"]+)"', match.group(1)):
+                if glob in ("-C", "git") or glob.startswith("-"):
+                    continue
+                checked += 1
+                found = subprocess.run(
+                    ["git", "ls-files", glob], cwd=ROOT,
+                    capture_output=True, text=True, check=False,
+                ).stdout.split()
+                if not found:
+                    line = text[: match.start()].count("\n") + 1
+                    empty.append(f"{rel}:{line} {glob!r}")
+    assert checked > 20, f"found only {checked} globs to check — the extraction is broken"
+    assert not empty, (
+        "these globs match no tracked file, so whatever they were meant to cover is not "
+        f"covered: {empty}"
     )

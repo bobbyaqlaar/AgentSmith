@@ -277,7 +277,11 @@ def test_every_stacks_ci_runs_the_strict_security_harness() -> None:
     its controls is Python-specific."""
     import yaml
 
-    for path in sorted(TEMPLATES.glob("ci-*.yml")):
+    stacks = sorted(TEMPLATES.glob("ci-*.yml"))
+    # A glob with no floor: rename the templates and "every stack runs the strict
+    # harness" passes over nothing (.agent-rfc/designs/sibling-sweep.md).
+    assert len(stacks) >= 3, f"expected a ci-*.yml per stack, found {[p.name for p in stacks]}"
+    for path in stacks:
         jobs = yaml.safe_load(path.read_text(encoding="utf-8"))["jobs"]
         gate = jobs.get("security-checks", {})
         assert gate.get("uses") == "./.github/workflows/eval-security.yml", f"{path.name} skips the security harness"

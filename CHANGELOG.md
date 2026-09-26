@@ -77,6 +77,33 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — sweeps that matched nothing, and a gate message that blamed the wrong line
+
+- **A test glob that matched nothing, and a guard for the class.** `examples/**/test*.py` had never
+  matched a file — there are no tests under `examples/` — and the surrounding
+  `assert len(sources) >= 40` was satisfied by the other two globs, so the dead member contributed
+  zero invisibly. Third occurrence of that shape in two days, so
+  `test_every_ls_files_glob_in_a_test_matches_something` now asserts every `ls-files` glob any test
+  passes resolves to at least one tracked file, and refuses to run if the extraction itself finds
+  fewer than 20 globs.
+- **A malformed pillar answer is quoted instead of reported as missing.** `_ANSWER` dropped a line it
+  could not parse and `check_pillars` then said *"'## Pillars' does not answer P3"* — telling the
+  author they omitted something on the page. `- P3: applies — …`, a colon where a space belongs, now
+  names itself. Sibling of the `_PASS` fix; `_KG_QUERY` was checked and is not one.
+- **Floors where a sweep could pass over nothing:** `test_every_stacks_ci_runs_the_strict_security_harness`
+  looped over `TEMPLATES.glob("ci-*.yml")` unguarded, so renaming the stack templates would have
+  retired a test whose whole purpose is that Go and TS tenants were once ungraded. Also the IDE
+  catalogue, iterated by two tests, and `_rollback_notify`'s parsed action steps.
+- **The two environment-variable checks now agree on what documentation is.** Both globbed every
+  tracked `*.md`, so `.agent-rfc/` design and review records counted as documentation offering a knob —
+  and neither check can tell a variable from any other all-caps token, so a review naming
+  `SEMVER_LOOP_GUARD`, and later `CODE_SUFFIXES` (a Python constant), each made the reverse check
+  report a variable as implemented by nothing. `doc_files()` is now defined once and imported by both.
+- **`CLAUDE_PROJECT_DIR` is documented**, found by that narrowing rather than in spite of it: it was
+  named only inside records, and it decides which repository the gate believes it was invoked in —
+  third in the chain after `git rev-parse --show-toplevel`, and deliberately not preferred because it
+  names the session's project rather than the repository being committed to.
+
 ### Fixed — the env-var gate never looked at shell, and the gate blamed the wrong thing
 
 - **`install-ai-stack.sh`, `hooks/*` and `.githooks/*` were outside every environment-variable gate

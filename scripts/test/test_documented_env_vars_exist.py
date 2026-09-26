@@ -91,9 +91,20 @@ CANDIDATE = re.compile(r"`([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)`")
 
 
 def _docs() -> list[str]:
-    return subprocess.check_output(
-        ["git", "-C", str(REPO), "ls-files", "*.md"], text=True
-    ).split()
+    """The same markdown the forward check treats as documentation.
+
+    Both directions used to glob every tracked `*.md`, which made design and
+    review records under `.agent-rfc/` count as documentation offering a knob.
+    They are records of how work was done and they discuss code identifiers: a
+    review naming `SEMVER_LOOP_GUARD`, and later `CODE_SUFFIXES` — a Python
+    constant, not an environment variable — each made this check report a
+    variable as implemented by nothing. Neither test can tell an environment
+    variable from any other all-caps token, so the fix is to agree on where a
+    reader looks, in ONE place (.agent-rfc/designs/sibling-sweep.md).
+    """
+    from test_env_var_documentation import doc_files
+
+    return doc_files()
 
 
 def _code_blob() -> str:
