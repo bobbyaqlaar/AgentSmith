@@ -27,7 +27,7 @@ mistake.
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 2.0.x | 3.11 | 0.2 | 4.0 | **MAJOR.** The installer no longer puts the 18 `ai-*` shell functions in your shell profile, and removes the block older installs appended (backup `*.agentsmith-bak`): use `agentsmith <subcommand>`, or `source ~/.agent-framework/shell/ai-compat.sh` for the old names. The framework runs in its own environment, `~/.agent-framework/.venv` (uv recommended). The core documents moved (`SPECS.md` → `docs/DESIGN.md`, `FIXES_AND_CLEANUP.md` → `docs/PRODUCT_BACKLOG.md`, `Product_Archive.md` → `docs/PRODUCT_ARCHIVE.md`) and numbered section anchors are gone — update links from outside. **Hook interface:** `.githooks/commit-msg`, `pre-commit` and `pre-push` run a repository's earlier hooks after the gate (`agentsmith.chainHooksPath`); `hooks/*` run with the framework environment. `tenant init` arms the design and review gates, so a new tenant's first commit carries the trailers it prints. `requirements.txt` drops `arize-phoenix`, `openinference-instrumentation-*` and `langchain-community` — nothing imported them. A tenant pinned to 1.x is unaffected until it moves; the startup version check warns across the boundary |
+| 2.0.x | 3.11 | 0.2 | 4.0 | **MAJOR.** The installer no longer puts the 17 `ai-*` shell functions in your shell profile, and removes the block older installs appended (backup `*.agentsmith-bak`): use `agentsmith <subcommand>`, or `source ~/.agent-framework/shell/ai-compat.sh` for the old names. The framework runs in its own environment, `~/.agent-framework/.venv` (uv recommended). The core documents moved (`SPECS.md` → `docs/DESIGN.md`, `FIXES_AND_CLEANUP.md` → `docs/PRODUCT_BACKLOG.md`, `Product_Archive.md` → `docs/PRODUCT_ARCHIVE.md`) and numbered section anchors are gone — update links from outside. **Hook interface:** `.githooks/commit-msg`, `pre-commit` and `pre-push` run a repository's earlier hooks after the gate (`agentsmith.chainHooksPath`); `hooks/*` run with the framework environment. `tenant init` arms the design and review gates, so a new tenant's first commit carries the trailers it prints. `requirements.txt` drops `arize-phoenix`, `openinference-instrumentation-*` and `langchain-community` — nothing imported them. A tenant pinned to 1.x is unaffected until it moves; the startup version check warns across the boundary |
 | 1.3.x | 3.11 | 0.2 | 4.0 | **Breaking, in a MINOR — see the note above.** `CompletionResult.input_tokens`/`output_tokens` are `Optional[int]` — a provider that reports no `usage` now yields `None` where 1.2.x yielded `0`, so a consumer doing arithmetic on them must handle `None`; `DeadLetterQueue.replay()` raises `AlreadyResolvedError` when the entry is not `pending` instead of replaying it; a HITL approval is consumed by the gate that reads it and no longer satisfies later gates (`hitl_approved_for(gate_id, approved)` addresses one explicitly); `run_with_hitl_gate` raises when the gate activity returns `None` rather than treating it as "no review needed"; `audit_token_velocity_circuit` raises `ValueError` on `None` token counts |
 | 1.2.x | 3.11 | 0.2 | 4.0 | `AGENT_JUDGE_MODEL` no longer overrides a declared `judge` role; a tenant `models.yaml` entry with a different `id` REPLACES the framework entry rather than merging into it; `--strict` fails a control declaring `met`/`partial` with no runner |
 | 1.1.x | 3.11 | 0.2 | 4.0 | Default model registry is local-only; `local_large`/`local_small` roles removed |
@@ -76,6 +76,34 @@ version table being consulted.
 
 
 ## [Unreleased]
+
+### Fixed — the env-var gate never looked at shell, and the gate blamed the wrong thing
+
+- **`install-ai-stack.sh`, `hooks/*` and `.githooks/*` were outside every environment-variable gate
+  in this repository** — 19 shell files reading 20 inputs. `test_env_var_documentation.py` globbed
+  Python one level deep (missing `runtime/machine/`, `scripts/security/`, `scripts/security/runners/`
+  and `examples/`, and carrying a dead `portal/*.py`), and `test_documented_env_vars_exist.py` listed
+  `.sh` in its suffixes — which looked like coverage while every git hook, being **extensionless**,
+  stayed invisible. That is where `SEMVER_LOOP_GUARD`, `DISABLE_AI_STACK`, `AGENT_KG_DEFER` and
+  `AGENTSMITH_AUTOPUSH` are read; naming one of them in a document was enough to make the reverse
+  test report it as implemented by nothing. Both sweeps now reach 105 Python files and every shell
+  file, with positive controls so they cannot quietly stop finding things.
+- **Telling a shell input from a local is the work**, and it is now a rule rather than a guess: a name
+  assigned anywhere in the file is a local however it is later read, `for` and `read` targets count as
+  assignments, and comments decide nothing — `hooks/post-checkout`'s own comment
+  `# Requested by DISABLE_AI_STACK=true` had been classifying the most important input in the file as
+  a local.
+- **The process gate reported an unparseable pass heading as a numbering error.** `_PASS` anchors on
+  `\s*$`, so `## Pass 4 — findings: 1 (CI, 2026-09-24)` matched nothing, the heading disappeared, and
+  `check_review` blamed the gap it left — *"passes are numbered [1, 2, 3, 5]"*. Three reviews in one
+  session were refused that way, each sending the author to the numbers instead of the syntax. The
+  strict form is unchanged; the gate now quotes the line it could not parse and says what the form is.
+- **Two stated counts corrected:** the 2.0.x compatibility row said "the 18 `ai-*` shell functions"
+  and `v1.3.0`'s installer defined **17**; the backlog said "6 in each tenant CI template" and
+  `ci-go.yml` carries 7.
+- **The pillar tests pinned presence, not correctness** — `### Pillar 15 — Anything At All` passed.
+  A section's heading is now compared against the registry's name, and a stub is refused. The
+  thin-body half could not fail at all until it was keyed on the pillar id instead of on position.
 
 ### Fixed — two pillars were enforced on every design and specified nowhere
 
@@ -797,7 +825,7 @@ the workflow files they have: the hook never overwrites one.
 
 ### One `agentsmith` command; nothing in your shell profile
 
-The 18 `ai-*` shell functions the installer appended to `~/.zshrc` are gone.
+The 17 `ai-*` shell functions the installer appended to `~/.zshrc` are gone.
 They existed only in interactive shells — a git GUI, an IDE, CI and Claude
 Code's hooks never had them — and a mode they "set" was an export in one
 terminal. Every command is now a subcommand of `agentsmith` (installed into

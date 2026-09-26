@@ -74,13 +74,78 @@ _EXEMPT = {
 
 
 def _source_files() -> list[Path]:
+    """Every shipped Python file, recursively.
+
+    The globs used to be `runtime/*.py scripts/*.py runtime/workflows/*.py
+    portal/*.py` — one level deep, so `runtime/machine/`, `scripts/security/`,
+    `scripts/security/runners/` and `examples/` were outside every gate this repo
+    has, and `portal/*.py` matched nothing by construction (the portal is
+    TypeScript; `_portal_source_files` covers it). Same defect as the one this
+    file's docstring records for the portal, one directory level along.
+    """
     out = subprocess.run(
-        ["git", "-C", str(REPO), "ls-files", "runtime/*.py", "scripts/*.py",
-         "runtime/workflows/*.py", "portal/*.py"],
+        ["git", "-C", str(REPO), "ls-files",
+         "runtime/**/*.py", "runtime/*.py", "scripts/**/*.py", "scripts/*.py",
+         "examples/**/*.py", "examples/*.py"],
         capture_output=True, text=True,
         check=False,
     ).stdout.split()
-    return [REPO / p for p in out if "/test" not in p and "/test_" not in p]
+    return [REPO / p for p in dict.fromkeys(out) if "/test" not in p and "/test_" not in p]
+
+
+# Shell reads the environment too, and no sweep here has ever looked at it:
+# install-ai-stack.sh, hooks/*, .githooks/* and the on-prem scripts. The work is
+# telling an INPUT from a LOCAL — a name assigned anywhere in the file is a local
+# however it is later read, and a name read without ever being assigned is an
+# input. A first version keyed on `${VAR:-default}` alone and called three
+# obvious locals inputs (.agent-rfc/designs/audit-notes-resolved.md).
+_SH_ASSIGN = re.compile(r"(?<![$\w}])\b([A-Z][A-Z0-9_]{2,})=")
+_SH_FOR = re.compile(r"\bfor\s+([A-Z][A-Z0-9_]{2,})\b")
+_SH_READ = re.compile(r"\bread\b[^\n]*?\s([A-Z][A-Z0-9_]{2,})\s*$", re.M)
+_SH_USE = re.compile(r"\$\{?([A-Z][A-Z0-9_]{2,})\}?")
+# Set by the shell or by the CI runner, not by this project.
+_AMBIENT = {
+    "BASH_SOURCE", "BASH_VERSION", "ZSH_VERSION", "FUNCNAME", "IFS", "OSTYPE", "PWD", "HOME",
+    "PATH", "SHELL", "USER", "LANG", "LC_ALL", "TERM", "TMPDIR", "RANDOM", "SECONDS", "LINENO",
+    "REPLY", "PS1", "PS4", "EDITOR", "VISUAL", "HOSTNAME", "UID", "EUID", "PPID", "OLDPWD",
+    "SHLVL", "COLUMNS", "LINES", "GROUPS",
+    "GITHUB_TOKEN", "GITHUB_OUTPUT", "GITHUB_ENV", "GITHUB_WORKSPACE", "GITHUB_SHA",
+    "GITHUB_REF_NAME", "GITHUB_STEP_SUMMARY", "GITHUB_ACTIONS", "RUNNER_TEMP", "CI",
+}
+
+
+def _shell_files() -> list[Path]:
+    out = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files", "*.sh", "hooks/*", ".githooks/*"],
+        capture_output=True, text=True, check=False,
+    ).stdout.split()
+    return [REPO / p for p in out if (REPO / p).is_file() and "/test" not in p]
+
+
+def _strip_shell_comments(text: str) -> str:
+    """Comments decide nothing, in either direction.
+
+    `hooks/post-checkout` opens with `# Requested by DISABLE_AI_STACK=true for one
+    command` — prose about the variable, which the assignment pattern read as an
+    assignment and so classified the most important input in the file as a local.
+    A `#` starts a comment at a word boundary, the same rule
+    `runtime/config._dotenv_value` uses.
+    """
+    return re.sub(r"(?<![\w$])#.*$", "", text, flags=re.M)
+
+
+def _shell_inputs() -> dict[str, set[str]]:
+    """{variable: files that read it as an input}."""
+    found: dict[str, set[str]] = {}
+    for path in _shell_files():
+        text = _strip_shell_comments(path.read_text(encoding="utf-8", errors="ignore"))
+        local = set(_SH_ASSIGN.findall(text)) | set(_SH_FOR.findall(text)) | set(_SH_READ.findall(text))
+        for match in _SH_USE.finditer(text):
+            name = match.group(1)
+            if name in local or name in _AMBIENT:
+                continue
+            found.setdefault(name, set()).add(str(path.relative_to(REPO)))
+    return found
 
 
 def _portal_source_files() -> list[Path]:
@@ -227,3 +292,48 @@ def test_every_shipped_command_is_in_the_canonical_reference() -> None:
     # A row may carry the command's positional choice (`agentsmith dashboard start`).
     missing = sorted(leaf for leaf in shipped if not any(row == leaf or row.startswith(leaf + " ") for row in listed))
     assert not missing, f"commands the CLI ships but docs/UserManual.md › Command Reference never lists: {missing}"
+
+
+def test_the_shell_sweep_finds_shell_files() -> None:
+    """A sweep that resolves to nothing passes over nothing — the failure this
+    file's docstring records for the portal, asserted for shell before it can
+    happen a third time."""
+    files = _shell_files()
+    assert len(files) > 10, f"the shell sweep found {len(files)} files"
+    names = {p.name for p in files}
+    assert "install-ai-stack.sh" in names and "post-checkout" in names, sorted(names)[:10]
+
+    found = _shell_inputs()
+    assert len(found) > 15, f"only {len(found)} shell inputs — the rule stopped working"
+    # Names that are unambiguously environment inputs in shell, as a positive control.
+    for expected in ("DISABLE_AI_STACK", "AGENTSMITH_DIR", "AGENTSMITH_PYTHON"):
+        assert expected in found, f"{expected} is read from the environment by shell and was missed"
+
+
+def test_a_shell_input_is_told_from_a_local() -> None:
+    """The distinction the whole sweep rests on. A name assigned anywhere in the
+    file is a local HOWEVER it is later read: a first version keyed on
+    `${VAR:-default}` alone and reported `RFC_COUNT`, `VENV_VERSION` and
+    `GITIGNORE_CHOICE` — each assigned on one line and read with a default on the
+    next — as undocumented environment inputs.
+    """
+    found = _shell_inputs()
+    for local in ("RFC_COUNT", "VENV_VERSION", "GITIGNORE_CHOICE", "GREEN", "RULES_STACK_KEY"):
+        assert local not in found, (
+            f"{local} is assigned in its own file and is a local, not an environment input"
+        )
+
+
+def test_every_shell_environment_input_is_documented() -> None:
+    """Same rule the Python and TypeScript sweeps apply, for the third language.
+    `install-ai-stack.sh`, `hooks/*` and `.githooks/*` read the environment and
+    were outside every gate in this repository."""
+    documented = _documented_text()
+    missing = {
+        name: sorted(files) for name, files in sorted(_shell_inputs().items())
+        if not re.search(rf"\b{re.escape(name)}\b", documented)
+    }
+    assert not missing, (
+        "these environment variables are read by shell and documented in no markdown file: "
+        f"{missing}"
+    )

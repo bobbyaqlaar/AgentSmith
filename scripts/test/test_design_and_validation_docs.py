@@ -274,6 +274,43 @@ def test_every_pillar_the_gate_knows_has_a_section_in_the_design_doc() -> None:
     )
 
 
+def test_a_pillar_section_carries_the_registry_name_and_says_something() -> None:
+    """Presence is not correctness. `### Pillar 15 — Anything At All` satisfied the
+    test above, so a section could name the wrong pillar, or name the right one and
+    be empty, and pass (.agent-rfc/designs/audit-notes-resolved.md).
+
+    The name is compared on its words rather than character for character: the
+    registry writes "Cost-Optimization Routing" and the prose "Cost-Optimisation
+    Routing", and a spelling difference is not a documentation defect.
+    """
+    design = (ROOT / "docs" / "DESIGN.md").read_text(encoding="utf-8")
+    # (heading, body) keyed on the pillar ID, never on position: pairing the
+    # registry order against a positional split silently misaligned, and the
+    # thin-body half of this test could not fail at all until it was keyed.
+    found = {
+        m.group(1): (m.group(2).strip(), m.group(3))
+        for m in re.finditer(r"^### Pillar (\d+) — (.+?)$(.*?)(?=^#{2,3} |\Z)", design, re.M | re.S)
+    }
+    assert len(found) > 10, f"parsed only {len(found)} pillar sections — the query is broken"
+
+    def words(text: str) -> set[str]:
+        return {w for w in re.findall(r"[a-z]{4,}", text.lower())
+                if w not in {"and", "the", "with"}}
+
+    wrong, thin = {}, {}
+    for pillar in _registry_pillars():
+        entry = found.get(str(pillar["id"]))
+        if entry is None:
+            continue                                   # the test above owns that case
+        heading, body = entry
+        if words(pillar["name"]) and not (words(heading) & words(pillar["name"])):
+            wrong[f"P{pillar['id']}"] = f"heading says {heading!r}, registry says {pillar['name']!r}"
+        if len(body.split()) < 25:
+            thin[f"P{pillar['id']}"] = f"{len(body.split())} words"
+    assert not wrong, f"these sections name a different pillar than the registry does: {wrong}"
+    assert not thin, f"these pillar sections are too short to specify anything: {thin}"
+
+
 def test_every_pillar_a_design_must_answer_is_listed_in_the_readme() -> None:
     """The gate asks a pillar when its `check` contains `design` — the same source
     `scripts/gate_models.py` reads, so this cannot drift from the gate."""
@@ -294,7 +331,7 @@ def test_no_document_states_a_stale_pillar_count() -> None:
     wrong = {n: word for n, word in spellings.items() if n != total}
     for doc in ("README.md", "docs/DESIGN.md", "docs/UserManual.md"):
         text = (ROOT / doc).read_text(encoding="utf-8")
-        for n, word in wrong.items():
+        for word in wrong.values():
             for phrase in (f"{word} Operational Pillars", f"{word} Pillars"):
                 assert phrase not in text, (
                     f"{doc} says '{phrase}' but the registry defines {total} pillars"

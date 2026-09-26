@@ -1747,6 +1747,9 @@
       "language": "python",
       "symbols": [
         "_source_files",
+        "_shell_files",
+        "_strip_shell_comments",
+        "_shell_inputs",
         "_portal_source_files",
         "_documented_text",
         "test_the_portal_sweep_actually_finds_portal_files",
@@ -1755,9 +1758,12 @@
         "test_security_knobs_are_in_the_canonical_reference",
         "test_fail_closed_behaviour_is_stated_not_just_the_variable",
         "test_every_shipped_command_is_in_the_canonical_reference",
+        "test_the_shell_sweep_finds_shell_files",
+        "test_a_shell_input_is_told_from_a_local",
+        "test_every_shell_environment_input_is_documented",
         "leaves"
       ],
-      "last_modified": "2026-09-18T05:06:27Z",
+      "last_modified": "2026-09-26T09:53:29Z",
       "id": "scripts/test/test_env_var_documentation.py"
     },
     {
@@ -4222,13 +4228,15 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_is_source",
         "_docs",
         "_code_blob",
         "test_the_scan_finds_candidates",
         "test_every_documented_env_var_is_read_somewhere",
-        "test_allowlist_entries_are_still_orphans"
+        "test_allowlist_entries_are_still_orphans",
+        "test_the_sweep_reaches_extensionless_shell"
       ],
-      "last_modified": "2026-09-18T15:41:18Z",
+      "last_modified": "2026-09-26T10:14:54Z",
       "id": "scripts/test/test_documented_env_vars_exist.py"
     },
     {
@@ -4300,9 +4308,15 @@
         "test_agent_rules_yaml_declares_both_playbooks",
         "test_generator_renders_both_playbooks_into_every_target",
         "test_installer_vendors_the_two_docs",
-        "test_installer_vendors_the_review_levers_the_process_gate_reads"
+        "test_installer_vendors_the_review_levers_the_process_gate_reads",
+        "_registry_pillars",
+        "test_every_pillar_the_gate_knows_has_a_section_in_the_design_doc",
+        "test_a_pillar_section_carries_the_registry_name_and_says_something",
+        "test_every_pillar_a_design_must_answer_is_listed_in_the_readme",
+        "test_no_document_states_a_stale_pillar_count",
+        "words"
       ],
-      "last_modified": "2026-09-14T06:25:48Z",
+      "last_modified": "2026-09-26T09:59:43Z",
       "id": "scripts/test/test_design_and_validation_docs.py"
     },
     {
@@ -4606,7 +4620,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-25T05:11:21Z",
+      "last_modified": "2026-09-26T09:48:26Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4632,6 +4646,8 @@
         "test_an_incomplete_design_fails",
         "test_an_unclean_review_fails",
         "test_a_clean_review_passes_with_any_dash",
+        "test_a_heading_that_does_not_parse_is_named_not_counted_as_a_gap",
+        "test_a_real_numbering_gap_is_still_reported_as_one",
         "test_a_trailer_may_only_name_a_record_file",
         "_check",
         "test_a_commit_with_no_gated_paths_needs_nothing",
@@ -4705,7 +4721,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-09-18T20:19:52Z",
+      "last_modified": "2026-09-26T09:48:00Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -4969,9 +4985,13 @@
         "test_verification_runs_the_command_through_its_link",
         "test_no_output_string_runs_a_command_by_accident",
         "_leaf_paths",
-        "test_every_compat_wrapper_names_a_real_command_and_real_options"
+        "test_every_compat_wrapper_names_a_real_command_and_real_options",
+        "_reference_rows",
+        "test_every_command_has_a_reference_row",
+        "test_a_command_kept_out_of_the_table_is_still_documented",
+        "test_every_reference_row_lists_the_flags_its_command_accepts"
       ],
-      "last_modified": "2026-09-14T19:10:16Z",
+      "last_modified": "2026-09-26T08:57:49Z",
       "id": "scripts/test/test_cli_install.py"
     },
     {
@@ -7069,6 +7089,54 @@
       "pillar": null,
       "created_at": "2026-09-26T07:47:05Z",
       "id": "rfc:reviews/public-front-door.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Three passes of the documentation against the code",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/docs-vs-code-audit.md",
+      "pillar": null,
+      "created_at": "2026-09-26T10:28:09Z",
+      "id": "rfc:designs/docs-vs-code-audit.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Two more rounds of the documentation against the code",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/docs-vs-code-audit-2.md",
+      "pillar": null,
+      "created_at": "2026-09-26T10:28:09Z",
+      "id": "rfc:designs/docs-vs-code-audit-2.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The four things the audits left open",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/audit-notes-resolved.md",
+      "pillar": null,
+      "created_at": "2026-09-26T10:28:09Z",
+      "id": "rfc:designs/audit-notes-resolved.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 three passes of the documentation against the code",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/docs-vs-code-audit.md",
+      "pillar": null,
+      "created_at": "2026-09-26T10:28:09Z",
+      "id": "rfc:reviews/docs-vs-code-audit.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 two more rounds of the documentation against the code",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/docs-vs-code-audit-2.md",
+      "pillar": null,
+      "created_at": "2026-09-26T10:28:09Z",
+      "id": "rfc:reviews/docs-vs-code-audit-2.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the four things the audits left open",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/audit-notes-resolved.md",
+      "pillar": null,
+      "created_at": "2026-09-26T10:28:09Z",
+      "id": "rfc:reviews/audit-notes-resolved.md"
     }
   ],
   "edges": [

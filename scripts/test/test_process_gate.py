@@ -282,6 +282,34 @@ def test_a_clean_review_passes_with_any_dash():
     assert pg.check_review("## Pass 1 - findings: 0\n" + SIGNOFF, REGISTRY) == []
 
 
+def test_a_heading_that_does_not_parse_is_named_not_counted_as_a_gap():
+    """`_PASS` anchors on `\\s*$`, so a heading with anything after the count is
+    INVISIBLE — and `check_review` then reported the hole it left as a numbering
+    error. Written after three reviews in one session were refused with "passes
+    are numbered [1, 2, 3, 5]" when the real fault was
+    `## Pass 4 — findings: 1 (CI, 2026-09-24)`: one message for two causes, and
+    it sends the author to the numbers instead of the syntax
+    (.agent-rfc/designs/audit-notes-resolved.md).
+    """
+    text = ("## Pass 1 — findings: 2\n"
+            "## Pass 2 — findings: 1 (CI, 2026-09-24)\n"
+            "## Pass 3 — findings: 0\n" + SIGNOFF)
+    errors = pg.check_review(text, REGISTRY)
+    assert any("did not parse" in e for e in errors), errors
+    assert any("(CI, 2026-09-24)" in e for e in errors), (
+        "the message must quote the line, so the author can see what is wrong with it", errors)
+    assert not any("numbered" in e for e in errors), (
+        "an unparseable heading must not be reported as a numbering gap", errors)
+
+
+def test_a_real_numbering_gap_is_still_reported_as_one():
+    """The diagnosis above must not swallow the case it was confused with."""
+    text = "## Pass 1 — findings: 1\n## Pass 3 — findings: 0\n" + SIGNOFF
+    errors = pg.check_review(text, REGISTRY)
+    assert any("numbered" in e for e in errors), errors
+    assert not any("did not parse" in e for e in errors), errors
+
+
 @pytest.mark.parametrize(
     "value",
     ["../../etc/passwd.md", ".agent-rfc/designs/../reviews/x.md", ".agent-rfc/designs/sub/x.md",

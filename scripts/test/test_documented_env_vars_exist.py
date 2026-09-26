@@ -41,6 +41,20 @@ CODE_SUFFIXES = (
     ".sh", ".json", ".txt", ".toml", ".cfg",
 )
 
+# Shell with no extension: every git hook. `.sh` was in the list from the start,
+# so this looked covered — but `hooks/post-commit`, `.githooks/process-gate` and
+# their siblings carry no suffix, and they are where SEMVER_LOOP_GUARD,
+# DISABLE_AI_STACK, AGENT_KG_DEFER and AGENTSMITH_AUTOPUSH are read. Documenting
+# SEMVER_LOOP_GUARD in a review record was enough to make this test call it
+# "read by nothing" (.agent-rfc/designs/audit-notes-resolved.md).
+EXTENSIONLESS_SOURCE_DIRS = ("hooks/", ".githooks/")
+
+
+def _is_source(rel: str) -> bool:
+    if rel.endswith(CODE_SUFFIXES):
+        return True
+    return rel.startswith(EXTENSIONLESS_SOURCE_DIRS) and "." not in Path(rel).name
+
 # Tokens that look like environment variables but are not ours to implement.
 ALLOWED = {
     # Documented as NOT IMPLEMENTED, tracked in docs/PRODUCT_BACKLOG.md. Listed
@@ -102,7 +116,7 @@ def _code_blob() -> str:
     ).split()
     parts = []
     for f in files:
-        if f == self_path or not f.endswith(CODE_SUFFIXES):
+        if f == self_path or not _is_source(f):
             continue
         try:
             parts.append((REPO / f).read_text(errors="replace"))
@@ -148,3 +162,16 @@ def test_allowlist_entries_are_still_orphans() -> None:
         f"{implemented} are now referenced in code — remove them from ALLOWED "
         f"so they are covered by the test again."
     )
+
+
+def test_the_sweep_reaches_extensionless_shell() -> None:
+    """`.sh` was in CODE_SUFFIXES from the start, which made shell look covered
+    while every git hook — extensionless — was invisible. A sweep that misses the
+    files a variable is actually read in reports it as implemented by nothing.
+    """
+    blob = _code_blob()
+    assert "SEMVER_LOOP_GUARD" in blob, (
+        "hooks/post-commit reads SEMVER_LOOP_GUARD and the sweep cannot see it"
+    )
+    for name in ("DISABLE_AI_STACK", "AGENTSMITH_AUTOPUSH"):
+        assert name in blob, f"{name} is read by an extensionless hook and was missed"
