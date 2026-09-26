@@ -194,3 +194,81 @@ def test_every_compat_wrapper_names_a_real_command_and_real_options():
                               for c in (action.choices or [])}
         for token in tokens[len(path):]:
             assert token in options or token in positional_choices, f"{name}: `{token}` is not valid for {path}"
+
+
+# ── The manual's Command Reference is a second copy of the CLI surface ────────
+
+
+def _reference_rows() -> dict[tuple[str, ...], str]:
+    """{command path: every reference cell that documents it}.
+
+    The args column contains escaped pipes (`shared\\|dedicated`), so the row is
+    split on unescaped `|` only — splitting naively truncates the column and the
+    check silently stops seeing most of it.
+    """
+    manual = (REPO / "docs" / "UserManual.md").read_text(encoding="utf-8")
+    leaves = _leaf_paths(build_parser())
+    rows: dict[tuple[str, ...], str] = {}
+    for line in manual.splitlines():
+        if not line.startswith("| `agentsmith "):
+            continue
+        cells = re.split(r"(?<!\\)\|", line)
+        head = re.match(r"\s*`agentsmith ([^`]+)`", cells[1] or "")
+        if not head:
+            continue
+        tokens = head.group(1).split()
+        path = next((tuple(tokens[:n]) for n in range(len(tokens), 0, -1)
+                     if tuple(tokens[:n]) in leaves), None)
+        if path is None:
+            continue
+        rows[path] = rows.get(path, "") + " " + " ".join(cells[1:])
+    return rows
+
+
+# `agentsmith hooks` is described in build_parser as "internal: called by the git
+# hooks", and the Command Reference is the DAILY command table, so its subcommand
+# is documented in prose (docs/UserManual.md § Bypass policy enforcement) instead
+# of a row. Pinned rather than filtered: a new internal command has to be added
+# here deliberately, and cannot arrive undocumented by inheriting an exemption.
+_NOT_DAILY_COMMANDS = {("hooks", "bypass-check")}
+
+
+def test_every_command_has_a_reference_row():
+    """`pin-unremovable-duplicates`: the manual restates the CLI surface in prose,
+    which cannot be merged into argparse, so it is pinned by parsing both."""
+    documented = set(_reference_rows())
+    real = set(_leaf_paths(build_parser()))
+    missing = sorted(" ".join(p) for p in real - documented - _NOT_DAILY_COMMANDS)
+    assert not missing, f"these commands have no Command Reference row: {missing}"
+
+    stale = sorted(" ".join(p) for p in _NOT_DAILY_COMMANDS - real)
+    assert not stale, f"exempted from the reference table but no longer a command: {stale}"
+
+
+def test_a_command_kept_out_of_the_table_is_still_documented():
+    """The exemption is from the DAILY table, not from the manual. Without this,
+    `_NOT_DAILY_COMMANDS` would be a way to make a command disappear."""
+    manual = (REPO / "docs" / "UserManual.md").read_text(encoding="utf-8")
+    for path in sorted(_NOT_DAILY_COMMANDS):
+        assert f"agentsmith {' '.join(path)}" in manual, (
+            f"`agentsmith {' '.join(path)}` is exempt from the reference table and appears nowhere "
+            "in the manual — exempt from the table is not exempt from being documented"
+        )
+
+
+def test_every_reference_row_lists_the_flags_its_command_accepts():
+    """Found `tenant init` documenting two of seven options — `--architecture`
+    and `--agentic` among the five missing, while `tenant adopt`'s row documented
+    both. Two sibling commands, and a reader would have concluded `init` could
+    not do what `adopt` could (.agent-rfc/designs/docs-vs-code-audit.md).
+    """
+    rows = _reference_rows()
+    leaves = _leaf_paths(build_parser())
+    gaps = {}
+    for path, cell in rows.items():
+        real = {s for action in leaves[path]._actions for s in action.option_strings
+                if s.startswith("--") and s != "--help"}
+        undocumented = sorted(f for f in real if not re.search(re.escape(f) + r"\b", cell))
+        if undocumented:
+            gaps[" ".join(path)] = undocumented
+    assert not gaps, f"reference rows omit flags their command accepts: {gaps}"

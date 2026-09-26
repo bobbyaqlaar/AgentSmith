@@ -46,8 +46,14 @@ span per decision (pillar 3) — so it needs the framework environment:
 `.githooks/process-gate` tries, in order: `$AGENTSMITH_PYTHON`,
 `$AGENTSMITH_DIR/.venv/bin/python`, `~/.agent-framework/.venv/bin/python`, then
 the repo's own `.venv`. An interpreter that cannot run the gate exits 3 and the
-next one is tried; when none can, the gate **fails closed** — the edit is
-denied, the commit and push are blocked — and says to run `install-ai-stack.sh`.
+next one is tried; when none can, the gate **fails closed where a decision is
+being made** — the edit is denied, and the commit, push and CI are blocked — and
+says to run `install-ai-stack.sh`. **`session-start` and `stop` warn on stderr
+and exit 0 instead**, because they are advisory: neither is the moment anything
+is written, and blocking every turn of a session on a broken install would make
+the IDE unusable rather than safe. So a machine whose gate cannot run still
+starts sessions and ends turns, with a warning each time, and stops the moment
+it tries to edit or commit.
 CI installs `scripts/requirements-gate.txt`, the list that travels with the
 vendored gate.
 

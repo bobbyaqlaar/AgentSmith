@@ -929,7 +929,7 @@ The older `ai-*` names map to these one for one
 | `agentsmith scrub` | `[directory] [--yes]` | Interactive removal of runtime artefacts from a project directory — lists every exact path it will delete before prompting for confirmation. |
 | `agentsmith upgrade` | `[--to VERSION]` | Refreshes the current tenant repo's vendored `scripts/`, `runtime/` (with only the five harness-delegated `runtime/test` suites) and `fixtures/` from `~/.agent-framework`, regenerates their `ruff.toml` excludes, bumps `.agenticframework/tenant.yaml`'s `framework.version`, and commits. Needs `tenant.yaml`. Leaves a foreign `runtime/` alone and does nothing in a tenant that installs `agentsmith-runtime` as a package. Does **not** refresh workflows or composite actions. Fails loudly (and stops) if the commit itself fails, rather than reporting "Upgrade complete" regardless. |
 | `agentsmith tenant onprem-scaffold` | — | Copy the on-prem deploy template (Docker Compose or Helm, `templates/onprem-deploy/`) into the current repo's `deploy/onprem/` for in-border / air-gapped clusters. Full walkthrough: docs/UserManual.md. |
-| `agentsmith uninstall` | `[--yes] [--purge]` | Machine-level removal: restores `git init.templateDir` to its pre-install value, removes `~/.local/bin/agentsmith` and any AgentSmith block left in a shell profile; `--purge` also removes `~/.agent-framework` (including the command itself) and `~/.git_templates`. Asks for confirmation unless `--yes`. |
+| `agentsmith uninstall` | `[--yes] [--purge] [--legacy-profile-only]` | Machine-level removal: restores `git init.templateDir` to its pre-install value, removes `~/.local/bin/agentsmith` and any AgentSmith block left in a shell profile; `--purge` also removes `~/.agent-framework` (including the command itself) and `~/.git_templates`. `--legacy-profile-only` removes just the shell-function block an install before 2.0.0 appended to a shell profile, and touches nothing else. Asks for confirmation unless `--yes`. |
 | `python3 scripts/verify_system.py --governed` | — | Is this repo actually governed? Lists every gap at once — the config, the four hooks, whether `core.hooksPath` points at them, the IDE hook configs, a committed knowledge graph, the artifact stubs — and separately whether the last `agentsmith gates run` was green **for this commit**. "Not installed" and "installed but never run" are different answers and it says which. |
 | `agentsmith gates list` | — | The gates this repo's CI declares — every step tagged `# agentsmith:gate` in `.github/workflows/`, as a table. The same table `docs/validation-checklist.md` carries, generated from the same tags, so there is no second list to drift. |
 | `agentsmith gates run` | `[--only TEXT] [--services] [--fail-fast] [--allow-install]` | Run that list here, before pushing. Three counts, never two: passed, failed, and **skipped** with the reason — a tool that is not installed, a service container CI starts, an expression only CI can answer. Dependency-install lines are dropped and named (this is not a fresh runner); `--allow-install` runs them. It does not reproduce the runner image or the setup steps, so CI stays the authority — this answers "does this gate pass here". |
@@ -942,10 +942,10 @@ The older `ai-*` names map to these one for one
 
 | Command | Arguments | Description |
 |---|---|---|
-| `agentsmith tenant init` | `<id> [--stack STACK] [--isolation shared\|dedicated]` | Scaffolds `.agenticframework/tenant.yaml` and per-environment CI/CD workflows in the current repo. |
-| `agentsmith tenant adopt` | `<id> [--stack STACK] [--architecture STYLE] [--agentic] [--gate GLOB]… [--framework-ref TAG] [--yes]` | Brings an existing repo under the gates: prints what it found and would do, then — on a yes — gates its code, keeps its hooks, CI, rules and design doc, and prints the adoption commit. |
+| `agentsmith tenant init` | `<id> [--stack STACK] [--isolation shared\|dedicated] [--architecture STYLE] [--agentic] [--root DIR] [--force] [--allow-framework-root]` | Scaffolds `.agenticframework/tenant.yaml` and per-environment CI/CD workflows in the current repo. `--architecture` and `--agentic` are the same options `tenant adopt` takes — a new repo gets the structural style and, with `--agentic`, the agent layer (agents, allowlisted tools, the gateway, durable workflows, evals). `--force` overwrites existing files; `--allow-framework-root` scaffolds even inside the framework's own checkout, which is otherwise refused. |
+| `agentsmith tenant adopt` | `<id> [--stack STACK] [--architecture STYLE] [--agentic] [--gate GLOB]… [--framework-ref TAG] [--root DIR] [--yes]` | Brings an existing repo under the gates: prints what it found and would do, then — on a yes — gates its code, keeps its hooks, CI, rules and design doc, and prints the adoption commit. |
 | `agentsmith sync` | `[--root DIR] [--yes]` | Brings this repository's copies of the framework up to date — the gate hooks, the provider declaration, and (vendored tenants) the vendored trees — and prints a commit whose review the repository's own gates accept, because every file in it is one the framework wrote. Run it after upgrading AgentSmith. |
-| `agentsmith gate` | `<session-start\|pre-edit\|stop>` | Answer one gate event in the neutral profile of the gate contract (`contract/gate/v1/protocol.md`): the event as JSON on stdin, the decision as JSON on stdout. This is what a tenant names as its provider; exit 3 means this machine cannot run the gate. |
+| `agentsmith gate` | `<session-start\|pre-edit\|stop> [--ide IDE]` | Answer one gate event in the neutral profile of the gate contract (`contract/gate/v1/protocol.md`): the event as JSON on stdin, the decision as JSON on stdout. This is what a tenant names as its provider; exit 3 means this machine cannot run the gate. `--ide` reads the payload in one IDE's dialect instead of the neutral profile — what the generated hook configs pass, and what an integrator needs when the caller is an IDE rather than the contract. |
 | `agentsmith conformance` | `--provider "<command>"` | Build the contract's fixture repository, replay its cases against that command, and report per case. Run it against another platform's adapter, or against `agentsmith gate`. |
 | `agentsmith gate --ide <id>` | `<event> --ide claude` | The same, for a payload in an IDE's dialect: the provider translates it and answers in it. The generated IDE hook configs pass this. |
 | `agentsmith tenant promote` | `<id> --from staging --to production` | Verifies the staging eval gate, then opens a `develop → main` promotion PR. No direct push to `main`. Refuses if `<id>` doesn't exactly match the current repo's `.agenticframework/tenant.yaml` — a same-prefix tenant id (e.g. `acme` vs. `acme-sandbox`) is not a match. |
@@ -1581,6 +1581,20 @@ It reads the repo and prints a plan before writing anything: the stack, the path
 the `--gate GLOB`s you pass), the hooks the repo already runs, and for every file whether it will
 be created, merged or left alone. Answer `y` to go ahead; off a terminal, pass `--yes`.
 
+**What it writes — 28 files**, and none of them is AgentSmith's own code:
+
+| Group | Files |
+|---|---|
+| The declaration and the manifest | `.agenticframework/providers.json`, `tenant.yaml`, `process-gates.json`, `scaffold.json` |
+| The gate hooks | `.githooks/process-gate`, `commit-msg`, `pre-commit`, `pre-push`, and `chain` — which runs whatever hooks the repo already had |
+| IDE hook wiring | `.claude/settings.json` (merged — your permissions stay), `.cursor/hooks.json` |
+| Agent rule files | `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `GEMINI.md`, `.github/copilot-instructions.md` — each gets a marked block appended if it exists, and is created if it does not; plus six `.agents/skills/<name>/skill.md` for Antigravity |
+| CI | `.github/workflows/agentsmith-gates.yml`, `agentsmith-sync.yml` |
+| Records | `.agent-rfc/designs/adoption.md`, `.agent-rfc/fixtures/knowledge_graph.json`, `.agent-history.log`, and an `## Architecture (target)` section in `docs/DESIGN.md` |
+
+The plan it prints before writing lists every one with its fate — created, merged or left alone — so
+this table is what to expect, not what to take on trust.
+
 What it keeps:
 
 - **Your hooks** (husky, pre-commit, `.git/hooks`) keep running, after the gate. AgentSmith's own
@@ -1592,8 +1606,9 @@ What it keeps:
   opens a pull request. Both check AgentSmith out with the run's own token; if AgentSmith is private
   to you, set the `AGENTSMITH_READ_TOKEN` repository secret (Contents: read). Nothing is vendored
   into the repo.
-- **Your agent rules**: an existing `CLAUDE.md`, `AGENTS.md`, `.cursorrules` gets AgentSmith's rules
-  appended in a marked block, replaced on a re-run.
+- **Your agent rules**: an existing rule file — `CLAUDE.md`, `AGENTS.md`, `.cursorrules`,
+  `GEMINI.md`, `.github/copilot-instructions.md` — gets AgentSmith's rules appended in a marked
+  block, replaced on a re-run. Everything you wrote around the block survives.
 - **Your Claude settings**: the gate hooks are added; permissions and everything else stay.
 - **Your design doc**: `docs/DESIGN.md` gets an `## Architecture (target)` section — the style your
   code moves towards, not a claim that it already follows it.

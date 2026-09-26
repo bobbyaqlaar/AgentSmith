@@ -77,6 +77,39 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — three passes of the documentation against the code
+
+- **`docs/DESIGN.md` documented `resolve()`'s precedence backwards**, and this is the one that
+  mattered. It said *explicit → environment → `tenant.yaml` → default*; the code is explicit →
+  `.env` → `tenant.yaml` → **ambient `os.environ` last** → default. `.env` was missing entirely and
+  the environment was second instead of last — the exact inversion `runtime/config.py`'s docstring
+  exists to warn against, and which it ties to a 30× budget breach (a declared $5 monthly cap while
+  the gateway enforced a $150 default). A reader would have believed an exported variable overrides a
+  declared control. `docs/UserManual.md` had it right, so the canonical design document contradicted
+  both the code and the manual.
+- **"The gate fails closed" was true of three callers out of five.** With no usable interpreter
+  `pre-edit` denies and `commit-msg`/`pre-push`/`ci` block, but `session-start` and `stop` warn and
+  exit 0 — which `docs/process-gates.md` never said. It now names which callers block, which warn,
+  and why.
+- **`agentsmith tenant adopt` writes 28 files and the manual named eight.** The section is framed
+  "What it keeps"; unnamed were `GEMINI.md`, `.github/copilot-instructions.md`, `.cursor/hooks.json`,
+  six `.agents/skills/*/skill.md`, `.agent-history.log`, `tenant.yaml`, `process-gates.json` and
+  three of the four gate hooks. There is now a table of the footprint, grouped by purpose.
+- **Three Command Reference rows omitted flags their command accepts**: `tenant init` documented two
+  of seven options (`--architecture` and `--agentic` among the missing, while `tenant adopt`'s row
+  documented both), `gate` omitted `--ide`, and `uninstall` omitted `--legacy-profile-only`.
+
+### Added — the Command Reference is pinned against argparse
+
+- **`scripts/test/test_cli_install.py`** gains three tests: every command has a reference row, every
+  row lists the flags its command accepts, and a command kept out of the daily table is still
+  documented somewhere in the manual. The table is a second copy of the CLI surface across a boundary
+  that cannot be merged, which is `pin-unremovable-duplicates`' case for a test that parses the other
+  side; it reuses the `_leaf_paths` helper the compat-wrapper test already uses. Both new assertions
+  were confirmed failing against the reverted fixes, and the test found a fourth finding the manual
+  audit had missed — `agentsmith hooks bypass-check` has no row, which is legitimate (its parent is
+  internal) and is now an explicit, two-way-pinned exemption rather than an accident.
+
 ### Fixed — a template fixed in the checkout now reaches the tenant
 
 - **`_templates_dir` and `_actions_dir` preferred the machine install over the checkout they were
