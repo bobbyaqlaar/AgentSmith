@@ -151,7 +151,11 @@ jobs:
           ghost = sorted(e for e in top if not pathlib.Path(e).exists())
 
           # Second-level check for the directories that actually drifted (P12).
-          DEEP_DIRS = ["scripts", "runtime", "docs", "fixtures"]
+          # workflow-templates added 2026-09-27: agentsmith-gates.yml and
+          # agentsmith-sync.yml — the two workflows that carry the governance —
+          # were absent from the tree's description of the directory holding them,
+          # and a top-level-only check could not see it.
+          DEEP_DIRS = ["scripts", "runtime", "docs", "fixtures", "workflow-templates"]
           IGNORE_SECOND = {"__init__.py", ".gitignore"}
           # Map: top-level dir -> second-level names listed under it in the tree.
           second: dict[str, set] = {d: set() for d in DEEP_DIRS}

@@ -77,6 +77,17 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the repository tree named three of five template families
+
+- **`docs/DESIGN.md`'s tree described `workflow-templates/` as "(ci-\* / cd-\* / eval-\* reusable
+  workflows)"**, omitting `agentsmith-gates.yml` and `agentsmith-sync.yml` — the two workflows that
+  carry the governance. The tree now names those two and the `ci-*`, `cd-*`, `eval-*` and
+  `shadow-eval.yml` families.
+- **The drift check could not have caught it.** It diffs second-level entries for `scripts`,
+  `runtime`, `docs` and `fixtures`, chosen after the P12 additions drifted at that depth;
+  `workflow-templates` was never added. It is now, and running it immediately found a second gap —
+  `shadow-eval.yml`, a fifth family the first fix had missed.
+
 ### Fixed — the local gate runner's green did not mean CI's green
 
 - **Four blocking CI checks carried no `# agentsmith:gate`**, so `agentsmith gates run` could not run

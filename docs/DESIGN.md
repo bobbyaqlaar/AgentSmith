@@ -1389,7 +1389,13 @@ AgentSmith/
 │   └── in-app-widget/           # Embeddable end-user status widget + Ops Portal API
 ├── portal/                      # Ops Portal (Next.js + TypeScript + Tailwind)
 ├── contract/                    # The gate contract a provider satisfies (contract/gate/v1/protocol.md) — versioned apart from this implementation
-├── workflow-templates/          # Tenant CI/CD templates (ci-* / cd-* / eval-* reusable workflows) — the CI/CD via GitHub Actions section
+├── workflow-templates/          # What a tenant's CI becomes — the CI/CD via GitHub Actions section
+│   ├── agentsmith-gates.yml     # The process gate over every pushed commit (pinned to a release)
+│   ├── agentsmith-sync.yml       # Weekly: brings the tenant up to the latest release, as a pull request
+│   ├── ci-*.yml                 # Per stack: lint, test, and the eval + security gates
+│   ├── cd-*.yml                 # Staging and production promotion
+│   ├── eval-*.yml               # Reusable: scorecard, fairness, hallucination, security, TTFT
+│   └── shadow-eval.yml          # Opt-in schedule: passive sampling, never auto-promotes
 ├── examples/
 │   ├── oil-price-agent/         # Reference tenant app (fork per customer)
 │   └── README.md                # "Copy and rename — do not deploy from framework repo"
