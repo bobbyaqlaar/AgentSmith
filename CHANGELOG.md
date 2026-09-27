@@ -77,6 +77,32 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — a repository can declare its visibility instead of being guessed at
+
+- **`AGENTSMITH_TENANT_VISIBILITY=private|internal|public`** tells `hooks/post-checkout` what the repository
+  being provisioned is, instead of detecting it. It decides one thing: whether the IDE config files —
+  `CLAUDE.md`, `.cursorrules`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`,
+  `.agents/`, `.agent-history.log` — go into `.gitignore`, since they carry system prompt content.
+  Unset detects exactly as before (`gh repo view`, then any `github.com` remote is treated as
+  potentially public), so **no existing caller changes**. An unrecognised value is read as neither
+  answer: it warns and falls back to detection.
+- **Why:** the five scratch tenants were made public on 2026-09-27 so their CI would run on free
+  standard-runner minutes, and the hook then correctly gitignored those files — leaving every fixture
+  on the opposite branch of the visibility decision from the private tenants it stands in for, which
+  is the branch whose onboarding bugs the fixtures exist to catch. `build.sh` now declares
+  `private`, and the `.gitignore` check that already ran is what proves the declaration arrived.
+
+### Fixed — "could not confirm private" was printed for repos confirmed public
+
+- **One sentence covered two states.** `hooks/post-checkout` said "Could not confirm this repo is
+  private" both when `gh` could not answer and when `gh` had answered `PUBLIC`, sending readers to
+  fix an authentication that was working. The three states now print three sentences, and only the
+  genuine can't-answer case keeps the original wording.
+- **`.github/scratch-tenants/build.sh` blamed the same wrong cause** — "Is gh authenticated
+  (GH_TOKEN)?" — in its `.gitignore` guard and in its own header comment. Both now name the
+  declaration that was not honoured. The guard keeps both directions and its exit 1; a mutation
+  proves a stale installed hook that ignores the declaration still fails the build.
+
 ### Fixed — the repository tree named three of five template families
 
 - **`docs/DESIGN.md`'s tree described `workflow-templates/` as "(ci-\* / cd-\* / eval-\* reusable

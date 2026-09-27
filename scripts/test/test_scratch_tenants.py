@@ -304,9 +304,25 @@ def test_the_build_fails_when_the_install_cannot_provision(install, tmp_path, mi
 
 @needs_git
 def test_the_build_fails_if_the_hook_rewrites_gitignore(install, tmp_path, monkeypatch):
-    """A repo the hook cannot confirm is private gets IDE config ignored. For
-    the go app, which has no .gitignore, the hook CREATES one — the first
-    version of this check only compared existing files and missed it."""
+    """The guard has to be able to fail. build.sh declares
+    AGENTSMITH_TENANT_VISIBILITY=private so these public fixture repos still
+    track the IDE config files a real private tenant tracks; this proves the
+    build STOPS when a hook ignores that declaration, rather than publishing a
+    tenant that silently differs from the ones it stands in for.
+
+    The stimulus is a stale installed hook — one predating the override, which
+    is the realistic way this happens, since the machine install lags the
+    checkout. Simulated by renaming the variable the installed hook reads, so
+    build.sh's export reaches a hook that does not honour it.
+
+    For the go app, which has no .gitignore, the hook CREATES one — the first
+    version of this check only compared existing files and missed it.
+    """
+    installed = install / ".git_templates" / "hooks" / "post-checkout"
+    text = installed.read_text()
+    assert "AGENTSMITH_TENANT_VISIBILITY" in text, "the installed hook should read the override"
+    installed.write_text(text.replace("AGENTSMITH_TENANT_VISIBILITY", "AGENTSMITH_TENANT_VISIBILITY_OLD"))
+
     target = tmp_path / "tenant"
     _init(target)
     subprocess.run(
@@ -322,6 +338,30 @@ def test_the_build_fails_if_the_hook_rewrites_gitignore(install, tmp_path, monke
 
     assert result.returncode == 1
     assert "changed .gitignore" in result.stdout + result.stderr
+    assert "AGENTSMITH_TENANT_VISIBILITY" in result.stdout + result.stderr, \
+        "the error has to name the cause, not send the reader to their gh auth"
+
+
+@needs_git
+def test_the_build_keeps_ide_configs_tracked_on_a_public_fixture(install, tmp_path, monkeypatch):
+    """The other half: with a current hook and a gh that reports PUBLIC — which
+    these five fixture repos genuinely are since 2026-09-27 — the build still
+    succeeds and leaves the IDE config files tracked."""
+    target = tmp_path / "tenant"
+    _init(target)
+    subprocess.run(
+        ["git", "-C", str(target), "remote", "add", "origin", "https://github.com/example/scratch.git"], check=True
+    )
+    public = tmp_path / "publicgh"
+    public.mkdir()
+    (public / "gh").write_text('#!/bin/sh\necho PUBLIC\n')
+    (public / "gh").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{public}{os.pathsep}{os.environ['PATH']}")
+
+    result = _build("go", target)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not (target / ".gitignore").exists(), "the declaration must keep the fixture faithful"
 
 
 @needs_git

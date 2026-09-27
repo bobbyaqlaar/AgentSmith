@@ -480,18 +480,45 @@ fi
 # ── .gitignore for public repos ───────────────────────────────────────────────
 REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
 IS_PUBLIC=0
+# Which of the three states below decided IS_PUBLIC, so the message can name it:
+# a declaration by the caller, a visibility gh confirmed, or a lookup that never
+# answered. One sentence used to cover the last two, so a repo gh had confirmed
+# PUBLIC was reported as "could not confirm this repo is private" — sending the
+# reader to their gh auth when nothing was wrong with it
+# (.agent-rfc/designs/tenant-visibility-override.md).
+VIS_SOURCE=""
+
+# A caller that already knows the visibility says so, and is believed: an
+# explicit declaration beats an inference about the declarer. Unset means detect
+# exactly as before, so no existing caller changes. An unrecognised value is
+# taken as neither — it warns and falls through to detection, and a caller that
+# fails on a ⚠️ line (.github/scratch-tenants/build.sh) catches the typo there
+# rather than silently testing the wrong branch.
+case "${AGENTSMITH_TENANT_VISIBILITY:-}" in
+  "") ;;
+  private|PRIVATE|internal|INTERNAL) IS_PUBLIC=0; VIS_SOURCE=declared ;;
+  public|PUBLIC)                     IS_PUBLIC=1; VIS_SOURCE=declared ;;
+  *) echo "⚠️  AGENTSMITH_TENANT_VISIBILITY='${AGENTSMITH_TENANT_VISIBILITY}' is not one of private, internal, public — detecting instead" ;;
+esac
+# An `if`, not `[ -n ... ] && echo`: the common path is an unset override, and
+# that one-liner would return 1 there — fatal the day anyone adds `set -e`.
+if [ -n "$VIS_SOURCE" ]; then
+  echo "ℹ️  Visibility declared ${AGENTSMITH_TENANT_VISIBILITY} by AGENTSMITH_TENANT_VISIBILITY"
+fi
 
 # Real visibility via `gh` when available (docs/DESIGN.md › IDE Config Security (`.gitignore` Confirmation)); if gh is missing,
 # unauthenticated, or the lookup fails, fall back to treating any github.com
 # remote as potentially public — the safe direction, since the consequence
 # is only a .gitignore prompt (or a conservative auto-append in CI).
-if echo "$REMOTE_URL" | grep -q "github.com"; then
+if [ -z "$VIS_SOURCE" ] && echo "$REMOTE_URL" | grep -q "github.com"; then
   IS_PUBLIC=1
+  VIS_SOURCE=unconfirmed
   if command -v gh >/dev/null 2>&1; then
     REPO_SLUG=$(echo "$REMOTE_URL" | sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')
     VISIBILITY=$(gh repo view "$REPO_SLUG" --json visibility --jq .visibility 2>/dev/null || echo "")
     case "$VISIBILITY" in
-      PRIVATE|private|INTERNAL|internal) IS_PUBLIC=0 ;;
+      PRIVATE|private|INTERNAL|internal) IS_PUBLIC=0; VIS_SOURCE=confirmed ;;
+      PUBLIC|public)                                  VIS_SOURCE=confirmed ;;
     esac
   fi
 fi
@@ -508,8 +535,12 @@ fi
 if [ "$IS_PUBLIC" -eq 1 ] && [ -t 1 ]; then
   echo ""
   echo "⚠️  This repository appears to be public."
+  # Every path the block below appends, so the question covers what answering
+  # it does: .agent-history.log was appended and never named, and "y" agreed to
+  # less than it got.
   echo "   .cursorrules, CLAUDE.md, AGENTS.md, GEMINI.md,"
-  echo "   .github/copilot-instructions.md and .agents/ contain system prompt content."
+  echo "   .github/copilot-instructions.md, .agents/ and .agent-history.log"
+  echo "   contain system prompt content."
   read -r -p "   Add them to .gitignore? (y/n): " GITIGNORE_CHOICE
   if [[ "${GITIGNORE_CHOICE:-y}" =~ ^[Yy]$ ]]; then
     GITIGNORE="$REPO_ROOT/.gitignore"
@@ -530,7 +561,13 @@ elif [ "$IS_PUBLIC" -eq 1 ]; then
   # Non-interactive (CI): auto-add to .gitignore — and say so; this used to be
   # entirely silent, so a repo could stop tracking CLAUDE.md with no trace.
   GITIGNORE="$REPO_ROOT/.gitignore"
-  echo "ℹ️  Could not confirm this repo is private — added IDE config files to .gitignore"
+  # Three states, three sentences: only the last one is about gh being unable to
+  # answer, and only it should send the reader to their gh auth.
+  case "$VIS_SOURCE" in
+    declared)  echo "ℹ️  Added IDE config files to .gitignore" ;;
+    confirmed) echo "ℹ️  This repo is public (confirmed via gh) — added IDE config files to .gitignore" ;;
+    *)         echo "ℹ️  Could not confirm this repo is private — added IDE config files to .gitignore" ;;
+  esac
   {
     echo ""
     echo "# AgentSmith — IDE configs (system prompt content)"

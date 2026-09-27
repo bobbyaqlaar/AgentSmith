@@ -1678,22 +1678,35 @@ MAJOR/CRITICAL entries are synced to the Ops Portal unresolved queue in addition
 ## IDE Config Security (`.gitignore` Confirmation)
 
 When the `post-checkout` hook writes IDE config files into a repository, it
-determines repository visibility: if the `gh` CLI is available, it asks
-GitHub directly (`gh repo view --json visibility`) — `private`/`internal`
-suppresses the prompt entirely; without `gh` (or when the lookup fails), any
-`github.com` remote is conservatively treated as potentially public, since
-the only consequence is this `.gitignore` prompt. If treated as public:
+determines repository visibility from three sources, in this order:
+
+1. `AGENTSMITH_TENANT_VISIBILITY=private|internal|public` — a caller that already knows
+   says so, and is believed: an explicit declaration beats an inference about
+   the declarer. An unrecognised value is read as neither; it prints a `⚠️`
+   line and falls through to detection, so a caller that fails on warnings
+   catches the typo instead of silently getting the other branch.
+2. `gh repo view --json visibility` when the `gh` CLI is available —
+   `private`/`internal` suppresses the prompt entirely.
+3. Otherwise any `github.com` remote is conservatively treated as potentially
+   public, since the only consequence is this `.gitignore` prompt.
+
+Which source decided is named in the message, because "gh confirmed this repo is
+public" and "gh could not answer" need different responses from the reader and
+were once reported with the same sentence
+(.agent-rfc/designs/tenant-visibility-override.md). If treated as public:
 
 ```
-⚠️  AgentSmith: IDE config files contain system prompt content.
-    This repo appears to be public. Add them to .gitignore?
-    (y/n): _
+⚠️  This repository appears to be public.
+   .cursorrules, CLAUDE.md, AGENTS.md, GEMINI.md,
+   .github/copilot-instructions.md, .agents/ and .agent-history.log
+   contain system prompt content.
+   Add them to .gitignore? (y/n): _
 ```
 
 - If **y**: `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.agents/`, `.agent-history.log` appended to `.gitignore`.
 - If **n**: Files written but not gitignored. A MINOR warning logged.
 
-Additionally, if `.agenticframework/tenant.yaml` contains non-public tenant metadata (non-default tenant id, non-public endpoint URLs), it is also included in the gitignore prompt for public repos.
+The block covers those seven paths and nothing else. `.agenticframework/tenant.yaml` is **not** among them, although it can carry a non-default tenant id and non-public endpoint URLs: this section claimed it was included, and no code ever did that — an unbacked claim found by reading the hook against the doc (docs/PRODUCT_BACKLOG.md, "tenant.yaml is not covered by the IDE-config gitignore block").
 
 In non-interactive environments (CI), the hook defaults to yes.
 
@@ -1709,7 +1722,7 @@ In non-interactive environments (CI), the hook defaults to yes.
 | 4 | NetworkX version | NetworkX ≥3.0; `node_link_data(G, edges="links")` format |
 | 5 | Notifications | Cross-platform via `plyer`; macOS additionally uses `osascript` |
 | 6 | Log levels & rotation | INFO/MINOR/MAJOR/CRITICAL; MAJOR+CRITICAL protected until HITL resolved; INFO+MINOR capped at 10,000 (FIFO) |
-| 7 | IDE config in public repos | Hook prompts for confirmation; auto-adds to `.gitignore` on yes; CI defaults to yes |
+| 7 | IDE config in public repos | Hook prompts for confirmation; auto-adds to `.gitignore` on yes; CI defaults to yes. `AGENTSMITH_TENANT_VISIBILITY` declares the visibility instead of detecting it |
 | 8 | Judge model | The `judge` role in `models.yaml` (framework default `falcon3:3b` — deliberately not `architect`'s model, so the grader is never the author), resolved by `scripts/_shared.py:judge_model()` for run-evals/shadow-eval/verify_system alike — so a tenant declaring its own `judge` route gets its CI evals and its runtime judge on one model. The registry takes precedence over `AGENT_JUDGE_MODEL`, which applies only where no role is declared — an ambient variable must not be able to regrade a repo |
 | 9 | Team Phoenix | Docker Compose included; auth required for team/production deployments |
 | 10 | Monorepo scope | Monorepo and multi-repo fully in scope; nested `.agent-rfc/` for sub-packages |

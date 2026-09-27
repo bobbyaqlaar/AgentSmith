@@ -3495,7 +3495,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-26T07:20:10Z",
+      "last_modified": "2026-09-27T07:22:24Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4113,7 +4113,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-24T21:56:56Z",
+      "last_modified": "2026-09-27T06:55:08Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4467,9 +4467,10 @@
         "test_a_hand_edit_in_the_scratch_repo_fails_the_build",
         "test_the_build_fails_when_the_install_cannot_provision",
         "test_the_build_fails_if_the_hook_rewrites_gitignore",
+        "test_the_build_keeps_ide_configs_tracked_on_a_public_fixture",
         "test_the_build_copies_what_git_would_publish_not_local_junk"
       ],
-      "last_modified": "2026-09-13T21:44:57Z",
+      "last_modified": "2026-09-27T06:52:57Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -4622,7 +4623,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-26T09:48:26Z",
+      "last_modified": "2026-09-27T07:26:32Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -6647,7 +6648,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-26T14:02:14Z",
+      "last_modified": "2026-09-27T07:25:12Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -7178,6 +7179,56 @@
       "pillar": null,
       "created_at": "2026-09-26T14:41:19Z",
       "id": "rfc:reviews/gate-tag-coverage.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_tenant",
+        "_run",
+        "test_declared_private_keeps_ide_configs_tracked_on_a_public_repo",
+        "test_declared_public_appends_on_a_private_repo",
+        "test_unrecognised_value_warns_and_falls_back_to_detection",
+        "test_confirmed_public_does_not_blame_gh",
+        "test_build_sh_declares_the_visibility_it_needs",
+        "_appended_blocks",
+        "test_both_append_blocks_ignore_the_same_paths",
+        "test_the_prompt_names_every_path_it_would_ignore"
+      ],
+      "last_modified": "2026-09-27T07:39:56Z",
+      "id": "scripts/test/test_hook_visibility_override.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Tenant visibility override",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/tenant-visibility-override.md",
+      "pillar": null,
+      "created_at": "2026-09-27T07:40:25Z",
+      "id": "rfc:designs/tenant-visibility-override.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The tree said `workflow-templates/` held three families; it holds five",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/tree-drift-blind-spot.md",
+      "pillar": null,
+      "created_at": "2026-09-27T07:40:25Z",
+      "id": "rfc:designs/tree-drift-blind-spot.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 tenant-visibility-override",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/tenant-visibility-override.md",
+      "pillar": null,
+      "created_at": "2026-09-27T07:40:25Z",
+      "id": "rfc:reviews/tenant-visibility-override.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the tree said `workflow-templates/` held three families; it holds five",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/tree-drift-blind-spot.md",
+      "pillar": null,
+      "created_at": "2026-09-27T07:40:25Z",
+      "id": "rfc:reviews/tree-drift-blind-spot.md"
     }
   ],
   "edges": [

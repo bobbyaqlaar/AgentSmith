@@ -26,9 +26,9 @@
 #     SCRATCH_TENANTS_ALLOW_MANUAL_HEAD=1 to overwrite it deliberately.
 #   - the installed hook prints any column-0 warning (⚠️/❌): a tenant onboarded
 #     from this install would be broken the same way.
-#   - the hook changes the app's .gitignore: it could not confirm the repo is
-#     private (is gh authenticated?), and the next commit would stop tracking
-#     CLAUDE.md and friends.
+#   - the hook changes the app's .gitignore: it did not honour the declared
+#     AGENTSMITH_TENANT_VISIBILITY=private, and the next commit would stop
+#     tracking CLAUDE.md and friends.
 
 set -euo pipefail
 
@@ -76,6 +76,15 @@ mkdir -p .agenticframework
 touch .agenticframework/enabled
 
 # ── 3. Fire the installed hook, as `git checkout` would ──────────────────────
+# A real tenant is private and TRACKS its IDE config files. These fixture repos
+# are public — so their CI runs on free standard-runner minutes — and the hook
+# would therefore gitignore CLAUDE.md, .cursorrules and friends, leaving a
+# fixture on the opposite branch of the visibility decision from every tenant
+# it stands in for. Declaring the intent keeps the fixture faithful without
+# making it depend on where it happens to be hosted
+# (.agent-rfc/designs/tenant-visibility-override.md). The .gitignore check in
+# step 4 is what proves this reached the hook.
+export AGENTSMITH_TENANT_VISIBILITY=private
 LOG="$(mktemp)"
 bash "$HOOK" 2>&1 | tee "$LOG"
 
@@ -91,7 +100,7 @@ fi
 # with one either — the hook creates the file when it appends.
 if { [ -f "$APP/.gitignore" ] && ! cmp -s "$APP/.gitignore" .gitignore; } \
    || { [ ! -f "$APP/.gitignore" ] && [ -f .gitignore ]; }; then
-  echo "::error::the hook changed .gitignore — it treated this repo as public. Is gh authenticated (GH_TOKEN)?"
+  echo "::error::the hook changed .gitignore — it did not honour AGENTSMITH_TENANT_VISIBILITY=private, so this fixture would stop tracking the IDE config files a real tenant tracks"
   diff "${APP}/.gitignore" .gitignore 2>/dev/null || cat .gitignore
   exit 1
 fi
