@@ -131,7 +131,8 @@ def _code_blob() -> str:
             continue
         try:
             parts.append((REPO / f).read_text(errors="replace"))
-        except OSError:
+        except OSError:  # fail-open: one unreadable file must not blind the sweep
+            # to the rest; the file list itself is asserted non-empty above.
             pass
     return "\n".join(parts)
 

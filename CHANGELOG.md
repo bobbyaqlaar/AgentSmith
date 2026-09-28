@@ -77,6 +77,40 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — a scaffolded tenant could not make its own first commit
+
+- **`agentsmith tenant init` prints the exact command to commit its output, and that command was
+  refused.** `hooks/pre-commit` runs its guardrails over the files STAGED in a commit; a first commit
+  stages the `scripts/` and `runtime/` the scaffold just vendored, so both guardrails ran over
+  AgentSmith's own code and both failed it. Every repository onboarded from `git init` hit this.
+  **Fixed for a default machine. An enterprise machine is still blocked** — see the last bullet.
+- **Guardrail 2 (empty `except` handlers):** thirteen handlers across `gate_history.py`,
+  `process_gate.py`, `send_dev_record.py`, `map_codebase.py`, `mutation_check.py`,
+  `runtime/embeddings.py`, `runtime/llm_gateway.py` and two test files had no stated reason. Twelve
+  are intentional fail-opens and now say so individually with `# fail-open: <reason>`; four of those
+  had already tried to, in a place or a punctuation the checker does not read. The thirteenth,
+  `security/runners/structured_output.py`, was **not** a fail-open — its empty handler meant "the
+  expected error was raised" — so it is restructured rather than labelled with a word that lies.
+- **Guardrail 1 (unresolved AI markers):** `verify_system.py` writes `"# TODO: agent fix this"` as
+  data for its own hook test, and that file is vendored into every tenant. The literal is assembled
+  from two pieces; the file written at runtime is byte-identical and
+  `verify_system.py --check-hooks` still proves the guardrail catches it.
+- **Why nothing caught it.** The guardrails only ever run on staged files, so they had never examined
+  the tree they protect — which is how thirteen handlers accumulated. The scratch tenants all have
+  history, so only changed files stage there. Two tests close it: one runs the empty-except check over
+  every tracked `.py`, and one scaffolds a tenant and runs the commit command the CLI prints.
+- **Still broken under enterprise policy, and not fixed here.** Where an org policy file exists,
+  Guardrail 4 requires at least one `*.md` at `.agent-rfc/` depth 1, and the scaffold writes only
+  `.agent-rfc/designs/scaffold.md`. Verified on an isolated machine with a policy file: the printed
+  commit is refused with "Enterprise policy requires at least one RFC under `.agent-rfc/`". Fixing it
+  means deciding whether a design note counts as an RFC — a change to what the enterprise contract
+  means, not a bug fix — so it is recorded in `docs/PRODUCT_BACKLOG.md` for the owner.
+- **The shared test fixture was not what it claimed.** It promised "a complete `~/.agent-framework`
+  as install-ai-stack.sh lays them out" while copying one of three files in `templates/`, none of the
+  three in `docs/`, and one of the four machine hooks — the missing one being `pre-commit` itself, so
+  no test using it had ever seen a pre-commit guardrail run. Fixed, with the one remaining omission
+  (the venv) now named in the docstring.
+
 ### Changed — the process gates now refuse a push, for everyone but the owner
 
 - **`Process gates (design + review)` is a required check on `main`** as of 2026-09-29. A push, or a

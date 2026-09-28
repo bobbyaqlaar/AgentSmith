@@ -157,8 +157,17 @@ def test_the_commit_step_disarms_hooks_and_uses_the_author_build_sh_expects():
 
 @pytest.fixture()
 def install(tmp_path, monkeypatch):
-    """A complete ~/.agent-framework and ~/.git_templates, as install-ai-stack.sh
-    lays them out. Complete matters: build.sh fails on ANY hook warning."""
+    """~/.agent-framework and ~/.git_templates as install-ai-stack.sh lays them out,
+    minus the venv. Completeness matters: build.sh fails on ANY hook warning, and
+    every omission here has hidden a defect. This fixture claimed to be complete
+    while copying one of three files in templates/, none of three in docs/, and one
+    of four machine hooks — so no test using it could reach a commit through the
+    process gate, or see the pre-commit guardrails run at all
+    (.agent-rfc/designs/first-commit-guardrail.md).
+
+    Still absent, deliberately: the venv install-ai-stack.sh builds. A caller that
+    needs the gate to start an interpreter names one with AGENTSMITH_PYTHON, which
+    is what the gate's own error message tells a real user to do."""
     home = tmp_path / "home"
     fw = home / ".agent-framework"
     ignore = shutil.ignore_patterns("__pycache__", ".hitl_blobs")
@@ -171,10 +180,33 @@ def install(tmp_path, monkeypatch):
     shutil.copytree(REPO / "workflow-templates", fw / "workflow-templates")
     shutil.copytree(REPO / ".github" / "actions", fw / "github-actions")
     (fw / "templates").mkdir()
-    shutil.copy(REPO / "templates" / "agent-rules.yaml", fw / "templates" / "agent-rules.yaml")
+    # All three the installer copies, not just the rules: governance.json is the
+    # registry the process gate reads (it runs without pyyaml) and
+    # architectures.yaml is what --architecture renders. The docstring above
+    # promised "as install-ai-stack.sh lays them out" while copying one of the
+    # three, so no test using this fixture could reach a commit through the gate
+    # (.agent-rfc/designs/first-commit-guardrail.md).
+    for name in ("agent-rules.yaml", "governance.json", "architectures.yaml"):
+        shutil.copy(REPO / "templates" / name, fw / "templates" / name)
+    # The three docs the installer copies too. review-levers.md is not optional
+    # reading material here: the process gate validates that a design's
+    # `## Levers` cites a real lever, and without this file it blocks the
+    # scaffold's own commit on a machine that has no checkout.
+    (fw / "docs").mkdir()
+    for name in ("design-review-checklist.md", "validation-checklist.md", "review-levers.md"):
+        shutil.copy(REPO / "docs" / name, fw / "docs" / name)
+    # All four machine hooks the installer places here, not just post-checkout.
+    # pre-commit is the one that carries the bare-except and AI-marker guardrails,
+    # so a fixture without it cannot see a commit refused by them — which is how a
+    # tenant's first commit stayed broken while these tests were green
+    # (.agent-rfc/designs/first-commit-guardrail.md).
     hooks = home / ".git_templates" / "hooks"
     hooks.mkdir(parents=True)
-    shutil.copy(REPO / "hooks" / "post-checkout", hooks / "post-checkout")
+    for name in ("pre-commit", "commit-msg", "post-commit", "post-checkout"):
+        shutil.copy(REPO / "hooks" / name, hooks / name)
+    # post-commit auto-tags and pushes. These repos have no remote, so a push
+    # cannot reach anything, but saying so beats relying on it.
+    monkeypatch.setenv("AGENTSMITH_AUTOPUSH", "0")
     # python3 with pyyaml for generate-ide-config.py (a bare system python3 may
     # lack it), and a normal pycache location so a .pyc regression is visible.
     shim = tmp_path / "bin"

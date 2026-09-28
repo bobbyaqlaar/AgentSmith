@@ -1023,8 +1023,9 @@ def _install_restore_handlers(target: Path, original: str) -> None:
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
             signal.signal(sig, _restore)
-        except (ValueError, OSError):  # pragma: no cover - non-main thread
-            pass
+        except (ValueError, OSError):  # fail-open: signal.signal only works on the
+            # main thread; without the handler an interrupt just skips the restore.
+            pass  # pragma: no cover - non-main thread
 
 
 def _pytest(tests: tuple[str, ...]) -> subprocess.CompletedProcess:
@@ -1095,8 +1096,9 @@ def run_suite(suite: Suite) -> list[str]:
             ):
                 try:
                     signal.signal(sig, handler)
-                except (ValueError, OSError):  # pragma: no cover
-                    pass
+                except (ValueError, OSError):  # fail-open: as above — not the main
+                    # thread, so there was no handler of ours to put back.
+                    pass  # pragma: no cover
 
         if result.returncode == 0:
             problems.append(

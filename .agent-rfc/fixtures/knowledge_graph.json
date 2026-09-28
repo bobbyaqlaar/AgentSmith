@@ -434,7 +434,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-09-27T07:48:37Z",
+      "last_modified": "2026-09-28T23:28:46Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -476,7 +476,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-09-27T07:48:52Z",
+      "last_modified": "2026-09-28T23:28:46Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -1005,7 +1005,7 @@
         "_resolve_local_import",
         "run_map"
       ],
-      "last_modified": "2026-09-12T14:55:34Z",
+      "last_modified": "2026-09-28T23:28:46Z",
       "id": "scripts/map_codebase.py"
     },
     {
@@ -1068,7 +1068,7 @@
         "_git_repo",
         "want"
       ],
-      "last_modified": "2026-09-18T05:07:06Z",
+      "last_modified": "2026-09-28T23:40:40Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -1828,7 +1828,7 @@
         "_SmokeModel",
         "run"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-28T23:28:46Z",
       "id": "scripts/security/runners/structured_output.py"
     },
     {
@@ -4113,7 +4113,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-27T06:55:08Z",
+      "last_modified": "2026-09-28T23:28:46Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4238,7 +4238,7 @@
         "test_allowlist_entries_are_still_orphans",
         "test_the_sweep_reaches_extensionless_shell"
       ],
-      "last_modified": "2026-09-26T11:16:02Z",
+      "last_modified": "2026-09-28T23:28:46Z",
       "id": "scripts/test/test_documented_env_vars_exist.py"
     },
     {
@@ -4470,7 +4470,7 @@
         "test_the_build_keeps_ide_configs_tracked_on_a_public_fixture",
         "test_the_build_copies_what_git_would_publish_not_local_junk"
       ],
-      "last_modified": "2026-09-27T06:52:57Z",
+      "last_modified": "2026-09-28T23:41:24Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -4623,7 +4623,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-27T08:27:42Z",
+      "last_modified": "2026-09-28T23:28:46Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5146,7 +5146,7 @@
       "symbols": [
         "pytest_configure"
       ],
-      "last_modified": "2026-09-16T07:36:18Z",
+      "last_modified": "2026-09-28T23:39:33Z",
       "id": "scripts/test/conftest.py"
     },
     {
@@ -5859,7 +5859,7 @@
         "record_gates_run",
         "last_gates_run"
       ],
-      "last_modified": "2026-09-18T05:07:06Z",
+      "last_modified": "2026-09-28T23:28:46Z",
       "id": "scripts/gate_history.py"
     },
     {
@@ -6499,7 +6499,7 @@
         "_parts",
         "main"
       ],
-      "last_modified": "2026-09-18T15:29:56Z",
+      "last_modified": "2026-09-28T23:28:46Z",
       "id": "scripts/send_dev_record.py"
     },
     {
@@ -7256,6 +7256,37 @@
       "pillar": null,
       "created_at": "2026-09-28T21:59:35Z",
       "id": "rfc:reviews/branch-protection-enabled.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_git",
+        "_scaffold",
+        "test_the_scaffold_commit_the_cli_prints_is_accepted",
+        "test_the_pre_commit_guardrail_still_runs_on_that_commit"
+      ],
+      "last_modified": "2026-09-28T23:52:00Z",
+      "id": "scripts/test/test_first_commit.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_tracked_python_files",
+        "test_the_checker_is_reading_a_real_file_list",
+        "test_every_tracked_python_file_passes_the_bare_except_check"
+      ],
+      "last_modified": "2026-09-28T23:41:50Z",
+      "id": "scripts/test/test_bare_except_tree.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A scaffolded tenant cannot make its first commit",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/first-commit-guardrail.md",
+      "pillar": null,
+      "created_at": "2026-09-28T23:42:25Z",
+      "id": "rfc:designs/first-commit-guardrail.md"
     }
   ],
   "edges": [
