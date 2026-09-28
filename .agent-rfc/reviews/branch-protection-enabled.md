@@ -102,3 +102,30 @@ Declared gaps:             (1) enforce_admins is false and no pull request is re
                               allow_deletions is untested and assumed bypassable; (3) strict is off,
                               so a stale branch can merge on an old passing check
 ```
+
+## Post-commit verification — the bypass, observed
+
+Pushing this slice produced the evidence the passes above could only assert.
+`git push origin main` on `e962723` succeeded, and the remote reported:
+
+    remote: Bypassed rule violations for refs/heads/main:
+    remote: - Required status check "Process gates (design + review)" is expected.
+
+Three things are confirmed by those two lines, none of which was verified when
+the documentation was written:
+
+1. The protection is active and the required check is matched by the exact name
+   this slice pinned — GitHub names it back, character for character.
+2. It **would have refused** this push: the violation was real, not absent.
+3. The admin exemption is what admitted it, and GitHub calls it a bypass. So the
+   split recorded in `docs/process-gates.md` and `docs/PRODUCT_BACKLOG.md` —
+   enforced for everyone except the owner — is observed behaviour, not inference.
+
+Still not verified, and still to be assumed bypassable: whether that same
+exemption covers `allow_force_pushes` and `allow_deletions` (Pass 1). Nothing in
+this output speaks to those, and the way to find out remains a force push.
+
+One consequence worth naming: every push the owner makes to `main` will now
+print this bypass notice. It is not a warning about this commit — it is the
+protection working, and the exemption being used. It stops appearing the day
+`enforce_admins` is turned on, which is the same day direct pushes stop.
