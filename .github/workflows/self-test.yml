@@ -15,8 +15,10 @@ jobs:
   # Design before code, review before merge — checked on every pushed commit
   # (docs/process-gates.md). The local commit-msg hook runs the same function,
   # but only in a clone that armed it; this is the check no clone can skip.
-  # It cannot REFUSE a push: branch protection on a private repo needs GitHub
-  # Pro, so a failing range is red after the fact, not blocked.
+  # Required on `main` since 2026-09-29: a push or merge whose head fails this
+  # job is REFUSED for everyone except a repository admin. `enforce_admins` is
+  # off, so the owner can still push past it — deliberately, since turning it on
+  # ends direct pushes to `main` (docs/process-gates.md › Limits, stated).
   process-gates:
     name: "Process gates (design + review)"
     runs-on: ubuntu-latest

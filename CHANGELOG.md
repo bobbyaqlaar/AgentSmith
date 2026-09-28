@@ -77,6 +77,21 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — the process gates now refuse a push, for everyone but the owner
+
+- **`Process gates (design + review)` is a required check on `main`** as of 2026-09-29. A push, or a
+  pull-request merge, whose head fails it is rejected. `allow_force_pushes` and `allow_deletions` are off as well, though whether an
+  admin bypasses those too is untested and should be assumed bypassable. Possible only because the repository went public on
+  2026-09-27 — branch protection needs GitHub Pro on a private repository.
+- **What is not enforced, stated plainly:** `enforce_admins` is false and no pull request is
+  required, so the owner — the only admin — can still push directly to `main` past a failing check.
+  Deliberate: both remaining settings end direct pushes to `main`, which is how this repository is
+  worked in. Left open in `docs/PRODUCT_BACKLOG.md` with its trigger rather than written up as done.
+- Three places said the CI gate *cannot* refuse a push, naming the Pro requirement:
+  `.github/workflows/self-test.yml`, `docs/process-gates.md` › Limits stated, and the backlog item.
+  All three now say which half is enforced and which is not. The `[2.0.0]` entry below says the old
+  thing and is left alone — it was true on 2026-09-19.
+
 ### Added — a repository can declare its visibility instead of being guessed at
 
 - **`AGENTSMITH_TENANT_VISIBILITY=private|internal|public`** tells `hooks/post-checkout` what the repository

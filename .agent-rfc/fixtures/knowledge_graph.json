@@ -101,7 +101,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-09-25T04:03:52Z",
+      "last_modified": "2026-09-27T07:47:59Z",
       "id": "runtime/structured_output.py"
     },
     {
@@ -191,7 +191,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-09-25T04:04:10Z",
+      "last_modified": "2026-09-27T07:48:10Z",
       "id": "runtime/input_guardrail.py"
     },
     {
@@ -232,7 +232,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-09-25T04:05:07Z",
+      "last_modified": "2026-09-27T07:49:00Z",
       "id": "runtime/vector_store.py"
     },
     {
@@ -251,7 +251,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-09-25T04:03:35Z",
+      "last_modified": "2026-09-27T07:47:47Z",
       "id": "runtime/idempotency.py"
     },
     {
@@ -289,7 +289,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-09-25T04:03:40Z",
+      "last_modified": "2026-09-27T07:47:50Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -358,7 +358,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-09-25T04:02:44Z",
+      "last_modified": "2026-09-27T07:47:18Z",
       "id": "runtime/trace_redactor.py"
     },
     {
@@ -434,7 +434,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-09-25T04:04:40Z",
+      "last_modified": "2026-09-27T07:48:37Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -458,7 +458,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-09-25T04:03:43Z",
+      "last_modified": "2026-09-27T07:47:52Z",
       "id": "runtime/prompt_guard.py"
     },
     {
@@ -476,7 +476,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-09-25T04:04:58Z",
+      "last_modified": "2026-09-27T07:48:52Z",
       "id": "runtime/embeddings.py"
     },
     {
@@ -488,7 +488,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-09-25T04:04:36Z",
+      "last_modified": "2026-09-27T07:48:33Z",
       "id": "runtime/environment.py"
     },
     {
@@ -521,7 +521,7 @@
         "degrade_tiers",
         "__getattr__"
       ],
-      "last_modified": "2026-09-25T04:03:20Z",
+      "last_modified": "2026-09-27T07:47:39Z",
       "id": "runtime/testing.py"
     },
     {
@@ -607,7 +607,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-09-25T04:04:04Z",
+      "last_modified": "2026-09-27T07:48:07Z",
       "id": "runtime/conversation_memory.py"
     },
     {
@@ -766,7 +766,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-09-25T04:03:59Z",
+      "last_modified": "2026-09-27T07:48:04Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -837,7 +837,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-09-25T04:03:57Z",
+      "last_modified": "2026-09-27T07:48:03Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -868,7 +868,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-09-25T04:03:55Z",
+      "last_modified": "2026-09-27T07:48:01Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -3402,7 +3402,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-09-25T04:04:09Z",
+      "last_modified": "2026-09-27T07:48:09Z",
       "id": "runtime/config.py"
     },
     {
@@ -3495,7 +3495,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-27T07:22:24Z",
+      "last_modified": "2026-09-27T08:39:28Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3588,7 +3588,7 @@
         "system_fingerprint",
         "prompt_attributes"
       ],
-      "last_modified": "2026-09-25T04:03:22Z",
+      "last_modified": "2026-09-27T07:47:40Z",
       "id": "runtime/prompt_identity.py"
     },
     {
@@ -4061,7 +4061,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-09-25T04:02:28Z",
+      "last_modified": "2026-09-27T07:47:13Z",
       "id": "runtime/pii_patterns.py"
     },
     {
@@ -4623,7 +4623,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-27T07:26:32Z",
+      "last_modified": "2026-09-27T08:27:42Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5074,7 +5074,7 @@
         "upgrade",
         "git"
       ],
-      "last_modified": "2026-09-25T05:45:33Z",
+      "last_modified": "2026-09-27T08:38:10Z",
       "id": "runtime/machine/upgrade.py"
     },
     {
@@ -5639,7 +5639,7 @@
         "_command",
         "render_config"
       ],
-      "last_modified": "2026-09-25T04:58:04Z",
+      "last_modified": "2026-09-27T08:20:20Z",
       "id": "scripts/gate_ides.py"
     },
     {
@@ -6648,7 +6648,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-27T07:25:12Z",
+      "last_modified": "2026-09-27T08:35:33Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6832,7 +6832,7 @@
         "passed",
         "render"
       ],
-      "last_modified": "2026-09-25T05:04:01Z",
+      "last_modified": "2026-09-27T08:23:49Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -6944,7 +6944,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-09-25T05:43:28Z",
+      "last_modified": "2026-09-27T08:36:52Z",
       "id": "runtime/sync.py"
     },
     {
@@ -7229,6 +7229,33 @@
       "pillar": null,
       "created_at": "2026-09-27T07:40:25Z",
       "id": "rfc:reviews/tree-drift-blind-spot.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_the_gate_job_reports_under_the_required_name",
+        "test_the_docs_name_the_same_required_check",
+        "test_the_job_name_is_not_generated_from_something_else"
+      ],
+      "last_modified": "2026-09-28T21:50:16Z",
+      "id": "scripts/test/test_required_check_name.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Branch protection enabled on main",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/branch-protection-enabled.md",
+      "pillar": null,
+      "created_at": "2026-09-28T21:59:35Z",
+      "id": "rfc:designs/branch-protection-enabled.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 branch-protection-enabled",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/branch-protection-enabled.md",
+      "pillar": null,
+      "created_at": "2026-09-28T21:59:35Z",
+      "id": "rfc:reviews/branch-protection-enabled.md"
     }
   ],
   "edges": [

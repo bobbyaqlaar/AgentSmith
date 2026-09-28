@@ -752,11 +752,26 @@ see Provisioning, above.
 
 ## Limits, stated
 
-- **The CI gate cannot refuse a push.** Branch protection, which would make
-  `process-gates` a required check on `main`, needs GitHub Pro for a private
-  repository (verified 2026-09-14: the API answers "Upgrade to GitHub Pro or
-  make this repository public"). Until then a non-compliant push lands and
-  Self-Test goes red. Recorded in `docs/PRODUCT_BACKLOG.md`.
+- **The CI gate refuses a push — unless you are an admin.** The check
+  `Process gates (design + review)` — copy it exactly; GitHub matches a required
+  check by that string — is required on `main` since 2026-09-29, so a push
+  or a pull-request merge whose head fails it is rejected; `allow_force_pushes` and
+  `allow_deletions` are both off as well. Whether an admin bypasses *those* too
+  is untested — a force push to `main` is not an experiment worth running to find
+  out — so assume the admin path bypasses everything until someone verifies it. What is *not*
+  enforced: `enforce_admins` is false and no pull request is required, so the
+  owner — the only admin — can still push directly to `main` past a failing
+  check. That half is deliberate, not an oversight: enabling it ends direct
+  pushes to `main` for the person who does all of them. It stays open in
+  `docs/PRODUCT_BACKLOG.md` with its trigger. `strict` is also off, so a branch
+  that passed the check against an older `main` can still merge without being
+  brought up to date — the check proves that commit was compliant, not that it
+  still is on top of what landed since.
+
+  Before 2026-09-29 no branch protection was possible at all: it needs GitHub
+  Pro for a private repository (verified 2026-09-14 — the API answered "Upgrade
+  to GitHub Pro or make this repository public"), and this repository was
+  private until 2026-09-27.
 - **Only the edit gate fails closed.** If `python3` is missing or the script
   dies, the edit gate still denies (its command falls back to a deny). The
   session-start and stop hooks cannot: Claude Code treats their failure as a

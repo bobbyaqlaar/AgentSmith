@@ -195,17 +195,19 @@ and `docs/PRODUCT_ARCHIVE.md`. Each was checked still open on 2026-09-14.
   Sentinel does not use this action). **Trigger:** the next tenant onboarded
   from an older install, or the next fix to any composite action — at that
   point `ai-stack-upgrade` should refresh actions.
-- **The process gates report a bad push; they cannot refuse one.** Making
-  Self-Test's `process-gates` a required check on `main` (and merging through
-  pull requests) needs branch protection, which GitHub offers private repos only
-  on Pro — verified 2026-09-14. **Trigger: FIRED** — the owner is making the
-  repository public (2026-09-26), and branch protection is free on a public
-  repository. This is the single largest governance change available right now:
-  every gate in this repository currently *reports*. To make it refuse: protect
-  `main`, require the `process-gates` check, require a pull request, and stop
-  pushing to `main` directly. Owner's action — it is a repository setting, and
-  it changes how this repository is worked in, so it is not something to switch
-  on as a side effect of anything else.
+- **The process gates refuse a bad push for everyone except the owner.** Two of
+  the four steps are done: `main` is protected and `Process gates (design +
+  review)` is a required check, since 2026-09-29 (the repository went public on
+  2026-09-27, and protection is free on a public repository — it needs Pro on a
+  private one, verified 2026-09-14). `allow_force_pushes` and `allow_deletions` are off as well;
+  whether an admin bypasses those is untested, so assume it does.
+
+  **Still open:** `enforce_admins` is false and no pull request is required, so
+  the owner — the only admin — can still push directly to `main` past a failing
+  check. Both remaining steps are one API call, and both end direct pushes to
+  `main`, which is how this repository is worked in every day. **Trigger:** a
+  second person with write access, or the owner choosing to work through pull
+  requests. Deliberately not switched on as a side effect of anything else.
 - **New tenants do not get the process gates automatically.** AqlaarTeleologyStudio
   and KYC Sentinel adopted them by hand on 2026-09-14 (`docs/process-gates.md`
   § Rolling out to a tenant). `agentsmith tenant init` and `hooks/post-checkout`

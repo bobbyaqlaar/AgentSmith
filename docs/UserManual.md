@@ -1300,7 +1300,9 @@ Set these in **Settings → Secrets and variables → Actions** for each tenant 
 ```bash
 # Pinned version (recommended for team environments).
 # Set VERSION to a published tag — see github.com/bobbyaqlaar/AgentSmith/releases
-VERSION=v1.1.1
+# (this example is deliberately not a real tag: a number written here goes stale
+#  the next release, and v1.1.1 sat here two majors behind the page's own links)
+VERSION=vX.Y.Z
 BASE=https://github.com/bobbyaqlaar/AgentSmith/releases/download/$VERSION
 
 curl -fsSL "$BASE/install-ai-stack.sh" | bash
