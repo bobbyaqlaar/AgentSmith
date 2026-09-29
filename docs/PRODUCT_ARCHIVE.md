@@ -7,6 +7,47 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — a scaffolded tenant can make its first commit (2026-09-29)
+
+Design: `.agent-rfc/designs/first-commit-guardrail.md` and
+`.agent-rfc/designs/scaffold-rfc-and-vouched-skip.md`; reviews:
+`.agent-rfc/reviews/first-commit-guardrail.md`,
+`.agent-rfc/reviews/scaffold-rfc-and-vouched-skip.md`.
+
+Closes the backlog row "An enterprise machine still cannot make a scaffolded tenant's first
+commit", which was `Trigger: FIRED`.
+
+- **`agentsmith tenant init` printed a commit command that was refused.** `hooks/pre-commit` runs
+  its guardrails over every STAGED file; a first commit stages the `scripts/` and `runtime/` the
+  scaffold just vendored, so both guardrails ran over AgentSmith's own code and both failed it.
+  Every repository onboarded from `git init` hit this, on any machine.
+- **Thirteen empty `except` handlers** had no stated reason. Twelve are intentional fail-opens and
+  now say so one at a time; the thirteenth was not a fail-open at all and was restructured rather
+  than labelled with a word that lies. `verify_system.py` carried the literal `TODO: agent` as data
+  for its own hook test, in a file vendored into every tenant.
+- **The enterprise half needed two more fixes, found by running the test rather than reading it.**
+  Guardrail 4 counts `*.md` at `.agent-rfc/` **depth 1** and the scaffold's design sits at depth 2,
+  so `tenant init` and `tenant adopt` now write `.agent-rfc/001-scaffold.md`; `hooks/commit-msg`
+  separately requires an `RFC-NNN` in the message, so both printed commit commands carry a
+  `Refs: RFC-NNN` trailer — in the body, clear of the 72-character subject rule.
+- **Guardrails 1–3 now skip what the tenant did not write** — a staged file
+  `.agenticframework/scaffold.json` vouches for AND that still hashes to what it recorded. Edit a
+  vendored file and it is checked again: the skip is a hash match, not a path allowlist. Every
+  failure of `scripts/vouched_files.py` vouches for nothing, so the hook checks everything.
+- **Why nothing caught it for so long:** the guardrails only ever ran on staged files, so they had
+  never examined the tree they protect; the scratch tenants all have history, so only changed files
+  stage there; and the shared `install` test fixture promised "a complete ~/.agent-framework" while
+  copying one of three files in `templates/`, none of three in `docs/`, and one of four machine
+  hooks — the missing one being `pre-commit` itself, so no test using it had ever seen a pre-commit
+  guardrail run.
+- **Verified:** `scripts/test/test_first_commit.py` scaffolds a tenant and runs the command the CLI
+  prints, on a default machine and on one carrying an org policy file;
+  `scripts/test/test_bare_except_tree.py` and `scripts/test/test_vendored_markers.py` run both rules
+  over AgentSmith's own tree, so a defect is caught where it can be fixed. Scratch tenants green on
+  `ddbc856` with all five tenant CIs passing.
+
+---
+
 ## Completed — an existing repository comes under the gates (2026-09-19)
 
 Design: `.agent-rfc/designs/tenant-adopt.md`; review: `.agent-rfc/reviews/tenant-adopt.md`.
