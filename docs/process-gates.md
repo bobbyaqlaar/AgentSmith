@@ -789,11 +789,22 @@ see Provisioning, above.
   vouches for nothing, so the hook checks everything. A skip is only ever granted
   by a hash that matched.
 
-- **Only the edit gate fails closed.** If `python3` is missing or the script
-  dies, the edit gate still denies (its command falls back to a deny). The
-  session-start and stop hooks cannot: Claude Code treats their failure as a
-  non-blocking error, and a stop hook that blocked without being able to read
-  `stop_hook_active` could loop forever. The commit and CI gates still hold.
+- **Only the edit gate fails closed, and only in some IDEs.** If `python3` is
+  missing or the script dies, the edit gate denies — but whether an IDE honours
+  that is the IDE's to decide, and `fail_closed` in `templates/governance.json`
+  records which do. **Claude Code** and **Cursor** fail closed, by two different
+  mechanisms: Claude through `.githooks/process-gate`'s pre-edit fallback
+  printing a deny, Cursor through the `failClosed` key in its generated
+  `.cursor/hooks.json`. **Antigravity, Copilot, Gemini and Codex fail open by
+  design** — an edit there lands when the gate cannot run, and the commit, push
+  and CI gates are what hold. `scripts/test/test_fail_closed_declared.py` checks
+  each declaration against its own mechanism, so this table cannot go stale
+  quietly.
+
+  The session-start and stop hooks cannot fail closed anywhere: Claude Code
+  treats their failure as a non-blocking error, and a stop hook that blocked
+  without being able to read `stop_hook_active` could loop forever. The commit
+  and CI gates still hold.
 - **Shell-made edits skip the edit gate.** A command's file writes cannot be
   read reliably from its text. The stop, commit and CI gates check the files
   themselves.

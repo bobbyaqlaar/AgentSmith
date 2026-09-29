@@ -1,10 +1,12 @@
 ---
-status: active
+status: done
 scope:
   - scripts/test/**
   - runtime/test/**
 ---
 # Three tests that would have passed while checking nothing
+
+<!-- Closed 2026-09-29: shipped in 864de5e: three sweeps that asserted only inside their loops now assert what they swept. -->
 
 ## Problem
 

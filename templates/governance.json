@@ -301,8 +301,8 @@
         "pre-edit": "PreToolUse",
         "stop": "Stop"
       },
-      "fail_closed": false,
-      "note": "Verified by use — the hook family this repo runs. The configured command falls back to printing a deny when the launcher cannot run.\n"
+      "fail_closed": true,
+      "note": "Verified by use — the hook family this repo runs. It has no failClosed config key; what makes it fail closed is .githooks/process-gate, whose pre-edit fallback prints a deny when no interpreter can run the gate. Recorded false until 2026-09-29, which was the opposite of what this same note described (.agent-rfc/designs/fail-closed-has-a-reader.md).\n"
     },
     {
       "id": "cursor",

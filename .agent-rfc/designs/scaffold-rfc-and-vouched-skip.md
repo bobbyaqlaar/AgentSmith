@@ -1,11 +1,13 @@
 ---
-status: active
+status: done
 scope:
   - hooks/**
   - runtime/**
   - scripts/**
 ---
 # A scaffold that satisfies the enterprise gate, and guardrails that skip what the tenant did not write
+
+<!-- Closed 2026-09-29: shipped in ddbc856 and green in CI: the scaffold writes an RFC at depth 1 and the guardrails skip what the manifest vouches for. -->
 
 ## Problem
 
