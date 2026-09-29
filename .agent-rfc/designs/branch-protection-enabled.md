@@ -1,10 +1,12 @@
 ---
-status: active
+status: done
 scope:
   - .github/workflows/self-test.yml
   - scripts/test/**
 ---
 # Branch protection enabled on main
+
+<!-- Closed 2026-09-29: shipped in e962723; `main` is protected, the required check reports, and the bypass notice was observed. -->
 
 ## Problem
 

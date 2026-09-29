@@ -1068,7 +1068,7 @@
         "_git_repo",
         "want"
       ],
-      "last_modified": "2026-09-28T23:40:40Z",
+      "last_modified": "2026-09-29T07:57:32Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -3464,6 +3464,7 @@
         "_provision_governance",
         "_actions_dir",
         "_copy_composite_actions",
+        "_rfc_reference",
         "_cmd_tenant_init",
         "_cmd_tenant_adopt",
         "_cmd_gate",
@@ -3495,7 +3496,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-27T08:39:28Z",
+      "last_modified": "2026-09-29T12:27:03Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4113,7 +4114,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-28T23:28:46Z",
+      "last_modified": "2026-09-29T08:20:48Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4623,7 +4624,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-28T23:28:46Z",
+      "last_modified": "2026-09-29T10:08:34Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -6551,10 +6552,11 @@
         "render_design_md",
         "render_architecture",
         "_scaffold_answers",
+        "render_scaffold_rfc",
         "render_scaffold_design",
         "session_start_line"
       ],
-      "last_modified": "2026-09-18T20:08:43Z",
+      "last_modified": "2026-09-29T07:47:55Z",
       "id": "runtime/architectures.py"
     },
     {
@@ -6648,7 +6650,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-27T08:35:33Z",
+      "last_modified": "2026-09-29T12:34:54Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -7264,9 +7266,13 @@
         "_git",
         "_scaffold",
         "test_the_scaffold_commit_the_cli_prints_is_accepted",
-        "test_the_pre_commit_guardrail_still_runs_on_that_commit"
+        "test_the_pre_commit_guardrail_still_runs_on_that_commit",
+        "_ship_defects",
+        "test_a_defect_shipped_in_vendored_code_does_not_block_the_first_commit",
+        "test_a_tenant_edit_to_a_vendored_file_is_checked_again",
+        "test_the_scaffold_writes_an_rfc_the_enterprise_guardrail_accepts"
       ],
-      "last_modified": "2026-09-28T23:52:00Z",
+      "last_modified": "2026-09-29T09:50:40Z",
       "id": "scripts/test/test_first_commit.py"
     },
     {
@@ -7287,6 +7293,72 @@
       "pillar": null,
       "created_at": "2026-09-28T23:42:25Z",
       "id": "rfc:designs/first-commit-guardrail.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_git",
+        "_staged_blobs",
+        "vouched",
+        "main"
+      ],
+      "last_modified": "2026-09-29T12:35:25Z",
+      "id": "scripts/vouched_files.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_repo",
+        "_vouched",
+        "_manifest",
+        "test_a_file_the_manifest_records_unchanged_is_vouched",
+        "test_an_edited_file_loses_its_vouch",
+        "test_a_staged_edit_after_add_is_judged_on_the_staged_copy",
+        "test_no_manifest_vouches_for_nothing",
+        "test_an_unparseable_manifest_vouches_for_nothing",
+        "test_a_manifest_that_is_not_a_mapping_vouches_for_nothing",
+        "test_a_manifest_naming_an_unstaged_path_grants_nothing",
+        "test_outside_a_git_repository_it_says_nothing"
+      ],
+      "last_modified": "2026-09-29T07:58:01Z",
+      "id": "scripts/test/test_vouched_files.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_vendored_files",
+        "test_the_sweep_covers_a_real_file_list",
+        "test_no_vendored_file_carries_a_marker_guardrail_1_forbids"
+      ],
+      "last_modified": "2026-09-29T07:57:31Z",
+      "id": "scripts/test/test_vendored_markers.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A scaffold that satisfies the enterprise gate, and guardrails that skip what the tenant did not write",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/scaffold-rfc-and-vouched-skip.md",
+      "pillar": null,
+      "created_at": "2026-09-29T09:00:01Z",
+      "id": "rfc:designs/scaffold-rfc-and-vouched-skip.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 first-commit-guardrail",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/first-commit-guardrail.md",
+      "pillar": null,
+      "created_at": "2026-09-29T09:00:01Z",
+      "id": "rfc:reviews/first-commit-guardrail.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 scaffold-rfc-and-vouched-skip",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/scaffold-rfc-and-vouched-skip.md",
+      "pillar": null,
+      "created_at": "2026-09-29T12:35:59Z",
+      "id": "rfc:reviews/scaffold-rfc-and-vouched-skip.md"
     }
   ],
   "edges": [

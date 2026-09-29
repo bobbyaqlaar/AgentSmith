@@ -77,6 +77,35 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the scaffold writes a first RFC, and the guardrails skip what the tenant did not write
+
+- **`agentsmith tenant init` and `tenant adopt` write `.agent-rfc/001-scaffold.md`** — a template in the
+  `NNN-short-description.md` convention with the Objective / Files to Modify / Acceptance Criteria
+  sections `docs/UserManual.md` calls the minimum. It is left alone if the repository already has
+  RFCs, including on `--force`, so an edited one is never overwritten and a stub is never dropped
+  among real ones. **Hook-interface note:** the commit command each of them prints now carries a
+  `Refs: RFC-NNN` trailer, in the body rather than the subject, so it clears the 72-character
+  subject rule. Both were needed: Guardrail 4 wants the file, `hooks/commit-msg` wants the
+  reference, and satisfying one alone leaves the printed command refused.
+- **Why:** on a machine with an enterprise org policy, `hooks/pre-commit` Guardrail 4 requires at
+  least one `*.md` at `.agent-rfc/` **depth 1** and `hooks/commit-msg` requires an `RFC-NNN`
+  reference in the message. The scaffold's own design sits at depth 2 and its commit message cited
+  nothing, so a scaffolded tenant could not make its first commit on such a machine at all.
+- **Guardrails 1–3 now skip a staged file the scaffold manifest vouches for** — recorded in
+  `.agenticframework/scaffold.json` **and** still hashing to what was recorded. A tenant cannot fix
+  `scripts/process_gate.py`, and being asked to is what blocked every scaffolded repository's first
+  commit until 2026-09-29. Edit a vendored file and it is checked again: the skip is a hash match,
+  not a path allowlist. Guardrail 4 is not skippable — it asks whether the repository has an RFC at
+  all, which is not a per-file question.
+- **The skip cannot be granted by accident.** A new `scripts/vouched_files.py` computes the list;
+  a missing script, a missing `python3`, a missing manifest or an unparseable one all vouch for
+  nothing, so the hook checks everything, which is what it did before. The hook says how many files
+  it skipped rather than passing them in silence.
+- **Nothing stops being checked.** The same two rules now run over AgentSmith's own tree in its own
+  suite — `test_bare_except_tree.py` for empty handlers (added 2026-09-29) and a new
+  `test_vendored_markers.py` for the AI markers — so a defect in vendored code is caught in the
+  repository that can fix it instead of in a tenant that cannot.
+
 ### Fixed — a scaffolded tenant could not make its own first commit
 
 - **`agentsmith tenant init` prints the exact command to commit its output, and that command was

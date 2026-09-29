@@ -1,10 +1,12 @@
 ---
-status: active
+status: done
 scope:
   - scripts/**
   - runtime/**
 ---
 # A scaffolded tenant cannot make its first commit
+
+<!-- Closed 2026-09-29: shipped in 7854bd1. Its declared gap — the enterprise machine — is the subject of scaffold-rfc-and-vouched-skip.md, a design of its own rather than more work under this one. -->
 
 ## Problem
 

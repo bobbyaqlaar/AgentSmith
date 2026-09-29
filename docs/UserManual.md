@@ -318,6 +318,14 @@ agentsmith mode off
 
 Before an agent can modify code in any file, a corresponding spec must exist in `.agent-rfc/`.
 
+`agentsmith tenant init` writes a template one at `.agent-rfc/001-scaffold.md` and
+leaves it alone if you already have RFCs of your own. Replace every section before
+an agent works from it — it is a shape, not a requirement. It is also what
+satisfies the enterprise pre-commit guardrail, which requires at least one `*.md`
+directly under `.agent-rfc/` (not in a subdirectory), and the `Refs: RFC-001`
+trailer in the commit command the CLI prints is what satisfies the matching
+commit-message rule.
+
 ### Create a Spec
 
 ```bash

@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - hooks/post-checkout
   - .github/scratch-tenants/build.sh
@@ -7,6 +7,8 @@ scope:
   - scripts/test/**
 ---
 # Tenant visibility override
+
+<!-- Closed 2026-09-29: shipped in 2819294; AGENTSMITH_TENANT_VISIBILITY is in the hook, the docs and the tests, and the scratch tenants went green on it. -->
 
 ## Problem
 

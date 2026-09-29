@@ -772,6 +772,23 @@ see Provisioning, above.
   Pro for a private repository (verified 2026-09-14 — the API answered "Upgrade
   to GitHub Pro or make this repository public"), and this repository was
   private until 2026-09-27.
+- **The pre-commit guardrails skip what the tenant did not write.** Guardrails 1–3
+  (AI markers, empty catch/except, direct `cost_router` imports) do not run over a
+  staged file that `.agenticframework/scaffold.json` records **and** that still
+  hashes to what the manifest recorded — the code AgentSmith vendored, unchanged.
+  A tenant cannot fix `scripts/process_gate.py`, and being asked to blocked every
+  scaffolded repository's first commit until 2026-09-29. Edit a vendored file and
+  it is checked again, because the hash no longer matches. The rules still run
+  over that code in AgentSmith's own suite, where it can be fixed
+  (`scripts/test/test_bare_except_tree.py`, `scripts/test/test_vendored_markers.py`).
+  Guardrail 4 is not skippable: it asks whether the repository has an RFC at all,
+  which is not a per-file question.
+
+  Every failure of the check that grants the skip — missing
+  `scripts/vouched_files.py`, missing `python3`, missing or unreadable manifest —
+  vouches for nothing, so the hook checks everything. A skip is only ever granted
+  by a hash that matched.
+
 - **Only the edit gate fails closed.** If `python3` is missing or the script
   dies, the edit gate still denies (its command falls back to a deny). The
   session-start and stop hooks cannot: Claude Code treats their failure as a
