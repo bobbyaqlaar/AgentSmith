@@ -524,6 +524,7 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `delivery_model.py` | Enterprise Delivery Model soft gate: reads org policy + tenant.yaml `delivery.*`; returns ok/warn/skip, never hard-fails CI. |
 | `delivery_evidence.py` | Promote-time evidence pack (JSON + Markdown) collecting scorecard/fairness/redaction/HITL artifacts into `.agent-rfc/fixtures/`. |
 | `check_bare_except.py` | AST detector for empty exception handlers (pre-commit Guardrail 2); `# fail-open: <reason>` opts a handler out. Global copy at `~/.agent-framework/scripts/` must be kept in sync. |
+| `vouched_files.py` | Which staged files `.agenticframework/scaffold.json` vouches for and that still hash to what it recorded — the files AgentSmith wrote into a tenant. `hooks/pre-commit` skips Guardrails 1–3 for exactly those, so a tenant is not asked to fix vendored code. Every failure (no manifest, unreadable, no git) prints nothing, so the hook checks everything. |
 | `_shared.py` | Consolidated helpers (`_repo_root`, Phoenix REST get/post, `judge_model()` — reads the `judge` role from `models.yaml` via a lazy, optional `runtime/` import). Helpers are otherwise deliberately not shared with `runtime/` (vendoring boundary — see module docstring). |
 | `test/` | Framework self-tests for the above (run by `self-test.yml`). |
 | `promote-learning.py` | Appends to `golden_evals.json`; archives resolution as judge learning (versioned, not FIFO-evicted); marks log entry `hitl_resolved: true` with `hitl_resolved_by` + `hitl_resolved_at`. |
@@ -1302,6 +1303,7 @@ AgentSmith/
 │   ├── delivery_model.py        # Delivery Model soft gate (ok|warn|skip)
 │   ├── delivery_evidence.py     # Promote-time evidence pack (JSON + Markdown)
 │   ├── check_bare_except.py     # AST empty-handler detector (pre-commit Guardrail 2)
+│   ├── vouched_files.py         # staged files the scaffold manifest vouches for (pre-commit skips those)
 │   ├── process_gate.py          # Design/review gates: Claude Code hooks, .githooks/commit-msg, Self-Test (docs/process-gates.md)
 │   ├── gate_models.py           # Pydantic V2 models the gate validates with: IDE payloads, registry, config, approvals, sign-off
 │   ├── gate_pillars.py          # The pillars a script can check (P3 tracing, P7 Pydantic), the per-repo policy and its ratchet, evidence-token resolution
