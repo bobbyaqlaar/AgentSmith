@@ -131,7 +131,10 @@ def test_ci_templates_do_not_pin_a_judge_model() -> None:
     a harmless default, but the env var WINS over the registry — so every tenant
     CI run overrode its own declared judge route with a framework literal."""
     offenders: list[str] = []
-    for path in sorted((REPO / "workflow-templates").glob("*.yml")):
+    templates = sorted((REPO / "workflow-templates").glob("*.yml"))
+    # Rename the directory and every assertion below sweeps nothing and passes.
+    assert len(templates) > 5, f"only {len(templates)} templates — this test stopped looking"
+    for path in templates:
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if "AGENT_JUDGE_MODEL" in line and _MODEL_ID.search(line):
                 offenders.append(f"{path.name}:{lineno}: {line.strip()[:120]}")

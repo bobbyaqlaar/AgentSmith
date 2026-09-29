@@ -587,7 +587,7 @@
         "parse_cloud_response",
         "_get_access_token"
       ],
-      "last_modified": "2026-09-18T05:04:52Z",
+      "last_modified": "2026-09-29T13:05:36Z",
       "id": "runtime/provider_dispatch.py"
     },
     {
@@ -1592,7 +1592,7 @@
         "test_ci_templates_do_not_pin_a_judge_model",
         "test_the_guard_actually_catches_a_hardcoded_id"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-09-29T13:06:04Z",
       "id": "scripts/test/test_no_hardcoded_model_ids.py"
     },
     {
@@ -2380,7 +2380,7 @@
         "test_an_empty_anthropic_style_content_array_yields_empty_text",
         "test_every_cloud_adapter_delegates_to_a_shared_parser"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-09-29T13:05:34Z",
       "id": "runtime/test/test_provider_dispatch_cloud.py"
     },
     {
@@ -4471,7 +4471,7 @@
         "test_the_build_keeps_ide_configs_tracked_on_a_public_fixture",
         "test_the_build_copies_what_git_would_publish_not_local_junk"
       ],
-      "last_modified": "2026-09-28T23:41:24Z",
+      "last_modified": "2026-09-29T13:06:42Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -7359,6 +7359,22 @@
       "pillar": null,
       "created_at": "2026-09-29T12:35:59Z",
       "id": "rfc:reviews/scaffold-rfc-and-vouched-skip.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Three tests that would have passed while checking nothing",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/vacuous-sweep-guards.md",
+      "pillar": null,
+      "created_at": "2026-09-29T13:11:41Z",
+      "id": "rfc:designs/vacuous-sweep-guards.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 vacuous-sweep-guards",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/vacuous-sweep-guards.md",
+      "pillar": null,
+      "created_at": "2026-09-29T13:11:41Z",
+      "id": "rfc:reviews/vacuous-sweep-guards.md"
     }
   ],
   "edges": [

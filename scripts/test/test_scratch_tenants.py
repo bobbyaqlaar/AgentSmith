@@ -140,7 +140,12 @@ def test_apps_carry_nothing_provisioning_generates():
         ".github", "runtime", "fixtures", ".agents", ".cursorrules", "CLAUDE.md", "AGENTS.md",
         "GEMINI.md", ".agenticframework", "SCRATCH_TENANT.md", ".agent-history.log", ".agent-rfc",
     }
-    for app in (p for p in APPS.iterdir() if p.is_dir()):
+    apps = [p for p in APPS.iterdir() if p.is_dir()]
+    # Every assertion below is inside the loop. `test_every_app_is_the_scenario_it_claims`
+    # would catch an empty APPS, but a test that only holds because a sibling
+    # holds stops holding the moment either is moved or skipped.
+    assert len(apps) == len(SCENARIOS), f"expected {len(SCENARIOS)} apps, found {[a.name for a in apps]}"
+    for app in apps:
         present = {p.name for p in app.iterdir()} & generated
         assert not present, f"apps/{app.name} contains generated paths: {present}"
 

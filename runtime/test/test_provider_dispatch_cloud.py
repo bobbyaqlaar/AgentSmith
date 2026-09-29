@@ -415,6 +415,7 @@ def test_every_cloud_adapter_delegates_to_a_shared_parser() -> None:
     tree = ast.parse(src.read_text())
     shared = {"parse_openai_completion", "parse_anthropic_completion"}
 
+    checked = []
     for cls in [n for n in tree.body if isinstance(n, ast.ClassDef)]:
         for fn in [f for f in cls.body if isinstance(f, ast.FunctionDef)
                    and f.name == "parse_response"]:
@@ -424,7 +425,15 @@ def test_every_cloud_adapter_delegates_to_a_shared_parser() -> None:
                 n.func.id for n in ast.walk(fn)
                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
             }
+            checked.append(cls.name)
             assert called & shared, (
                 f"{cls.name}.parse_response does not call a shared parser; "
                 f"an inline copy will miss the next hardening fix"
             )
+
+    # Every assertion above is INSIDE the loop, so a rename of `parse_response`
+    # or a move of these classes would empty it and pass in silence — at exactly
+    # the moment an adapter had stopped being checked. The four are the four the
+    # docstring counts.
+    assert len(checked) >= 4, f"only found {checked} — this test stopped checking the adapters"
+
