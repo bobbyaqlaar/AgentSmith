@@ -116,13 +116,17 @@ Mutation-checked:          the two added here were applied and reverted BY HAND,
                           fail its own named test: the vouch degrading into a path allowlist ->
                           test_an_edited_file_loses_its_vouch; a manifest that is not a mapping being
                           trusted -> test_a_manifest_that_is_not_a_mapping_vouches_for_nothing.
-                          The full tenant_adopt suite was NOT re-run to completion today: it was at
-                          2h44m against ~37 minutes for the same suite on 2026-09-29 and was stopped
-                          (the harness restores on SIGTERM; the tree was checked clean afterwards).
-                          Its other 24 mutations were all caught on 2026-09-29 and none of their
-                          targets changed here. CI runs `mutation_check --changed-since` on this
-                          push, which is where the full suite is proven. scripts/vouched_files.py
-                          was added to the suite's watch list so a change to it triggers them.
+                          The full tenant_adopt suite was NOT re-run to completion locally: it was
+                          stopped at 2h44m ELAPSED (the harness restores on SIGTERM; the tree was
+                          checked clean afterwards). That figure measured nothing — the machine had
+                          been asleep, and `ps etime` counts sleep, so comparing it with an earlier
+                          run's elapsed time was not evidence of anything. Recorded because the
+                          first version of this sign-off treated it as a slowdown and a backlog item
+                          was filed on it; both were wrong and the item is withdrawn. Its other 24
+                          mutations were all caught on 2026-09-29 and none of their targets changed
+                          here. CI runs `mutation_check --changed-since` on this push, which is
+                          where the full suite is proven. scripts/vouched_files.py was added to the
+                          suite's watch list so a change to it triggers them.
 Fixtures re-pinned:        .agent-rfc/fixtures/knowledge_graph.json via map_codebase.run_map(force=True);
                           test_kg_drift_gate.py passes
 KG query:                 kg:1bd8268bfd3d
