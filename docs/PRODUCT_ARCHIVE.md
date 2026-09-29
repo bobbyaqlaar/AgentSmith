@@ -7,6 +7,37 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — a tenant stops being asked to fix code it did not write (2026-09-29)
+
+Design: `.agent-rfc/designs/scaffold-rfc-and-vouched-skip.md`; review:
+`.agent-rfc/reviews/scaffold-rfc-and-vouched-skip.md`.
+
+Closes the backlog row "A tenant's pre-commit checks vendored framework files it did not write",
+which named the work precisely: "consulting `.agenticframework/scaffold.json` for which files the
+framework wrote AND whether they are still unmodified, and getting that wrong exempts a tenant's
+own edits."
+
+- **The skip is a hash match, not a path allowlist.** `scripts/vouched_files.py` reads the manifest
+  and compares the SHA-256 of each STAGED blob — not the working tree, so a file edited after
+  `git add` cannot inherit a vouch its staged copy earned. Guardrails 1–3 skip only what matches.
+- **The risk the row named is the one that is tested.** `test_a_tenant_edit_to_a_vendored_file_is_checked_again`
+  appends a marker to a vendored file and asserts the commit is refused, naming the file. Getting
+  this wrong would exempt a tenant's own edits, which is why it is asserted in both directions.
+- **Every failure vouches for nothing** — no helper, no `python3`, no manifest, an unparseable
+  manifest, no git repository. The hook then checks everything, which is what it did before, so
+  losing the script can only make the hook stricter. Eight tests, one per failure path.
+- **No coverage was traded away.** The same two rules now run over AgentSmith's own tree in its own
+  suite (`scripts/test/test_bare_except_tree.py`, `scripts/test/test_vendored_markers.py`), so a
+  defect in vendored code is caught in the repository that can fix it rather than in a tenant that
+  cannot.
+- **Observed, not assumed:** on a scaffolded tenant carrying both defect kinds shipped in vendored
+  code, 167 files were skipped and the guardrails passed; the hook prints how many it skipped rather
+  than passing them in silence.
+- **Remaining, and moved to its own row:** a guardrail added later gets no vouch unless someone
+  wires it, and nothing checks that.
+
+---
+
 ## Completed — a scaffolded tenant can make its first commit (2026-09-29)
 
 Design: `.agent-rfc/designs/first-commit-guardrail.md` and
