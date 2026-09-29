@@ -77,6 +77,24 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — `fail_closed` said the opposite of the truth for the default IDE
+
+- **The registry recorded `fail_closed: false` for Claude Code** while the note beside it in
+  `templates/agent-rules.yaml` said "the configured command falls back to printing a deny when the
+  launcher cannot run" — which is what failing closed means. Both have been there since 2026-09-17,
+  three lines apart. `claude` is `DEFAULT_IDE`, so the one value a tenant would read about the IDE
+  this framework is most used with was inverted. Corrected to `true`; **no behaviour changes**,
+  `.githooks/process-gate` already denied.
+- **The field now has one meaning:** does the edit gate refuse an edit when the gate cannot run, for
+  this IDE. Claude Code and Cursor fail closed, by different mechanisms — a shell fallback and the
+  `failClosed` key in the generated `.cursor/hooks.json`. Antigravity, Copilot, Gemini and Codex fail
+  open by design, and `docs/process-gates.md` now names them instead of stating one blanket rule.
+- **And it now has a reader.** `scripts/gate_ides.py`'s `render_config` took `failClosed` from a
+  hardcoded literal sitting beside the registry field, so the declared value changed nothing; it
+  reads `ADAPTERS[ide].fail_closed` instead. `scripts/test/test_fail_closed_declared.py` checks each
+  adapter's declaration against its own mechanism and fails if the generator hardcodes the value
+  again. Three of its five tests fail against the pre-fix tree.
+
 ### Added — the scaffold writes a first RFC, and the guardrails skip what the tenant did not write
 
 - **`agentsmith tenant init` and `tenant adopt` write `.agent-rfc/001-scaffold.md`** — a template in the
