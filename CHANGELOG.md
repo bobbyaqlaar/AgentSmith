@@ -77,6 +77,28 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — tenant intakes in the portal, pulled rather than pushed
+
+- **An author's answers for a new tenant can now be stored in the portal**, for
+  `agentsmith tenant init --from <id>` to pull onto the author's own machine (the CLI side is
+  the next change). `POST /api/dev/intakes` stores the stack, isolation, architecture, agentic
+  flag, IDEs and the first RFC's objective and acceptance criteria, and needs `admin.apps` — the
+  narrowest existing permission that can hold it, until `dev.create` is added deliberately.
+- **The portal never writes into a repository.** The CLI fetches the record, scaffolds locally,
+  and only then marks it consumed — so the first commit is still made on the author's machine
+  and still vouched by the scaffold manifest.
+- **A new kind of credential, scoped to one intake.** Every existing machine token assumed the
+  tenant already existed. An intake token opens one intake, once, for 24 hours; only its SHA-256
+  is stored, it is shown once with `Cache-Control: no-store`, and it is never on a command line.
+  The token decides which intake is read: an id in the URL that disagrees is the same 404 as one
+  that does not exist. A used intake and an expired one are refused with different reasons.
+- **The record's shape is a versioned contract, `contract/intake/v1/`**, tested from the portal
+  now and from the CLI next. The tenant id follows the portal's app-id rule, the narrower of the
+  two, so a scaffolded tenant can always register.
+- **`portal/middleware.ts`'s list of paths that skip sign-in now has a test** —
+  `portal/test/middleware.test.ts`, which pins the new exclusion and the five that had none,
+  including that a lookalike path (`/api/dev/scaffolding`) is still guarded.
+
 ### Added — `tenant init --ide`, and the choice is recorded rather than assumed
 
 - **A tenant now says which IDEs it uses.** `agentsmith tenant init --ide cursor` (repeatable) writes

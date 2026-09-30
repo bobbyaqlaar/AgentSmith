@@ -262,6 +262,31 @@ CREATE TABLE IF NOT EXISTS dev_ingest_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_dev_ingest_runs_tenant_received ON dev_ingest_runs (tenant_id, received_at DESC);
 
+-- An author's answers for a tenant not yet created, pulled by
+-- `agentsmith tenant init --from <id>` (.agent-rfc/designs/portal-intake-pull.md).
+-- tenant_id is deliberately NOT a foreign key: the tenant does not exist yet,
+-- which is the whole point. No CHECK on stack or isolation either: those sets
+-- are pinned against their Python owners by test/catalogs.test.ts, and a second
+-- CHECK on `isolation` would be one catalogs.test.ts's reader never reaches.
+-- The token is shown once; only its SHA-256 is kept, as for app_ingest_tokens.
+CREATE TABLE IF NOT EXISTS tenant_intakes (
+    intake_id     BIGSERIAL PRIMARY KEY,
+    org_id        TEXT NOT NULL DEFAULT 'default' REFERENCES orgs(org_id),
+    token_hash    TEXT NOT NULL UNIQUE,
+    tenant_id     TEXT NOT NULL,
+    stack         TEXT NOT NULL,
+    isolation     TEXT NOT NULL,
+    architecture  TEXT,
+    agentic       BOOLEAN NOT NULL,
+    ides          JSONB NOT NULL DEFAULT '[]'::jsonb,
+    rfc           JSONB NOT NULL,
+    created_by    TEXT NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at    TIMESTAMPTZ NOT NULL,
+    consumed_at   TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_tenant_intakes_tenant ON tenant_intakes (tenant_id);
+
 -- Deliberately NOT created here: dlq_entries, idempotency_keys.
 --
 -- Both are owned and created by the Python runtime side, not this

@@ -15,6 +15,10 @@
 // The database cannot import TypeScript, so this is the same treatment
 // lib/environment.ts's mirror of runtime/environment.py gets: read the other
 // side and compare.
+//
+// Two sets have their owner in Python rather than SQL: the stacks and IDEs a
+// tenant intake may name (lib/intakes.ts), whose owners are runtime/cli.py
+// STACKS and scripts/gate_ides.py GENERATED. Same treatment, other language.
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -27,9 +31,25 @@ import { AGENT_RUN_STATUSES } from "../lib/runStatus.ts";
 import { AUDIT_EVENT_TYPES } from "../lib/auditSignature.ts";
 import { DEV_VERDICTS } from "../lib/devIngest.ts";
 import { REPO_PROVIDERS } from "../lib/tenants.ts";
+import { INTAKE_IDES, INTAKE_STACKS } from "../lib/intakes.ts";
 
 const PORTAL = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SCHEMA = readFileSync(join(PORTAL, "db", "schema.sql"), "utf8");
+const REPO_ROOT = resolve(PORTAL, "..");
+
+/**
+ * The string tuple assigned to `name` in a Python file — `STACKS = ("a", "b")`.
+ * Throws when it is not found or is empty, for the reason checkConstraintValues
+ * does: a reader that finds nothing must fail, not compare [] with [].
+ */
+function pythonTuple(file: string, name: string): string[] {
+  const source = readFileSync(join(REPO_ROOT, file), "utf8");
+  const match = source.match(new RegExp(`^${name}\\s*=\\s*\\(([^)]*)\\)`, "m"));
+  assert.ok(match, `no ${name} = (...) found in ${file}`);
+  const values = [...match[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(values.length > 0, `${name} in ${file} parsed as empty — the reader, not the code, is wrong`);
+  return values;
+}
 
 let passed = 0;
 function test(name: string, fn: () => void) {
@@ -82,6 +102,16 @@ test("tenants.repo_provider matches REPO_PROVIDERS", () => {
   assert.deepEqual(checkConstraintValues("repo_provider").sort(), [...REPO_PROVIDERS].sort());
 });
 
+test("an intake's stacks are the CLI's STACKS", () => {
+  assert.deepEqual([...INTAKE_STACKS], pythonTuple("runtime/cli.py", "STACKS"));
+});
+
+test("an intake's IDEs are the ones gate_ides can write a config for", () => {
+  // GENERATED, not every adapter: an IDE whose config schema is unverified
+  // cannot be written, and the CLI refuses it (--ide).
+  assert.deepEqual([...INTAKE_IDES], pythonTuple("scripts/gate_ides.py", "GENERATED"));
+});
+
 test("ROLES has no SQL counterpart to drift from", () => {
   // Stated rather than assumed: roles live in OPS_PORTAL_USERS / OPS_PORTAL_SSO_USERS
   // (environment, not schema), so if a `role` column ever appears here, this
@@ -97,6 +127,8 @@ test("the constraint reader actually reads constraints", () => {
   // would compare two empty arrays and pass having checked nothing.
   assert.ok(checkConstraintValues("isolation").length >= 2);
   assert.throws(() => checkConstraintValues("no_such_column"));
+  assert.ok(pythonTuple("runtime/cli.py", "ISOLATIONS").length >= 2);
+  assert.throws(() => pythonTuple("runtime/cli.py", "NO_SUCH_TUPLE"));
 });
 
 console.log(`\n${passed} passed`);

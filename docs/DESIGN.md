@@ -1398,7 +1398,7 @@ AgentSmith/
 │   ├── onprem-deploy/
 │   └── in-app-widget/           # Embeddable end-user status widget + Ops Portal API
 ├── portal/                      # Ops Portal (Next.js + TypeScript + Tailwind)
-├── contract/                    # The gate contract a provider satisfies (contract/gate/v1/protocol.md) — versioned apart from this implementation
+├── contract/                    # Versioned apart from this implementation: the gate contract a provider satisfies (contract/gate/v1/protocol.md) and the tenant intake record (contract/intake/v1/)
 ├── workflow-templates/          # What a tenant's CI becomes — the CI/CD via GitHub Actions section
 │   ├── agentsmith-gates.yml     # The process gate over every pushed commit (pinned to a release)
 │   ├── agentsmith-sync.yml       # Weekly: brings the tenant up to the latest release, as a pull request
@@ -2086,6 +2086,11 @@ The Ops Portal aggregates data from:
    app's own token, so a token writes only its own app. The record carries a schema number and
    the portal refuses one it does not know; the verdict list is pinned across the gate, the
    portal and the database.
+6. Tenant intakes (`POST /api/dev/intakes`) — an author's answers for a tenant not yet created.
+   The portal never writes into a repository: `agentsmith tenant init --from <id>` pulls the
+   record (`GET /api/dev/scaffold/:id`) with a token that opens that one intake, once, for 24
+   hours, scaffolds on the author's machine, and only then marks it consumed. So the first
+   commit is still made locally and still vouched by the scaffold manifest.
 
 Ops Portal API contract is defined in `portal/README.md`.
 

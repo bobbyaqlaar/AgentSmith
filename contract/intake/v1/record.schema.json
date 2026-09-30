@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Intake record",
+  "description": "What GET /api/dev/scaffold/:id returns and `agentsmith tenant init --from <id>` scaffolds from (.agent-rfc/designs/portal-intake-pull.md). A change to this shape is a v2, never an edit to v1. The portal validates it for the author's convenience; the CLI re-validates every field against its own constants, and that is the control.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "intake_id", "tenant_id", "stack", "isolation", "architecture", "agentic", "ides", "rfc", "expires_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "intake_id": {"type": "string", "pattern": "^[0-9]{1,19}$"},
+    "tenant_id": {
+      "description": "portal/lib/apps.ts APP_ID — narrower than runtime/cli.py TENANT_ID_PATTERN, so the tenant can register as a portal app.",
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+    },
+    "stack": {"enum": ["python-fastapi", "ts-react", "go"]},
+    "isolation": {"enum": ["shared", "dedicated"]},
+    "architecture": {
+      "description": "A structural style or null. Checked against templates/architectures.yaml by the CLI only; the portal checks its shape.",
+      "anyOf": [{"type": "null"}, {"type": "string", "pattern": "^[a-z][a-z-]{0,39}$"}]
+    },
+    "agentic": {"type": "boolean"},
+    "ides": {
+      "description": "scripts/gate_ides.py GENERATED. Empty means every IDE with a verified config schema.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"enum": ["claude", "cursor"]}
+    },
+    "rfc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objective", "acceptance_criteria", "files_to_modify"],
+      "properties": {
+        "objective": {"type": "string", "minLength": 1, "maxLength": 4000},
+        "acceptance_criteria": {
+          "type": "array", "minItems": 1, "maxItems": 20,
+          "items": {"type": "string", "minLength": 1, "maxLength": 500}
+        },
+        "files_to_modify": {
+          "type": "array", "maxItems": 50,
+          "items": {"type": "string", "minLength": 1, "maxLength": 500}
+        }
+      }
+    },
+    "expires_at": {"type": "string", "format": "date-time"}
+  }
+}

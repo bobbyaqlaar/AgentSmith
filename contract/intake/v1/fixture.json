@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "intake_id": "42",
+  "tenant_id": "acme-orders",
+  "stack": "python-fastapi",
+  "isolation": "shared",
+  "architecture": "hexagonal",
+  "agentic": false,
+  "ides": ["cursor"],
+  "rfc": {
+    "objective": "Take orders from the web shop and confirm them to the customer by email.",
+    "acceptance_criteria": [
+      "An order posted to /orders is stored and answered with its id",
+      "The customer receives a confirmation within one minute"
+    ],
+    "files_to_modify": []
+  },
+  "expires_at": "2026-10-02T09:00:00.000Z"
+}

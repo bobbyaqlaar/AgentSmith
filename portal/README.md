@@ -108,10 +108,15 @@ either works standalone or together:
   revocable server-side (`revoked_sessions` table) on logout.
 
 **Machine-to-machine endpoints** (`/api/sync/*`, `/api/runs/ingest`,
-`/api/dev/ingest`, `/api/widget/*`, `/api/audit/append`) are excluded from the
-dashboard-auth middleware entirely — each has its own bearer-token/widget-token
-check inside the route handler, not basic-auth/SSO. `/api/dev/ingest` takes a
-per-app ingest token, and the app a request writes to is the token's.
+`/api/dev/ingest`, `/api/dev/scaffold/*`, `/api/widget/*`, `/api/audit/append`)
+are excluded from the dashboard-auth middleware entirely — each has its own
+bearer-token/widget-token check inside the route handler, not basic-auth/SSO.
+`/api/dev/ingest` takes a per-app ingest token, and the app a request writes to
+is the token's. `/api/dev/scaffold/:id` takes a per-intake token: it reads that
+one intake and marks it consumed, once, within 24 hours of issue, and the id in
+the URL must agree with the token or the answer is 404. Creating an intake
+(`POST /api/dev/intakes`) is a signed-in person's act and needs `admin.apps`.
+`test/middleware.test.ts` pins which paths skip sign-in.
 
 ## Data sources
 
@@ -124,6 +129,7 @@ per-app ingest token, and the app a request writes to is the token's.
 | Phoenix trace stats | Phoenix's own REST (health check) + GraphQL (`traceCountByStatusTimeSeries`) | Read live from each tenant's `phoenixBaseUrl`, not cached |
 | Audit log | `audit_log` | This portal — HMAC-signed, DB-trigger-enforced append-only |
 | Dev workspace | `dev_commits`, `dev_ingest_runs` | This portal, via `/api/dev/ingest` — what each app's CI gate decided (`process_gate.py ci --json`). A cache of git: every row can be rebuilt from the app's history |
+| Tenant intakes | `tenant_intakes` | This portal, via `/api/dev/intakes`, pulled by `agentsmith tenant init --from <id>` (`contract/intake/v1/`). Only each token's SHA-256 is kept |
 
 ## Tracing
 
