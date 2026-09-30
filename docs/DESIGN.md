@@ -1139,6 +1139,14 @@ budget:
 workflow:
   engine: temporal                  # WORKER_BACKEND
   task_queue: acme                  # TASK_QUEUE
+
+# Written only when `tenant init --ide` declared one, and read by
+# runtime.config.chosen_ides — the single reader shared by `tenant init`,
+# `tenant adopt`, `agentsmith sync` and `generate-ide-config.py --hooks`, so the
+# choice survives a sync instead of being restored on the next run. Absent,
+# empty or unreadable means every IDE with a verified config schema.
+workspace:
+  ides: ["cursor"]
 ```
 
 `tenant.yaml` carries no per-environment block. `phoenix_namespace` is read by

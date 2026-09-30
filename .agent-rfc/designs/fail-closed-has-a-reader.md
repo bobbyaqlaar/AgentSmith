@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/**
   - templates/agent-rules.yaml

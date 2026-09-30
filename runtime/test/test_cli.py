@@ -49,6 +49,10 @@ def test_every_scaffolded_key_is_one_the_runtime_reads():
         "tenant", "framework", "security", "moderation", "budget", "workflow", "delivery"
     }
     assert "environments" not in doc
+    # `workspace` is written only when `--ide` declared one, and it is read by
+    # runtime.config.chosen_ides — so the criterion holds in both shapes
+    # (runtime/test/test_chosen_ides.py).
+    assert set(yaml.safe_load(tenant_yaml("acme", ides=["cursor"]))) == set(doc) | {"workspace"}
 
 
 def test_modes_are_strings_not_booleans():
@@ -475,7 +479,7 @@ def test_a_missing_template_is_a_message_not_a_traceback(command, monkeypatch, t
         monkeypatch.setattr(cli, "init_tenant", lambda *a, **k: (_ for _ in ()).throw(missing))
         args = argparse.Namespace(tenant_id="acme", root=str(tmp_path), stack="python-fastapi",
                                   isolation="shared", force=False, allow_framework_root=False,
-                                  architecture="hexagonal", agentic=False)
+                                  architecture="hexagonal", agentic=False, ide=None)
         code = cli._cmd_tenant_init(args)
     else:
         import runtime.adopt as adopt

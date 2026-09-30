@@ -321,3 +321,30 @@ def test_the_sync_workflow_is_refreshed_like_everything_else_the_framework_owns(
 
     assert SYNC_WORKFLOW in written
     assert "agentsmith/old-branch" not in stale.read_text()
+
+
+def test_a_sync_keeps_the_tenants_declared_ide_choice(tenant, moved_on):
+    """The reason `--ide` records the choice in tenant.yaml instead of only
+    narrowing what `tenant init` writes. `sync` refreshes the IDE hook configs
+    on every run, so a sync that read `GENERATED` directly would hand back the
+    `.claude/settings.json` a Cursor-only tenant deliberately does not have —
+    silently, and again after every upgrade
+    (.agent-rfc/designs/chosen-ide-is-recorded.md).
+    """
+    cfg = tenant / ".agenticframework" / "tenant.yaml"
+    cfg.write_text(cfg.read_text(encoding="utf-8") + "\nworkspace:\n  ides: [cursor]\n",
+                   encoding="utf-8")
+    (tenant / ".claude" / "settings.json").unlink()
+
+    written = _sync(tenant, framework=moved_on)
+
+    # `written` lists only what MOVED (test_a_sync_lists_only_what_moved), so the
+    # property is about the files on disk, not about that list.
+    assert ".claude/settings.json" not in written
+    assert not (tenant / ".claude" / "settings.json").exists(), (
+        "sync restored the config the tenant declared it does not use"
+    )
+    wired = (tenant / ".cursor" / "hooks.json")
+    assert wired.is_file() and "process-gate" in wired.read_text(encoding="utf-8"), (
+        "the declared IDE lost its gate wiring — the narrowing went the wrong way"
+    )

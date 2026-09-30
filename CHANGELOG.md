@@ -77,6 +77,33 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — `tenant init --ide`, and the choice is recorded rather than assumed
+
+- **A tenant now says which IDEs it uses.** `agentsmith tenant init --ide cursor` (repeatable) writes
+  a hook config for only the IDEs named. Omitted, the behaviour is exactly as before: every IDE whose
+  config schema is verified. Nothing existing changes — no fixture, scenario or invocation passes
+  `--ide`.
+- **The choice is recorded in `.agenticframework/tenant.yaml` as `workspace.ides`, and read back by
+  everything that writes those configs.** Four commands write them — `tenant init`, `tenant adopt`,
+  `agentsmith sync` and `generate-ide-config.py --hooks` — and each read `gate_ides.GENERATED`
+  directly, so a Cursor-only tenant was handed a `.claude/settings.json` it never opens and **`sync`
+  restored it on every run**. They now share one reader, `runtime.config.chosen_ides`. Without that,
+  `--ide` would have been a declaration nothing reads — the failure `runtime/config.py`'s own header
+  is about.
+- **An unreadable declaration wires every verified editor, never none.** Absent, empty, malformed,
+  or naming only an IDE with no verified schema all fall back to the full set: the safe failure is a
+  config the tenant ignores, not a gate their editor never consults. Six shapes are tested and four
+  mutations pin the fallback.
+- **`--ide` names only what can actually be written.** An IDE whose config schema is unconfirmed
+  (Antigravity, Copilot, Gemini, Codex) is refused with the alternatives named, and a misspelling
+  gets a different message from an unverified schema — the two send you to different fixes. The
+  adapters still read and answer every IDE's gate events; it is the config FILE's shape that is
+  unconfirmed.
+- **Hook interface:** unchanged. The shell hooks in `.githooks/` are installed for every tenant
+  whatever `--ide` says. An IDE config decides which editor *also* consults the gate before an edit;
+  it is not the gate, and every other editing path — a terminal `sed`, vim, another agent — still
+  meets the commit, stop and CI gates.
+
 ### Fixed — `fail_closed` said the opposite of the truth for the default IDE
 
 - **The registry recorded `fail_closed: false` for Claude Code** while the note beside it in

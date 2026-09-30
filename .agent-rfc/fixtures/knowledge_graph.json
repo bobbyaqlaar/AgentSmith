@@ -988,7 +988,7 @@
         "main",
         "_check_drift"
       ],
-      "last_modified": "2026-09-18T05:08:17Z",
+      "last_modified": "2026-09-30T08:37:49Z",
       "id": "scripts/generate-ide-config.py"
     },
     {
@@ -3396,13 +3396,14 @@
         "shadowed_env",
         "tenant_config",
         "config_get",
+        "chosen_ides",
         "override",
         "env_overrides",
         "_cast",
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-09-29T13:15:49Z",
+      "last_modified": "2026-09-30T08:45:00Z",
       "id": "runtime/config.py"
     },
     {
@@ -3452,6 +3453,7 @@
         "_templates_dir",
         "FrameworkRootError",
         "looks_like_framework",
+        "gate_ides_module",
         "init_tenant",
         "_all_files",
         "_vendor",
@@ -3496,7 +3498,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-09-29T13:14:58Z",
+      "last_modified": "2026-09-30T08:46:33Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3538,7 +3540,7 @@
         "test_a_missing_template_is_a_message_not_a_traceback",
         "test_an_empty_framework_never_arms_an_empty_hooks_directory"
       ],
-      "last_modified": "2026-09-23T04:26:40Z",
+      "last_modified": "2026-09-30T08:43:10Z",
       "id": "runtime/test/test_cli.py"
     },
     {
@@ -4114,7 +4116,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-09-29T08:20:48Z",
+      "last_modified": "2026-09-30T08:44:30Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -6650,7 +6652,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-29T13:36:33Z",
+      "last_modified": "2026-09-30T08:37:39Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6946,7 +6948,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-09-27T08:36:52Z",
+      "last_modified": "2026-09-30T08:40:10Z",
       "id": "runtime/sync.py"
     },
     {
@@ -6974,9 +6976,10 @@
         "test_a_file_the_tenant_edited_is_left_alone_and_named",
         "test_the_gates_workflow_follows_the_framework_it_runs",
         "test_everything_a_sync_refreshed_goes_in_one_commit_the_gates_accept",
-        "test_the_sync_workflow_is_refreshed_like_everything_else_the_framework_owns"
+        "test_the_sync_workflow_is_refreshed_like_everything_else_the_framework_owns",
+        "test_a_sync_keeps_the_tenants_declared_ide_choice"
       ],
-      "last_modified": "2026-09-24T04:07:24Z",
+      "last_modified": "2026-09-30T08:42:33Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -7404,6 +7407,45 @@
       "pillar": null,
       "created_at": "2026-09-29T15:37:34Z",
       "id": "rfc:reviews/fail-closed-has-a-reader.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_declare",
+        "test_a_declared_subset_is_honoured",
+        "test_every_unreadable_declaration_falls_back_to_all",
+        "test_the_result_is_always_the_frameworks_own_constants",
+        "test_the_reader_sees_a_file_written_after_the_process_started",
+        "test_no_choice_writes_no_key",
+        "test_a_choice_is_recorded_where_the_other_commands_read_it",
+        "test_init_with_a_choice_writes_only_that_ides_config",
+        "test_init_without_a_choice_is_unchanged",
+        "test_init_refuses_an_ide_it_cannot_write_a_config_for",
+        "test_a_typo_and_an_unverified_ide_get_different_answers",
+        "test_the_contract_profile_is_not_an_ide_you_can_choose",
+        "test_the_gate_itself_is_armed_whatever_the_ide_choice_says",
+        "test_every_writer_routes_the_verified_set_through_the_reader",
+        "hooks"
+      ],
+      "last_modified": "2026-09-30T08:46:47Z",
+      "id": "runtime/test/test_chosen_ides.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The tenant's IDE is chosen once and recorded, not assumed four times",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/chosen-ide-is-recorded.md",
+      "pillar": null,
+      "created_at": "2026-09-30T09:59:12Z",
+      "id": "rfc:designs/chosen-ide-is-recorded.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 chosen-ide-is-recorded",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/chosen-ide-is-recorded.md",
+      "pillar": null,
+      "created_at": "2026-09-30T09:59:13Z",
+      "id": "rfc:reviews/chosen-ide-is-recorded.md"
     }
   ],
   "edges": [
@@ -7530,6 +7572,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/cost_router.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/generate-ide-config.py",
       "target": "runtime/__init__.py"
     },
     {
@@ -8290,6 +8337,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_framework_sync.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "runtime/test/test_chosen_ides.py",
       "target": "runtime/__init__.py"
     }
   ]
