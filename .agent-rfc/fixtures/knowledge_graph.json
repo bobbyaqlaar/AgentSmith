@@ -7651,7 +7651,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-10-01T15:50:11Z",
+      "last_modified": "2026-10-01T17:14:03Z",
       "id": "portal/test/brand.test.ts"
     },
     {
@@ -7734,6 +7734,13 @@
       "pillar": null,
       "created_at": "2026-10-01T16:05:51Z",
       "id": "rfc:reviews/gate-reads-binary-files.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-10-01T17:13:47Z",
+      "id": "portal/assets/brand/images.d.ts"
     }
   ],
   "edges": [

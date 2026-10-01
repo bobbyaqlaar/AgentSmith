@@ -63,6 +63,15 @@ test("the layout imports both marks as modules, unoptimized", () => {
   for (const tag of images) assert.match(tag, /\bunoptimized\b/, tag);
 });
 
+test("the image module type is declared in a tracked file, not only in the generated next-env.d.ts", () => {
+  // next-env.d.ts is written by \`next build\` and gitignored; CI type-checks before
+  // it builds. Without a tracked declaration, tsc passes on any machine that has
+  // built once and fails in CI — which is how the first push of these marks failed.
+  const declared = join(PORTAL, "assets", "brand", "images.d.ts");
+  assert.ok(existsSync(declared), "assets/brand/images.d.ts is missing");
+  assert.match(readFileSync(declared, "utf8"), /^\/\/\/ <reference types="next\/image-types\/global" \/>$/m);
+});
+
 test("each mark is a transparent PNG sized for where it is shown", () => {
   const mark = png(join(PORTAL, "assets", "brand", "agentsmith-mark.png"));
   assert.deepEqual(mark, { width: 128, height: 128, rgba: true });

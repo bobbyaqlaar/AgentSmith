@@ -68,6 +68,25 @@ aq.resize((96, round(96 * aq.height / aq.width)), Image.LANCZOS).save("portal/as
 print("derived")
 ```
 
+## Pass 3 — findings: 1
+
+1. **`environment-parity` — the lever this design named, and missed.** CI's
+   `npx tsc --noEmit` failed on the first push: `Cannot find module
+   '@/assets/brand/agentsmith-mark.png' or its corresponding type declarations`.
+   The `*.png` module type comes from `next-env.d.ts`, which `next build` generates
+   and `portal/.gitignore` excludes; CI type-checks before it builds. Locally `tsc`
+   passed because an earlier build had left the file behind — the very
+   works-here-not-there gap the design checked the standalone server to avoid, one
+   step earlier in the pipeline. A tracked `portal/assets/brand/images.d.ts` now
+   references `next/image-types/global`; reproduced CI by moving `next-env.d.ts`
+   aside — two `TS2307` errors before, none after — and `test/brand.test.ts` fails
+   if the declaration goes.
+
+## Pass 4 — findings: 0
+
+`tsc` passes with and without `next-env.d.ts`; `npm run build` compiles; `npm test`
+has no failures; the new brand test, mutated by removing the declaration, fails.
+
 ## Sign-off
 
 Group 1 · DRY & shared code — [x] checked — the marks are rendered once, in `portal/app/layout.tsx`, the shell every page shares; the footer reuses the header's border and the pages' muted text.
@@ -78,11 +97,11 @@ Group 5 · Intuitive UI — [x] checked — light and dark themes, phone width, 
 Group 6 · Signal integrity — [x] n/a — nothing here reports a status or a result.
 Group 7 · Auth & session integrity — [x] n/a — no auth, session or permission is touched; the favicon route is served like any page asset.
 
-Tests added: `portal/test/brand.test.ts` (4), registered in `portal/package.json`.
-Mutation-checked: by hand — a `public/` folder, a root-relative `src`, a mark without `unoptimized`, each caught.
+Tests added: `portal/test/brand.test.ts` (5), registered in `portal/package.json`.
+Mutation-checked: by hand — a `public/` folder, a root-relative `src`, a mark without `unoptimized`, the type declaration removed; each caught.
 Fixtures re-pinned: none.
-Gates run: `npx tsc --noEmit`, `npm test` (16 files), `npm run build`, the standalone server in both themes and at 375 px, and `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
+Gates run: `npx tsc --noEmit` with and without `next-env.d.ts` (Pass 3: first run only with), `npm test` (16 files), `npm run build`, the standalone server in both themes and at 375 px, and `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
 
 Levers reviewed: `matches-the-existing-component-language`, `works-at-real-viewport-sizes`, `keyboard-and-screen-reader-operable`, `environment-parity`, `guards-must-be-able-to-fail`, `every-line-earns-its-place`.
 
-KG query: kg:4db5efdf7e02
+KG query: kg:db5613af7735
