@@ -500,6 +500,17 @@ def _commit(repo: Path, message: str) -> subprocess.CompletedProcess:
     return _git(repo, "commit", "-q", "-m", message, check=False)
 
 
+def test_the_working_tree_reader_returns_a_binary_file_rather_than_crashing(tmp_path):
+    """The stop gate reads the working tree. A PNG is not UTF-8, and strict
+    decoding crashed it; the file must still read as present
+    (.agent-rfc/designs/gate-reads-binary-files.md). The index and commit reader
+    is covered end to end in test_gate_kg.py."""
+    (tmp_path / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n" + bytes(range(256)))
+    read = pg._worktree_reader(tmp_path)
+    assert isinstance(read("logo.png"), str)
+    assert read("absent.png") is None
+
+
 @needs_git
 def test_the_commit_hook_blocks_a_gated_commit_without_trailers(gated_repo):
     _write(gated_repo, "scripts/tool.py", "print(1)\n")

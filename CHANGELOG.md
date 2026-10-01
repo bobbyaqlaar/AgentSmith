@@ -77,6 +77,14 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the process gate crashed on a commit that carried an image
+
+- **`scripts/process_gate.py` read every changed file as UTF-8**, so a gated commit that also carried an
+  image, a font or a PDF crashed the commit gate — and CI — with `UnicodeDecodeError` instead of being
+  judged. Both readers now decode with replacement: the file still counts in the review's scope, as
+  `local_knowledge_graph.py --impact` already counted it, and no check reads a binary's content.
+  **Tenants vendor this gate**: `agentsmith sync` brings the fix.
+
 ### Added — start a tenant from the portal
 
 - **Dev › Start a tenant** (`/dev/intakes/new`), for anyone holding `dev.create`: the tenant id, its
