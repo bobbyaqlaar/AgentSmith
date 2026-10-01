@@ -752,21 +752,33 @@ see Provisioning, above.
 
 ## Limits, stated
 
-- **The CI gate refuses a push — unless you are an admin.** The check
-  `Process gates (design + review)` — copy it exactly; GitHub matches a required
-  check by that string — is required on `main` since 2026-09-29, so a push
-  or a pull-request merge whose head fails it is rejected; `allow_force_pushes` and
-  `allow_deletions` are both off as well. Whether an admin bypasses *those* too
-  is untested — a force push to `main` is not an experiment worth running to find
-  out — so assume the admin path bypasses everything until someone verifies it. What is *not*
-  enforced: `enforce_admins` is false and no pull request is required, so the
-  owner — the only admin — can still push directly to `main` past a failing
-  check. That half is deliberate, not an oversight: enabling it ends direct
-  pushes to `main` for the person who does all of them. It stays open in
-  `docs/PRODUCT_BACKLOG.md` with its trigger. `strict` is also off, so a branch
-  that passed the check against an older `main` can still merge without being
-  brought up to date — the check proves that commit was compliant, not that it
-  still is on top of what landed since.
+- **Nothing reaches `main` except through a pull request that passed all seven
+  checks — the owner included.** Every Self-Test job is a required check (the
+  names must match exactly — GitHub matches a required check by that string):
+  `Process gates (design + review)` since 2026-09-29, the other six since
+  2026-09-30. `enforce_admins` has been on since 2026-10-01, so the admin bypass
+  is gone, and with it every direct push to `main`: a required check cannot have
+  passed on a commit the push itself creates. `allow_force_pushes` and
+  `allow_deletions` are off, and `enforce_admins` applies to them as well. That
+  is the setting as the protection API reports it; a refused direct push has not
+  been demonstrated here, because the attempt was declined by an agent session's
+  own permission check.
+
+  What is still open, deliberately: **no approving review is required** — the
+  only person with write access cannot approve their own pull request, so
+  requiring one would lock them out — and **`strict` is off**, so a branch that
+  passed against an older `main` can merge without being brought up to date; the
+  checks prove that commit was compliant, not that it still is on top of what
+  landed since.
+
+  **Run the CI gate before you push, not after.** Some rules see only a range of
+  commits — the CHANGELOG rule above all — so no hook on a single commit can
+  check them. The same command CI runs, over the same range, runs locally:
+
+      python3 scripts/process_gate.py ci --base origin/main --head HEAD
+
+  The first pull request under `enforce_admins` failed exactly that rule, on a
+  commit that passed every local hook.
 
   Before 2026-09-29 no branch protection was possible at all: it needs GitHub
   Pro for a private repository (verified 2026-09-14 — the API answered "Upgrade
