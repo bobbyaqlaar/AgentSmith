@@ -77,6 +77,12 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the `intake` mutation suite failed the repository's lint
+
+- `scripts/mutation_check.py` carried a 133-character line — the https mutation's search string, added
+  with `tenant init --from` — and CI's `ruff check .` failed on it, so the suite did not run in CI at all.
+  Split into two adjacent strings with the same content; the mutation still applies and is still caught.
+
 ### Added — `agentsmith tenant init --from <intake>`
 
 - **A tenant can now be scaffolded from a portal intake.** `agentsmith tenant init --from 42` fetches
