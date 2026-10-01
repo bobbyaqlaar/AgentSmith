@@ -7,6 +7,25 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — an app's ingest token does not follow a redirect (2026-10-01)
+
+Design: `.agent-rfc/designs/send-dev-record-redirects.md`; review:
+`.agent-rfc/reviews/send-dev-record-redirects.md`.
+
+Closes the backlog row "`scripts/send_dev_record.py` follows redirects, and `urllib` carries the
+`Authorization` header across one", opened the same day while `runtime/intake.py` was built.
+
+- **Refused before a second request exists.** The script's opener now raises in
+  `redirect_request` instead of building the next request — the same opener `runtime/intake.py`
+  uses — so the redirect target never sees the token.
+- **A redirect fails the step.** Exit 1 with `::error`, naming the address it pointed to and saying
+  to set `AGENTSMITH_PORTAL_URL` to the final one. Not a warning: a misconfigured address is not an
+  outage, and a green build would hide that every record since was going nowhere.
+- **Proved in both directions.** `test_security_a_redirect_fails_the_step_and_the_token_does_not_follow_it`
+  stands up a portal that redirects to a second one and asserts the second receives nothing; the
+  `send_dev_record` mutation suite restores the default opener, and the warning instead of the
+  failure, and both are caught.
+
 ## Completed — the CI gate refuses the owner too (2026-10-01)
 
 Design: `.agent-rfc/designs/enforce-admins-on.md`; review:

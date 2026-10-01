@@ -25,8 +25,9 @@ SENDER = REPO / "scripts" / "send_dev_record.py"
 class Portal:
     """A stand-in portal that answers with a set status and records what it got."""
 
-    def __init__(self, status: int = 200, body: dict | None = None):
+    def __init__(self, status: int = 200, body: dict | None = None, location: str | None = None):
         self.status = status
+        self.location = location
         self.body = body or {"stored": 1}
         self.received: list[tuple[str, dict]] = []
         portal = self
@@ -36,6 +37,12 @@ class Portal:
                 length = int(self.headers.get("content-length", 0))
                 body = json.loads(self.rfile.read(length))
                 portal.received.append((self.headers.get("authorization", ""), body))
+                if portal.location:
+                    self.send_response(302)
+                    self.send_header("location", portal.location + self.path)
+                    self.send_header("content-length", "0")
+                    self.end_headers()
+                    return
                 data = json.dumps(portal.body).encode()
                 self.send_response(portal.status)
                 self.send_header("content-type", "application/json")
@@ -119,6 +126,24 @@ def test_security_a_plain_http_portal_is_refused_before_the_token_is_sent(record
     result = send(record, "http://portal.example.com", "asi_secret")
     assert result.returncode == 1 and "https" in result.stdout
     assert "asi_secret" not in result.stdout + result.stderr, "the refusal must not print the token either"
+
+
+def test_security_a_redirect_fails_the_step_and_the_token_does_not_follow_it(record):
+    """urllib copies Authorization onto a redirected request, so following one
+    would hand the ingest token to wherever it points
+    (.agent-rfc/designs/send-dev-record-redirects.md)."""
+    elsewhere = Portal(200, {"stored": 1})
+    portal = Portal(location=elsewhere.url)
+    try:
+        result = send(record, portal.url, "asi_secret")
+    finally:
+        portal.close()
+        elsewhere.close()
+    assert len(portal.received) == 1, "the configured portal should get the one request it was sent"
+    assert elsewhere.received == [], "SECURITY: the token followed the redirect"
+    assert result.returncode == 1 and "::error" in result.stdout and "redirected" in result.stdout
+    assert elsewhere.url in result.stdout, "the message names where it pointed, so the operator can fix the address"
+    assert "asi_secret" not in result.stdout + result.stderr
 
 
 def test_a_long_range_goes_in_parts_with_the_designs_last(tmp_path):

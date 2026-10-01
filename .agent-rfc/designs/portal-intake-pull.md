@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - contract/intake/**
   - portal/db/schema.sql

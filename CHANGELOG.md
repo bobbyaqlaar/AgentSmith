@@ -77,6 +77,14 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — `send_dev_record.py` no longer hands the ingest token to a redirect
+
+- **`scripts/send_dev_record.py` refuses a redirect** instead of following it. `urllib` copies the
+  `Authorization` header onto a redirected request, so a portal address that redirected — a moved
+  domain, a misconfigured proxy — would have received the app's ingest token at the redirect target.
+  The step now fails with the address it pointed to; set `AGENTSMITH_PORTAL_URL` to the final address.
+  **If your CI reached the portal through a redirect, that step now fails where it used to pass.**
+
 ### Changed — this repository's `main` now refuses its owner too
 
 - **`enforce_admins` is on** (2026-10-01). Nothing reaches `main` except through a pull request whose
