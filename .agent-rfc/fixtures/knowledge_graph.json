@@ -3499,7 +3499,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-01T06:19:11Z",
+      "last_modified": "2026-10-01T06:47:08Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4117,7 +4117,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-01T06:15:24Z",
+      "last_modified": "2026-10-01T09:03:32Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -7554,7 +7554,7 @@
         "redirect_request",
         "consume"
       ],
-      "last_modified": "2026-10-01T06:18:28Z",
+      "last_modified": "2026-10-01T06:46:30Z",
       "id": "runtime/intake.py"
     },
     {
@@ -7596,6 +7596,22 @@
       ],
       "last_modified": "2026-10-01T06:14:35Z",
       "id": "runtime/test/test_intake.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The CI gate now refuses the admin too",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/enforce-admins-on.md",
+      "pillar": null,
+      "created_at": "2026-10-01T09:04:57Z",
+      "id": "rfc:designs/enforce-admins-on.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 enforce-admins-on",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/enforce-admins-on.md",
+      "pillar": null,
+      "created_at": "2026-10-01T09:04:57Z",
+      "id": "rfc:reviews/enforce-admins-on.md"
     }
   ],
   "edges": [

@@ -15,10 +15,10 @@ jobs:
   # Design before code, review before merge — checked on every pushed commit
   # (docs/process-gates.md). The local commit-msg hook runs the same function,
   # but only in a clone that armed it; this is the check no clone can skip.
-  # Required on `main` since 2026-09-29: a push or merge whose head fails this
-  # job is REFUSED for everyone except a repository admin. `enforce_admins` is
-  # off, so the owner can still push past it — deliberately, since turning it on
-  # ends direct pushes to `main` (docs/process-gates.md › Limits, stated).
+  # Required on `main` (2026-09-29), with the other six jobs (2026-09-30), and
+  # enforced on admins too since 2026-10-01: nothing reaches `main` except
+  # through a pull request whose head passed all seven — the owner included
+  # (docs/process-gates.md › Limits, stated).
   process-gates:
     name: "Process gates (design + review)"
     runs-on: ubuntu-latest

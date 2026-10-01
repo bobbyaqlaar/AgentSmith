@@ -7,6 +7,32 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — the CI gate refuses the owner too (2026-10-01)
+
+Design: `.agent-rfc/designs/enforce-admins-on.md`; review:
+`.agent-rfc/reviews/enforce-admins-on.md`.
+
+Closes two backlog items that described one gap from two sides: "CI **detects** a gate
+violation on `main` but does not prevent one", and "The process gates refuse a bad push for
+everyone except the owner", whose trigger was "the owner choosing to work through pull
+requests".
+
+- **The gap was demonstrated before it was closed.** `a44e586` reached `main` with a failing
+  `ruff` step; GitHub accepted the push with "Bypassed rule violations — 7 of 7 required status
+  checks are expected". The detection half worked — CI went red within minutes — and nothing
+  removed the commit, which is what the first item said.
+- **Turned on by the owner's decision, 2026-10-01**: `enforce_admins: true`, read back from the
+  protection API with all seven Self-Test jobs required (since 2026-09-30), no approving review
+  required, force pushes and deletion still off.
+- **The first change under it went through a pull request and failed a required check** —
+  `Process gates (design + review)`, on the CHANGELOG rule — and GitHub reported it `BLOCKED`
+  from merging; the missing entry was added on the same branch. That is the rule doing what the
+  two items asked for.
+- **Not demonstrated:** a refused direct push. The attempt was declined by the agent session's
+  permission check, so the refusal rests on the API's reading, and `docs/process-gates.md` says so.
+- **Still open, deliberately, and stated in `docs/process-gates.md` › Limits:** no approving
+  review is required (the sole owner cannot approve their own pull request), and `strict` is off.
+
 ## Completed — a tenant stops being asked to fix code it did not write (2026-09-29)
 
 Design: `.agent-rfc/designs/scaffold-rfc-and-vouched-skip.md`; review:

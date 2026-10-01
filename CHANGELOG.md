@@ -77,6 +77,16 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — this repository's `main` now refuses its owner too
+
+- **`enforce_admins` is on** (2026-10-01). Nothing reaches `main` except through a pull request whose
+  head passed all seven Self-Test checks — the owner, the only admin, included. Before, the owner's
+  pushes went straight past a failing check: `a44e586` did, with a red lint step. No approving review
+  is required (the sole owner cannot approve their own pull request) and `strict` is off; both are
+  stated in `docs/process-gates.md` › Limits, with the one command that runs the CI gate locally over
+  the range CI will see — CHANGELOG rule included.
+- Tenant repositories are not affected: this is a setting on this repository.
+
 ### Fixed — the `intake` mutation suite failed the repository's lint
 
 - `scripts/mutation_check.py` carried a 133-character line — the https mutation's search string, added
