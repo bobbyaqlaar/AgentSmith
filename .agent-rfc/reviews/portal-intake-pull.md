@@ -145,6 +145,22 @@ new mutation suite against the levers.
   matching the manifest, and the commit — the portal-authored RFC inside it —
   was made.
 
+## Pass 7 — findings: 1
+
+After `a44e586`, CI's `ruff` step failed: `scripts/mutation_check.py:497` was 133
+characters, over the 120 limit — the https mutation's search string, which I
+added in 2b. I had run ruff on `runtime/` only, with whatever ruff was installed;
+CI runs the pinned `ruff==0.15.20` over the whole repository (`ruff check .`).
+The sign-off below said "`ruff`" under gates run, which claimed more than was run.
+The literal is split into two adjacent strings with the same content; the
+mutation still applies (the harness reports "target absent" and exits 1 when a
+search string no longer matches) and is still caught.
+
+## Pass 8 — findings: 0
+
+CI's exact command — `uvx --from ruff==0.15.20 ruff check .` — passes across the
+repository, and the `intake` mutation suite is 11 of 11 caught after the split.
+
 ## Sign-off
 
 Group 1 · DRY & shared code — [x] checked — 2a reuses the token shape, `APP_ID`, `Parsed`, `ISOLATION_VALUES` and the audit types; 2b reuses `validate_tenant_id`, `STACKS`, `ISOLATIONS`, slice 1's `--ide` check and the existing RFC path. The rules that must exist twice — the Python sets the portal mirrors, the contract's patterns and limits the CLI mirrors, and the portal address rule shared with `scripts/send_dev_record.py` — are each pinned by a test.
@@ -158,8 +174,8 @@ Group 7 · Auth & session integrity — [x] checked — a per-intake token: hash
 Tests added: 2a — `portal/test/intakes.test.ts` (14), `portal/test/intakesDb.test.ts` (8), `portal/test/middleware.test.ts` (6), two in `portal/test/catalogs.test.ts`. 2b — `runtime/test/test_intake.py` (55).
 Mutation-checked: 2b — `scripts/mutation_check.py` suite `intake`, 11 mutations, all caught. 2a — four by hand, each caught; `scripts/mutation_check.py` drives pytest only, so portal mutations there need node and Postgres in that job, which this design does not cover.
 Fixtures re-pinned: none stale. `contract/intake/v1/fixture.json` is pinned from both sides now — the portal's tests and `runtime/test/test_intake.py`'s stub portal serve it.
-Gates run: 2b — `ruff`, `mypy==1.14.1` (47 files, clean), the `intake` mutation suite, the doc and env-var sweeps, the end-to-end run against the real portal, and the Python suite — 2054 passed, 10 skipped, with the doc-reading tests re-run after the last `docs/DESIGN.md` edit. 2a's are recorded in Pass 3 and were green in CI on `9d5120f`.
+Gates run: 2b — the pinned `ruff==0.15.20` over the whole repository, as CI runs it (Pass 7: it was first run on `runtime/` only), `mypy==1.14.1` (47 files, clean), the `intake` mutation suite, the doc and env-var sweeps, the end-to-end run against the real portal, and the Python suite — 2054 passed, 10 skipped, with the doc-reading tests re-run after the last `docs/DESIGN.md` edit. 2a's are recorded in Pass 3 and were green in CI on `9d5120f`.
 
 Levers reviewed: `validate-on-the-receiving-side`, `consistent-auth-gates`, `denied-vs-missing`, `single-source-of-truth`, `pin-unremovable-duplicates`, `guards-must-be-able-to-fail`, `when-the-fallback-fails`, `every-line-earns-its-place`, `implemented-not-invoked`, `use-existing-apis`, `docs-match-behaviour`, `search-before-writing`, `small-verified-slices`.
 
-KG query: kg:e68dfa3ee02e
+KG query: kg:95d62282382a
