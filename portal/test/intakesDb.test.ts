@@ -211,6 +211,44 @@ await test("two people filing the same id at once: exactly one intake is issued"
   assert.equal(rowCount, 1);
 });
 
+// ── replacing an intake you lost the token for (.agent-rfc/designs/intake-form.md) ─
+
+await test("the author can replace their own open intake: the old token stops working, the new one works", async () => {
+  const lost = await createIntake(input("lost"), "alice", "developer");
+  const taken = await createIntake(input("lost"), "alice", "developer").then(
+    () => assert.fail("a second intake for the same id was issued"),
+    (err) => err as IntakeTakenError,
+  );
+  assert.deepEqual(taken.open, { intakeId: lost.intake_id, mine: true }, "the 409 must say it is the author's own");
+
+  const fresh = await createIntake(input("lost"), "alice", "developer", lost.intake_id);
+  assert.notEqual(fresh.intake_id, lost.intake_id);
+  const old = await handleScaffoldRead(bearer(lost.token), lost.intake_id);
+  assert.equal(old.status, 410);
+  assert.equal(old.body.reason, "expired", "a withdrawn intake reads as expired — ask for a new one");
+  assert.equal((await handleScaffoldRead(bearer(fresh.token), fresh.intake_id)).status, 200);
+
+  const withdrawn = (await auditFor(lost.intake_id)).find((e) => e.details.action === "intake_withdrawn");
+  assert.ok(withdrawn, "the withdrawal was not audited");
+  assert.equal(withdrawn.actor_id, "alice");
+});
+
+await test("nobody else can replace it, and the 409 does not offer to", async () => {
+  const held = await createIntake(input("theirs-held"), "alice", "developer");
+  const err = await createIntake(input("theirs-held"), "mallory", "developer", held.intake_id).then(
+    () => assert.fail("another actor replaced someone's intake"),
+    (e) => e as IntakeTakenError,
+  );
+  assert.deepEqual(err.open, { intakeId: held.intake_id, mine: false });
+  assert.equal((await handleScaffoldRead(bearer(held.token), held.intake_id)).status, 200, "alice's intake was touched");
+});
+
+await test("replacing names the open intake exactly — a wrong id withdraws nothing", async () => {
+  const held = await createIntake(input("exact"), "alice", "developer");
+  await assert.rejects(() => createIntake(input("exact"), "alice", "developer", "999999999"), IntakeTakenError);
+  assert.equal((await handleScaffoldRead(bearer(held.token), held.intake_id)).status, 200, "a wrong id withdrew the intake");
+});
+
 await test("an intake expires 24 hours after it is issued", async () => {
   const issued = await createIntake(input("ttl"), "alice", "developer");
   const hours = (Date.parse(issued.expires_at) - Date.now()) / 3_600_000;

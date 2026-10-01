@@ -77,6 +77,17 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — start a tenant from the portal
+
+- **Dev › Start a tenant** (`/dev/intakes/new`), for anyone holding `dev.create`: the tenant id, its
+  stack and options, and its first change. The token is shown once, with the commands to run on your
+  own machine, in order; `agentsmith tenant init --from <id>` asks for it.
+- **Lost the token?** An intake you started can be replaced from the refusal itself: the old token
+  stops working and a new one is shown. Only its author can, only while it is open.
+- **Architecture is now chosen from a list**, and the portal refuses an id that is not one of
+  `templates/architectures.yaml`'s styles — a typo is caught where it was typed, not at `tenant init`.
+- The portal's TypeScript now refuses syntax its tests' runner cannot strip (`erasableSyntaxOnly`).
+
 ### Changed — a Developer can start a tenant from the portal
 
 - **`dev.create`**, a new permission held by Developers, Design approvers, Administrators and Super

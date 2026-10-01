@@ -31,7 +31,7 @@ import { AGENT_RUN_STATUSES } from "../lib/runStatus.ts";
 import { AUDIT_EVENT_TYPES } from "../lib/auditSignature.ts";
 import { DEV_VERDICTS } from "../lib/devIngest.ts";
 import { REPO_PROVIDERS } from "../lib/tenants.ts";
-import { INTAKE_IDES, INTAKE_STACKS } from "../lib/intakes.ts";
+import { INTAKE_ARCHITECTURES, INTAKE_IDES, INTAKE_STACKS } from "../lib/intakes.ts";
 
 const PORTAL = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SCHEMA = readFileSync(join(PORTAL, "db", "schema.sql"), "utf8");
@@ -110,6 +110,20 @@ test("an intake's IDEs are the ones gate_ides can write a config for", () => {
   // GENERATED, not every adapter: an IDE whose config schema is unverified
   // cannot be written, and the CLI refuses it (--ide).
   assert.deepEqual([...INTAKE_IDES], pythonTuple("scripts/gate_ides.py", "GENERATED"));
+});
+
+test("an intake's architectures are templates/architectures.yaml's styles, by id and name", () => {
+  // The form's select needs the list, so the portal mirrors it; the YAML owns it.
+  // Read with a regex over the two-space-indented style keys and their name:
+  // there is no YAML parser in the portal, and adding one for a test is not worth it.
+  const yaml = readFileSync(join(REPO_ROOT, "templates", "architectures.yaml"), "utf8");
+  const start = yaml.indexOf("\nstyles:");
+  const end = yaml.indexOf("\nagentic:");
+  assert.ok(start >= 0 && end > start, "templates/architectures.yaml no longer has styles: before agentic:");
+  const styles = yaml.slice(start, end);
+  const found = [...styles.matchAll(/^  ([a-z][a-z-]*):\n    name: (.+)$/gm)].map((m) => ({ id: m[1], name: m[2].trim() }));
+  assert.ok(found.length >= 5, `parsed ${found.length} styles — the reader, not the catalogue, is wrong`);
+  assert.deepEqual(found, INTAKE_ARCHITECTURES.map((a) => ({ id: a.id, name: a.name })));
 });
 
 test("ROLES has no SQL counterpart to drift from", () => {

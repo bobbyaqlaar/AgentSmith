@@ -3635,6 +3635,28 @@ data older than 24 hours is marked stale.
 setup, above): a `developer` or `design_approver` grant opens the Dev workspace for the apps it
 lists.
 
+#### Start a tenant from the portal
+
+Anyone with the `developer` role or above sees **Dev › Start a tenant**. Fill in the tenant id,
+its stack and options, and its first change — an objective and acceptance criteria, one per
+line. The portal keeps the answers and shows a token **once**, with the commands to run on your
+own machine:
+
+```bash
+mkdir <tenant> && cd <tenant> && git init
+export AGENTSMITH_PORTAL_URL=https://your-portal
+agentsmith tenant init --from <id>
+```
+
+The last command asks for the token: paste it there rather than exporting it, which keeps it
+out of your shell history. It scaffolds the tenant with your RFC as its first, and prints the
+exact command for its first commit — made on your machine, as any scaffold's is. The token works
+once, for that tenant only, for 24 hours.
+
+A tenant id that is already a registered app, or that an open intake names, is refused. If you
+lost the token of an intake you started, the refusal offers **Replace it**: the old token stops
+working and a new one is shown.
+
 #### Audit log (enterprise pack, docs/DESIGN.md › Enterprise Install and Compliance Pack)
 
 ```bash

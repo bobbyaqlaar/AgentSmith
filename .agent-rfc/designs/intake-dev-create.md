@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - portal/lib/authz.ts
   - portal/lib/intakes.ts
