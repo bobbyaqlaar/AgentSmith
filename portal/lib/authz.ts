@@ -19,6 +19,7 @@ export const PERMISSIONS = [
   "dev.read", // the Dev workspace, for an app
   "dev.approve", // approve a design deviation (phase 2)
   "dev.allowlist", // approve an exemption from a mechanical pillar check (phase 2)
+  "dev.create", // create a tenant intake — asked app-less: the app does not exist yet
   "ops.read", // the Ops workspace, for an app
   "ops.dlq", // replay or discard a dead-letter entry
   "ops.widget", // mint a widget token
@@ -51,10 +52,14 @@ export const LEGACY_ROLES = ["viewer"] as const;
 export type AnyRole = Role | (typeof LEGACY_ROLES)[number];
 
 const ADMINISTRATOR: readonly Permission[] = PERMISSIONS.filter((p) => p !== "admin.org");
+// docs/DESIGN.md's role table says a Design approver has "Developer's, and" more.
+// Derived rather than copied, so adding to the Developer cannot leave that
+// sentence false (.agent-rfc/designs/intake-dev-create.md).
+const DEVELOPER: readonly Permission[] = ["dev.read", "dev.approve", "dev.create"];
 
 export const ROLE_PERMISSIONS: Readonly<Record<AnyRole, readonly Permission[]>> = {
-  developer: ["dev.read", "dev.approve"],
-  design_approver: ["dev.read", "dev.approve", "dev.allowlist"],
+  developer: DEVELOPER,
+  design_approver: [...DEVELOPER, "dev.allowlist"],
   // Exactly what the pre-phase-1 `operator` could do, so an old config maps onto it unchanged.
   operator: ["ops.read", "ops.dlq", "ops.widget", "ops.app_settings"],
   hitl_reviewer: ["ops.hitl"],
@@ -109,7 +114,8 @@ function isApps(value: unknown): value is "*" | string[] {
  * thing at all" (a 403); the per-app form answers "on this app" (a 404, so an
  * app outside the user's grants is indistinguishable from one that does not
  * exist). Organisation-level permissions (`admin.audit`, `admin.users`,
- * `admin.org`) are asked app-less.
+ * `admin.org`) are asked app-less, and so is `dev.create`: it starts a tenant
+ * that is not an app yet, so there is no app to ask about.
  */
 export function can(access: Access, permission: Permission, app?: string): boolean {
   return roleFor(access, permission, app) !== undefined;

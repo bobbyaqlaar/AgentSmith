@@ -2123,7 +2123,7 @@ role's reach is decided in one table:
 
 | Role | Permissions |
 |---|---|
-| Developer | Read the Dev workspace; approve a design deviation |
+| Developer | Read the Dev workspace; approve a design deviation; start a new tenant from a portal intake |
 | Design approver | Developer's, and approve an exemption from a mechanical pillar check |
 | Operator | Read the Ops workspace; replay and discard dead-letter entries; mint widget tokens; edit an app's operational settings |
 | HITL reviewer | Decide HITL gates — nothing else in Ops |
@@ -2132,7 +2132,9 @@ role's reach is decided in one table:
 | Super user | Everything; organisation settings and Administrators |
 
 Administrator and Super user act for the whole organisation, so a grant of either must cover
-`"*"`. Minting and revoking a widget token are split on purpose: minting is routine onboarding,
+`"*"`. Starting a tenant (`dev.create`) is asked without an app — the tenant is not an
+app yet — so a Developer granted one app can start any new one; what keeps that safe is that an
+intake may only name a tenant id no app holds and no open intake names. Minting and revoking a widget token are split on purpose: minting is routine onboarding,
 revoking breaks every live embed at once.
 
 A permission check with an app answers "on this app" and a failure is a 404, so an app outside

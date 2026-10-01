@@ -77,6 +77,18 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — a Developer can start a tenant from the portal
+
+- **`dev.create`**, a new permission held by Developers, Design approvers, Administrators and Super
+  users, is what `POST /api/dev/intakes` now asks for, in place of `admin.apps`. It is asked without
+  an app, because the tenant is not an app yet: a Developer granted one app can start any new one.
+- **An intake may only name a tenant that does not exist yet.** An id that is already a registered app,
+  or that an open intake names, is refused with 409 and says which — so an intake can never reach an app
+  its author has no grant on, and two people cannot start the same tenant at once.
+- **The audit says under which role** an intake was issued, now that more than one role can.
+- **A Design approver is now built from the Developer's permissions**, as the role table always said; it
+  was a hand-copied list that would have missed `dev.create`.
+
 ### Fixed — `send_dev_record.py` no longer hands the ingest token to a redirect
 
 - **`scripts/send_dev_record.py` refuses a redirect** instead of following it. `urllib` copies the

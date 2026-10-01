@@ -19,6 +19,7 @@ import { getPool } from "../lib/db.ts";
 import { hashToken } from "../lib/ingestTokens.ts";
 import {
   createIntake,
+  IntakeTakenError,
   handleScaffoldConsume,
   handleScaffoldRead,
   parseIntakeInput,
@@ -71,7 +72,7 @@ async function auditFor(intakeId: string) {
 }
 
 await test("issuing an intake stores only the token's hash, and audits who issued it", async () => {
-  const issued = await createIntake(input("issue"), "alice");
+  const issued = await createIntake(input("issue"), "alice", "developer");
   assert.match(issued.token, /^asx_/);
   const { rows } = await getPool().query(`SELECT token_hash, created_by FROM tenant_intakes WHERE intake_id = $1`, [issued.intake_id]);
   assert.equal(rows[0].token_hash, hashToken(issued.token));
@@ -87,7 +88,7 @@ await test("issuing an intake stores only the token's hash, and audits who issue
 });
 
 await test("the token reads its intake as the contract's record, and can read it again", async () => {
-  const issued = await createIntake(input("read"), "alice");
+  const issued = await createIntake(input("read"), "alice", "developer");
   const first = await handleScaffoldRead(bearer(issued.token), issued.intake_id);
   assert.equal(first.status, 200);
   assert.deepEqual(Object.keys(first.body).sort(), Object.keys(SCHEMA.properties).sort());
@@ -97,15 +98,15 @@ await test("the token reads its intake as the contract's record, and can read it
 });
 
 await test("no token, or an unknown one, is a 401", async () => {
-  const issued = await createIntake(input("unknown"), "alice");
+  const issued = await createIntake(input("unknown"), "alice", "developer");
   assert.equal((await handleScaffoldRead(null, issued.intake_id)).status, 401);
   assert.equal((await handleScaffoldRead("Basic abc", issued.intake_id)).status, 401);
   assert.equal((await handleScaffoldRead(bearer("asx_not-a-real-token"), issued.intake_id)).status, 401);
 });
 
 await test("the token decides: another intake's id is a 404, as an id that does not exist is", async () => {
-  const mine = await createIntake(input("mine"), "alice");
-  const theirs = await createIntake(input("theirs"), "bob");
+  const mine = await createIntake(input("mine"), "alice", "developer");
+  const theirs = await createIntake(input("theirs"), "bob", "developer");
   const wrongId = await handleScaffoldRead(bearer(mine.token), theirs.intake_id);
   const noId = await handleScaffoldRead(bearer(mine.token), "999999999999");
   assert.equal(wrongId.status, 404);
@@ -116,7 +117,7 @@ await test("the token decides: another intake's id is a 404, as an id that does 
 });
 
 await test("consuming uses the intake once, audits it against its author, and then refuses it", async () => {
-  const issued = await createIntake(input("consume"), "alice");
+  const issued = await createIntake(input("consume"), "alice", "developer");
   const used = await handleScaffoldConsume(bearer(issued.token), issued.intake_id);
   assert.equal(used.status, 200);
 
@@ -137,7 +138,7 @@ await test("consuming uses the intake once, audits it against its author, and th
 });
 
 await test("an expired intake is refused with a different reason from a used one", async () => {
-  const issued = await createIntake(input("expired"), "alice");
+  const issued = await createIntake(input("expired"), "alice", "developer");
   await getPool().query(`UPDATE tenant_intakes SET expires_at = now() - interval '1 second' WHERE intake_id = $1`, [issued.intake_id]);
   const read = await handleScaffoldRead(bearer(issued.token), issued.intake_id);
   const consume = await handleScaffoldConsume(bearer(issued.token), issued.intake_id);
@@ -151,7 +152,7 @@ await test("an expired intake is refused with a different reason from a used one
 });
 
 await test("two consumes racing each other: exactly one succeeds, and one audit row is written", async () => {
-  const issued = await createIntake(input("race"), "alice");
+  const issued = await createIntake(input("race"), "alice", "developer");
   const results = await Promise.all(
     Array.from({ length: 5 }, () => handleScaffoldConsume(bearer(issued.token), issued.intake_id)),
   );
@@ -161,8 +162,57 @@ await test("two consumes racing each other: exactly one succeeds, and one audit 
   assert.equal(consumed.length, 1);
 });
 
+// ── who may start which tenant (.agent-rfc/designs/intake-dev-create.md) ─────
+
+await test("the audit names the role that issued the intake", async () => {
+  const issued = await createIntake(input("role"), "dana", "design_approver");
+  const [event] = await auditFor(issued.intake_id);
+  assert.equal(event.details.role, "design_approver");
+});
+
+await test("an intake cannot name a registered app — that is what keeps dev.create safe to ask app-less", async () => {
+  const id = `test-intake-${RUN}-registered`;
+  await getPool().query(`INSERT INTO tenants (tenant_id, name) VALUES ($1, $1)`, [id]);
+  try {
+    const parsed = parseIntakeInput({ ...input("x"), tenant_id: id });
+    assert.ok(parsed.ok);
+    await assert.rejects(
+      () => createIntake((parsed as { ok: true; value: IntakeInput }).value, "mallory", "developer"),
+      (err: unknown) => err instanceof IntakeTakenError && /already a registered app/.test(err.message),
+    );
+    const { rowCount } = await getPool().query(`SELECT 1 FROM tenant_intakes WHERE tenant_id = $1`, [id]);
+    assert.equal(rowCount, 0, "a refused intake was stored");
+  } finally {
+    await getPool().query(`DELETE FROM tenants WHERE tenant_id = $1`, [id]);
+  }
+});
+
+await test("an id an open intake names is taken until that intake is used or expires", async () => {
+  const first = await createIntake(input("held"), "alice", "developer");
+  await assert.rejects(
+    () => createIntake(input("held"), "bob", "developer"),
+    (err: unknown) => err instanceof IntakeTakenError && new RegExp(`intake ${first.intake_id}`).test(err.message),
+  );
+  assert.equal((await handleScaffoldConsume(bearer(first.token), first.intake_id)).status, 200);
+  const again = await createIntake(input("held"), "bob", "developer");
+  assert.notEqual(again.intake_id, first.intake_id, "a used intake still held its id");
+
+  await getPool().query(`UPDATE tenant_intakes SET expires_at = now() - interval '1 second' WHERE intake_id = $1`, [again.intake_id]);
+  assert.ok(await createIntake(input("held"), "carol", "developer"), "an expired intake still held its id");
+});
+
+await test("two people filing the same id at once: exactly one intake is issued", async () => {
+  const results = await Promise.allSettled(
+    Array.from({ length: 5 }, (_, i) => createIntake(input("concurrent"), `user${i}`, "developer")),
+  );
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1, JSON.stringify(results.map((r) => r.status)));
+  assert.ok(results.filter((r) => r.status === "rejected").every((r) => (r as PromiseRejectedResult).reason instanceof IntakeTakenError));
+  const { rowCount } = await getPool().query(`SELECT 1 FROM tenant_intakes WHERE tenant_id = $1`, [`test-intake-${RUN}-concurrent`]);
+  assert.equal(rowCount, 1);
+});
+
 await test("an intake expires 24 hours after it is issued", async () => {
-  const issued = await createIntake(input("ttl"), "alice");
+  const issued = await createIntake(input("ttl"), "alice", "developer");
   const hours = (Date.parse(issued.expires_at) - Date.now()) / 3_600_000;
   assert.ok(hours > 23.9 && hours <= 24, `expires in ${hours} hours`);
 });
