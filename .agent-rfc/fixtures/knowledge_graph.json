@@ -4117,7 +4117,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-01T14:23:05Z",
+      "last_modified": "2026-10-01T16:03:51Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4627,7 +4627,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-09-29T13:30:21Z",
+      "last_modified": "2026-10-01T16:05:01Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4673,6 +4673,7 @@
         "installed_repo",
         "_write",
         "_commit",
+        "test_the_working_tree_reader_returns_a_binary_file_rather_than_crashing",
         "test_the_commit_hook_blocks_a_gated_commit_without_trailers",
         "test_the_commit_hook_accepts_a_designed_and_reviewed_commit",
         "test_amending_a_gated_commit_is_checked_like_the_commit_it_replaces",
@@ -4728,7 +4729,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-09-26T09:48:00Z",
+      "last_modified": "2026-10-01T16:02:35Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5837,11 +5838,12 @@
         "test_report_says_what_is_missing_without_refusing",
         "test_a_repo_whose_graph_is_missing_says_so_rather_than_passing",
         "test_a_renaming_commit_has_one_scope_in_the_commit_gate_and_in_ci",
+        "test_a_commit_carrying_a_binary_file_is_judged_by_both_gates_not_crashed_on",
         "test_renaming_a_gated_file_away_needs_a_design_at_commit_time_too",
         "test_agentsmith_declares_the_mode_it_ships",
         "test_the_tenant_template_runs_the_same_freshness_check"
       ],
-      "last_modified": "2026-09-18T05:26:57Z",
+      "last_modified": "2026-10-01T15:59:25Z",
       "id": "scripts/test/test_gate_kg.py"
     },
     {
@@ -7716,6 +7718,22 @@
       "pillar": null,
       "created_at": "2026-10-01T15:57:01Z",
       "id": "rfc:reviews/portal-brand.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The gate judges a commit that carries a binary file, instead of crashing on it",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/gate-reads-binary-files.md",
+      "pillar": null,
+      "created_at": "2026-10-01T16:05:50Z",
+      "id": "rfc:designs/gate-reads-binary-files.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 gate-reads-binary-files",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/gate-reads-binary-files.md",
+      "pillar": null,
+      "created_at": "2026-10-01T16:05:51Z",
+      "id": "rfc:reviews/gate-reads-binary-files.md"
     }
   ],
   "edges": [

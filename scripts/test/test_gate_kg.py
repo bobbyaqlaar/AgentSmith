@@ -260,6 +260,35 @@ def test_a_renaming_commit_has_one_scope_in_the_commit_gate_and_in_ci(kg_repo) -
 
 
 @needs_git
+def test_a_commit_carrying_a_binary_file_is_judged_by_both_gates_not_crashed_on(kg_repo) -> None:
+    """The scope check reads every changed file to see that it still exists, and
+    both readers decoded it as UTF-8 — so a gated commit that also carried an image,
+    a font or a PDF crashed the commit gate and CI with UnicodeDecodeError instead
+    of being judged. Found committing the portal's logos; the gate is vendored into
+    every tenant (.agent-rfc/designs/gate-reads-binary-files.md)."""
+    base = _git(kg_repo, "rev-parse", "HEAD").stdout.strip()
+    _write(kg_repo, "scripts/tool.py", "print(1)\n")
+    (kg_repo / "assets").mkdir()
+    (kg_repo / "assets" / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n" + bytes(range(256)))
+    _write(kg_repo, ".agent-rfc/designs/change.md", DESIGN)
+    _write(kg_repo, "CHANGELOG.md", "- a tool and its logo\n")  # the fixture's CHANGELOG rule, not this test's
+    query = _expected(kg_repo, ["scripts/tool.py", "assets/logo.png", ".agent-rfc/designs/change.md",
+                                ".agent-rfc/reviews/change.md", "CHANGELOG.md"])
+    _write(kg_repo, ".agent-rfc/reviews/change.md",
+           REVIEW_CLEAN.replace("Gates run locally:", f"KG query:                 {query}\nGates run locally:"))
+
+    committed = _commit(kg_repo, MESSAGE)
+    ci = subprocess.run([sys.executable, str(kg_repo / "scripts" / "process_gate.py"), "ci",
+                         "--base", base, "--head", "HEAD"],
+                        cwd=kg_repo, capture_output=True, text=True, check=False)
+
+    assert "Traceback" not in committed.stderr, committed.stderr[-1500:]
+    assert committed.returncode == 0, committed.stderr[-1500:]
+    assert "Traceback" not in ci.stdout + ci.stderr, (ci.stdout + ci.stderr)[-1500:]
+    assert ci.returncode == 0, ci.stdout[-1500:]
+
+
+@needs_git
 def test_renaming_a_gated_file_away_needs_a_design_at_commit_time_too(kg_repo) -> None:
     """Before this, the commit gate never saw a rename's old path, so moving a
     gated file out from under its design passed locally and failed in CI."""
