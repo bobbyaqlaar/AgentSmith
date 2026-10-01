@@ -77,6 +77,13 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the portal carries the AgentSmith and Aqlaar marks
+
+- The AgentSmith mark beside the name in every page's header, a footer naming Aqlaar as AgentSmith's
+  maker with its mark, and a favicon. Derived from `assets/` for the screen — transparent, sized for
+  where each is shown — and imported as modules, because the portal's Docker image serves
+  `.next/static` and not `public/`.
+
 ### Fixed — the process gate crashed on a commit that carried an image
 
 - **`scripts/process_gate.py` read every changed file as UTF-8**, so a gated commit that also carried an
