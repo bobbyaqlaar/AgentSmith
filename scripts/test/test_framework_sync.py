@@ -183,6 +183,118 @@ def test_upgrade_refuses_to_vendor_into_an_adopted_repository(tenant, capsys):
     assert "tenant adopt" in said_all and "agentsmith sync" in said_all, said
 
 
+
+# ── The framework's own checkout (.agent-rfc/designs/framework-sync-refuses-framework.md) ──
+
+
+@pytest.fixture()
+def framework_like(tmp_path):
+    """A repository carrying two of the framework's markers, governed like any
+    other — and with a tenant.yaml, the one file that used to be all that kept
+    `upgrade` from copying an install over the framework's own code."""
+    root = tmp_path / "framework"
+    (root / "workflow-templates").mkdir(parents=True)
+    (root / "install-ai-stack.sh").write_text("#!/bin/sh\n")
+    (root / ".agenticframework").mkdir()
+    (root / ".agenticframework" / "process-gates.json").write_text('{"gated": ["runtime/**"]}\n')
+    (root / ".agenticframework" / "tenant.yaml").write_text("tenant:\n  id: t\n")
+    (root / "runtime").mkdir()
+    (root / "runtime" / "llm_gateway.py").write_text("# the framework's own\n")
+    (root / "runtime" / "test").mkdir()
+    (root / "runtime" / "test" / "test_own.py").write_text("def test_own(): pass\n")
+    subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)
+    return root
+
+
+def _tree(root: Path) -> dict[str, bytes]:
+    return {str(p.relative_to(root)): p.read_bytes() for p in sorted(root.rglob("*"))
+            if p.is_file() and ".git" not in p.relative_to(root).parts}
+
+
+def _an_install(tmp_path: Path) -> Path:
+    """Somewhere `upgrade` could copy FROM, so that without its guard it would."""
+    home = tmp_path / "install"
+    (home / "scripts").mkdir(parents=True)
+    (home / "scripts" / "process_gate.py").write_text("# an install's copy\n")
+    (home / "runtime").mkdir()
+    (home / "runtime" / "llm_gateway.py").write_text("# an install's copy\n")
+    return home
+
+
+def test_sync_refuses_the_frameworks_own_checkout(framework_like):
+    """On 2026-10-01 a sync here wrote four tenant files into the framework,
+    re-moded its hooks and printed a commit marking it a tenant of itself."""
+    from runtime.sync import SyncError, plan_sync
+
+    before = _tree(framework_like)
+    with pytest.raises(SyncError) as refused:
+        plan_sync(framework_like)
+
+    assert "AgentSmith's own checkout" in str(refused.value)
+    assert "install-ai-stack.sh" in str(refused.value), "it names what it recognised"
+    assert _tree(framework_like) == before
+
+
+def test_the_sync_command_exits_2_and_writes_nothing(framework_like, capsys):
+    from runtime.cli import main
+
+    before = _tree(framework_like)
+    assert main(["sync", "--yes", "--root", str(framework_like)]) == 2
+    assert "AgentSmith's own checkout" in capsys.readouterr().err
+    assert _tree(framework_like) == before
+
+
+def test_sync_recognises_this_very_checkout():
+    """The markers are read from files that can be renamed; if they drift, this
+    fails instead of the guard quietly stopping. plan_sync writes nothing."""
+    from runtime.sync import SyncError, plan_sync
+
+    with pytest.raises(SyncError, match="AgentSmith's own checkout"):
+        plan_sync(REPO)
+
+
+def test_what_upgrade_vendors_does_not_make_a_tenant_look_like_the_framework(tmp_path, monkeypatch):
+    """The near-miss. A vendored tenant holds copies of framework trees, and
+    `templates/` carries `templates/agent-rules.yaml`, one of the markers. This
+    vendors for real, from an install that carries EVERY marker: if `upgrade`
+    ever copies a second one across, every vendored tenant is refused by `sync`
+    and `upgrade` alike, and this is the test that says so."""
+    from runtime.cli import looks_like_framework
+    from runtime.machine.upgrade import upgrade
+
+    for var, value in (("GIT_AUTHOR_NAME", "t"), ("GIT_AUTHOR_EMAIL", "t@x"),
+                       ("GIT_COMMITTER_NAME", "t"), ("GIT_COMMITTER_EMAIL", "t@x")):
+        monkeypatch.setenv(var, value)
+    home = _an_install(tmp_path)
+    (home / "install-ai-stack.sh").write_text("#!/bin/sh\n")
+    (home / "workflow-templates").mkdir()
+    (home / "workflow-templates" / "ci-python.yml").write_text("on: push\n")
+    (home / "templates").mkdir()
+    (home / "templates" / "agent-rules.yaml").write_text("rules: []\n")
+    (home / "pyproject.toml").write_text('[project]\nname = "agentsmith-runtime"\n')
+    assert looks_like_framework(home), "the install itself must carry the markers, or this proves nothing"
+
+    root = tmp_path / "vendored"
+    (root / ".agenticframework").mkdir(parents=True)
+    (root / ".agenticframework" / "tenant.yaml").write_text("tenant:\n  id: t\nframework:\n  version: 1.0.0\n")
+    subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)
+    upgrade(root, "9.9.9", out=lambda _line: None, home=home)
+
+    assert (root / "templates" / "agent-rules.yaml").is_file(), "it vendored, so the question was asked"
+    assert looks_like_framework(root) is None
+
+
+def test_upgrade_refuses_the_frameworks_own_checkout(framework_like, tmp_path):
+    from runtime.machine.upgrade import upgrade
+
+    before = _tree(framework_like)
+    said: list[str] = []
+    code = upgrade(framework_like, "9.9.9", out=said.append, home=_an_install(tmp_path))
+
+    assert code == 1
+    assert "AgentSmith's own checkout" in " ".join(said), said
+    assert _tree(framework_like) == before, "the framework's own runtime/ and runtime/test/ are untouched"
+
 # ── The files a tenant shares with the framework (.agent-rfc/designs/sync-merged-files.md) ──
 
 

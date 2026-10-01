@@ -7,6 +7,25 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — `sync` and `upgrade` refuse the framework's own checkout (2026-10-01)
+
+Design: `.agent-rfc/designs/framework-sync-refuses-framework.md`; review:
+`.agent-rfc/reviews/framework-sync-refuses-framework.md`.
+
+Closes the backlog row "`agentsmith sync` writes a tenant scaffold into the framework's own
+checkout", opened the same day after a `sync` here wrote four tenant files, re-copied `.githooks/`
+with `chain` at 755, and printed a commit that would have made this repository a tenant of itself.
+
+- **`sync` refuses before it reads anything else**, with the check `tenant init` and `tenant adopt`
+  already used (`looks_like_framework`): exit 2, the markers it recognised, nothing written.
+- **`upgrade` refuses too.** It copies an install over `scripts/` and `runtime/` and deletes
+  `runtime/test`; in this repository only a missing `tenant.yaml` had stopped it.
+- **No override on either**: there is nothing to sync or upgrade the framework from but itself.
+- **Proved against the real checkout and a stand-in.** The stand-in carries a `tenant.yaml` and an
+  install to copy from, so without its guard `upgrade` would write; one mutation per guard, each caught.
+
+The row "`sync` ignores `upgrade`'s exit code" stays open.
+
 ## Completed — an app's ingest token does not follow a redirect (2026-10-01)
 
 Design: `.agent-rfc/designs/send-dev-record-redirects.md`; review:
