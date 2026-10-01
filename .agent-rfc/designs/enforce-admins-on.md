@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - .github/workflows/self-test.yml
 ---
