@@ -171,7 +171,8 @@ proposal is updated rather than duplicated. It proposes only — merging is a pe
 the tenant's own gates run over the pull request.
 
 An adopted repository is never vendored into, by `sync` or by `agentsmith upgrade`: both read the
-manifest's `generated_by`.
+manifest's `generated_by`. Neither runs in the framework's own checkout, which is what they copy from:
+both refuse there, as `tenant init` and `tenant adopt` do, and take no override.
 
 ## A provider, not a path — `contract/gate/v1`
 

@@ -77,6 +77,14 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — `sync` and `upgrade` refuse the framework's own checkout
+
+- **`agentsmith sync` run inside the AgentSmith checkout scaffolded it as a tenant**: four tenant
+  files, its hooks re-copied, and a commit printed to record it. It now refuses there, as
+  `tenant init` and `tenant adopt` already did — exit 2, nothing written. **`agentsmith upgrade`**
+  refuses there too; it had been stopped only by the checkout having no `tenant.yaml`. Neither takes
+  an override. Tenants are unaffected.
+
 ### Added — the portal carries the AgentSmith and Aqlaar marks
 
 - The AgentSmith mark beside the name in every page's header, a footer naming Aqlaar as AgentSmith's

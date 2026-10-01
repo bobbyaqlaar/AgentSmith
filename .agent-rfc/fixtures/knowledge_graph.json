@@ -2792,7 +2792,7 @@
         "metadata",
         "RootLayout"
       ],
-      "last_modified": "2026-10-01T15:50:21Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/app/layout.tsx"
     },
     {
@@ -3499,7 +3499,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-01T06:47:08Z",
+      "last_modified": "2026-10-01T20:27:18Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3753,7 +3753,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-10-01T15:46:10Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/test/catalogs.test.ts"
     },
     {
@@ -4117,7 +4117,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-01T16:03:51Z",
+      "last_modified": "2026-10-01T19:57:39Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4627,7 +4627,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-10-01T16:05:01Z",
+      "last_modified": "2026-10-01T20:05:31Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4729,7 +4729,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-10-01T16:02:35Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5079,7 +5079,7 @@
         "upgrade",
         "git"
       ],
-      "last_modified": "2026-09-27T08:38:10Z",
+      "last_modified": "2026-10-01T20:36:22Z",
       "id": "runtime/machine/upgrade.py"
     },
     {
@@ -5843,7 +5843,7 @@
         "test_agentsmith_declares_the_mode_it_ships",
         "test_the_tenant_template_runs_the_same_freshness_check"
       ],
-      "last_modified": "2026-10-01T15:59:25Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "scripts/test/test_gate_kg.py"
     },
     {
@@ -6222,7 +6222,7 @@
       "symbols": [
         "DevLayout"
       ],
-      "last_modified": "2026-10-01T15:44:55Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/app/dev/layout.tsx"
     },
     {
@@ -6659,7 +6659,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-09-30T08:37:39Z",
+      "last_modified": "2026-10-01T20:20:02Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6955,7 +6955,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-09-30T08:40:10Z",
+      "last_modified": "2026-10-01T20:29:08Z",
       "id": "runtime/sync.py"
     },
     {
@@ -6975,6 +6975,14 @@
         "test_an_adopted_repository_is_never_vendored_into",
         "test_the_manifest_records_what_this_sync_wrote",
         "test_upgrade_refuses_to_vendor_into_an_adopted_repository",
+        "framework_like",
+        "_tree",
+        "_an_install",
+        "test_sync_refuses_the_frameworks_own_checkout",
+        "test_the_sync_command_exits_2_and_writes_nothing",
+        "test_sync_recognises_this_very_checkout",
+        "test_what_upgrade_vendors_does_not_make_a_tenant_look_like_the_framework",
+        "test_upgrade_refuses_the_frameworks_own_checkout",
         "_as_an_older_framework_left_it",
         "_stale_rules",
         "test_a_stale_rules_block_is_refreshed_and_the_tenants_prose_survives",
@@ -6986,7 +6994,7 @@
         "test_the_sync_workflow_is_refreshed_like_everything_else_the_framework_owns",
         "test_a_sync_keeps_the_tenants_declared_ide_choice"
       ],
-      "last_modified": "2026-09-30T08:42:33Z",
+      "last_modified": "2026-10-01T20:36:12Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -7465,14 +7473,14 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-10-01T15:47:39Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/test/intakesDb.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-10-01T15:46:01Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/test/intakes.test.ts"
     },
     {
@@ -7492,7 +7500,7 @@
         "handleScaffoldRead",
         "handleScaffoldConsume"
       ],
-      "last_modified": "2026-10-01T15:54:20Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/lib/intakes.ts"
     },
     {
@@ -7501,7 +7509,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-10-01T15:44:01Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/app/api/dev/intakes/route.ts"
     },
     {
@@ -7651,7 +7659,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-10-01T17:14:03Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/test/brand.test.ts"
     },
     {
@@ -7660,7 +7668,7 @@
       "symbols": [
         "IntakeForm"
       ],
-      "last_modified": "2026-10-01T15:50:20Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/components/IntakeForm.tsx"
     },
     {
@@ -7675,7 +7683,7 @@
         "INTAKE_LIMITS",
         "linesOf"
       ],
-      "last_modified": "2026-10-01T15:43:28Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/lib/intakeCatalog.ts"
     },
     {
@@ -7684,7 +7692,7 @@
       "symbols": [
         "NewIntakePage"
       ],
-      "last_modified": "2026-10-01T15:44:55Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/app/dev/intakes/new/page.tsx"
     },
     {
@@ -7739,8 +7747,24 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-10-01T17:13:47Z",
+      "last_modified": "2026-10-01T19:01:52Z",
       "id": "portal/assets/brand/images.d.ts"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "`sync` and `upgrade` refuse the framework's own checkout",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/framework-sync-refuses-framework.md",
+      "pillar": null,
+      "created_at": "2026-10-01T20:33:28Z",
+      "id": "rfc:designs/framework-sync-refuses-framework.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 framework-sync-refuses-framework",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/framework-sync-refuses-framework.md",
+      "pillar": null,
+      "created_at": "2026-10-01T20:33:28Z",
+      "id": "rfc:reviews/framework-sync-refuses-framework.md"
     }
   ],
   "edges": [

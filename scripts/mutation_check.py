@@ -1146,6 +1146,18 @@ CATALOGUE: tuple[Suite, ...] = (
                 '    command = generated_by or ("agentsmith tenant adopt" if adopted else "agentsmith tenant init")',
                 '    command = "agentsmith tenant adopt" if adopted else "agentsmith tenant init"',
             ),
+            Mutation(
+                "sync scaffolds a tenant into the framework's own checkout again",
+                "runtime/sync.py",
+                "    marker = looks_like_framework(root)\n    if marker:\n        raise SyncError(",
+                "    marker = None\n    if marker:\n        raise SyncError(",
+            ),
+            Mutation(
+                "upgrade copies an install over the framework's own scripts/ and runtime/",
+                "runtime/machine/upgrade.py",
+                "    marker = looks_like_framework(repo)",
+                "    marker = None",
+            ),
         ),
     ),
 )
