@@ -1341,6 +1341,7 @@ AgentSmith/
 │   ├── pg_pool.py               # Shared Postgres connection pool (budget / idempotency / DLQ)
 │   ├── environment.py           # Canonical fail-closed $ENVIRONMENT resolver
 │   ├── input_guardrail.py       # Pre-call PII scrub (PDPL)
+│   ├── intake.py                # `tenant init --from`: pulls a portal intake, re-validates it, consumes it once landed (contract/intake/v1/)
 │   ├── pii_patterns.py           # Emirates ID / phone / email / card shapes, both PII halves
 │   ├── luhn.py                  # Single Luhn validator (input_guardrail + trace_redactor)
 │   ├── testing.py               # FakeGateway / RecordingGateway test doubles for tenant suites

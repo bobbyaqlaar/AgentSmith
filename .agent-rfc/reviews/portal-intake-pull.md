@@ -3,8 +3,9 @@
 Design: `.agent-rfc/designs/portal-intake-pull.md`
 Levers: `docs/review-levers.md`
 
-Built in two commits under one design. This record covers **2a** — the contract
-and the portal side — and gains a section when 2b, the CLI, is built.
+Built in two commits under one design. Passes 1–3 cover **2a** — the contract
+and the portal side (`9d5120f`). Passes 4–6 cover **2b** — the CLI. The sign-off
+covers both.
 
 ## Pass 1 — findings: 3
 
@@ -73,21 +74,92 @@ the Pass 2 fixes.
   `/api/dev/scaffold/:id` with no credentials got the handler's 401 and no
   basic-auth challenge; `/api/dev/scaffolding` got the middleware's challenge.
 
+## Pass 4 — findings: 5
+
+2b, found while building it. Before any code, reading `urllib` showed that
+`HTTPRedirectHandler.redirect_request` keeps the `Authorization` header, so a
+redirecting portal address would hand the token on; the design was amended to
+refuse redirects before the client was written. `scripts/send_dev_record.py` has
+the same exposure with the app's ingest token — outside this design, so a
+backlog row, and the two scripts' address rule is now pinned to each other.
+
+1. **mypy — my new parameter shadowed an existing local.** `_scaffold_tenant`'s
+   `rfc` parameter shared its name with `rfc = _rfc_reference(root)`, a string,
+   further down the same function. Harmless at runtime only because the
+   parameter was used first. Renamed `intake_rfc`. Run with the pinned
+   `mypy==1.14.1` through `uvx`, since it is not installed here; the only other
+   errors were missing `yaml` stubs, which CI installs.
+2. **The env-var sweep could not see the new variables — and passed anyway.**
+   `runtime/intake.py` read `os.environ.get(TOKEN_VAR)` through a constant;
+   `scripts/test/test_env_var_documentation.py` finds reads by their literal. It
+   passed because "any tracked .md counts" and the design note committed in 2a
+   names the variable — documentation no author would find. The reads are now
+   literal, so the sweep enforces them; a test pins each literal to its constant;
+   and both variables are in `docs/UserManual.md`'s Runtime Flags, where the
+   sweep's own header says a variable belongs.
+3. **My re-run advice was wrong.** The message for an intake whose RFC could not
+   land said to re-run "with --force". `write_scaffold_records` never writes an
+   RFC beside an existing one, forced or not. It now names the RFC that blocked
+   it and says to move it aside.
+4. **A column-0 `⚠️`** in the failed-consume message — the pattern
+   `.github/scratch-tenants/build.sh:95` fails a tenant build on. Indented, and
+   `test_a_failed_consume_leaves_the_scaffold_and_says_so` asserts the indent.
+5. **A wrapper that added nothing.** `intake.render_rfc` only called
+   `architectures.render_scaffold_rfc`. Removed.
+
+## Pass 5 — findings: 2
+
+1. **The token was in the object's repr.** `Intake` is a `@dataclass`, and the
+   generated `__repr__` prints every field, `_token` included — so a traceback or
+   a debug print of it would print the token. `field(repr=False)`, a test, and an
+   eleventh mutation that puts it back and is caught.
+2. **A test parameter that tested nothing.** The address-rule pin's `""` case
+   returned before asserting. Removed, and two cases that do test something added
+   in its place: `http://localhost.example.com` and `http://127.0.0.1@example.com`.
+
+## Pass 6 — findings: 0
+
+Re-read `runtime/intake.py`, the `tenant init` changes in `runtime/cli.py`, the
+filled RFC in `runtime/architectures.py`, `runtime/test/test_intake.py` and the
+new mutation suite against the levers.
+
+- `validate-on-the-receiving-side` — every field re-checked; unknown fields
+  refused; the id checked against the one asked for; `--from` digits-only before
+  a URL exists.
+- `when-the-fallback-fails` — a refused fetch writes nothing (tested: the
+  directory stays empty); an RFC that could not land leaves the intake unused; a
+  failed consume leaves a complete scaffold; a re-run after it consumes cleanly.
+- `denied-vs-missing` — exit 2 to change something, 4 to retry, each with the
+  portal's own words.
+- Considered and accepted: should a newer portal ever offer an IDE this CLI
+  cannot write, the refusal reads "--ide <name>: …" though the author typed
+  `--from`. It still names the IDE and what is available, the catalog test keeps
+  the portal and the CLI in step, and one IDE check for both paths is the design.
+- **Checked end to end against the real portal**: built from the committed 2a,
+  on a throwaway Postgres. The portal issued intake 1; `tenant init --from 1`
+  scaffolded `e2e-orders` with the author's RFC, `ides: ["claude"]` and only
+  `.claude/settings.json`, and consumed it; the same command again was refused
+  with the portal's 410 and wrote nothing. Then the exact first-commit command
+  `tenant init` printed was run: `pre-commit` skipped 169 vouched files, the
+  process gate accepted `Review: n/a: generated scaffold` for 139 gated files
+  matching the manifest, and the commit — the portal-authored RFC inside it —
+  was made.
+
 ## Sign-off
 
-Group 1 · DRY & shared code — [x] checked — the token shape (`hashToken`, `bearerToken`), `APP_ID`, `Parsed`, `ISOLATION_VALUES`, `withTransaction` and the `config_change` / `tenant_created` audit types are reused; the two Python-owned sets are mirrored once and pinned by `portal/test/catalogs.test.ts`.
-Group 2 · Quality / safety — [x] checked — 14 validation and contract tests, 8 database tests, 6 matcher tests; four mutations run by hand and each caught (matcher anchor, stack drift, consume guard, token-decides id check); the live check above.
-Group 3 · Architecture / hygiene — [x] checked — handlers are Next-free, as `portal/lib/devIngestHandler.ts` is, so the database test drives what the routes run; the tenant id is deliberately not a foreign key, and no `CHECK` duplicates a set the catalog test pins.
-Group 4 · Process — [x] checked — design written and gate-validated before code; two passes of findings recorded with what caught each, including the two checks that passed while seeing nothing.
-Group 5 · Intuitive UI — [x] gap — no screen in this slice; the form is slice 4. Refusals name the field and say what to do. Not handled, and for slice 4's form to decide: nothing warns when an intake names a tenant id that is already a registered app, or that another open intake already names.
-Group 6 · Signal integrity — [x] checked — consumed and expired are different 410s; one clock decides expiry; a 404 for another intake's id carries none of its contents.
-Group 7 · Auth & session integrity — [x] checked — a new path skips sign-in, so `portal/test/middleware.test.ts` is its boundary and the first test of that list at all; the token is per intake, hashed at rest, shown once with `no-store`, never on a command line, single-use under concurrency and 24-hour; creating one needs `admin.apps` over the tenant id.
+Group 1 · DRY & shared code — [x] checked — 2a reuses the token shape, `APP_ID`, `Parsed`, `ISOLATION_VALUES` and the audit types; 2b reuses `validate_tenant_id`, `STACKS`, `ISOLATIONS`, slice 1's `--ide` check and the existing RFC path. The rules that must exist twice — the Python sets the portal mirrors, the contract's patterns and limits the CLI mirrors, and the portal address rule shared with `scripts/send_dev_record.py` — are each pinned by a test.
+Group 2 · Quality / safety — [x] checked — 2a: 28 portal tests and four hand-run mutations, each caught. 2b: 55 tests in `runtime/test/test_intake.py` against a real local HTTP server, and an `intake` suite of 11 mutations in `scripts/mutation_check.py`, all caught. Both checked live, and end to end together.
+Group 3 · Architecture / hygiene — [x] checked — the portal holds and the author's machine pulls; the portal never writes into a repository. `runtime/intake.py` is standard-library only because `runtime/` is vendored into tenants; the record's shape is one versioned contract.
+Group 4 · Process — [x] checked — designed before code, and the design amended before the code that needed it (redirects, the token prompt, exit codes, consume-only-when-landed); six passes recorded, including the checks that passed while seeing nothing.
+Group 5 · Intuitive UI — [x] gap — no screen until slice 4. The CLI's words were reviewed: each refusal says what to change or that the same command is the retry. Left for slice 4's form: nothing warns when an intake names a tenant id already registered, or already named by another open intake.
+Group 6 · Signal integrity — [x] checked — consumed, expired, refused and unreachable are different answers with different exit codes; one clock decides expiry; nothing reads as success unless the scaffold, RFC included, was written.
+Group 7 · Auth & session integrity — [x] checked — a per-intake token: hashed at rest, shown once, single-use under concurrency, 24 hours; never an argument, asked for without echo, never in a repr, never across a redirect, never over plain http to another host. The path that skips sign-in is pinned by `portal/test/middleware.test.ts`.
 
-Tests added: `portal/test/intakes.test.ts` (14), `portal/test/intakesDb.test.ts` (8), `portal/test/middleware.test.ts` (6), two tests in `portal/test/catalogs.test.ts`, all registered in `portal/package.json`.
-Mutation-checked: by hand, four mutations, each caught — not in `scripts/mutation_check.py`, which drives pytest only; putting portal mutations there needs node and Postgres in that job, which this design does not cover. Declared, not assumed.
-Fixtures re-pinned: none stale — `contract/intake/v1/fixture.json` is new and pinned from the portal side now, from the CLI in 2b.
-Gates run: `npx tsc --noEmit`, `npm test` (15 files), `npm run test:db` (7 files, fresh Postgres), `npm run build`, the live check, the `DESIGN.md` repo-tree drift check with 2a staged, and the Python suite — 1999 passed, 10 skipped, plus the 152 tests that read the touched files re-run against their final state.
+Tests added: 2a — `portal/test/intakes.test.ts` (14), `portal/test/intakesDb.test.ts` (8), `portal/test/middleware.test.ts` (6), two in `portal/test/catalogs.test.ts`. 2b — `runtime/test/test_intake.py` (55).
+Mutation-checked: 2b — `scripts/mutation_check.py` suite `intake`, 11 mutations, all caught. 2a — four by hand, each caught; `scripts/mutation_check.py` drives pytest only, so portal mutations there need node and Postgres in that job, which this design does not cover.
+Fixtures re-pinned: none stale. `contract/intake/v1/fixture.json` is pinned from both sides now — the portal's tests and `runtime/test/test_intake.py`'s stub portal serve it.
+Gates run: 2b — `ruff`, `mypy==1.14.1` (47 files, clean), the `intake` mutation suite, the doc and env-var sweeps, the end-to-end run against the real portal, and the Python suite — 2054 passed, 10 skipped, with the doc-reading tests re-run after the last `docs/DESIGN.md` edit. 2a's are recorded in Pass 3 and were green in CI on `9d5120f`.
 
-Levers reviewed: `consistent-auth-gates`, `validate-on-the-receiving-side`, `denied-vs-missing`, `single-source-of-truth`, `pin-unremovable-duplicates`, `guards-must-be-able-to-fail`, `every-line-earns-its-place`, `implemented-not-invoked`, `use-existing-apis`, `docs-match-behaviour`, `search-before-writing`, `small-verified-slices`.
+Levers reviewed: `validate-on-the-receiving-side`, `consistent-auth-gates`, `denied-vs-missing`, `single-source-of-truth`, `pin-unremovable-duplicates`, `guards-must-be-able-to-fail`, `when-the-fallback-fails`, `every-line-earns-its-place`, `implemented-not-invoked`, `use-existing-apis`, `docs-match-behaviour`, `search-before-writing`, `small-verified-slices`.
 
-KG query: kg:8b3830a1e4fc
+KG query: kg:e68dfa3ee02e

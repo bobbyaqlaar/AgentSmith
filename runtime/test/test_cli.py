@@ -479,7 +479,7 @@ def test_a_missing_template_is_a_message_not_a_traceback(command, monkeypatch, t
         monkeypatch.setattr(cli, "init_tenant", lambda *a, **k: (_ for _ in ()).throw(missing))
         args = argparse.Namespace(tenant_id="acme", root=str(tmp_path), stack="python-fastapi",
                                   isolation="shared", force=False, allow_framework_root=False,
-                                  architecture="hexagonal", agentic=False, ide=None)
+                                  architecture="hexagonal", agentic=False, ide=None, from_intake=None)
         code = cli._cmd_tenant_init(args)
     else:
         import runtime.adopt as adopt

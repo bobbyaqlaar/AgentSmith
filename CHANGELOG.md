@@ -77,6 +77,28 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — `agentsmith tenant init --from <intake>`
+
+- **A tenant can now be scaffolded from a portal intake.** `agentsmith tenant init --from 42` fetches
+  the intake, scaffolds it on this machine — its tenant id, stack, options, IDEs, and the author's own
+  first RFC in place of the template — and marks it used. The tenant id positional is now optional:
+  give it, or `--from`, not both; `--from` also refuses `--stack`, `--isolation`, `--architecture`,
+  `--agentic` and `--ide`, rather than letting one silently win.
+- **The first commit is still made here and still vouched.** The portal never writes into a repository.
+  Verified end to end: an intake issued by the portal, pulled, scaffolded, and its first commit — the
+  author's RFC inside it — accepted by the gate as a generated scaffold.
+- **Every field is checked again here, whatever the portal accepted.** The tenant id must satisfy both
+  this CLI's rule and the portal's narrower one; the stack, isolation, architecture, IDEs and the RFC's
+  sizes are re-checked; an unknown field is refused, not ignored; control characters are dropped, and an
+  acceptance criterion stays on one line. `--from` takes digits only, so it can never become a path.
+- **The token stays where it belongs.** Read from `AGENTSMITH_INTAKE_TOKEN`, or asked for without echo
+  at a terminal; never an argument. Sent only over https, or http to localhost. **Redirects are
+  refused**, because `urllib` carries the `Authorization` header across one.
+- **Consumed only once the intake has landed.** The scaffold never writes an RFC beside an existing one;
+  if that kept the author's text out, the intake is left unused rather than consumed, so the text is not
+  lost. A consume that fails leaves a complete scaffold and an intake that expires by itself. Exit 2
+  means change something; exit 4 means the portal was unreachable, and the same command is the retry.
+
 ### Added — tenant intakes in the portal, pulled rather than pushed
 
 - **An author's answers for a new tenant can now be stored in the portal**, for

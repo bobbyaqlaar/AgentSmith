@@ -130,15 +130,25 @@ definition:
 
 ### The CLI — commit 2b
 
-- **`agentsmith tenant init --from <id>`.** Reads `AGENTSMITH_PORTAL_URL`
-  (already the documented name, from `scripts/send_dev_record.py`) and
-  `AGENTSMITH_INTAKE_TOKEN`. The token is never an argument: an argument lands
-  in shell history and in `ps`.
+- **`agentsmith tenant init --from <id>`.** The tenant id positional becomes
+  optional: exactly one of `<tenant_id>` or `--from` is given, because the
+  record names the tenant. `<id>` must be digits before it reaches a URL, so
+  `--from ../admin` is refused as an argument, not sent as a path. Reads
+  `AGENTSMITH_PORTAL_URL` (already the documented name, from
+  `scripts/send_dev_record.py`) and `AGENTSMITH_INTAKE_TOKEN`. The token is
+  never an argument — an argument lands in shell history and in `ps` — and when
+  the variable is unset at a terminal the CLI asks for it without echo
+  (`getpass`), so the author need not `export` it into their history either.
+  Off a terminal, an unset token is "not configured", named.
 - **`runtime/intake.py`, standard library only,** because `runtime/` is vendored
   into tenants. It follows `scripts/send_dev_record.py`'s discipline exactly:
   `https`, or `http` only to `localhost`/`127.0.0.1`, checked before the token is
-  sent; a bounded timeout; a response-size cap; exit codes that separate "not
-  configured", "refused" and "unreachable".
+  sent; **redirects refused**, because `urllib` carries the `Authorization`
+  header across one, so a redirecting address would hand the token to wherever
+  it points; a bounded timeout; a response-size cap. Exit 2 when the author
+  must change something (not configured, refused, invalid record — each named in
+  words), exit 4 when the portal is unreachable or failing and the same command
+  is the retry.
 - **Validated on the receiving side, whatever the portal checked.** Every field
   is re-checked against the CLI's own constants — `validate_tenant_id`, `STACKS`,
   `ISOLATIONS`, the architecture catalogue, and slice 1's `--ide` validation —
@@ -151,9 +161,14 @@ definition:
   filled form of `render_scaffold_rfc`: the three sections from `rfc.*`, without
   the `⚠️ TEMPLATE` banner, at the same path, so Guardrail 4 is satisfied and the
   file is vouched like any scaffolded file.
-- **Then consume.** Only after `init_tenant` returns. If consume fails, the
-  scaffold stands and the CLI says so: the intake expires by itself, and the
-  portal shows it as unconsumed.
+- **Then consume — only once the intake has fully landed.** Only after
+  `init_tenant` returns, and only if `.agent-rfc/001-scaffold.md` holds exactly
+  what this intake renders. The scaffold never overwrites an RFC, so in a
+  repository that already has one the intake's text is NOT written; consuming
+  then would burn the only copy of it. In that case the CLI says so and leaves
+  the intake live. The same comparison makes a re-run after a failed consume
+  consume cleanly. If consume itself fails, the scaffold stands and the CLI
+  says so: the intake expires by itself.
 
 **Deliberately not done:** no portal form (slice 4), no `dev.create` (slice 3),
 no re-issue of an expired token (a new intake is one form away), and no push of
@@ -230,7 +245,8 @@ anything from the portal into a repository.
   so none goes stale. `contract/intake/v1/fixture.json` is the new projection both
   sides pin; a change to the record is a `v2`, not an edit to `v1`.
 - P15 applies — `scripts/send_dev_record.py` sets the precedent, and
-  `runtime/intake.py` distinguishes, in words and exit codes:
+  `runtime/intake.py` distinguishes, in words and in exit codes (2: change
+  something; 4: retry the same command):
   not configured (no URL or token set), refused (401/404/410 — wrong token, wrong
   id, consumed or expired, each named), invalid record (the field and the rule),
   and unreachable (network, 5xx). An expired intake and a consumed one are
@@ -241,6 +257,9 @@ anything from the portal into a repository.
   failed scaffold leaves the intake unconsumed, so the retry is the same command.
   A failed consume leaves a complete scaffold and an intake that expires by itself;
   the CLI prints that plainly and exits 0, because the author's work succeeded.
+  A scaffold that could not write the intake's RFC — another RFC was already
+  there — is not consumed, so the author resolves it and re-runs with the intake
+  still live.
 
 ## Deviations
 
