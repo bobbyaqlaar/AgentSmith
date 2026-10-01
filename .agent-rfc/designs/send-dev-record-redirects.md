@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/send_dev_record.py
   - scripts/test/test_send_dev_record.py

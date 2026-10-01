@@ -20,6 +20,7 @@ import { randomBytes } from "node:crypto";
 
 import { APP_ID, type Parsed } from "./apps";
 import { appendAuditEvent } from "./auditLog";
+import type { AnyRole } from "./authz";
 import { getPool, withTransaction } from "./db";
 import { bearerToken, hashToken } from "./ingestTokens";
 import { ISOLATION_VALUES, type Isolation } from "./isolation";
@@ -159,10 +160,41 @@ export interface IssuedIntake {
   expires_at: string;
 }
 
-/** Stores an intake and returns its token — the only time the token exists outside the caller. */
-export async function createIntake(input: IntakeInput, actor: string): Promise<IssuedIntake> {
+/** The tenant id is already taken — a registered app, or an open intake. A 409. */
+export class IntakeTakenError extends Error {}
+
+/**
+ * Stores an intake and returns its token — the only time the token exists
+ * outside the caller. `role` is the one that authorised it (`roleFor`).
+ *
+ * An intake can only name a tenant that does not exist yet. That is what makes
+ * `dev.create` safe to ask app-less (.agent-rfc/designs/intake-dev-create.md):
+ * an intake never names an app the caller could lack a grant on, and never
+ * starts a second repository claiming an id someone already holds.
+ */
+export async function createIntake(input: IntakeInput, actor: string, role: AnyRole): Promise<IssuedIntake> {
   const { token, hash } = newIntakeToken();
   return withTransaction("intake_create", async (client) => {
+    // One tenant id at a time, for the life of this transaction: without it, two
+    // people filing the same id at once would both pass the checks below.
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`tenant_intake:${input.tenant_id}`]);
+    const registered = await client.query(`SELECT 1 FROM tenants WHERE tenant_id = $1`, [input.tenant_id]);
+    if (registered.rowCount) {
+      throw new IntakeTakenError(
+        `${input.tenant_id} is already a registered app — an intake starts a new tenant, and changing an existing one is not what it does`,
+      );
+    }
+    const open = await client.query(
+      `SELECT intake_id, expires_at FROM tenant_intakes
+        WHERE tenant_id = $1 AND consumed_at IS NULL AND expires_at > now()
+        ORDER BY intake_id LIMIT 1`,
+      [input.tenant_id],
+    );
+    if (open.rowCount) {
+      throw new IntakeTakenError(
+        `intake ${open.rows[0].intake_id} already names ${input.tenant_id} until ${iso(open.rows[0].expires_at)} — use that one, or wait for it to expire`,
+      );
+    }
     const { rows } = await client.query(
       `INSERT INTO tenant_intakes (token_hash, tenant_id, stack, isolation, architecture, agentic, ides, rfc, created_by, expires_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now() + make_interval(hours => $10))
@@ -179,7 +211,7 @@ export async function createIntake(input: IntakeInput, actor: string): Promise<I
         eventType: "config_change",
         actorId: actor,
         tenantId: null,
-        details: { action: "intake_issued", intake_id: intakeId, tenant_id: input.tenant_id },
+        details: { action: "intake_issued", intake_id: intakeId, tenant_id: input.tenant_id, role },
       },
       client,
     );

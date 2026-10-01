@@ -46,7 +46,7 @@
         "encodeActorHeader",
         "decodeActorHeader"
       ],
-      "last_modified": "2026-09-18T15:23:04Z",
+      "last_modified": "2026-10-01T14:23:28Z",
       "id": "portal/lib/authz.ts"
     },
     {
@@ -2816,7 +2816,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-09-18T15:21:38Z",
+      "last_modified": "2026-10-01T14:25:21Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -4117,7 +4117,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-01T10:16:56Z",
+      "last_modified": "2026-10-01T14:23:05Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -6445,7 +6445,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-09-18T15:20:18Z",
+      "last_modified": "2026-10-01T14:25:21Z",
       "id": "portal/app/api/admin/apps/route.ts"
     },
     {
@@ -6506,7 +6506,7 @@
         "main",
         "redirect_request"
       ],
-      "last_modified": "2026-10-01T10:17:19Z",
+      "last_modified": "2026-10-01T14:23:05Z",
       "id": "scripts/send_dev_record.py"
     },
     {
@@ -6531,7 +6531,7 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-10-01T10:16:24Z",
+      "last_modified": "2026-10-01T14:23:05Z",
       "id": "scripts/test/test_send_dev_record.py"
     },
     {
@@ -7463,7 +7463,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-09-30T20:17:06Z",
+      "last_modified": "2026-10-01T14:25:42Z",
       "id": "portal/test/intakesDb.test.ts"
     },
     {
@@ -7489,12 +7489,13 @@
         "parseIntakeInput",
         "newIntakeToken",
         "IssuedIntake",
+        "IntakeTakenError",
         "createIntake",
         "ScaffoldResult",
         "handleScaffoldRead",
         "handleScaffoldConsume"
       ],
-      "last_modified": "2026-09-30T20:22:16Z",
+      "last_modified": "2026-10-01T14:26:17Z",
       "id": "portal/lib/intakes.ts"
     },
     {
@@ -7503,7 +7504,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-09-30T20:14:26Z",
+      "last_modified": "2026-10-01T14:25:21Z",
       "id": "portal/app/api/dev/intakes/route.ts"
     },
     {
@@ -7632,6 +7633,22 @@
       "pillar": null,
       "created_at": "2026-10-01T10:18:01Z",
       "id": "rfc:reviews/send-dev-record-redirects.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A developer can start a tenant: `dev.create`",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/intake-dev-create.md",
+      "pillar": null,
+      "created_at": "2026-10-01T14:28:24Z",
+      "id": "rfc:designs/intake-dev-create.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 intake-dev-create",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/intake-dev-create.md",
+      "pillar": null,
+      "created_at": "2026-10-01T14:28:24Z",
+      "id": "rfc:reviews/intake-dev-create.md"
     }
   ],
   "edges": [
@@ -8559,6 +8576,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/intakes.ts",
       "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/intakes.ts",
+      "target": "portal/lib/authz.ts"
     },
     {
       "edge_type": "IMPORTS",

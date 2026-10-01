@@ -143,6 +143,36 @@ test("a Developer may approve a deviation but not an allowlist entry", () => {
   assert.equal(can(access, "dev.allowlist", "acme"), false);
 });
 
+test("a Developer may start a tenant: dev.create, asked app-less", () => {
+  // The tenant is not an app yet, so there is no app to ask about — a grant on
+  // any app is enough (.agent-rfc/designs/intake-dev-create.md). What keeps that
+  // safe is lib/intakes.ts refusing an id that is already an app.
+  const scoped = { grants: parseGrants({ grants: [{ role: "developer", apps: ["acme"] }] }) };
+  assert.equal(can(scoped, "dev.create"), true);
+  assert.equal(roleFor(scoped, "dev.create"), "developer");
+});
+
+test("only the Dev roles and up may start a tenant", () => {
+  for (const role of ["operator", "hitl_reviewer", "release_approver"] as const) {
+    const access = { grants: parseGrants({ grants: [{ role, apps: "*" }] }) };
+    assert.equal(can(access, "dev.create"), false, role);
+  }
+  const viewer = { grants: parseGrants({ role: "viewer", tenants: "*" }) };
+  assert.equal(can(viewer, "dev.create"), false, "viewer");
+  for (const role of ["design_approver", "administrator", "super_user"] as const) {
+    const access = { grants: parseGrants({ grants: [{ role, apps: "*" }] }) };
+    assert.equal(can(access, "dev.create"), true, role);
+  }
+});
+
+test("a Design approver holds everything a Developer does — the role table says so", () => {
+  // docs/DESIGN.md: "Design approver | Developer's, and …". Derived in code now;
+  // pinned here so a permission added to one alone fails.
+  for (const permission of ROLE_PERMISSIONS.developer) {
+    assert.ok(ROLE_PERMISSIONS.design_approver.includes(permission), permission);
+  }
+});
+
 test("a HITL reviewer sees nothing else in Ops", () => {
   const access = { grants: parseGrants({ grants: [{ role: "hitl_reviewer", apps: ["acme"] }] }) };
   assert.equal(can(access, "ops.hitl", "acme"), true);
@@ -331,6 +361,22 @@ function handlers(source: string): Array<{ name: string; body: string }> {
   }));
 }
 
+/**
+ * Handlers that may ask ONE permission with no app, and why. Each entry names the
+ * permission; the handler must ask exactly that one app-less, and an entry that
+ * matches no handler fails — so this table cannot go stale or grow quietly.
+ * Every entry is a place the rule below is deliberately not applied.
+ */
+const APP_LESS: Record<string, { permission: string; because: string }> = {
+  "app/api/dev/intakes/route.ts:POST": {
+    permission: "dev.create",
+    because:
+      "it starts a tenant that is not an app yet, so there is no app to scope to; lib/intakes.ts " +
+      "refuses any id that IS a registered app, which test/intakesDb.test.ts proves — stronger than " +
+      "scoping to the caller's apps (.agent-rfc/designs/intake-dev-create.md)",
+  },
+};
+
 test("every HANDLER that reads an operator's Access also scopes it to tenants", () => {
   const routes = routeFiles(join(PORTAL_DIR, "app", "api"));
   // Without this the loop below could pass over an empty list — the failure
@@ -338,10 +384,18 @@ test("every HANDLER that reads an operator's Access also scopes it to tenants", 
   assert.ok(routes.length >= 10, `expected the API tree to have routes, found ${routes.length}`);
 
   let checked = 0;
+  const used = new Set<string>();
   for (const file of routes) {
     for (const handler of handlers(readFileSync(file, "utf8"))) {
       if (!handler.body.includes("currentAccess(")) continue; // machine-to-machine
       checked += 1;
+      const exempt = APP_LESS[`${file.replace(`${PORTAL_DIR}/`, "")}:${handler.name}`];
+      if (exempt) {
+        used.add(`${file.replace(`${PORTAL_DIR}/`, "")}:${handler.name}`);
+        const asksIt = new RegExp(`\\b(?:can|roleFor)\\(\\s*access\\s*,\\s*"${exempt.permission.replace(".", "\\.")}"\\s*\\)`);
+        assert.ok(asksIt.test(handler.body), `${handler.name} in ${file} is exempt for ${exempt.permission} but does not ask it`);
+        continue;
+      }
       const scoped = /\bcan\(\s*access\s*,\s*"[\w.]+"\s*,/.test(handler.body) || handler.body.includes("appsWith(");
       assert.ok(
         scoped,
@@ -352,6 +406,7 @@ test("every HANDLER that reads an operator's Access also scopes it to tenants", 
     }
   }
   assert.ok(checked >= 8, `expected several RBAC handlers, examined ${checked} — the split is broken, not the routes`);
+  for (const key of Object.keys(APP_LESS)) assert.ok(used.has(key), `APP_LESS names ${key}, which is not a handler — remove it`);
 });
 
 // ── No secret is compared with === ──────────────────────────────────────────

@@ -115,7 +115,7 @@ bearer-token/widget-token check inside the route handler, not basic-auth/SSO.
 is the token's. `/api/dev/scaffold/:id` takes a per-intake token: it reads that
 one intake and marks it consumed, once, within 24 hours of issue, and the id in
 the URL must agree with the token or the answer is 404. Creating an intake
-(`POST /api/dev/intakes`) is a signed-in person's act and needs `admin.apps`.
+(`POST /api/dev/intakes`) is a signed-in person's act and needs `dev.create` — Developers and up — and refuses, with 409, an id that is already a registered app or that an open intake names.
 `test/middleware.test.ts` pins which paths skip sign-in.
 
 ## Data sources
