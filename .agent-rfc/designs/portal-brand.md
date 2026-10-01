@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - portal/app/layout.tsx
   - portal/app/icon.png

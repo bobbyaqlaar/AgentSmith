@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - portal/app/dev/layout.tsx
   - portal/app/dev/intakes/**
