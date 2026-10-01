@@ -22,28 +22,27 @@ import { APP_ID, type Parsed } from "./apps";
 import { appendAuditEvent } from "./auditLog";
 import type { AnyRole } from "./authz";
 import { getPool, withTransaction } from "./db";
+import { formatUtc } from "./formatTime";
 import { bearerToken, hashToken } from "./ingestTokens";
 import { ISOLATION_VALUES, type Isolation } from "./isolation";
 import { portalSpan } from "./tracing";
 
-// Mirrors of the Python sets that own them — runtime/cli.py STACKS and
-// scripts/gate_ides.py GENERATED — pinned by test/catalogs.test.ts, which reads
-// both files and compares. The CLI re-checks every value against its own copy.
-export const INTAKE_STACKS = ["python-fastapi", "ts-react", "go"] as const;
-export const INTAKE_IDES = ["claude", "cursor"] as const;
-export type IntakeStack = (typeof INTAKE_STACKS)[number];
-export type IntakeIde = (typeof INTAKE_IDES)[number];
+// The catalogue lives in lib/intakeCatalog.ts, which the browser can load; it is
+// re-exported here so nothing that imported it from this module changes.
+import {
+  INTAKE_ARCHITECTURES,
+  INTAKE_IDES,
+  INTAKE_LIMITS,
+  INTAKE_STACKS,
+  type IntakeIde,
+  type IntakeStack,
+} from "./intakeCatalog";
+export { INTAKE_ARCHITECTURES, INTAKE_IDES, INTAKE_LIMITS, INTAKE_STACKS, type IntakeIde, type IntakeStack };
 
-export const INTAKE_LIMITS = {
-  objective: 4000,
-  criteria: 20,
-  files: 50,
-  item: 500,
-  ttlHours: 24,
-} as const;
-
-// A structural style's shape only: which styles exist is templates/architectures.yaml's
-// business, checked by the CLI, and a copy here would be a third catalogue.
+// A structural style's shape — the contract's pattern, pinned by test/intakes.test.ts.
+// Which ids exist is INTAKE_ARCHITECTURES, a pinned mirror of
+// templates/architectures.yaml: the form's select cannot render without the list,
+// so it is checked here too, where the author typed it, not first at tenant init.
 export const ARCHITECTURE = /^[a-z][a-z-]{0,39}$/;
 // Newline and tab are the only control characters a paragraph needs; the rest
 // have no business in a Markdown file an agent will read.
@@ -105,8 +104,16 @@ export function parseIntakeInput(body: unknown): Parsed<IntakeInput> {
     return { ok: false, error: `isolation must be one of ${ISOLATION_VALUES.join(", ")}` };
   }
   const architecture = b.architecture === undefined || b.architecture === null || b.architecture === "" ? null : b.architecture;
-  if (architecture !== null && (typeof architecture !== "string" || !ARCHITECTURE.test(architecture))) {
-    return { ok: false, error: "architecture must be a style name such as hexagonal or layered, or omitted" };
+  if (
+    architecture !== null &&
+    (typeof architecture !== "string" ||
+      !ARCHITECTURE.test(architecture) ||
+      !INTAKE_ARCHITECTURES.some((a) => a.id === architecture))
+  ) {
+    return {
+      ok: false,
+      error: `architecture must be one of ${INTAKE_ARCHITECTURES.map((a) => a.id).join(", ")}, or omitted`,
+    };
   }
   if (b.agentic !== undefined && typeof b.agentic !== "boolean") return { ok: false, error: "agentic must be true or false" };
   const ides = b.ides ?? [];
@@ -160,8 +167,21 @@ export interface IssuedIntake {
   expires_at: string;
 }
 
-/** The tenant id is already taken — a registered app, or an open intake. A 409. */
-export class IntakeTakenError extends Error {}
+/**
+ * The tenant id is already taken — a registered app, or an open intake. A 409.
+ * `open` is set for an open intake, and `mine` says whether the caller issued it:
+ * only then may they replace it, so only then does the form offer to.
+ */
+export class IntakeTakenError extends Error {
+  // A plain field, not a constructor parameter property: the tests run under
+  // Node's strip-only TypeScript, which does not support those.
+  readonly open?: { intakeId: string; mine: boolean };
+
+  constructor(message: string, open?: { intakeId: string; mine: boolean }) {
+    super(message);
+    this.open = open;
+  }
+}
 
 /**
  * Stores an intake and returns its token — the only time the token exists
@@ -172,7 +192,12 @@ export class IntakeTakenError extends Error {}
  * an intake never names an app the caller could lack a grant on, and never
  * starts a second repository claiming an id someone already holds.
  */
-export async function createIntake(input: IntakeInput, actor: string, role: AnyRole): Promise<IssuedIntake> {
+export async function createIntake(
+  input: IntakeInput,
+  actor: string,
+  role: AnyRole,
+  replace?: string,
+): Promise<IssuedIntake> {
   const { token, hash } = newIntakeToken();
   return withTransaction("intake_create", async (client) => {
     // One tenant id at a time, for the life of this transaction: without it, two
@@ -185,14 +210,39 @@ export async function createIntake(input: IntakeInput, actor: string, role: AnyR
       );
     }
     const open = await client.query(
-      `SELECT intake_id, expires_at FROM tenant_intakes
+      `SELECT intake_id, created_by, expires_at FROM tenant_intakes
         WHERE tenant_id = $1 AND consumed_at IS NULL AND expires_at > now()
         ORDER BY intake_id LIMIT 1`,
       [input.tenant_id],
     );
     if (open.rowCount) {
-      throw new IntakeTakenError(
-        `intake ${open.rows[0].intake_id} already names ${input.tenant_id} until ${iso(open.rows[0].expires_at)} — use that one, or wait for it to expire`,
+      const held = open.rows[0];
+      const heldId = String(held.intake_id);
+      const mine = held.created_by === actor;
+      // Replacing is for the author who lost their token — the commonest mistake
+      // a one-time token invites — so it is theirs alone, for that intake alone,
+      // and it happens in this transaction or not at all
+      // (.agent-rfc/designs/intake-form.md).
+      if (!(mine && replace === heldId)) {
+        throw new IntakeTakenError(
+          mine
+            ? `you already started ${input.tenant_id} as intake ${heldId}, open until ${formatUtc(held.expires_at)} — use it, or replace it if you no longer have its token`
+            : `intake ${heldId} already names ${input.tenant_id} until ${formatUtc(held.expires_at)} — use that one, or wait for it to expire`,
+          { intakeId: heldId, mine },
+        );
+      }
+      // Withdrawn by expiring it now: every reader already treats a past expiry
+      // as "unusable — ask for a new intake", so the old token's holder is told
+      // exactly that, and no new column or state is needed.
+      await client.query(`UPDATE tenant_intakes SET expires_at = now() WHERE intake_id = $1`, [held.intake_id]);
+      await appendAuditEvent(
+        {
+          eventType: "config_change",
+          actorId: actor,
+          tenantId: null,
+          details: { action: "intake_withdrawn", intake_id: heldId, tenant_id: input.tenant_id, role },
+        },
+        client,
       );
     }
     const { rows } = await client.query(
@@ -268,13 +318,13 @@ function unusable(row: IntakeRow): ScaffoldResult | null {
   if (row.consumed_at !== null) {
     return {
       status: 410,
-      body: { error: `intake ${row.intake_id} was already used at ${iso(row.consumed_at)} — a tenant was scaffolded from it`, reason: "consumed" },
+      body: { error: `intake ${row.intake_id} was already used at ${formatUtc(row.consumed_at)} — a tenant was scaffolded from it`, reason: "consumed" },
     };
   }
   if (row.expired) {
     return {
       status: 410,
-      body: { error: `intake ${row.intake_id} expired at ${iso(row.expires_at)} — ask for a new intake in the portal`, reason: "expired" },
+      body: { error: `intake ${row.intake_id} expired at ${formatUtc(row.expires_at)} — ask for a new intake in the portal`, reason: "expired" },
     };
   }
   return null;

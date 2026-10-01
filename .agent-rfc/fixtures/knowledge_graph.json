@@ -46,7 +46,7 @@
         "encodeActorHeader",
         "decodeActorHeader"
       ],
-      "last_modified": "2026-10-01T14:23:28Z",
+      "last_modified": "2026-10-01T15:21:10Z",
       "id": "portal/lib/authz.ts"
     },
     {
@@ -2792,7 +2792,7 @@
         "metadata",
         "RootLayout"
       ],
-      "last_modified": "2026-09-18T15:00:18Z",
+      "last_modified": "2026-10-01T15:50:21Z",
       "id": "portal/app/layout.tsx"
     },
     {
@@ -2816,7 +2816,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-10-01T14:25:21Z",
+      "last_modified": "2026-10-01T15:21:10Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -3753,7 +3753,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-09-30T20:16:23Z",
+      "last_modified": "2026-10-01T15:46:10Z",
       "id": "portal/test/catalogs.test.ts"
     },
     {
@@ -6220,7 +6220,7 @@
       "symbols": [
         "DevLayout"
       ],
-      "last_modified": "2026-09-18T15:10:42Z",
+      "last_modified": "2026-10-01T15:44:55Z",
       "id": "portal/app/dev/layout.tsx"
     },
     {
@@ -7463,25 +7463,20 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-10-01T14:25:42Z",
+      "last_modified": "2026-10-01T15:47:39Z",
       "id": "portal/test/intakesDb.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-09-30T20:22:32Z",
+      "last_modified": "2026-10-01T15:46:01Z",
       "id": "portal/test/intakes.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
-        "INTAKE_STACKS",
-        "INTAKE_IDES",
-        "IntakeStack",
-        "IntakeIde",
-        "INTAKE_LIMITS",
         "ARCHITECTURE",
         "IntakeRfc",
         "IntakeInput",
@@ -7495,7 +7490,7 @@
         "handleScaffoldRead",
         "handleScaffoldConsume"
       ],
-      "last_modified": "2026-10-01T14:26:17Z",
+      "last_modified": "2026-10-01T15:54:20Z",
       "id": "portal/lib/intakes.ts"
     },
     {
@@ -7504,7 +7499,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-10-01T14:25:21Z",
+      "last_modified": "2026-10-01T15:44:01Z",
       "id": "portal/app/api/dev/intakes/route.ts"
     },
     {
@@ -7649,6 +7644,78 @@
       "pillar": null,
       "created_at": "2026-10-01T14:28:24Z",
       "id": "rfc:reviews/intake-dev-create.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-10-01T15:50:11Z",
+      "id": "portal/test/brand.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "IntakeForm"
+      ],
+      "last_modified": "2026-10-01T15:50:20Z",
+      "id": "portal/components/IntakeForm.tsx"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "INTAKE_STACKS",
+        "INTAKE_IDES",
+        "IntakeStack",
+        "IntakeIde",
+        "INTAKE_ARCHITECTURES",
+        "INTAKE_LIMITS",
+        "linesOf"
+      ],
+      "last_modified": "2026-10-01T15:43:28Z",
+      "id": "portal/lib/intakeCatalog.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "NewIntakePage"
+      ],
+      "last_modified": "2026-10-01T15:44:55Z",
+      "id": "portal/app/dev/intakes/new/page.tsx"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Starting a tenant from the portal: the form",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/intake-form.md",
+      "pillar": null,
+      "created_at": "2026-10-01T15:57:01Z",
+      "id": "rfc:designs/intake-form.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The portal carries the AgentSmith mark and Aqlaar's",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/portal-brand.md",
+      "pillar": null,
+      "created_at": "2026-10-01T15:57:01Z",
+      "id": "rfc:designs/portal-brand.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 intake-form",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/intake-form.md",
+      "pillar": null,
+      "created_at": "2026-10-01T15:57:01Z",
+      "id": "rfc:reviews/intake-form.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 portal-brand",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/portal-brand.md",
+      "pillar": null,
+      "created_at": "2026-10-01T15:57:01Z",
+      "id": "rfc:reviews/portal-brand.md"
     }
   ],
   "edges": [
@@ -8581,6 +8648,16 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/intakes.ts",
       "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/intakes.ts",
+      "target": "portal/lib/formatTime.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/intakes.ts",
+      "target": "portal/lib/intakeCatalog.ts"
     },
     {
       "edge_type": "IMPORTS",

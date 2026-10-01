@@ -11,6 +11,8 @@ import { fileURLToPath } from "node:url";
 import { APP_ID } from "../lib/apps.ts";
 import { ARCHITECTURE, INTAKE_IDES, INTAKE_LIMITS, INTAKE_STACKS, newIntakeToken, parseIntakeInput } from "../lib/intakes.ts";
 import { hashToken } from "../lib/ingestTokens.ts";
+import * as catalog from "../lib/intakeCatalog.ts";
+import * as intakes from "../lib/intakes.ts";
 import { ISOLATION_VALUES } from "../lib/isolation.ts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -123,6 +125,32 @@ test("control characters are stripped, newlines and tabs kept", () => {
 
 test("text that is only control characters is empty, and refused", () => {
   refused({ ...good(), rfc: { ...good().rfc, objective: "\u0000\u0007" } }, "rfc.objective");
+});
+
+test("architecture is one of the catalogue's ids — a typo is caught where it was typed", () => {
+  for (const a of catalog.INTAKE_ARCHITECTURES) assert.ok(parseIntakeInput({ ...good(), architecture: a.id }).ok, a.id);
+  // "clean" is an alias the CLI resolves; the form sends ids, and the portal checks ids.
+  for (const bad of ["hexagnal", "clean", "layered-ish"]) refused({ ...good(), architecture: bad }, "architecture");
+});
+
+test("a textarea becomes a list one way: trimmed, blank lines dropped", () => {
+  assert.deepEqual(catalog.linesOf("  first \r\n\n second\n   \nthird"), ["first", "second", "third"]);
+  assert.deepEqual(catalog.linesOf(""), []);
+  assert.deepEqual(catalog.linesOf("\n \n"), []);
+});
+
+test("the catalogue moved, and lib/intakes.ts still answers for it", () => {
+  // The form imports lib/intakeCatalog.ts; the server imports lib/intakes.ts.
+  // They must be the same objects, not two copies that can drift.
+  assert.equal(intakes.INTAKE_STACKS, catalog.INTAKE_STACKS);
+  assert.equal(intakes.INTAKE_IDES, catalog.INTAKE_IDES);
+  assert.equal(intakes.INTAKE_LIMITS, catalog.INTAKE_LIMITS);
+  assert.equal(intakes.INTAKE_ARCHITECTURES, catalog.INTAKE_ARCHITECTURES);
+});
+
+test("the module the browser loads imports nothing the browser cannot", () => {
+  const source = readFileSync(resolve(REPO_ROOT, "portal", "lib", "intakeCatalog.ts"), "utf8");
+  assert.ok(!/^import /m.test(source), "lib/intakeCatalog.ts must stay import-free — the form loads it in the browser");
 });
 
 // ── the token ────────────────────────────────────────────────────────────────

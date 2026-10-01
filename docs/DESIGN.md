@@ -1239,7 +1239,8 @@ Observability section "Role-Based Access Control"):
   app's CI sends (`process_gate.py ci --json`, posted by `scripts/send_dev_record.py`), so it is a
   cache of git and never reaches a verdict of its own. Design status and approvals are read from
   the designs as they stand at the newest commit received, because a design is closed by a commit
-  that does not cite it.
+  that does not cite it. **Start a tenant** (`/dev/intakes/new`, `dev.create`) collects an intake
+  and shows its token once; the author's own machine pulls it with `agentsmith tenant init --from`.
 - **Ops (`/ops`)** — the operations views below.
 - **Administration (`/admin`)** — register apps and their repositories; issue, rotate and revoke
   each app's ingest token. Every change is audited in the same transaction, with its actor.

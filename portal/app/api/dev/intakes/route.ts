@@ -18,14 +18,23 @@ export async function POST(request: Request) {
   if (!role) {
     return NextResponse.json({ error: "creating a tenant intake needs the Developer role or above" }, { status: 403 });
   }
-  const parsed = parseIntakeInput(await request.json().catch(() => null));
+  const body = await request.json().catch(() => null);
+  const parsed = parseIntakeInput(body);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  // `replace`: the id of an open intake this author issued and lost the token
+  // for. Only meaningful when it names theirs; createIntake decides that.
+  const replace = (body as { replace?: unknown } | null)?.replace;
+  if (replace !== undefined && (typeof replace !== "string" || !/^[0-9]{1,19}$/.test(replace))) {
+    return NextResponse.json({ error: "replace must be the id of an intake you started" }, { status: 400 });
+  }
 
   let issued;
   try {
-    issued = await createIntake(parsed.value, access.actor ?? "unknown", role);
+    issued = await createIntake(parsed.value, access.actor ?? "unknown", role, replace);
   } catch (err) {
-    if (err instanceof IntakeTakenError) return NextResponse.json({ error: err.message }, { status: 409 });
+    if (err instanceof IntakeTakenError) {
+      return NextResponse.json({ error: err.message, ...(err.open ? { open_intake: { id: err.open.intakeId, mine: err.open.mine } } : {}) }, { status: 409 });
+    }
     throw err;
   }
   return NextResponse.json(
