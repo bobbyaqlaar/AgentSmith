@@ -1,0 +1,96 @@
+---
+status: active
+scope:
+  - portal/app/layout.tsx
+  - portal/app/icon.png
+  - portal/assets/brand/**
+  - portal/package.json
+  - portal/test/**
+---
+# The portal carries the AgentSmith mark and Aqlaar's
+
+## Problem
+
+The owner asked for the AgentSmith logo (`assets/Logo_AgentSmith.png`) and the
+company logo, Aqlaar (`assets/LogoAqlaar-Transparent.png`), on the portal's
+pages. The header is a text link reading "AgentSmith"; there is no footer, no
+favicon, and no image anywhere in the portal.
+
+Three facts about the files and the deployment decide how:
+
+1. **`assets/Logo_AgentSmith.png` is a JPEG**, 1280×1280, with an off-white,
+   textured background and no transparency — on the portal's dark theme it would
+   render as a pale square. The Aqlaar file is a real PNG with transparency.
+2. **The portal has no `public/` folder, and the Docker image would not serve one.**
+   `portal/Dockerfile` copies `.next/standalone` and `.next/static`, not `public/`
+   — so a logo served from `public/` works under `next dev` and 404s in the image.
+3. **The originals are large for a 28-pixel header mark** (125 KB and 100 KB).
+
+## Approach
+
+- **Derived assets in `portal/assets/brand/`, the originals untouched.**
+  - `agentsmith-mark.png` — the silhouette with its background made transparent
+    (luminance to alpha, so the edges stay smooth), cropped to the figure, 128 px.
+    Black on transparent; `dark:invert` turns it white on the dark theme.
+  - `aqlaar.png` — the company mark at 96 px wide, transparency kept.
+    Its blue-to-violet-to-green reads on both themes unchanged.
+  - The script that derives them is recorded in the review, so they can be
+    regenerated from `assets/` when the originals change.
+- **Imported as modules through `next/image`**, never from `public/`: a static
+  import is emitted into `.next/static/media`, which the image does copy. Marked
+  `unoptimized`: Next's image optimizer needs `sharp` in standalone mode, and the
+  portal does not install it — so the files are sized for their display (about
+  four times, for high-density screens) and served as they are.
+- **Header**: the AgentSmith mark beside the existing "AgentSmith" link, inside it,
+  `alt=""` because the text already names it.
+- **Footer**, on every page: "AgentSmith is made by" the Aqlaar mark and "Aqlaar",
+  muted and small — the company is the maker, not the product.
+- **`portal/app/icon.png`**: the mark on a white rounded square, so the browser tab
+  shows it on a dark tab strip as well as a light one. Next's file convention
+  serves it from the build, not from `public/`.
+
+## Pillars
+
+- P1 applies — `.agent-rfc/designs/portal-brand.md`, from the owner's request.
+- P2 applies — `portal/app/layout.tsx` is the one shell every page renders in; the
+  marks go there and nowhere else. `next/image` is already a dependency of `next`.
+  No dependencies added.
+- P3 n/a — no execution path; markup and static files.
+- P4 applies — `portal/test/brand.test.ts`: the portal has no `public/` folder (the
+  Docker image would not serve it), the layout imports both marks as modules, and
+  each mark has the size and transparency the design gives it. Checked in a real
+  browser on the built standalone server — the deployment's shape — in both themes
+  and at phone width.
+- P7 applies — `portal/app/layout.tsx` stays a server component; `next/image` with
+  explicit dimensions, so the header does not shift as the image loads.
+- P8 n/a — no telemetry.
+- P9 n/a — no orchestration.
+- P10 n/a — no LLM call.
+- P11 n/a — reads no untrusted content.
+- P12 n/a — no credentials.
+- P13 n/a — no check, threshold or allowlist changes.
+- P14 applies — `portal/assets/brand/agentsmith-mark.png` and its neighbour are DERIVED images; their source is
+  `assets/`, and the derivation is recorded so a changed original is re-derived,
+  not hand-edited.
+- P15 n/a — nothing reports a status.
+- P16 n/a — no fallback path; a missing image is a build failure, because it is
+  imported, not fetched.
+
+## Deviations
+
+none
+
+## Dependencies
+
+none
+
+## Levers
+
+- `matches-the-existing-component-language` — the footer uses the header's border and
+  the muted text the pages already use; no new colour.
+- `works-at-real-viewport-sizes` — the mark has fixed dimensions and the footer wraps;
+  checked at phone width.
+- `keyboard-and-screen-reader-operable` — decorative images next to their own names
+  carry `alt=""`, so a screen reader does not say each name twice.
+- `environment-parity` — served the way production serves it, and checked on the
+  standalone server rather than `next dev`.
