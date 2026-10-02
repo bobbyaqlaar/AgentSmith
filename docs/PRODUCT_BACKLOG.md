@@ -74,6 +74,30 @@ Evidence: OTS template slices S1/S2 (no spans, dataclasses, KG skipped, CI subse
 
 ---
 
+## Active: Governance contracts — every port, Dev and Ops 🟡 DESIGNED (2026-10-02)
+
+Owner principle (2026-10-02), non-negotiable: AgentSmith and its tenants are decoupled **by contract**.
+A tenant holds declarations, its own data and hash-recorded shims that call a declared command — no
+framework code, no framework path. Umbrella design: `.agent-rfc/designs/governance-contracts.md`
+(finishes `governance-providers.md`; reverses its decision to keep vendoring as a transport).
+
+**OTS is the proving ground.** Its core function (template model, ingest, API) is frozen until its
+governance is aligned; work in OTS on how AgentSmith governs it is in scope, slice by slice below.
+
+| Slice | AgentSmith | Tenant step that proves it | Status |
+|---|---|---|---|
+| C1 | Gate v2 — the CI event, dev record as its output, a provider setup step for CI; `agentsmith-gates.yml` calls the declared command | OTS declares `providers.json`, CI calls the provider, vendored gate files go; KYC pins a release | Next |
+| C2 | Gate v2 — commit-msg, sweep, pre-push; the knowledge graph as gate evidence | hooks in OTS and KYC become stubs; `map_codebase.py` leaves OTS | |
+| C3 | Records — `contract/record/v1` | `send_dev_record.py` is never a tenant's file | |
+| C4 | Rules — `contract/rules/v1`, `render` / `check` | OTS's rules move into its declaration; vendored `templates/` goes | |
+| C5 | Telemetry — `contract/telemetry/v1` from the Wire Contract | OTS's `tracing.py` on plain OpenTelemetry; vendored `runtime/` goes | |
+| C6 | Evals — `contract/evals/v1` | OTS's eval workflows call the declared command on its own datasets | |
+| C7 | Security — `contract/security/v1` | vendored `fixtures/security/` goes | |
+| C8 | Ops records — `contract/ops/v1`: run history out, HITL and UI feedback in | OTS's CD workflows send and receive by contract | |
+| C9 | Vendoring retired; `upgrade` removed | no tenant holds a framework file, checked | |
+
+---
+
 ## Active: KYC Sentinel "Running live" 🟡 NOT STARTED
 
 **Goal:** take the tenant from offline/smoke-job to serving real traffic, so
