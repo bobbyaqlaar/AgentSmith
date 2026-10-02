@@ -182,14 +182,15 @@ An adopted repository is never vendored into, by `sync` or by `agentsmith upgrad
 manifest's `generated_by`. Neither runs in the framework's own checkout, which is what they copy from:
 both refuse there, as `tenant init` and `tenant adopt` do, and take no override.
 
-## A provider, not a path — `contract/gate/v1`
+## A provider, not a path — the gate contract
 
-The gate answers three questions: may this edit happen, may this turn end, and what should a
-session know. `contract/gate/v1/protocol.md` publishes them as a protocol — one command, one event
+The gate answers four questions: may this edit happen, may this turn end, what should a session
+know, and — contract 2 — does this pushed range pass. `contract/gate/v2/protocol.md` publishes them
+as a protocol (version 1, the first three, stays published and served) — one command, one event
 on stdin, one decision on stdout, exit 3 for "cannot run here" — so a repository can be governed
 by AgentSmith or by another platform that answers the same way. `agentsmith gate <event>` is this
-framework's adapter, and `agentsmith conformance --provider "<command>"` replays the contract's
-cases against any provider, in a fixture repository the contract carries.
+framework's adapter, and `agentsmith conformance --provider "<command>" [--contract 2]` replays the
+contract's cases against any provider, in a fixture repository the contract carries.
 
 The contract is versioned apart from the provider: a provider's major release does not reach a
 tenant's files.
@@ -198,7 +199,8 @@ tenant's files.
 `tenant adopt` write:
 
 ```json
-{ "contract": 1, "providers": { "gate": { "command": "agentsmith gate", "version": "^2" } } }
+{ "contract": 2, "providers": { "gate": { "command": "agentsmith gate", "version": "^2",
+  "setup": "bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@v2.1.0" } } }
 ```
 
 For the three contract events the launcher asks `$GOVERNANCE_PROVIDER`, then that command, then
@@ -206,13 +208,23 @@ this framework's own paths. **An answer is a decision on stdout**: a provider th
 not answered — it is missing, cannot run here, or is too old to know the event — and the next step
 is tried, so naming a provider is additive rather than a migration. `"gate": "none"` declares the
 repository ungoverned and never falls back, because that is a different answer from "no provider
-could run". `commit-msg`, `sweep` and `ci` are not in contract v1 and keep this framework's own
-resolution.
+could run".
+
+**CI asks the provider too, at contract 2.** The gates workflow runs the `setup` step the
+declaration names — the provider's own, pinned to a release — then `.githooks/process-gate ci`, which
+sends the range to the declared command. Nothing in the tenant's workflow names a framework file or
+path. `ci` never falls back: a provider that gives no decision fails the check, with the reason, and
+the framework's own script is not tried. A declaration still at contract 1 keeps the old resolution,
+and the gate entry's own `contract` wins over the top-level one. **The declaration is always
+governed** — whatever a config lists, an edit to `providers.json` (or `process-gates.json`) needs a
+design and a review, because at contract 2 `"gate": "none"` turns CI's check off. `commit-msg` and
+`sweep` are not in the contract yet and keep this framework's own resolution.
 
 ## Finding the script — `.githooks/process-gate`
 
-Every caller — the three Claude Code hooks and `.githooks/commit-msg` — runs
-`.githooks/process-gate <subcommand>`, which looks for `process_gate.py` in this
+Every caller — the three Claude Code hooks, `.githooks/commit-msg`, and the gates workflow's `ci`
+step — runs `.githooks/process-gate <subcommand>`. A declared provider answers first, as above; at
+contract 2 `ci` goes only to it. For everything else it looks for `process_gate.py` in this
 order and runs the first it finds, relative to the repository git reports for
 the current directory (not the Claude Code session's project, which can be a
 different repo):

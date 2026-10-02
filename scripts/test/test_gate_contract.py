@@ -89,7 +89,10 @@ def test_what_adopt_writes_validates_against_the_published_providers_schema():
 
     from runtime.adopt import providers_declaration
 
-    schema = json.loads((REPO / "contract/gate/v1/providers.schema.json").read_text(encoding="utf-8"))
+    # adopt writes gate contract 2 since .agent-rfc/designs/gate-contract-ci.md; a
+    # contract-1 declaration still validates against v1's schema
+    # (test_gate_contract_v2.py::test_a_version_1_declaration_still_reads_as_version_1).
+    schema = json.loads((REPO / "contract/gate/v2/providers.schema.json").read_text(encoding="utf-8"))
     written = json.loads(providers_declaration())
     jsonschema.validate(written, schema)
 

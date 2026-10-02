@@ -3499,7 +3499,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-02T07:41:53Z",
+      "last_modified": "2026-10-02T15:59:00Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4117,7 +4117,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-02T07:28:34Z",
+      "last_modified": "2026-10-02T16:37:51Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4592,6 +4592,8 @@
         "_verdict",
         "check_commits",
         "cmd_ci",
+        "ci_verdict",
+        "cmd_ci_decision",
         "_slug_sections",
         "design_section",
         "review_entries",
@@ -4620,6 +4622,7 @@
         "problems",
         "load_registry",
         "is_gated",
+        "lists",
         "needs_changelog",
         "doc_text",
         "display",
@@ -4627,7 +4630,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-10-02T07:45:52Z",
+      "last_modified": "2026-10-02T16:44:18Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5198,6 +5201,8 @@
         "PillarPolicy",
         "GateEvent",
         "Decision",
+        "GateEventV2",
+        "DecisionV2",
         "Ide",
         "Signoff",
         "Records",
@@ -5219,7 +5224,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-09-26T13:59:45Z",
+      "last_modified": "2026-10-02T15:42:02Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -6506,9 +6511,10 @@
         "_say",
         "_parts",
         "main",
+        "send",
         "redirect_request"
       ],
-      "last_modified": "2026-10-01T14:23:05Z",
+      "last_modified": "2026-10-02T15:42:24Z",
       "id": "scripts/send_dev_record.py"
     },
     {
@@ -6650,6 +6656,9 @@
         "_skill_files",
         "describe",
         "generated_by_agentsmith",
+        "setup_reference",
+        "declared_setup",
+        "workflow_setup",
         "providers_declaration",
         "merge_rules_block",
         "_test_command",
@@ -6661,7 +6670,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-10-02T07:04:43Z",
+      "last_modified": "2026-10-02T16:20:08Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6682,7 +6691,7 @@
         "test_a_rule_file_agentsmith_generated_is_regenerated_not_merged_into",
         "test_the_rules_block_is_replaced_not_repeated",
         "test_the_gates_are_armed_and_the_old_hooks_chained",
-        "test_the_gates_workflow_runs_the_gate_from_a_framework_checkout",
+        "test_the_gates_workflow_asks_the_declared_provider_and_names_no_framework_path",
         "test_this_checkouts_copies_beat_the_machines_installed_ones",
         "_adoption_commit",
         "test_the_adoption_commit_goes_in_though_it_is_not_the_first",
@@ -6697,7 +6706,7 @@
         "test_adopt_declares_who_governs_the_repository",
         "test_adopt_writes_the_sync_workflow_so_a_tenant_hears_about_upgrades"
       ],
-      "last_modified": "2026-09-26T07:22:23Z",
+      "last_modified": "2026-10-02T15:57:21Z",
       "id": "scripts/test/test_tenant_adopt.py"
     },
     {
@@ -6845,7 +6854,7 @@
         "passed",
         "render"
       ],
-      "last_modified": "2026-09-27T08:23:49Z",
+      "last_modified": "2026-10-02T15:46:05Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -6858,7 +6867,7 @@
         "test_what_adopt_writes_validates_against_the_published_providers_schema",
         "test_the_providers_schema_rejects_a_declaration_the_launcher_cannot_read"
       ],
-      "last_modified": "2026-09-26T14:00:45Z",
+      "last_modified": "2026-10-02T15:53:33Z",
       "id": "scripts/test/test_gate_contract.py"
     },
     {
@@ -6957,7 +6966,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-10-02T07:35:28Z",
+      "last_modified": "2026-10-02T16:17:14Z",
       "id": "runtime/sync.py"
     },
     {
@@ -6999,9 +7008,11 @@
         "test_a_tenant_armed_before_the_sweep_is_planned_the_hooks_it_lacks",
         "test_the_hooks_it_adds_go_in_the_manifest_and_a_commit_the_tenants_own_gate_accepts",
         "test_a_tenant_with_no_arming_design_gets_one_that_covers_the_whole_commit",
-        "test_the_scope_edit_appends_only_what_is_missing_and_keeps_the_prose"
+        "test_the_scope_edit_appends_only_what_is_missing_and_keeps_the_prose",
+        "test_an_untouched_contract_1_declaration_moves_to_contract_2_with_its_workflow",
+        "test_a_declaration_naming_another_provider_is_theirs_and_its_setup_is_what_ci_runs"
       ],
-      "last_modified": "2026-10-02T07:26:06Z",
+      "last_modified": "2026-10-02T16:04:20Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -7788,6 +7799,58 @@
       "pillar": null,
       "created_at": "2026-10-02T07:58:56Z",
       "id": "rfc:reviews/sync-adds-missing-hooks.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_agentsmith_passes_contract_2",
+        "test_the_v2_schemas_are_the_v2_models",
+        "test_version_2_carries_version_1_unchanged",
+        "test_every_history_step_changes_something",
+        "test_what_adopt_declares_is_a_valid_contract_2_declaration",
+        "test_a_version_1_declaration_still_reads_as_version_1",
+        "fixture_repo",
+        "_declare",
+        "_ci",
+        "test_at_contract_2_a_passing_range_passes",
+        "test_at_contract_2_a_refused_range_fails_with_the_providers_reasons",
+        "test_at_contract_2_no_decision_fails_and_never_falls_back",
+        "test_at_contract_1_ci_is_what_it_always_was",
+        "test_the_gate_entrys_contract_wins_over_the_declarations",
+        "test_a_repository_declared_ungoverned_is_not_checked",
+        "test_a_ref_that_is_not_a_ref_is_refused_before_anything_runs",
+        "_decide",
+        "test_without_a_portal_the_range_is_judged_and_the_report_says_nothing_was_sent",
+        "test_a_stored_record_is_reported_and_the_token_never_appears",
+        "test_a_portal_that_refuses_the_record_fails_the_answer_with_its_own_reason"
+      ],
+      "last_modified": "2026-10-02T16:04:01Z",
+      "id": "scripts/test/test_gate_contract_v2.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Governance contracts: every port a tenant needs, Dev and Ops",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/governance-contracts.md",
+      "pillar": null,
+      "created_at": "2026-10-02T16:20:40Z",
+      "id": "rfc:designs/governance-contracts.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "C1 \u2014 Gate contract 2: the CI event",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/gate-contract-ci.md",
+      "pillar": null,
+      "created_at": "2026-10-02T16:20:40Z",
+      "id": "rfc:designs/gate-contract-ci.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 gate-contract-ci (C1)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/gate-contract-ci.md",
+      "pillar": null,
+      "created_at": "2026-10-02T16:20:41Z",
+      "id": "rfc:reviews/gate-contract-ci.md"
     }
   ],
   "edges": [
@@ -8739,6 +8802,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "runtime/test/test_intake.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract_v2.py",
       "target": "runtime/__init__.py"
     }
   ]

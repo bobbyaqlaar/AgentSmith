@@ -160,17 +160,19 @@ The git hooks ask *that* — not AgentSmith's paths. At the three events the con
 answers with a `Decision` on stdout: allow, deny, block, or extra context. `"gate": "none"` declares
 a repository deliberately ungoverned, and is never overridden by a fallback.
 
-The commit, push and CI gates are **not** yet part of the contract: they still run AgentSmith's own
-`process_gate.py`. So today a third-party provider can govern an editing session and not a commit —
-the table below says which is which, and that boundary is the honest state of the architecture
-rather than a detail.
+**CI is in the contract** since gate contract 2: a tenant's gates workflow runs its provider's
+pinned setup step and asks the declared command whether the pushed range passes, never a framework
+path. The local commit and push gates are **not** yet in it: they still run AgentSmith's own
+`process_gate.py`. So today a third-party provider can govern an editing session and a CI check but
+not a local commit — the table below says which is which, and that boundary is the honest state of
+the architecture rather than a detail.
 
 Two things follow:
 
 - **Another platform can govern your repository.** The contract is published under
-  [`contract/gate/v1/`](contract/gate/v1/) with a schema, golden cases and a conformance suite.
-  `agentsmith conformance --provider "<your command>"` scores any implementation against the same
-  five cases AgentSmith's own adapter is scored against — so "or another provider" is checkable
+  [`contract/gate/v2/`](contract/gate/v2/) (version 1 stays published) with a schema, golden cases
+  and a conformance suite. `agentsmith conformance --provider "<your command>" --contract 2` scores
+  any implementation against the same cases AgentSmith's own adapter is scored against — so "or another provider" is checkable
   rather than claimed.
 - **A major AgentSmith release costs you one merged pull request.** Everything a tenant still holds
   — the gate hooks, the IDE hook wiring, the rules block, the workflows — is framework-owned and
@@ -184,7 +186,7 @@ through the contract today, and the rest are contracts in place that still resol
 
 | Port | What it provides | Status |
 |---|---|---|
-| **Gate** | a decision at `session-start`, `pre-edit`, `stop` | **declared and resolved** via `contract/gate/v1`; the commit, push and CI gates are not in the contract and run AgentSmith's own gate |
+| **Gate** | a decision at `session-start`, `pre-edit`, `stop`, and on a CI range | **declared and resolved** via `contract/gate/v2` — CI included; the local commit and push gates are not in the contract and run AgentSmith's own gate |
 | **Telemetry** | spans, metrics, resource attributes | already vendor-neutral — OTLP and the span contract in CHANGELOG.md |
 | **Rules** | what the agent is told | a contract in place (`templates/governance.json`, the `agentsmith:rules` markers); not yet published as a schema |
 | **Records** | what CI decided, per commit | a contract in place — the dev record, versioned `schema: 1` |
@@ -367,7 +369,7 @@ One document per kind, each for a different question:
 | [docs/PRODUCT_ARCHIVE.md](docs/PRODUCT_ARCHIVE.md) | How did it get this way — what was decided, when, and what it replaced? |
 | [docs/REVIEW_LOG.md](docs/REVIEW_LOG.md) | What did each review find, and what closed it? |
 | [CHANGELOG.md](CHANGELOG.md) | What changed in each release, and what is compatible with what? |
-| [contract/gate/v1/protocol.md](contract/gate/v1/protocol.md) | What must a governance provider do to satisfy the gate contract? |
+| [contract/gate/v2/protocol.md](contract/gate/v2/protocol.md) | What must a governance provider do to satisfy the gate contract? |
 
 Reference material a tenant reads — the security framework map, the UAE regulatory notes, the
 ISO 42001 map, the delivery model, RAG and memory, team observability — is under

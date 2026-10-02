@@ -7,6 +7,22 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — C1: gate contract 2, the CI event (2026-10-02)
+
+Design: `.agent-rfc/designs/gate-contract-ci.md`; review: `.agent-rfc/reviews/gate-contract-ci.md`.
+Slice C1 of `.agent-rfc/designs/governance-contracts.md`.
+
+- **`contract/gate/v2/`**: v1 plus `ci` — a range in, one decision out, an optional report and
+  annotations; no fall-through. v2 carries v1's cases and fixture word for word (pinned) and adds
+  five; AgentSmith's provider passes both versions.
+- **The tenant's gates workflow is a shim**: the provider's pinned setup action, then the tenant's own
+  launcher. No AgentSmith checkout, no framework path, no record step.
+- **A hole closed on the way**: an adopted tenant did not gate `providers.json`, and at contract 2 an
+  unreviewed `"gate": "none"` would have switched CI off. Found by this slice's own test; the gate now
+  governs the declaration and its config always, and contract 2 requires it of every provider.
+- **Proving it waits for the release**: the scratch tenants, KYC and OTS move once v2.1.0 carries the
+  setup action.
+
 ## Completed — `sync` brings a tenant armed before the sweep current (2026-10-02)
 
 Design: `.agent-rfc/designs/sync-adds-missing-hooks.md`; review:

@@ -1,0 +1,40 @@
+{
+  "_about": "The repository a conformance run builds before replaying the cases. Contract 1's, committed as the first commit and tagged `fixture`, then the `history` below, each commit tagged by its `tag`, so the `ci` cases can name a range. Everything the decisions depend on is in it.",
+  "commit": {
+    "message": "chore: conformance fixture",
+    "name": "Gate conformance",
+    "email": "conformance@agentsmith.invalid"
+  },
+  "files": {
+    ".agenticframework/process-gates.json": "{\n  \"_about\": \"The fixture's gate configuration: src/ is governed, documents are not. Everything the decisions depend on is in this repository \\u2014 the registry and the levers below \\u2014 so a conformance run needs nothing from the provider's own installation.\",\n  \"gated\": [\n    \"src/**\",\n    \".agenticframework/process-gates.json\"\n  ],\n  \"not_gated\": [\n    \"**.md\",\n    \".agent-rfc/**\"\n  ],\n  \"registry\": \".agenticframework/rules.json\",\n  \"levers_doc\": \"docs/review-levers.md\",\n  \"artifacts\": \"off\",\n  \"pillars\": \"off\",\n  \"knowledge_graph\": \"off\"\n}\n",
+    ".agenticframework/rules.json": "{\n  \"_about\": \"The fixture's rules: one pillar a design must answer, and the sections a design and a sign-off carry. A provider maps these to its own policy vocabulary.\",\n  \"version\": \"conformance-1\",\n  \"pillars\": [\n    {\n      \"id\": 1,\n      \"name\": \"Design before code\",\n      \"check\": [\n        \"design\"\n      ],\n      \"design_question\": \"Is this change recorded in a design whose scope covers it?\"\n    }\n  ],\n  \"records\": {\n    \"design_sections\": [\n      \"Problem\",\n      \"Approach\",\n      \"Pillars\",\n      \"Deviations\",\n      \"Dependencies\",\n      \"Levers\"\n    ],\n    \"signoff\": {\n      \"groups\": [\n        \"Correctness\"\n      ],\n      \"fields\": [\n        \"Tests added\"\n      ]\n    }\n  }\n}\n",
+    "docs/review-levers.md": "# Review levers\n\nThe checklist a review pass works down; the slug is the identifier.\n\n- `test-the-contract` — the fixture is a real repository and the cases are real events.\n",
+    ".agent-rfc/designs/covered.md": "---\nstatus: active\nscope:\n  - src/covered.py\n---\n# The change this fixture has a design for\n\n## Problem\n\nA conformance run needs one governed path a design covers and one that none does, so that `allow`\nand `deny` are told apart by the rule rather than by the path being governed at all.\n\n## Approach\n\nThis design covers `src/covered.py` and nothing else. `src/other.py` is governed and uncovered.\n\n## Pillars\n\n- P1 applies — this design is what makes `src/covered.py` a covered path.\n\n## Deviations\n\nnone\n\n## Dependencies\n\nNone added.\n\n## Levers\n\n- `test-the-contract` — the fixture is a real repository, and the cases are real events.\n",
+    "src/covered.py": "VALUE = 1\n",
+    "src/other.py": "VALUE = 2\n",
+    "docs/notes.md": "Notes that no gate governs.\n"
+  },
+  "history": [
+    {
+      "tag": "clean",
+      "message": "docs: a change no gate governs",
+      "files": {
+        "docs/notes.md": "# Notes\n\nA document; the configuration governs src/ only.\n"
+      }
+    },
+    {
+      "tag": "undesigned",
+      "message": "feat: a governed change with no design",
+      "files": {
+        "src/other.py": "VALUE = 3\n"
+      }
+    },
+    {
+      "tag": "after",
+      "message": "docs: another change no gate governs",
+      "files": {
+        "docs/notes.md": "# Notes\n\nStill a document, after a governed change.\n"
+      }
+    }
+  ]
+}
