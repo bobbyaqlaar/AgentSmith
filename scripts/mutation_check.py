@@ -1059,7 +1059,8 @@ CATALOGUE: tuple[Suite, ...] = (
             Mutation(
                 "adopt stops declaring who governs the repository",
                 "runtime/adopt.py",
-                "    if not (root / PROVIDERS).exists():\n        put(PROVIDERS, providers_declaration())",
+                "    if not (root / PROVIDERS).exists():\n"
+                "        put(PROVIDERS, providers_declaration(setup=setup_reference(plan.framework_ref)))",
                 "    pass",
             ),
             Mutation(

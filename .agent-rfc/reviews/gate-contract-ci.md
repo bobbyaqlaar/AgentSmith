@@ -76,6 +76,21 @@ the setup action, the template, `workflow_setup`, and the docs against the lever
 Re-ran `python3 scripts/process_gate.py ci --base origin/main --head HEAD` over the amended commit
 and re-read the config change: one entry added to the reference list, nothing else in the file moved.
 
+## Pass 6 — findings: 1
+
+1. **An existing mutation's target moved, and only CI said so.** `gate_contract`'s "adopt stops
+   declaring who governs the repository" searched for `put(PROVIDERS, providers_declaration())`;
+   this slice changed that line to pass the setup reference, so the target matched nothing and CI's
+   mutation step failed with `STALE TARGET` after 36 minutes. The runner refused rather than skipped
+   it, as it should. Re-pointed at the new line and run: caught. Then every target in the catalogue
+   was counted without running tests — this was the only stale one. The local mutation runs here
+   covered only the suites this slice added or changed, which is how it was missed.
+
+## Pass 7 — findings: 0
+
+Every mutation target in `scripts/mutation_check.py` counted against its file: all match. The
+re-pointed mutation run through `mutation_check.run_suite` with its suite's own tests, baseline green.
+
 ## Sign-off
 
 Group 1 · DRY & shared code — [x] checked — one verdict (`ci_verdict`) behind both `ci` and the contract-2 answer; the record sender imported, not run by path; v2's schemas generated from models that extend v1's; v2 carries v1's cases and fixture, pinned word for word.
@@ -87,10 +102,10 @@ Group 6 · Signal integrity — [x] checked — "denied", "no decision" and "rec
 Group 7 · Auth & session integrity — [x] checked — the portal token is read by name, never enters the decision or report (asserted); refs are validated before they reach JSON; the declaration that switches CI on or off is governed in every tenant.
 
 Tests added: `scripts/test/test_gate_contract_v2.py` (17); in `scripts/test/test_framework_sync.py` — `test_an_untouched_contract_1_declaration_moves_to_contract_2_with_its_workflow`, `test_a_declaration_naming_another_provider_is_theirs_and_its_setup_is_what_ci_runs`; updated `test_tenant_adopt.py`, `test_gate_contract.py`.
-Mutation-checked: `python3 scripts/mutation_check.py gate_contract_v2` — 7 caught (run twice, after the pass-2 fix); the 3 new `framework_sync` mutations through `mutation_check.run_suite` — caught.
+Mutation-checked: `python3 scripts/mutation_check.py gate_contract_v2` — 7 caught (run twice, after the pass-2 fix); the 3 new `framework_sync` mutations and the re-pointed `gate_contract` one through `mutation_check.run_suite` — caught; every target in the catalogue counted (pass 7).
 Fixtures re-pinned: `contract/gate/v2/` written new (v1 untouched); `.agent-rfc/fixtures/knowledge_graph.json` rebuilt.
 Gates run: full `pytest` (2083 passed before the pass-2 fix, its 3 failures being that finding; then `test_process_gate.py` and `test_gate_contract_v2.py` in full, 127 passed); `ruff check .` (0.15.20); `mypy` (1.14.1); `agentsmith conformance --contract 2` and `--contract 1`; the launcher run end to end through an action-style `agentsmith` in a clean virtualenv; `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
 
 Levers reviewed: `gate-integrity`, `declared-vs-enforced`, `test-the-contract`, `test-that-cannot-fail`, `implemented-not-invoked`, `two-owners-two-cadences`, `failure-mode-visibility`, `pin-unremovable-duplicates`, `docs-match-behaviour`.
 
-KG query: kg:f882db829bb3
+KG query: kg:fd00ccf81a06
