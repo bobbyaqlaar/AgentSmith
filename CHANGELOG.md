@@ -77,6 +77,20 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — `sync` brings a tenant armed before the sweep current
+
+- **A tenant armed before `pre-commit`, `pre-push` and `chain` existed** — KYC Sentinel and OTS —
+  got the three hooks written and armed by `agentsmith sync`, but left out of its manifest and of
+  the commit it printed: live in that checkout, absent from every clone. `sync` now lists them as
+  `add`, records them, commits them, and says the bypass sweep runs on commit and push from now on.
+- **The commit `sync` printed was refused where a tenant gates `.agenticframework/**`**: the
+  manifest was a gated file it could not vouch for, and the arming design's scope never listed it.
+  The gate no longer asks the manifest to carry its own hash — every other file still must match —
+  and a sync adds what it commits to the arming design's `scope:`. A scaffold design written by
+  `tenant init` or `tenant adopt` now lists the manifest as well.
+  A tenant whose CI checks the provider out (`agentsmith-gates.yml`) has the gate fix at its next run;
+  one still running a vendored copy needs `agentsmith sync`.
+
 ### Fixed — `sync` and `upgrade` refuse the framework's own checkout
 
 - **`agentsmith sync` run inside the AgentSmith checkout scaffolded it as a tenant**: four tenant

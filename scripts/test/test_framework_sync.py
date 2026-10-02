@@ -460,3 +460,105 @@ def test_a_sync_keeps_the_tenants_declared_ide_choice(tenant, moved_on):
     assert wired.is_file() and "process-gate" in wired.read_text(encoding="utf-8"), (
         "the declared IDE lost its gate wiring — the narrowing went the wrong way"
     )
+
+
+# ── A tenant armed before the sweep existed (.agent-rfc/designs/sync-adds-missing-hooks.md) ──
+
+_BEFORE_G3 = (".githooks/pre-commit", ".githooks/pre-push", ".githooks/chain")
+
+
+@pytest.fixture()
+def armed_before_g3(tmp_path, monkeypatch):
+    """Shaped like KYC Sentinel and OTS on 2026-10-02: the gates armed with two of
+    the five hooks — `pre-commit`, `pre-push` and `chain` did not exist yet — and
+    `.agenticframework/**` gated, so the manifest is a gated file."""
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("AGENTSMITH_DIR", str(REPO))
+    monkeypatch.setenv("AGENTSMITH_PYTHON", sys.executable)
+    root = tmp_path / "tenant"
+    (root / "mypkg").mkdir(parents=True)
+    (root / "mypkg" / "core.py").write_text("VALUE = 1\n")
+    (root / "pyproject.toml").write_text('[project]\nname = "t"\nversion = "0.1.0"\n')
+    subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "feat: the tenant's own code")
+
+    from runtime.adopt import adopt, plan_adoption
+
+    written = adopt(plan_adoption("t", root, architecture="layered", gate=["mypkg/**", ".agenticframework/**"]))
+    manifest_path = root / ".agenticframework" / "scaffold.json"
+    manifest = json.loads(manifest_path.read_text())
+    for rel in _BEFORE_G3:
+        (root / rel).unlink()
+        manifest["files"].pop(rel, None)
+        written.remove(rel)
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    _git(root, "add", "--", *written)
+    armed = _git(root, "commit", "-m", "chore: adopt AgentSmith gates",
+                 "-m", "Design: .agent-rfc/designs/adoption.md", "-m", "Review: n/a: generated scaffold")
+    assert armed.returncode == 0, armed.stdout + armed.stderr
+    # The arming design as a framework of that time wrote it: it never listed the
+    # hooks that did not exist, nor the manifest. Without this the design already
+    # covers everything and the scope edit goes unasserted — a mutation survived.
+    design = root / ".agent-rfc" / "designs" / "adoption.md"
+    older = "\n".join(line for line in design.read_text().split("\n")
+                      if line not in {f"  - {rel}" for rel in (*_BEFORE_G3, ".agenticframework/scaffold.json")})
+    assert older != design.read_text(), "the fixture must actually narrow the scope"
+    design.write_text(older)
+    _git(root, "add", "--", ".agent-rfc/designs/adoption.md")
+    assert _git(root, "commit", "-m", "docs: the arming design as it was").returncode == 0
+    return root
+
+
+def test_a_tenant_armed_before_the_sweep_is_planned_the_hooks_it_lacks(armed_before_g3):
+    from runtime.sync import describe, plan_sync
+
+    plan = plan_sync(armed_before_g3)
+
+    assert plan.added == list(_BEFORE_G3)
+    said = describe(plan)
+    assert "  add     .githooks/pre-push" in said
+    assert "bypass sweep" in said, "a refused push after this sync must read as the sweep, not a broken hook"
+
+
+def test_the_hooks_it_adds_go_in_the_manifest_and_a_commit_the_tenants_own_gate_accepts(armed_before_g3):
+    """KYC on 2026-10-02: the hooks were armed and never committed, and the commit
+    sync printed was refused for `scaffold.json`. Commit exactly what it printed."""
+    written = _sync(armed_before_g3)
+
+    assert set(_BEFORE_G3) <= set(written)
+    manifest = json.loads((armed_before_g3 / ".agenticframework" / "scaffold.json").read_text())
+    assert set(_BEFORE_G3) <= set(manifest["files"])
+    _git(armed_before_g3, "add", "--", *written)
+    result = _git(armed_before_g3, "commit", *SYNC_COMMIT)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _git(armed_before_g3, "status", "--porcelain").stdout == "", "nothing the sync wrote is left behind"
+    assert _sync(armed_before_g3) == [], "a second sync adds nothing"
+
+
+def test_a_tenant_with_no_arming_design_gets_one_that_covers_the_whole_commit(armed_before_g3):
+    """KYC had no `adoption.md`: it armed the gates by hand. The design the sync
+    writes must cover the manifest it commits beside it."""
+    _git(armed_before_g3, "rm", "-q", ".agent-rfc/designs/adoption.md")
+    assert _git(armed_before_g3, "commit", "-m", "docs: drop the arming design").returncode == 0
+
+    written = _sync(armed_before_g3)
+    _git(armed_before_g3, "add", "--", *written)
+    result = _git(armed_before_g3, "commit", *SYNC_COMMIT)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "  - .agenticframework/scaffold.json" in (armed_before_g3 / ".agent-rfc/designs/adoption.md").read_text()
+
+
+def test_the_scope_edit_appends_only_what_is_missing_and_keeps_the_prose():
+    from runtime.architectures import extend_design_scope
+
+    text = "---\nstatus: done\nscope:\n  - a\n---\n# Adopt t\n\n  - not a scope line\n"
+
+    once = extend_design_scope(text, ["a", "b"])
+    assert once == "---\nstatus: done\nscope:\n  - a\n  - b\n---\n# Adopt t\n\n  - not a scope line\n"
+    assert extend_design_scope(once, ["b", "a"]) == once
+    assert extend_design_scope("# no front matter\n", ["b"]) == "# no front matter\n"
+    indented = "---\nscope:\n    -   a\n---\n"
+    assert extend_design_scope(indented, ["a", "b"]) == "---\nscope:\n    -   a\n    -   b\n---\n", \
+        "an item is read as the gate reads it, and a new one written at its indentation"

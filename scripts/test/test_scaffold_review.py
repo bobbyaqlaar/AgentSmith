@@ -225,3 +225,25 @@ def test_a_forced_rerun_still_vouches_for_what_the_first_run_wrote(scaffold):
     assert any(path.startswith(".github/actions/") for path in manifest["files"])
     result = _commit(scaffold, *FIRST_COMMIT)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_the_manifest_is_not_asked_to_vouch_for_itself_and_nothing_else_escapes():
+    """Where a tenant gates `.agenticframework/**` (KYC Sentinel, OTS), the
+    manifest is a gated file in every commit that vouches by it, and no file can
+    carry its own hash: every sync commit there was refused. It is the check's
+    input, so it is skipped — and only it (.agent-rfc/designs/sync-adds-missing-hooks.md)."""
+    import hashlib
+
+    sys.path.insert(0, str(REPO / "scripts"))
+    import process_gate as pg
+
+    hook = "#!/usr/bin/env bash\n"
+    manifest = json.dumps({"generated_by": "agentsmith sync",
+                           "files": {".githooks/pre-push": hashlib.sha256(hook.encode()).hexdigest()}})
+    tree = {pg.SCAFFOLD_MANIFEST: manifest, ".githooks/pre-push": hook, ".githooks/stray": hook}
+
+    assert pg.manifest_problems([pg.SCAFFOLD_MANIFEST, ".githooks/pre-push"], tree.get) == []
+    problems = pg.manifest_problems([pg.SCAFFOLD_MANIFEST, ".githooks/pre-push", ".githooks/stray"], tree.get)
+    assert problems == [".githooks/stray is not part of what `agentsmith sync` wrote — review it"]
+    note = pg.vouched_note("framework sync", [pg.SCAFFOLD_MANIFEST, ".githooks/pre-push"], tree.get)
+    assert "— 1 gated file(s) match" in note, "the note counts the files it checked, not the manifest"

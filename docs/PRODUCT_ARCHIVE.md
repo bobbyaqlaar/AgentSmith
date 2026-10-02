@@ -7,6 +7,32 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — `sync` brings a tenant armed before the sweep current (2026-10-02)
+
+Design: `.agent-rfc/designs/sync-adds-missing-hooks.md`; review:
+`.agent-rfc/reviews/sync-adds-missing-hooks.md`.
+
+Closes the backlog row "`agentsmith sync` cannot bring KYC Sentinel or OTS current", opened the same
+day when a sync in KYC armed three hooks it never committed and printed a commit KYC's gate refused.
+Owner decision recorded there: a sync gives a tenant the gate hooks it is missing.
+
+- **Missing gate hooks are planned, recorded and committed** — `add` in the plan, beside `stale`,
+  with a note that the bypass sweep now runs on commit and push.
+- **The manifest is not asked to vouch for itself.** Every other gated file in a sync commit must
+  still match its hash; a tenant that gates the manifest now has the posture every `init` or `adopt`
+  tenant already had.
+- **The arming design covers what the sync commits** — scope lines appended, prose kept; a scaffold
+  design from `init` or `adopt` lists the manifest from the start.
+- **Proved by committing exactly what `sync` printed** through the gate of a tenant built the way KYC
+  was, with and without an arming design.
+
+## Closed — KYC Sentinel's CI gate runs in its own environment (done 2026-09-18, closed 2026-10-02)
+
+The backlog row "KYC Sentinel's CI runs the framework gate with a bare `python3`, which exits 3 since
+G1" was done in KYC Sentinel's `274e5ee` (design `.agent-rfc/designs/gate-environment.md` there): the
+process-gates job sets up Python 3.11 and installs `scripts/requirements-gate.txt` before the gate.
+The row stayed open here for two weeks after; found while preparing to sync KYC on 2026-10-02.
+
 ## Completed — `sync` and `upgrade` refuse the framework's own checkout (2026-10-01)
 
 Design: `.agent-rfc/designs/framework-sync-refuses-framework.md`; review:
