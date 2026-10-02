@@ -87,7 +87,7 @@ governance is aligned; work in OTS on how AgentSmith governs it is in scope, sli
 | Slice | AgentSmith | Tenant step that proves it | Status |
 |---|---|---|---|
 | C1 | Gate v2 — the CI event, dev record as its output, a provider setup step for CI; `agentsmith-gates.yml` calls the declared command | OTS declares `providers.json`, CI calls the provider, vendored gate files go; KYC pins a release | **Built 2026-10-02** (`gate-contract-ci`); tenants wait for the v2.1.0 release that carries the setup action |
-| C2 | Gate v2 — commit-msg, sweep, pre-push; the knowledge graph as gate evidence | hooks in OTS and KYC become stubs; `map_codebase.py` leaves OTS | Next |
+| C2 | Gate v2 — commit-msg, sweep, pre-push; the knowledge graph as gate evidence | hooks in OTS and KYC become stubs; `map_codebase.py` leaves OTS | Designing (`gate-local-events`) |
 | C3 | Records — `contract/record/v1` | `send_dev_record.py` is never a tenant's file | |
 | C4 | Rules — `contract/rules/v1`, `render` / `check` | OTS's rules move into its declaration; vendored `templates/` goes | |
 | C5 | Telemetry — `contract/telemetry/v1` from the Wire Contract | OTS's `tracing.py` on plain OpenTelemetry; vendored `runtime/` goes | |
@@ -95,6 +95,8 @@ governance is aligned; work in OTS on how AgentSmith governs it is in scope, sli
 | C7 | Security — `contract/security/v1` | vendored `fixtures/security/` goes | |
 | C8 | Ops records — `contract/ops/v1`: run history out, HITL and UI feedback in | OTS's CD workflows send and receive by contract | |
 | C9 | Vendoring retired; `upgrade` removed | no tenant holds a framework file, checked | |
+
+**Open — CI does not prove the contract on any change (found 2026-10-02, after C1 merged).** The scratch tenants are built with `tenant init`, which writes no gates workflow, and the `tenant init` CI templates (`workflow-templates/ci-*.yml`) run no process-gates job — so the scratch-tenants run after #29 was green without exercising contract 2 at all. Only an *adopted* tenant can prove C1 today, and only by hand. Close it by adding an adopted scratch tenant (`tenant adopt`, so its CI runs `agentsmith-gates.yml` through the pinned setup step), by giving the `tenant init` templates the gates job, or both — each slice C2–C9 then proves itself in CI rather than on a real tenant. Trigger: before C2 is called proven, and after v2.1.0 is released (the setup step must exist at a tag).
 
 ---
 
