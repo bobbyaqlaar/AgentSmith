@@ -3499,7 +3499,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-01T20:27:18Z",
+      "last_modified": "2026-10-02T07:41:53Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4117,7 +4117,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-01T19:57:39Z",
+      "last_modified": "2026-10-02T07:28:34Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4627,7 +4627,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-10-01T20:05:31Z",
+      "last_modified": "2026-10-02T07:45:52Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5079,7 +5079,7 @@
         "upgrade",
         "git"
       ],
-      "last_modified": "2026-10-01T20:36:22Z",
+      "last_modified": "2026-10-02T07:09:05Z",
       "id": "runtime/machine/upgrade.py"
     },
     {
@@ -6562,10 +6562,11 @@
         "render_architecture",
         "_scaffold_answers",
         "render_scaffold_rfc",
+        "extend_design_scope",
         "render_scaffold_design",
         "session_start_line"
       ],
-      "last_modified": "2026-10-01T06:04:25Z",
+      "last_modified": "2026-10-02T07:26:06Z",
       "id": "runtime/architectures.py"
     },
     {
@@ -6586,9 +6587,10 @@
         "test_ci_reaches_the_same_verdict_on_the_root_commit",
         "test_init_vendors_before_the_first_commit_and_the_manifest_covers_it",
         "test_init_runs_only_the_machines_post_checkout",
-        "test_a_forced_rerun_still_vouches_for_what_the_first_run_wrote"
+        "test_a_forced_rerun_still_vouches_for_what_the_first_run_wrote",
+        "test_the_manifest_is_not_asked_to_vouch_for_itself_and_nothing_else_escapes"
       ],
-      "last_modified": "2026-09-23T21:53:57Z",
+      "last_modified": "2026-10-02T07:26:06Z",
       "id": "scripts/test/test_scaffold_review.py"
     },
     {
@@ -6659,7 +6661,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-10-01T20:20:02Z",
+      "last_modified": "2026-10-02T07:04:43Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6955,7 +6957,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-10-01T20:29:08Z",
+      "last_modified": "2026-10-02T07:35:28Z",
       "id": "runtime/sync.py"
     },
     {
@@ -6992,9 +6994,14 @@
         "test_the_gates_workflow_follows_the_framework_it_runs",
         "test_everything_a_sync_refreshed_goes_in_one_commit_the_gates_accept",
         "test_the_sync_workflow_is_refreshed_like_everything_else_the_framework_owns",
-        "test_a_sync_keeps_the_tenants_declared_ide_choice"
+        "test_a_sync_keeps_the_tenants_declared_ide_choice",
+        "armed_before_g3",
+        "test_a_tenant_armed_before_the_sweep_is_planned_the_hooks_it_lacks",
+        "test_the_hooks_it_adds_go_in_the_manifest_and_a_commit_the_tenants_own_gate_accepts",
+        "test_a_tenant_with_no_arming_design_gets_one_that_covers_the_whole_commit",
+        "test_the_scope_edit_appends_only_what_is_missing_and_keeps_the_prose"
       ],
-      "last_modified": "2026-10-01T20:36:12Z",
+      "last_modified": "2026-10-02T07:26:06Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -7765,6 +7772,22 @@
       "pillar": null,
       "created_at": "2026-10-01T20:33:28Z",
       "id": "rfc:reviews/framework-sync-refuses-framework.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "`sync` gives a tenant the gate hooks it is missing, in a commit its gate accepts",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/sync-adds-missing-hooks.md",
+      "pillar": null,
+      "created_at": "2026-10-02T07:58:55Z",
+      "id": "rfc:designs/sync-adds-missing-hooks.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 sync-adds-missing-hooks",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/sync-adds-missing-hooks.md",
+      "pillar": null,
+      "created_at": "2026-10-02T07:58:56Z",
+      "id": "rfc:reviews/sync-adds-missing-hooks.md"
     }
   ],
   "edges": [

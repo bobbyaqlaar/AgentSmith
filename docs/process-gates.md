@@ -152,7 +152,12 @@ in the repository it is run in, and nothing else, then prints the commit. Run tw
 writes nothing.
 
 It refreshes the gate hooks, the provider declaration, the IDE hook configs, the rule files'
-managed block and the gates workflow — and, for a vendored tenant, the vendored trees. **The
+managed block and the gates workflow — and, for a vendored tenant, the vendored trees. **It also adds
+the gate hooks a tenant lacks:** a repository that armed the gates before `pre-commit`, `pre-push` and
+`chain` existed gets them, listed as `add`, recorded in the manifest and carried by the commit — and is
+told that the bypass sweep now runs on every commit and push. The other files a sync can create are
+its own records, each only where it is missing: the provider declaration, the manifest, the arming
+design, and an RFC template in a repository that has no RFC. **The
 manifest decides whose file each one is:** written by the framework and untouched, it is refreshed;
 edited here since, it is left alone and named; never ours, it is left alone. The exceptions are the
 regions the framework owns inside a tenant's own file — the `agentsmith:rules` block and the `hooks`
@@ -160,7 +165,10 @@ key in `.claude/settings.json` — which are refreshed whatever else changed aro
 
 **Its commit passes the tenant's own gates.** `Review: n/a: framework sync <version>` is accepted
 while every gated file in the commit matches `.agenticframework/scaffold.json` — the same hash rule
-the generated scaffold uses, and a visible note, not silence. A file the tenant edited is not in
+the generated scaffold uses, and a visible note, not silence. The manifest itself is the one gated file
+it does not ask about: it is the check's input, and no file can carry its own hash. The arming design
+covers the commit too — a sync adds to its `scope:` what it commits that the design does not list,
+and leaves its prose alone. A file the tenant edited is not in
 that manifest, or no longer matches it, and gets the normal rule with its name. The limit is the
 scaffold's: the manifest is not signed, so rewriting a file *and* its hash defeats it, deliberately
 and in plain sight.
