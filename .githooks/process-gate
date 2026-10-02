@@ -11,6 +11,10 @@
 # 3, 126 or 127 cannot run here, and the next step is tried
 # (contract/gate/v1/protocol.md).
 #
+# `ci` goes to the declared provider when the repository speaks gate contract 2,
+# and then never falls back: no decision fails the check
+# (contract/gate/v2/protocol.md).
+#
 # Everything else — and any event no provider answered — runs AgentSmith's own
 # script, looked up in this order:
 #
@@ -51,6 +55,87 @@ declared_gate() {
   esac
 }
 
+# The gate contract this repository speaks: the `gate` entry's own "contract",
+# else the declaration's top-level one, else 1. Innermost objects (the port
+# entries) are cut away before the top-level value is read, so a port's number
+# is never mistaken for the declaration's.
+declared_contract() {
+  local file="$root/.agenticframework/providers.json" flat n
+  [ -f "$file" ] || { echo 1; return; }
+  flat="$(tr -d '\n' < "$file")"
+  n="$(printf '%s' "$flat" | sed -n 's/.*"gate"[[:space:]]*:[[:space:]]*{\([^}]*\)}.*/\1/p' \
+       | sed -n 's/.*"contract"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
+  [ -n "$n" ] || n="$(printf '%s' "$flat" | sed 's/{[^{}]*}//g' \
+       | sed -n 's/.*"contract"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
+  echo "${n:-1}"
+}
+
+# `ci --base B --head H` at contract 2: one range event to the declared
+# provider, its decision printed for a person (report, annotations, the step
+# summary), and its verdict as the exit code. Every way of getting no decision
+# fails the check and says which it was.
+ci_by_contract() {
+  local base="" head="HEAD" provider answer code
+  shift  # the subcommand
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --base) base="${2:-}"; shift 2 ;;
+      --head) head="${2:-HEAD}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+  provider="${GOVERNANCE_PROVIDER:-$(declared_gate)}"
+  if [ "$provider" = "none" ]; then
+    echo "Process gates: this repository declares itself ungoverned (providers.json) — nothing checked."
+    return 0
+  fi
+  if [ -z "$provider" ]; then
+    echo "::error title=Process gate::providers.json declares gate contract 2 but names no gate command"
+    return 1
+  fi
+  # A ref is put into JSON by hand here, so only characters a ref can hold.
+  for ref in "$base" "$head"; do
+    case "$ref" in
+      *[!A-Za-z0-9._/~^@{}-]*)
+        echo "::error title=Process gate::not a git ref: $ref"
+        return 1 ;;
+    esac
+  done
+  answer="$(printf '{"kind":"range","base":"%s","head":"%s"}' "$base" "$head" | $provider ci)"
+  code=$?
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "::error title=Process gate::python3 is needed to read the provider's decision, and is not on PATH"
+    return 1
+  fi
+  printf '%s' "$answer" | GATE_EXIT="$code" python3 -c '
+import json, os, sys
+raw, code = sys.stdin.read(), os.environ["GATE_EXIT"]
+try:
+    answer = json.loads(raw)
+    decision = answer["decision"]
+except (ValueError, KeyError, TypeError):
+    why = {"3": "it cannot run here (exit 3)", "126": "it is not executable (exit 126)",
+           "127": "it is not installed (exit 127)"}.get(code, f"it printed no decision (exit {code})")
+    print(f"::error title=Process gate::the declared gate provider gave no decision: {why}. "
+          "Under gate contract 2 that fails the check; nothing falls back to a framework path.")
+    sys.exit(1)
+report = answer.get("report") or ""
+if report:
+    print(report)
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a", encoding="utf-8") as fh:
+            fh.write(report + "\n")
+for line in answer.get("annotations") or []:
+    print(line)
+if decision == "allow":
+    sys.exit(0)
+text = answer.get("text") or "the range was refused, with no reason given"
+print("::error title=Process gate::" + text)
+sys.exit(1)
+'
+}
+
 provider=""
 case "$subcommand" in
   session-start|pre-edit|stop)
@@ -76,6 +161,17 @@ case "$subcommand" in
       fi
       # The payload is already drained; replay it below.
       replayed="$payload"
+    fi
+    ;;
+  ci)
+    # Gate contract 2 (contract/gate/v2/protocol.md): CI asks the declared
+    # provider, and NEVER falls back — a check that could not run is not a check
+    # that passed, and the fallback below is the framework path contract 2
+    # exists to remove (.agent-rfc/designs/gate-contract-ci.md). At contract 1,
+    # or with no declaration, nothing here applies and `ci` runs as it always has.
+    if [ "$(declared_contract)" -ge 2 ]; then
+      ci_by_contract "$@"
+      exit $?
     fi
     ;;
 esac

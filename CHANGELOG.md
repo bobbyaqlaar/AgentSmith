@@ -77,6 +77,30 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — gate contract 2: a tenant's CI asks its declared provider
+
+**Hook-interface change** (additive; contract 1 stays published and served).
+
+- **`contract/gate/v2/`** — contract 1 plus the **`ci` event**: a range (`{"kind": "range", "base",
+  "head"}`) answered by one decision, with an optional `report` and `annotations` for the person
+  reading CI. **`ci` never falls back**: a provider that gives no decision fails the check, with the
+  reason — the framework's own script is not tried. Conformance has the `ci` cases;
+  `agentsmith conformance --provider "<command>" --contract 2`.
+- **The gates workflow names no framework path.** `agentsmith-gates.yml` now runs the provider's
+  pinned setup step — `bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@<release>`, new — and
+  `bash .githooks/process-gate ci`. It no longer checks AgentSmith out or runs `process_gate.py` and
+  `send_dev_record.py` by path; `agentsmith gate ci` sends the record itself when the portal's two
+  secrets are set, and a portal that refuses it still fails the check.
+- **`providers.json` declares contract 2** and the `setup` step (`tenant init`, `tenant adopt`), and
+  `agentsmith sync` moves an untouched contract-1 declaration and its workflow over in the one pull
+  request it opens. A declaration naming another provider is the tenant's, and its setup step is the
+  one CI runs.
+- **The declaration is always governed.** At contract 2 `"gate": "none"` turns CI's check off, and an
+  adopted tenant's config did not gate `providers.json`: the gate now governs it — and
+  `process-gates.json` — whatever a config lists, and contract 2 requires the same of any provider.
+- **Needs this release published** before a tenant can pin the setup step: until a tag carrying the
+  action exists, do not `adopt` or `sync` a tenant from an unreleased checkout.
+
 ### Fixed — `sync` brings a tenant armed before the sweep current
 
 - **A tenant armed before `pre-commit`, `pre-push` and `chain` existed** — KYC Sentinel and OTS —

@@ -953,8 +953,8 @@ The older `ai-*` names map to these one for one
 | `agentsmith tenant init` | `<id> [--stack STACK] [--isolation shared\|dedicated] [--architecture STYLE] [--agentic] [--root DIR] [--ide NAME] [--force] [--allow-framework-root]`, or `--from INTAKE [--root DIR] [--force]` | Scaffolds `.agenticframework/tenant.yaml` and per-environment CI/CD workflows in the current repo. `--architecture` and `--agentic` are the same options `tenant adopt` takes — a new repo gets the structural style and, with `--agentic`, the agent layer (agents, allowlisted tools, the gateway, durable workflows, evals). `--from INTAKE` scaffolds from a portal intake instead — its tenant id, stack, options, IDEs and first RFC — and marks it used only once that RFC is written; it refuses the flags the intake decides. `--ide` (repeatable) writes a hook config for only the IDEs named, and records them as `workspace.ides` in `tenant.yaml` so `agentsmith sync` keeps the choice; omitted, every IDE with a verified config schema is written. `--force` overwrites existing files; `--allow-framework-root` scaffolds even inside the framework's own checkout, which is otherwise refused. |
 | `agentsmith tenant adopt` | `<id> [--stack STACK] [--architecture STYLE] [--agentic] [--gate GLOB]… [--framework-ref TAG] [--root DIR] [--yes]` | Brings an existing repo under the gates: prints what it found and would do, then — on a yes — gates its code, keeps its hooks, CI, rules and design doc, and prints the adoption commit. |
 | `agentsmith sync` | `[--root DIR] [--yes]` | Brings this repository's copies of the framework up to date — the gate hooks (adding any it lacks), the provider declaration, and (vendored tenants) the vendored trees — and prints a commit whose review the repository's own gates accept, because every file in it is one the framework wrote. Run it after upgrading AgentSmith. Refused in the framework's own checkout, which is what it copies from. |
-| `agentsmith gate` | `<session-start\|pre-edit\|stop> [--ide IDE]` | Answer one gate event in the neutral profile of the gate contract (`contract/gate/v1/protocol.md`): the event as JSON on stdin, the decision as JSON on stdout. This is what a tenant names as its provider; exit 3 means this machine cannot run the gate. `--ide` reads the payload in one IDE's dialect instead of the neutral profile — what the generated hook configs pass, and what an integrator needs when the caller is an IDE rather than the contract. |
-| `agentsmith conformance` | `--provider "<command>"` | Build the contract's fixture repository, replay its cases against that command, and report per case. Run it against another platform's adapter, or against `agentsmith gate`. |
+| `agentsmith gate` | `<session-start\|pre-edit\|stop\|ci> [--ide IDE]` | Answer one gate event in the neutral profile of the gate contract (`contract/gate/v2/protocol.md`; `ci` is contract 2's — a range on stdin, the verdict, a report, and the record sent to the portal when configured): the event as JSON on stdin, the decision as JSON on stdout. This is what a tenant names as its provider; exit 3 means this machine cannot run the gate. `--ide` reads the payload in one IDE's dialect instead of the neutral profile — what the generated hook configs pass, and what an integrator needs when the caller is an IDE rather than the contract. |
+| `agentsmith conformance` | `--provider "<command>" [--contract 1\|2]` | Build the contract's fixture repository, replay its cases against that command, and report per case. Run it against another platform's adapter, or against `agentsmith gate`. |
 | `agentsmith gate --ide <id>` | `<event> --ide claude` | The same, for a payload in an IDE's dialect: the provider translates it and answers in it. The generated IDE hook configs pass this. |
 | `agentsmith tenant promote` | `<id> --from staging --to production` | Verifies the staging eval gate, then opens a `develop → main` promotion PR. No direct push to `main`. Refuses if `<id>` doesn't exactly match the current repo's `.agenticframework/tenant.yaml` — a same-prefix tenant id (e.g. `acme` vs. `acme-sandbox`) is not a match. |
 
@@ -1574,17 +1574,17 @@ agentsmith tenant adopt acme --architecture hexagonal
 
 **What it writes, and why it is not a copy of AgentSmith.** The file that matters is
 `.agenticframework/providers.json`: the repository's declaration of *who governs it*
-(`contract/gate/v1/providers.schema.json`).
+(`contract/gate/v2/providers.schema.json`).
 
 ```json
-{
-  "contract": 1,
-  "providers": { "gate": { "command": "agentsmith gate", "version": "^2" } }
-}
+{ "contract": 2, "providers": { "gate": { "command": "agentsmith gate", "version": "^2",
+  "setup": "bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@v2.1.0" } } }
 ```
 
 `.githooks/process-gate` reads that before it falls back to the framework's own paths, so the hooks
-name a provider rather than a file layout. Point `gate.command` at another platform's command and
+name a provider rather than a file layout. At contract 2 the gates workflow does too: it runs the
+`setup` step named there and asks the provider whether the pushed range passes — no checkout of
+AgentSmith, no framework path in the workflow, and no fallback if the provider cannot answer. Point `gate.command` at another platform's command and
 this repository is governed by that platform instead — `agentsmith conformance --provider "<command>"`
 scores it against the contract first. `"gate": "none"` declares the repository deliberately
 ungoverned, and is never overridden by a fallback.

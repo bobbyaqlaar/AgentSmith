@@ -399,14 +399,20 @@ def test_a_file_the_tenant_edited_is_left_alone_and_named(tenant):
 def test_the_gates_workflow_follows_the_framework_it_runs(tenant):
     """A tenant that upgrades should run the new provider in CI, not the release
     it was adopted from."""
+    import re
+
+    from runtime.adopt import SETUP_ACTION
+
     workflow = tenant / ".github" / "workflows" / "agentsmith-gates.yml"
-    workflow.write_text(workflow.read_text().replace('ref: "v2.0.0"', 'ref: "v1.9.0"'))
+    older = re.sub(rf"{re.escape(SETUP_ACTION)}@v\S+", f"{SETUP_ACTION}@v1.9.0", workflow.read_text())
+    assert f"{SETUP_ACTION}@v1.9.0" in older, "the workflow pins the provider's setup step"
+    workflow.write_text(older)
     _as_an_older_framework_left_it(tenant, ".github/workflows/agentsmith-gates.yml")
 
     written = _sync(tenant)
 
     assert ".github/workflows/agentsmith-gates.yml" in written
-    assert 'ref: "v1.9.0"' not in workflow.read_text()
+    assert f"{SETUP_ACTION}@v1.9.0" not in workflow.read_text()
     assert "{{" not in workflow.read_text().replace("${{", "")
 
 
@@ -562,3 +568,52 @@ def test_the_scope_edit_appends_only_what_is_missing_and_keeps_the_prose():
     indented = "---\nscope:\n    -   a\n---\n"
     assert extend_design_scope(indented, ["a", "b"]) == "---\nscope:\n    -   a\n    -   b\n---\n", \
         "an item is read as the gate reads it, and a new one written at its indentation"
+
+
+# ── Gate contract 2 (.agent-rfc/designs/gate-contract-ci.md) ──
+
+
+def test_an_untouched_contract_1_declaration_moves_to_contract_2_with_its_workflow(tenant):
+    """One sync pull request moves a tenant's CI onto the declared provider."""
+    from runtime.adopt import SETUP_ACTION
+
+    declaration = tenant / ".agenticframework" / "providers.json"
+    declaration.write_text(json.dumps({"contract": 1, "providers": {"gate": {
+        "command": "agentsmith gate", "version": "^2"}}}, indent=2) + "\n")
+    _as_an_older_framework_left_it(tenant, ".agenticframework/providers.json")
+
+    written = _sync(tenant)
+
+    assert ".agenticframework/providers.json" in written
+    declared = json.loads(declaration.read_text())
+    assert declared["contract"] == 2
+    assert declared["providers"]["gate"]["setup"].startswith(f"{SETUP_ACTION}@v")
+    _git(tenant, "add", "--", *written)
+    result = _git(tenant, "commit", *SYNC_COMMIT)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_a_declaration_naming_another_provider_is_theirs_and_its_setup_is_what_ci_runs(tenant):
+    """Another platform's provider and setup step: sync never rewrites either,
+    and the gates workflow runs the step the tenant declared."""
+    declaration = tenant / ".agenticframework" / "providers.json"
+    theirs = json.dumps({"contract": 2, "providers": {"gate": {
+        "command": "othergov gate", "setup": "example/othergov/setup@v7"}}}, indent=2) + "\n"
+    declaration.write_text(theirs)
+    _git(tenant, "add", "-A")
+    assert _git(tenant, "commit", "-m", "chore: govern with othergov",
+                "-m", "Design: .agent-rfc/designs/adoption.md", "-m", "Review: n/a: framework sync").returncode != 0, \
+        "an edited declaration is not something the framework wrote — it needs a real review"
+    _git(tenant, "reset", "-q")
+
+    from runtime.sync import plan_sync
+
+    plan = plan_sync(tenant)
+    assert ".agenticframework/providers.json" not in plan.stale
+    assert any("providers.json" in note and "edited" in note for note in plan.notes), plan.notes
+    assert ".github/workflows/agentsmith-gates.yml" in plan.stale, "its CI must move to the declared setup"
+    _sync(tenant)
+    assert declaration.read_text() == theirs
+    workflow = (tenant / ".github" / "workflows" / "agentsmith-gates.yml").read_text()
+    assert 'uses: "example/othergov/setup@v7"' in workflow
+    assert "setup-agentsmith" not in workflow

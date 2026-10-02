@@ -1,7 +1,8 @@
 ---
-status: active
+status: done
 scope:
   - contract/gate/v2/**
+  - .agenticframework/process-gates.json
   - .githooks/process-gate
   - .github/actions/setup-agentsmith/**
   - runtime/cli.py
@@ -59,6 +60,16 @@ paths.
   carry `"contract": 2` and `"setup"`: the provider's CI setup step, a pinned reference
   (`bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@v2.1.0`). A top-level `"contract": 1`
   with no per-port value reads as gate contract 1, so every existing declaration means what it meant.
+- **The declaration is always governed.** Under contract 2 the declaration decides whether CI
+  checks anything — `"gate": "none"` turns the check off — so an unreviewed edit to it must not be
+  possible. It was: a tenant `adopt` wrote gates `.agenticframework/process-gates.json` but not
+  `providers.json`, and a commit setting the gate to `none` needed no design (found by this slice's
+  own test). The gate now treats both files — its config and the declaration — as governed whatever
+  the config lists, and the contract says a provider must: a conformance case edits the declaration
+  in a fixture whose config does not list it, and expects `deny`. `adopt` adds the declaration to the
+  gated list it writes, so the config says what the gate does.
+- **The v2 protocol is reference documentation**, declared beside v1's in this repository's
+  `.agenticframework/process-gates.json` (`extends.artifacts.reference`), as the artifact rule asks.
 - **Records stay out of the contract until C3.** The AgentSmith provider sends the dev record itself
   when the portal's two variables are set, as the workflow's second step does today; the tenant's
   workflow has no record step at all. C3 publishes the record's schema and endpoint as a wire
@@ -110,7 +121,8 @@ between building C1 and proving it. CHANGELOG calls it out as a hook-interface c
 
 **Deliberately not done:** `commit-msg`, `sweep`, `pre-push` and the knowledge graph (C2); the record
 as a published wire contract (C3); AgentSmith's own `self-test.yml`, which runs the gate it ships and
-is the provider, not a tenant.
+is the provider, not a tenant; and `agentsmith-sync.yml`, which still checks AgentSmith out to run
+`agentsmith sync` — it is the provider's update channel for the shims, and goes with C9.
 
 ## Pillars
 
@@ -124,7 +136,7 @@ is the provider, not a tenant.
 - P10 n/a — no LLM call.
 - P11 applies — `contract/gate/v1/protocol.md`'s rule holds: the provider command comes from the tenant's committed declaration, `$GOVERNANCE_PROVIDER` is an operator's escape; the `setup` reference is read by `sync` to write the workflow, never executed from fetched content.
 - P12 applies — `scripts/send_dev_record.py` reads the portal URL and token by name from the environment and refuses redirects; the provider path keeps that, and the token never enters the decision or the report.
-- P13 applies — `.githooks/process-gate` fails `ci` closed when a contract-2 provider gives no decision; today it falls back to framework paths, and that fallback is exactly what contract 2 removes for this event. Contract-1 behaviour is unchanged, pinned by a test.
+- P13 applies — `.githooks/process-gate` fails `ci` closed when a contract-2 provider gives no decision; today it falls back to framework paths, and that fallback is exactly what contract 2 removes for this event. Contract-1 behaviour is unchanged, pinned by a test. And the declaration, which now switches CI's check on or off, is governed in every tenant whatever its config lists — `scripts/process_gate.py`'s `is_gated` — closing a hole contract 2 would otherwise have widened.
 - P14 applies — `contract/gate/v1/fixture.json` and `cases.json` stay byte-for-byte; v2 gets its own fixture and cases, so a v1 provider's conformance result cannot move.
 - P15 applies — `.githooks/process-gate` names the reason a `ci` check failed without a verdict (not installed, not executable, no decision) separately from a `deny`, which carries the provider's own text.
 - P16 applies — `contract/gate/v1/providers.schema.json` already admits ports it does not read; its v2 successor keeps a per-port contract, so a tenant can return to contract 1 by editing one value; the shim and the old workflow both remain valid until C9.

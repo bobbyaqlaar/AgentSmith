@@ -1,0 +1,83 @@
+{
+  "additionalProperties": false,
+  "description": "A gate event: what the caller is asking about (contract/gate/v2/protocol.md). Contract 1's, plus `range` with `base` and `head` for the `ci` event.",
+  "properties": {
+    "kind": {
+      "enum": [
+        "edit",
+        "shell",
+        "other",
+        "range"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "paths": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Paths",
+      "type": "array"
+    },
+    "command": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Command"
+    },
+    "cwd": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cwd"
+    },
+    "stop_active": {
+      "default": false,
+      "title": "Stop Active",
+      "type": "boolean"
+    },
+    "base": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Base"
+    },
+    "head": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Head"
+    }
+  },
+  "required": [
+    "kind"
+  ],
+  "title": "GateEventV2",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/gate/v2/event.schema.json"
+}

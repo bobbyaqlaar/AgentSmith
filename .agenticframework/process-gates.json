@@ -77,7 +77,8 @@
   "extends": {
     "artifacts": {
       "reference": [
-        "contract/gate/v1/protocol.md"
+        "contract/gate/v1/protocol.md",
+        "contract/gate/v2/protocol.md"
       ]
     }
   }

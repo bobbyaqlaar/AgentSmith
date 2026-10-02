@@ -216,19 +216,21 @@ def test_the_gates_are_armed_and_the_old_hooks_chained(legacy):
     assert config["pillars"] == "off"
 
 
-def test_the_gates_workflow_runs_the_gate_from_a_framework_checkout(legacy):
+def test_the_gates_workflow_asks_the_declared_provider_and_names_no_framework_path(legacy):
+    """Gate contract 2 (.agent-rfc/designs/gate-contract-ci.md): the workflow runs
+    the provider's pinned setup step and asks through the tenant's own launcher.
+    It used to check AgentSmith out and run two of its scripts by path."""
+    from runtime.adopt import SETUP_ACTION
+
     _adopt(legacy, framework_ref="v9.9.9")
 
     workflow = (legacy / ".github/workflows/agentsmith-gates.yml").read_text()
-    assert 'ref: "v9.9.9"' in workflow
-    assert "process_gate.py ci" in workflow and "send_dev_record.py" in workflow
-    assert "{{FRAMEWORK_REF}}" not in workflow
-    # On the emitted file, not the template. `secrets.AGENTSMITH_READ_TOKEN`
-    # alone was satisfied by the bare form too, which is why this test was green
-    # while a real adoption wrote a workflow that required the secret.
-    assert "secrets.AGENTSMITH_READ_TOKEN || github.token" in workflow, (
-        "a tenant must not need a secret to check out a PUBLIC provider"
-    )
+    assert f'uses: "{SETUP_ACTION}@v9.9.9"' in workflow
+    assert 'bash .githooks/process-gate ci --base "$BASE" --head "$HEAD_SHA"' in workflow
+    steps = workflow.split("steps:", 1)[1]
+    for coupling in ("scripts/", "process_gate.py", "send_dev_record.py", "python3", "repository: bobbyaqlaar"):
+        assert coupling not in steps, f"the workflow still names {coupling!r}"
+    assert "{{" not in workflow.replace("${{", "")
 
 
 @pytest.mark.parametrize(
@@ -432,9 +434,11 @@ def test_adopt_declares_who_governs_the_repository(legacy):
 
     assert ".agenticframework/providers.json" in written
     declared = json.loads((legacy / ".agenticframework/providers.json").read_text())
-    assert declared["contract"] == 1
+    assert declared["contract"] == 2
     assert declared["providers"]["gate"]["command"] == "agentsmith gate"
     assert declared["providers"]["gate"]["version"].startswith("^")
+    assert declared["providers"]["gate"]["setup"].startswith(
+        "bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@v"), "CI pins the provider through it"
     assert _adoption_commit(legacy, written).returncode == 0, "it is part of the adoption commit"
 
 
