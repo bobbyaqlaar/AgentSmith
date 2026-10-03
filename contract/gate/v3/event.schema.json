@@ -1,0 +1,102 @@
+{
+  "additionalProperties": false,
+  "description": "A gate event: what the caller is asking about (contract/gate/v3/protocol.md). Contract 2's, plus `commit` (with its `message` and `amend`) and `push`.",
+  "properties": {
+    "kind": {
+      "enum": [
+        "edit",
+        "shell",
+        "other",
+        "range",
+        "commit",
+        "push"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "paths": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Paths",
+      "type": "array"
+    },
+    "command": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Command"
+    },
+    "cwd": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cwd"
+    },
+    "stop_active": {
+      "default": false,
+      "title": "Stop Active",
+      "type": "boolean"
+    },
+    "base": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Base"
+    },
+    "head": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Head"
+    },
+    "message": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Message"
+    },
+    "amend": {
+      "default": false,
+      "title": "Amend",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "kind"
+  ],
+  "title": "GateEventV3",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/gate/v3/event.schema.json"
+}

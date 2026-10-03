@@ -1,0 +1,41 @@
+{
+  "additionalProperties": false,
+  "description": "What `<gate> kg impact` answers: the files a review must read, the lever groups, the changed files the graph does not know yet, and the `KG query:` hash (contract/gate/v3/protocol.md).",
+  "properties": {
+    "files": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Files",
+      "type": "array"
+    },
+    "groups": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Groups",
+      "type": "array"
+    },
+    "unknown": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unknown",
+      "type": "array"
+    },
+    "query": {
+      "pattern": "^kg:[0-9a-f]{12}$",
+      "title": "Query",
+      "type": "string"
+    }
+  },
+  "required": [
+    "files",
+    "groups",
+    "query"
+  ],
+  "title": "KgImpact",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/gate/v3/kg_impact.schema.json"
+}

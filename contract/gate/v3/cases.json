@@ -1,0 +1,212 @@
+{
+  "_about": "What a gate provider must answer, in the repository contract/gate/v3/fixture.json builds. Each case pins a different rule, not a different wording: `text` is never matched, because a provider words its own answers — only `deny` and `block` must carry some text, since a refusal with no reason is not an answer.",
+  "cases": [
+    {
+      "name": "an edit to a path no gate governs",
+      "event_name": "pre-edit",
+      "event": {
+        "kind": "edit",
+        "paths": [
+          "docs/notes.md"
+        ]
+      },
+      "expect": "allow",
+      "why": "the configuration governs src/ only; everything else is the repository's own business"
+    },
+    {
+      "name": "an edit to a governed path that no design covers",
+      "event_name": "pre-edit",
+      "event": {
+        "kind": "edit",
+        "paths": [
+          "src/other.py"
+        ]
+      },
+      "expect": "deny",
+      "why": "design before code: the governed change has no design, so the edit is refused"
+    },
+    {
+      "name": "an edit to a governed path an active design covers",
+      "event_name": "pre-edit",
+      "event": {
+        "kind": "edit",
+        "paths": [
+          "src/covered.py"
+        ]
+      },
+      "expect": "allow",
+      "why": "the design in the fixture is active and its scope covers this path"
+    },
+    {
+      "name": "a turn ending with governed changes and no review",
+      "event_name": "stop",
+      "event": {
+        "kind": "other"
+      },
+      "arrange": {
+        "write": {
+          "src/covered.py": "VALUE = 99\n"
+        }
+      },
+      "expect": "block",
+      "why": "review before done: the turn leaves a governed change no review record vouches for"
+    },
+    {
+      "name": "a session starting",
+      "event_name": "session-start",
+      "event": {
+        "kind": "other"
+      },
+      "expect": "context",
+      "why": "not a refusal: the session is told the rules it is about to work under"
+    },
+    {
+      "name": "an edit to the declaration, which the configuration does not list",
+      "event_name": "pre-edit",
+      "event": {
+        "kind": "edit",
+        "paths": [
+          ".agenticframework/providers.json"
+        ]
+      },
+      "expect": "deny",
+      "why": "the declaration decides who governs the repository and, at contract 2, whether CI checks anything: a provider governs it whatever the configuration lists, so no design covering it means no edit"
+    },
+    {
+      "name": "a range whose commits touch nothing governed",
+      "event_name": "ci",
+      "event": {
+        "kind": "range",
+        "base": "fixture",
+        "head": "clean"
+      },
+      "expect": "allow",
+      "why": "nothing governed changed between the two commits, so there is nothing a design must cover"
+    },
+    {
+      "name": "a range with a governed commit that names no design",
+      "event_name": "ci",
+      "event": {
+        "kind": "range",
+        "base": "clean",
+        "head": "undesigned"
+      },
+      "expect": "deny",
+      "why": "design before code: a commit touching src/ carries no Design trailer"
+    },
+    {
+      "name": "a new branch: the head commit alone",
+      "event_name": "ci",
+      "event": {
+        "kind": "range",
+        "base": "0000000000000000000000000000000000000000",
+        "head": "after"
+      },
+      "expect": "allow",
+      "why": "an all-zeros base is a branch with no history on the remote: only its head commit is judged. The head touches nothing governed; the undesigned commit before it is not in question, so judging the whole branch instead would wrongly deny"
+    },
+    {
+      "name": "a ci event that is not a range",
+      "event_name": "ci",
+      "event": {
+        "kind": "edit",
+        "paths": [
+          "src/covered.py"
+        ]
+      },
+      "expect": "deny",
+      "why": "the ci event asks about a range; anything else is refused with a reason, never allowed"
+    },
+    {
+      "name": "the review scope of a staged change",
+      "event_name": "kg",
+      "args": [
+        "impact"
+      ],
+      "event": {},
+      "arrange": {
+        "checkout": "clean",
+        "drop": [
+          "undesigned",
+          "after"
+        ],
+        "write": {
+          "src/covered.py": "VALUE = 5\n"
+        },
+        "stage": [
+          "src/covered.py"
+        ]
+      },
+      "expect": "impact",
+      "why": "a provider that checks a review's scope names it: the staged files among those to read, the lever groups, and a kg: hash. From here on the fixture holds no commit that skipped the gate — the ci cases' tags are dropped — so every provider's history reads the same"
+    },
+    {
+      "name": "a commit that stages nothing governed",
+      "event_name": "commit",
+      "event": {
+        "kind": "commit",
+        "message": "docs: a note\n"
+      },
+      "arrange": {
+        "checkout": "clean",
+        "write": {
+          "docs/later.md": "A later note.\n"
+        },
+        "stage": [
+          "docs/later.md"
+        ]
+      },
+      "expect": "allow",
+      "why": "nothing governed is staged, so there is nothing a design must cover"
+    },
+    {
+      "name": "a commit that stages a governed change and names no design",
+      "event_name": "commit",
+      "event": {
+        "kind": "commit",
+        "message": "feat: change covered\n"
+      },
+      "arrange": {
+        "checkout": "clean",
+        "write": {
+          "src/covered.py": "VALUE = 4\n"
+        },
+        "stage": [
+          "src/covered.py"
+        ]
+      },
+      "expect": "deny",
+      "why": "design before code: the staged governed change carries no Design trailer"
+    },
+    {
+      "name": "a push of a history that held to the gate",
+      "event_name": "push",
+      "event": {
+        "kind": "push"
+      },
+      "arrange": {
+        "checkout": "clean"
+      },
+      "expect": "allow",
+      "why": "every reachable commit touches nothing governed, or arms the gates"
+    },
+    {
+      "name": "a push of a history holding a commit that skipped the gate",
+      "event_name": "push",
+      "event": {
+        "kind": "push"
+      },
+      "arrange": {
+        "checkout": "clean",
+        "commit": {
+          "message": "feat: a governed change made without the gate",
+          "files": {
+            "src/other.py": "VALUE = 9\n"
+          }
+        }
+      },
+      "expect": "deny",
+      "why": "the commit was made without meeting any gate — no design, no review — after the gates were armed; a push must not carry it off this machine"
+    }
+  ]
+}

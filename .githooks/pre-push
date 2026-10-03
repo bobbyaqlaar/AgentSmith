@@ -14,8 +14,8 @@ set -uo pipefail
 
 hook_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if ! "$hook_dir/process-gate" sweep; then
-  echo "❌ push blocked by the sweep: commits above did not pass the gate." >&2
-  echo "   Repair them (agentsmith gates repair), then push again." >&2
+  echo "❌ push blocked by the gate: see above for which commits, and why." >&2
+  echo "   Repair them (with AgentSmith: agentsmith gates repair), then push again." >&2
   exit 1
 fi
 # The hook this repository ran before the gates, if any (.githooks/chain). The

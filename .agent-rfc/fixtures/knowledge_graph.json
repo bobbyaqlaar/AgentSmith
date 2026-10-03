@@ -682,7 +682,7 @@
         "impacted_files",
         "stats"
       ],
-      "last_modified": "2026-09-24T19:16:43Z",
+      "last_modified": "2026-10-03T10:12:59Z",
       "id": "scripts/local_knowledge_graph.py"
     },
     {
@@ -988,7 +988,7 @@
         "main",
         "_check_drift"
       ],
-      "last_modified": "2026-09-30T08:37:49Z",
+      "last_modified": "2026-10-02T20:19:50Z",
       "id": "scripts/generate-ide-config.py"
     },
     {
@@ -3308,7 +3308,7 @@
         "identity_processor",
         "pytest_configure"
       ],
-      "last_modified": "2026-09-14T19:25:42Z",
+      "last_modified": "2026-10-03T09:50:27Z",
       "id": "runtime/test/conftest.py"
     },
     {
@@ -3470,7 +3470,9 @@
         "_cmd_tenant_init",
         "_scaffold_tenant",
         "_cmd_tenant_adopt",
+        "_provider_scripts",
         "_cmd_gate",
+        "_gate_kg",
         "_cmd_conformance",
         "_cmd_sync",
         "_cmd_doctor",
@@ -3499,7 +3501,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-02T15:59:00Z",
+      "last_modified": "2026-10-03T10:12:19Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4117,7 +4119,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-02T17:43:47Z",
+      "last_modified": "2026-10-03T10:07:03Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4580,7 +4582,11 @@
         "stop_problems",
         "cmd_stop",
         "cmd_session_start",
+        "_without_comments",
         "cmd_commit_msg",
+        "commit_verdict",
+        "cmd_commit_decision",
+        "cmd_push_decision",
         "_range_commits",
         "_report",
         "design_summary",
@@ -4630,7 +4636,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-10-02T16:44:18Z",
+      "last_modified": "2026-10-03T10:11:39Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -5154,7 +5160,7 @@
       "symbols": [
         "pytest_configure"
       ],
-      "last_modified": "2026-09-28T23:39:33Z",
+      "last_modified": "2026-10-02T20:24:49Z",
       "id": "scripts/test/conftest.py"
     },
     {
@@ -5203,6 +5209,11 @@
         "Decision",
         "GateEventV2",
         "DecisionV2",
+        "GateEventV3",
+        "KgNode",
+        "KgEdge",
+        "KnowledgeGraph",
+        "KgImpact",
         "Ide",
         "Signoff",
         "Records",
@@ -5224,7 +5235,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-10-02T15:42:02Z",
+      "last_modified": "2026-10-02T20:10:31Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -5816,9 +5827,11 @@
         "_dependents",
         "impact",
         "changed_files",
+        "staged_files",
+        "staged_graph",
         "render_impact"
       ],
-      "last_modified": "2026-09-17T21:30:11Z",
+      "last_modified": "2026-10-02T20:11:46Z",
       "id": "scripts/gate_kg.py"
     },
     {
@@ -6670,7 +6683,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-10-02T17:45:01Z",
+      "last_modified": "2026-10-03T09:35:02Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6706,7 +6719,7 @@
         "test_adopt_declares_who_governs_the_repository",
         "test_adopt_writes_the_sync_workflow_so_a_tenant_hears_about_upgrades"
       ],
-      "last_modified": "2026-10-02T15:57:21Z",
+      "last_modified": "2026-10-02T20:17:49Z",
       "id": "scripts/test/test_tenant_adopt.py"
     },
     {
@@ -6849,12 +6862,14 @@
         "fixture",
         "build_fixture",
         "_ask",
+        "_judge_impact",
         "_judge",
+        "_arrange",
         "run",
         "passed",
         "render"
       ],
-      "last_modified": "2026-10-02T15:46:05Z",
+      "last_modified": "2026-10-02T20:16:06Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -7009,10 +7024,10 @@
         "test_the_hooks_it_adds_go_in_the_manifest_and_a_commit_the_tenants_own_gate_accepts",
         "test_a_tenant_with_no_arming_design_gets_one_that_covers_the_whole_commit",
         "test_the_scope_edit_appends_only_what_is_missing_and_keeps_the_prose",
-        "test_an_untouched_contract_1_declaration_moves_to_contract_2_with_its_workflow",
+        "test_an_untouched_contract_1_declaration_moves_to_the_current_contract_with_its_workflow",
         "test_a_declaration_naming_another_provider_is_theirs_and_its_setup_is_what_ci_runs"
       ],
-      "last_modified": "2026-10-02T16:04:20Z",
+      "last_modified": "2026-10-02T20:17:55Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -7825,7 +7840,7 @@
         "test_a_stored_record_is_reported_and_the_token_never_appears",
         "test_a_portal_that_refuses_the_record_fails_the_answer_with_its_own_reason"
       ],
-      "last_modified": "2026-10-02T16:04:01Z",
+      "last_modified": "2026-10-02T20:17:49Z",
       "id": "scripts/test/test_gate_contract_v2.py"
     },
     {
@@ -7851,6 +7866,67 @@
       "pillar": null,
       "created_at": "2026-10-02T16:20:41Z",
       "id": "rfc:reviews/gate-contract-ci.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_agentsmith_passes_contract_3",
+        "test_the_v3_schemas_are_the_models",
+        "test_version_3_carries_version_2_unchanged",
+        "test_this_repositorys_graph_is_a_valid_graph",
+        "test_what_adopt_declares_is_a_valid_contract_3_declaration",
+        "test_the_subject_rule_is_one_rule_in_two_places",
+        "test_the_provider_never_answers_with_a_tenants_vendored_gate",
+        "_env",
+        "repo",
+        "_declare",
+        "_commit",
+        "test_kg_impact_names_the_staged_scope_as_the_contract_shapes_it",
+        "test_kg_impact_scopes_the_commit_not_the_working_tree",
+        "test_kg_build_writes_a_graph_the_contract_describes",
+        "test_at_contract_3_a_commit_of_nothing_governed_is_made",
+        "test_at_contract_3_a_governed_commit_with_no_design_is_refused_by_the_provider",
+        "test_at_contract_3_the_subject_rule_is_the_providers",
+        "test_at_contract_3_no_decision_blocks_the_commit_and_never_falls_back",
+        "test_at_contract_3_pre_commit_asks_nothing",
+        "remote",
+        "_push",
+        "_skip_the_gate",
+        "test_at_contract_3_a_clean_history_is_pushed",
+        "test_at_contract_3_a_history_with_a_commit_that_skipped_the_gate_is_not_pushed",
+        "test_a_provider_older_than_the_declared_contract_is_named_with_the_fix",
+        "test_a_launcher_too_old_to_name_the_contract_keeps_the_subject_rule",
+        "test_every_gate_hook_parses",
+        "test_the_launchers_inline_python_is_quoted_whole_and_compiles"
+      ],
+      "last_modified": "2026-10-03T10:07:03Z",
+      "id": "scripts/test/test_gate_contract_v3.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "install"
+      ],
+      "last_modified": "2026-10-02T20:24:49Z",
+      "id": "scripts/test/provider_shim.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "C2 \u2014 Gate contract 3: the commit and push events, and the knowledge graph",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/gate-local-events.md",
+      "pillar": null,
+      "created_at": "2026-10-03T10:20:24Z",
+      "id": "rfc:designs/gate-local-events.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 gate-local-events (C2)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/gate-local-events.md",
+      "pillar": null,
+      "created_at": "2026-10-03T10:20:24Z",
+      "id": "rfc:reviews/gate-local-events.md"
     }
   ],
   "edges": [
@@ -8807,6 +8883,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_gate_contract_v2.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract_v3.py",
       "target": "runtime/__init__.py"
     }
   ]

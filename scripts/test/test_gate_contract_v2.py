@@ -96,7 +96,7 @@ def test_what_adopt_declares_is_a_valid_contract_2_declaration():
     schema = json.loads((V2 / "providers.schema.json").read_text(encoding="utf-8"))
     declared = json.loads(providers_declaration())
     jsonschema.validate(declared, schema)
-    assert declared["contract"] == 2
+    assert declared["contract"] >= 2, "adopt declares contract 2 or later (3 since gate-local-events.md)"
     jsonschema.validate({**declared, "providers": {"gate": "none"}}, schema)
     for bad in ({"contract": 2, "providers": {"gate": {"command": "x", "contract": 3}}},
                 {"contract": 2, "providers": {"gate": {"command": "x", "setup": ""}}}):

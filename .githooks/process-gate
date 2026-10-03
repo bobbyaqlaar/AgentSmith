@@ -12,8 +12,8 @@
 # (contract/gate/v1/protocol.md).
 #
 # `ci` goes to the declared provider when the repository speaks gate contract 2,
-# and then never falls back: no decision fails the check
-# (contract/gate/v2/protocol.md).
+# and `commit-msg` and `sweep` — the commit and push events — at contract 3; none
+# of them then falls back: no decision refuses (contract/gate/v3/protocol.md).
 #
 # Everything else — and any event no provider answered — runs AgentSmith's own
 # script, looked up in this order:
@@ -84,55 +84,123 @@ ci_by_contract() {
       *) shift ;;
     esac
   done
+  # A ref is put into JSON by hand here, so only characters a ref can hold.
+  for ref in "$base" "$head"; do
+    case "$ref" in
+      *[!A-Za-z0-9._/~^@{}-]*)
+        say_error ci "not a git ref: $ref"
+        return 1 ;;
+    esac
+  done
+  ask_provider ci "$(printf '{"kind":"range","base":"%s","head":"%s"}' "$base" "$head")" ci
+}
+
+# `commit-msg [--amend] FILE` and `sweep [--report]` at contract 3: the commit
+# and push events (contract/gate/v3/protocol.md). `sweep --report` is what
+# pre-commit runs; at contract 3 it asks nothing, because `commit` runs the same
+# sweep with the message and decides. No policy lives here — the subject rule is
+# the provider's.
+local_by_contract() {
+  local amend=false file="" payload
+  case "$1" in
+    sweep)
+      shift
+      case " $* " in *" --report "*) return 0 ;; esac
+      ask_provider push '{"kind":"push"}' local ;;
+    commit-msg)
+      shift
+      for arg in "$@"; do
+        case "$arg" in --amend) amend=true ;; *) file="$arg" ;; esac
+      done
+      if [ ! -f "$file" ]; then
+        say_error local "commit-msg was given no message file"
+        return 1
+      fi
+      need_python local || return 1
+      # The message is data: encoded by an interpreter, never spliced into JSON by hand.
+      payload="$(GATE_AMEND="$amend" python3 -c '
+import json, os, sys
+print(json.dumps({"kind": "commit", "message": open(sys.argv[1], encoding="utf-8").read(),
+                  "amend": os.environ["GATE_AMEND"] == "true"}))
+' "$file")" || return 1
+      ask_provider commit "$payload" local ;;
+  esac
+}
+
+# Where a failure is said: CI gets an annotation; a hook speaks to the person
+# at the terminal.
+say_error() {
+  if [ "$1" = "ci" ]; then
+    echo "::error title=Process gate::$2"
+  else
+    echo "❌ process gate: $2" >&2
+  fi
+}
+
+need_python() {
+  command -v python3 >/dev/null 2>&1 && return 0
+  say_error "$1" "python3 is needed to talk to the gate provider, and is not on PATH"
+  return 1
+}
+
+# One event to the declared provider, and its decision as the exit code.
+# $1 the event, $2 its JSON, $3 `ci` or `local`. No decision, in any form,
+# refuses — and says which form it took; nothing falls back to a framework path.
+ask_provider() {
+  local event="$1" payload="$2" where="$3" provider answer code
   provider="${GOVERNANCE_PROVIDER:-$(declared_gate)}"
   if [ "$provider" = "none" ]; then
     echo "Process gates: this repository declares itself ungoverned (providers.json) — nothing checked."
     return 0
   fi
   if [ -z "$provider" ]; then
-    echo "::error title=Process gate::providers.json declares gate contract 2 but names no gate command"
+    say_error "$where" "providers.json declares gate contract $(declared_contract) but names no gate command"
     return 1
   fi
-  # A ref is put into JSON by hand here, so only characters a ref can hold.
-  for ref in "$base" "$head"; do
-    case "$ref" in
-      *[!A-Za-z0-9._/~^@{}-]*)
-        echo "::error title=Process gate::not a git ref: $ref"
-        return 1 ;;
-    esac
-  done
-  answer="$(printf '{"kind":"range","base":"%s","head":"%s"}' "$base" "$head" | $provider ci)"
+  need_python "$where" || return 1
+  answer="$(printf '%s' "$payload" | $provider "$event")"
   code=$?
-  if ! command -v python3 >/dev/null 2>&1; then
-    echo "::error title=Process gate::python3 is needed to read the provider's decision, and is not on PATH"
-    return 1
-  fi
-  printf '%s' "$answer" | GATE_EXIT="$code" python3 -c '
+  printf '%s' "$answer" | GATE_EXIT="$code" GATE_EVENT="$event" GATE_WHERE="$where" \
+    GATE_CONTRACT="$(declared_contract)" python3 -c '
 import json, os, sys
-raw, code = sys.stdin.read(), os.environ["GATE_EXIT"]
+raw, code, event = sys.stdin.read(), os.environ["GATE_EXIT"], os.environ["GATE_EVENT"]
+in_ci = os.environ["GATE_WHERE"] == "ci"
+refused = {"ci": "fails the check", "commit": "blocks the commit", "push": "blocks the push"}[event]
+
+def fail(text):
+    if in_ci:
+        print("::error title=Process gate::" + text)
+    else:
+        print("❌ process gate: " + text, file=sys.stderr)
+    sys.exit(1)
+
 try:
     answer = json.loads(raw)
     decision = answer["decision"]
 except (ValueError, KeyError, TypeError):
-    why = {"3": "it cannot run here (exit 3)", "126": "it is not executable (exit 126)",
+    # Exit 2 is a usage error: an installed provider older than the contract this
+    # repository declares does not know the event — the case that happens when a
+    # tenant moves ahead of the install on a machine.
+    why = {"2": f"it does not know `{event}` (exit 2) — it is older than the gate contract this repository declares; "
+                "update it (for AgentSmith: re-run install-ai-stack.sh)",
+           "3": "it cannot run here (exit 3)", "126": "it is not executable (exit 126)",
            "127": "it is not installed (exit 127)"}.get(code, f"it printed no decision (exit {code})")
-    print(f"::error title=Process gate::the declared gate provider gave no decision: {why}. "
-          "Under gate contract 2 that fails the check; nothing falls back to a framework path.")
-    sys.exit(1)
+    contract = os.environ["GATE_CONTRACT"]
+    fail(f"the declared gate provider gave no decision for `{event}`: {why}. Under gate contract "
+         f"{contract} that {refused}; nothing falls back to a framework path.")
 report = answer.get("report") or ""
 if report:
     print(report)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
-    if summary:
+    if in_ci and summary:
         with open(summary, "a", encoding="utf-8") as fh:
             fh.write(report + "\n")
-for line in answer.get("annotations") or []:
-    print(line)
+if in_ci:
+    for line in answer.get("annotations") or []:
+        print(line)
 if decision == "allow":
     sys.exit(0)
-text = answer.get("text") or "the range was refused, with no reason given"
-print("::error title=Process gate::" + text)
-sys.exit(1)
+fail(answer.get("text") or "refused, with no reason given")
 '
 }
 
@@ -173,6 +241,20 @@ case "$subcommand" in
       ci_by_contract "$@"
       exit $?
     fi
+    ;;
+  commit-msg|sweep)
+    # Gate contract 3: the commit and push events go to the declared provider,
+    # and never fall back (contract/gate/v3/protocol.md). Below 3, nothing here
+    # applies and the framework's own script runs, as it always has.
+    if [ "$(declared_contract)" -ge 3 ]; then
+      local_by_contract "$@"
+      exit $?
+    fi
+    ;;
+  declared-contract)
+    # For the hooks: commit-msg applies the subject rule itself only below 3.
+    declared_contract
+    exit 0
     ;;
 esac
 
