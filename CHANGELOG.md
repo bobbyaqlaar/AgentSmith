@@ -77,6 +77,22 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the record contract: what a gate provider tells a portal
+
+- **`contract/record/v1/`** publishes the dev record a gate provider sends a portal after a CI run —
+  its schema, generated from a new Pydantic model (`DevRecord`) — and how it travels: bearer token,
+  https or loopback only, never across a redirect, at most 500 commits a request with the designs on
+  the last part, `4xx` fails the sender's run and `5xx` only warns, and resending is safe.
+- **The gate validates every record before it is written or sent.** A record the contract would refuse
+  is a gate defect and fails the run, instead of being refused by the portal in someone's CI.
+- **The portal is held to the published file**: its schema number, verdict and pillar catalogues and
+  limits are checked against `record.schema.json`, and every contract case runs through its ingest
+  handler against a real database (`recordContract.test.ts`, `recordContractDb.test.ts`). The
+  regex pin of one constant against the other is gone.
+- **`agentsmith conformance --port record`**: `--sender "<gate command>"` judges what a provider sends
+  a loopback portal; `--receiver <url>` judges a portal's answers to the contract's cases.
+- No tenant change: since gate contract 2 the provider sends the record, and no tenant holds a sender.
+
 ### Added — gate contract 3: a tenant's commits and pushes ask its declared provider
 
 **Hook-interface change** (additive; contracts 1 and 2 stay published and served).

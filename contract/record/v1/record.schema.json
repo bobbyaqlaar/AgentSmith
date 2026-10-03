@@ -1,0 +1,531 @@
+{
+  "$defs": {
+    "RecordCommit": {
+      "additionalProperties": true,
+      "properties": {
+        "commit": {
+          "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$",
+          "title": "Commit",
+          "type": "string"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent"
+        },
+        "subject": {
+          "maxLength": 1000,
+          "title": "Subject",
+          "type": "string"
+        },
+        "author_name": {
+          "anyOf": [
+            {
+              "maxLength": 320,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Author Name"
+        },
+        "author_email": {
+          "anyOf": [
+            {
+              "maxLength": 320,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Author Email"
+        },
+        "committed_at": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Committed At"
+        },
+        "adopted": {
+          "title": "Adopted",
+          "type": "boolean"
+        },
+        "gated": {
+          "title": "Gated",
+          "type": "boolean"
+        },
+        "verdict": {
+          "enum": [
+            "passed",
+            "failed",
+            "passed_with_notes",
+            "not_gated",
+            "before_adoption"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        },
+        "errors": {
+          "items": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Errors",
+          "type": "array"
+        },
+        "notes": {
+          "items": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Notes",
+          "type": "array"
+        },
+        "repairs": {
+          "items": {
+            "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$",
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Repairs",
+          "type": "array"
+        },
+        "design": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordDesign"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "review": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordReview"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "commit",
+        "subject",
+        "adopted",
+        "gated",
+        "verdict"
+      ],
+      "title": "RecordCommit",
+      "type": "object"
+    },
+    "RecordDesign": {
+      "additionalProperties": true,
+      "description": "The design a commit names: resolved, or the reason it could not be.",
+      "properties": {
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "maxLength": 32,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "scope": {
+          "items": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Scope",
+          "type": "array"
+        },
+        "pillars": {
+          "maxProperties": 200,
+          "patternProperties": {
+            "^P\\d{1,3}$": {
+              "enum": [
+                "applies",
+                "n/a",
+                "gap",
+                "deviation",
+                "unrecognised"
+              ],
+              "type": "string"
+            }
+          },
+          "propertyNames": {
+            "pattern": "^P\\d{1,3}$"
+          },
+          "title": "Pillars",
+          "type": "object"
+        },
+        "deviations": {
+          "items": {
+            "$ref": "#/$defs/RecordDeviation"
+          },
+          "maxItems": 200,
+          "title": "Deviations",
+          "type": "array"
+        },
+        "ref": {
+          "maxLength": 4000,
+          "title": "Ref",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "resolved": {
+          "title": "Resolved",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "ref",
+        "resolved"
+      ],
+      "title": "RecordDesign",
+      "type": "object"
+    },
+    "RecordDeviation": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "maxLength": 32,
+          "title": "Id",
+          "type": "string"
+        },
+        "text_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Text Sha256",
+          "type": "string"
+        },
+        "approval_id": {
+          "anyOf": [
+            {
+              "maxLength": 32,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approval Id"
+        }
+      },
+      "required": [
+        "id",
+        "text_sha256"
+      ],
+      "title": "RecordDeviation",
+      "type": "object"
+    },
+    "RecordHeadDesign": {
+      "additionalProperties": true,
+      "description": "A design document as it stands at the head.",
+      "properties": {
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "maxLength": 32,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "scope": {
+          "items": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Scope",
+          "type": "array"
+        },
+        "pillars": {
+          "maxProperties": 200,
+          "patternProperties": {
+            "^P\\d{1,3}$": {
+              "enum": [
+                "applies",
+                "n/a",
+                "gap",
+                "deviation",
+                "unrecognised"
+              ],
+              "type": "string"
+            }
+          },
+          "propertyNames": {
+            "pattern": "^P\\d{1,3}$"
+          },
+          "title": "Pillars",
+          "type": "object"
+        },
+        "deviations": {
+          "items": {
+            "$ref": "#/$defs/RecordDeviation"
+          },
+          "maxItems": 200,
+          "title": "Deviations",
+          "type": "array"
+        },
+        "path": {
+          "maxLength": 4000,
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "RecordHeadDesign",
+      "type": "object"
+    },
+    "RecordPass": {
+      "additionalProperties": true,
+      "properties": {
+        "n": {
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "findings": {
+          "minimum": 0,
+          "title": "Findings",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "n",
+        "findings"
+      ],
+      "title": "RecordPass",
+      "type": "object"
+    },
+    "RecordReview": {
+      "additionalProperties": true,
+      "properties": {
+        "ref": {
+          "maxLength": 4000,
+          "title": "Ref",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "resolved": {
+          "title": "Resolved",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "passes": {
+          "items": {
+            "$ref": "#/$defs/RecordPass"
+          },
+          "maxItems": 200,
+          "title": "Passes",
+          "type": "array"
+        },
+        "signed_off": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Signed Off"
+        },
+        "kg_query": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kg Query"
+        }
+      },
+      "required": [
+        "ref",
+        "resolved"
+      ],
+      "title": "RecordReview",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "What a gate provider sends a portal about one CI run, one request at a time (contract/record/v1/protocol.md): what it decided about each commit, and the designs at the head on the last part. A receiver drops keys it does not read and refuses, whole, a body outside these limits.",
+  "properties": {
+    "schema": {
+      "const": 1,
+      "title": "Schema",
+      "type": "integer"
+    },
+    "head": {
+      "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$",
+      "title": "Head",
+      "type": "string"
+    },
+    "commits": {
+      "items": {
+        "$ref": "#/$defs/RecordCommit"
+      },
+      "maxItems": 500,
+      "title": "Commits",
+      "type": "array"
+    },
+    "designs": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/RecordHeadDesign"
+          },
+          "maxItems": 1000,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Designs"
+    },
+    "ci_run_url": {
+      "anyOf": [
+        {
+          "pattern": "^https?://",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ci Run Url"
+    }
+  },
+  "required": [
+    "schema",
+    "head",
+    "commits"
+  ],
+  "title": "DevRecord",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/record/v1/record.schema.json"
+}

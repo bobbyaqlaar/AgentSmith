@@ -32,6 +32,14 @@ document as it stands at the head, because a design is usually closed by a
 commit that does not cite it. The file is written whatever the verdict. It is what the portal's Dev workspace is sent, so the portal
 shows the gate's verdict rather than reaching its own.
 
+**That record is a contract** — `contract/record/v1/`: its schema (generated from the gate's own
+model, which checks every record before it is written or sent — a record the contract would refuse
+fails the run here, not in the portal), and how it travels: bearer token, https or loopback, never
+across a redirect, at most 500 commits a request, refused fails the run and unwell only warns, and
+resending is safe. The portal is held to the same file by its tests. `agentsmith conformance --port
+record --sender "<gate command>"` or `--receiver <ingest address>` checks any other provider or
+portal against it.
+
 **What no gate can check** is whether the design was *good*. The gates prove a
 design exists, is scoped to the change, and cites real levers; that a review
 ran until a pass found nothing; and that the review is as fresh as the change.

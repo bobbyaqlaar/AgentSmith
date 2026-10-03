@@ -217,19 +217,6 @@ def test_an_incomplete_sign_off_is_recorded_as_not_signed_off():
     assert pg.review_summary(REVIEW_CLEAN, None)["signed_off"] is None
 
 
-def test_the_gate_and_the_portal_agree_on_the_record():
-    """The gate writes the record and the portal refuses what it does not know,
-    so a verdict or schema added on one side alone breaks every ingest."""
-    import re
-
-    source = (REPO / "portal" / "lib" / "devIngest.ts").read_text(encoding="utf-8")
-    verdicts = re.search(r"DEV_VERDICTS = \[([^\]]*)\]", source)
-    schema = re.search(r"DEV_RECORD_SCHEMA = (\d+);", source)
-    assert verdicts and schema, "the constants moved — re-point this test"
-    assert tuple(re.findall(r'"([^"]+)"', verdicts.group(1))) == pg.DEV_VERDICTS
-    assert int(schema.group(1)) == pg.DEV_RECORD_SCHEMA
-
-
 def test_the_record_carries_every_design_as_it_stands_at_the_head(gated_repo, tmp_path):
     """A design is closed by a records commit that does not cite it, so the last
     commit that DID cite it still says `active`. The portal reads status from

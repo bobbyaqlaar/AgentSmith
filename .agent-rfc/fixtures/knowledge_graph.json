@@ -3473,6 +3473,7 @@
         "_provider_scripts",
         "_cmd_gate",
         "_gate_kg",
+        "_record_conformance",
         "_cmd_conformance",
         "_cmd_sync",
         "_cmd_doctor",
@@ -3501,7 +3502,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-03T10:12:19Z",
+      "last_modified": "2026-10-03T20:21:00Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4119,7 +4120,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-03T10:07:03Z",
+      "last_modified": "2026-10-03T20:45:35Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4589,6 +4590,7 @@
         "cmd_push_decision",
         "_range_commits",
         "_report",
+        "record_problem",
         "design_summary",
         "review_summary",
         "describe_records",
@@ -4636,7 +4638,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-10-03T10:11:39Z",
+      "last_modified": "2026-10-03T20:46:13Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4738,7 +4740,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-10-01T19:01:52Z",
+      "last_modified": "2026-10-03T20:24:17Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5214,6 +5216,15 @@
         "KgEdge",
         "KnowledgeGraph",
         "KgImpact",
+        "_Record",
+        "RecordDeviation",
+        "_DesignFields",
+        "RecordDesign",
+        "RecordHeadDesign",
+        "RecordPass",
+        "RecordReview",
+        "RecordCommit",
+        "DevRecord",
         "Ide",
         "Signoff",
         "Records",
@@ -5235,7 +5246,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-10-02T20:10:31Z",
+      "last_modified": "2026-10-03T20:26:24Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -6003,10 +6014,9 @@
         "test_a_deviation_is_recorded_by_id_text_hash_and_approval",
         "test_every_pillar_kind_is_recorded_as_answered",
         "test_an_incomplete_sign_off_is_recorded_as_not_signed_off",
-        "test_the_gate_and_the_portal_agree_on_the_record",
         "test_the_record_carries_every_design_as_it_stands_at_the_head"
       ],
-      "last_modified": "2026-09-18T15:07:37Z",
+      "last_modified": "2026-10-03T20:23:03Z",
       "id": "scripts/test/test_dev_record.py"
     },
     {
@@ -6083,7 +6093,7 @@
         "Parsed",
         "parseDevIngest"
       ],
-      "last_modified": "2026-09-18T15:13:27Z",
+      "last_modified": "2026-10-03T20:27:27Z",
       "id": "portal/lib/devIngest.ts"
     },
     {
@@ -6866,10 +6876,25 @@
         "_judge",
         "_arrange",
         "run",
+        "_record_dir",
+        "RecordCase",
+        "Check",
+        "RecordReport",
+        "record_cases",
+        "record_body",
+        "_NoRedirect",
+        "run_record_receiver",
+        "run_record_sender",
+        "_record_schema_problem",
         "passed",
-        "render"
+        "render",
+        "redirect_request",
+        "Receiver",
+        "decide",
+        "do_POST",
+        "log_message"
       ],
-      "last_modified": "2026-10-02T20:16:06Z",
+      "last_modified": "2026-10-03T20:46:47Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -7927,6 +7952,67 @@
       "pillar": null,
       "created_at": "2026-10-03T10:20:24Z",
       "id": "rfc:reviews/gate-local-events.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_the_record_schema_is_the_model",
+        "test_the_model_decides_every_parseable_case_as_the_contract_does",
+        "test_the_gate_and_the_contract_agree_on_the_record",
+        "test_a_record_the_contract_would_refuse_never_leaves_the_gate",
+        "_Stub",
+        "test_the_receiver_suite_passes_a_conformant_receiver_and_fails_one_that_stores_anything",
+        "test_agentsmith_passes_the_sender_suite",
+        "test_the_sender_suite_fails_a_sender_that_sends_nothing_and_always_allows",
+        "test_a_range_named_by_ref_records_commit_hashes",
+        "__init__",
+        "Handler",
+        "do_POST",
+        "log_message"
+      ],
+      "last_modified": "2026-10-03T20:42:53Z",
+      "id": "scripts/test/test_record_contract.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "RecordCase",
+        "recordBody"
+      ],
+      "last_modified": "2026-10-03T20:22:08Z",
+      "id": "portal/test/recordCases.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-10-03T20:22:08Z",
+      "id": "portal/test/recordContract.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-10-03T20:22:08Z",
+      "id": "portal/test/recordContractDb.test.ts"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "C3 \u2014 The record contract: what a gate provider tells a portal",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/record-contract.md",
+      "pillar": null,
+      "created_at": "2026-10-03T21:01:11Z",
+      "id": "rfc:designs/record-contract.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 record-contract (C3)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/record-contract.md",
+      "pillar": null,
+      "created_at": "2026-10-03T21:01:11Z",
+      "id": "rfc:reviews/record-contract.md"
     }
   ],
   "edges": [
@@ -8888,6 +8974,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_gate_contract_v3.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_record_contract.py",
       "target": "runtime/__init__.py"
     }
   ]

@@ -457,6 +457,9 @@ GATE_FILES = {
     # not — it imports gate_kg.py, which is why that split exists.
     "scripts/_shared.py": REPO / "scripts/_shared.py",
     "scripts/gate_tracing.py": REPO / "scripts/gate_tracing.py",
+    # The record is sent (gate contract 2's `ci`) and validated in the parts it
+    # is sent in (contract/record/v1) through this module, so it is the gate's too.
+    "scripts/send_dev_record.py": REPO / "scripts/send_dev_record.py",
     "templates/governance.json": REPO / "templates/governance.json",
     "runtime": REPO / "runtime",
 }

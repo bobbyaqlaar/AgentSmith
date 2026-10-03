@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - contract/record/v1/**
   - scripts/gate_models.py

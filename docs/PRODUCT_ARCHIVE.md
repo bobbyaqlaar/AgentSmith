@@ -7,6 +7,22 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — C3: the record contract (2026-10-04)
+
+Design: `.agent-rfc/designs/record-contract.md`; review: `.agent-rfc/reviews/record-contract.md`.
+Slice C3 of `.agent-rfc/designs/governance-contracts.md`.
+
+- **`contract/record/v1/`**: the dev record's schema, generated from a new model the gate validates
+  every record against before it is written or sent, and its transport written down as the sender
+  and the portal already behaved.
+- **Both sides held to one file.** The portal's constants are checked against the published schema
+  (the regex pin of one hand-written constant against another is gone); every case runs through its
+  handler against Postgres — 9/9.
+- **Conformance that can fail.** `--port record --sender` and `--receiver`; AgentSmith passes both,
+  and a stub sender that sends nothing and a stub portal that stores anything are each judged
+  non-conformant, check by check.
+- **No tenant step**: since C1 the provider sends the record, and no tenant holds a sender — checked.
+
 ## Completed — C2: gate contract 3, commit and push, and the graph (2026-10-03)
 
 Design: `.agent-rfc/designs/gate-local-events.md`; review: `.agent-rfc/reviews/gate-local-events.md`.

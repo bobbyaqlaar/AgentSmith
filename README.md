@@ -189,7 +189,7 @@ through the contract today, and the rest are contracts in place that still resol
 | **Gate** | a decision at `session-start`, `pre-edit`, `stop`, on each commit and push, and on a CI range; the review scope from the knowledge graph | **declared and resolved** via `contract/gate/v3` — editing, commit, push and CI |
 | **Telemetry** | spans, metrics, resource attributes | already vendor-neutral — OTLP and the span contract in CHANGELOG.md |
 | **Rules** | what the agent is told | a contract in place (`templates/governance.json`, the `agentsmith:rules` markers); not yet published as a schema |
-| **Records** | what CI decided, per commit | a contract in place — the dev record, versioned `schema: 1` |
+| **Records** | what CI decided, per commit | **published** — `contract/record/v1`: the record and its transport, with conformance for a sender and for a receiver; the portal and AgentSmith's provider are both held to it |
 | **Security and evals** | artifact schemas and a harness verdict | a contract in place — the `SEC-*` registry and evidence packs |
 
 ---

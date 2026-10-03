@@ -1,0 +1,89 @@
+{
+  "_about": "A record a receiver must store: two commits of one range and the design at its head. Each case in cases.json starts from this body and changes one thing.",
+  "record": {
+    "schema": 1,
+    "head": "2222222222222222222222222222222222222222",
+    "ci_run_url": "https://ci.example/run/1",
+    "commits": [
+      {
+        "commit": "1111111111111111111111111111111111111111",
+        "parent": "3333333333333333333333333333333333333333",
+        "subject": "feat: the change the design covers",
+        "author_name": "Dev",
+        "author_email": "dev@example.invalid",
+        "committed_at": "2026-10-04T08:00:00Z",
+        "adopted": true,
+        "gated": true,
+        "verdict": "passed",
+        "errors": [],
+        "notes": [],
+        "repairs": [],
+        "design": {
+          "ref": ".agent-rfc/designs/change.md",
+          "path": ".agent-rfc/designs/change.md",
+          "resolved": true,
+          "reason": null,
+          "title": "The change",
+          "status": "active",
+          "scope": [
+            "src/**"
+          ],
+          "pillars": {
+            "P1": "applies",
+            "P9": "n/a"
+          },
+          "deviations": []
+        },
+        "review": {
+          "ref": ".agent-rfc/reviews/change.md",
+          "path": ".agent-rfc/reviews/change.md",
+          "resolved": true,
+          "reason": null,
+          "passes": [
+            {
+              "n": 1,
+              "findings": 1
+            },
+            {
+              "n": 2,
+              "findings": 0
+            }
+          ],
+          "signed_off": true,
+          "kg_query": "kg:0123456789ab"
+        }
+      },
+      {
+        "commit": "2222222222222222222222222222222222222222",
+        "parent": "1111111111111111111111111111111111111111",
+        "subject": "docs: a note no gate governs",
+        "author_name": "Dev",
+        "author_email": "dev@example.invalid",
+        "committed_at": "2026-10-04T09:00:00Z",
+        "adopted": true,
+        "gated": false,
+        "verdict": "not_gated",
+        "errors": [],
+        "notes": [],
+        "repairs": [],
+        "design": null,
+        "review": null
+      }
+    ],
+    "designs": [
+      {
+        "path": ".agent-rfc/designs/change.md",
+        "title": "The change",
+        "status": "active",
+        "scope": [
+          "src/**"
+        ],
+        "pillars": {
+          "P1": "applies",
+          "P9": "n/a"
+        },
+        "deviations": []
+      }
+    ]
+  }
+}

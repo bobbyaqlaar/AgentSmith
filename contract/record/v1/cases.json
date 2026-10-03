@@ -1,0 +1,73 @@
+{
+  "_about": "What a receiver must answer. Each case starts from fixture.json's record and changes one thing: `set` replaces a value at a dotted path (a list index is a number), `repeat_commits` repeats the first commit until there are that many, `pad` adds an unknown key holding that many characters. `token` is `valid` (the receiver's test token), `unknown`, or `none`. Only the status is matched: a receiver words its own refusals.",
+  "cases": [
+    {
+      "name": "a valid record",
+      "token": "valid",
+      "expect": 200,
+      "why": "the record the contract describes is stored"
+    },
+    {
+      "name": "a key the receiver does not read",
+      "token": "valid",
+      "set": {
+        "sender_note": "added later"
+      },
+      "expect": 200,
+      "why": "unknown keys are dropped, never refused — a sender adding one breaks nobody"
+    },
+    {
+      "name": "a schema version the receiver does not read",
+      "token": "valid",
+      "set": {
+        "schema": 2
+      },
+      "expect": 400,
+      "why": "a receiver refuses a shape it does not know rather than storing half of it"
+    },
+    {
+      "name": "a verdict outside the catalogue",
+      "token": "valid",
+      "set": {
+        "commits.0.verdict": "probably_fine"
+      },
+      "expect": 400,
+      "why": "the verdict catalogue is closed"
+    },
+    {
+      "name": "a commit hash that is not one",
+      "token": "valid",
+      "set": {
+        "commits.0.commit": "not-a-sha"
+      },
+      "expect": 400,
+      "why": "every field is validated, and the body is refused whole"
+    },
+    {
+      "name": "more commits than one request may carry",
+      "token": "valid",
+      "repeat_commits": 501,
+      "expect": 400,
+      "why": "a longer range is sent in parts of at most 500"
+    },
+    {
+      "name": "a body larger than a receiver reads",
+      "token": "valid",
+      "pad": 2000001,
+      "expect": 413,
+      "why": "the size limit is checked before anything is parsed"
+    },
+    {
+      "name": "no token",
+      "token": "none",
+      "expect": 401,
+      "why": "a record is stored only for the app whose token sent it"
+    },
+    {
+      "name": "an unknown token",
+      "token": "unknown",
+      "expect": 401,
+      "why": "a revoked or invented token stores nothing"
+    }
+  ]
+}
