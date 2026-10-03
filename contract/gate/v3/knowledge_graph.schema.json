@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "KgEdge": {
+      "additionalProperties": true,
+      "description": "One edge: `source` IMPORTS `target`, and the like.",
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "edge_type": {
+          "title": "Edge Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target",
+        "edge_type"
+      ],
+      "title": "KgEdge",
+      "type": "object"
+    },
+    "KgNode": {
+      "additionalProperties": true,
+      "description": "One node of a repository's knowledge graph: a file or a guardrail.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "node_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Node Type"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "KgNode",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "A repository's knowledge graph, `.agent-rfc/fixtures/knowledge_graph.json`, as a gate provider reads it to scope a review (contract/gate/v3/protocol.md). The fields the review-scope hash depends on are pinned; a builder may add others.",
+  "properties": {
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/KgNode"
+      },
+      "title": "Nodes",
+      "type": "array"
+    },
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/KgEdge"
+      },
+      "title": "Edges",
+      "type": "array"
+    },
+    "links": {
+      "items": {
+        "$ref": "#/$defs/KgEdge"
+      },
+      "title": "Links",
+      "type": "array"
+    }
+  },
+  "title": "KnowledgeGraph",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/gate/v3/knowledge_graph.schema.json"
+}

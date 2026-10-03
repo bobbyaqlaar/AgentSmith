@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - contract/gate/v3/**
   - .githooks/process-gate
@@ -96,6 +96,15 @@ so an unmigrated tenant loses nothing.
   equals a committed one byte for byte; what CI must know — that a review covered the right scope — the
   `KG query:` check in `ci` already enforces. OTS's node-count step is replaced by that, not ported.
 
+### The provider runs its own gate
+
+`agentsmith gate` looked for `process_gate.py` in the repository it was asked about **first**
+(`./scripts/`), and in its own installation second. In a vendored tenant that means the provider
+answers with the tenant's copy — OTS's, 1,318 lines behind — so a tenant on contract 2 or 3 would
+still be judged by stale framework code it holds. The provider now runs its own installation's gate;
+a repository's `scripts/` is used only when that repository is the framework checkout itself
+(`looks_like_framework`), so AgentSmith's own development still runs the code being changed.
+
 ### Declarations and sync
 
 `providers_declaration` writes contract 3; `sync` moves an untouched declaration and the hook stubs
@@ -134,7 +143,7 @@ changes the rule *text* that named a path, in `scripts/generate-ide-config.py`; 
 - P10 n/a — no LLM call.
 - P11 applies — `.githooks/commit-msg` passes the commit message to the provider as data inside a JSON event, encoded by the launcher's interpreter, never spliced into a command; the declared command comes from the committed declaration, as in v1.
 - P12 n/a — no credentials in these events.
-- P13 applies — `.githooks/commit-msg` blocks a commit when the gate cannot run, today; at contract 3 a provider with no decision blocks it too and never falls back to a framework path, and the subject rule moves into the provider without being dropped for unmigrated tenants.
+- P13 applies — `.githooks/commit-msg` blocks a commit when the gate cannot run, today; the provider stops answering with a tenant's vendored copy of the gate; at contract 3 a provider with no decision blocks it too and never falls back to a framework path, and the subject rule moves into the provider without being dropped for unmigrated tenants.
 - P14 applies — `contract/gate/v2/fixture.json` and its cases stay byte-for-byte; v3 carries them, pinned, and adds its own.
 - P15 applies — `.githooks/process-gate` distinguishes a refused commit (the provider's reason) from a provider that gave no decision (which kind) from one too old for contract 3.
 - P16 applies — `contract/gate/v2/providers.schema.json` already lets the gate entry state its contract, so a tenant returns to 2 by editing one number; below 3 the hooks behave exactly as before.

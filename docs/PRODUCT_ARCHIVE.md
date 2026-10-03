@@ -7,6 +7,22 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — C2: gate contract 3, commit and push, and the graph (2026-10-03)
+
+Design: `.agent-rfc/designs/gate-local-events.md`; review: `.agent-rfc/reviews/gate-local-events.md`.
+Slice C2 of `.agent-rfc/designs/governance-contracts.md`.
+
+- **`contract/gate/v3/`**: v2 plus `commit` and `push`, no fall-through, and the `kg build` /
+  `kg impact` verbs with the graph's shape published. v3 carries v2's cases and fixture, pinned; its
+  new cases are written so a provider that sweeps everything reachable and one that sweeps only what
+  is new read the same history. AgentSmith passes v1, v2 and v3.
+- **The hooks are stubs at contract 3**: the subject rule moved into the provider; `pre-commit` asks
+  nothing. The provider answers with its own gate, never a tenant's vendored copy.
+- **The slice locked its own author out.** An apostrophe in a comment inside the launcher's
+  single-quoted Python broke `.githooks/process-gate`; every hook failed closed, and the session could
+  not repair it — the owner did, from a terminal. Two tests now stand in front of it: every hook must
+  pass `bash -n`, and every inline Python block must close on a line of its own and compile.
+
 ## Completed — C1: gate contract 2, the CI event (2026-10-02)
 
 Design: `.agent-rfc/designs/gate-contract-ci.md`; review: `.agent-rfc/reviews/gate-contract-ci.md`.

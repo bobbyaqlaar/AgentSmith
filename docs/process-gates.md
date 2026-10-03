@@ -184,12 +184,13 @@ both refuse there, as `tenant init` and `tenant adopt` do, and take no override.
 
 ## A provider, not a path — the gate contract
 
-The gate answers four questions: may this edit happen, may this turn end, what should a session
-know, and — contract 2 — does this pushed range pass. `contract/gate/v2/protocol.md` publishes them
-as a protocol (version 1, the first three, stays published and served) — one command, one event
+The gate answers six questions: may this edit happen, may this turn end, what should a session
+know, does this pushed range pass (contract 2), may this commit be made and may this history be
+pushed (contract 3). `contract/gate/v3/protocol.md` publishes them as a protocol — versions 1 and 2
+stay published and served — — one command, one event
 on stdin, one decision on stdout, exit 3 for "cannot run here" — so a repository can be governed
 by AgentSmith or by another platform that answers the same way. `agentsmith gate <event>` is this
-framework's adapter, and `agentsmith conformance --provider "<command>" [--contract 2]` replays the
+framework's adapter, and `agentsmith conformance --provider "<command>" [--contract 2|3]` replays the
 contract's cases against any provider, in a fixture repository the contract carries.
 
 The contract is versioned apart from the provider: a provider's major release does not reach a
@@ -199,7 +200,7 @@ tenant's files.
 `tenant adopt` write:
 
 ```json
-{ "contract": 2, "providers": { "gate": { "command": "agentsmith gate", "version": "^2",
+{ "contract": 3, "providers": { "gate": { "command": "agentsmith gate", "version": "^2",
   "setup": "bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@v2.1.0" } } }
 ```
 
@@ -217,8 +218,17 @@ path. `ci` never falls back: a provider that gives no decision fails the check, 
 the framework's own script is not tried. A declaration still at contract 1 keeps the old resolution,
 and the gate entry's own `contract` wins over the top-level one. **The declaration is always
 governed** — whatever a config lists, an edit to `providers.json` (or `process-gates.json`) needs a
-design and a review, because at contract 2 `"gate": "none"` turns CI's check off. `commit-msg` and
-`sweep` are not in the contract yet and keep this framework's own resolution.
+design and a review, because from contract 2 on `"gate": "none"` turns those checks off.
+
+**Commits and pushes ask the provider at contract 3.** `.githooks/commit-msg` sends the message to
+the declared command as a `commit` event, and `.githooks/pre-push` sends `push`; `pre-commit` asks
+nothing, because `commit` runs the same sweep and decides. The hooks hold no policy: the Conventional
+Commits subject rule is AgentSmith's, applied in its `commit` answer (below contract 3 the hook still
+applies it, as it always did). Neither event falls back. A provider older than the repository's
+declared contract does not know `commit`, exits with a usage error, and the commit is blocked with
+that said — update the provider (re-run `install-ai-stack.sh`). **The provider answers with its
+own gate**, never with a copy a repository vendored; the repository's `scripts/` is used only when
+the repository is AgentSmith itself.
 
 ## Finding the script — `.githooks/process-gate`
 
@@ -511,13 +521,17 @@ The knowledge graph existed and nothing made a review use it. Where a repo
 declares `knowledge_graph` in its config, a review says which scope it covered:
 
 ```bash
-python3 scripts/local_knowledge_graph.py --impact --base HEAD
+agentsmith gate kg impact            # the commit being made: the staged set, the index's graph
+agentsmith gate kg impact --base HEAD  # the working tree against a ref
 ```
 
-It lists the files to read — the change plus **one hop** of dependents, because
+It answers JSON (`contract/gate/v3/kg_impact.schema.json`): the files to read — the change plus **one hop** of dependents, because
 two hops out from a shared helper is most of the repo — the lever groups those
 files pull in, and a `KG query:` hash. That hash goes in the sign-off, and the
-commit gate recomputes it from the commit's own file list.
+commit gate recomputes it from the commit's own file list — which is why `kg impact` scopes the
+**staged** set by default: diffing the working tree counted unstaged edits, and the two hashes
+disagreed. `agentsmith gate kg build` rebuilds the graph, whose shape is published
+(`contract/gate/v3/knowledge_graph.schema.json`).
 
 **The hash is the scope, not the diff.** It covers the impacted file SET, so it
 does not go stale on the next keystroke; what it says is "the reviewer looked

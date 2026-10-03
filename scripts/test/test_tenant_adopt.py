@@ -434,7 +434,7 @@ def test_adopt_declares_who_governs_the_repository(legacy):
 
     assert ".agenticframework/providers.json" in written
     declared = json.loads((legacy / ".agenticframework/providers.json").read_text())
-    assert declared["contract"] == 2
+    assert declared["contract"] == 3, "commit and push go to the provider too (gate-local-events.md)"
     assert declared["providers"]["gate"]["command"] == "agentsmith gate"
     assert declared["providers"]["gate"]["version"].startswith("^")
     assert declared["providers"]["gate"]["setup"].startswith(

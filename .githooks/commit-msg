@@ -14,12 +14,25 @@
 set -euo pipefail
 
 msg_file="$1"
-subject=$(grep -v '^#' "$msg_file" | head -n 1)
-if [[ ! "$subject" =~ ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_/-]+\))?!?:\ .{1,72}$ ]]; then
-  echo "❌ commit blocked: subject must be a Conventional Commit, ≤72 chars after the type" >&2
-  echo "   got: \"$subject\"" >&2
-  exit 1
-fi
+hook_dir="$(git rev-parse --show-toplevel)/.githooks"
+# Below gate contract 3 the subject rule is applied here, as it always was. At 3
+# it is the provider's policy and is applied in its `commit` answer — this hook
+# only asks (contract/gate/v3/protocol.md); scripts/process_gate.py's
+# COMMIT_SUBJECT is the same rule, and a test pins the two equal.
+# Dropped only when the contract is plainly 3 or more: a launcher too old to know
+# `declared-contract` prints anything but a number, and that must keep the rule.
+contract="$("$hook_dir/process-gate" declared-contract 2>/dev/null || true)"
+case "$contract" in
+  [3-9]|[1-9][0-9]) ;;
+  *)
+    subject=$(grep -v '^#' "$msg_file" | head -n 1)
+    if [[ ! "$subject" =~ ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_/-]+\))?!?:\ .{1,72}$ ]]; then
+      echo "❌ commit blocked: subject must be a Conventional Commit, ≤72 chars after the type" >&2
+      echo "   got: \"$subject\"" >&2
+      exit 1
+    fi
+    ;;
+esac
 
 # `git commit --amend` compares the index with the commit being REPLACED, so an
 # amend that changes only the message looked like a commit with no changes and
@@ -40,7 +53,6 @@ if parent_args | grep -qE '(^|[[:space:]])--amend([[:space:]]|$)'; then
   amend=(--amend)
 fi
 
-hook_dir="$(git rev-parse --show-toplevel)/.githooks"
 "$hook_dir/process-gate" commit-msg "${amend[@]+"${amend[@]}"}" "$msg_file" || exit $?
 # The hook this repository ran before the gates, if any — after the gate, never
 # instead of it (.githooks/chain).

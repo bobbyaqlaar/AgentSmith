@@ -16,6 +16,10 @@ def pytest_configure(config):
     import tempfile
 
     os.environ.setdefault("AGENTSMITH_STATE_DIR", tempfile.mkdtemp(prefix="agentsmith-test-state-"))
+    # The provider a tenant's hooks ask is this checkout's (provider_shim.py).
+    import provider_shim
+
+    provider_shim.install()
 
 
 # The gated-repo fixture lives beside the gate's own tests; re-exported here so

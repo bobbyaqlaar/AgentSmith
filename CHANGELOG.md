@@ -77,6 +77,27 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — gate contract 3: a tenant's commits and pushes ask its declared provider
+
+**Hook-interface change** (additive; contracts 1 and 2 stay published and served).
+
+- **`contract/gate/v3/`** — contract 2 plus **`commit`** (the staged change and its message) and
+  **`push`** (may this history leave the machine), neither of which falls back, and two
+  knowledge-graph verbs: `kg build`, and `kg impact`, which names a change's review scope as JSON.
+  The graph's shape is published (`knowledge_graph.schema.json`).
+- **The git hooks hold no policy at contract 3.** `commit-msg` asks the provider; the Conventional
+  Commits subject rule moved into AgentSmith's `commit` answer (below 3 the hook still applies it).
+  `pre-push` asks `push`; `pre-commit` asks nothing. A provider older than the declared contract is
+  named, with the fix: re-run `install-ai-stack.sh`.
+- **`agentsmith gate` answers with its own gate**, never with a copy a repository vendored — a vendored
+  tenant on contract 2 or 3 was otherwise judged by its own stale framework code.
+- **`kg impact` scopes the staged change by default**, from the index: the scope the commit gate
+  recomputes. The gate's messages and the generated rule files name `agentsmith gate kg …`, not
+  `scripts/map_codebase.py` or `scripts/local_knowledge_graph.py`.
+- **`tenant init` and `tenant adopt` declare contract 3**; `agentsmith sync` moves an untouched
+  declaration and the hooks together. **Every machine that commits to a contract-3 tenant needs this
+  release installed**, or its commits are refused as above.
+
 ### Added — gate contract 2: a tenant's CI asks its declared provider
 
 **Hook-interface change** (additive; contract 1 stays published and served).

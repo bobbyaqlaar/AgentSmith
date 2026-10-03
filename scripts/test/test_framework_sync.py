@@ -573,7 +573,7 @@ def test_the_scope_edit_appends_only_what_is_missing_and_keeps_the_prose():
 # ── Gate contract 2 (.agent-rfc/designs/gate-contract-ci.md) ──
 
 
-def test_an_untouched_contract_1_declaration_moves_to_contract_2_with_its_workflow(tenant):
+def test_an_untouched_contract_1_declaration_moves_to_the_current_contract_with_its_workflow(tenant):
     """One sync pull request moves a tenant's CI onto the declared provider."""
     from runtime.adopt import SETUP_ACTION
 
@@ -586,7 +586,9 @@ def test_an_untouched_contract_1_declaration_moves_to_contract_2_with_its_workfl
 
     assert ".agenticframework/providers.json" in written
     declared = json.loads(declaration.read_text())
-    assert declared["contract"] == 2
+    from runtime.adopt import GATE_CONTRACT
+
+    assert declared["contract"] == GATE_CONTRACT >= 2
     assert declared["providers"]["gate"]["setup"].startswith(f"{SETUP_ACTION}@v")
     _git(tenant, "add", "--", *written)
     result = _git(tenant, "commit", *SYNC_COMMIT)
