@@ -58,7 +58,9 @@ jobs:
         env:
           AGENTSMITH_DIR: ${{ github.workspace }}/.agentsmith-framework
           PYTHONPATH: ${{ github.workspace }}/.agentsmith-framework
-        run: python3 -m runtime.cli sync --yes
+        # -P: `python -m` otherwise puts the working directory — this tenant —
+        # first on the path, and a vendored tenant's own `runtime/` would answer.
+        run: python3 -P -m runtime.cli sync --yes
 
       - name: "Nothing to sync, or open the proposal"
         env:

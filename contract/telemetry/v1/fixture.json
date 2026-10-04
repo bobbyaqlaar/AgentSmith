@@ -1,0 +1,907 @@
+{
+  "_about": "One representative run exported by AgentSmith's runtime library (scripts/test/telemetry_emitter.py), as OTLP/JSON: a step, a tool call, a retrieval and an LLM call with reported usage, inside one run, and the metrics they record. The cases in cases.json each change one thing in it. Regenerate only when the library's emission changes, and say why in the review.",
+  "exports": [
+    {
+      "resourceSpans": [
+        {
+          "resource": {
+            "attributes": [
+              {
+                "key": "telemetry.sdk.language",
+                "value": {
+                  "stringValue": "python"
+                }
+              },
+              {
+                "key": "telemetry.sdk.name",
+                "value": {
+                  "stringValue": "opentelemetry"
+                }
+              },
+              {
+                "key": "telemetry.sdk.version",
+                "value": {
+                  "stringValue": "1.42.1"
+                }
+              },
+              {
+                "key": "service.name",
+                "value": {
+                  "stringValue": "fixture-tenant"
+                }
+              },
+              {
+                "key": "project.name",
+                "value": {
+                  "stringValue": "fixture-tenant"
+                }
+              },
+              {
+                "key": "environment",
+                "value": {
+                  "stringValue": "staging"
+                }
+              },
+              {
+                "key": "agentsmith.framework.version",
+                "value": {
+                  "stringValue": "2.0.0"
+                }
+              },
+              {
+                "key": "governance.telemetry.contract",
+                "value": {
+                  "intValue": "1"
+                }
+              },
+              {
+                "key": "agent.owner_id",
+                "value": {
+                  "stringValue": "owner@example.test"
+                }
+              }
+            ]
+          },
+          "scopeSpans": [
+            {
+              "scope": {
+                "name": "agentsmith.runtime"
+              },
+              "spans": [
+                {
+                  "traceId": "2fEWxXE5OARmVbZhGRMeKg==",
+                  "spanId": "mMBZXVRCR7Y=",
+                  "parentSpanId": "X8kJ92QXNfc=",
+                  "name": "agent.tool.sanctions_lookup",
+                  "kind": "SPAN_KIND_INTERNAL",
+                  "startTimeUnixNano": "1791138252159437000",
+                  "endTimeUnixNano": "1791138252159489000",
+                  "attributes": [
+                    {
+                      "key": "agent.role",
+                      "value": {
+                        "stringValue": "analyst"
+                      }
+                    },
+                    {
+                      "key": "run.id",
+                      "value": {
+                        "stringValue": "run-0001"
+                      }
+                    },
+                    {
+                      "key": "agent.tool.name",
+                      "value": {
+                        "stringValue": "sanctions_lookup"
+                      }
+                    },
+                    {
+                      "key": "agent.tool.allowed",
+                      "value": {
+                        "boolValue": true
+                      }
+                    },
+                    {
+                      "key": "agent.tool.duration_ms",
+                      "value": {
+                        "doubleValue": 12.5
+                      }
+                    },
+                    {
+                      "key": "tenant.id",
+                      "value": {
+                        "stringValue": "fixture-tenant"
+                      }
+                    }
+                  ],
+                  "status": {},
+                  "flags": 256
+                },
+                {
+                  "traceId": "2fEWxXE5OARmVbZhGRMeKg==",
+                  "spanId": "UkdVvnaK6+c=",
+                  "parentSpanId": "X8kJ92QXNfc=",
+                  "name": "agent.retrieval.memory",
+                  "kind": "SPAN_KIND_INTERNAL",
+                  "startTimeUnixNano": "1791138252159538000",
+                  "endTimeUnixNano": "1791138252159918000",
+                  "attributes": [
+                    {
+                      "key": "tenant.id",
+                      "value": {
+                        "stringValue": "fixture-tenant"
+                      }
+                    },
+                    {
+                      "key": "agent.role",
+                      "value": {
+                        "stringValue": "analyst"
+                      }
+                    },
+                    {
+                      "key": "run.id",
+                      "value": {
+                        "stringValue": "run-0001"
+                      }
+                    },
+                    {
+                      "key": "agent.step",
+                      "value": {
+                        "stringValue": "retrieval.memory"
+                      }
+                    },
+                    {
+                      "key": "agent.kind",
+                      "value": {
+                        "stringValue": "retrieval"
+                      }
+                    },
+                    {
+                      "key": "agent.k",
+                      "value": {
+                        "intValue": "2"
+                      }
+                    },
+                    {
+                      "key": "agent.retrieval.embedder",
+                      "value": {
+                        "stringValue": "fixture-embedder"
+                      }
+                    },
+                    {
+                      "key": "agent.retrieval.hit_count",
+                      "value": {
+                        "intValue": "2"
+                      }
+                    },
+                    {
+                      "key": "agent.retrieval.corpus_size",
+                      "value": {
+                        "intValue": "2"
+                      }
+                    },
+                    {
+                      "key": "agent.retrieval.hit_ids",
+                      "value": {
+                        "arrayValue": {
+                          "values": [
+                            {
+                              "stringValue": "doc-1"
+                            },
+                            {
+                              "stringValue": "doc-2"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "key": "agent.retrieval.top_score",
+                      "value": {
+                        "doubleValue": 0.9486832980505138
+                      }
+                    },
+                    {
+                      "key": "agent.retrieval.min_score",
+                      "value": {
+                        "doubleValue": 0.4472135954999579
+                      }
+                    },
+                    {
+                      "key": "agent.duration_ms",
+                      "value": {
+                        "doubleValue": 0.3909161314368248
+                      }
+                    }
+                  ],
+                  "status": {},
+                  "flags": 256
+                },
+                {
+                  "traceId": "2fEWxXE5OARmVbZhGRMeKg==",
+                  "spanId": "X8kJ92QXNfc=",
+                  "name": "agent.analyse",
+                  "kind": "SPAN_KIND_INTERNAL",
+                  "startTimeUnixNano": "1791138252159369000",
+                  "endTimeUnixNano": "1791138252159929000",
+                  "attributes": [
+                    {
+                      "key": "tenant.id",
+                      "value": {
+                        "stringValue": "fixture-tenant"
+                      }
+                    },
+                    {
+                      "key": "agent.role",
+                      "value": {
+                        "stringValue": "analyst"
+                      }
+                    },
+                    {
+                      "key": "run.id",
+                      "value": {
+                        "stringValue": "run-0001"
+                      }
+                    },
+                    {
+                      "key": "agent.step",
+                      "value": {
+                        "stringValue": "analyse"
+                      }
+                    },
+                    {
+                      "key": "agent.kind",
+                      "value": {
+                        "stringValue": "step"
+                      }
+                    },
+                    {
+                      "key": "agent.case",
+                      "value": {
+                        "stringValue": "c-1"
+                      }
+                    },
+                    {
+                      "key": "agent.duration_ms",
+                      "value": {
+                        "doubleValue": 0.6013328675180674
+                      }
+                    }
+                  ],
+                  "status": {},
+                  "flags": 256
+                },
+                {
+                  "traceId": "TM6ULzsujVAnhwA4nYHqkg==",
+                  "spanId": "nD61rh4/Vz4=",
+                  "name": "llm.analyst",
+                  "kind": "SPAN_KIND_INTERNAL",
+                  "startTimeUnixNano": "1791138251259934000",
+                  "endTimeUnixNano": "1791138252160049000",
+                  "attributes": [
+                    {
+                      "key": "agent.role",
+                      "value": {
+                        "stringValue": "analyst"
+                      }
+                    },
+                    {
+                      "key": "run.id",
+                      "value": {
+                        "stringValue": "run-0001"
+                      }
+                    },
+                    {
+                      "key": "llm.gateway.span_source",
+                      "value": {
+                        "stringValue": "gateway"
+                      }
+                    },
+                    {
+                      "key": "tenant.id",
+                      "value": {
+                        "stringValue": "fixture-tenant"
+                      }
+                    },
+                    {
+                      "key": "llm.model_name",
+                      "value": {
+                        "stringValue": "claude-sonnet-5-5"
+                      }
+                    },
+                    {
+                      "key": "llm.gateway.tier",
+                      "value": {
+                        "stringValue": "analyst"
+                      }
+                    },
+                    {
+                      "key": "llm.gateway.cost_usd",
+                      "value": {
+                        "doubleValue": 0.0123
+                      }
+                    },
+                    {
+                      "key": "llm.gateway.cost_estimated",
+                      "value": {
+                        "boolValue": false
+                      }
+                    },
+                    {
+                      "key": "llm.usage.reported",
+                      "value": {
+                        "boolValue": true
+                      }
+                    },
+                    {
+                      "key": "llm.usage.input_tokens",
+                      "value": {
+                        "intValue": "1500"
+                      }
+                    },
+                    {
+                      "key": "llm.usage.output_tokens",
+                      "value": {
+                        "intValue": "270"
+                      }
+                    },
+                    {
+                      "key": "llm.usage.total_tokens",
+                      "value": {
+                        "intValue": "1770"
+                      }
+                    },
+                    {
+                      "key": "llm.gateway.ttft_ms",
+                      "value": {
+                        "doubleValue": 410.0
+                      }
+                    },
+                    {
+                      "key": "workflow.id",
+                      "value": {
+                        "stringValue": "wf-1"
+                      }
+                    }
+                  ],
+                  "status": {},
+                  "flags": 256
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "resourceMetrics": [
+        {
+          "resource": {
+            "attributes": [
+              {
+                "key": "telemetry.sdk.language",
+                "value": {
+                  "stringValue": "python"
+                }
+              },
+              {
+                "key": "telemetry.sdk.name",
+                "value": {
+                  "stringValue": "opentelemetry"
+                }
+              },
+              {
+                "key": "telemetry.sdk.version",
+                "value": {
+                  "stringValue": "1.42.1"
+                }
+              },
+              {
+                "key": "service.name",
+                "value": {
+                  "stringValue": "fixture-tenant"
+                }
+              },
+              {
+                "key": "project.name",
+                "value": {
+                  "stringValue": "fixture-tenant"
+                }
+              },
+              {
+                "key": "environment",
+                "value": {
+                  "stringValue": "staging"
+                }
+              },
+              {
+                "key": "agentsmith.framework.version",
+                "value": {
+                  "stringValue": "2.0.0"
+                }
+              },
+              {
+                "key": "governance.telemetry.contract",
+                "value": {
+                  "intValue": "1"
+                }
+              },
+              {
+                "key": "agent.owner_id",
+                "value": {
+                  "stringValue": "owner@example.test"
+                }
+              }
+            ]
+          },
+          "scopeMetrics": [
+            {
+              "scope": {
+                "name": "agentsmith.runtime"
+              },
+              "metrics": [
+                {
+                  "name": "agentsmith.retrieval.queries",
+                  "unit": "1",
+                  "sum": {
+                    "dataPoints": [
+                      {
+                        "startTimeUnixNano": "1791138252159828000",
+                        "timeUnixNano": "1791138252160420000",
+                        "exemplars": [
+                          {
+                            "timeUnixNano": "1791138252159802000",
+                            "spanId": "UkdVvnaK6+c=",
+                            "traceId": "2fEWxXE5OARmVbZhGRMeKg==",
+                            "asInt": "1"
+                          }
+                        ],
+                        "asInt": "1",
+                        "attributes": [
+                          {
+                            "key": "tenant.id",
+                            "value": {
+                              "stringValue": "fixture-tenant"
+                            }
+                          },
+                          {
+                            "key": "backend",
+                            "value": {
+                              "stringValue": "memory"
+                            }
+                          }
+                        ]
+                      }
+                    ],
+                    "aggregationTemporality": "AGGREGATION_TEMPORALITY_CUMULATIVE",
+                    "isMonotonic": true
+                  }
+                },
+                {
+                  "name": "agentsmith.retrieval.hits",
+                  "unit": "1",
+                  "histogram": {
+                    "dataPoints": [
+                      {
+                        "startTimeUnixNano": "1791138252159889000",
+                        "timeUnixNano": "1791138252160420000",
+                        "count": "1",
+                        "sum": 2.0,
+                        "bucketCounts": [
+                          "0",
+                          "1",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0"
+                        ],
+                        "explicitBounds": [
+                          0.0,
+                          5.0,
+                          10.0,
+                          25.0,
+                          50.0,
+                          75.0,
+                          100.0,
+                          250.0,
+                          500.0,
+                          750.0,
+                          1000.0,
+                          2500.0,
+                          5000.0,
+                          7500.0,
+                          10000.0
+                        ],
+                        "exemplars": [
+                          {
+                            "timeUnixNano": "1791138252159856000",
+                            "spanId": "UkdVvnaK6+c=",
+                            "traceId": "2fEWxXE5OARmVbZhGRMeKg==",
+                            "asInt": "2"
+                          }
+                        ],
+                        "attributes": [
+                          {
+                            "key": "tenant.id",
+                            "value": {
+                              "stringValue": "fixture-tenant"
+                            }
+                          },
+                          {
+                            "key": "backend",
+                            "value": {
+                              "stringValue": "memory"
+                            }
+                          }
+                        ],
+                        "min": 2.0,
+                        "max": 2.0
+                      }
+                    ],
+                    "aggregationTemporality": "AGGREGATION_TEMPORALITY_CUMULATIVE"
+                  }
+                },
+                {
+                  "name": "agentsmith.llm.calls",
+                  "unit": "1",
+                  "sum": {
+                    "dataPoints": [
+                      {
+                        "startTimeUnixNano": "1791138252159990000",
+                        "timeUnixNano": "1791138252160420000",
+                        "asInt": "1",
+                        "attributes": [
+                          {
+                            "key": "tenant.id",
+                            "value": {
+                              "stringValue": "fixture-tenant"
+                            }
+                          },
+                          {
+                            "key": "llm.model_name",
+                            "value": {
+                              "stringValue": "claude-sonnet-5-5"
+                            }
+                          },
+                          {
+                            "key": "llm.gateway.tier",
+                            "value": {
+                              "stringValue": "analyst"
+                            }
+                          },
+                          {
+                            "key": "outcome",
+                            "value": {
+                              "stringValue": "ok"
+                            }
+                          },
+                          {
+                            "key": "degraded",
+                            "value": {
+                              "boolValue": false
+                            }
+                          }
+                        ]
+                      }
+                    ],
+                    "aggregationTemporality": "AGGREGATION_TEMPORALITY_CUMULATIVE",
+                    "isMonotonic": true
+                  }
+                },
+                {
+                  "name": "agentsmith.llm.ttft",
+                  "unit": "ms",
+                  "histogram": {
+                    "dataPoints": [
+                      {
+                        "startTimeUnixNano": "1791138252160007000",
+                        "timeUnixNano": "1791138252160420000",
+                        "count": "1",
+                        "sum": 410.0,
+                        "bucketCounts": [
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "1",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0"
+                        ],
+                        "explicitBounds": [
+                          0.0,
+                          5.0,
+                          10.0,
+                          25.0,
+                          50.0,
+                          75.0,
+                          100.0,
+                          250.0,
+                          500.0,
+                          750.0,
+                          1000.0,
+                          2500.0,
+                          5000.0,
+                          7500.0,
+                          10000.0
+                        ],
+                        "attributes": [
+                          {
+                            "key": "tenant.id",
+                            "value": {
+                              "stringValue": "fixture-tenant"
+                            }
+                          },
+                          {
+                            "key": "llm.model_name",
+                            "value": {
+                              "stringValue": "claude-sonnet-5-5"
+                            }
+                          },
+                          {
+                            "key": "llm.gateway.tier",
+                            "value": {
+                              "stringValue": "analyst"
+                            }
+                          },
+                          {
+                            "key": "outcome",
+                            "value": {
+                              "stringValue": "ok"
+                            }
+                          },
+                          {
+                            "key": "degraded",
+                            "value": {
+                              "boolValue": false
+                            }
+                          }
+                        ],
+                        "min": 410.0,
+                        "max": 410.0
+                      }
+                    ],
+                    "aggregationTemporality": "AGGREGATION_TEMPORALITY_CUMULATIVE"
+                  }
+                },
+                {
+                  "name": "agentsmith.llm.input_tokens",
+                  "unit": "1",
+                  "histogram": {
+                    "dataPoints": [
+                      {
+                        "startTimeUnixNano": "1791138252160024000",
+                        "timeUnixNano": "1791138252160420000",
+                        "count": "1",
+                        "sum": 1500.0,
+                        "bucketCounts": [
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "1",
+                          "0",
+                          "0",
+                          "0",
+                          "0"
+                        ],
+                        "explicitBounds": [
+                          0.0,
+                          5.0,
+                          10.0,
+                          25.0,
+                          50.0,
+                          75.0,
+                          100.0,
+                          250.0,
+                          500.0,
+                          750.0,
+                          1000.0,
+                          2500.0,
+                          5000.0,
+                          7500.0,
+                          10000.0
+                        ],
+                        "attributes": [
+                          {
+                            "key": "tenant.id",
+                            "value": {
+                              "stringValue": "fixture-tenant"
+                            }
+                          },
+                          {
+                            "key": "llm.model_name",
+                            "value": {
+                              "stringValue": "claude-sonnet-5-5"
+                            }
+                          },
+                          {
+                            "key": "llm.gateway.tier",
+                            "value": {
+                              "stringValue": "analyst"
+                            }
+                          },
+                          {
+                            "key": "outcome",
+                            "value": {
+                              "stringValue": "ok"
+                            }
+                          },
+                          {
+                            "key": "degraded",
+                            "value": {
+                              "boolValue": false
+                            }
+                          }
+                        ],
+                        "min": 1500.0,
+                        "max": 1500.0
+                      }
+                    ],
+                    "aggregationTemporality": "AGGREGATION_TEMPORALITY_CUMULATIVE"
+                  }
+                },
+                {
+                  "name": "agentsmith.llm.output_tokens",
+                  "unit": "1",
+                  "histogram": {
+                    "dataPoints": [
+                      {
+                        "startTimeUnixNano": "1791138252160036000",
+                        "timeUnixNano": "1791138252160420000",
+                        "count": "1",
+                        "sum": 270.0,
+                        "bucketCounts": [
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "1",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0",
+                          "0"
+                        ],
+                        "explicitBounds": [
+                          0.0,
+                          5.0,
+                          10.0,
+                          25.0,
+                          50.0,
+                          75.0,
+                          100.0,
+                          250.0,
+                          500.0,
+                          750.0,
+                          1000.0,
+                          2500.0,
+                          5000.0,
+                          7500.0,
+                          10000.0
+                        ],
+                        "attributes": [
+                          {
+                            "key": "tenant.id",
+                            "value": {
+                              "stringValue": "fixture-tenant"
+                            }
+                          },
+                          {
+                            "key": "llm.model_name",
+                            "value": {
+                              "stringValue": "claude-sonnet-5-5"
+                            }
+                          },
+                          {
+                            "key": "llm.gateway.tier",
+                            "value": {
+                              "stringValue": "analyst"
+                            }
+                          },
+                          {
+                            "key": "outcome",
+                            "value": {
+                              "stringValue": "ok"
+                            }
+                          },
+                          {
+                            "key": "degraded",
+                            "value": {
+                              "boolValue": false
+                            }
+                          }
+                        ],
+                        "min": 270.0,
+                        "max": 270.0
+                      }
+                    ],
+                    "aggregationTemporality": "AGGREGATION_TEMPORALITY_CUMULATIVE"
+                  }
+                },
+                {
+                  "name": "agentsmith.llm.cost",
+                  "unit": "USD",
+                  "sum": {
+                    "dataPoints": [
+                      {
+                        "startTimeUnixNano": "1791138252160047000",
+                        "timeUnixNano": "1791138252160420000",
+                        "asDouble": 0.0123,
+                        "attributes": [
+                          {
+                            "key": "tenant.id",
+                            "value": {
+                              "stringValue": "fixture-tenant"
+                            }
+                          },
+                          {
+                            "key": "llm.model_name",
+                            "value": {
+                              "stringValue": "claude-sonnet-5-5"
+                            }
+                          },
+                          {
+                            "key": "llm.gateway.tier",
+                            "value": {
+                              "stringValue": "analyst"
+                            }
+                          },
+                          {
+                            "key": "outcome",
+                            "value": {
+                              "stringValue": "ok"
+                            }
+                          },
+                          {
+                            "key": "degraded",
+                            "value": {
+                              "boolValue": false
+                            }
+                          }
+                        ]
+                      }
+                    ],
+                    "aggregationTemporality": "AGGREGATION_TEMPORALITY_CUMULATIVE",
+                    "isMonotonic": true
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

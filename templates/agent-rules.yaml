@@ -102,10 +102,13 @@ pillars:
   - id: 8
     name: Observability Wire
     check: [design]
-    design_question: "Does the change emit telemetry, and does it resolve the endpoint through runtime/otlp.py?"
+    design_question: "Does the change emit telemetry, does it speak the telemetry contract (contract/telemetry/v1), and does its endpoint come from the standard OTEL_EXPORTER_OTLP_* variables?"
     rule: >
-      .cursorrules and CLAUDE.md include explicit OTLP endpoint instructions.
-      Without OTEL_EXPORTER_OTLP_ENDPOINT, runtime/otlp.py uses the endpoint `agentsmith dashboard start` records.
+      Telemetry is OTLP with the attributes and instruments contract/telemetry/v1 catalogues, and
+      `governance.telemetry.contract` on the Resource. The endpoint comes from the standard
+      OTEL_EXPORTER_OTLP_* variables, never from a path into a provider's install; AgentSmith's
+      runtime library reads them through runtime/otlp.py, and plain OpenTelemetry reads them too.
+      `agentsmith conformance --port telemetry` judges what an emitter exports.
 
   - id: 9
     name: Multi-Agent Orchestration

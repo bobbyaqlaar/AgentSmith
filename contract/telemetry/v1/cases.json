@@ -1,0 +1,213 @@
+{
+  "_about": "What a telemetry judge must notice (contract/telemetry/v1/protocol.md). Each case applies `change` to fixture.json's exports, in order: `empty` drops everything; `resource` drops or sets an attribute on every Resource; `span` on every span whose name starts with `match`; `spans` on every span; `metric` changes an instrument's unit. Values are OTLP/JSON AnyValues. `expect` is `passed`, or the one check that must fail — and a `note` the report must carry.",
+  "cases": [
+    {
+      "name": "the run as the library exported it",
+      "change": [],
+      "expect": {
+        "passed": true
+      }
+    },
+    {
+      "name": "nothing exported",
+      "change": [
+        {
+          "op": "empty"
+        }
+      ],
+      "expect": {
+        "failed": "something was exported"
+      }
+    },
+    {
+      "name": "a Resource without the contract attribute — a pre-contract emitter",
+      "change": [
+        {
+          "op": "resource",
+          "drop": "governance.telemetry.contract"
+        }
+      ],
+      "expect": {
+        "failed": "the Resource names the contract it speaks"
+      }
+    },
+    {
+      "name": "a Resource claiming another contract",
+      "change": [
+        {
+          "op": "resource",
+          "set": {
+            "governance.telemetry.contract": {
+              "intValue": "2"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "failed": "the Resource names the contract it speaks"
+      }
+    },
+    {
+      "name": "a Resource without service.name",
+      "change": [
+        {
+          "op": "resource",
+          "drop": "service.name"
+        }
+      ],
+      "expect": {
+        "failed": "the Resource carries every required attribute"
+      }
+    },
+    {
+      "name": "an environment the contract does not name",
+      "change": [
+        {
+          "op": "resource",
+          "set": {
+            "environment": {
+              "stringValue": "prod-eu"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "failed": "every catalogued attribute has its catalogued type"
+      }
+    },
+    {
+      "name": "a span inside a run without tenant.id",
+      "change": [
+        {
+          "op": "span",
+          "match": "llm.",
+          "drop": "tenant.id"
+        }
+      ],
+      "expect": {
+        "failed": "every span inside a run carries the run's identity"
+      }
+    },
+    {
+      "name": "no run at all — identity is not required outside one",
+      "change": [
+        {
+          "op": "spans",
+          "drop": "run.id"
+        }
+      ],
+      "expect": {
+        "passed": true
+      }
+    },
+    {
+      "name": "a child span inherits the run — without run.id of its own, it still needs a tenant",
+      "change": [
+        {
+          "op": "span",
+          "match": "agent.tool.",
+          "drop": "run.id"
+        },
+        {
+          "op": "span",
+          "match": "agent.tool.",
+          "drop": "tenant.id"
+        }
+      ],
+      "expect": {
+        "failed": "every span inside a run carries the run's identity"
+      }
+    },
+    {
+      "name": "an LLM span without its model",
+      "change": [
+        {
+          "op": "span",
+          "match": "llm.",
+          "drop": "llm.model_name"
+        }
+      ],
+      "expect": {
+        "failed": "every span carries what its kind requires"
+      }
+    },
+    {
+      "name": "token counts without llm.usage.reported",
+      "change": [
+        {
+          "op": "span",
+          "match": "llm.",
+          "set": {
+            "llm.usage.reported": {
+              "boolValue": false
+            }
+          }
+        }
+      ],
+      "expect": {
+        "failed": "conditional attributes appear exactly when their condition holds"
+      }
+    },
+    {
+      "name": "usage reported, counts missing",
+      "change": [
+        {
+          "op": "span",
+          "match": "llm.",
+          "drop": "llm.usage.input_tokens"
+        }
+      ],
+      "expect": {
+        "failed": "conditional attributes appear exactly when their condition holds"
+      }
+    },
+    {
+      "name": "a duration that is a string",
+      "change": [
+        {
+          "op": "span",
+          "match": "agent.analyse",
+          "set": {
+            "agent.duration_ms": {
+              "stringValue": "12"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "failed": "every catalogued attribute has its catalogued type"
+      }
+    },
+    {
+      "name": "an attribute the catalogue does not know is allowed",
+      "change": [
+        {
+          "op": "span",
+          "match": "llm.",
+          "set": {
+            "acme.cost_centre": {
+              "stringValue": "cc-7"
+            }
+          }
+        }
+      ],
+      "expect": {
+        "passed": true,
+        "note": "acme.cost_centre"
+      }
+    },
+    {
+      "name": "an instrument in the wrong unit",
+      "change": [
+        {
+          "op": "metric",
+          "match": "agentsmith.llm.ttft",
+          "unit": "s"
+        }
+      ],
+      "expect": {
+        "failed": "every catalogued instrument has its kind and unit"
+      }
+    }
+  ]
+}
