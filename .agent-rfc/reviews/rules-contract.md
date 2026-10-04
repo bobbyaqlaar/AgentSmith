@@ -88,6 +88,26 @@ schema refuse the same 17 paths and accept the same 7), absent-is-not-drift, the
 outcomes, the whitespace split — and the CHANGELOG, manual, `process-gates.md` and README against
 the code. Every mutation target in the catalogue matches.
 
+## Pass 5 — findings: 2
+
+CI on the pull request failed where the local full suite had passed — both checks read **tracked**
+files, and the new ones were untracked when the suite ran.
+
+1. **Two hand-rolled script loaders.** `scripts/rules_port.py` and `test_rules_contract.py` loaded
+   `generate-ide-config.py` with their own four lines of `importlib`; the repository keeps one,
+   `_shared.load_script`, and `test_scripts_has_exactly_one_script_loader` holds it to that. Both
+   use it now.
+2. **`scripts/rules_port.py` was missing from the Repository Structure tree** in `docs/DESIGN.md`,
+   which the self-test's tree drift check compares with `git ls-files`. Listed.
+
+Both checks were run here on the staged tree before this commit — the order that would have caught
+them the first time.
+
+## Pass 6 — findings: 0
+
+`test_security_registry.py`, `test_rules_contract.py` (63 passed) and the self-test's tree check,
+lifted from the workflow and run on the staged tree: 33 top-level and 115 second-level entries match.
+
 ## Sign-off
 
 Group 1 · DRY & shared code — [x] checked — one renderer behind the generator's flags, the port and `sync`; one placement module for adopt, sync, `--write` and the conformance runner; schemas generated from the models; the path rule is one rule in the model and the published pattern, pinned by a test that runs both.
@@ -101,8 +121,8 @@ Group 7 · Auth & session integrity — [x] checked — no credential is read or
 Tests added: `scripts/test/test_rules_contract.py` (53); `test_adopt_writes_every_file_its_plan_promises` in `test_tenant_adopt.py`; `test_an_adopted_config_naming_this_installs_paths_is_moved_to_provider_and_still_passes` in `test_framework_sync.py`; re-pinned `test_governed_tenant.py`, `test_process_gate.py` (registry value, the provider's document wording, `pyyaml` in the gate requirements).
 Mutation-checked: `rules_contract` 7/7; re-pointed `tenant_adopt` 2, `framework_sync` 2, `gate_contract` 1 — all caught.
 Fixtures re-pinned: `contract/rules/v1/` written new; `.agent-rfc/fixtures/knowledge_graph.json` rebuilt.
-Gates run: full `pytest` (2178 passed, 10 skipped); `ruff check .` (0.15.20); `mypy` (1.14.1, pinned); `agentsmith conformance --contract 1|2|3` and `--port rules`; `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
+Gates run: full `pytest` (2178 passed, 10 skipped) — and, after CI found two misses on tracked files, the security registry, rules and tree-drift checks on the staged tree; `ruff check .` (0.15.20); `mypy` (1.14.1, pinned); `agentsmith conformance --contract 1|2|3` and `--port rules`; `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
 
 Levers reviewed: `single-source-of-truth`, `environment-parity`, `two-owners-two-cadences`, `validate-on-the-receiving-side`, `denied-vs-missing`, `guards-must-be-able-to-fail`, `test-the-contract`, `declared-vs-enforced`, `gate-integrity`, `implemented-not-invoked`, `early-exit-keeps-the-record`, `every-line-earns-its-place`.
 
-KG query: kg:b3ac391f40f6
+KG query: kg:04752d3b8956

@@ -1333,6 +1333,7 @@ AgentSmith/
 │   ├── circuit_breaker.py
 │   ├── verify_system.py         # incl. --check-security, --check-delivery-model
 │   ├── test/                    # Framework self-tests for scripts/
+│   ├── rules_port.py            # The rules contract's `render` / `check` — AgentSmith as a rules provider (contract/rules/v1/)
 │   └── generate-ide-config.py  # Reads templates/agent-rules.yaml, writes target-repo IDE config
 ├── runtime/                     # Production runtime components
 │   ├── worker.py

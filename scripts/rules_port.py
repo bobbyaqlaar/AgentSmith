@@ -16,7 +16,6 @@ rules provider renders with them (.agent-rfc/designs/rules-contract.md).
 from __future__ import annotations
 
 import difflib
-import importlib.util
 import re
 import subprocess
 import sys
@@ -78,11 +77,10 @@ def state(existing: Optional[str], file: gm.RulesFile) -> str:
 
 
 def _generator():
-    spec = importlib.util.spec_from_file_location("generate_ide_config",
-                                                  Path(__file__).resolve().parent / "generate-ide-config.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    """scripts/generate-ide-config.py — one renderer, loaded the one way scripts load each other."""
+    from _shared import load_script
+
+    return load_script("generate-ide-config")
 
 
 def seed_history(root: Path) -> bool:
