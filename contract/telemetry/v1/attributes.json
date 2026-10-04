@@ -1,0 +1,589 @@
+{
+  "contract": 1,
+  "entries": [
+    {
+      "name": "service.name",
+      "where": "resource",
+      "meaning": "The service, as OpenTelemetry names it; the project name for a tenant's workers.",
+      "type": "string",
+      "requirement": "required",
+      "since": "1.3.0"
+    },
+    {
+      "name": "project.name",
+      "where": "resource",
+      "meaning": "The codebase that emitted the telemetry.",
+      "type": "string",
+      "requirement": "required",
+      "since": "1.3.0"
+    },
+    {
+      "name": "environment",
+      "where": "resource",
+      "meaning": "Where it ran. Unset or unknown is production — never silently development.",
+      "type": "string",
+      "requirement": "required",
+      "values": [
+        "development",
+        "staging",
+        "production"
+      ],
+      "since": "1.3.0"
+    },
+    {
+      "name": "governance.telemetry.contract",
+      "where": "resource",
+      "meaning": "Which telemetry contract this emitter speaks. Absent: a pre-contract emitter.",
+      "type": "int",
+      "requirement": "required",
+      "since": "2.1.0"
+    },
+    {
+      "name": "agent.owner_id",
+      "where": "resource",
+      "meaning": "Who owns the application. Omitted rather than 'unknown' when undeclared.",
+      "type": "string",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agentsmith.framework.version",
+      "where": "resource",
+      "meaning": "Which AgentSmith runtime library emitted it, when one did.",
+      "type": "string",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agent.role",
+      "where": "resource",
+      "meaning": "A process with one role for its whole life (the Ops Portal) may state it here; a worker serving many roles never does.",
+      "type": "string"
+    },
+    {
+      "name": "service.instance.id",
+      "where": "resource",
+      "meaning": "OpenTelemetry's id for one running instance, when the SDK sets it.",
+      "type": "string"
+    },
+    {
+      "name": "telemetry.sdk.",
+      "where": "resource",
+      "meaning": "OpenTelemetry's own SDK attributes (name, language, version).",
+      "family": true
+    },
+    {
+      "name": "tenant.id",
+      "where": "span",
+      "meaning": "The tenant the work belongs to. Partitions budget, audit and isolation.",
+      "type": "string",
+      "requirement": "required_in_run",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agent.role",
+      "where": "span",
+      "meaning": "Which role did the work (intake, analyst, process-gate, …).",
+      "type": "string",
+      "requirement": "required_in_run",
+      "since": "1.3.0"
+    },
+    {
+      "name": "run.id",
+      "where": "span",
+      "meaning": "The run the span belongs to. A span is inside a run when it, or an ancestor, carries this.",
+      "type": "string",
+      "requirement": "required_in_run",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agent.",
+      "where": "span",
+      "meaning": "A step's own attributes: the emitter names them (agent_span(**attributes) writes each under `agent.`).",
+      "family": true,
+      "open": true
+    },
+    {
+      "name": "agent.step",
+      "where": "span",
+      "meaning": "The step a span records.",
+      "type": "string"
+    },
+    {
+      "name": "agent.kind",
+      "where": "span",
+      "meaning": "What sort of step: step, retrieval, embedding, …",
+      "type": "string"
+    },
+    {
+      "name": "agent.duration_ms",
+      "where": "span",
+      "meaning": "How long the step took.",
+      "type": "number"
+    },
+    {
+      "name": "agent.error",
+      "where": "span",
+      "meaning": "The exception type a step ended with.",
+      "type": "string"
+    },
+    {
+      "name": "agent.name",
+      "where": "span",
+      "meaning": "The agent or component that did the work.",
+      "type": "string"
+    },
+    {
+      "name": "agent.session_id",
+      "where": "span",
+      "meaning": "A session that groups runs (the reference stacks).",
+      "type": "string"
+    },
+    {
+      "name": "project.name",
+      "where": "span",
+      "meaning": "The project, on a reference stack's root span.",
+      "type": "string"
+    },
+    {
+      "name": "agent.owner_id",
+      "where": "span",
+      "meaning": "The owner, on a reference stack's root span.",
+      "type": "string"
+    },
+    {
+      "name": "agent.tool.name",
+      "where": "span",
+      "meaning": "The tool called.",
+      "type": "string",
+      "requirement": "required",
+      "applies_to": "agent.tool."
+    },
+    {
+      "name": "agent.tool.allowed",
+      "where": "span",
+      "meaning": "Whether the allowlist let the call through.",
+      "type": "bool",
+      "requirement": "required",
+      "applies_to": "agent.tool."
+    },
+    {
+      "name": "agent.tool.duration_ms",
+      "where": "span",
+      "meaning": "How long the tool call took.",
+      "type": "number"
+    },
+    {
+      "name": "agent.tool.error",
+      "where": "span",
+      "meaning": "Why a tool call failed.",
+      "type": "string"
+    },
+    {
+      "name": "agent.tool.result_count",
+      "where": "span",
+      "meaning": "How many results a tool returned.",
+      "type": "int"
+    },
+    {
+      "name": "input.value",
+      "where": "span",
+      "meaning": "A payload in: a tool's arguments, a prompt. Redacted by the emitter's profile.",
+      "type": "string",
+      "payload": true
+    },
+    {
+      "name": "output.value",
+      "where": "span",
+      "meaning": "A payload out: a tool's result, a completion. Redacted by the emitter's profile.",
+      "type": "string",
+      "payload": true
+    },
+    {
+      "name": "llm.model_name",
+      "where": "span",
+      "meaning": "The model that answered.",
+      "type": "string",
+      "requirement": "required",
+      "applies_to": "llm."
+    },
+    {
+      "name": "llm.gateway.tier",
+      "where": "span",
+      "meaning": "The role, or tier, the call was routed as.",
+      "type": "string",
+      "requirement": "required",
+      "applies_to": "llm."
+    },
+    {
+      "name": "llm.usage.reported",
+      "where": "span",
+      "meaning": "Whether the provider reported token usage — a streamed call may not.",
+      "type": "bool",
+      "requirement": "required",
+      "applies_to": "llm.",
+      "since": "1.3.0"
+    },
+    {
+      "name": "llm.usage.input_tokens",
+      "where": "span",
+      "meaning": "Tokens in, as the provider reported them.",
+      "type": "int",
+      "requirement": "conditional",
+      "when": {
+        "llm.usage.reported": true
+      },
+      "since": "1.3.0"
+    },
+    {
+      "name": "llm.usage.output_tokens",
+      "where": "span",
+      "meaning": "Tokens out, as the provider reported them.",
+      "type": "int",
+      "requirement": "conditional",
+      "when": {
+        "llm.usage.reported": true
+      },
+      "since": "1.3.0"
+    },
+    {
+      "name": "llm.usage.total_tokens",
+      "where": "span",
+      "meaning": "Tokens in and out.",
+      "type": "int",
+      "requirement": "conditional",
+      "when": {
+        "llm.usage.reported": true
+      },
+      "since": "1.3.0"
+    },
+    {
+      "name": "llm.gateway.span_source",
+      "where": "span",
+      "meaning": "Which code opened the LLM span.",
+      "type": "string"
+    },
+    {
+      "name": "llm.gateway.cost_usd",
+      "where": "span",
+      "meaning": "What the call cost.",
+      "type": "number"
+    },
+    {
+      "name": "llm.gateway.cost_estimated",
+      "where": "span",
+      "meaning": "Whether the cost is an estimate rather than reported.",
+      "type": "bool",
+      "since": "1.3.0"
+    },
+    {
+      "name": "llm.gateway.ttft_ms",
+      "where": "span",
+      "meaning": "Time to the first token.",
+      "type": "number"
+    },
+    {
+      "name": "llm.gateway.attempts",
+      "where": "span",
+      "meaning": "How many attempts the call took.",
+      "type": "int"
+    },
+    {
+      "name": "llm.gateway.degrade_reason",
+      "where": "span",
+      "meaning": "Why the call was degraded to another tier.",
+      "type": "string"
+    },
+    {
+      "name": "llm.gateway.prompt_guard.mode",
+      "where": "span",
+      "meaning": "The prompt guard's mode for the call.",
+      "type": "string"
+    },
+    {
+      "name": "llm.gateway.input_guardrail.mode",
+      "where": "span",
+      "meaning": "The input guardrail's mode for the call.",
+      "type": "string"
+    },
+    {
+      "name": "llm.gateway.input_guardrail.redactions",
+      "where": "span",
+      "meaning": "How many redactions the input guardrail made.",
+      "type": "int"
+    },
+    {
+      "name": "llm.gateway.input_guardrail.",
+      "where": "span",
+      "meaning": "Redactions by kind (email, phone, …).",
+      "family": true,
+      "type": "int"
+    },
+    {
+      "name": "workflow.id",
+      "where": "span",
+      "meaning": "The workflow the call ran in.",
+      "type": "string"
+    },
+    {
+      "name": "prompt.system.sha256",
+      "where": "span",
+      "meaning": "A digest of the system prompt — the prompt itself never reaches a span.",
+      "type": "string",
+      "since": "1.3.0"
+    },
+    {
+      "name": "prompt.system.chars",
+      "where": "span",
+      "meaning": "The system prompt's length.",
+      "type": "int",
+      "since": "1.3.0"
+    },
+    {
+      "name": "prompt.template.id",
+      "where": "span",
+      "meaning": "The prompt template's id.",
+      "type": "string",
+      "since": "1.3.0"
+    },
+    {
+      "name": "prompt.message_count",
+      "where": "span",
+      "meaning": "How many messages the prompt held.",
+      "type": "int",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agent.retrieval.hit_count",
+      "where": "span",
+      "meaning": "How many hits a query returned.",
+      "type": "int",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agent.retrieval.hit_ids",
+      "where": "span",
+      "meaning": "The first twenty hit ids.",
+      "type": "string[]",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agent.retrieval.top_score",
+      "where": "span",
+      "meaning": "The best hit's score.",
+      "type": "double",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agent.retrieval.min_score",
+      "where": "span",
+      "meaning": "The worst hit's score.",
+      "type": "double",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agent.retrieval.corpus_size",
+      "where": "span",
+      "meaning": "How many documents were searched.",
+      "type": "int"
+    },
+    {
+      "name": "agent.retrieval.embedder",
+      "where": "span",
+      "meaning": "Which embedder the store used.",
+      "type": "string"
+    },
+    {
+      "name": "agent.embedding.dimensions",
+      "where": "span",
+      "meaning": "The embedding's width.",
+      "type": "int"
+    },
+    {
+      "name": "agent.decision",
+      "where": "span",
+      "meaning": "What a gate or rules check decided.",
+      "type": "string"
+    },
+    {
+      "name": "agent.rule",
+      "where": "span",
+      "meaning": "Which rule a gate decision applied.",
+      "type": "string"
+    },
+    {
+      "name": "agent.exit_code",
+      "where": "span",
+      "meaning": "The gate's exit code.",
+      "type": "int"
+    },
+    {
+      "name": "agent.",
+      "where": "span_name",
+      "meaning": "A step: `agent.<step>`, the emitter's own name for it.",
+      "family": true,
+      "open": true
+    },
+    {
+      "name": "agent.tool.",
+      "where": "span_name",
+      "meaning": "A tool call: `agent.tool.<name>`.",
+      "family": true
+    },
+    {
+      "name": "agent.retrieval.",
+      "where": "span_name",
+      "meaning": "A vector-store query: `agent.retrieval.<backend>`.",
+      "family": true,
+      "since": "1.3.0"
+    },
+    {
+      "name": "agent.gate.",
+      "where": "span_name",
+      "meaning": "A gate event: `agent.gate.<event>`.",
+      "family": true
+    },
+    {
+      "name": "llm.",
+      "where": "span_name",
+      "meaning": "An LLM call: `llm.<role>`.",
+      "family": true
+    },
+    {
+      "name": "llm.retry",
+      "where": "event",
+      "meaning": "A retried provider call, as an event on the LLM span."
+    },
+    {
+      "name": "agentsmith.llm.calls",
+      "where": "metric",
+      "meaning": "LLM calls.",
+      "instrument": "counter",
+      "unit": "1",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agentsmith.llm.duration",
+      "where": "metric",
+      "meaning": "LLM call duration.",
+      "instrument": "histogram",
+      "unit": "ms",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agentsmith.llm.ttft",
+      "where": "metric",
+      "meaning": "Time to the first token.",
+      "instrument": "histogram",
+      "unit": "ms",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agentsmith.llm.input_tokens",
+      "where": "metric",
+      "meaning": "Tokens in, per call.",
+      "instrument": "histogram",
+      "unit": "1",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agentsmith.llm.output_tokens",
+      "where": "metric",
+      "meaning": "Tokens out, per call.",
+      "instrument": "histogram",
+      "unit": "1",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agentsmith.llm.cost",
+      "where": "metric",
+      "meaning": "Spend.",
+      "instrument": "counter",
+      "unit": "USD",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agentsmith.llm.cache",
+      "where": "metric",
+      "meaning": "Idempotency cache hits and misses.",
+      "instrument": "counter",
+      "unit": "1",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agentsmith.llm.retries",
+      "where": "metric",
+      "meaning": "Retried provider calls.",
+      "instrument": "counter",
+      "unit": "1",
+      "since": "1.3.0"
+    },
+    {
+      "name": "agentsmith.retrieval.queries",
+      "where": "metric",
+      "meaning": "Vector-store queries.",
+      "instrument": "counter",
+      "unit": "1"
+    },
+    {
+      "name": "agentsmith.retrieval.hits",
+      "where": "metric",
+      "meaning": "Hits per query.",
+      "instrument": "histogram",
+      "unit": "1"
+    },
+    {
+      "name": "agentsmith.retrieval.duration",
+      "where": "metric",
+      "meaning": "Query duration.",
+      "instrument": "histogram",
+      "unit": "ms"
+    },
+    {
+      "name": "tenant.id",
+      "where": "metric_attribute",
+      "meaning": "The tenant, on every metric point.",
+      "type": "string"
+    },
+    {
+      "name": "llm.model_name",
+      "where": "metric_attribute",
+      "meaning": "The model.",
+      "type": "string"
+    },
+    {
+      "name": "llm.gateway.tier",
+      "where": "metric_attribute",
+      "meaning": "The tier.",
+      "type": "string"
+    },
+    {
+      "name": "outcome",
+      "where": "metric_attribute",
+      "meaning": "How the call ended.",
+      "type": "string"
+    },
+    {
+      "name": "degraded",
+      "where": "metric_attribute",
+      "meaning": "Whether the call was degraded.",
+      "type": "bool"
+    },
+    {
+      "name": "hit",
+      "where": "metric_attribute",
+      "meaning": "Whether the cache hit.",
+      "type": "bool"
+    },
+    {
+      "name": "reason",
+      "where": "metric_attribute",
+      "meaning": "Why a call was retried — a coarse class, never a message.",
+      "type": "string"
+    },
+    {
+      "name": "backend",
+      "where": "metric_attribute",
+      "meaning": "The vector-store backend.",
+      "type": "string"
+    }
+  ]
+}

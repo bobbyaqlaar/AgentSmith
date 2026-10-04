@@ -50,6 +50,7 @@ version is itself on both wires from 1.3.0.
 
 | Emitted since | Field | Wire |
 |---|---|---|
+| 2.1.0 | `governance.telemetry.contract` — which telemetry contract the emitter speaks (`contract/telemetry/v1`) | OTel Resource |
 | 2.0.0 | the Dev record — each commit's gate verdict, design, pillars, review passes (`process_gate.py ci --json`, `schema` 1) | Dev ingest POST |
 | 1.3.0 | `agentsmith.framework.version` | OTel Resource |
 | 1.3.0 | `frameworkVersion` → `agent_runs.framework_version` | run-status POST |
@@ -76,6 +77,28 @@ version table being consulted.
 
 
 ## [Unreleased]
+
+### Added — the telemetry contract: what a governed application's spans and metrics carry
+
+**Span-attribute change** (additive): the Resource gains `governance.telemetry.contract`.
+
+- **`contract/telemetry/v1/`** — OTLP, and `attributes.json`, a catalogue of every Resource
+  attribute, span attribute, family, span name and instrument a governed application emits: type,
+  requirement (`required`, `required_in_run`, `conditional`), payload, and the release that first
+  emitted it. An application on plain OpenTelemetry conforms without importing AgentSmith.
+- **`governance.telemetry.contract: 1`** on the Resource — the runtime library's and the portal's —
+  says which contract the spans speak, whoever emitted them; a Resource without it is a pre-contract
+  emitter. `agentsmith.framework.version` stays, optional.
+- **`agentsmith conformance --port telemetry --emitter "<command>" | --export FILE`** judges what an
+  emitter exports: through a loopback OTLP receiver (its own destinations removed; nothing received
+  fails) or from an OTLP/JSON file. The runtime library passes, a plain-OpenTelemetry emitter passes,
+  and emitters with no contract attribute or an unidentified span in a run fail.
+- **Held on both sides**: a test inventories every attribute and instrument the framework's emitters
+  write and fails on any not catalogued; the portal's Resource and the span attributes it reads back
+  are pinned to the catalogue; the Wire Contract table above is pinned to it.
+- **Pillar 8's question and rule** no longer name `runtime/otlp.py` as the way to emit: telemetry is
+  OTLP with the catalogue's attributes, the endpoint from the standard `OTEL_EXPORTER_OTLP_*`
+  variables. Tenants' rule files change accordingly — `agentsmith sync` refreshes them.
 
 ### Added — the rules contract: what a tenant's agents are told, and who checks it
 

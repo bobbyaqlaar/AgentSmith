@@ -25,8 +25,13 @@ export const PORTAL_ROLE = "ops-portal";
 
 const SERVICE_NAME = "agentsmith-ops-portal";
 
-export function resourceAttributes(env: NodeJS.ProcessEnv = process.env): Record<string, string> {
-  const attrs: Record<string, string> = {
+/** Which telemetry contract these spans speak (contract/telemetry/v1). A reader
+ *  keys on it, whoever emitted the spans; `test/telemetryContract.test.ts` holds
+ *  it — and every attribute here — to the published catalogue. */
+export const TELEMETRY_CONTRACT = 1;
+
+export function resourceAttributes(env: NodeJS.ProcessEnv = process.env): Record<string, string | number> {
+  const attrs: Record<string, string | number> = {
     "service.name": SERVICE_NAME,
     // Groups portal traces with the worker's when both name the same project.
     // A repo-derived default is not available in a container, and being wrong
@@ -34,6 +39,7 @@ export function resourceAttributes(env: NodeJS.ProcessEnv = process.env): Record
     "project.name": env.AGENT_PROJECT_NAME?.trim() || SERVICE_NAME,
     environment: getEnvironment(env),
     "agent.role": PORTAL_ROLE,
+    "governance.telemetry.contract": TELEMETRY_CONTRACT,
   };
   const owner = env.AGENT_OWNER_ID?.trim();
   // Omitted when unset rather than "unknown" — a gap is visible in a query,

@@ -62,6 +62,10 @@ def repo(tmp_path, monkeypatch):
     for key, value in (("user.name", "Owner"), ("user.email", "owner@example.com")):
         subprocess.run(["git", "-C", str(tmp_path), "config", key, value], check=True)
     monkeypatch.chdir(tmp_path)
+    # This checkout's registry, not whatever a machine install last copied: the
+    # skeleton is compared with REPO's templates/governance.json below, and a
+    # stale ~/.agent-framework would otherwise answer first.
+    monkeypatch.setenv("AGENTSMITH_DIR", str(REPO))
     return tmp_path
 
 

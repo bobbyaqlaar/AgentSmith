@@ -31,7 +31,9 @@ def install() -> Path:
     shim.write_text(
         "#!/usr/bin/env bash\n"
         f'export AGENTSMITH_DIR="${{AGENTSMITH_DIR:-{REPO}}}"\n'
-        f'PYTHONPATH="{REPO}${{PYTHONPATH:+:$PYTHONPATH}}" exec "{sys.executable}" -m runtime.cli "$@"\n',
+        # -P: `python -m` otherwise puts the working directory first on the
+        # path — inside a vendored tenant, its own older `runtime/`.
+        f'PYTHONPATH="{REPO}${{PYTHONPATH:+:$PYTHONPATH}}" exec "{sys.executable}" -P -m runtime.cli "$@"\n',
         encoding="utf-8",
     )
     shim.chmod(0o755)

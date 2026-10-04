@@ -7,6 +7,22 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — C5: the telemetry contract (2026-10-04)
+
+Design: `.agent-rfc/designs/telemetry-contract.md`; review: `.agent-rfc/reviews/telemetry-contract.md`.
+Slice C5 of `.agent-rfc/designs/governance-contracts.md`, the first Ops port.
+
+- **`contract/telemetry/v1/`**: OTLP and a catalogue of 84 names — Resource and span attributes,
+  families, span names, instruments — with `governance.telemetry.contract` on the Resource.
+- **Judged by what is exported**, never by the emitter's code: a loopback OTLP receiver for
+  `--emitter`, OTLP/JSON for `--export`. The runtime library, a plain-OpenTelemetry stub and OTS's
+  template CLI pass; emitters that break it fail.
+- **Every emitted name catalogued**, checked by an inventory of the framework's emitters; the portal
+  and the CHANGELOG's Wire Contract table pinned to the same file.
+- **OTS**: its only span code moved to plain OpenTelemetry, as a governance-only change to the frozen
+  template work at the owner's direction — uncommitted there, 9/9 against the contract. Its own code
+  now imports nothing from its vendored `runtime/`.
+
 ## Completed — C4: the rules contract (2026-10-04)
 
 Design: `.agent-rfc/designs/rules-contract.md`; review: `.agent-rfc/reviews/rules-contract.md`.

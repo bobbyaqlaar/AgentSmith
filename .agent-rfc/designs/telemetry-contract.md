@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - contract/telemetry/v1/**
   - runtime/telemetry_contract.py
@@ -15,6 +15,8 @@ scope:
   - runtime/test/**
   - scripts/mutation_check.py
   - .agenticframework/process-gates.json
+  - .github/actions/setup-agentsmith/action.yml
+  - workflow-templates/agentsmith-sync.yml
 ---
 # C5 — The telemetry contract: what a tenant's spans and metrics carry
 
@@ -30,7 +32,8 @@ Measured on 2026-10-04:
 
 - **The shape exists only as code and prose.** `runtime/tracing.py`, `runtime/llm_gateway.py`,
   `runtime/metrics.py`, `runtime/prompt_identity.py`, `runtime/vector_store.py` and
-  `runtime/embeddings.py` set about forty span attributes and eight metric instruments; the CHANGELOG's
+  `runtime/embeddings.py` set about fifty span attributes and eleven metric instruments (counted when building: the
+  first count, eight, missed the three retrieval instruments); the CHANGELOG's
   Wire Contract table lists thirteen rows of them, by hand, with no check that either matches the
   other. Nothing tells a tenant which attributes are required, which are optional, or which carry a
   payload the redactor must see.
@@ -110,6 +113,20 @@ the coupling this contract removes, written into the rules every tenant is held 
 becomes whether the endpoint comes from the standard `OTEL_EXPORTER_OTLP_*` variables (the runtime
 library's `runtime/otlp.py` is one way to read them), and the rule names the contract; the registry
 is regenerated from it. OTS's design met exactly this when it stopped importing that module.
+
+### Found while building: the provider ran a vendored tenant's CLI
+
+Verifying OTS's spans through `--emitter` from OTS's own directory ran OTS's vendored
+`runtime/cli.py`, not the provider's. `python -m` puts the working directory first on the module
+path, ahead of `PYTHONPATH` — so the `agentsmith` shim that `.github/actions/setup-agentsmith`
+writes in CI (C1), and the test suite's `scripts/test/provider_shim.py`, both answer with a vendored
+tenant's own copy when run inside one. In OTS's CI, `agentsmith gate ci` would have reached a
+two-month-old CLI that has no `gate` command. Both shims run Python with `-P` (3.11+: no unsafe path
+first), and a test runs each shim from a directory holding a decoy `runtime/` and asserts the
+provider's module answered. Its sibling, the weekly sync workflow (`workflow-templates/agentsmith-sync.yml`),
+ran `python3 -m runtime.cli sync` from the tenant's workspace — a vendored tenant's own `sync` —
+and takes `-P` too. The installed console script is unaffected — its path starts at its
+own directory.
 
 ### Conformance — `agentsmith conformance --port telemetry`
 

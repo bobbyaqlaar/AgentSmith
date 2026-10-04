@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/telemetry/v1/catalogue.schema.json",
+  "description": "The shape of contract/telemetry/v1/attributes.json: every Resource attribute, span attribute, family, span name, event and metric instrument a governed application emits (contract/telemetry/v1/protocol.md).",
+  "$defs": {
+    "CatalogueEntry": {
+      "additionalProperties": false,
+      "description": "One name the contract defines, or one family of names (`family`).",
+      "properties": {
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)*\\.?$",
+          "title": "Name",
+          "type": "string"
+        },
+        "where": {
+          "enum": [
+            "resource",
+            "span",
+            "span_name",
+            "event",
+            "metric",
+            "metric_attribute"
+          ],
+          "title": "Where",
+          "type": "string"
+        },
+        "family": {
+          "default": false,
+          "title": "Family",
+          "type": "boolean"
+        },
+        "open": {
+          "default": false,
+          "title": "Open",
+          "type": "boolean"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "enum": [
+                "string",
+                "int",
+                "double",
+                "number",
+                "bool",
+                "string[]"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        },
+        "requirement": {
+          "default": "optional",
+          "enum": [
+            "required",
+            "required_in_run",
+            "conditional",
+            "optional"
+          ],
+          "title": "Requirement",
+          "type": "string"
+        },
+        "applies_to": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applies To"
+        },
+        "when": {
+          "additionalProperties": true,
+          "title": "When",
+          "type": "object"
+        },
+        "payload": {
+          "default": false,
+          "title": "Payload",
+          "type": "boolean"
+        },
+        "instrument": {
+          "anyOf": [
+            {
+              "enum": [
+                "counter",
+                "histogram",
+                "gauge",
+                "up_down_counter"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Instrument"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Values",
+          "type": "array"
+        },
+        "since": {
+          "anyOf": [
+            {
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Since"
+        },
+        "meaning": {
+          "minLength": 1,
+          "title": "Meaning",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "where",
+        "meaning"
+      ],
+      "title": "CatalogueEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "const": 1,
+      "title": "Contract",
+      "type": "integer"
+    },
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/CatalogueEntry"
+      },
+      "minItems": 1,
+      "title": "Entries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "contract",
+    "entries"
+  ],
+  "title": "Catalogue",
+  "type": "object"
+}

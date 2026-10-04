@@ -310,6 +310,10 @@ Rules are generated from `templates/agent-rules.yaml` and written to: `.cursorru
 
 - `.cursorrules`, `CLAUDE.md`, `AGENTS.md` and `GEMINI.md` include explicit OTLP endpoint instructions.
 - `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the shell session when the dashboard starts.
+- What the telemetry carries is a contract, `contract/telemetry/v1`: OTLP, a catalogue of every
+  Resource attribute, span attribute and instrument, and `governance.telemetry.contract` on the
+  Resource. The runtime library is one emitter; a tenant on plain OpenTelemetry is another, judged
+  the same way by `agentsmith conformance --port telemetry`.
 
 **Data locality clarification:**
 
@@ -1359,7 +1363,8 @@ AgentSmith/
 │   ├── cli.py                   # `agentsmith` console script — every operator command
 │   ├── architectures.py         # The structural styles `tenant init`/`adopt` record (templates/architectures.yaml)
 │   ├── adopt.py                 # `agentsmith tenant adopt` — an existing repository under the gates
-│   ├── conformance.py           # Does a command satisfy the gate contract? (contract/gate/v1/protocol.md)
+│   ├── conformance.py           # Does a provider, sender, receiver or emitter satisfy its contract? (contract/*/protocol.md)
+│   ├── telemetry_contract.py    # The telemetry catalogue, OTLP decoding, the judge and a loopback receiver (contract/telemetry/v1/)
 │   ├── sync.py                  # `agentsmith sync` — a tenant's copies of the framework, brought current
 │   ├── machine/                 # the commands' logic + ~/.agent-framework/state (mode, policy, upgrade)
 │   ├── metrics.py               # OTel counters/histograms — rates spans cannot answer
@@ -1401,7 +1406,7 @@ AgentSmith/
 │   ├── onprem-deploy/
 │   └── in-app-widget/           # Embeddable end-user status widget + Ops Portal API
 ├── portal/                      # Ops Portal (Next.js + TypeScript + Tailwind)
-├── contract/                    # Versioned apart from this implementation: the gate contract a provider satisfies (contract/gate/v1/protocol.md) and the tenant intake record (contract/intake/v1/)
+├── contract/                    # Versioned apart from this implementation: gate, record, rules and telemetry — each with its protocol, schemas and cases — and the tenant intake record (contract/intake/v1/)
 ├── workflow-templates/          # What a tenant's CI becomes — the CI/CD via GitHub Actions section
 │   ├── agentsmith-gates.yml     # The process gate over every pushed commit (pinned to a release)
 │   ├── agentsmith-sync.yml       # Weekly: brings the tenant up to the latest release, as a pull request
