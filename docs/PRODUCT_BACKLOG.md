@@ -89,7 +89,7 @@ governance is aligned; work in OTS on how AgentSmith governs it is in scope, sli
 | C1 | Gate v2 — the CI event, dev record as its output, a provider setup step for CI; `agentsmith-gates.yml` calls the declared command | OTS declares `providers.json`, CI calls the provider, vendored gate files go; KYC pins a release | **Built 2026-10-02** (`gate-contract-ci`); tenants wait for the v2.1.0 release that carries the setup action |
 | C2 | Gate contract 3 — commit and push; the knowledge graph as gate evidence | hooks in OTS and KYC become stubs; `map_codebase.py` leaves OTS | **Built 2026-10-03** (`gate-local-events`); tenants move after the release that carries it |
 | C3 | Records — `contract/record/v1` | `send_dev_record.py` is never a tenant's file — already true since C1 (no tenant sends a record); proven by sender and receiver conformance | **Built 2026-10-04** (`record-contract`) |
-| C4 | Rules — `contract/rules/v1`, `render` / `check` | OTS's rules move into its declaration; vendored `templates/` goes  Next |
+| C4 | Rules — `contract/rules/v1`, `render` / `check`; provider paths leave a tenant's `process-gates.json` | OTS's rules move into its declaration and its CI calls the declared check; KYC's `@framework/` keys go | **Designed 2026-10-04** (`rules-contract`) |
 | C5 | Telemetry — `contract/telemetry/v1` from the Wire Contract | OTS's `tracing.py` on plain OpenTelemetry; vendored `runtime/` goes | |
 | C6 | Evals — `contract/evals/v1` | OTS's eval workflows call the declared command on its own datasets | |
 | C7 | Security — `contract/security/v1` | vendored `fixtures/security/` goes | |
