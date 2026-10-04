@@ -7,6 +7,23 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — C4: the rules contract (2026-10-04)
+
+Design: `.agent-rfc/designs/rules-contract.md`; review: `.agent-rfc/reviews/rules-contract.md`.
+Slice C4 of `.agent-rfc/designs/governance-contracts.md`.
+
+- **`contract/rules/v1/`**: `render` and `check` for the rule files every IDE's agent reads — `whole`
+  or the marked block, `instructions` or `supporting`, paths a provider may never use, and the
+  caller refusing a bad render whole. AgentSmith 11/11; providers that ignore the tenant's notes or
+  read the environment fail.
+- **Renders read committed declarations only**, so CI and a developer cannot disagree; the gates
+  workflow checks the rule files against the declared `rules` provider.
+- **`"provider"`** names the gate provider's documents in a tenant's config. Dropping the keys, as
+  designed, would have weakened the gate — an absent `registry` marks a config older than the pillar
+  requirements — so the design was amended while building.
+- **Tenant steps wait for the release**: OTS declares the port and stops running its vendored
+  renderer; KYC's `@framework/` values become `"provider"`.
+
 ## Completed — C3: the record contract (2026-10-04)
 
 Design: `.agent-rfc/designs/record-contract.md`; review: `.agent-rfc/reviews/record-contract.md`.

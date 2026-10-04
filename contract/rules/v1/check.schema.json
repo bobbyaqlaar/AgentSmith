@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/rules/v1/check.schema.json",
+  "description": "A rules provider's answer to `check`: whether the repository still holds what `render` would place (contract/rules/v1/protocol.md).",
+  "$defs": {
+    "RulesFileState": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "current",
+            "drifted",
+            "absent"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "state"
+      ],
+      "title": "RulesFileState",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "decision": {
+      "enum": [
+        "allow",
+        "deny"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "text": {
+      "default": "",
+      "title": "Text",
+      "type": "string"
+    },
+    "report": {
+      "default": "",
+      "title": "Report",
+      "type": "string"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/RulesFileState"
+      },
+      "title": "Files",
+      "type": "array"
+    }
+  },
+  "required": [
+    "decision"
+  ],
+  "title": "RulesCheck",
+  "type": "object"
+}

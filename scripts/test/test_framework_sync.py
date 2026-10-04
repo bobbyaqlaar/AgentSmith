@@ -36,6 +36,10 @@ def _git(root: Path, *args: str) -> subprocess.CompletedProcess:
 @pytest.fixture()
 def tenant(tmp_path, monkeypatch):
     """An adopted repository, one commit old, as `tenant adopt` leaves it."""
+    return _adopted(tmp_path, monkeypatch)
+
+
+def _adopted(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.setenv("AGENTSMITH_DIR", str(REPO))
     monkeypatch.setenv("AGENTSMITH_PYTHON", sys.executable)
@@ -619,3 +623,38 @@ def test_a_declaration_naming_another_provider_is_theirs_and_its_setup_is_what_c
     workflow = (tenant / ".github" / "workflows" / "agentsmith-gates.yml").read_text()
     assert 'uses: "example/othergov/setup@v7"' in workflow
     assert "setup-agentsmith" not in workflow
+
+
+def test_an_adopted_config_naming_this_installs_paths_is_moved_to_provider_and_still_passes(tmp_path, monkeypatch):
+    """A tenant adopted before the rules contract carries `@framework/…` values —
+    the provider's install layout, in its declaration. Sync names them
+    `"provider"`, touches nothing else in the file, and the tenant's own gate
+    accepts the commit (.agent-rfc/designs/rules-contract.md)."""
+    import runtime.cli as cli
+
+    original = cli._process_gates_config
+
+    def legacy(*args, **kwargs):
+        data = json.loads(original(*args, **kwargs))
+        data.update({"registry": "@framework/templates/governance.json",
+                     "levers_doc": "@framework/docs/review-levers.md",
+                     "design_checklist": "@framework/docs/design-review-checklist.md"})
+        return json.dumps(data, indent=2) + "\n"
+
+    monkeypatch.setattr(cli, "_process_gates_config", legacy)
+    root = _adopted(tmp_path, monkeypatch)
+    config = root / ".agenticframework" / "process-gates.json"
+    before = config.read_text()
+    assert "@framework/" in before
+
+    written = _sync(root, framework=REPO)
+
+    after = config.read_text()
+    assert ".agenticframework/process-gates.json" in written
+    assert "@framework/" not in after
+    assert after == before.replace('"@framework/templates/governance.json"', '"provider"') \
+        .replace('"@framework/docs/review-levers.md"', '"provider"') \
+        .replace('"@framework/docs/design-review-checklist.md"', '"provider"')
+    _git(root, "add", "--", *written)
+    result = _git(root, "commit", *SYNC_COMMIT)
+    assert result.returncode == 0, result.stdout + result.stderr

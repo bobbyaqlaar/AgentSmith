@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/rules/v1/extends.schema.json",
+  "description": "A tenant's own additions — `extends` in .agenticframework/process-gates.json.\nKept apart from the registry so re-syncing the framework never overwrites it.",
+  "$defs": {
+    "Artifact": {
+      "additionalProperties": false,
+      "description": "One document type a repo is allowed exactly one of.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "patterns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Patterns",
+          "type": "array"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "append_only": {
+          "default": false,
+          "title": "Append Only",
+          "type": "boolean"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Artifact",
+      "type": "object"
+    },
+    "Artifacts": {
+      "additionalProperties": false,
+      "properties": {
+        "types": {
+          "items": {
+            "$ref": "#/$defs/Artifact"
+          },
+          "title": "Types",
+          "type": "array"
+        },
+        "reference": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reference",
+          "type": "array"
+        },
+        "ignored": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Ignored",
+          "type": "array"
+        }
+      },
+      "title": "Artifacts",
+      "type": "object"
+    },
+    "Pillar": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minimum": 1,
+          "title": "Id",
+          "type": "integer"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "check": {
+          "items": {
+            "enum": [
+              "design",
+              "review",
+              "mechanical"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Check",
+          "type": "array"
+        },
+        "design_question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Design Question"
+        },
+        "rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "check"
+      ],
+      "title": "Pillar",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "pillars": {
+      "items": {
+        "$ref": "#/$defs/Pillar"
+      },
+      "title": "Pillars",
+      "type": "array"
+    },
+    "session_start": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Session Start",
+      "type": "array"
+    },
+    "rules_extra": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Rules Extra",
+      "type": "array"
+    },
+    "test_command": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Test Command"
+    },
+    "otel_endpoint": {
+      "anyOf": [
+        {
+          "pattern": "^https?://[^\\s]+$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Otel Endpoint"
+    },
+    "artifacts": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Artifacts"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "title": "Extends",
+  "type": "object"
+}

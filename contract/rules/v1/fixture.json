@@ -1,0 +1,16 @@
+{
+  "_about": "The repository every case is asked about (contract/rules/v1/protocol.md): a tenant's declarations, two notes of its own, and a CLAUDE.md it wrote by hand, with no markers. Each case builds it fresh in a new git repository.",
+  "notes": [
+    "Fixture note one: the ledger is reached only through services/ledger/client.py.",
+    "Fixture note two: a migration ships with the code that needs it, never before."
+  ],
+  "hand_written": "CLAUDE.md",
+  "files": {
+    ".agenticframework/tenant.yaml": "tenant:\n  id: \"fixture-tenant\"\n  name: \"fixture-tenant\"\n  owner: owner@example.test\n\nframework:\n  version: \"2.1.0\"\n",
+    ".agenticframework/process-gates.json": "{\n  \"_about\": \"The fixture tenant's gate config: only `extends` matters to a render.\",\n  \"gated\": [\n    \"src/**\"\n  ],\n  \"not_gated\": [\n    \"**.md\"\n  ],\n  \"registry\": \"provider\",\n  \"extends\": {\n    \"rules_extra\": [\n      \"Fixture note one: the ledger is reached only through services/ledger/client.py.\",\n      \"Fixture note two: a migration ships with the code that needs it, never before.\"\n    ],\n    \"test_command\": \"make check\",\n    \"otel_endpoint\": \"https://collector.example.test\"\n  }\n}\n",
+    ".agenticframework/providers.json": "{\n  \"contract\": 3,\n  \"providers\": {\n    \"gate\": \"none\",\n    \"rules\": {\n      \"command\": \"<the provider under test>\",\n      \"contract\": 1\n    }\n  }\n}\n",
+    "pyproject.toml": "[project]\nname = \"fixture-tenant\"\nversion = \"0.1.0\"\n",
+    "src/app.py": "print(\"fixture\")\n",
+    "CLAUDE.md": "# Fixture tenant\n\nWritten by hand. The rules provider must not take this file whole.\n"
+  }
+}

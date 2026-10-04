@@ -77,6 +77,35 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the rules contract: what a tenant's agents are told, and who checks it
+
+**Hook-interface change** (additive): `.githooks/process-gate rules check`, and a new step in
+`agentsmith-gates.yml`.
+
+- **`contract/rules/v1/`** — a command port, `render` and `check`, for `CLAUDE.md`, `AGENTS.md`,
+  `GEMINI.md`, `.cursorrules`, `.github/copilot-instructions.md` and the skill files: each file's text,
+  whether it is placed `whole` or as the `agentsmith:rules` block inside a file the tenant wrote, and
+  whether it carries the tenant's notes. Paths into `.git/`, `.githooks/`, `.agenticframework/` or
+  CI are refused by the caller, whole. Schemas generated from new models; conformance with
+  `agentsmith conformance --port rules --provider "<command>"` — AgentSmith 11/11, and providers that
+  ignore the notes or read the environment fail.
+- **A render reads committed declarations only.** `generate-ide-config.py` no longer reads
+  `AGENT_OWNER_ID`, `AGENT_PHOENIX_ENDPOINT` or `FRAMEWORK_VERSION`, and adopt no longer passes the git
+  remote's name: owner and project come from `tenant.yaml`, the collector from `extends.otel_endpoint`
+  (new), the default test command from the lock file (`uv run pytest`, `pnpm test`). A tenant whose
+  files were rendered with one of those variables set sees a one-time drift; `agentsmith sync`
+  repairs it.
+- **`agentsmith rules render [--write] | check`**, and `providers.json` gains a `rules` port that
+  `adopt` writes and `sync` adds to a declaration it wrote. The gates workflow checks the rule files
+  after the gate: drift, or a declared provider that gives no answer, fails; none declared is said.
+- **`"provider"` replaces `@framework/…` in a tenant's `process-gates.json`** for `registry`,
+  `levers_doc` and `design_checklist` — the gate provider's own document, named without its install
+  path. `adopt` writes it; `sync` rewrites exactly the values adopt used to write. `@framework/` is
+  still read. A machine whose installed AgentSmith predates this reads `"provider"` as a missing file
+  and refuses — install the release the tenant syncs to.
+- `scripts/requirements-gate.txt` adds `pyyaml` (already a framework dependency): the provider's CI
+  setup reads the rules catalogue.
+
 ### Added — the record contract: what a gate provider tells a portal
 
 - **`contract/record/v1/`** publishes the dev record a gate provider sends a portal after a CI run —

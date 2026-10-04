@@ -1,11 +1,12 @@
 ---
-status: active
+status: done
 scope:
   - contract/rules/v1/**
   - scripts/rules_port.py
   - scripts/generate-ide-config.py
   - scripts/gate_models.py
   - scripts/process_gate.py
+  - scripts/requirements-gate.txt
   - runtime/cli.py
   - runtime/adopt.py
   - runtime/sync.py
@@ -68,7 +69,7 @@ the provider's own version — nothing else:
 - `.agenticframework/process-gates.json` `extends` — the tenant's own rules
   (`extends.schema.json`, generated from `gate_models.Extends`, which gains `otel_endpoint` — absent,
   the provider's own default);
-- files the repository commits (a lock file decides a default test command, a manifest the stack).
+- files the repository commits (they decide the stack, and a lock file the default test command).
 
 Not the environment, not machine configuration, not the git remote. Two machines render the same
 bytes from the same commit, so CI's check can only fail on a change somebody made.
@@ -126,17 +127,19 @@ C4 row is amended to say so.
   passes; declared and no answer → **fails**, and says which way it got none. An old launcher that does
   not know `rules` hands it to `process_gate.py`, which refuses it as a usage error, or finds no gate
   script — either fails the step: closed, not skipped.
-- **The provider paths leave a tenant's config.** `adopt` stops writing `registry`, `levers_doc` and
-  `design_checklist`. Absent, `registry` already means the provider's own. `levers_doc` and
-  `design_checklist` do not: absent, they default to a repository path (`docs/review-levers.md`,
-  `docs/design-review-checklist.md`), so dropping KYC's keys as things stand would point its gate at
-  files it does not have. Their default becomes **the repository's own file if it has one at the
-  commit being checked, else the provider's** — every repository that has the file keeps reading it,
-  and one that has not gets what its `@framework/` value meant. `sync` removes each of the three
-  keys from a tenant's `process-gates.json` **only** when it holds exactly the `@framework/` value
-  `adopt` wrote, and lists the change in its commit; any other value is the tenant's choice and is left, with a note when it names a repository path to a registry. `process_gate.py`
-  still resolves `@framework/` (a tenant not yet synced keeps working), and its messages stop telling a
-  tenant to run `scripts/generate-ide-config.py`.
+- **The provider paths leave a tenant's config.** `registry`, `levers_doc` and `design_checklist`
+  take a new value, **`"provider"`** — the gate provider's own copy of that document, named without
+  naming where it is installed. `adopt` writes it; `sync` rewrites each key that holds exactly the
+  `@framework/` value `adopt` used to write, and lists the change in its commit; any other value is
+  the tenant's and is left. `process_gate.py` reads `"provider"` as the `@framework/` path it stands
+  for, and still reads `@framework/` (a tenant not yet synced keeps working).
+  *Amended while building:* this said the keys would be dropped. They cannot be: an absent `registry`
+  is how the gate recognises a config that **predates** the pillar and sign-off requirements
+  (`Config.registry_declared`), so dropping it would have judged every later commit by the older,
+  weaker rules — and an absent `levers_doc` is a repository path. A value says the same thing as the
+  `@framework/` path without the path. A machine whose installed provider predates `"provider"`
+  reads it as a repository path and refuses with "the rules registry does not exist" — closed, and
+  the same release note as contract 3: install the release the tenant syncs to.
 
 ### Failure semantics (the umbrella's table, for this port)
 
@@ -165,13 +168,13 @@ environment, are each shown to fail it.
 
 ### The tenant steps that prove it — after the release that carries it
 
-- **OTS** (its own design, in OTS): declares `rules`; drops `"registry": "templates/governance.json"`,
+- **OTS** (its own design, in OTS): declares `rules`; changes `"registry": "templates/governance.json"` to `"provider"`,
   so its designs are checked against its provider's pillars; its two `generate-ide-config.py` CI steps
   go, replaced by the gates workflow's step. Its vendored `templates/` and `generate-ide-config.py`
   are then read by nothing — they leave with the rest of vendoring at C9, because `upgrade` re-vendors
   `scripts/` and `templates/` whole and stopping that piecemeal would break a vendored tenant whose CI
   still runs `scripts/process_gate.py` by path.
-- **KYC Sentinel**: `sync` removes its two `@framework/` keys. It commits no rule files today; while
+- **KYC Sentinel**: `sync` rewrites its two `@framework/` values to `"provider"`. It commits no rule files today; while
   that holds, its check reports each one absent and passes.
 
 **Deliberately not done:** the `tenant init` templates' drift step (`ci-*.yml` serve vendored
@@ -184,14 +187,14 @@ schema (above).
 - P1 applies — `.agent-rfc/designs/governance-contracts.md` defines C4 and is amended where this design departs from its row (the registry, the timing of the vendored files); `.agent-rfc/designs/sync-merged-files.md` is where the marked block was designed; this design precedes the code.
 - P2 applies — `scripts/generate-ide-config.py` keeps its renderers and gains one entry point both its own default mode and the port call; `runtime/conformance.py` gains the port rather than a second runner; `.githooks/process-gate` generalises `declared_gate` rather than adding a parser. KG impact over the scope is recorded in the review. No dependency added.
 - P3 applies — `scripts/gate_tracing.py` `gate_span` is the helper every gate event runs inside; `rules render` and `rules check` each run inside one span from it (`gate.rules_render`, `gate.rules_check`, with `agent.role=process-gate` and the tenant) carrying the verdict and file count, spooled like the gate's when no collector is up.
-- P4 applies — `runtime/conformance.py`'s rules suite runs against AgentSmith and against two stub providers that must fail it; unit tests for placement (block replace, append, whole), path refusal, the launcher's three outcomes, and `sync` dropping only default-valued keys. Mutations: a check that ignores a block's drift, a renderer that reads `AGENT_OWNER_ID`, a path guard that allows `.githooks/`, a launcher that passes on no answer, a `sync` that drops a non-default `registry`, a levers default that prefers the provider's file over the repository's.
+- P4 applies — `runtime/conformance.py`'s rules suite runs against AgentSmith and against two stub providers that must fail it; unit tests for placement (block replace, append, whole), path refusal, the launcher's three outcomes, and `sync` rewriting only the `@framework/` values `adopt` wrote. Mutations: a check that ignores a block's drift, a renderer that reads `AGENT_OWNER_ID`, a path guard that allows `.githooks/`, a launcher that passes on no answer, a `"provider"` value read as a repository path, a `sync` that rewrites a `@framework/` value the tenant chose.
 - P7 applies — `scripts/gate_models.py`: `RulesFile`, `RulesRender`, `RulesCheck` and the `rules` port entry are Pydantic V2 models, the schemas generated from them, as C3's record is.
 - P8 n/a — no telemetry wire changes; the span above uses the existing exporter path.
 - P9 n/a — no orchestration.
 - P10 n/a — no LLM call.
 - P11 applies — `runtime/adopt.py` will write files named by a provider's output: the caller validates every path against the contract's allowed shape and refuses the whole render on the first bad one, so a rules provider cannot write hooks, declarations or CI.
 - P12 n/a — no credentials are read or written; the rules port carries none.
-- P13 applies — `workflow-templates/agentsmith-gates.yml` gains a blocking check a tenant's CI did not have; the existing drift check's semantics (absent is not drift) are kept, not loosened; `@framework/` still resolves, so no tenant's gate weakens before it syncs; removing a declared `rules` port is a change to an always-governed file.
+- P13 applies — `workflow-templates/agentsmith-gates.yml` gains a blocking check a tenant's CI did not have; the existing drift check's semantics (absent is not drift) are kept, not loosened; `@framework/` still resolves, so no tenant's gate weakens before it syncs, and `registry` is never dropped — its absence means "predates the requirements"; removing a declared `rules` port is a change to an always-governed file.
 - P14 applies — `scripts/generate-ide-config.py` stops reading three environment variables and the git remote: a tenant whose files were rendered with one of them set sees a one-time drift that `agentsmith sync` repairs, and the fixture pins the inputs the contract allows.
 - P15 applies — `.githooks/process-gate` keeps "not declared", "declared none" and "no answer" apart: the first two pass and say so, the third fails and names whether the command was missing, exited 3 or printed something that was not JSON.
 - P16 applies — `runtime/sync.py` places files only after the whole render validated, so a refused render leaves the tenant's files as they were; a tenant that drifted is repaired by `agentsmith sync`, which the deny text names.
@@ -202,7 +205,9 @@ none
 
 ## Dependencies
 
-none
+No package is new to AgentSmith. `pyyaml` (already in `requirements.txt` and `requirements.lock`) is
+added to `scripts/requirements-gate.txt`, the provider's CI install, because the rules port reads
+the catalogue `templates/agent-rules.yaml`. It has no dependencies of its own.
 
 ## Levers
 

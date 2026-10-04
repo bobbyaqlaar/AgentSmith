@@ -25,6 +25,10 @@
 # and runs it with the first interpreter that can: $AGENTSMITH_PYTHON,
 # $AGENTSMITH_DIR/.venv, ~/.agent-framework/.venv, then the repo's own .venv.
 #
+# `rules check` asks the `rules` provider the repository declares
+# (contract/rules/v1/protocol.md) and never falls back: declared and silent
+# fails; not declared, or "none", passes and says so.
+#
 # When none exists the gate cannot run, and each caller fails the safe way:
 # pre-edit denies the edit, commit-msg blocks the commit, ci fails; the
 # advisory session-start and stop only warn.
@@ -43,17 +47,19 @@ root="$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:
 # before any interpreter is known to exist. Only the three contract events go to
 # a provider; commit-msg, sweep and ci are not in contract v1 and keep the
 # resolution below.
-declared_gate() {
+declared_port() {
   local file="$root/.agenticframework/providers.json"
   [ -f "$file" ] || return 0
-  # The `gate` port's value: either "none" or an object with a "command".
+  # A port's value ($1: gate, rules): either "none" or an object with a "command".
   local block
-  block="$(tr -d '\n' < "$file" | sed -n 's/.*"gate"[[:space:]]*:[[:space:]]*\(.*\)/\1/p')"
+  block="$(tr -d '\n' < "$file" | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\(.*\)/\1/p")"
   case "$block" in
     '"none"'*) echo "none" ;;
     *) printf '%s' "$block" | sed -n 's/^[^}]*"command"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' ;;
   esac
 }
+
+declared_gate() { declared_port gate; }
 
 # The gate contract this repository speaks: the `gate` entry's own "contract",
 # else the declaration's top-level one, else 1. Innermost objects (the port
@@ -144,11 +150,16 @@ need_python() {
 }
 
 # One event to the declared provider, and its decision as the exit code.
-# $1 the event, $2 its JSON, $3 `ci` or `local`. No decision, in any form,
-# refuses — and says which form it took; nothing falls back to a framework path.
+# $1 the event, $2 its JSON, $3 `ci` or `local`, $4 the port (default gate). No
+# decision, in any form, refuses — and says which form it took; nothing falls
+# back to a framework path. The provider runs at the top of the repository.
 ask_provider() {
-  local event="$1" payload="$2" where="$3" provider answer code
-  provider="${GOVERNANCE_PROVIDER:-$(declared_gate)}"
+  local event="$1" payload="$2" where="$3" port="${4:-gate}" provider answer code
+  if [ "$port" = "gate" ]; then
+    provider="${GOVERNANCE_PROVIDER:-$(declared_port gate)}"
+  else
+    provider="$(declared_port "$port")"
+  fi
   if [ "$provider" = "none" ]; then
     echo "Process gates: this repository declares itself ungoverned (providers.json) — nothing checked."
     return 0
@@ -158,20 +169,23 @@ ask_provider() {
     return 1
   fi
   need_python "$where" || return 1
-  answer="$(printf '%s' "$payload" | $provider "$event")"
+  answer="$(cd "$root" && printf '%s' "$payload" | $provider "$event")"
   code=$?
-  printf '%s' "$answer" | GATE_EXIT="$code" GATE_EVENT="$event" GATE_WHERE="$where" \
+  printf '%s' "$answer" | GATE_EXIT="$code" GATE_EVENT="$event" GATE_WHERE="$where" GATE_PORT="$port" \
     GATE_CONTRACT="$(declared_contract)" python3 -c '
 import json, os, sys
 raw, code, event = sys.stdin.read(), os.environ["GATE_EXIT"], os.environ["GATE_EVENT"]
+port = os.environ["GATE_PORT"]
 in_ci = os.environ["GATE_WHERE"] == "ci"
-refused = {"ci": "fails the check", "commit": "blocks the commit", "push": "blocks the push"}[event]
+refused = {"ci": "fails the check", "commit": "blocks the commit", "push": "blocks the push",
+           "check": "fails the check"}[event]
+title = "Process gate" if port == "gate" else "Rules"
 
 def fail(text):
     if in_ci:
-        print("::error title=Process gate::" + text)
+        print("::error title=" + title + "::" + text)
     else:
-        print("❌ process gate: " + text, file=sys.stderr)
+        print("❌ " + title.lower() + ": " + text, file=sys.stderr)
     sys.exit(1)
 
 try:
@@ -181,13 +195,14 @@ except (ValueError, KeyError, TypeError):
     # Exit 2 is a usage error: an installed provider older than the contract this
     # repository declares does not know the event — the case that happens when a
     # tenant moves ahead of the install on a machine.
-    why = {"2": f"it does not know `{event}` (exit 2) — it is older than the gate contract this repository declares; "
-                "update it (for AgentSmith: re-run install-ai-stack.sh)",
+    why = {"2": f"it does not know `{event}` (exit 2) — it is older than the {port} contract this repository "
+                "declares; update it (for AgentSmith: re-run install-ai-stack.sh)",
            "3": "it cannot run here (exit 3)", "126": "it is not executable (exit 126)",
            "127": "it is not installed (exit 127)"}.get(code, f"it printed no decision (exit {code})")
     contract = os.environ["GATE_CONTRACT"]
-    fail(f"the declared gate provider gave no decision for `{event}`: {why}. Under gate contract "
-         f"{contract} that {refused}; nothing falls back to a framework path.")
+    under = f"Under gate contract {contract} that" if port == "gate" else "That"
+    fail(f"the declared {port} provider gave no decision for `{event}`: {why}. {under} {refused}; "
+         "nothing falls back to a framework path.")
 report = answer.get("report") or ""
 if report:
     print(report)
@@ -255,6 +270,26 @@ case "$subcommand" in
     # For the hooks: commit-msg applies the subject rule itself only below 3.
     declared_contract
     exit 0
+    ;;
+  rules)
+    # The rules port (contract/rules/v1/protocol.md): only `check` is asked
+    # from here — a render is placed by the provider tooling, not by a hook.
+    if [ "${2:-}" != "check" ]; then
+      echo "usage: process-gate rules check" >&2
+      exit 2
+    fi
+    where=local
+    [ -n "${GITHUB_ACTIONS:-}" ] && where=ci
+    case "$(declared_port rules)" in
+      "")
+        echo "Rules: this repository declares no rules provider (providers.json) — nothing checked."
+        exit 0 ;;
+      none)
+        echo "Rules: this repository declares \"rules\": \"none\" (providers.json) — nothing checked."
+        exit 0 ;;
+    esac
+    ask_provider check '{}' "$where" rules
+    exit $?
     ;;
 esac
 

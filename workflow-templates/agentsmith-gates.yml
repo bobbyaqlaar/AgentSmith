@@ -41,3 +41,10 @@ jobs:
           AGENTSMITH_PORTAL_URL: ${{ secrets.AGENTSMITH_PORTAL_URL }}
           AGENTSMITH_PORTAL_INGEST_TOKEN: ${{ secrets.AGENTSMITH_PORTAL_INGEST_TOKEN }}
         run: bash .githooks/process-gate ci --base "$BASE" --head "$HEAD_SHA"
+      - name: "The rule files say what the declared rules provider renders"
+        # agentsmith:gate
+        # The rules port (contract/rules/v1/protocol.md): CLAUDE.md, AGENTS.md and
+        # the rest are checked against the `rules` provider providers.json names.
+        # Drift, or a declared provider that gives no answer, fails; a repository
+        # that declares none is told so. `agentsmith sync` repairs drift.
+        run: bash .githooks/process-gate rules check

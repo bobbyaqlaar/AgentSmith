@@ -945,7 +945,7 @@ def test_pre_edit_in_an_installed_mode_repo_reads_framework_levers(installed_rep
     allowed = _hook(installed_repo, "pre-edit", _edit(installed_repo, "agents/intake.py"), script=GATE)
     assert _decision(allowed) == "allow", allowed.stdout
     denied = _hook(installed_repo, "pre-edit", _edit(installed_repo, "worker.py"), script=GATE)
-    assert "design-review-checklist.md in your AgentSmith checkout" in denied.stdout
+    assert "the gate provider's docs/design-review-checklist.md" in denied.stdout
 
 
 @needs_git
@@ -1078,7 +1078,7 @@ def test_self_test_runs_the_ci_gate_over_the_pushed_range():
 
 def test_the_gate_requirements_list_covers_what_the_gate_imports():
     listed = (REPO / "scripts/requirements-gate.txt").read_text(encoding="utf-8")
-    for package in ("pydantic", "opentelemetry-sdk", "opentelemetry-exporter-otlp-proto-http"):
+    for package in ("pydantic", "opentelemetry-sdk", "opentelemetry-exporter-otlp-proto-http", "pyyaml"):
         assert package in listed
 
 

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/rules/v1/providers.schema.json",
+  "title": "providers.json — the rules port",
+  "description": "The `rules` entry of .agenticframework/providers.json (contract/rules/v1/protocol.md). The rest of the declaration is the gate contract's (contract/gate/v3/providers.schema.json); a port this schema does not describe is allowed.",
+  "type": "object",
+  "required": [
+    "providers"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "providers": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "rules": {
+          "description": "Who renders and checks this repository's rule files, or \"none\": it declares no rules provider, and the check says so instead of checking.",
+          "oneOf": [
+            {
+              "const": "none"
+            },
+            {
+              "additionalProperties": false,
+              "description": "The rules provider: the command a caller runs with `render` or `check` appended, and the payload on stdin.",
+              "properties": {
+                "command": {
+                  "minLength": 1,
+                  "title": "Command",
+                  "type": "string"
+                },
+                "version": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Version"
+                },
+                "contract": {
+                  "anyOf": [
+                    {
+                      "const": 1,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Contract"
+                },
+                "setup": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Setup"
+                }
+              },
+              "required": [
+                "command"
+              ],
+              "type": "object"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

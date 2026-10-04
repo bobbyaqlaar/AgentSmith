@@ -40,6 +40,14 @@ resending is safe. The portal is held to the same file by its tests. `agentsmith
 record --sender "<gate command>"` or `--receiver <ingest address>` checks any other provider or
 portal against it.
 
+**The rule files are a contract too** — `contract/rules/v1/`. `CLAUDE.md`, `AGENTS.md`,
+`GEMINI.md`, `.cursorrules`, `.github/copilot-instructions.md` and the skill files are rendered by
+the `rules` provider `providers.json` declares, from the repository's committed declarations only —
+never the environment — and placed whole, or as the marked `agentsmith:rules` block inside a file the
+repository wrote itself. The gates workflow's last step, `bash .githooks/process-gate rules check`,
+fails on drift or on a declared provider that does not answer; `agentsmith sync` repairs drift.
+`agentsmith conformance --port rules --provider "<command>"` checks any other provider.
+
 **What no gate can check** is whether the design was *good*. The gates prove a
 design exists, is scoped to the change, and cites real levers; that a review
 ran until a pass found nothing; and that the review is as fresh as the change.
@@ -123,7 +131,7 @@ so a missing config means it was removed.
   "not_gated":        ["**.md", ".agent-rfc/**"],
   "pillars":          { "mode": "enforce", "allow": [{"check": "P7-pydantic", "path": "runtime/x.py", "why": "…"}] },
   "levers_doc":       "docs/review-levers.md",
-  "design_checklist": "@framework/docs/design-review-checklist.md",
+  "design_checklist": "provider",
   "changelog":        { "file": "CHANGELOG.md", "paths": ["hooks/**", "…"], "except": ["scripts/test/**"] }
 }
 ```
@@ -132,13 +140,14 @@ so a missing config means it was removed.
   gate itself, or deleting a line would switch a gate off unreviewed; a config
   that does not is rejected, and a broken config blocks every commit and every
   edit except to itself.
-- **`levers_doc` / `design_checklist`** — a repo path, read at the commit being
-  checked (OTS validates against its own, extended `docs/review-levers.md`), or
-  `@framework/<path>`, read beside the running `process_gate.py` — the AgentSmith
-  checkout or `~/.agent-framework` (KYC Sentinel carries no copy) — and, when it
-  is not there, from `$AGENTSMITH_DIR`, then `~/.agent-framework`. A vendored
-  tenant runs its own copy of the script, which has no `templates/` or `docs/`
-  beside it; the framework it came from does.
+- **`registry` / `levers_doc` / `design_checklist`** — a repo path, read at the
+  commit being checked (OTS validates against its own, extended
+  `docs/review-levers.md`), or **`"provider"`**: the gate provider's own copy,
+  wherever it is installed — what `tenant adopt` writes, and what `agentsmith
+  sync` turns the older `@framework/<path>` values into. `@framework/<path>` is
+  still read, beside the running `process_gate.py`, then `$AGENTSMITH_DIR`, then
+  `~/.agent-framework`. Declare `registry` rather than omit it: a config without
+  one predates the pillar and sign-off requirements, and is judged without them.
 - **`pillars`** — optional, default `off`. Whether this repo is held to the
   pillars a script can check, and to evidence in its designs' pillar answers
   (below). `"enforce"` on its own is the same as `{"mode": "enforce"}`.
