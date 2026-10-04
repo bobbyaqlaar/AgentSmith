@@ -275,11 +275,9 @@ def test_none_declared_renders_nothing(tmp_path):
 
 
 def test_the_render_context_ignores_the_environment(tmp_path, monkeypatch):
-    import importlib.util
+    from _shared import load_script
 
-    spec = importlib.util.spec_from_file_location("gen_ide", REPO / "scripts" / "generate-ide-config.py")
-    gen = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gen)
+    gen = load_script("generate-ide-config")
     (tmp_path / ".agenticframework").mkdir()
     (tmp_path / ".agenticframework" / "tenant.yaml").write_text(
         'tenant:\n  id: "t"\n  name: "t"\n  owner: o@example.test\nframework:\n  version: "2.1.0"\n')
