@@ -984,11 +984,13 @@
         "_render_gemini_md",
         "_render_skill",
         "_detect_stack",
-        "_default_project_name",
+        "declared_context",
+        "seed_history",
+        "render_files",
         "main",
         "_check_drift"
       ],
-      "last_modified": "2026-10-02T20:19:50Z",
+      "last_modified": "2026-10-04T16:43:14Z",
       "id": "scripts/generate-ide-config.py"
     },
     {
@@ -3473,6 +3475,8 @@
         "_provider_scripts",
         "_cmd_gate",
         "_gate_kg",
+        "_cmd_rules",
+        "_rules_conformance",
         "_record_conformance",
         "_cmd_conformance",
         "_cmd_sync",
@@ -3502,7 +3506,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-03T20:21:00Z",
+      "last_modified": "2026-10-04T16:27:16Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4120,7 +4124,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-03T20:45:35Z",
+      "last_modified": "2026-10-04T16:32:34Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4549,6 +4553,7 @@
         "framework_file",
         "glob_match",
         "_any",
+        "_document",
         "Config",
         "parse_config",
         "lever_slugs",
@@ -4638,7 +4643,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-10-03T20:46:13Z",
+      "last_modified": "2026-10-04T16:43:44Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4740,7 +4745,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-10-03T20:24:17Z",
+      "last_modified": "2026-10-04T16:39:48Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5225,6 +5230,13 @@
         "RecordReview",
         "RecordCommit",
         "DevRecord",
+        "_any_case",
+        "RulesRequest",
+        "RulesFile",
+        "RulesRender",
+        "RulesFileState",
+        "RulesCheck",
+        "RulesPort",
         "Ide",
         "Signoff",
         "Records",
@@ -5243,10 +5255,11 @@
         "check_evidence",
         "_signoff_section",
         "check_signoff",
+        "_one_entry_per_path",
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-10-03T20:26:24Z",
+      "last_modified": "2026-10-04T16:43:22Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -5921,7 +5934,7 @@
         "test_the_line_is_the_shape_the_checker_already_reads",
         "test_the_stop_gate_writes_one"
       ],
-      "last_modified": "2026-09-18T16:22:28Z",
+      "last_modified": "2026-10-04T16:39:48Z",
       "id": "scripts/test/test_governed_tenant.py"
     },
     {
@@ -6665,6 +6678,7 @@
       "language": "python",
       "symbols": [
         "AdoptError",
+        "RulesUnavailable",
         "Plan",
         "_git",
         "_executable_hooks",
@@ -6676,24 +6690,22 @@
         "vendored_dirs",
         "_detect_code",
         "plan_adoption",
-        "_skill_files",
         "describe",
-        "generated_by_agentsmith",
+        "rules_port",
+        "declared_rules",
+        "rendered_rules",
         "setup_reference",
         "declared_setup",
         "workflow_setup",
         "providers_declaration",
         "merge_rules_block",
-        "_test_command",
-        "_project_name",
-        "generated_rules",
         "_write_rules",
         "adopt",
         "commit_command",
         "fate",
         "put"
       ],
-      "last_modified": "2026-10-03T09:35:02Z",
+      "last_modified": "2026-10-04T16:43:29Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6727,9 +6739,10 @@
         "test_vendored_framework_code_is_not_gated",
         "test_adopt_refuses_when_the_install_cannot_arm_the_gates",
         "test_adopt_declares_who_governs_the_repository",
-        "test_adopt_writes_the_sync_workflow_so_a_tenant_hears_about_upgrades"
+        "test_adopt_writes_the_sync_workflow_so_a_tenant_hears_about_upgrades",
+        "test_adopt_writes_every_file_its_plan_promises"
       ],
-      "last_modified": "2026-10-02T20:17:49Z",
+      "last_modified": "2026-10-04T16:40:04Z",
       "id": "scripts/test/test_tenant_adopt.py"
     },
     {
@@ -6886,6 +6899,20 @@
         "run_record_receiver",
         "run_record_sender",
         "_record_schema_problem",
+        "_rules_dir",
+        "RulesCase",
+        "RulesReport",
+        "rules_cases",
+        "rules_fixture",
+        "_placement",
+        "build_rules_fixture",
+        "_ask_rules",
+        "_schema_problem",
+        "_render",
+        "_arrange_rules",
+        "_judge_render",
+        "_judge_check",
+        "run_rules",
         "passed",
         "render",
         "redirect_request",
@@ -6894,7 +6921,7 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-10-03T20:46:47Z",
+      "last_modified": "2026-10-04T16:24:29Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -6997,8 +7024,7 @@
         "_digest",
         "ownership",
         "plan_sync",
-        "_generated_whole",
-        "_with_block",
+        "provider_documents",
         "_shared_files",
         "_workflow_template",
         "describe",
@@ -7006,7 +7032,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-10-02T16:17:14Z",
+      "last_modified": "2026-10-04T16:53:35Z",
       "id": "runtime/sync.py"
     },
     {
@@ -7015,6 +7041,7 @@
       "symbols": [
         "_git",
         "tenant",
+        "_adopted",
         "moved_on",
         "_sync",
         "test_a_tenant_whose_hooks_drifted_is_brought_current",
@@ -7050,9 +7077,11 @@
         "test_a_tenant_with_no_arming_design_gets_one_that_covers_the_whole_commit",
         "test_the_scope_edit_appends_only_what_is_missing_and_keeps_the_prose",
         "test_an_untouched_contract_1_declaration_moves_to_the_current_contract_with_its_workflow",
-        "test_a_declaration_naming_another_provider_is_theirs_and_its_setup_is_what_ci_runs"
+        "test_a_declaration_naming_another_provider_is_theirs_and_its_setup_is_what_ci_runs",
+        "test_an_adopted_config_naming_this_installs_paths_is_moved_to_provider_and_still_passes",
+        "legacy"
       ],
-      "last_modified": "2026-10-02T20:17:55Z",
+      "last_modified": "2026-10-04T16:34:45Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -8013,6 +8042,86 @@
       "pillar": null,
       "created_at": "2026-10-03T21:01:11Z",
       "id": "rfc:reviews/record-contract.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "block",
+        "region",
+        "place",
+        "state",
+        "_generator",
+        "seed_history",
+        "generated_whole",
+        "_ours",
+        "_read",
+        "render",
+        "check",
+        "write",
+        "_repository",
+        "_traced",
+        "main",
+        "run"
+      ],
+      "last_modified": "2026-10-04T16:49:00Z",
+      "id": "scripts/rules_port.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "provider_env",
+        "test_agentsmith_passes_the_rules_contract",
+        "test_the_rules_schemas_are_the_models",
+        "test_the_declared_port_is_the_model",
+        "test_what_adopt_declares_names_the_rules_provider_under_both_contracts",
+        "test_the_path_rule_is_one_rule_in_the_model_and_the_schema",
+        "test_a_render_naming_a_path_twice_is_refused",
+        "_stub",
+        "test_a_provider_that_ignores_the_tenants_notes_and_drift_fails",
+        "test_a_provider_that_reads_the_environment_fails",
+        "_port",
+        "_file",
+        "test_a_block_is_appended_once_then_replaced_and_the_tenants_text_survives",
+        "test_text_outside_the_block_is_never_compared_and_a_file_without_markers_has_drifted",
+        "test_a_whole_file_is_replaced_and_any_change_to_it_is_drift",
+        "test_a_marker_quoted_inside_a_line_is_not_a_marker",
+        "_tenant",
+        "_bad_provider",
+        "test_a_render_that_names_a_hook_is_refused_and_nothing_is_written",
+        "test_a_provider_that_gives_no_render_is_named",
+        "test_none_declared_renders_nothing",
+        "test_the_render_context_ignores_the_environment",
+        "_launcher_repo",
+        "_check",
+        "test_no_rules_provider_declared_passes_and_says_so",
+        "test_a_declared_provider_that_gives_no_answer_fails_and_says_how",
+        "test_the_launcher_carries_the_providers_verdict",
+        "test_the_launcher_reads_each_port_apart",
+        "test_the_gates_workflow_checks_the_rules_after_the_gate",
+        "test_provider_names_the_gate_providers_own_document",
+        "test_adopt_writes_provider_not_this_installs_paths",
+        "test_sync_renames_only_what_adopt_wrote_and_leaves_every_other_byte"
+      ],
+      "last_modified": "2026-10-04T16:31:42Z",
+      "id": "scripts/test/test_rules_contract.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "C4 \u2014 The rules contract: what a tenant's agents are told, and who checks it",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/rules-contract.md",
+      "pillar": null,
+      "created_at": "2026-10-04T16:53:46Z",
+      "id": "rfc:designs/rules-contract.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 rules-contract (C4)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/rules-contract.md",
+      "pillar": null,
+      "created_at": "2026-10-04T16:53:46Z",
+      "id": "rfc:reviews/rules-contract.md"
     }
   ],
   "edges": [
@@ -8979,6 +9088,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_record_contract.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_rules_contract.py",
       "target": "runtime/__init__.py"
     }
   ]

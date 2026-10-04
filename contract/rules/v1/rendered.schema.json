@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/rules/v1/rendered.schema.json",
+  "description": "A rules provider's answer to `render`: every rule file, its text, how it is placed and what it is (contract/rules/v1/protocol.md). A caller refuses the whole render if any path breaks the pattern.",
+  "$defs": {
+    "RulesFile": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "maxLength": 512,
+          "pattern": "^(?!/)(?!.*//)(?!.*/$)(?!(?:.*/)?\\.\\.?(?:/|$))(?!(?:\\.[gG][iI][tT]|\\.[gG][iI][tT][hH][oO][oO][kK][sS]|\\.[aA][gG][eE][nN][tT][iI][cC][fF][rR][aA][mM][eE][wW][oO][rR][kK]|\\.[gG][iI][tT][hH][uU][bB]/[wW][oO][rR][kK][fF][lL][oO][wW][sS]|\\.[gG][iI][tT][hH][uU][bB]/[aA][cC][tT][iI][oO][nN][sS])(?:/|$))[^\\\\\\x00-\\x1f]+$",
+          "title": "Path",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 1000000,
+          "title": "Text",
+          "type": "string"
+        },
+        "placement": {
+          "enum": [
+            "whole",
+            "block"
+          ],
+          "title": "Placement",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "instructions",
+            "supporting"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "text",
+        "placement",
+        "kind"
+      ],
+      "title": "RulesFile",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "files": {
+      "items": {
+        "$ref": "#/$defs/RulesFile"
+      },
+      "maxItems": 200,
+      "title": "Files",
+      "type": "array"
+    }
+  },
+  "required": [
+    "files"
+  ],
+  "title": "RulesRender",
+  "type": "object"
+}

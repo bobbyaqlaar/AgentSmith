@@ -82,7 +82,9 @@ def test_the_gates_are_live_and_the_extra_modes_are_off(tenant) -> None:
     config = json.loads((tenant / ".agenticframework" / "process-gates.json").read_text(encoding="utf-8"))
 
     assert config["gated"], "a config that gates nothing gates nothing"
-    assert config["registry"].endswith("governance.json")
+    # The provider's own registry, named without its install path — and declared,
+    # because an absent `registry` reads as a config older than the pillars.
+    assert config["registry"] == "provider"
     for mode in ("artifacts", "pillars", "knowledge_graph"):
         assert config.get(mode, "off") == "off", mode
 

@@ -1,0 +1,148 @@
+{
+  "_about": "What a rules provider is asked, and what each answer must be (contract/rules/v1/protocol.md). `arrange` runs in order on a fresh fixture: `place` renders and places every file by the contract's rules; `edit` changes the first file of a placement, inside its provider region or outside it; `delete` removes the first instructions file; `note` changes the fixture's first note. `target` in `expect` is the file an `edit` or `delete` touched.",
+  "cases": [
+    {
+      "name": "render answers with the schema",
+      "verb": "render",
+      "expect": {
+        "render": "valid"
+      },
+      "why": "one JSON answer on stdout, every path safe, at least one instructions file"
+    },
+    {
+      "name": "render reads no environment",
+      "verb": "render",
+      "env": {
+        "AGENT_OWNER_ID": "junk@junk.test",
+        "AGENT_PHOENIX_ENDPOINT": "http://junk.test:1",
+        "FRAMEWORK_VERSION": "9.9.9"
+      },
+      "expect": {
+        "render": "same-as-without-env"
+      },
+      "why": "two machines render the same bytes from the same commit"
+    },
+    {
+      "name": "every note is in every instructions file",
+      "verb": "render",
+      "expect": {
+        "render": "notes"
+      },
+      "why": "the tenant's own rules reach every IDE's agent"
+    },
+    {
+      "name": "a hand-written file is not taken whole",
+      "verb": "render",
+      "expect": {
+        "render": "hand-written-not-whole"
+      },
+      "why": "a tenant's own text is never overwritten"
+    },
+    {
+      "name": "placed files are current",
+      "arrange": [
+        {
+          "op": "place"
+        }
+      ],
+      "verb": "check",
+      "expect": {
+        "decision": "allow"
+      }
+    },
+    {
+      "name": "a change inside a block is drift",
+      "arrange": [
+        {
+          "op": "place"
+        },
+        {
+          "op": "edit",
+          "placement": "block",
+          "where": "inside"
+        }
+      ],
+      "verb": "check",
+      "expect": {
+        "decision": "deny",
+        "target": "drifted"
+      }
+    },
+    {
+      "name": "the tenant's text outside a block is not drift",
+      "arrange": [
+        {
+          "op": "place"
+        },
+        {
+          "op": "edit",
+          "placement": "block",
+          "where": "outside"
+        }
+      ],
+      "verb": "check",
+      "expect": {
+        "decision": "allow",
+        "target": "current"
+      }
+    },
+    {
+      "name": "a change to a whole file is drift",
+      "arrange": [
+        {
+          "op": "place"
+        },
+        {
+          "op": "edit",
+          "placement": "whole",
+          "where": "inside"
+        }
+      ],
+      "verb": "check",
+      "expect": {
+        "decision": "deny",
+        "target": "drifted"
+      }
+    },
+    {
+      "name": "a deleted file is absent, not drift",
+      "arrange": [
+        {
+          "op": "place"
+        },
+        {
+          "op": "delete"
+        }
+      ],
+      "verb": "check",
+      "expect": {
+        "decision": "allow",
+        "target": "absent"
+      }
+    },
+    {
+      "name": "a changed note is drift",
+      "arrange": [
+        {
+          "op": "place"
+        },
+        {
+          "op": "note"
+        }
+      ],
+      "verb": "check",
+      "expect": {
+        "decision": "deny"
+      },
+      "why": "the declaration is an input, so changing it without re-rendering is caught"
+    },
+    {
+      "name": "an unknown verb gets no answer",
+      "verb": "publish",
+      "expect": {
+        "answer": "none"
+      },
+      "why": "a caller then fails closed rather than read a guess"
+    }
+  ]
+}

@@ -455,3 +455,16 @@ def test_adopt_writes_the_sync_workflow_so_a_tenant_hears_about_upgrades(legacy)
     assert SYNC_WORKFLOW in written
     assert "gh pr create" in (legacy / SYNC_WORKFLOW).read_text()
     assert _adoption_commit(legacy, written).returncode == 0
+
+
+def test_adopt_writes_every_file_its_plan_promises(legacy):
+    """Each path the plan says `create` exists afterwards and is in the commit.
+    The session log came along as a side effect of the old render and silently
+    stopped when the render became the rules contract's (rules-contract.md)."""
+    planned = [path for path, act in _plan(legacy, architecture="clean").actions if act == "create"]
+
+    written = _adopt(legacy)
+
+    missing = [path for path in planned if not (legacy / path).exists()]
+    assert not missing, missing
+    assert ".agent-history.log" in written
