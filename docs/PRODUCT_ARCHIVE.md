@@ -7,6 +7,17 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Released — v2.1.0 (2026-10-05)
+
+Design: `.agent-rfc/designs/release-2-1-0.md`; review: `.agent-rfc/reviews/release-2-1-0.md`.
+
+A MINOR carrying the governance contracts C1–C5 — the gate's CI, commit and push events, the record,
+the rules and the telemetry — with everything else since v2.0.0: tenant intake from the portal,
+`tenant init --from` and `--ide`, `agentsmith sync` and its weekly pull request. Nothing a 2.0.0
+tenant runs stops working; the 2.1.x row in `CHANGELOG.md` names what one will notice when it
+syncs. Tagged `v2.1.0` on the merged release commit; `release.yml` publishes the artifacts, and
+the CI setup action exists at that ref.
+
 ## Completed — C5: the telemetry contract (2026-10-04)
 
 Design: `.agent-rfc/designs/telemetry-contract.md`; review: `.agent-rfc/reviews/telemetry-contract.md`.

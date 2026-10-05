@@ -9,7 +9,7 @@
 > install and operate it is in [docs/UserManual.md](UserManual.md); how it came to be this way
 > is in [docs/PRODUCT_ARCHIVE.md](PRODUCT_ARCHIVE.md).
 
-**Version:** 2.0.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
+**Version:** 2.1.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
 `pyproject.toml` — pinned together by
 `scripts/test/test_version_consistency.py`)
 **Status:** Current.
@@ -2292,7 +2292,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 2.0.x | 3.11 | 0.2 | 4.0 | **MAJOR.** The `ai-*` shell functions are no longer installed (use `agentsmith <subcommand>`, or the `ai-compat.sh` shim); the framework runs in `~/.agent-framework/.venv`; the core documents moved and numbered anchors are gone; the gate hooks chain a repository's earlier hooks; `tenant init` arms the design and review gates. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
+| 2.1.x | 3.11 | 0.2 | 4.0 | **None** — a MINOR: the governance contracts are additive and reach a tenant when it syncs or adopts; a machine committing to a contract-3 tenant needs 2.1.0 installed. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
 
 ### Examples as Forks
 
