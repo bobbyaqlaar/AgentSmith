@@ -11,10 +11,12 @@
 > spent a week claiming the testbed deploy had not started, six days after it
 > had.
 
-## Current state (2026-09-19)
+## Current state (2026-10-05)
 
-**v2.0.0 is the latest release** (2026-09-19) — the governance release, a MAJOR
-(`CHANGELOG.md` › 2.0.x in the compatibility matrix).
+**v2.1.0 is the latest release** (2026-10-05) — the governance contracts C1–C5, a MINOR
+(`CHANGELOG.md` › 2.1.x in the compatibility matrix). The contracts' tenant steps below — KYC
+Sentinel's pin and sync, OTS's declaration, the adopted scratch tenant — were waiting on it.
+v2.0.0 (2026-09-19) was the governance release, a MAJOR.
 **AgentSmith, KYC Sentinel and AqlaarTeleologyStudio are private** since
 2026-09-13, until AgentSmith is product-ready — see the install item below.
 
@@ -86,7 +88,7 @@ governance is aligned; work in OTS on how AgentSmith governs it is in scope, sli
 
 | Slice | AgentSmith | Tenant step that proves it | Status |
 |---|---|---|---|
-| C1 | Gate v2 — the CI event, dev record as its output, a provider setup step for CI; `agentsmith-gates.yml` calls the declared command | OTS declares `providers.json`, CI calls the provider, vendored gate files go; KYC pins a release | **Built 2026-10-02** (`gate-contract-ci`); tenants wait for the v2.1.0 release that carries the setup action |
+| C1 | Gate v2 — the CI event, dev record as its output, a provider setup step for CI; `agentsmith-gates.yml` calls the declared command | OTS declares `providers.json`, CI calls the provider, vendored gate files go; KYC pins a release | **Built 2026-10-02** (`gate-contract-ci`); released in v2.1.0 — tenants can move |
 | C2 | Gate contract 3 — commit and push; the knowledge graph as gate evidence | hooks in OTS and KYC become stubs; `map_codebase.py` leaves OTS | **Built 2026-10-03** (`gate-local-events`); tenants move after the release that carries it |
 | C3 | Records — `contract/record/v1` | `send_dev_record.py` is never a tenant's file — already true since C1 (no tenant sends a record); proven by sender and receiver conformance | **Built 2026-10-04** (`record-contract`) |
 | C4 | Rules — `contract/rules/v1`, `render` / `check`; `"provider"` replaces `@framework/` paths in a tenant's `process-gates.json` | OTS's rules move into its declaration and its CI calls the declared check; KYC's `@framework/` values become `"provider"` | **Built 2026-10-04** (`rules-contract`); tenants move after the release that carries it |
