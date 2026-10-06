@@ -1,6 +1,6 @@
 # Scratch tenants
 
-Five small private repositories whose only purpose is to be onboarded by
+Six small repositories whose only purpose is to be onboarded by
 AgentSmith, over and over, so that tenant CI runs for real on GitHub. Their app
 source lives **here**, in `.github/scratch-tenants/apps/<app>/`; the scratch
 repositories are pure build outputs. Every stack has at least one app; a stack
@@ -13,6 +13,7 @@ can have several, one per scenario the templates must handle.
 | [agentsmith-scratch-go](https://github.com/bobbyaqlaar/agentsmith-scratch-go) | `go` | `apps/go/` — one module, one tested package, **no `.gitignore`** | eval/CD workflows on a repo with no Python manifest; nothing masking stray files |
 | [agentsmith-scratch-python](https://github.com/bobbyaqlaar/agentsmith-scratch-python) | `python-fastapi` | `apps/python-fastapi/` — FastAPI `/healthz` + one test, `requirements.txt` | vendored `runtime/test` suites under the template's bare `pytest`, ruff isolation, **strict security harness** |
 | [agentsmith-scratch-python-uv](https://github.com/bobbyaqlaar/agentsmith-scratch-python-uv) | `python-fastapi` | `apps/python-uv/` — the same app as a **uv** project (`pyproject.toml` + `uv.lock`, dev dependency group, `[tool.ruff]`), no `requirements.txt` | the template installs the exported lock; the vendored `ruff.toml` files `extend` the project's `pyproject.toml` |
+| [agentsmith-scratch-adopted](https://github.com/bobbyaqlaar/agentsmith-scratch-adopted) | `python-fastapi` | `adopted/` — a small library with **its own CI**, built by **`tenant adopt`** (`adopt.sh`), not by the hook | **the governance contracts at this commit**: the adoption commit passes the tenant's contract-3 commit gate; its "AgentSmith gates" run installs the provider through `setup-agentsmith@<this commit>`, asks the gate's `ci` event and runs the rules check; adopt leaves its own CI alone. Rebuilt from an orphan commit and force-pushed every run |
 
 ## Why they exist
 
@@ -85,7 +86,7 @@ The job pushes to other repositories, which `GITHUB_TOKEN` cannot do.
 1. Create a **fine-grained personal access token**
    (GitHub → Settings → Developer settings → Fine-grained tokens):
    - Resource owner: `bobbyaqlaar`
-   - Repository access: **Only select repositories** → all five `agentsmith-scratch-*` repos (a new app's repo must be added here too). Not "Public repositories": that authenticates, then every checkout fails with `Not Found`
+   - Repository access: **Only select repositories** → all six `agentsmith-scratch-*` repos (a new app's repo must be added here too — `agentsmith-scratch-adopted` was added on 2026-10-06, so a token made before then needs it added). Not "Public repositories": that authenticates, then every checkout fails with `Not Found`
    - Permissions: **Contents → Read and write**, **Workflows → Read and write**, **Actions → Read-only** (Metadata is added automatically).
      Workflows is needed because each build writes the tenant's `.github/workflows/`; without it GitHub rejects any push that changes a workflow file, and accepts the rest — so a token missing it works until the first template change
    - Expiry: your choice. When it lapses, runs fail at **Checkout agentsmith-scratch-…** with an authentication error — renew it and update the secret

@@ -98,7 +98,19 @@ governance is aligned; work in OTS on how AgentSmith governs it is in scope, sli
 | C8 | Ops records — `contract/ops/v1`: run history out, HITL and UI feedback in | OTS's CD workflows send and receive by contract | |
 | C9 | Vendoring retired; `upgrade` removed | no tenant holds a framework file, checked | |
 
-**Open — CI does not prove the contract on any change (found 2026-10-02, after C1 merged).** The scratch tenants are built with `tenant init`, which writes no gates workflow, and the `tenant init` CI templates (`workflow-templates/ci-*.yml`) run no process-gates job — so the scratch-tenants run after #29 was green without exercising contract 2 at all. Only an *adopted* tenant can prove C1 today, and only by hand. Close it by adding an adopted scratch tenant (`tenant adopt`, so its CI runs `agentsmith-gates.yml` through the pinned setup step), by giving the `tenant init` templates the gates job, or both — each slice C2–C9 then proves itself in CI rather than on a real tenant. Trigger: before C2 is called proven, and after v2.1.0 is released (the setup step must exist at a tag).
+**Closed 2026-10-06 — CI proves the contracts on an adopted scratch tenant** (`scratch-adopted`):
+`agentsmith-scratch-adopted` is rebuilt by `tenant adopt` pinned to each commit; its gates run installs
+the provider through the setup action at that commit and its adoption commit passes its own gate.
+
+**Open — `sync` on a vendored tenant stages a refresh it cannot commit (found 2026-10-06, OTS).**
+`sync` calls `upgrade`, which `git add`s the refreshed `scripts/`, `runtime/`, `templates/` and tries to
+commit them; the tenant's gate refuses (no design), `sync` discards `upgrade`'s output, and the staged
+framework code is swept into the "vouched" sync commit by the command sync prints. OTS's move left the
+refresh out by hand. Fix with C9 (vendoring retired), or sooner: `sync` stops calling `upgrade`, or says
+plainly what it staged. **Also from the tenant moves:** `sync` leaves hooks a tenant already holds
+uncommitted out of its commit list and manifest (KYC's `chain`, `pre-commit`); its "vendored tenant"
+note prints for a package tenant (KYC), where `upgrade` vendors nothing; and `agentsmith gate` /
+`agentsmith rules` block on an open, empty stdin (the launcher always writes one, so CI is safe).
 
 ---
 

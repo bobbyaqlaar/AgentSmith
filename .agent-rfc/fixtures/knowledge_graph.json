@@ -3507,7 +3507,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-06T07:01:09Z",
+      "last_modified": "2026-10-06T13:09:14Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4126,7 +4126,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-06T12:02:21Z",
+      "last_modified": "2026-10-06T13:09:14Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4481,9 +4481,12 @@
         "test_the_build_fails_when_the_install_cannot_provision",
         "test_the_build_fails_if_the_hook_rewrites_gitignore",
         "test_the_build_keeps_ide_configs_tracked_on_a_public_fixture",
-        "test_the_build_copies_what_git_would_publish_not_local_junk"
+        "test_the_build_copies_what_git_would_publish_not_local_junk",
+        "test_adopt_sh_builds_a_tenant_whose_adoption_passed_its_own_gate",
+        "test_adopt_sh_rebuilds_from_a_clean_history",
+        "test_the_adopted_job_waits_on_both_of_the_tenants_workflows"
       ],
-      "last_modified": "2026-10-06T12:02:21Z",
+      "last_modified": "2026-10-06T13:09:14Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -5261,7 +5264,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-10-04T18:18:41Z",
+      "last_modified": "2026-10-06T13:09:14Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -6707,7 +6710,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-10-06T07:02:26Z",
+      "last_modified": "2026-10-06T13:09:14Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6813,7 +6816,7 @@
         "test_a_baseline_runs_every_test_even_after_a_failure",
         "git"
       ],
-      "last_modified": "2026-10-06T12:02:21Z",
+      "last_modified": "2026-10-06T13:09:14Z",
       "id": "scripts/test/test_mutation_check_scope.py"
     },
     {
@@ -6938,7 +6941,7 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-10-06T07:02:33Z",
+      "last_modified": "2026-10-06T13:09:14Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -8229,7 +8232,7 @@
         "test_the_ci_setup_shim_answers_with_the_provider_inside_a_vendored_tenant",
         "test_no_shipped_shim_runs_the_cli_with_the_working_directory_first"
       ],
-      "last_modified": "2026-10-04T19:41:50Z",
+      "last_modified": "2026-10-06T13:09:14Z",
       "id": "scripts/test/test_telemetry_contract.py"
     },
     {
@@ -8286,6 +8289,30 @@
       "pillar": null,
       "created_at": "2026-10-06T12:02:29Z",
       "id": "rfc:reviews/release-2-1-0.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "An adopted scratch tenant: the governance contracts proved in CI, at every commit",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/scratch-adopted.md",
+      "pillar": null,
+      "created_at": "2026-10-06T13:09:27Z",
+      "id": "rfc:designs/scratch-adopted.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "C6 \u2014 The evals contract: a tenant's datasets, judged by the provider it declares",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/evals-contract.md",
+      "pillar": null,
+      "created_at": "2026-10-06T13:09:27Z",
+      "id": "rfc:designs/evals-contract.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 scratch-adopted",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/scratch-adopted.md",
+      "pillar": null,
+      "created_at": "2026-10-06T13:09:27Z",
+      "id": "rfc:reviews/scratch-adopted.md"
     }
   ],
   "edges": [
