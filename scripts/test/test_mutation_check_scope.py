@@ -131,3 +131,63 @@ def test_the_cli_says_why_it_ran_everything(tmp_path):
                              "--list"], cwd=REPO, capture_output=True, text=True, check=False, timeout=60)
     assert result.returncode == 0
     assert "cannot tell what changed" in result.stdout
+
+
+# ── A mutation is caught by its first failing test (mutation-first-failure.md) ──
+
+
+def _toy_suite(tmp_path: Path, mutation: "mc.Mutation") -> "mc.Suite":
+    """A target module and three tests, each of which records that it ran. Only
+    the FIRST depends on the target's value, so a mutation of it is caught there."""
+    (tmp_path / "target.py").write_text("VALUE = 1  # the value under test\n")
+    ran = tmp_path / "ran.log"
+    header = ("import sys, pathlib\nsys.path.insert(0, str(pathlib.Path(__file__).parent))\n"
+              f"LOG = pathlib.Path({str(ran)!r})\n")
+    (tmp_path / "test_toy.py").write_text(
+        header
+        + "def test_the_value():\n    LOG.open('a').write('value\\n')\n    import target\n"
+          "    assert target.VALUE == 1\n"
+        + "".join(f"def test_other_{i}():\n    LOG.open('a').write('other\\n')\n" for i in range(3)))
+    return mc.Suite(name="toy", tests=(str(tmp_path / "test_toy.py"),), mutations=(mutation,))
+
+
+def _ran(tmp_path: Path) -> list[str]:
+    log = tmp_path / "ran.log"
+    return log.read_text().split() if log.exists() else []
+
+
+def test_a_caught_mutation_stops_at_its_first_failing_test(tmp_path, monkeypatch):
+    monkeypatch.setattr(mc, "REPO", tmp_path)
+    suite = _toy_suite(tmp_path, mc.Mutation("the value moves", "target.py", "VALUE = 1", "VALUE = 2"))
+
+    problems = mc.run_suite(suite)
+
+    assert problems == []
+    # The baseline ran all four; the mutation run stopped at the first, which failed.
+    assert _ran(tmp_path) == ["value", "other", "other", "other", "value"]
+    assert (tmp_path / "target.py").read_text() == "VALUE = 1  # the value under test\n", "restored"
+
+
+def test_a_surviving_mutation_still_runs_every_test(tmp_path, monkeypatch):
+    """Stopping early must never hide a survivor: nothing fails, so nothing stops."""
+    monkeypatch.setattr(mc, "REPO", tmp_path)
+    suite = _toy_suite(tmp_path, mc.Mutation("only the comment moves", "target.py", "# the value", "# a value"))
+
+    problems = mc.run_suite(suite)
+
+    assert len(problems) == 1 and "SURVIVED" in problems[0]
+    assert _ran(tmp_path) == ["value", "other", "other", "other"] * 2
+
+
+def test_a_baseline_runs_every_test_even_after_a_failure(tmp_path, monkeypatch):
+    """A baseline that stopped at its first failure would hide the second."""
+    calls = []
+    monkeypatch.setattr(mc.subprocess, "run", lambda args, **kw: calls.append(args) or
+                        subprocess.CompletedProcess(args, 1, "", "1 failed"))
+    suite = mc.Suite(name="toy", tests=("t.py",),
+                     mutations=(mc.Mutation("m", "scripts/mutation_check.py", "def main", "def main"),))
+
+    problems = mc.run_suite(suite)
+
+    assert "BASELINE ALREADY FAILING" in problems[0]
+    assert "-x" not in calls[0]

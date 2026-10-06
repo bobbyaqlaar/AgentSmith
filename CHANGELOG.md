@@ -79,6 +79,16 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — a mutation is caught by its first failing test, and the run stops there
+
+- **`scripts/mutation_check.py` runs each mutation with `pytest -x`.** A caught mutation ends at
+  its first failing test instead of running the rest of the suite for nothing; a mutation that
+  survives fails no test, so it still runs every test and is reported exactly as before. The
+  baseline run still runs everything — it must show every test passes. The verdict cannot change,
+  only the time: on `gate_contract` (8 mutations), 546 s before and 150 s after on the same machine — all 8 caught both times.
+- **Its output is line-buffered**, so CI's step log carries a timestamp per suite and per mutation
+  rather than one for whole groups of them.
+
 ## [2.1.0] — 2026-10-05
 
 ### Added — the telemetry contract: what a governed application's spans and metrics carry
