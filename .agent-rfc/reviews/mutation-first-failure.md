@@ -28,6 +28,24 @@ Measured on the suite CI runs, same machine, same tree: `gate_contract` (8 mutat
 On the staged tree: the scope tests and every test reading `git ls-files` (91 passed), `ruff check .`,
 mypy 1.14.1 (no issues in 48 files), the Repository Structure tree check.
 
+## Pass 3 — findings: 1
+
+From CI on the pull request: `test_a_caught_mutation_stops_at_its_first_failing_test` failed there —
+the toy mutation `VALUE = 1` → `VALUE = 2` "survived".
+
+- **A false survivor from Python's bytecode cache.** A cached `.pyc` is trusted when the source's
+  recorded mtime (whole seconds) and size match. The toy writes `target.py`, the baseline compiles
+  it, and the same-length mutation lands within the same second: the test ran the cached original.
+  The real catalogue has the same shape — the restore of one mutation and the next same-length
+  mutation of that file — and `-x` makes the runs fast enough to hit it. It never hid a broken
+  property (a false survivor is reported, not passed), but it is a flake in a gate. Each test run now
+  gets a fresh `PYTHONPYCACHEPREFIX`; the three toy tests pass three runs in a row.
+
+## Pass 4 — findings: 0
+
+Re-read `_pytest` and `run_suite` with the cache change: the temporary directory lives exactly as
+long as the subprocess; the rest of the environment passes through unchanged; ruff clean.
+
 ## Sign-off
 
 Group 1 · DRY & shared code — [x] checked — one argument on the existing runner; no second runner.
@@ -41,8 +59,8 @@ Group 7 · Auth & session integrity — [x] n/a — no credential or session.
 Tests added: three in `scripts/test/test_mutation_check_scope.py`.
 Mutation-checked: by hand — the mutation run without `-x` is caught.
 Fixtures re-pinned: none.
-Gates run: scope tests and every `git ls-files` test on the staged tree (91 passed); `ruff check .`; mypy 1.14.1; the tree check; `gate_contract` timed through `run_suite`, before and after; `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
+Gates run: the three toy tests three times after the cache fix; scope tests and every `git ls-files` test on the staged tree (91 passed); `ruff check .`; mypy 1.14.1; the tree check; `gate_contract` timed through `run_suite`, before and after; `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
 
 Levers reviewed: `every-line-earns-its-place`, `guards-must-be-able-to-fail`, `failure-mode-visibility`, `run-the-gates-ci-lists`.
 
-KG query: kg:f45635f21dcd
+KG query: kg:920ee94523ce

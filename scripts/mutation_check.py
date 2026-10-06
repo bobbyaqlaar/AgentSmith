@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import os
 import signal
 import subprocess
 import sys
@@ -1543,9 +1544,17 @@ def _pytest(tests: tuple[str, ...], *, first_failure: bool = False) -> subproces
         # A mutation can turn a loop into an infinite one. Without a per-test
         # timeout that hangs the whole run rather than reporting a survivor.
         args.append("--timeout=120")
-    # check=False deliberately: a NON-ZERO exit is the good outcome here. It
-    # means the suite noticed the mutation, which is the entire point.
-    return subprocess.run(args, cwd=REPO, capture_output=True, text=True, check=False)
+    # A fresh bytecode cache per run. Python trusts a cached .pyc whose recorded
+    # source mtime (whole seconds) and size match the file; a same-length mutation
+    # written within the same second as the last write of that file — the restore
+    # of the previous mutation, say — matches, and the test runs the stale
+    # original: a false survivor. -x made runs fast enough to hit it
+    # (.agent-rfc/designs/mutation-first-failure.md).
+    with tempfile.TemporaryDirectory(prefix="mutation-pycache-") as cache:
+        env = {**os.environ, "PYTHONPYCACHEPREFIX": cache}
+        # check=False deliberately: a NON-ZERO exit is the good outcome here. It
+        # means the suite noticed the mutation, which is the entire point.
+        return subprocess.run(args, cwd=REPO, capture_output=True, text=True, check=False, env=env)
 
 
 def _has_timeout_plugin() -> bool:

@@ -86,6 +86,9 @@ version table being consulted.
   survives fails no test, so it still runs every test and is reported exactly as before. The
   baseline run still runs everything — it must show every test passes. The verdict cannot change,
   only the time: on `gate_contract` (8 mutations), 546 s before and 150 s after on the same machine — all 8 caught both times.
+- **Each test run compiles fresh** (a new `PYTHONPYCACHEPREFIX`): a same-length mutation written
+  within the same second as the file's previous write could run the stale cached original and
+  read as a survivor — a flake the faster runs made likely.
 - **Its output is line-buffered**, so CI's step log carries a timestamp per suite and per mutation
   rather than one for whole groups of them.
 
