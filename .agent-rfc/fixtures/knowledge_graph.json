@@ -164,7 +164,7 @@
         "start_as_current_span",
         "on_start"
       ],
-      "last_modified": "2026-10-04T18:48:03Z",
+      "last_modified": "2026-10-04T19:41:50Z",
       "id": "runtime/tracing.py"
     },
     {
@@ -3507,7 +3507,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-04T18:44:50Z",
+      "last_modified": "2026-10-06T07:01:09Z",
       "id": "runtime/cli.py"
     },
     {
@@ -3705,7 +3705,7 @@
         "resourceAttributes",
         "PortalIdentityProcessor"
       ],
-      "last_modified": "2026-10-04T18:44:50Z",
+      "last_modified": "2026-10-04T19:41:50Z",
       "id": "portal/lib/spanIdentity.ts"
     },
     {
@@ -4126,7 +4126,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-04T18:44:50Z",
+      "last_modified": "2026-10-06T12:02:21Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4483,7 +4483,7 @@
         "test_the_build_keeps_ide_configs_tracked_on_a_public_fixture",
         "test_the_build_copies_what_git_would_publish_not_local_junk"
       ],
-      "last_modified": "2026-09-29T13:06:42Z",
+      "last_modified": "2026-10-06T12:02:21Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -5313,7 +5313,7 @@
         "test_a_deviation_the_design_does_not_list_cannot_be_approved",
         "test_design_new_writes_the_skeleton_the_gate_asks_for"
       ],
-      "last_modified": "2026-10-04T18:45:14Z",
+      "last_modified": "2026-10-04T19:41:50Z",
       "id": "scripts/test/test_cli_approve.py"
     },
     {
@@ -5686,7 +5686,7 @@
         "_command",
         "render_config"
       ],
-      "last_modified": "2026-09-29T15:21:48Z",
+      "last_modified": "2026-10-06T07:01:13Z",
       "id": "scripts/gate_ides.py"
     },
     {
@@ -6707,7 +6707,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-10-04T18:18:41Z",
+      "last_modified": "2026-10-06T07:02:26Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6806,9 +6806,14 @@
         "test_only_the_slow_suite_is_narrowed",
         "test_the_cli_names_a_skipped_suite_and_does_not_count_it_as_caught",
         "test_the_cli_says_why_it_ran_everything",
+        "_toy_suite",
+        "_ran",
+        "test_a_caught_mutation_stops_at_its_first_failing_test",
+        "test_a_surviving_mutation_still_runs_every_test",
+        "test_a_baseline_runs_every_test_even_after_a_failure",
         "git"
       ],
-      "last_modified": "2026-09-19T18:37:34Z",
+      "last_modified": "2026-10-06T12:02:21Z",
       "id": "scripts/test/test_mutation_check_scope.py"
     },
     {
@@ -6933,7 +6938,7 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-10-04T18:45:26Z",
+      "last_modified": "2026-10-06T07:02:33Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -7975,7 +7980,7 @@
       "symbols": [
         "install"
       ],
-      "last_modified": "2026-10-04T18:44:50Z",
+      "last_modified": "2026-10-04T19:41:50Z",
       "id": "scripts/test/provider_shim.py"
     },
     {
@@ -8173,7 +8178,7 @@
         "log_message",
         "do_POST"
       ],
-      "last_modified": "2026-10-04T18:47:41Z",
+      "last_modified": "2026-10-04T19:41:50Z",
       "id": "runtime/telemetry_contract.py"
     },
     {
@@ -8185,7 +8190,7 @@
         "main",
         "embed"
       ],
-      "last_modified": "2026-10-04T18:44:50Z",
+      "last_modified": "2026-10-04T19:41:50Z",
       "id": "scripts/test/telemetry_emitter.py"
     },
     {
@@ -8224,14 +8229,14 @@
         "test_the_ci_setup_shim_answers_with_the_provider_inside_a_vendored_tenant",
         "test_no_shipped_shim_runs_the_cli_with_the_working_directory_first"
       ],
-      "last_modified": "2026-10-04T18:44:50Z",
+      "last_modified": "2026-10-04T19:41:50Z",
       "id": "scripts/test/test_telemetry_contract.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-10-04T18:44:50Z",
+      "last_modified": "2026-10-04T19:41:50Z",
       "id": "portal/test/telemetryContract.test.ts"
     },
     {
@@ -8249,6 +8254,38 @@
       "pillar": null,
       "created_at": "2026-10-04T18:48:13Z",
       "id": "rfc:reviews/telemetry-contract.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A mutation is caught by its first failing test \u2014 stop there",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/mutation-first-failure.md",
+      "pillar": null,
+      "created_at": "2026-10-06T12:02:29Z",
+      "id": "rfc:designs/mutation-first-failure.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Release 2.1.0",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/release-2-1-0.md",
+      "pillar": null,
+      "created_at": "2026-10-06T12:02:29Z",
+      "id": "rfc:designs/release-2-1-0.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 mutation-first-failure",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/mutation-first-failure.md",
+      "pillar": null,
+      "created_at": "2026-10-06T12:02:29Z",
+      "id": "rfc:reviews/mutation-first-failure.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 release 2.1.0",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/release-2-1-0.md",
+      "pillar": null,
+      "created_at": "2026-10-06T12:02:29Z",
+      "id": "rfc:reviews/release-2-1-0.md"
     }
   ],
   "edges": [
