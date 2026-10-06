@@ -1530,8 +1530,15 @@ def _install_restore_handlers(target: Path, original: str) -> None:
             pass  # pragma: no cover - non-main thread
 
 
-def _pytest(tests: tuple[str, ...]) -> subprocess.CompletedProcess:
+def _pytest(tests: tuple[str, ...], *, first_failure: bool = False) -> subprocess.CompletedProcess:
+    """Run a suite's tests. `first_failure` stops at the first failing test:
+    right for a mutation run, where one failure already means "caught" and the
+    rest of the run decides nothing — a survivor fails nothing, so it still runs
+    every test. Never for a baseline, which must show EVERY test passes
+    (.agent-rfc/designs/mutation-first-failure.md)."""
     args = [sys.executable, "-m", "pytest", *tests, "-q", "-p", "no:cacheprovider"]
+    if first_failure:
+        args.append("-x")
     if _has_timeout_plugin():
         # A mutation can turn a loop into an infinite one. Without a per-test
         # timeout that hangs the whole run rather than reporting a survivor.
@@ -1590,7 +1597,7 @@ def run_suite(suite: Suite) -> list[str]:
             if target.read_text(encoding="utf-8") == original:
                 problems.append(f"{suite.name}: MUTATION DID NOT APPLY — {mutation.name}")
                 continue
-            result = _pytest(suite.tests)
+            result = _pytest(suite.tests, first_failure=True)
         finally:
             target.write_text(original, encoding="utf-8")
             for sig, handler in zip(
@@ -1655,6 +1662,11 @@ def select_suites(suites: "tuple[Suite, ...]", changed: "set[str] | None"
 
 
 def main() -> int:
+    # One line, one write: under CI stdout is a pipe and block-buffered, so whole
+    # groups of suites landed at one timestamp and the step's log could not say
+    # which suite took the time (.agent-rfc/designs/mutation-first-failure.md).
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(line_buffering=True)
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument("suites", nargs="*", help="suite names (default: all)")
     parser.add_argument("--list", action="store_true", help="list suites and exit")
