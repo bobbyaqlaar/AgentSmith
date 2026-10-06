@@ -33,6 +33,7 @@ on:
     # Only what can change what a tenant receives.
     paths:
       - "hooks/**"
+      - ".githooks/**"
       - "install-ai-stack.sh"
       - "workflow-templates/**"
       - ".github/actions/**"
@@ -189,3 +190,101 @@ jobs:
               --jq '.jobs[] | select(.conclusion=="failure") | "::error::\(.name): " + ([.steps[] | select(.conclusion=="failure") | .name] | join(", "))'
             exit 1
           fi
+
+  # The ADOPTED scratch tenant (.agent-rfc/designs/scratch-adopted.md): an
+  # existing repository brought under the gates by `agentsmith tenant adopt`,
+  # pinned to THIS commit — so its "AgentSmith gates" run installs the provider
+  # through .github/actions/setup-agentsmith at this commit, asks it the gate's
+  # `ci` event, and runs the rules check, as every adopted tenant's CI does.
+  # The adoption commit itself goes through the tenant's contract-3 commit gate,
+  # answered by the provider installed from this commit. The other scratch
+  # tenants prove the vendored path; this one proves the contracts.
+  adopted:
+    name: "Scratch tenant — adopted"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: scratch-tenant-adopted
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ secrets.SCRATCH_TENANTS_TOKEN }}
+      REPO: bobbyaqlaar/agentsmith-scratch-adopted
+    steps:
+      - name: Require the token
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::SCRATCH_TENANTS_TOKEN is not set — see docs/scratch-tenants.md § Setup. Nothing was built."
+            exit 1
+          fi
+
+      - name: Checkout AgentSmith
+        uses: actions/checkout@v4
+        with:
+          path: agentsmith
+
+      - name: Checkout the adopted scratch repository
+        uses: actions/checkout@v4
+        with:
+          repository: bobbyaqlaar/agentsmith-scratch-adopted
+          token: ${{ secrets.SCRATCH_TENANTS_TOKEN }}
+          path: tenant
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: agentsmith/install-ai-stack.sh
+
+      - name: Install AgentSmith from this commit
+        run: bash agentsmith/install-ai-stack.sh < /dev/null
+
+      # Re-adopts from an orphan commit, pinned to this commit's SHA; the
+      # adoption commit passes the tenant's own gate.
+      - name: Adopt the tenant at ${{ github.sha }}
+        run: bash agentsmith/.github/scratch-tenants/adopt.sh "$GITHUB_WORKSPACE/tenant" "$GITHUB_SHA"
+
+      # A clean history every run (adopt refuses a repository already under
+      # the gates): force-pushed, owner-approved — the repository is pure output.
+      # Its own pre-push sweep runs on the way out.
+      - name: Push
+        id: push
+        working-directory: tenant
+        run: |
+          if ! git push -q --force origin main 2>push.err; then
+            cat push.err >&2
+            if grep -q "without .workflow. scope" push.err; then
+              echo "::error::SCRATCH_TENANTS_TOKEN lacks Workflows: Read and write on $REPO"
+            fi
+            exit 1
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for the tenant's own CI and its AgentSmith gates
+        run: |
+          set -uo pipefail
+          failed=0
+          for workflow in "CI" "AgentSmith gates"; do
+            id=""
+            for _ in $(seq 1 60); do
+              id=$(gh run list -R "$REPO" --commit "${{ steps.push.outputs.sha }}" --workflow "$workflow" \
+                     --json databaseId --jq '.[0].databaseId // empty' 2>err.txt) || cat err.txt >&2
+              [ -n "$id" ] && break
+              sleep 10
+            done
+            if [ -z "$id" ]; then
+              echo "::error::no \"$workflow\" run appeared for ${{ steps.push.outputs.sha }} within 10 minutes"
+              failed=1
+              continue
+            fi
+            gh run watch "$id" -R "$REPO" --exit-status > /dev/null
+            rc=$?
+            conclusion=$(gh run view "$id" -R "$REPO" --json conclusion --jq .conclusion)
+            printf '| adopted | %s | %s | [%s](https://github.com/%s/actions/runs/%s) |\n' \
+              "$workflow" "$conclusion" "$id" "$REPO" "$id" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$rc" -ne 0 ]; then
+              gh run view "$id" -R "$REPO" --json jobs \
+                --jq '.jobs[] | select(.conclusion=="failure") | "::error::\(.name): " + ([.steps[] | select(.conclusion=="failure") | .name] | join(", "))'
+              failed=1
+            fi
+          done
+          exit $failed

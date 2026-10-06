@@ -424,3 +424,61 @@ def test_the_build_copies_what_git_would_publish_not_local_junk(install, tmp_pat
     assert not (target / ".ruff_cache").exists()
     assert (target / "notes.txt").read_text() == "new, not ignored\n"
     assert (target / "calc").is_dir(), "the app itself must still arrive"
+
+
+# ── The adopted scratch tenant (.agent-rfc/designs/scratch-adopted.md) ───────
+
+ADOPTED = SCRATCH / "adopted"
+
+
+@needs_git
+def test_adopt_sh_builds_a_tenant_whose_adoption_passed_its_own_gate(tmp_path):
+    """The real `tenant adopt`, pinned to a ref; the adoption commit made through
+    the tenant's contract-3 commit gate (the provider shim answers it); the
+    tenant's own CI left as it was."""
+    target, ref = tmp_path / "adopted", "0123456789abcdef0123456789abcdef01234567"
+
+    done = subprocess.run(["bash", str(SCRATCH / "adopt.sh"), str(target), ref],
+                          capture_output=True, text=True, check=False)
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    log = subprocess.run(["git", "-C", str(target), "log", "--format=%s"], capture_output=True, text=True,
+                         check=True).stdout.splitlines()
+    assert log == ["chore: adopt AgentSmith gates", "feat: the ledger and its CI, before AgentSmith"]
+    assert subprocess.run(["git", "-C", str(target), "status", "--porcelain"], capture_output=True, text=True,
+                          check=True).stdout == "", "everything adopt wrote is in the adoption commit"
+    setup = f"bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@{ref}"
+    assert setup in (target / ".github/workflows/agentsmith-gates.yml").read_text(encoding="utf-8")
+    assert json.loads((target / ".agenticframework/providers.json").read_text())["providers"]["gate"]["setup"] == setup
+    assert (target / ".github/workflows/ci.yml").read_bytes() == (ADOPTED / ".github/workflows/ci.yml").read_bytes()
+    assert subprocess.run(["git", "-C", str(target), "config", "--get", "core.hooksPath"], capture_output=True,
+                          text=True, check=True).stdout.strip() == ".githooks", "the gates are armed"
+    gate = subprocess.run(["bash", ".githooks/process-gate", "ci", "--base", "0" * 40, "--head", "HEAD"],
+                          cwd=target, stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False)
+    assert gate.returncode == 0, gate.stdout + gate.stderr
+
+
+@needs_git
+def test_adopt_sh_rebuilds_from_a_clean_history(tmp_path):
+    """adopt refuses a repository already under the gates, so a second build
+    must start over rather than fail on the first build's history."""
+    target, ref = tmp_path / "adopted", "v0.0.0-test"
+    for _ in range(2):
+        done = subprocess.run(["bash", str(SCRATCH / "adopt.sh"), str(target), ref],
+                              capture_output=True, text=True, check=False)
+        assert done.returncode == 0, done.stdout + done.stderr
+    count = subprocess.run(["git", "-C", str(target), "rev-list", "--count", "HEAD"], capture_output=True,
+                           text=True, check=True).stdout.strip()
+    assert count == "2"
+
+
+def test_the_adopted_job_waits_on_both_of_the_tenants_workflows():
+    """The tenant's own CI and the gates workflow adopt adds — named as each
+    file names itself, or the wait would look for a run that never appears."""
+    job = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["adopted"]
+    wait = next(s["run"] for s in job["steps"] if s.get("name", "").startswith("Wait"))
+    own = yaml.safe_load((ADOPTED / ".github/workflows/ci.yml").read_text(encoding="utf-8"))["name"]
+    gates = yaml.safe_load((REPO / "workflow-templates/agentsmith-gates.yml").read_text(encoding="utf-8"))["name"]
+    assert f'"{own}"' in wait and f'"{gates}"' in wait
+    assert any("adopt.sh" in s.get("run", "") and "$GITHUB_SHA" in s.get("run", "") for s in job["steps"]), \
+        "the tenant must be pinned to the commit under test"

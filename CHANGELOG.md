@@ -79,6 +79,15 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — CI proves the governance contracts on an adopted scratch tenant
+
+- **`agentsmith-scratch-adopted`**, a sixth scratch tenant, built by **`tenant adopt`** at the commit
+  under test: its adoption commit passes its own contract-3 commit gate, and its "AgentSmith gates"
+  run installs the provider through `setup-agentsmith@<that commit>`, asks the gate's `ci` event and
+  runs the rules check. Until now only real tenants, by hand, exercised that path.
+- **A change to `.githooks/` rebuilds the scratch tenants and needs a CHANGELOG entry** — every tenant
+  receives those hooks.
+
 ### Changed — a mutation is caught by its first failing test, and the run stops there
 
 - **`scripts/mutation_check.py` runs each mutation with `pytest -x`.** A caught mutation ends at
