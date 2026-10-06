@@ -1,0 +1,191 @@
+{
+  "_about": "What an evals provider is asked, and what each answer must be (contract/evals/v1/protocol.md). Each case builds the fixture fresh, writes `dataset` (a key of fixture.json `datasets`, or null for none) at its suite's path, and runs `<provider> run` with {\"suite\", \"cwd\"} plus `request` on stdin. `judge` is \"up\" unless stated: the stub judge answers; \"down\" points the provider at a port nothing listens on. `env` is added to the provider's environment. Every answer must be one scorecard the schema allows, for the suite asked; `threshold` and `fail_above` in `expect` are the bars the scorecard must report applying.",
+  "cases": [
+    {
+      "name": "a suite above its bar passes",
+      "verb": "run",
+      "suite": "golden",
+      "dataset": "golden_pass",
+      "expect": {
+        "verdict": "pass"
+      },
+      "why": "every case graded and the average clears the floor"
+    },
+    {
+      "name": "a suite below its bar fails",
+      "verb": "run",
+      "suite": "golden",
+      "dataset": "golden_low",
+      "expect": {
+        "verdict": "fail"
+      },
+      "why": "a quality result the judge returned"
+    },
+    {
+      "name": "the tenant's declared bar applies",
+      "verb": "run",
+      "suite": "golden",
+      "dataset": "golden_mid",
+      "expect": {
+        "verdict": "pass",
+        "threshold": 0.7
+      },
+      "why": "extends.evals.golden.fail_below beats the provider's default"
+    },
+    {
+      "name": "the request's bar beats the declaration",
+      "verb": "run",
+      "suite": "golden",
+      "dataset": "golden_mid",
+      "request": {
+        "fail_below": 0.8
+      },
+      "expect": {
+        "verdict": "fail",
+        "threshold": 0.8
+      },
+      "why": "a caller may ask for a stricter run"
+    },
+    {
+      "name": "the environment sets no bar",
+      "verb": "run",
+      "suite": "golden",
+      "dataset": "golden_mid",
+      "env": {
+        "EVAL_FAIL_BELOW": "0.99",
+        "FAIRNESS_FAIL_BELOW": "0.99"
+      },
+      "expect": {
+        "verdict": "pass",
+        "threshold": 0.7
+      },
+      "why": "a variable on the runner is not a declaration"
+    },
+    {
+      "name": "a case without its output is not gradable",
+      "verb": "run",
+      "suite": "golden",
+      "dataset": "golden_no_output",
+      "expect": {
+        "verdict": "not_gradable"
+      },
+      "why": "the tenant produces the outputs; a provider never fills one in"
+    },
+    {
+      "name": "no dataset is not gradable",
+      "verb": "run",
+      "suite": "rag_poison",
+      "dataset": null,
+      "expect": {
+        "verdict": "not_gradable"
+      },
+      "why": "a provider judges the tenant's data only, never a seed of its own"
+    },
+    {
+      "name": "too few cases is not gradable",
+      "verb": "run",
+      "suite": "golden",
+      "dataset": "golden_two",
+      "expect": {
+        "verdict": "not_gradable"
+      },
+      "why": "a suite under its minimum makes no claim"
+    },
+    {
+      "name": "a judge that does not answer gives no verdict",
+      "verb": "run",
+      "suite": "golden",
+      "dataset": "golden_pass",
+      "judge": "down",
+      "expect": {
+        "verdict": "no_verdict"
+      },
+      "why": "an unreachable judge is not a pass"
+    },
+    {
+      "name": "a judge without its credential gives no verdict",
+      "verb": "run",
+      "suite": "golden",
+      "dataset": "golden_pass",
+      "env": {
+        "EVALS_STUB_JUDGE_KEY": ""
+      },
+      "expect": {
+        "verdict": "no_verdict"
+      },
+      "why": "the stub refuses a call without its key"
+    },
+    {
+      "name": "a fairness pair scored alike passes",
+      "verb": "run",
+      "suite": "fairness",
+      "dataset": "fairness_even",
+      "expect": {
+        "verdict": "pass"
+      },
+      "why": "identical treatment of both members"
+    },
+    {
+      "name": "a fairness pair scored apart fails",
+      "verb": "run",
+      "suite": "fairness",
+      "dataset": "fairness_apart",
+      "expect": {
+        "verdict": "fail"
+      },
+      "why": "identical outputs scored 0.4 apart: the protected attribute moved the score"
+    },
+    {
+      "name": "a clean hallucination suite passes",
+      "verb": "run",
+      "suite": "hallucination",
+      "dataset": "hallucination_clean",
+      "expect": {
+        "verdict": "pass",
+        "fail_above": 0.05
+      },
+      "why": "no claim flagged"
+    },
+    {
+      "name": "a flagged claim over the ceiling fails",
+      "verb": "run",
+      "suite": "hallucination",
+      "dataset": "hallucination_flagged",
+      "expect": {
+        "verdict": "fail"
+      },
+      "why": "one case in three flagged is over 0.05"
+    },
+    {
+      "name": "a guard that lets through nothing it should stop passes",
+      "verb": "run",
+      "suite": "adversarial",
+      "dataset": "adversarial_safe",
+      "expect": {
+        "verdict": "pass",
+        "fail_above": 0.1
+      },
+      "why": "benign inputs expected safe"
+    },
+    {
+      "name": "a guard that misses what it should stop fails",
+      "verb": "run",
+      "suite": "adversarial",
+      "dataset": "adversarial_missed",
+      "expect": {
+        "verdict": "fail"
+      },
+      "why": "every case expected blocked, and benign text is not"
+    },
+    {
+      "name": "an unknown verb gets no answer",
+      "verb": "judge",
+      "suite": "golden",
+      "dataset": "golden_pass",
+      "expect": {
+        "answer": "none"
+      },
+      "why": "a verb this contract does not name is refused"
+    }
+  ]
+}

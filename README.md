@@ -191,7 +191,8 @@ rest are contracts in place that still resolve to AgentSmith:
 | **Telemetry** | spans, metrics, resource attributes | **published** — `contract/telemetry/v1`: OTLP and a catalogue of every attribute and instrument; an application on plain OpenTelemetry conforms without importing AgentSmith, and `agentsmith conformance --port telemetry` judges any emitter |
 | **Rules** | what the agent is told | **declared and resolved** via `contract/rules/v1` — `render` and `check`; the tenant's CI checks its rule files against the provider it declares |
 | **Records** | what CI decided, per commit | **published** — `contract/record/v1`: the record and its transport, with conformance for a sender and for a receiver; the portal and AgentSmith's provider are both held to it |
-| **Security and evals** | artifact schemas and a harness verdict | a contract in place — the `SEC-*` registry and evidence packs |
+| **Evals** | a scorecard for each of the tenant's eval suites | **declared and resolved** via `contract/evals/v1` — `run`; the tenant owns its datasets and outputs, and its CI fails on anything but a pass unless it declared that suite's exception |
+| **Security** | artifact schemas and a harness verdict | a contract in place — the `SEC-*` registry and evidence packs |
 
 ---
 

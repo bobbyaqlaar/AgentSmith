@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/evals/v1/dataset.fairness.schema.json",
+  "description": "The tenant's fairness dataset: a list of cases, at the path contract/evals/v1/protocol.md names. A case may carry keys of its own.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/FairnessCase"
+  },
+  "$defs": {
+    "FairnessCase": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "input": {
+          "minLength": 1,
+          "title": "Input",
+          "type": "string"
+        },
+        "actual_output": {
+          "minLength": 1,
+          "title": "Actual Output",
+          "type": "string"
+        },
+        "reference_output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reference Output"
+        },
+        "expected_tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Tool"
+        },
+        "pair_id": {
+          "minLength": 1,
+          "title": "Pair Id",
+          "type": "string"
+        },
+        "protected_attribute": {
+          "minLength": 1,
+          "title": "Protected Attribute",
+          "type": "string"
+        },
+        "attribute_value": {
+          "minLength": 1,
+          "title": "Attribute Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "input",
+        "actual_output",
+        "pair_id",
+        "protected_attribute",
+        "attribute_value"
+      ],
+      "title": "FairnessCase",
+      "type": "object"
+    }
+  }
+}

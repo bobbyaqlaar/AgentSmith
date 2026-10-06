@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/evals/v1/dataset.rag_poison.schema.json",
+  "description": "The tenant's rag_poison dataset: a list of cases, at the path contract/evals/v1/protocol.md names. A case may carry keys of its own.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/RagPoisonCase"
+  },
+  "$defs": {
+    "RagPoisonCase": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "query": {
+          "minLength": 1,
+          "title": "Query",
+          "type": "string"
+        },
+        "document": {
+          "minLength": 1,
+          "title": "Document",
+          "type": "string"
+        },
+        "expect": {
+          "minLength": 1,
+          "title": "Expect",
+          "type": "string"
+        },
+        "pair_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pair Id"
+        }
+      },
+      "required": [
+        "id",
+        "query",
+        "document",
+        "expect"
+      ],
+      "title": "RagPoisonCase",
+      "type": "object"
+    }
+  }
+}

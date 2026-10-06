@@ -79,6 +79,34 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the evals contract: a tenant's datasets, judged by the provider it declares
+
+**Hook-interface change** (additive): `.githooks/process-gate evals run --suite <suite>`, and an
+`evals` port in the `providers.json` that `tenant adopt` and `sync` write.
+
+- **`contract/evals/v1/`** — `<evals-command> run`: a request (`suite`, optional `fail_below` /
+  `fail_above`) on stdin, one scorecard on stdout, exit 0 whenever it answers. Five dataset schemas
+  — the tenant's, at the paths its suites already use — and the scorecard's: `verdict` is `pass`,
+  `fail`, `no_verdict` (the judge did not answer) or `not_gradable` (no dataset, a case off its
+  schema, too few cases), with the reason and the bars applied.
+- **The tenant produces the outputs.** A golden, fairness or hallucination case without its
+  `actual_output` is `not_gradable` — a contract run never generates one with the framework's
+  code-generation pipeline, and never judges the framework's seed cases in place of the tenant's.
+- **Bars come from the request, then the tenant's declaration** — `extends.evals` in
+  `process-gates.json`, then the judge role's calibrated `fail_below` in `models.yaml` — **then the
+  provider's defaults; never from the environment.** `EVAL_FAIL_BELOW` and its siblings are not
+  read by a contract run.
+- **Closed in CI.** The launcher passes only `pass`. `no_verdict` and `not_gradable` — both green
+  under `run-evals.py` — fail the step unless `providers.json` names that suite under them as
+  `"warn"`, a reviewed exception in an always-governed file, shown as a warning in CI.
+- **`agentsmith evals run [--suite S]`** is AgentSmith as the provider, over `run-evals.py`'s
+  scoring; `agentsmith evals` with no verb still syncs HITL feedback and runs the scorecard.
+- **`agentsmith conformance --port evals --provider "<command>"`** builds the fixture per case and
+  stands up a stub judge on loopback that answers with the scores the fixed outputs carry, so no
+  model is called: 17 cases. AgentSmith passes; a provider that always answers `pass` fails.
+- `run-evals.py` and the eval workflow templates are unchanged; vendored tenants keep them until
+  vendoring is retired.
+
 ### Added — CI proves the governance contracts on an adopted scratch tenant
 
 - **`agentsmith-scratch-adopted`**, a sixth scratch tenant, built by **`tenant adopt`** at the commit

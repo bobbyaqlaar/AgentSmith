@@ -3476,6 +3476,8 @@
         "_cmd_gate",
         "_gate_kg",
         "_cmd_rules",
+        "_cmd_evals_run",
+        "_evals_conformance",
         "_rules_conformance",
         "_telemetry_conformance",
         "_record_conformance",
@@ -3507,7 +3509,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-06T13:09:14Z",
+      "last_modified": "2026-10-07T06:38:45Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4126,7 +4128,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-06T13:09:14Z",
+      "last_modified": "2026-10-07T06:38:45Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4486,7 +4488,7 @@
         "test_adopt_sh_rebuilds_from_a_clean_history",
         "test_the_adopted_job_waits_on_both_of_the_tenants_workflows"
       ],
-      "last_modified": "2026-10-06T13:09:14Z",
+      "last_modified": "2026-10-07T06:38:45Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -5242,10 +5244,20 @@
         "RulesFileState",
         "RulesCheck",
         "RulesPort",
+        "_Case",
+        "GoldenCase",
+        "FairnessCase",
+        "HallucinationCase",
+        "AdversarialCase",
+        "RagPoisonCase",
+        "EvalsRequest",
+        "Scorecard",
+        "EvalsPort",
         "Ide",
         "Signoff",
         "Records",
         "Extends",
+        "EvalsThresholds",
         "Artifact",
         "Artifacts",
         "Registry",
@@ -5264,7 +5276,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-10-06T13:09:14Z",
+      "last_modified": "2026-10-07T06:38:45Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -6710,7 +6722,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-10-06T13:09:14Z",
+      "last_modified": "2026-10-07T06:38:45Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6932,16 +6944,33 @@
         "telemetry_cases",
         "telemetry_exports",
         "judge_case",
+        "_evals_dir",
+        "EvalsCase",
+        "EvalsReport",
+        "evals_cases",
+        "evals_fixture",
+        "build_evals_fixture",
+        "StubJudge",
+        "_closed_port_url",
+        "_ask_evals",
+        "_evals_schema_problem",
+        "_judge_scorecard",
+        "run_evals",
         "passed",
         "render",
         "redirect_request",
         "Receiver",
         "decide",
         "edit",
+        "__init__",
+        "__enter__",
+        "__exit__",
         "do_POST",
-        "log_message"
+        "log_message",
+        "Handler",
+        "_send"
       ],
-      "last_modified": "2026-10-06T13:09:14Z",
+      "last_modified": "2026-10-07T06:38:45Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -8232,7 +8261,7 @@
         "test_the_ci_setup_shim_answers_with_the_provider_inside_a_vendored_tenant",
         "test_no_shipped_shim_runs_the_cli_with_the_working_directory_first"
       ],
-      "last_modified": "2026-10-06T13:09:14Z",
+      "last_modified": "2026-10-07T06:38:45Z",
       "id": "scripts/test/test_telemetry_contract.py"
     },
     {
@@ -8313,6 +8342,77 @@
       "pillar": null,
       "created_at": "2026-10-06T13:09:27Z",
       "id": "rfc:reviews/scratch-adopted.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_scorecard",
+        "_declared_thresholds",
+        "thresholds",
+        "dataset",
+        "missed",
+        "judge",
+        "_repository",
+        "main",
+        "number"
+      ],
+      "last_modified": "2026-10-07T06:38:45Z",
+      "id": "scripts/evals_port.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "provider_env",
+        "_port",
+        "test_agentsmith_passes_the_evals_contract",
+        "_liar",
+        "test_a_provider_that_always_passes_is_not_conformant",
+        "test_the_stub_judge_scores_from_the_markers_and_refuses_a_call_without_its_key",
+        "test_a_scorecard_with_a_failing_exit_code_is_not_an_answer",
+        "test_the_evals_schemas_are_the_models",
+        "test_each_dataset_schema_is_its_model",
+        "test_the_rules_contract_describes_the_extends_that_carries_the_bars",
+        "test_the_declared_port_is_the_model",
+        "test_what_adopt_declares_names_the_evals_provider_under_both_contracts",
+        "test_every_fixture_dataset_matches_its_schema",
+        "_tenant",
+        "test_bars_come_from_the_request_then_the_declaration_then_the_default",
+        "test_an_unreadable_declaration_falls_to_the_default_rather_than_crashing",
+        "test_a_judged_case_without_its_output_names_the_case",
+        "test_a_guard_case_needs_no_output_and_a_tenant_key_is_kept",
+        "_run",
+        "test_an_ungradable_suite_answers_and_exits_zero_and_removes_a_stale_result",
+        "test_a_request_outside_the_contract_gets_no_answer",
+        "_fake_scoring",
+        "test_a_failed_suite_names_each_bar_it_missed",
+        "test_each_outcome_of_the_scoring_is_one_verdict",
+        "test_the_environment_sets_no_bar_on_the_scoring",
+        "_launcher_tenant",
+        "_launch",
+        "test_the_launcher_passes_only_a_pass_unless_the_tenant_declared_a_warning",
+        "test_a_reason_cannot_start_a_workflow_command",
+        "test_the_declared_warning_is_visible_in_ci",
+        "test_a_scorecard_for_another_suite_fails_the_step",
+        "test_no_declared_provider_judges_nothing_and_says_so",
+        "test_the_launcher_refuses_a_malformed_call",
+        "test_the_cli_writes_the_request_from_suite",
+        "test_suite_without_run_is_refused",
+        "ask",
+        "run_scorecard",
+        "spy"
+      ],
+      "last_modified": "2026-10-07T06:38:45Z",
+      "id": "scripts/test/test_evals_contract.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 evals-contract (C6)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/evals-contract.md",
+      "pillar": null,
+      "created_at": "2026-10-07T06:39:06Z",
+      "id": "rfc:reviews/evals-contract.md"
     }
   ],
   "edges": [
@@ -9299,6 +9399,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_telemetry_contract.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_evals_contract.py",
       "target": "runtime/__init__.py"
     }
   ]

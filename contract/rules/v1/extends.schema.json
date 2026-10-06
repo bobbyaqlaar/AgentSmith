@@ -88,6 +88,42 @@
       "title": "Artifacts",
       "type": "object"
     },
+    "EvalsThresholds": {
+      "additionalProperties": false,
+      "description": "One suite's bars: a floor on the average score, a ceiling on a rate.",
+      "properties": {
+        "fail_below": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fail Below"
+        },
+        "fail_above": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fail Above"
+        }
+      },
+      "title": "EvalsThresholds",
+      "type": "object"
+    },
     "Pillar": {
       "additionalProperties": false,
       "properties": {
@@ -206,6 +242,22 @@
         }
       ],
       "default": null
+    },
+    "evals": {
+      "additionalProperties": {
+        "$ref": "#/$defs/EvalsThresholds"
+      },
+      "propertyNames": {
+        "enum": [
+          "golden",
+          "fairness",
+          "hallucination",
+          "adversarial",
+          "rag_poison"
+        ]
+      },
+      "title": "Evals",
+      "type": "object"
     }
   },
   "title": "Extends",
