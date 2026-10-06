@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/evals/v1/providers.schema.json",
+  "title": "providers.json — the evals port",
+  "description": "The `evals` entry of .agenticframework/providers.json (contract/evals/v1/protocol.md). The rest of the declaration is the gate contract's (contract/gate/v3/providers.schema.json); a port this schema does not describe is allowed.",
+  "type": "object",
+  "required": [
+    "providers"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "providers": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "evals": {
+          "description": "Who judges this repository's eval suites, or \"none\": it declares no evals provider, and an eval step says so instead of judging.",
+          "oneOf": [
+            {
+              "const": "none"
+            },
+            {
+              "additionalProperties": false,
+              "description": "The evals provider: the command a caller runs with `run` appended, and the request on stdin. `no_verdict` and `not_gradable` name the suites where that verdict only warns.",
+              "properties": {
+                "command": {
+                  "minLength": 1,
+                  "title": "Command",
+                  "type": "string"
+                },
+                "version": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Version"
+                },
+                "contract": {
+                  "anyOf": [
+                    {
+                      "const": 1,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Contract"
+                },
+                "no_verdict": {
+                  "additionalProperties": {
+                    "const": "warn",
+                    "type": "string"
+                  },
+                  "propertyNames": {
+                    "enum": [
+                      "golden",
+                      "fairness",
+                      "hallucination",
+                      "adversarial",
+                      "rag_poison"
+                    ]
+                  },
+                  "title": "No Verdict",
+                  "type": "object"
+                },
+                "not_gradable": {
+                  "additionalProperties": {
+                    "const": "warn",
+                    "type": "string"
+                  },
+                  "propertyNames": {
+                    "enum": [
+                      "golden",
+                      "fairness",
+                      "hallucination",
+                      "adversarial",
+                      "rag_poison"
+                    ]
+                  },
+                  "title": "Not Gradable",
+                  "type": "object"
+                }
+              },
+              "required": [
+                "command"
+              ],
+              "title": "EvalsPort",
+              "type": "object"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

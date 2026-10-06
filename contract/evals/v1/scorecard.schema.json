@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/evals/v1/scorecard.schema.json",
+  "description": "A provider's answer to `run`. The keys below are the contract; a provider\nadds its own (AgentSmith's carry every field its scorecard always had, which\nthe security harness, the promotion loop and the evidence pack read).",
+  "additionalProperties": true,
+  "properties": {
+    "schema": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema",
+      "type": "integer"
+    },
+    "suite": {
+      "enum": [
+        "golden",
+        "fairness",
+        "hallucination",
+        "adversarial",
+        "rag_poison"
+      ],
+      "title": "Suite",
+      "type": "string"
+    },
+    "verdict": {
+      "enum": [
+        "pass",
+        "fail",
+        "no_verdict",
+        "not_gradable"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    },
+    "threshold": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Threshold"
+    },
+    "fail_above": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Fail Above"
+    },
+    "cases_total": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Cases Total",
+      "type": "integer"
+    },
+    "cases_graded": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Cases Graded",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "suite",
+    "verdict"
+  ],
+  "title": "Scorecard",
+  "type": "object"
+}

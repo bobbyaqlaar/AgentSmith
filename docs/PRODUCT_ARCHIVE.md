@@ -7,6 +7,21 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — C6: the evals contract (2026-10-06)
+
+Design: `.agent-rfc/designs/evals-contract.md`; review: `.agent-rfc/reviews/evals-contract.md`.
+Slice C6 of `.agent-rfc/designs/governance-contracts.md`.
+
+- **`contract/evals/v1/`**: `run` — a request on stdin, a scorecard on stdout; the tenant's five
+  dataset schemas at the paths its suites already use; four verdicts kept apart.
+- **The tenant's data only**: a judged case carries its output, no framework seed stands in for a
+  missing dataset, and the bars come from the request or the tenant's declarations, never the
+  environment.
+- **Closed in CI**: `no_verdict` and `not_gradable`, green under `run-evals.py`, fail the launcher's
+  step unless the tenant declares that suite's exception in `providers.json`.
+- **Conformance without a model**: a loopback stub judge answers from the fixture's fixed outputs;
+  17 cases, AgentSmith passes, an always-pass provider fails.
+
 ## Released — v2.1.0 (2026-10-05)
 
 Design: `.agent-rfc/designs/release-2-1-0.md`; review: `.agent-rfc/reviews/release-2-1-0.md`.

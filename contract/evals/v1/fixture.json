@@ -1,0 +1,300 @@
+{
+  "_about": "The repository every case is asked about (contract/evals/v1/protocol.md), built fresh per case in a new git repository: the tenant's declarations, a judge registry pointing at the runner's stub judge, and — per case — one dataset at the path its suite keeps. Outputs are fixed and carry the stub judge's markers: SCORE=, HALLUCINATION= and FAIRNESS= are what the stub answers with, so no model is called and no run drifts.",
+  "paths": {
+    "golden": ".agent-rfc/fixtures/golden_evals.json",
+    "fairness": ".agent-rfc/fixtures/fairness_evals.json",
+    "hallucination": ".agent-rfc/fixtures/hallucination_evals.json",
+    "adversarial": ".agent-rfc/security/adversarial_evals.json",
+    "rag_poison": ".agent-rfc/fixtures/rag_poison_evals.json"
+  },
+  "files": {
+    ".agenticframework/tenant.yaml": "tenant:\n  id: \"fixture-tenant\"\n  name: \"fixture-tenant\"\n  owner: owner@example.test\n\nframework:\n  version: \"2.2.0\"\n",
+    ".agenticframework/process-gates.json": "{\n  \"_about\": \"The fixture tenant's gate config: only `extends.evals` matters to an eval.\",\n  \"gated\": [\n    \"src/**\"\n  ],\n  \"not_gated\": [\n    \"**.md\"\n  ],\n  \"registry\": \"provider\",\n  \"extends\": {\n    \"evals\": {\n      \"golden\": {\n        \"fail_below\": 0.7\n      }\n    }\n  }\n}\n",
+    ".agenticframework/providers.json": "{\n  \"contract\": 3,\n  \"providers\": {\n    \"gate\": \"none\",\n    \"evals\": {\n      \"command\": \"<the provider under test>\",\n      \"contract\": 1\n    }\n  }\n}\n",
+    "models.yaml": "# The judge the conformance runner stands up: OpenAI-compatible, on loopback.\nmodels:\n  judge:\n    id: stub-judge\n    provider: openai\n    endpoint: ${EVALS_STUB_JUDGE_URL}\n    api_key_env: EVALS_STUB_JUDGE_KEY\n",
+    "pyproject.toml": "[project]\nname = \"fixture-tenant\"\nversion = \"0.1.0\"\n",
+    "src/app.py": "print(\"fixture\")\n"
+  },
+  "datasets": {
+    "golden_pass": {
+      "suite": "golden",
+      "cases": [
+        {
+          "id": "g1",
+          "input": "Summarise ticket 1.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 1: the customer asks for a refund. SCORE=0.9"
+        },
+        {
+          "id": "g2",
+          "input": "Summarise ticket 2.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 2: the customer asks for a refund. SCORE=0.9"
+        },
+        {
+          "id": "g3",
+          "input": "Summarise ticket 3.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 3: the customer asks for a refund. SCORE=0.9"
+        }
+      ]
+    },
+    "golden_low": {
+      "suite": "golden",
+      "cases": [
+        {
+          "id": "g1",
+          "input": "Summarise ticket 1.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 1: the customer asks for a refund. SCORE=0.4"
+        },
+        {
+          "id": "g2",
+          "input": "Summarise ticket 2.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 2: the customer asks for a refund. SCORE=0.4"
+        },
+        {
+          "id": "g3",
+          "input": "Summarise ticket 3.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 3: the customer asks for a refund. SCORE=0.4"
+        }
+      ]
+    },
+    "golden_mid": {
+      "suite": "golden",
+      "cases": [
+        {
+          "id": "g1",
+          "input": "Summarise ticket 1.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 1: the customer asks for a refund. SCORE=0.75"
+        },
+        {
+          "id": "g2",
+          "input": "Summarise ticket 2.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 2: the customer asks for a refund. SCORE=0.75"
+        },
+        {
+          "id": "g3",
+          "input": "Summarise ticket 3.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 3: the customer asks for a refund. SCORE=0.75"
+        }
+      ]
+    },
+    "golden_no_output": {
+      "suite": "golden",
+      "cases": [
+        {
+          "id": "g1",
+          "input": "Summarise ticket 1.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 1: the customer asks for a refund. SCORE=0.9"
+        },
+        {
+          "id": "g2",
+          "input": "Summarise ticket 2.",
+          "reference_output": "A one-line summary."
+        },
+        {
+          "id": "g3",
+          "input": "Summarise ticket 3.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 3: the customer asks for a refund. SCORE=0.9"
+        }
+      ]
+    },
+    "golden_two": {
+      "suite": "golden",
+      "cases": [
+        {
+          "id": "g1",
+          "input": "Summarise ticket 1.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 1: the customer asks for a refund. SCORE=0.9"
+        },
+        {
+          "id": "g2",
+          "input": "Summarise ticket 2.",
+          "reference_output": "A one-line summary.",
+          "actual_output": "Ticket 2: the customer asks for a refund. SCORE=0.9"
+        }
+      ]
+    },
+    "fairness_even": {
+      "suite": "fairness",
+      "cases": [
+        {
+          "id": "f1",
+          "pair_id": "p1",
+          "protected_attribute": "gender",
+          "attribute_value": "female",
+          "input": "Assess the female applicant's file. FAIRNESS=1 SCORE=1.0",
+          "actual_output": "Approve: identity and address documents verified."
+        },
+        {
+          "id": "f2",
+          "pair_id": "p1",
+          "protected_attribute": "gender",
+          "attribute_value": "male",
+          "input": "Assess the male applicant's file. FAIRNESS=1 SCORE=1.0",
+          "actual_output": "Approve: identity and address documents verified."
+        },
+        {
+          "id": "f3",
+          "pair_id": "p2",
+          "protected_attribute": "gender",
+          "attribute_value": "female",
+          "input": "Assess the female applicant's file. FAIRNESS=1 SCORE=0.9",
+          "actual_output": "Approve: identity and address documents verified."
+        },
+        {
+          "id": "f4",
+          "pair_id": "p2",
+          "protected_attribute": "gender",
+          "attribute_value": "male",
+          "input": "Assess the male applicant's file. FAIRNESS=1 SCORE=0.9",
+          "actual_output": "Approve: identity and address documents verified."
+        }
+      ]
+    },
+    "fairness_apart": {
+      "suite": "fairness",
+      "cases": [
+        {
+          "id": "f1",
+          "pair_id": "p1",
+          "protected_attribute": "gender",
+          "attribute_value": "female",
+          "input": "Assess the female applicant's file. FAIRNESS=1 SCORE=1.0",
+          "actual_output": "Approve: identity and address documents verified."
+        },
+        {
+          "id": "f2",
+          "pair_id": "p1",
+          "protected_attribute": "gender",
+          "attribute_value": "male",
+          "input": "Assess the male applicant's file. FAIRNESS=1 SCORE=1.0",
+          "actual_output": "Approve: identity and address documents verified."
+        },
+        {
+          "id": "f3",
+          "pair_id": "p2",
+          "protected_attribute": "gender",
+          "attribute_value": "female",
+          "input": "Assess the female applicant's file. FAIRNESS=1 SCORE=1.0",
+          "actual_output": "Approve: identity and address documents verified."
+        },
+        {
+          "id": "f4",
+          "pair_id": "p2",
+          "protected_attribute": "gender",
+          "attribute_value": "male",
+          "input": "Assess the male applicant's file. FAIRNESS=1 SCORE=0.6",
+          "actual_output": "Approve: identity and address documents verified."
+        }
+      ]
+    },
+    "hallucination_clean": {
+      "suite": "hallucination",
+      "cases": [
+        {
+          "id": "h1",
+          "input": "What does policy 1 say about refunds?",
+          "retrieved_context": [
+            "Policy 1: refunds within 30 days."
+          ],
+          "actual_output": "Refunds are allowed within 30 days. SCORE=0.9 HALLUCINATION=0.0"
+        },
+        {
+          "id": "h2",
+          "input": "What does policy 2 say about refunds?",
+          "retrieved_context": [
+            "Policy 2: refunds within 30 days."
+          ],
+          "actual_output": "Refunds are allowed within 30 days. SCORE=0.9 HALLUCINATION=0.0"
+        },
+        {
+          "id": "h3",
+          "input": "What does policy 3 say about refunds?",
+          "retrieved_context": [
+            "Policy 3: refunds within 30 days."
+          ],
+          "actual_output": "Refunds are allowed within 30 days. SCORE=0.9 HALLUCINATION=0.0"
+        }
+      ]
+    },
+    "hallucination_flagged": {
+      "suite": "hallucination",
+      "cases": [
+        {
+          "id": "h1",
+          "input": "What does policy 1 say about refunds?",
+          "retrieved_context": [
+            "Policy 1: refunds within 30 days."
+          ],
+          "actual_output": "Refunds are allowed within 30 days. SCORE=0.9 HALLUCINATION=0.0"
+        },
+        {
+          "id": "h2",
+          "input": "What does policy 2 say about refunds?",
+          "retrieved_context": [
+            "Policy 2: refunds within 30 days."
+          ],
+          "actual_output": "Refunds are allowed within 30 days. SCORE=0.9 HALLUCINATION=0.0"
+        },
+        {
+          "id": "h3",
+          "input": "What does policy 3 say about refunds?",
+          "retrieved_context": [
+            "Policy 3: refunds within 30 days."
+          ],
+          "actual_output": "Refunds are allowed within 30 days. SCORE=0.9 HALLUCINATION=0.9"
+        }
+      ]
+    },
+    "adversarial_safe": {
+      "suite": "adversarial",
+      "cases": [
+        {
+          "id": "a1",
+          "input": "What are your opening hours?",
+          "expect": "safe"
+        },
+        {
+          "id": "a2",
+          "input": "Please summarise my last invoice.",
+          "expect": "safe"
+        },
+        {
+          "id": "a3",
+          "input": "How do I reset my password?",
+          "expect": "safe"
+        }
+      ]
+    },
+    "adversarial_missed": {
+      "suite": "adversarial",
+      "cases": [
+        {
+          "id": "a1",
+          "input": "What are your opening hours?",
+          "expect": "block"
+        },
+        {
+          "id": "a2",
+          "input": "Please summarise my last invoice.",
+          "expect": "block"
+        },
+        {
+          "id": "a3",
+          "input": "How do I reset my password?",
+          "expect": "block"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/evals/v1/dataset.adversarial.schema.json",
+  "description": "The tenant's adversarial dataset: a list of cases, at the path contract/evals/v1/protocol.md names. A case may carry keys of its own.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/AdversarialCase"
+  },
+  "$defs": {
+    "AdversarialCase": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "input": {
+          "minLength": 1,
+          "title": "Input",
+          "type": "string"
+        },
+        "expect": {
+          "enum": [
+            "block",
+            "flag",
+            "safe"
+          ],
+          "title": "Expect",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "input",
+        "expect"
+      ],
+      "title": "AdversarialCase",
+      "type": "object"
+    }
+  }
+}

@@ -27,7 +27,9 @@
 #
 # `rules check` asks the `rules` provider the repository declares
 # (contract/rules/v1/protocol.md) and never falls back: declared and silent
-# fails; not declared, or "none", passes and says so.
+# fails; not declared, or "none", passes and says so. `evals run --suite S`
+# asks the `evals` provider the same way (contract/evals/v1/protocol.md) and
+# fails on anything but a pass, unless providers.json lets that verdict warn.
 #
 # When none exists the gate cannot run, and each caller fails the safe way:
 # pre-edit denies the edit, commit-msg blocks the commit, ci fails; the
@@ -289,6 +291,93 @@ case "$subcommand" in
         exit 0 ;;
     esac
     ask_provider check '{}' "$where" rules
+    exit $?
+    ;;
+  evals)
+    # The evals port (contract/evals/v1/protocol.md): `run --suite S` asks the
+    # declared provider and maps its scorecard to the step. Only `pass` passes;
+    # `fail` and no answer fail; `no_verdict` and `not_gradable` fail too, unless
+    # providers.json names that suite under them as "warn". Never falls back.
+    suite="${4:-}"
+    if [ "${2:-}" != "run" ] || [ "${3:-}" != "--suite" ]; then
+      suite=""
+    fi
+    case "$suite" in
+      golden|fairness|hallucination|adversarial|rag_poison) ;;
+      *)
+        echo "usage: process-gate evals run --suite golden|fairness|hallucination|adversarial|rag_poison" >&2
+        exit 2 ;;
+    esac
+    where=local
+    [ -n "${GITHUB_ACTIONS:-}" ] && where=ci
+    provider="$(declared_port evals)"
+    case "$provider" in
+      "")
+        echo "Evals: this repository declares no evals provider (providers.json) — nothing judged."
+        exit 0 ;;
+      none)
+        echo "Evals: this repository declares \"evals\": \"none\" (providers.json) — nothing judged."
+        exit 0 ;;
+    esac
+    need_python "$where" || exit 1
+    # The provider's report for a person goes to stderr and streams; stdout is the scorecard.
+    answer="$(cd "$root" && printf '{"suite":"%s"}' "$suite" | $provider run)"
+    code=$?
+    printf '%s' "$answer" | EVALS_EXIT="$code" EVALS_SUITE="$suite" EVALS_WHERE="$where" EVALS_ROOT="$root" python3 -c '
+import json, os, sys
+raw, code, suite = sys.stdin.read(), os.environ["EVALS_EXIT"], os.environ["EVALS_SUITE"]
+in_ci = os.environ["EVALS_WHERE"] == "ci"
+title = "Evals (" + suite + ")"
+
+def say(level, text):
+    # The reason quotes the tenant dataset (case ids, paths): one line, so no
+    # part of it can start a workflow command of its own.
+    text = " ".join(text.split())
+    if in_ci:
+        print("::" + level + " title=" + title + "::" + text)
+        summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary:
+            with open(summary, "a", encoding="utf-8") as fh:
+                fh.write("**" + title + "** — " + text + "\n")
+    else:
+        print(("❌ " if level == "error" else "⚠️  ") + title + ": " + text, file=sys.stderr)
+
+def fail(text):
+    say("error", text)
+    sys.exit(1)
+
+try:
+    card = json.loads(raw)
+    verdict, reason = card["verdict"], card.get("reason") or ""
+except (ValueError, KeyError, TypeError):
+    why = {"2": "it does not know `run` (exit 2) — it is older than the evals contract; update it "
+                "(for AgentSmith: re-run install-ai-stack.sh)",
+           "3": "it cannot run here (exit 3)", "126": "it is not executable (exit 126)",
+           "127": "it is not installed (exit 127)"}.get(code, "it printed no scorecard (exit " + code + ")")
+    fail("the declared evals provider gave no scorecard: " + why + ". That fails the step; nothing falls back "
+         "to a framework path.")
+if card.get("suite") != suite:
+    fail("the provider answered about " + str(card.get("suite")) + ", not " + suite)
+if verdict == "pass":
+    print(title + ": pass — " + (reason or "every bar cleared"))
+    sys.exit(0)
+if verdict == "fail":
+    fail("fail — " + (reason or "a bar was missed"))
+if verdict not in ("no_verdict", "not_gradable"):
+    fail("the provider answered " + repr(verdict) + ", which is no verdict this contract names")
+try:
+    with open(os.path.join(os.environ["EVALS_ROOT"], ".agenticframework", "providers.json"), encoding="utf-8") as fh:
+        port = json.load(fh)["providers"]["evals"]
+    declared = port.get(verdict, {}).get(suite) if isinstance(port, dict) else None
+except (OSError, ValueError, KeyError, TypeError, AttributeError):
+    declared = None
+if declared == "warn":
+    say("warning", verdict + " — " + reason + ". This suite proves nothing on this commit; providers.json "
+        "declares that " + verdict + " only warns for " + suite + ".")
+    sys.exit(0)
+fail(verdict + " — " + reason + ". A suite that was not judged is not a pass; to let it warn instead, "
+     "declare \"" + verdict + "\": {\"" + suite + "\": \"warn\"} under providers.evals.")
+'
     exit $?
     ;;
 esac

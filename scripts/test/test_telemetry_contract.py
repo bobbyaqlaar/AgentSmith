@@ -190,7 +190,8 @@ def test_the_receiver_refuses_an_oversize_body(monkeypatch):
 
 EMITTERS = sorted([*(REPO / "runtime").glob("*.py"),
                    *(REPO / "scripts" / name for name in ("gate_tracing.py", "process_gate.py", "rules_port.py",
-                                                          "local_agent_stack.py", "multi_agent_system.py"))])
+                                                          "evals_port.py", "local_agent_stack.py",
+                                                          "multi_agent_system.py"))])
 # Sites whose attribute names are not literals — each reviewed: the identity
 # processor writes `current_identity()` (tenancy.py, inventoried below), the
 # gateway writes `prompt_attributes()` (prompt_identity.py, likewise), and the

@@ -1338,6 +1338,7 @@ AgentSmith/
 │   ├── verify_system.py         # incl. --check-security, --check-delivery-model
 │   ├── test/                    # Framework self-tests for scripts/
 │   ├── rules_port.py            # The rules contract's `render` / `check` — AgentSmith as a rules provider (contract/rules/v1/)
+│   ├── evals_port.py            # The evals contract's `run` — AgentSmith as an evals provider, over run-evals.py's scoring (contract/evals/v1/)
 │   └── generate-ide-config.py  # Reads templates/agent-rules.yaml, writes target-repo IDE config
 ├── runtime/                     # Production runtime components
 │   ├── worker.py
@@ -1406,7 +1407,7 @@ AgentSmith/
 │   ├── onprem-deploy/
 │   └── in-app-widget/           # Embeddable end-user status widget + Ops Portal API
 ├── portal/                      # Ops Portal (Next.js + TypeScript + Tailwind)
-├── contract/                    # Versioned apart from this implementation: gate, record, rules and telemetry — each with its protocol, schemas and cases — and the tenant intake record (contract/intake/v1/)
+├── contract/                    # Versioned apart from this implementation: gate, record, rules, telemetry and evals — each with its protocol, schemas and cases — and the tenant intake record (contract/intake/v1/)
 ├── workflow-templates/          # What a tenant's CI becomes — the CI/CD via GitHub Actions section
 │   ├── agentsmith-gates.yml     # The process gate over every pushed commit (pinned to a release)
 │   ├── agentsmith-sync.yml       # Weekly: brings the tenant up to the latest release, as a pull request

@@ -13,6 +13,7 @@ scope:
   - scripts/test/**
   - scripts/mutation_check.py
   - .agenticframework/process-gates.json
+  - contract/rules/v1/extends.schema.json
 ---
 # C6 — The evals contract: a tenant's datasets, judged by the provider it declares
 
@@ -74,6 +75,33 @@ Measured on 2026-10-06:
 - **Thresholds** come from the request, else the tenant's declaration (`extends.evals` in
   `process-gates.json`: per-suite `fail_below` / `fail_above`), else the provider's defaults —
   never from the environment of whoever runs CI.
+
+### Amended while building (2026-10-06)
+
+- **The provider exits 0 whenever it answers**; the verdict is in the scorecard, and the caller maps
+  it to the step's result — as the gate contract does. ("Exit 0 for pass, 1 for fail" above is the
+  launcher's mapping, not the provider's.)
+- **`actual_output` is required for the judged suites** — golden, fairness, hallucination. The
+  adversarial and rag_poison suites score the provider's guard on the input itself, with no judge
+  and no output to supply.
+- **No dataset is `not_gradable`.** `run-evals.py` seeds AgentSmith's own base cases when a tenant
+  has no file; a contract run judges the tenant's data only.
+- **The eval workflow templates stay as they are until C9.** They serve `tenant init`'s vendored
+  tenants, whose workflows have no provider setup step to call; a tenant on the contracts calls the
+  launcher from its own CI, as KYC's will.
+- **The judge's calibrated bar is a declaration too.** `models.yaml`'s judge role may carry a
+  per-suite `fail_below` (KYC's does: 0.95 for golden and fairness), calibrated for that grader. It
+  is the tenant's committed file, not the environment, so it stays — after the request and
+  `extends.evals`, before the provider's default.
+- **A judge model that is no longer served is `fail`, not `no_verdict`.** `run-evals.py` already
+  goes red on it: a repointed role is a broken configuration in the tenant's repository, which no
+  later run clears, and a declared `no_verdict: warn` must not hide it. Verdicts from more than one
+  judge or rubric are `fail` too, as they are today.
+- **`extends.evals` is part of the one `extends` the rules contract publishes**
+  (`contract/rules/v1/extends.schema.json` gains the optional key); the evals contract does not
+  publish a second copy.
+- **`agentsmith evals` already exists** (sync HITL feedback, then the scorecard). With no verb it
+  keeps doing that; `agentsmith evals run` is the contract's verb.
 
 ### AgentSmith as the provider
 
