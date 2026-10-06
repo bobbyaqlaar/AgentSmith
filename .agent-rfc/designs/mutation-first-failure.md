@@ -29,6 +29,10 @@ groups of suites land at one timestamp (19:58:36, then 20:30:05, on that run).
   reported exactly as before. The verdict cannot change, only the time to reach it.
 - **The baseline run stays whole.** It must show every test in the suite passes before anything is
   mutated; stopping it early would hide a second failing test behind the first.
+- **Each test run gets a fresh bytecode cache** (`PYTHONPYCACHEPREFIX`, a new temporary
+  directory). *Added after CI:* Python trusts a cached `.pyc` whose recorded source mtime (whole
+  seconds) and size match; a same-length mutation written within the same second as the last write
+  of that file runs the stale original — a false survivor. `-x` makes runs fast enough to hit it.
 - **Output is flushed per line**, so CI's step log carries a timestamp per suite and per mutation,
   and the next "why is this slow" is read from the log rather than reconstructed.
 - **Measured before and after** on the same suite, the same machine, and recorded in the review.
