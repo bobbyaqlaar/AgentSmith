@@ -9,7 +9,7 @@
 > install and operate it is in [docs/UserManual.md](UserManual.md); how it came to be this way
 > is in [docs/PRODUCT_ARCHIVE.md](PRODUCT_ARCHIVE.md).
 
-**Version:** 2.1.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
+**Version:** 2.2.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
 `pyproject.toml` — pinned together by
 `scripts/test/test_version_consistency.py`)
 **Status:** Current.
@@ -2293,7 +2293,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 2.1.x | 3.11 | 0.2 | 4.0 | **None** — a MINOR: the governance contracts are additive and reach a tenant when it syncs or adopts; a machine committing to a contract-3 tenant needs 2.1.0 installed. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
+| 2.2.x | 3.11 | 0.2 | 4.0 | **None** — a MINOR: the evals contract is additive and reaches a tenant when it syncs, adopts, or calls `process-gate evals run`; a tenant declaring `extends.evals` needs 2.2.0 installed. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
 
 ### Examples as Forks
 

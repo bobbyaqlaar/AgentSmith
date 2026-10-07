@@ -11,12 +11,13 @@
 > spent a week claiming the testbed deploy had not started, six days after it
 > had.
 
-## Current state (2026-10-05)
+## Current state (2026-10-07)
 
-**v2.1.0 is the latest release** (2026-10-05) — the governance contracts C1–C5, a MINOR
-(`CHANGELOG.md` › 2.1.x in the compatibility matrix). The contracts' tenant steps below — KYC
-Sentinel's pin and sync, OTS's declaration, the adopted scratch tenant — were waiting on it.
-v2.0.0 (2026-09-19) was the governance release, a MAJOR.
+**v2.2.0 is the latest release** (2026-10-07) — the evals contract (C6), a MINOR
+(`CHANGELOG.md` › 2.2.x in the compatibility matrix). C6's tenant steps below — KYC Sentinel's
+eval steps through the declared provider, OTS's eval workflows — were waiting on it. v2.1.0
+(2026-10-05) carried the governance contracts C1–C5; v2.0.0 (2026-09-19) was the governance
+release, a MAJOR.
 **AgentSmith, KYC Sentinel and AqlaarTeleologyStudio are private** since
 2026-09-13, until AgentSmith is product-ready — see the install item below.
 
@@ -93,7 +94,7 @@ governance is aligned; work in OTS on how AgentSmith governs it is in scope, sli
 | C3 | Records — `contract/record/v1` | `send_dev_record.py` is never a tenant's file — already true since C1 (no tenant sends a record); proven by sender and receiver conformance | **Built 2026-10-04** (`record-contract`) |
 | C4 | Rules — `contract/rules/v1`, `render` / `check`; `"provider"` replaces `@framework/` paths in a tenant's `process-gates.json` | OTS's rules move into its declaration and its CI calls the declared check; KYC's `@framework/` values become `"provider"` | **Built 2026-10-04** (`rules-contract`); tenants move after the release that carries it |
 | C5 | Telemetry — `contract/telemetry/v1`: OTLP and a catalogue of attributes and instruments; `governance.telemetry.contract` on the Resource | OTS's template spans on plain OpenTelemetry — **done** as a governance-only change (uncommitted in OTS, with the frozen template work), 9/9 against the contract; KYC's smoke export passes once its pin moves | **Built 2026-10-04** (`telemetry-contract`) |
-| C6 | Evals — `contract/evals/v1`: tenant-owned datasets with outputs, the scorecard, five verdicts, closed in CI unless declared | KYC's and OTS's eval steps call the declared command; KYC declares `no_verdict: warn` where its judge quota runs out | **Built 2026-10-06** (`evals-contract`); tenants move after the release that carries it |
+| C6 | Evals — `contract/evals/v1`: tenant-owned datasets with outputs, the scorecard, five verdicts, closed in CI unless declared | KYC's and OTS's eval steps call the declared command; KYC declares `no_verdict: warn` where its judge quota runs out | **Built 2026-10-06** (`evals-contract`); released in v2.2.0 — tenants can move |
 | C7 | Security — `contract/security/v1` | vendored `fixtures/security/` goes | |
 | C8 | Ops records — `contract/ops/v1`: run history out, HITL and UI feedback in | OTS's CD workflows send and receive by contract | |
 | C9 | Vendoring retired; `upgrade` removed | no tenant holds a framework file, checked | |
