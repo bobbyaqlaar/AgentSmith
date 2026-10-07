@@ -33,7 +33,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentsmith-runtime"
-version = "2.1.0"
+version = "2.2.0"
 description = "AgentSmith production runtime — LLM gateway, guardrails, durable workflow helpers"
 readme = "README.md"
 requires-python = ">=3.11"

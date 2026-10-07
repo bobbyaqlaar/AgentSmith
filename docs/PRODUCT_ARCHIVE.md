@@ -7,6 +7,16 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Released — v2.2.0 (2026-10-07)
+
+Design: `.agent-rfc/designs/release-2-2-0.md`; review: `.agent-rfc/reviews/release-2-2-0.md`.
+
+A MINOR carrying the evals contract (C6), with CI's adopted scratch tenant and a mutation runner
+that stops at a mutation's first failing test. Nothing a 2.1.0 tenant runs stops working; the 2.2.x
+row in `CHANGELOG.md` names what one will notice — a tenant declaring its own eval bars needs
+2.2.0 on every machine that works in it. Tagged `v2.2.0` on the merged release commit;
+`release.yml` publishes the artifacts, and the CI setup action serves `evals` at that ref.
+
 ## Completed — C6: the evals contract (2026-10-06)
 
 Design: `.agent-rfc/designs/evals-contract.md`; review: `.agent-rfc/reviews/evals-contract.md`.

@@ -8413,6 +8413,22 @@
       "pillar": null,
       "created_at": "2026-10-07T06:39:06Z",
       "id": "rfc:reviews/evals-contract.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Release 2.2.0",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/release-2-2-0.md",
+      "pillar": null,
+      "created_at": "2026-10-07T08:02:46Z",
+      "id": "rfc:designs/release-2-2-0.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 release 2.2.0",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/release-2-2-0.md",
+      "pillar": null,
+      "created_at": "2026-10-07T08:18:41Z",
+      "id": "rfc:reviews/release-2-2-0.md"
     }
   ],
   "edges": [
