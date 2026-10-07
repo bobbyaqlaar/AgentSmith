@@ -397,3 +397,97 @@ def test_one_truthy_catalog_across_the_runtime():
     for spelling in ("0", "", "no", "off", "maybe"):
         assert as_bool(spelling) is False
         assert tls_enabled({"TEMPORAL_TLS": spelling}) is False
+
+
+# ── credentials: the repository's .env wins over the shell ──────────────────
+# (.agent-rfc/designs/env-file-credentials.md)
+
+
+@pytest.mark.parametrize("name, credential", [
+    ("GEMINI_API_KEY", True), ("ANTHROPIC_API_KEY_JUDGE", True), ("OPS_PORTAL_SYNC_TOKEN", True),
+    ("DB_PASSWORD", True), ("CLIENT_SECRET", True), ("TOKEN", True),
+    ("MAX_TOKENS", False), ("TOKENIZER_PATH", False), ("API_KEYRING", False), ("AGENT_OWNER_ID", False),
+    ("OTEL_EXPORTER_OTLP_ENDPOINT", False),
+])
+def test_a_credential_is_named_as_one(name, credential):
+    from runtime.config import is_credential
+
+    assert is_credential(name) is credential
+
+
+def test_a_declared_credential_beats_a_stale_export_and_says_so_by_name(repo, monkeypatch, capsys):
+    """The risk this closes: a key exported in a profile, an old terminal or one
+    command silently replacing the one the repository declares — every
+    credential reader reads os.environ."""
+    import os
+
+    from runtime.config import REDACTED, shadowed_env
+
+    root = repo(dotenv="GEMINI_API_KEY=declared-value-1\n")
+    monkeypatch.setenv("GEMINI_API_KEY", "stale-value-2")
+
+    load_env_file(root)
+
+    assert os.environ["GEMINI_API_KEY"] == "declared-value-1"
+    assert shadowed_env() == {"GEMINI_API_KEY": REDACTED}
+    err = capsys.readouterr().err
+    assert "GEMINI_API_KEY" in err and "env_overrides" in err
+    assert "declared-value-1" not in err and "stale-value-2" not in err
+
+
+def test_it_is_said_once_per_process(repo, monkeypatch, capsys):
+    root = repo(dotenv="GEMINI_API_KEY=declared\n")
+    monkeypatch.setenv("GEMINI_API_KEY", "stale")
+    load_env_file(root)
+    load_env_file(root)
+    assert len([line for line in capsys.readouterr().err.splitlines() if "GEMINI_API_KEY" in line]) == 1
+
+
+def test_env_overrides_lets_the_shell_win_for_a_credential(repo, monkeypatch, capsys):
+    import os
+
+    from runtime.config import shadowed_env
+
+    root = repo({"env_overrides": ["GEMINI_API_KEY"]}, dotenv="GEMINI_API_KEY=declared\n")
+    monkeypatch.setenv("GEMINI_API_KEY", "deliberate")
+
+    load_env_file(root)
+
+    assert os.environ["GEMINI_API_KEY"] == "deliberate"
+    assert shadowed_env() == {} and capsys.readouterr().err == ""
+
+
+def test_an_empty_declaration_does_not_unset_the_shell(repo, monkeypatch):
+    """`KEY=` in .env is a placeholder, not a declaration of no key."""
+    import os
+
+    root = repo(dotenv="GEMINI_API_KEY=\n")
+    monkeypatch.setenv("GEMINI_API_KEY", "from-shell")
+    load_env_file(root)
+    assert os.environ["GEMINI_API_KEY"] == "from-shell"
+
+
+def test_a_credential_the_shell_matches_is_not_reported(repo, monkeypatch, capsys):
+    from runtime.config import shadowed_env
+
+    root = repo(dotenv="GEMINI_API_KEY=same\n")
+    monkeypatch.setenv("GEMINI_API_KEY", "same")
+    load_env_file(root)
+    assert shadowed_env() == {} and capsys.readouterr().err == ""
+
+
+def test_the_startup_note_names_a_credential_and_never_shows_it(repo, monkeypatch):
+    from runtime.config import shadowed_notes
+
+    root = repo({"budget": {"monthly_usd_cap": 5}}, dotenv="GEMINI_API_KEY=declared-secret\n")
+    monkeypatch.setenv("GEMINI_API_KEY", "stale-secret")
+    monkeypatch.setenv("AGENT_MONTHLY_USD_CAP", "999")
+    load_env_file(root)
+    resolve("budget.monthly_usd_cap", env_var="AGENT_MONTHLY_USD_CAP", default=150.0, cast=float, root=root)
+
+    notes = shadowed_notes()
+
+    assert any(n.startswith("GEMINI_API_KEY in the environment was IGNORED") for n in notes)
+    assert any(n.startswith("AGENT_MONTHLY_USD_CAP='999'") for n in notes), "a setting is still shown"
+    assert not any("secret" in n for n in notes)
+

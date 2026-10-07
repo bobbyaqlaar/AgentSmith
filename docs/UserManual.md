@@ -942,7 +942,7 @@ The older `ai-*` names map to these one for one
 | `agentsmith gates list` | — | The gates this repo's CI declares — every step tagged `# agentsmith:gate` in `.github/workflows/`, as a table. The same table `docs/validation-checklist.md` carries, generated from the same tags, so there is no second list to drift. |
 | `agentsmith gates run` | `[--only TEXT] [--services] [--fail-fast] [--allow-install]` | Run that list here, before pushing. Three counts, never two: passed, failed, and **skipped** with the reason — a tool that is not installed, a service container CI starts, an expression only CI can answer. Dependency-install lines are dropped and named (this is not a fresh runner); `--allow-install` runs them. It does not reproduce the runner image or the setup steps, so CI stays the authority — this answers "does this gate pass here". |
 | `agentsmith gates repair` | — | Lists commits that reached this repo without passing the gate — a `--no-verify` commit, an unarmed clone, a rebase — and how to bring each under a design and review. The same sweep the hooks run, so this list is the one refusing your commit. |
-| `agentsmith doctor` | `[verify_system flags]` | Runs `scripts/verify_system.py` (the tenant's copy, else the machine's) with the flags given. |
+| `agentsmith doctor` | `[verify_system flags]` | Runs `scripts/verify_system.py` (the tenant's copy, else the machine's) with the flags given. Among its checks, as warnings: credentials exported in a shell profile, and credentials in this shell that differ from the repository's `.env` — by name and line, never by value. |
 | `agentsmith purge-idempotency` | — | Deletes idempotency rows past their TTL (the Maintain (Day-2 Operations) section). |
 | `agentsmith version` | — | The installed framework version. |
 
@@ -1129,7 +1129,9 @@ export GEMINI_API_KEY="AIza..."         # optional: Google AI Studio (NOT vertex
                                         # which uses service-account OAuth instead)
 # Prefer a repo-root .env over a shell profile for these. A profile is
 # machine-wide and invisible: an AGENT_JUDGE_MODEL exported there silently
-# graded every local eval with a different model than CI used.
+# graded every local eval with a different model than CI used. A credential a
+# repository's .env declares wins over one exported here — the export is
+# ignored, by name, unless tenant.yaml lists it in `env_overrides`.
 
 # ── Observability ──────────────────────────────────────────────────────────────────
 export AGENT_PHOENIX_ENDPOINT="http://localhost:6006"  # change to team server URL if shared
@@ -1259,6 +1261,14 @@ HITL_ENCRYPTION_KEY=<32-byte-hex>        # generate: openssl rand -hex 32
 > **How:** created manually or by `agentsmith tenant init` scaffolding; never committed — add `.env` to your tenant app's `.gitignore`.
 
 This file is loaded by the tenant worker at runtime and by `scripts/sync-portal-history.py` when syncing to the Ops Portal.
+
+**Provider keys go here** — whichever variable the `judge` and other roles in your `models.yaml` name
+(`api_key_env`), e.g. `GEMINI_API_KEY`. A credential this file declares — a name with `API_KEY`,
+`TOKEN`, `SECRET` or `PASSWORD` as a part — **wins over the same variable exported in your shell**,
+so a stale key in a profile or an old terminal cannot quietly replace it; a one-line warning names
+the variable (never its value). To let the shell win for one key on purpose, list it under
+`env_overrides:` in `tenant.yaml`. `agentsmith doctor` reports credentials exported in your shell
+profiles and any that differ from this file. CI has no `.env`: its keys are repository secrets.
 
 ```bash
 # my-tenant-app/.env — tenant-specific runtime variables

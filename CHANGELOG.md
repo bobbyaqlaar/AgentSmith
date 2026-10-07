@@ -80,6 +80,25 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — a repository's `.env` wins for its credentials
+
+- **A credential a repository's `.env` declares now beats the same variable exported in the
+  shell.** Every credential reader — the gateway, provider dispatch, the eval judge — reads
+  `os.environ`, and `.env` filled it only where nothing was set, so an export in a profile, an old
+  terminal or one command silently replaced the declared key: a revoked key read as a judge that
+  "did not answer". A credential is a name with `API_KEY`, `TOKEN`, `SECRET` or `PASSWORD` as a
+  `_`-separated part. Other variables keep the old mirror; `resolve()` already ranks `.env` first
+  for configuration.
+- **It is said, never shown**: one line to stderr per key per process, naming the variable and the
+  file; `shadowed_env()` records a placeholder, and the worker's startup note names a credential
+  without its value.
+- **`env_overrides` in `tenant.yaml`** lets the shell win for a named key, as it does for
+  configuration.
+- **`agentsmith doctor` warns** about credentials exported in `~/.zshrc`, `~/.zprofile`,
+  `~/.zshenv`, `~/.bashrc`, `~/.bash_profile` or `~/.profile`, and about any in the current shell
+  that differ from this repository's `.env` — by name and line only.
+- CI and deployments have no `.env`, so their secrets reach the environment as before.
+
 ## [2.2.1] — 2026-10-07
 
 ### Fixed — the evals contract's datasets, as their scorers read them

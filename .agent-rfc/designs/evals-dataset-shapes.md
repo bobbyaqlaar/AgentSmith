@@ -72,5 +72,5 @@ none
 ## Levers
 
 - `validate-on-the-receiving-side` — the schema is the receiver's, so it must accept what the receiver reads and refuse what it misreads.
-- `test-with-real-data` — the defect was invisible to fixtures written alongside the schema and obvious on a tenant's data.
+- `test-the-contract` — the defect was invisible to fixtures written alongside the schema and obvious on a tenant's data.
 - `grep-for-siblings` — every suite's model checked against its scorer, not only the one that failed.
