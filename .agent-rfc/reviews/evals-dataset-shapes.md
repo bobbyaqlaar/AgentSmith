@@ -39,6 +39,6 @@ Mutation-checked: `evals_contract` 10/10.
 Fixtures re-pinned: `contract/evals/v1/fixture.json` (documents in the flagged hallucination dataset); `dataset.hallucination` and `dataset.rag_poison` schemas regenerated; `.agent-rfc/fixtures/knowledge_graph.json` rebuilt.
 Gates run: full `pytest` on the staged tree (2303 passed, 10 skipped); `ruff check .`; `mypy` (1.14.1); the self-test's tree and knowledge-graph gates; `agentsmith conformance --port evals` 17/17; KYC Sentinel's four CI suites through its launcher against this provider (adversarial passes; the judged three answer no verdict without a key and warn, as declared).
 
-Levers reviewed: `validate-on-the-receiving-side`, `test-with-real-data`, `grep-for-siblings`, `single-source-of-truth`.
+Levers reviewed: `validate-on-the-receiving-side`, `test-the-contract`, `grep-for-siblings`, `single-source-of-truth`.
 
 KG query: kg:1477f20d35b8

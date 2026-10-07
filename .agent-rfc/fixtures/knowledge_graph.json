@@ -134,7 +134,7 @@
         "_start_temporal_worker",
         "_start_celery_worker"
       ],
-      "last_modified": "2026-09-18T05:09:23Z",
+      "last_modified": "2026-10-07T14:24:35Z",
       "id": "runtime/worker.py"
     },
     {
@@ -824,6 +824,8 @@
         "_save_sync_state",
         "_dotenv_value",
         "_load_dotenv",
+        "_standalone_env_overrides",
+        "_dotenv_pairs",
         "_load_dotenv_standalone",
         "_phoenix_request",
         "_phoenix_get",
@@ -837,7 +839,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-09-29T13:15:39Z",
+      "last_modified": "2026-10-07T15:09:07Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -1050,6 +1052,8 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "exported_credentials",
+        "shadowed_credentials",
         "_required_ollama_models",
         "_check",
         "run_checks",
@@ -1070,7 +1074,7 @@
         "_git_repo",
         "want"
       ],
-      "last_modified": "2026-09-29T07:57:32Z",
+      "last_modified": "2026-10-07T15:09:10Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -3394,8 +3398,11 @@
         "as_bool",
         "repo_root",
         "_dotenv_value",
+        "is_credential",
+        "_declared_credential_wins",
         "load_env_file",
         "shadowed_env",
+        "shadowed_notes",
         "tenant_config",
         "config_get",
         "chosen_ides",
@@ -3405,7 +3412,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-09-30T08:45:00Z",
+      "last_modified": "2026-10-07T15:09:04Z",
       "id": "runtime/config.py"
     },
     {
@@ -3440,9 +3447,16 @@
         "test_overrides_nest_and_restore",
         "test_one_root_finder_and_a_tenant_beats_its_parent_repo",
         "test_one_truthy_catalog_across_the_runtime",
+        "test_a_credential_is_named_as_one",
+        "test_a_declared_credential_beats_a_stale_export_and_says_so_by_name",
+        "test_it_is_said_once_per_process",
+        "test_env_overrides_lets_the_shell_win_for_a_credential",
+        "test_an_empty_declaration_does_not_unset_the_shell",
+        "test_a_credential_the_shell_matches_is_not_reported",
+        "test_the_startup_note_names_a_credential_and_never_shows_it",
         "_build"
       ],
-      "last_modified": "2026-09-24T19:02:45Z",
+      "last_modified": "2026-10-07T14:24:51Z",
       "id": "runtime/test/test_config.py"
     },
     {
@@ -4128,7 +4142,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-07T09:27:47Z",
+      "last_modified": "2026-10-07T14:25:31Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -5277,7 +5291,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-10-07T09:33:27Z",
+      "last_modified": "2026-10-07T10:51:20Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -8358,7 +8372,7 @@
         "main",
         "number"
       ],
-      "last_modified": "2026-10-07T09:34:04Z",
+      "last_modified": "2026-10-07T10:51:20Z",
       "id": "scripts/evals_port.py"
     },
     {
@@ -8408,7 +8422,7 @@
         "run_scorecard",
         "spy"
       ],
-      "last_modified": "2026-10-07T09:27:09Z",
+      "last_modified": "2026-10-07T10:51:20Z",
       "id": "scripts/test/test_evals_contract.py"
     },
     {
@@ -8466,6 +8480,39 @@
       "pillar": null,
       "created_at": "2026-10-07T09:52:06Z",
       "id": "rfc:reviews/release-2-2-1.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_the_standalone_credential_rule_is_the_runtimes",
+        "_tenant",
+        "_said",
+        "test_standalone_a_declared_credential_beats_the_shell_by_name",
+        "test_standalone_env_overrides_lets_the_shell_win",
+        "test_standalone_without_yaml_the_declaration_wins",
+        "test_doctor_finds_credentials_exported_in_a_profile_by_name_and_line",
+        "test_doctor_names_a_shell_credential_that_differs_from_the_repository",
+        "test_doctor_without_a_dotenv_reports_nothing"
+      ],
+      "last_modified": "2026-10-07T14:25:15Z",
+      "id": "scripts/test/test_env_file_credentials.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A repository's `.env` wins for its credentials",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/env-file-credentials.md",
+      "pillar": null,
+      "created_at": "2026-10-07T14:41:28Z",
+      "id": "rfc:designs/env-file-credentials.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 env-file-credentials",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/env-file-credentials.md",
+      "pillar": null,
+      "created_at": "2026-10-07T14:56:26Z",
+      "id": "rfc:reviews/env-file-credentials.md"
     }
   ],
   "edges": [
@@ -9457,6 +9504,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_evals_contract.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_env_file_credentials.py",
       "target": "runtime/__init__.py"
     }
   ]
