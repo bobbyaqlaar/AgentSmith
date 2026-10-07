@@ -7,6 +7,14 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Released — v2.2.1 (2026-10-07)
+
+Design: `.agent-rfc/designs/release-2-2-1.md`; review: `.agent-rfc/reviews/release-2-2-1.md`.
+
+A PATCH: the evals contract's dataset schemas as their scorers read them (`evals-dataset-shapes`) —
+`retrieved_context` documents accepted, a `rag_poison` typo refused. Found the same day, moving KYC
+Sentinel's evals onto the contract; 2.2.1 is the release to adopt it at. Tagged `v2.2.1`.
+
 ## Released — v2.2.0 (2026-10-07)
 
 Design: `.agent-rfc/designs/release-2-2-0.md`; review: `.agent-rfc/reviews/release-2-2-0.md`.

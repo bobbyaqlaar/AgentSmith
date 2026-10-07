@@ -13,7 +13,8 @@
 
 ## Current state (2026-10-07)
 
-**v2.2.0 is the latest release** (2026-10-07) — the evals contract (C6), a MINOR
+**v2.2.1 is the latest release** (2026-10-07) — a patch to the evals contract's dataset schemas, the
+release to adopt it at. v2.2.0 (2026-10-07) carried the evals contract (C6), a MINOR
 (`CHANGELOG.md` › 2.2.x in the compatibility matrix). C6's tenant steps below — KYC Sentinel's
 eval steps through the declared provider, OTS's eval workflows — were waiting on it. v2.1.0
 (2026-10-05) carried the governance contracts C1–C5; v2.0.0 (2026-09-19) was the governance
