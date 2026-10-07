@@ -1,5 +1,5 @@
 {
-  "_about": "The repository every case is asked about (contract/evals/v1/protocol.md), built fresh per case in a new git repository: the tenant's declarations, a judge registry pointing at the runner's stub judge, and — per case — one dataset at the path its suite keeps. Outputs are fixed and carry the stub judge's markers: SCORE=, HALLUCINATION= and FAIRNESS= are what the stub answers with, so no model is called and no run drifts.",
+  "_about": "The repository every case is asked about (contract/evals/v1/protocol.md), built fresh per case in a new git repository: the tenant's declarations, a judge registry pointing at the runner's stub judge, and — per case — one dataset at the path its suite keeps. Outputs are fixed and carry the stub judge's markers: SCORE=, HALLUCINATION= and FAIRNESS= are what the stub answers with, so no model is called and no run drifts. The flagged hallucination dataset carries its context as {id, text} documents, the shape a retrieval layer produces; the clean one as strings.",
   "paths": {
     "golden": ".agent-rfc/fixtures/golden_evals.json",
     "fairness": ".agent-rfc/fixtures/fairness_evals.json",
@@ -234,7 +234,10 @@
           "id": "h1",
           "input": "What does policy 1 say about refunds?",
           "retrieved_context": [
-            "Policy 1: refunds within 30 days."
+            {
+              "id": "policy-1",
+              "text": "Policy 1: refunds within 30 days."
+            }
           ],
           "actual_output": "Refunds are allowed within 30 days. SCORE=0.9 HALLUCINATION=0.0"
         },
@@ -242,7 +245,10 @@
           "id": "h2",
           "input": "What does policy 2 say about refunds?",
           "retrieved_context": [
-            "Policy 2: refunds within 30 days."
+            {
+              "id": "policy-2",
+              "text": "Policy 2: refunds within 30 days."
+            }
           ],
           "actual_output": "Refunds are allowed within 30 days. SCORE=0.9 HALLUCINATION=0.0"
         },
@@ -250,7 +256,10 @@
           "id": "h3",
           "input": "What does policy 3 say about refunds?",
           "retrieved_context": [
-            "Policy 3: refunds within 30 days."
+            {
+              "id": "policy-3",
+              "text": "Policy 3: refunds within 30 days."
+            }
           ],
           "actual_output": "Refunds are allowed within 30 days. SCORE=0.9 HALLUCINATION=0.9"
         }

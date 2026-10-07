@@ -7,6 +7,46 @@
     "$ref": "#/$defs/HallucinationCase"
   },
   "$defs": {
+    "ContextDocument": {
+      "additionalProperties": true,
+      "description": "One retrieved document, as a retrieval layer produces it: the judge\nquotes its `text` under its `id` (or `title`).",
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "ContextDocument",
+      "type": "object"
+    },
     "HallucinationCase": {
       "additionalProperties": true,
       "properties": {
@@ -52,13 +92,20 @@
         "retrieved_context": {
           "anyOf": [
             {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
+              "type": "string"
             },
             {
-              "type": "string"
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/$defs/ContextDocument"
+                  }
+                ]
+              },
+              "type": "array"
             },
             {
               "type": "null"

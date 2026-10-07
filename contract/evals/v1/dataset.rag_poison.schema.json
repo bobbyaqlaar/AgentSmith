@@ -16,9 +16,16 @@
           "type": "string"
         },
         "query": {
-          "minLength": 1,
-          "title": "Query",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
         },
         "document": {
           "minLength": 1,
@@ -26,7 +33,10 @@
           "type": "string"
         },
         "expect": {
-          "minLength": 1,
+          "enum": [
+            "quarantine",
+            "safe"
+          ],
           "title": "Expect",
           "type": "string"
         },
@@ -45,7 +55,6 @@
       },
       "required": [
         "id",
-        "query",
         "document",
         "expect"
       ],

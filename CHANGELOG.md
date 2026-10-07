@@ -80,6 +80,19 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the evals contract's datasets, as their scorers read them
+
+Found moving KYC Sentinel onto `contract/evals/v1` the day 2.2.0 shipped.
+
+- **`retrieved_context` may be `{id, text}` documents** — the shape a retrieval layer produces and
+  the judge has always rendered. 2.2.0's schema took only strings, so a real hallucination dataset
+  was `not_gradable` whole. A string, a list of strings, documents, or a mix are all valid.
+- **rag_poison's `expect` is `quarantine` or `safe`.** Its scorer reads anything else as `safe`, so a
+  typo silently flipped a case; it is now refused, by the model and the published schema alike.
+  `query`, reported and not scored, is optional.
+- **A refusal blames a missing output only when one is missing**, and names the top-level field each
+  case breaks rather than every branch of a nested type.
+
 ## [2.2.0] — 2026-10-07
 
 ### Added — the evals contract: a tenant's datasets, judged by the provider it declares
