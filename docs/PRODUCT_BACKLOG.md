@@ -117,6 +117,18 @@ note prints for a package tenant (KYC), where `upgrade` vendors nothing; and `ag
 release but leaves a gates workflow the tenant wrote itself at the old one, and says nothing — the
 declaration and the CI step disagree until someone notices (KYC's was moved by hand).
 
+**Open — a judge that is not the one the bars were calibrated for is not flagged (found 2026-10-07,
+KYC).** A tenant's bars are calibrated against one grader (KYC's 0.95 / 0.95 / 0.75 against
+`gemini-3-flash-preview`), but the judge a run uses is whatever the machine's mode selects: on a
+machine in `local` mode KYC's judge resolves to `falcon3:3b`, which its own `models.yaml` calls
+uncalibrated, and the provider grades against the same bars without a word. The scorecard records
+the judge that answered (`judge_models_used`) but not the judge the bars belong to. Fix: the judge
+role in `models.yaml` names the grader its `fail_below` was calibrated on; when the answering judge
+differs, the scorecard says so in its reason and the launcher warns — a pass against a borrowed bar
+is not the pass the bar describes (`failure-is-not-a-result`). **Also from the same move:** an
+over-quota contract run raises two warnings, the launcher's and `run-evals.py`'s own annotation
+fired inside the provider — one verdict should speak once.
+
 ---
 
 ## Active: KYC Sentinel "Running live" 🟡 NOT STARTED
