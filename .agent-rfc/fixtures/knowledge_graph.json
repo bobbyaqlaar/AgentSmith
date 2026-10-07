@@ -4128,7 +4128,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-07T06:38:45Z",
+      "last_modified": "2026-10-07T09:27:47Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -5247,6 +5247,7 @@
         "_Case",
         "GoldenCase",
         "FairnessCase",
+        "ContextDocument",
         "HallucinationCase",
         "AdversarialCase",
         "RagPoisonCase",
@@ -5276,7 +5277,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-10-07T06:38:45Z",
+      "last_modified": "2026-10-07T09:33:27Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -8357,7 +8358,7 @@
         "main",
         "number"
       ],
-      "last_modified": "2026-10-07T06:38:45Z",
+      "last_modified": "2026-10-07T09:34:04Z",
       "id": "scripts/evals_port.py"
     },
     {
@@ -8381,6 +8382,10 @@
         "test_bars_come_from_the_request_then_the_declaration_then_the_default",
         "test_an_unreadable_declaration_falls_to_the_default_rather_than_crashing",
         "test_a_judged_case_without_its_output_names_the_case",
+        "test_every_context_shape_the_judge_renders_is_a_valid_case",
+        "test_a_case_its_scorer_would_misread_is_refused_by_model_and_schema_alike",
+        "test_a_rag_poison_case_needs_no_query",
+        "test_the_reason_names_the_output_only_when_one_is_missing",
         "test_a_guard_case_needs_no_output_and_a_tenant_key_is_kept",
         "_run",
         "test_an_ungradable_suite_answers_and_exits_zero_and_removes_a_stale_result",
@@ -8403,7 +8408,7 @@
         "run_scorecard",
         "spy"
       ],
-      "last_modified": "2026-10-07T06:38:45Z",
+      "last_modified": "2026-10-07T09:27:09Z",
       "id": "scripts/test/test_evals_contract.py"
     },
     {
@@ -8429,6 +8434,22 @@
       "pillar": null,
       "created_at": "2026-10-07T08:18:41Z",
       "id": "rfc:reviews/release-2-2-0.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The evals contract's datasets, as the scorers read them",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/evals-dataset-shapes.md",
+      "pillar": null,
+      "created_at": "2026-10-07T09:35:16Z",
+      "id": "rfc:designs/evals-dataset-shapes.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 evals-dataset-shapes",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/evals-dataset-shapes.md",
+      "pillar": null,
+      "created_at": "2026-10-07T09:51:02Z",
+      "id": "rfc:reviews/evals-dataset-shapes.md"
     }
   ],
   "edges": [

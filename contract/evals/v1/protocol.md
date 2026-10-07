@@ -28,9 +28,9 @@ may carry keys of its own; the provider reads the ones its suite names.
 |---|---|---|
 | `golden` | `.agent-rfc/fixtures/golden_evals.json` | `id`, `input`, `actual_output` |
 | `fairness` | `.agent-rfc/fixtures/fairness_evals.json` | the golden fields, `pair_id`, `protected_attribute`, `attribute_value` |
-| `hallucination` | `.agent-rfc/fixtures/hallucination_evals.json` | the golden fields; `retrieved_context`, `expect_hallucination` |
+| `hallucination` | `.agent-rfc/fixtures/hallucination_evals.json` | the golden fields; `retrieved_context` — a string, or a list of strings and `{id, text}` documents — and `expect_hallucination` |
 | `adversarial` | `.agent-rfc/security/adversarial_evals.json` | `id`, `input`, `expect`: `block` \| `flag` \| `safe` |
-| `rag_poison` | `.agent-rfc/fixtures/rag_poison_evals.json` | `id`, `query`, `document`, `expect` |
+| `rag_poison` | `.agent-rfc/fixtures/rag_poison_evals.json` | `id`, `document`, `expect`: `quarantine` \| `safe`; `query` |
 
 **The outputs.** A judged suite — golden, fairness, hallucination — grades what the application
 produced, so every case carries its `actual_output`. Producing them is the tenant's own step, before

@@ -112,6 +112,9 @@ plainly what it staged. **Also from the tenant moves:** `sync` leaves hooks a te
 uncommitted out of its commit list and manifest (KYC's `chain`, `pre-commit`); its "vendored tenant"
 note prints for a package tenant (KYC), where `upgrade` vendors nothing; and `agentsmith gate` /
 `agentsmith rules` block on an open, empty stdin (the launcher always writes one, so CI is safe).
+**And from KYC's evals move (2026-10-07):** `sync` moves `providers.json`'s gate `setup` to the new
+release but leaves a gates workflow the tenant wrote itself at the old one, and says nothing — the
+declaration and the CI step disagree until someone notices (KYC's was moved by hand).
 
 ---
 
