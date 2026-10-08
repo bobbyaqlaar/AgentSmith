@@ -7,6 +7,16 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Released — v2.2.2 (2026-10-08)
+
+Design: `.agent-rfc/designs/release-2-2-2.md`; review: `.agent-rfc/reviews/release-2-2-2.md`.
+
+A PATCH carrying `env-file-credentials`: a credential a repository's `.env` declares wins over the
+same variable exported in the shell — said by name, never shown — unless `env_overrides` lets the
+shell win; `agentsmith doctor` warns about credentials exported in shell profiles. Asked for by the
+owner after a stale export was found able to replace KYC Sentinel's judge key silently. Tagged
+`v2.2.2`.
+
 ## Released — v2.2.1 (2026-10-07)
 
 Design: `.agent-rfc/designs/release-2-2-1.md`; review: `.agent-rfc/reviews/release-2-2-1.md`.

@@ -8513,6 +8513,22 @@
       "pillar": null,
       "created_at": "2026-10-07T14:56:26Z",
       "id": "rfc:reviews/env-file-credentials.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Release 2.2.2",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/release-2-2-2.md",
+      "pillar": null,
+      "created_at": "2026-10-08T17:49:28Z",
+      "id": "rfc:designs/release-2-2-2.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 release 2.2.2",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/release-2-2-2.md",
+      "pillar": null,
+      "created_at": "2026-10-08T17:49:28Z",
+      "id": "rfc:reviews/release-2-2-2.md"
     }
   ],
   "edges": [
