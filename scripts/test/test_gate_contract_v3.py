@@ -359,3 +359,57 @@ def test_the_launchers_inline_python_is_quoted_whole_and_compiles():
         blocks += 1
         start = text.find(marker, end + 1)
     assert blocks >= 2, "the launcher's decision and event-encoding blocks were found"
+
+
+# ── The launcher reads the declaration by its structure ───────────────────────
+# (.agent-rfc/designs/launcher-reads-declaration.md)
+
+
+def _read_declaration(tmp_path: Path, declaration: object, *calls: str) -> list[str]:
+    """Each launcher function call's answer, against `declaration` as providers.json."""
+    root = tmp_path / "declared"
+    (root / ".agenticframework").mkdir(parents=True, exist_ok=True)
+    text = declaration if isinstance(declaration, str) else json.dumps(declaration, indent=2)
+    (root / ".agenticframework" / "providers.json").write_text(text)
+    launcher = REPO / ".githooks" / "process-gate"
+    script = (f'eval "$(sed -n "/^decl_get()/,/^}}/p;/^declared_port()/,/^}}/p;/^declared_contract()/,/^}}/p" '
+              f'{launcher})"; root=$PWD; ' + "; ".join(f'echo "[$({call})]"' for call in calls))
+    done = subprocess.run(["bash", "-c", script], cwd=root, capture_output=True, text=True, check=False)
+    assert done.returncode == 0, done.stderr
+    return [line[1:-1] for line in done.stdout.splitlines()]
+
+
+EVALS_WITH_MAPS = {"command": "agentsmith evals", "version": "^2", "contract": 1,
+                   "no_verdict": {"golden": "warn", "fairness": "warn"},
+                   "not_gradable": {"golden": "warn"}}
+
+
+def test_a_port_with_maps_does_not_change_the_gate_contract(tmp_path):
+    """KYC Sentinel's and OTS's shape: an evals port carrying the maps its
+    contract allows read as gate contract 1 — its own `"contract": 1` survived a
+    one-level strip and was taken for the declaration's."""
+    declaration = {"_about": "x", "contract": 3, "providers": {
+        "gate": {"command": "agentsmith gate", "version": "^2", "setup": "s@v2"},
+        "rules": {"command": "agentsmith rules", "contract": 1}, "evals": EVALS_WITH_MAPS}}
+    assert _read_declaration(tmp_path, declaration, "declared_contract") == ["3"]
+
+
+def test_the_gate_entrys_own_contract_wins_and_a_missing_one_is_1(tmp_path):
+    with_own = {"contract": 2, "providers": {"evals": EVALS_WITH_MAPS, "gate": {"contract": 3, "command": "g"}}}
+    assert _read_declaration(tmp_path, with_own, "declared_contract") == ["3"]
+    assert _read_declaration(tmp_path, {"providers": {"gate": {"command": "g"}}}, "declared_contract") == ["1"]
+    assert _read_declaration(tmp_path, '{"contract": "three", "providers": {}}', "declared_contract") == ["1"]
+
+
+def test_a_port_is_read_wherever_its_command_sits(tmp_path):
+    """The evals port with its maps first read as undeclared — and the launcher
+    then passed the step with "no evals provider declared"."""
+    maps_first = {"no_verdict": {"golden": "warn"}, "contract": 1, "command": "agentsmith evals"}
+    declaration = {"_about": 'opt out with "gate": "none" — braces { } in a string',
+                   "providers": {"evals": maps_first, "rules": "none",
+                                 "gate": {"version": "^2", "command": 'g "x"'}},
+                   "contract": 3}
+
+    answers = _read_declaration(tmp_path, declaration, "declared_port evals", "declared_port rules",
+                                "declared_port gate", "declared_port security")
+    assert answers == ["agentsmith evals", "none", 'g "x"', ""]

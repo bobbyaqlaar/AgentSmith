@@ -11,9 +11,11 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 Design: `.agent-rfc/designs/release-2-2-3.md`; review: `.agent-rfc/reviews/release-2-2-3.md`.
 
-A PATCH carrying `setup-evals-provider`: `setup-agentsmith` installs `httpx`, so a tenant's eval job
-that installs the provider through it can call its judge — before, every judged suite answered no
-verdict. Found moving AqlaarTeleologyStudio's evals onto the contract; its eval jobs pin this
+A PATCH carrying `setup-evals-provider` — `setup-agentsmith` installs `httpx`, so a tenant's eval
+job that installs the provider through it can call its judge; before, every judged suite answered no
+verdict — and `launcher-reads-declaration` — the launcher reads `providers.json` by its structure, so
+an evals port with warning maps no longer reads as gate contract 1 (KYC Sentinel had, since
+2026-10-07). Found moving AqlaarTeleologyStudio's evals onto the contract; its eval jobs pin this
 release. Tagged `v2.2.3`.
 
 ## Released — v2.2.2 (2026-10-08)
