@@ -1094,8 +1094,8 @@ CATALOGUE: tuple[Suite, ...] = (
             Mutation(
                 "the launcher reads every declaration as contract 1",
                 ".githooks/process-gate",
-                '  echo "${n:-1}"',
-                "  echo 1",
+                '    *) echo "$n" ;;',
+                "    *) echo 1 ;;",
             ),
             Mutation(
                 "a range the provider refused passes CI",
