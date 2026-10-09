@@ -97,7 +97,7 @@ governance is aligned; work in OTS on how AgentSmith governs it is in scope, sli
 | C3 | Records — `contract/record/v1` | `send_dev_record.py` is never a tenant's file — already true since C1 (no tenant sends a record); proven by sender and receiver conformance | **Built 2026-10-04** (`record-contract`) |
 | C4 | Rules — `contract/rules/v1`, `render` / `check`; `"provider"` replaces `@framework/` paths in a tenant's `process-gates.json` | OTS's rules move into its declaration and its CI calls the declared check; KYC's `@framework/` values become `"provider"` | **Built 2026-10-04** (`rules-contract`); tenants move after the release that carries it |
 | C5 | Telemetry — `contract/telemetry/v1`: OTLP and a catalogue of attributes and instruments; `governance.telemetry.contract` on the Resource | OTS's template spans on plain OpenTelemetry — **done** as a governance-only change (uncommitted in OTS, with the frozen template work), 9/9 against the contract; KYC's smoke export passes once its pin moves | **Built 2026-10-04** (`telemetry-contract`) |
-| C6 | Evals — `contract/evals/v1`: tenant-owned datasets with outputs, the scorecard, five verdicts, closed in CI unless declared | KYC's and OTS's eval steps call the declared command; KYC declares `no_verdict: warn` where its judge quota runs out | **Built 2026-10-06** (`evals-contract`); released in v2.2.0 — tenants can move |
+| C6 | Evals — `contract/evals/v1`: tenant-owned datasets with outputs, the scorecard, five verdicts, closed in CI unless declared | KYC's and OTS's eval steps call the declared command; KYC declares `no_verdict: warn` where its judge quota runs out | **Built 2026-10-06** (`evals-contract`); released in v2.2.0; **both tenants moved** — KYC at 2.2.3 (#3), OTS at 2.2.3 (#7, `not_gradable` and `no_verdict` declared warnings) |
 | C7 | Security — `contract/security/v1` | vendored `fixtures/security/` goes | |
 | C8 | Ops records — `contract/ops/v1`: run history out, HITL and UI feedback in | OTS's CD workflows send and receive by contract | |
 | C9 | Vendoring retired; `upgrade` removed | no tenant holds a framework file, checked | |
@@ -118,6 +118,14 @@ note prints for a package tenant (KYC), where `upgrade` vendors nothing; and `ag
 **And from KYC's evals move (2026-10-07):** `sync` moves `providers.json`'s gate `setup` to the new
 release but leaves a gates workflow the tenant wrote itself at the old one, and says nothing — the
 declaration and the CI step disagree until someone notices (KYC's was moved by hand).
+**And from OTS's evals move (2026-10-09):** `sync` and the rules check disagree on whose a whole-file
+rule file is. OTS's `.cursorrules` predates the manifest recording rule files (its `scaffold.json`
+lists only `.agent-rfc/001-scaffold.md`), so `ownership()` reads it as `theirs` and `sync` leaves it
+silently; but the rules check in CI holds it to the pinned provider's render, and that render names
+the provider's version in its header — so every pin move fails CI on one line (OTS's was re-rendered
+by hand at 2.2.3, `724d030`). Fix: a file the declared rules provider renders is the provider's for
+`sync` whatever the manifest says (refresh it, or name it as `edited` and stop), and the header stops
+carrying a version the rules check compares.
 
 **Open — a judge that is not the one the bars were calibrated for is not flagged (found 2026-10-07,
 KYC).** A tenant's bars are calibrated against one grader (KYC's 0.95 / 0.95 / 0.75 against
