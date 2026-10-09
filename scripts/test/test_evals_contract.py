@@ -111,6 +111,31 @@ def test_the_stub_judge_scores_from_the_markers_and_refuses_a_call_without_its_k
             ask(judge, "")
 
 
+def test_a_judged_suite_cannot_grade_without_httpx(tmp_path):
+    """Why scripts/requirements-gate.txt — what the provider's CI setup step
+    installs — lists httpx: every direct-API judge route goes through it, and
+    without it a judged suite can only answer no_verdict, which a tenant may
+    have declared a warning (.agent-rfc/designs/setup-evals-provider.md)."""
+    from runtime import conformance
+
+    blocker = tmp_path / "without_httpx.py"
+    blocker.write_text("import runpy, sys\nsys.modules['httpx'] = None\npath = sys.argv[1]\n"
+                       "sys.argv = [path] + sys.argv[2:]\nrunpy.run_path(path, run_name='__main__')\n")
+    case = next(c for c in conformance.evals_cases() if c.name == "a suite above its bar passes")
+    script = REPO / "scripts" / "evals_port.py"
+    verdicts = {}
+    with conformance.StubJudge() as judge:
+        for name, provider in (("with", f"{sys.executable} {script}"),
+                               ("without", f"{sys.executable} {blocker} {script}")):
+            root = conformance.build_evals_fixture(tmp_path / name, case)
+            _code, out = conformance._ask_evals(provider, case, root, judge.url)
+            verdicts[name] = json.loads(out)["verdict"]
+    assert verdicts == {"with": "pass", "without": "no_verdict"}
+    required = [line.split("#")[0].strip() for line in
+                (REPO / "scripts" / "requirements-gate.txt").read_text(encoding="utf-8").splitlines()]
+    assert any(line.startswith("httpx") for line in required), "the setup step must install what the judge imports"
+
+
 def test_a_scorecard_with_a_failing_exit_code_is_not_an_answer(tmp_path):
     from runtime import conformance
 

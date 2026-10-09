@@ -1077,8 +1077,10 @@ def test_self_test_runs_the_ci_gate_over_the_pushed_range():
 
 
 def test_the_gate_requirements_list_covers_what_the_gate_imports():
-    listed = (REPO / "scripts/requirements-gate.txt").read_text(encoding="utf-8")
-    for package in ("pydantic", "opentelemetry-sdk", "opentelemetry-exporter-otlp-proto-http", "pyyaml"):
+    # Requirement lines only: a comment that names a package installs nothing.
+    listed = "\n".join(line.split("#")[0] for line in
+                       (REPO / "scripts/requirements-gate.txt").read_text(encoding="utf-8").splitlines())
+    for package in ("pydantic", "opentelemetry-sdk", "opentelemetry-exporter-otlp-proto-http", "pyyaml", "httpx"):
         assert package in listed
 
 

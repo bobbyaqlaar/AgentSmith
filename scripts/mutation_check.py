@@ -1350,6 +1350,12 @@ CATALOGUE: tuple[Suite, ...] = (
                 'if suite in gm.JUDGED_SUITES else ""',
             ),
             Mutation(
+                "the provider's CI setup cannot reach a judge",
+                "scripts/requirements-gate.txt",
+                "\nhttpx>=0.25,<1.0",
+                "",
+            ),
+            Mutation(
                 "a warning declared for one suite excuses another",
                 ".githooks/process-gate",
                 "    declared = port.get(verdict, {}).get(suite) if isinstance(port, dict) else None",

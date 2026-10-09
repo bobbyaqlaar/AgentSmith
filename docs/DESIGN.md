@@ -1326,7 +1326,7 @@ AgentSmith/
 │   ├── gate_history.py          # Pillar 5's log, written by the stop gate and the sweep; and what the last local `agentsmith gates run` found
 │   ├── gate_steps.py            # The `# agentsmith:gate` steps in the workflows: `agentsmith gates run` and the generated checklist table
 │   ├── gate_tracing.py          # One span per gate decision, spooled to state/gate-spans and shipped at session start
-│   ├── requirements-gate.txt    # What the gate itself needs (pydantic, opentelemetry-sdk) — installed by CI and the framework env
+│   ├── requirements-gate.txt    # What the provider needs in a tenant's CI — the gate (pydantic, opentelemetry-sdk), the rules (pyyaml), the evals' judge (httpx)
 │   ├── _shared.py               # Consolidated scripts/ helpers (repo root, Phoenix REST, judge model)
 │   ├── verify_ttft.py           # live Ollama TTFT smoke (`TTFT_FAIL_ABOVE_MS`)
 │   ├── verify_sovereign_endpoint.py  # Falcon 3 / HF sovereign smoke
