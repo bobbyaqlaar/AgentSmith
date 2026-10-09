@@ -13,8 +13,9 @@
 
 ## Current state (2026-10-07)
 
-**v2.2.2 is the latest release** (2026-10-08) — a repository's `.env` wins for its credentials over a
-shell export, and `agentsmith doctor` reports exported keys. v2.2.1 (2026-10-07) patched the evals
+**v2.2.3 is the latest release** (2026-10-09) — the provider's CI setup step can call an eval's
+judge. v2.2.2 (2026-10-08): a repository's `.env` wins for its credentials over a shell export, and
+`agentsmith doctor` reports exported keys. v2.2.1 (2026-10-07) patched the evals
 contract's dataset schemas — the release to adopt it at. v2.2.0 (2026-10-07) carried the evals contract (C6), a MINOR
 (`CHANGELOG.md` › 2.2.x in the compatibility matrix). C6's tenant steps below — KYC Sentinel's
 eval steps through the declared provider, OTS's eval workflows — were waiting on it. v2.1.0

@@ -8546,6 +8546,22 @@
       "pillar": null,
       "created_at": "2026-10-09T06:09:44Z",
       "id": "rfc:reviews/setup-evals-provider.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Release 2.2.3",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/release-2-2-3.md",
+      "pillar": null,
+      "created_at": "2026-10-09T06:27:50Z",
+      "id": "rfc:designs/release-2-2-3.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 release 2.2.3",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/release-2-2-3.md",
+      "pillar": null,
+      "created_at": "2026-10-09T06:27:51Z",
+      "id": "rfc:reviews/release-2-2-3.md"
     }
   ],
   "edges": [

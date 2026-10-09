@@ -7,6 +7,15 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Released — v2.2.3 (2026-10-09)
+
+Design: `.agent-rfc/designs/release-2-2-3.md`; review: `.agent-rfc/reviews/release-2-2-3.md`.
+
+A PATCH carrying `setup-evals-provider`: `setup-agentsmith` installs `httpx`, so a tenant's eval job
+that installs the provider through it can call its judge — before, every judged suite answered no
+verdict. Found moving AqlaarTeleologyStudio's evals onto the contract; its eval jobs pin this
+release. Tagged `v2.2.3`.
+
 ## Released — v2.2.2 (2026-10-08)
 
 Design: `.agent-rfc/designs/release-2-2-2.md`; review: `.agent-rfc/reviews/release-2-2-2.md`.
