@@ -7,9 +7,16 @@ evals onto the contract — which needs a release carrying `setup-evals-provider
 `docs/DESIGN.md`'s header; `scripts/test/test_version_consistency.py` passes over all three and the
 new `CHANGELOG.md` section, whose one heading is the setup step's Fixed entry.
 
-## Pass 1 — findings: 0
+## Pass 1 — findings: 1
 
-The 2.2.3 section against the fix's commit — one Fixed heading, nothing else since v2.2.2; the
+- `docs-match-behaviour` — **finding:** the release grew a second fix after its first commit
+  (`launcher-reads-declaration`, found committing OTS's change). The design, the CHANGELOG section,
+  the 2.2.x row and DESIGN's mirror now name both, and the row says a tenant with evals warning maps
+  needs the 2.2.3 launcher.
+
+## Pass 2 — findings: 0
+
+The 2.2.3 section against the two fixes' commits — two Fixed headings, nothing else since v2.2.2; the
 2.2.x row names the pin an eval job's setup step needs, and DESIGN's mirror, the backlog and the
 archive say the same; no portal file changed since `v2.2.2`.
 
@@ -26,7 +33,7 @@ Group 7 · Auth & session integrity — [x] n/a — the release workflow's signi
 Tests added: none — the existing version pin covers the release.
 Mutation-checked: n/a — no logic changed.
 Fixtures re-pinned: `.agent-rfc/fixtures/knowledge_graph.json` — this design's node.
-Gates run: full `pytest` on the staged tree (2328 passed, 10 skipped); the self-test's knowledge-graph gate; portal not run — no portal file changed since `v2.2.2`; `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
+Gates run: full `pytest` on the staged tree (2328 passed, 10 skipped; 2331 with the launcher fix); the self-test's knowledge-graph gate; portal not run — no portal file changed since `v2.2.2`; `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
 
 Levers reviewed: `declared-vs-enforced`, `docs-match-behaviour`.
 

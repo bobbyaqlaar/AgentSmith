@@ -360,7 +360,7 @@ def test_the_launcher_reads_each_port_apart(tmp_path):
     reordered = {"contract": 3, "providers": {"rules": data["providers"]["rules"], "gate": data["providers"]["gate"]}}
     for declaration in (data, reordered):
         (root / ".agenticframework" / "providers.json").write_text(json.dumps(declaration, indent=2))
-        script = 'eval "$(sed -n "/^declared_port()/,/^}/p" .githooks/process-gate)"; root=$PWD; ' \
+        script = 'eval "$(sed -n "/^decl_get()/,/^}/p;/^declared_port()/,/^}/p" .githooks/process-gate)"; root=$PWD; ' \
                  'echo "$(declared_port gate)|$(declared_port rules)"'
         done = subprocess.run(["bash", "-c", script], cwd=root, capture_output=True, text=True, check=False)
         assert done.stdout.strip() == "agentsmith gate|rules-cmd", declaration

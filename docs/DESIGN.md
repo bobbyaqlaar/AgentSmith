@@ -2293,7 +2293,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 2.2.x | 3.11 | 0.2 | 4.0 | **None** — a MINOR (adopt the evals contract at 2.2.1): the evals contract is additive and reaches a tenant when it syncs, adopts, or calls `process-gate evals run`; a tenant declaring `extends.evals` needs 2.2.0 installed; from 2.2.2 a credential a repository's `.env` declares beats a shell export; an eval job grades through `setup-agentsmith` from 2.2.3. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
+| 2.2.x | 3.11 | 0.2 | 4.0 | **None** — a MINOR (adopt the evals contract at 2.2.1): the evals contract is additive and reaches a tenant when it syncs, adopts, or calls `process-gate evals run`; a tenant declaring `extends.evals` needs 2.2.0 installed; from 2.2.2 a credential a repository's `.env` declares beats a shell export; an eval job grades through `setup-agentsmith` from 2.2.3, whose launcher also reads a declaration with evals warnings correctly. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
 
 ### Examples as Forks
 

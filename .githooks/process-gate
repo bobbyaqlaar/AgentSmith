@@ -49,33 +49,73 @@ root="$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:
 # before any interpreter is known to exist. Only the three contract events go to
 # a provider; commit-msg, sweep and ci are not in contract v1 and keep the
 # resolution below.
-declared_port() {
+# The scalar at a dotted path in the declaration (`contract`,
+# `providers.gate.command`), or nothing — read by its nesting, with POSIX awk,
+# because this runs before any interpreter is known to exist. A text match on
+# `"contract"` or `"command"` misread a port carrying maps of its own
+# (.agent-rfc/designs/launcher-reads-declaration.md).
+decl_get() {
   local file="$root/.agenticframework/providers.json"
   [ -f "$file" ] || return 0
-  # A port's value ($1: gate, rules): either "none" or an object with a "command".
-  local block
-  block="$(tr -d '\n' < "$file" | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\(.*\)/\1/p")"
-  case "$block" in
-    '"none"'*) echo "none" ;;
-    *) printf '%s' "$block" | sed -n 's/^[^}]*"command"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' ;;
-  esac
+  tr '\n\r\t' '   ' < "$file" | awk -v want="$1" '
+    function emit(v,   p, k) {
+      p = ""
+      for (k = 1; k <= d; k++) p = p (k > 1 ? "." : "") key[k]
+      if (p == want) { print v; done = 1 }
+    }
+    {
+      s = $0; n = length(s); d = 0; i = 1
+      while (i <= n && !done) {
+        c = substr(s, i, 1)
+        if (c == "{") { d++; obj[d] = 1; key[d] = ""; got[d] = 0; i++; continue }
+        if (c == "[") { d++; obj[d] = 0; key[d] = 0; i++; continue }
+        if (c == "}" || c == "]") { d--; i++; continue }
+        if (c == ",") { if (obj[d]) got[d] = 0; else key[d]++; i++; continue }
+        if (c == ":") { got[d] = 1; i++; continue }
+        if (c == "\"") {
+          j = i + 1; str = ""
+          while (j <= n) {
+            ch = substr(s, j, 1)
+            if (ch == "\\") { str = str substr(s, j + 1, 1); j += 2; continue }
+            if (ch == "\"") break
+            str = str ch; j++
+          }
+          i = j + 1
+          if (obj[d] && !got[d]) key[d] = str; else emit(str)
+          continue
+        }
+        if (c ~ /[-0-9a-z]/) {
+          j = i
+          while (j <= n && substr(s, j, 1) ~ /[-+0-9.eEa-z]/) j++
+          emit(substr(s, i, j - i)); i = j; continue
+        }
+        i++
+      }
+    }'
+}
+
+declared_port() {
+  # A port's value ($1: gate, rules, evals): either "none" or an object with a "command".
+  if [ "$(decl_get "providers.$1")" = "none" ]; then
+    echo "none"
+  else
+    decl_get "providers.$1.command"
+  fi
 }
 
 declared_gate() { declared_port gate; }
 
 # The gate contract this repository speaks: the `gate` entry's own "contract",
-# else the declaration's top-level one, else 1. Innermost objects (the port
-# entries) are cut away before the top-level value is read, so a port's number
-# is never mistaken for the declaration's.
+# else the declaration's top-level one, else 1. Read by path, so another port's
+# own "contract" — or its maps — is never mistaken for the declaration's.
 declared_contract() {
-  local file="$root/.agenticframework/providers.json" flat n
-  [ -f "$file" ] || { echo 1; return; }
-  flat="$(tr -d '\n' < "$file")"
-  n="$(printf '%s' "$flat" | sed -n 's/.*"gate"[[:space:]]*:[[:space:]]*{\([^}]*\)}.*/\1/p' \
-       | sed -n 's/.*"contract"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
-  [ -n "$n" ] || n="$(printf '%s' "$flat" | sed 's/{[^{}]*}//g' \
-       | sed -n 's/.*"contract"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
-  echo "${n:-1}"
+  local n
+  n="$(decl_get providers.gate.contract)"
+  [ -n "$n" ] || n="$(decl_get contract)"
+  case "$n" in
+    ''|*[!0-9]*) echo 1 ;;
+    *) echo "$n" ;;
+  esac
 }
 
 # `ci --base B --head H` at contract 2: one range event to the declared

@@ -9,15 +9,18 @@ scope:
 
 ## Problem
 
-`setup-evals-provider` (the previous commit) makes the provider's CI setup step able to call a
-judge. A tenant's eval job pins the setup step to a release, so the fix reaches none until one is
+`setup-evals-provider` makes the provider's CI setup step able to call a judge, and
+`launcher-reads-declaration` (added after this design was first written, found the same day) makes
+the launcher read a declaration whose evals port carries warning maps as the gate contract it
+declares. A tenant's eval job pins the setup step to a release, so the fix reaches none until one is
 cut — and AqlaarTeleologyStudio's move onto the evals contract, the owner's request of 2026-10-09,
 pins its eval jobs to it.
 
 ## Approach
 
-- **2.2.3, a PATCH.** Unreleased holds one Fixed heading: the setup step installs one more package,
-  already a framework dependency; nothing a 2.2.2 tenant runs changes.
+- **2.2.3, a PATCH.** Two Fixed headings: the setup step installs one more package, already a
+  framework dependency; the launcher reads the declaration by its structure — a repository that
+  declares no maps reads exactly as before.
 - `pyproject.toml` and `install-ai-stack.sh` declare `2.2.3`; `docs/DESIGN.md`'s header follows
   (`scripts/test/test_version_consistency.py`).
 - `CHANGELOG.md`: Unreleased becomes `[2.2.3] — 2026-10-09`; the 2.2.x row says an eval job that
