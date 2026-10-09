@@ -80,6 +80,15 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the CI setup step can grade an eval
+
+- **`setup-agentsmith` installs `httpx`** (`scripts/requirements-gate.txt`). A tenant's eval job that
+  installs the provider through the setup step could not call any judge — every direct-API route
+  goes through `httpx` — so every judged suite answered `no_verdict`, which a tenant may have
+  declared a warning: a provider that could never grade read as a judge out of quota. Measured: the
+  evals conformance suite in the setup step's environment, 8/17 before, 17/17 after. Judges on
+  Vertex AI or Bedrock still need their cloud SDK installed by the tenant.
+
 ## [2.2.2] — 2026-10-08
 
 ### Changed — a repository's `.env` wins for its credentials
