@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/security/v1/providers.schema.json",
+  "title": "providers.json — the security port",
+  "description": "The `security` entry of .agenticframework/providers.json (contract/security/v1/protocol.md). The rest of the declaration is the gate contract's (contract/gate/v3/providers.schema.json); a port this schema does not describe is allowed.",
+  "type": "object",
+  "required": [
+    "providers"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "providers": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "security": {
+          "description": "Who checks this repository's security pack and posture, or \"none\": it declares no security provider, and a security step says so instead of checking.",
+          "oneOf": [
+            {
+              "const": "none"
+            },
+            {
+              "additionalProperties": false,
+              "description": "The security provider: the command a caller runs with `check` or `redaction` appended, and the request on stdin. `emitter` is the command that exports one representative run of the repository's telemetry, or \"none\" when it emits none.",
+              "properties": {
+                "command": {
+                  "minLength": 1,
+                  "title": "Command",
+                  "type": "string"
+                },
+                "version": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Version"
+                },
+                "contract": {
+                  "anyOf": [
+                    {
+                      "const": 1,
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Contract"
+                },
+                "emitter": {
+                  "anyOf": [
+                    {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Emitter"
+                }
+              },
+              "required": [
+                "command"
+              ],
+              "title": "SecurityPort",
+              "type": "object"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -7,6 +7,21 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — C7: the security contract (2026-10-09)
+
+Design: `.agent-rfc/designs/security-contract.md`; review: `.agent-rfc/reviews/security-contract.md`.
+Slice C7 of `.agent-rfc/designs/governance-contracts.md`.
+
+- **`contract/security/v1/`**: `check` — a row per control, each naming whose evidence it is — and
+  `redaction` — the tenant's declared emitter run with planted probes against a loopback receiver.
+- **A tenant's verdict is about the tenant** (the owner's decision): a control testing the
+  provider's own code is not run for a tenant and is named as the provider's. KYC's strict run had
+  failed four portal and hook controls from the installed package and passed them from a checkout.
+- **The declared posture**, never the CI step's environment; no non-strict mode; a registry the
+  tenant edits only adds.
+- **Conformance on the standard library**: a complete pack and an emitter that redacts, leaks,
+  plants nothing or sends nothing; 33 cases, AgentSmith passes, an always-pass provider fails.
+
 ## Released — v2.2.3 (2026-10-09)
 
 Design: `.agent-rfc/designs/release-2-2-3.md`; review: `.agent-rfc/reviews/release-2-2-3.md`.

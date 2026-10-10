@@ -1801,7 +1801,7 @@
         "ControlSpec",
         "load_control_registry"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/security/registry.py"
     },
     {
@@ -1843,7 +1843,7 @@
       "symbols": [
         "run"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/security/runners/pii_postcall.py"
     },
     {
@@ -1853,7 +1853,7 @@
         "_registered_tool_names",
         "run"
       ],
-      "last_modified": "2026-08-25T21:41:13Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/security/runners/tool_allowlist.py"
     },
     {
@@ -1862,7 +1862,7 @@
       "symbols": [
         "run"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/security/runners/adversarial_eval.py"
     },
     {
@@ -1881,6 +1881,7 @@
         "self_correction",
         "budget_caps",
         "change_gates",
+        "_gate_declared",
         "rbac_matrix",
         "rag_poison",
         "audit_hmac",
@@ -1891,7 +1892,7 @@
         "agency_manifest",
         "gateway_static"
       ],
-      "last_modified": "2026-09-12T22:44:31Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/security/runners/delegating.py"
     },
     {
@@ -1920,36 +1921,52 @@
         "not_applicable",
         "framework_component_absent",
         "security_fixture",
+        "is_contract",
+        "provider_code_in_scope",
+        "declared_value",
+        "declared_choice",
+        "_evals_port",
+        "contract_dataset_gradable",
+        "_declared_not_gradable",
+        "contract_guard_suite",
+        "repository_env",
+        "repository_python",
         "node_suite"
       ],
-      "last_modified": "2026-09-12T22:44:31Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/security/runners/_shared.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_api_smoke",
+        "_declared",
         "run"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/security/runners/moderation_hook.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_detection",
+        "_declared",
         "run"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/security/runners/prompt_guard.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "run"
+        "_declared",
+        "run",
+        "_scrub_probes"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/security/runners/pii_precall.py"
     },
     {
@@ -1980,7 +1997,7 @@
         "_template_path",
         "run"
       ],
-      "last_modified": "2026-08-23T21:05:28Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/security/runners/risk_register.py"
     },
     {
@@ -3491,6 +3508,8 @@
         "_gate_kg",
         "_cmd_rules",
         "_cmd_evals_run",
+        "_cmd_security",
+        "_security_conformance",
         "_evals_conformance",
         "_rules_conformance",
         "_telemetry_conformance",
@@ -3523,7 +3542,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-09T09:11:16Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4142,7 +4161,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-09T07:54:45Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4766,7 +4785,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-10-09T06:01:44Z",
+      "last_modified": "2026-10-09T09:52:44Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5268,6 +5287,21 @@
         "EvalsRequest",
         "Scorecard",
         "EvalsPort",
+        "ControlFrameworks",
+        "TenantControl",
+        "RiskEntry",
+        "RiskRegister",
+        "AgencyAction",
+        "AgencyManifest",
+        "AllowedTool",
+        "ToolAllowlist",
+        "SecurityRequest",
+        "ProviderName",
+        "ControlRow",
+        "SecurityResult",
+        "RedactionRequest",
+        "RedactionResult",
+        "SecurityPort",
         "Ide",
         "Signoff",
         "Records",
@@ -5288,10 +5322,11 @@
         "_signoff_section",
         "check_signoff",
         "_one_entry_per_path",
+        "_evidenced",
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-10-09T08:41:17Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -6737,7 +6772,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-10-09T09:10:05Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -6971,6 +7006,17 @@
         "_evals_schema_problem",
         "_judge_scorecard",
         "run_evals",
+        "_security_dir",
+        "SecurityCase",
+        "SecurityReport",
+        "security_cases",
+        "security_fixture",
+        "contract_controls",
+        "build_security_fixture",
+        "_ask_security",
+        "_security_schema_problem",
+        "_judge_security",
+        "run_security",
         "passed",
         "render",
         "redirect_request",
@@ -6985,7 +7031,7 @@
         "Handler",
         "_send"
       ],
-      "last_modified": "2026-10-09T08:43:26Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -8022,7 +8068,7 @@
         "test_the_gate_entrys_own_contract_wins_and_a_missing_one_is_1",
         "test_a_port_is_read_wherever_its_command_sits"
       ],
-      "last_modified": "2026-10-09T06:48:33Z",
+      "last_modified": "2026-10-09T09:52:44Z",
       "id": "scripts/test/test_gate_contract_v3.py"
     },
     {
@@ -8172,7 +8218,7 @@
         "test_adopt_writes_provider_not_this_installs_paths",
         "test_sync_renames_only_what_adopt_wrote_and_leaves_every_other_byte"
       ],
-      "last_modified": "2026-10-09T06:48:04Z",
+      "last_modified": "2026-10-09T09:52:44Z",
       "id": "scripts/test/test_rules_contract.py"
     },
     {
@@ -8229,7 +8275,7 @@
         "log_message",
         "do_POST"
       ],
-      "last_modified": "2026-10-09T08:30:51Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "runtime/telemetry_contract.py"
     },
     {
@@ -8280,7 +8326,7 @@
         "test_the_ci_setup_shim_answers_with_the_provider_inside_a_vendored_tenant",
         "test_no_shipped_shim_runs_the_cli_with_the_working_directory_first"
       ],
-      "last_modified": "2026-10-07T06:38:45Z",
+      "last_modified": "2026-10-10T13:36:41Z",
       "id": "scripts/test/test_telemetry_contract.py"
     },
     {
@@ -8427,7 +8473,7 @@
         "run_scorecard",
         "spy"
       ],
-      "last_modified": "2026-10-09T06:01:44Z",
+      "last_modified": "2026-10-09T09:52:44Z",
       "id": "scripts/test/test_evals_contract.py"
     },
     {
@@ -8582,6 +8628,107 @@
       "pillar": null,
       "created_at": "2026-10-09T06:55:18Z",
       "id": "rfc:reviews/launcher-reads-declaration.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_version",
+        "_own",
+        "registry",
+        "_row",
+        "_checked",
+        "check",
+        "evidence_pack",
+        "redaction",
+        "_repository",
+        "_answer",
+        "main"
+      ],
+      "last_modified": "2026-10-10T13:36:41Z",
+      "id": "scripts/security_port.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "provider_env",
+        "_liar",
+        "test_a_provider_that_always_passes_is_not_conformant",
+        "test_a_provider_that_runs_its_own_code_for_a_tenant_is_not_conformant",
+        "test_the_security_schemas_are_the_models",
+        "test_the_registry_schema_is_the_model",
+        "test_the_declared_port_is_the_model",
+        "test_the_published_probes_are_the_ones_planted",
+        "test_no_probe_looks_like_a_credential_to_the_secret_check",
+        "test_agentsmiths_redactor_scrubs_every_probe",
+        "test_every_contract_control_is_a_repository_control_agentsmith_checks",
+        "test_a_tenants_own_rows_are_always_the_repositorys",
+        "test_what_adopt_declares_names_the_security_provider_without_an_emitter",
+        "_fixture",
+        "_check",
+        "test_a_provider_row_is_not_run_for_a_tenant",
+        "test_a_provider_row_runs_in_the_providers_own_repository",
+        "test_a_warning_is_a_failure_unless_it_is_a_declared_gap",
+        "test_a_check_that_raises_fails_that_control_alone",
+        "test_a_repositorys_registry_cannot_redefine_a_providers_control",
+        "test_asking_about_a_control_nobody_checks_is_not_gradable",
+        "test_the_environment_does_not_set_the_posture_checked",
+        "test_a_declared_not_gradable_eval_is_a_gap_not_a_failure",
+        "test_the_gateway_check_reads_the_repository_not_the_install",
+        "test_the_evidence_pack_carries_the_result",
+        "test_a_risk_register_is_validated_by_its_model",
+        "test_a_leak_is_named_by_kind_never_by_its_text",
+        "_launcher_tenant",
+        "_launch",
+        "_result",
+        "test_the_launcher_passes_only_a_pass",
+        "test_the_launcher_maps_a_redaction",
+        "test_each_failed_control_is_its_own_annotation_and_one_line",
+        "test_no_declared_provider_checks_nothing_and_says_so",
+        "test_the_launcher_refuses_a_malformed_call",
+        "test_the_launcher_sends_the_evidence_directory",
+        "_recording_python",
+        "test_a_repositorys_suite_and_hook_run_in_its_own_interpreter",
+        "test_a_pack_file_is_held_to_its_published_schema",
+        "test_an_org_owned_row_without_a_suite_is_evidenced_elsewhere",
+        "test_a_leak_is_a_failure_even_when_the_emitter_then_exits_badly",
+        "test_the_repositorys_code_does_not_see_the_providers_source",
+        "test_a_leak_is_a_failure_even_when_the_emitter_then_hangs",
+        "test_the_emitter_does_not_see_the_providers_source",
+        "test_agentsmith_passes_the_security_contract",
+        "broken"
+      ],
+      "last_modified": "2026-10-10T13:36:41Z",
+      "id": "scripts/test/test_security_contract.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "Probe",
+        "Redaction",
+        "declared_emitter",
+        "check"
+      ],
+      "last_modified": "2026-10-10T13:36:41Z",
+      "id": "scripts/security/redaction.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "C7 \u2014 The security contract: a tenant's own posture, checked by the provider it declares",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/security-contract.md",
+      "pillar": null,
+      "created_at": "2026-10-09T12:34:31Z",
+      "id": "rfc:designs/security-contract.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 security-contract (C7)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/security-contract.md",
+      "pillar": null,
+      "created_at": "2026-10-09T12:34:32Z",
+      "id": "rfc:reviews/security-contract.md"
     }
   ],
   "edges": [
@@ -9578,6 +9725,21 @@
     {
       "edge_type": "IMPORTS",
       "source": "scripts/test/test_env_file_credentials.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security_port.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/redaction.py",
       "target": "runtime/__init__.py"
     }
   ]

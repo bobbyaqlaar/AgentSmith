@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/security/v1/request.schema.json",
+  "additionalProperties": true,
+  "description": "What a caller sends `check` on stdin. Unknown keys are ignored.",
+  "properties": {
+    "controls": {
+      "anyOf": [
+        {
+          "items": {
+            "pattern": "^SEC-[A-Z0-9]+(?:-[A-Z0-9]+)*-[0-9]{3}$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Controls"
+    },
+    "evidence_dir": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Evidence Dir"
+    },
+    "cwd": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cwd"
+    }
+  },
+  "title": "SecurityRequest",
+  "type": "object"
+}

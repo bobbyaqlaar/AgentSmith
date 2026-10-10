@@ -1,0 +1,110 @@
+{
+  "_about": "The repository controls every security provider checks (contract/security/v1/protocol.md), each a row with `subject: repository` in every `check` result. A provider adds its own controls, under either subject; a repository adds its own in `.agent-rfc/security/control_registry.json`.",
+  "controls": [
+    {
+      "id": "SEC-RISK-001",
+      "title": "Risk register",
+      "reads": [
+        ".agent-rfc/security/risk_register.yaml"
+      ],
+      "passes": "it matches risk_register.schema.json and holds no template entry (an id starting RISK-EXAMPLE-)"
+    },
+    {
+      "id": "SEC-AGENCY-001",
+      "title": "Agency manifest",
+      "reads": [
+        ".agent-rfc/security/agency_manifest.yaml"
+      ],
+      "passes": "it matches agency_manifest.schema.json, holds no shipped placeholder, and at least one action needs a human"
+    },
+    {
+      "id": "SEC-TOOL-001",
+      "title": "Tool allowlist",
+      "reads": [
+        ".agent-rfc/security/tool_allowlist.yaml",
+        "the tools the repository registers"
+      ],
+      "passes": "the allowlist exists and every registered tool resolves the way it says, with the deny path exercised"
+    },
+    {
+      "id": "SEC-PROMPT-001",
+      "title": "Prompt-injection guard enforces",
+      "reads": [
+        ".agenticframework/tenant.yaml security.prompt_guard"
+      ],
+      "passes": "the declared mode enforces — default or strict; undeclared is default. Never the environment"
+    },
+    {
+      "id": "SEC-PII-001",
+      "title": "Input guardrail scrubs",
+      "reads": [
+        ".agenticframework/tenant.yaml security.input_guardrail"
+      ],
+      "passes": "the declared mode is not off; undeclared scrubs outside development"
+    },
+    {
+      "id": "SEC-MOD-001",
+      "title": "Output moderation declared",
+      "reads": [
+        ".agenticframework/tenant.yaml moderation.mode, moderation.hook"
+      ],
+      "passes": "moderation.mode is declared; under required, moderation.hook names a module.path:callable that imports in the repository's interpreter and answers benign text with allowed: true"
+    },
+    {
+      "id": "SEC-PII-002",
+      "title": "Telemetry redacted on the wire",
+      "reads": [
+        ".agenticframework/providers.json security.emitter"
+      ],
+      "passes": "redaction passes for staging and production; not applicable when the emitter is declared none"
+    },
+    {
+      "id": "SEC-CHANGE-001",
+      "title": "Changes governed by a gate",
+      "reads": [
+        ".agenticframework/providers.json gate"
+      ],
+      "passes": "a gate provider is declared, not none"
+    },
+    {
+      "id": "SEC-EVAL-001",
+      "title": "Golden eval gradable",
+      "reads": [
+        ".agent-rfc/fixtures/golden_evals.json"
+      ],
+      "passes": "it is gradable under contract/evals/v1 (at least 3 cases, each with its output); not applicable with no dataset; a gap when providers.json evals.not_gradable declares golden a warning"
+    },
+    {
+      "id": "SEC-EVAL-002",
+      "title": "Fairness eval gradable",
+      "reads": [
+        ".agent-rfc/fixtures/fairness_evals.json"
+      ],
+      "passes": "as SEC-EVAL-001, for fairness (at least 2 cases)"
+    },
+    {
+      "id": "SEC-EVAL-003",
+      "title": "Hallucination eval gradable",
+      "reads": [
+        ".agent-rfc/fixtures/hallucination_evals.json"
+      ],
+      "passes": "as SEC-EVAL-001, for hallucination"
+    },
+    {
+      "id": "SEC-ADV-001",
+      "title": "Adversarial probes",
+      "reads": [
+        ".agent-rfc/security/adversarial_evals.json"
+      ],
+      "passes": "the adversarial suite passes under contract/evals/v1; not applicable with no dataset"
+    },
+    {
+      "id": "SEC-RAG-001",
+      "title": "RAG poisoning probes",
+      "reads": [
+        ".agent-rfc/fixtures/rag_poison_evals.json"
+      ],
+      "passes": "the rag_poison suite passes under contract/evals/v1; not applicable with no dataset"
+    }
+  ]
+}

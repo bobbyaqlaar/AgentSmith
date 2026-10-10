@@ -1,0 +1,539 @@
+{
+  "_about": "What a security provider is asked, and what each answer must be (contract/security/v1/protocol.md). Each case builds fixture.json's repository fresh, applies `files` (null removes one), and runs `<provider> <verb>` with {\"cwd\"} plus `request` on stdin; `env` is added to the provider's environment. Every `check` answer must be one result the schema allows, list every control of controls.json as a repository row (unless the request narrows it), and report every provider row not applicable — the fixture is not the provider's repository. `rows` names results the answer must hold; `only` says no other row may appear; `leaked` the kinds a redaction must name.",
+  "cases": [
+    {
+      "name": "a complete pack passes",
+      "verb": "check",
+      "request": {},
+      "files": {},
+      "env": {},
+      "expect": {
+        "verdict": "pass",
+        "rows": {
+          "SEC-RISK-001": "pass",
+          "SEC-AGENCY-001": "pass",
+          "SEC-TOOL-001": "pass",
+          "SEC-PROMPT-001": "pass",
+          "SEC-PII-001": "pass",
+          "SEC-MOD-001": "pass",
+          "SEC-PII-002": "pass",
+          "SEC-CHANGE-001": "pass",
+          "SEC-EVAL-001": "not_applicable",
+          "SEC-ADV-001": "not_applicable",
+          "SEC-FIXTURE-001": "pass"
+        }
+      },
+      "why": "every repository control holds; no dataset is not applicable"
+    },
+    {
+      "name": "a template risk entry fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agent-rfc/security/risk_register.yaml": "version: 1\nentries:\n  - id: RISK-EXAMPLE-001\n    description: A prompt carries an instruction that overrides the agent's task.\n    severity: high\n    mitigations:\n      - The prompt guard blocks a flagged prompt.\n    control_ids: [SEC-PROMPT-001]\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-RISK-001": "fail"
+        }
+      },
+      "why": "a placeholder is not a register"
+    },
+    {
+      "name": "a risk register that does not match its schema fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agent-rfc/security/risk_register.yaml": "version: 1\nentries:\n  - id: RISK-FIXTURE-001\n    description: A prompt carries an instruction that overrides the agent's task.\n    severity: dire\n    mitigations:\n      - The prompt guard blocks a flagged prompt.\n    control_ids: [SEC-PROMPT-001]\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-RISK-001": "fail"
+        }
+      },
+      "why": "risk_register.schema.json"
+    },
+    {
+      "name": "a placeholder agency manifest fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agent-rfc/security/agency_manifest.yaml": "version: 1\nactions:\n  - workflow: example_workflow\n    action: high_impact_step\n    needs_hitl: true\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-AGENCY-001": "fail"
+        }
+      },
+      "why": "the shipped placeholder declares nothing"
+    },
+    {
+      "name": "an agency manifest where nothing needs a human fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agent-rfc/security/agency_manifest.yaml": "version: 1\nactions:\n  - workflow: FixtureWorkflow\n    action: approve\n    needs_hitl: false\n  - workflow: FixtureWorkflow\n    action: lookup\n    needs_hitl: false\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-AGENCY-001": "fail"
+        }
+      },
+      "why": "nothing gated records no governance"
+    },
+    {
+      "name": "no tool allowlist fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agent-rfc/security/tool_allowlist.yaml": null
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-TOOL-001": "fail"
+        }
+      },
+      "why": "tools would be ungoverned"
+    },
+    {
+      "name": "a declared prompt guard that only warns fails, whatever the environment says",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/tenant.yaml": "tenant:\n  id: \"fixture-tenant\"\n  name: \"fixture-tenant\"\n  owner: owner@example.test\n\nsecurity:\n  prompt_guard: \"warn\"\n  input_guardrail: \"default\"\n\nmoderation:\n  mode: \"optional\"\n"
+      },
+      "env": {
+        "PROMPT_GUARD": "default"
+      },
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-PROMPT-001": "fail"
+        }
+      },
+      "why": "the posture checked is the declared one"
+    },
+    {
+      "name": "a declared prompt guard that is off fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/tenant.yaml": "tenant:\n  id: \"fixture-tenant\"\n  name: \"fixture-tenant\"\n  owner: owner@example.test\n\nsecurity:\n  prompt_guard: \"off\"\n  input_guardrail: \"default\"\n\nmoderation:\n  mode: \"optional\"\n"
+      },
+      "env": {
+        "PROMPT_GUARD": "strict"
+      },
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-PROMPT-001": "fail"
+        }
+      },
+      "why": "the environment is not a declaration"
+    },
+    {
+      "name": "a bare YAML off is not a mode",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/tenant.yaml": "tenant:\n  id: \"fixture-tenant\"\n  name: \"fixture-tenant\"\n  owner: owner@example.test\n\nsecurity:\n  prompt_guard: off\n  input_guardrail: \"default\"\n\nmoderation:\n  mode: \"optional\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-PROMPT-001": "fail"
+        }
+      },
+      "why": "YAML reads it as false, never as a word"
+    },
+    {
+      "name": "an input guardrail that is off fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/tenant.yaml": "tenant:\n  id: \"fixture-tenant\"\n  name: \"fixture-tenant\"\n  owner: owner@example.test\n\nsecurity:\n  prompt_guard: \"default\"\n  input_guardrail: \"off\"\n\nmoderation:\n  mode: \"optional\"\n"
+      },
+      "env": {
+        "INPUT_GUARDRAIL": "default"
+      },
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-PII-001": "fail"
+        }
+      },
+      "why": "nothing is scrubbed before a model call"
+    },
+    {
+      "name": "an undeclared moderation mode fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/tenant.yaml": "tenant:\n  id: \"fixture-tenant\"\n  name: \"fixture-tenant\"\n  owner: owner@example.test\n\nsecurity:\n  prompt_guard: \"default\"\n  input_guardrail: \"default\"\n\n"
+      },
+      "env": {
+        "MODERATION_HOOK": "optional"
+      },
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-MOD-001": "fail"
+        }
+      },
+      "why": "the mode is declared, not exported"
+    },
+    {
+      "name": "required moderation with a hook that answers passes",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/tenant.yaml": "tenant:\n  id: \"fixture-tenant\"\n  name: \"fixture-tenant\"\n  owner: owner@example.test\n\nsecurity:\n  prompt_guard: \"default\"\n  input_guardrail: \"default\"\n\nmoderation:\n  mode: \"required\"\n  hook: \"fixture_hooks:allows\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "pass",
+        "rows": {
+          "SEC-MOD-001": "pass"
+        }
+      },
+      "why": "the hook runs in the repository's interpreter"
+    },
+    {
+      "name": "required moderation with a hook that blocks benign text fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/tenant.yaml": "tenant:\n  id: \"fixture-tenant\"\n  name: \"fixture-tenant\"\n  owner: owner@example.test\n\nsecurity:\n  prompt_guard: \"default\"\n  input_guardrail: \"default\"\n\nmoderation:\n  mode: \"required\"\n  hook: \"fixture_hooks:blocks_everything\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-MOD-001": "fail"
+        }
+      },
+      "why": "a classifier that blocks everything is not a control"
+    },
+    {
+      "name": "required moderation with no hook fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/tenant.yaml": "tenant:\n  id: \"fixture-tenant\"\n  name: \"fixture-tenant\"\n  owner: owner@example.test\n\nsecurity:\n  prompt_guard: \"default\"\n  input_guardrail: \"default\"\n\nmoderation:\n  mode: \"required\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-MOD-001": "fail"
+        }
+      },
+      "why": "required names a hook"
+    },
+    {
+      "name": "a repository that declares its gate none fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/providers.json": "{\n  \"contract\": 3,\n  \"providers\": {\n    \"gate\": \"none\",\n    \"security\": {\n      \"command\": \"the-provider-under-test\",\n      \"contract\": 1,\n      \"emitter\": \"python3 emit.py redact\"\n    }\n  }\n}\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CHANGE-001": "fail"
+        }
+      },
+      "why": "its changes are ungoverned"
+    },
+    {
+      "name": "a repository control whose suite fails, fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        "tests/test_fixture_control.py": "def test_the_control_holds():\n    assert False\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-FIXTURE-001": "fail"
+        }
+      },
+      "why": "the repository's own evidence"
+    },
+    {
+      "name": "a repository registry may not redefine a control",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agent-rfc/security/control_registry.json": "[\n  {\n    \"id\": \"SEC-FIXTURE-001\",\n    \"title\": \"The fixture's own control\",\n    \"status\": \"met\",\n    \"owner\": \"tenant\",\n    \"frameworks\": {\n      \"owasp\": [\n        \"LLM09\"\n      ]\n    },\n    \"suite\": \"tests/test_fixture_control.py\",\n    \"mechanism\": \"a control the repository adds, evidenced by its own suite\"\n  },\n  {\n    \"id\": \"SEC-RISK-001\",\n    \"title\": \"Lowered\",\n    \"status\": \"met\",\n    \"suite\": \"tests/test_fixture_control.py\"\n  }\n]\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-RISK-001": "fail"
+        }
+      },
+      "why": "a registry the repository edits only adds"
+    },
+    {
+      "name": "a repository registry that does not match its schema is not gradable",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agent-rfc/security/control_registry.json": "[{\"id\": \"SEC-FIXTURE-001\", \"status\": \"met\"}]\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "not_gradable"
+      },
+      "why": "registry.schema.json: a title, and a suite for what it claims"
+    },
+    {
+      "name": "a declared gap is shown, not failed",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agent-rfc/security/control_registry.json": "[\n  {\n    \"id\": \"SEC-FIXTURE-001\",\n    \"title\": \"The fixture's own control\",\n    \"status\": \"met\",\n    \"owner\": \"tenant\",\n    \"frameworks\": {\n      \"owasp\": [\n        \"LLM09\"\n      ]\n    },\n    \"suite\": \"tests/test_fixture_control.py\",\n    \"mechanism\": \"a control the repository adds, evidenced by its own suite\"\n  },\n  {\n    \"id\": \"SEC-FIXTURE-002\",\n    \"title\": \"Not built yet\",\n    \"status\": \"gap\"\n  }\n]\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "pass",
+        "rows": {
+          "SEC-FIXTURE-002": "gap"
+        }
+      },
+      "why": "a tracked deficiency is visible and does not fail"
+    },
+    {
+      "name": "a leaking emitter fails SEC-PII-002",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/providers.json": "{\n  \"contract\": 3,\n  \"providers\": {\n    \"gate\": {\n      \"command\": \"example-gate\",\n      \"version\": \"^1\"\n    },\n    \"security\": {\n      \"command\": \"the-provider-under-test\",\n      \"contract\": 1,\n      \"emitter\": \"python3 emit.py leak\"\n    }\n  }\n}\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-PII-002": "fail"
+        }
+      },
+      "why": "the wire is the control"
+    },
+    {
+      "name": "no declared emitter fails SEC-PII-002",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/providers.json": "{\n  \"contract\": 3,\n  \"providers\": {\n    \"gate\": {\n      \"command\": \"example-gate\",\n      \"version\": \"^1\"\n    },\n    \"security\": {\n      \"command\": \"the-provider-under-test\",\n      \"contract\": 1\n    }\n  }\n}\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-PII-002": "fail"
+        }
+      },
+      "why": "nothing verifies what the repository exports"
+    },
+    {
+      "name": "an emitter declared none makes SEC-PII-002 not applicable",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agenticframework/providers.json": "{\n  \"contract\": 3,\n  \"providers\": {\n    \"gate\": {\n      \"command\": \"example-gate\",\n      \"version\": \"^1\"\n    },\n    \"security\": {\n      \"command\": \"the-provider-under-test\",\n      \"contract\": 1,\n      \"emitter\": \"none\"\n    }\n  }\n}\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "pass",
+        "rows": {
+          "SEC-PII-002": "not_applicable"
+        }
+      },
+      "why": "a reviewed declaration"
+    },
+    {
+      "name": "an org-owned control with no suite is evidenced elsewhere",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".agent-rfc/security/control_registry.json": "[\n  {\n    \"id\": \"SEC-FIXTURE-001\",\n    \"title\": \"The fixture's own control\",\n    \"status\": \"met\",\n    \"owner\": \"tenant\",\n    \"frameworks\": {\n      \"owasp\": [\n        \"LLM09\"\n      ]\n    },\n    \"suite\": \"tests/test_fixture_control.py\",\n    \"mechanism\": \"a control the repository adds, evidenced by its own suite\"\n  },\n  {\n    \"id\": \"SEC-FIXTURE-003\",\n    \"title\": \"Board sign-off\",\n    \"status\": \"org-owned\"\n  }\n]\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "pass",
+        "rows": {
+          "SEC-FIXTURE-003": "not_applicable"
+        }
+      },
+      "why": "the organisation holds its evidence; nothing in the repository runs"
+    },
+    {
+      "name": "asking about one control answers that one",
+      "verb": "check",
+      "request": {
+        "controls": [
+          "SEC-RISK-001"
+        ]
+      },
+      "files": {},
+      "env": {},
+      "expect": {
+        "verdict": "pass",
+        "rows": {
+          "SEC-RISK-001": "pass"
+        },
+        "only": true
+      },
+      "why": "controls narrows the run"
+    },
+    {
+      "name": "redaction passes on staging",
+      "verb": "redaction",
+      "request": {
+        "environment": "staging"
+      },
+      "files": {},
+      "env": {},
+      "expect": {
+        "verdict": "pass"
+      },
+      "why": "the probe span arrived and no probe did"
+    },
+    {
+      "name": "redaction passes on production",
+      "verb": "redaction",
+      "request": {
+        "environment": "production"
+      },
+      "files": {},
+      "env": {},
+      "expect": {
+        "verdict": "pass"
+      },
+      "why": "the same, under the production profile"
+    },
+    {
+      "name": "a leak fails, named by its kind",
+      "verb": "redaction",
+      "request": {
+        "environment": "production",
+        "emitter": "python3 emit.py leak"
+      },
+      "files": {},
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "leaked": [
+          "api key",
+          "bearer token",
+          "email address",
+          "card number"
+        ]
+      },
+      "why": "the request's emitter beats the declaration; a leak is reported by kind"
+    },
+    {
+      "name": "a leak counts even when the emitter then fails",
+      "verb": "redaction",
+      "request": {
+        "environment": "staging",
+        "emitter": "python3 emit.py leak-then-fail"
+      },
+      "files": {},
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "leaked": [
+          "api key",
+          "bearer token",
+          "email address",
+          "card number"
+        ]
+      },
+      "why": "what reached the wire is the stronger fact"
+    },
+    {
+      "name": "an emitter that plants nothing is not gradable",
+      "verb": "redaction",
+      "request": {
+        "environment": "staging",
+        "emitter": "python3 emit.py unmarked"
+      },
+      "files": {},
+      "env": {},
+      "expect": {
+        "verdict": "not_gradable"
+      },
+      "why": "a clean wire proves nothing without the probe span"
+    },
+    {
+      "name": "an emitter that sends nothing is not gradable",
+      "verb": "redaction",
+      "request": {
+        "environment": "staging",
+        "emitter": "python3 emit.py nothing"
+      },
+      "files": {},
+      "env": {},
+      "expect": {
+        "verdict": "not_gradable"
+      },
+      "why": "nothing received is not a pass"
+    },
+    {
+      "name": "an emitter that does not run is not gradable",
+      "verb": "redaction",
+      "request": {
+        "environment": "staging",
+        "emitter": "python3 emit.py broken"
+      },
+      "files": {},
+      "env": {},
+      "expect": {
+        "verdict": "not_gradable"
+      },
+      "why": "a check that did not run is not a pass"
+    },
+    {
+      "name": "a repository that emits no telemetry is not applicable",
+      "verb": "redaction",
+      "request": {
+        "environment": "staging"
+      },
+      "files": {
+        ".agenticframework/providers.json": "{\n  \"contract\": 3,\n  \"providers\": {\n    \"gate\": {\n      \"command\": \"example-gate\",\n      \"version\": \"^1\"\n    },\n    \"security\": {\n      \"command\": \"the-provider-under-test\",\n      \"contract\": 1,\n      \"emitter\": \"none\"\n    }\n  }\n}\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "not_applicable"
+      },
+      "why": "`\"emitter\": \"none\"` is declared"
+    },
+    {
+      "name": "no answer to an unknown verb",
+      "verb": "audit",
+      "request": {},
+      "files": {},
+      "env": {},
+      "expect": {
+        "answer": "none"
+      },
+      "why": "a provider answers only the verbs it knows"
+    }
+  ]
+}

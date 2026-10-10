@@ -1,0 +1,28 @@
+{
+  "_about": "What `redaction` plants (contract/security/v1/protocol.md). The emitter is handed every `text`, as a JSON array, in the variable `env`, and exports one span carrying `attribute: true` with them in its payload attribute `payload`, through whatever redaction it applies. A `core` that arrives verbatim anywhere in what was exported is a leak, reported by its `kind`. None of these is a credential.",
+  "env": "SECURITY_REDACTION_PROBES",
+  "attribute": "security.redaction.probe",
+  "payload": "input.value",
+  "probes": [
+    {
+      "kind": "api key",
+      "text": "sk-redactionprobe0000000001",
+      "core": "sk-redactionprobe0000000001"
+    },
+    {
+      "kind": "bearer token",
+      "text": "Authorization: Bearer redaction-probe-token-0001",
+      "core": "redaction-probe-token-0001"
+    },
+    {
+      "kind": "email address",
+      "text": "redaction.probe@example.com",
+      "core": "redaction.probe@example.com"
+    },
+    {
+      "kind": "card number",
+      "text": "4111 1111 1111 1111",
+      "core": "4111 1111 1111 1111"
+    }
+  ]
+}

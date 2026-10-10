@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/security/v1/redaction-result.schema.json",
+  "additionalProperties": true,
+  "description": "A provider's answer to `redaction`: whether a probe reached the wire. A\nleak is named by the probe's kind, never its text.",
+  "properties": {
+    "schema": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema",
+      "type": "integer"
+    },
+    "verdict": {
+      "enum": [
+        "pass",
+        "fail",
+        "not_gradable",
+        "not_applicable"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    },
+    "environment": {
+      "enum": [
+        "staging",
+        "production"
+      ],
+      "title": "Environment",
+      "type": "string"
+    },
+    "leaked": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Leaked",
+      "type": "array"
+    }
+  },
+  "required": [
+    "verdict",
+    "environment"
+  ],
+  "title": "RedactionResult",
+  "type": "object"
+}

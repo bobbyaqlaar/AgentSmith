@@ -80,6 +80,31 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the security contract (`contract/security/v1`)
+
+A repository's security, checked by the provider it declares — slice C7 of the governance contracts.
+`<security-command> check` answers one row per control, each naming whose evidence it is;
+`<security-command> redaction` runs the repository's declared emitter with planted probes and
+judges what reaches an OTLP receiver. AgentSmith answers both as `agentsmith security`, and
+`agentsmith conformance --port security` scores any provider (AgentSmith: 33/33).
+
+- **A tenant's verdict is about the tenant.** Controls that test AgentSmith's own code — the
+  portal, the hooks, the runtime library's tests — are reported `not_applicable` in a tenant,
+  naming the provider's version. Measured before: KYC Sentinel's strict run failed four of them from
+  the installed package and passed them from CI's full checkout, its repository unchanged.
+- **The posture checked is the declared one** — `tenant.yaml`, never the CI step's environment —
+  and there is no non-strict mode: a control that only warns fails, a declared gap is shown.
+- **SEC-GW-001 reads the repository.** Run from a framework checkout it scanned AgentSmith's own
+  directories, never the tenant's `agents/`; fixed for the harness too.
+- **The risk register is validated by its model** (`contract/security/v1/risk_register.schema.json`);
+  `scripts/security/schemas/` and the harness's `jsonschema` import go, and a control id may have
+  parts (`SEC-KYC-FLOOR-001`).
+
+**Hook-interface change** (additive): `.githooks/process-gate security check [--evidence-dir DIR]`
+and `security redaction --environment staging|production`. `tenant adopt` declares a `security`
+port. `run-security-checks.py` and `verify_system.py --check-redaction` are unchanged for this
+repository and vendored tenants until vendoring is retired.
+
 ## [2.2.3] — 2026-10-09
 
 ### Fixed — the launcher reads `providers.json` by its structure
