@@ -107,4 +107,6 @@ Gates run: full `pytest` on the staged tree (2387 passed, 10 skipped) and the af
 
 Levers reviewed: `declared-vs-enforced`, `implemented-not-invoked`, `environment-parity`, `failure-is-not-a-result`, `failure-mode-visibility`, `test-the-contract`, `grep-for-siblings`, `single-source-of-truth`, `every-line-earns-its-place`, `minimal-host-dependency`, `review-the-branch`.
 
-KG query: kg:82c57c57cf00
+The pull request was squash-merged (`f83db05`), folding the repo-tree fix into the same commit; the scope reviewed is that commit's 49 files — the 48 signed off above plus `docs/DESIGN.md`'s tree entry, read in the CI follow-up. Recorded as its scope in the repair (`kg:82c57c57cf00` was the 48-file staged scope).
+
+KG query: kg:2dfc0c83dc92
