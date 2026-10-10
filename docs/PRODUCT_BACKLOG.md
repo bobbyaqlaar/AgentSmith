@@ -11,9 +11,9 @@
 > spent a week claiming the testbed deploy had not started, six days after it
 > had.
 
-## Current state (2026-10-07)
+## Current state (2026-10-10)
 
-**v2.2.3 is the latest release** (2026-10-09) — the provider's CI setup step can call an eval's
+**v2.3.0 is the latest release** (2026-10-10) — the security contract (C7), a MINOR: a tenant's own pack, declared posture and telemetry wire, checked by the provider it declares. v2.2.3 (2026-10-09) — the provider's CI setup step can call an eval's
 judge, and the launcher reads a declaration with evals warnings as the contract it declares. v2.2.2 (2026-10-08): a repository's `.env` wins for its credentials over a shell export, and
 `agentsmith doctor` reports exported keys. v2.2.1 (2026-10-07) patched the evals
 contract's dataset schemas — the release to adopt it at. v2.2.0 (2026-10-07) carried the evals contract (C6), a MINOR
@@ -98,7 +98,7 @@ governance is aligned; work in OTS on how AgentSmith governs it is in scope, sli
 | C4 | Rules — `contract/rules/v1`, `render` / `check`; `"provider"` replaces `@framework/` paths in a tenant's `process-gates.json` | OTS's rules move into its declaration and its CI calls the declared check; KYC's `@framework/` values become `"provider"` | **Built 2026-10-04** (`rules-contract`); tenants move after the release that carries it |
 | C5 | Telemetry — `contract/telemetry/v1`: OTLP and a catalogue of attributes and instruments; `governance.telemetry.contract` on the Resource | OTS's template spans on plain OpenTelemetry — **done** as a governance-only change (uncommitted in OTS, with the frozen template work), 9/9 against the contract; KYC's smoke export passes once its pin moves | **Built 2026-10-04** (`telemetry-contract`) |
 | C6 | Evals — `contract/evals/v1`: tenant-owned datasets with outputs, the scorecard, five verdicts, closed in CI unless declared | KYC's and OTS's eval steps call the declared command; KYC declares `no_verdict: warn` where its judge quota runs out | **Built 2026-10-06** (`evals-contract`); released in v2.2.0; **both tenants moved** — KYC at 2.2.3 (#3), OTS at 2.2.3 (#7, `not_gradable` and `no_verdict` declared warnings) |
-| C7 | Security — `contract/security/v1`: `check` (a row per control, each naming whose evidence it is; the declared posture; no non-strict mode) and `redaction` (planted probes on the tenant's own wire) | KYC's strict harness step calls the declared command and its smoke emitter plants the probes; OTS's security and CD redaction steps call it, it declares `"emitter": "none"`, vendored `fixtures/security/` goes | **Built 2026-10-09** (`security-contract`); tenants move after the release that carries it. OTS stays red on SEC-RISK-001 and SEC-AGENCY-001 until its risk register and agency manifest are authored — content, the owner's |
+| C7 | Security — `contract/security/v1`: `check` (a row per control, each naming whose evidence it is; the declared posture; no non-strict mode) and `redaction` (planted probes on the tenant's own wire) | KYC's strict harness step calls the declared command and its smoke emitter plants the probes; OTS's security and CD redaction steps call it, it declares `"emitter": "none"`, vendored `fixtures/security/` goes | **Built 2026-10-09** (`security-contract`); released in v2.3.0 — tenants can move. OTS stays red on SEC-RISK-001 and SEC-AGENCY-001 until its risk register and agency manifest are authored — content, the owner's |
 | C8 | Ops records — `contract/ops/v1`: run history out, HITL and UI feedback in | OTS's CD workflows send and receive by contract | |
 | C9 | Vendoring retired; `upgrade` removed | no tenant holds a framework file, checked | |
 

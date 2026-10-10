@@ -8729,6 +8729,22 @@
       "pillar": null,
       "created_at": "2026-10-09T12:34:32Z",
       "id": "rfc:reviews/security-contract.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Release 2.3.0",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/release-2-3-0.md",
+      "pillar": null,
+      "created_at": "2026-10-10T18:17:14Z",
+      "id": "rfc:designs/release-2-3-0.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 release 2.3.0",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/release-2-3-0.md",
+      "pillar": null,
+      "created_at": "2026-10-10T18:35:13Z",
+      "id": "rfc:reviews/release-2-3-0.md"
     }
   ],
   "edges": [

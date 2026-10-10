@@ -7,6 +7,12 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Released — v2.3.0 (2026-10-10)
+
+Design: `.agent-rfc/designs/release-2-3-0.md`; review: `.agent-rfc/reviews/release-2-3-0.md`.
+
+A MINOR carrying the security contract (C7): `check` answers a row per control naming whose evidence it is, and `redaction` judges a tenant's own telemetry wire with planted probes. Nothing a 2.2.x tenant runs stops working; the 2.3.x row in `CHANGELOG.md` names what one will notice — `process-gate security` needs the 2.3.0 launcher and setup step, and the harness run by path now scans the repository for SEC-GW-001 and holds two pack files to their schemas. Merged by rebase; tagged `v2.3.0` on the merged commit.
+
 ## Completed — C7: the security contract (2026-10-09)
 
 Design: `.agent-rfc/designs/security-contract.md`; review: `.agent-rfc/reviews/security-contract.md`.
