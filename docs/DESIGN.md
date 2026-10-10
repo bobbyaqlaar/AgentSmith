@@ -1339,6 +1339,7 @@ AgentSmith/
 │   ├── test/                    # Framework self-tests for scripts/
 │   ├── rules_port.py            # The rules contract's `render` / `check` — AgentSmith as a rules provider (contract/rules/v1/)
 │   ├── evals_port.py            # The evals contract's `run` — AgentSmith as an evals provider, over run-evals.py's scoring (contract/evals/v1/)
+│   ├── security_port.py         # The security contract's `check` and `redaction` — AgentSmith as a security provider, over the harness's runners (contract/security/v1/)
 │   └── generate-ide-config.py  # Reads templates/agent-rules.yaml, writes target-repo IDE config
 ├── runtime/                     # Production runtime components
 │   ├── worker.py
