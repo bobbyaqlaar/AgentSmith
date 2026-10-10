@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - contract/security/v1/**
   - scripts/run-security-checks.py
