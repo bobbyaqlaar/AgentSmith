@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/security/v1/registry.schema.json",
+  "description": "A repository's own controls, .agent-rfc/security/control_registry.json (contract/security/v1/protocol.md). Only adds: an id the provider already checks is refused.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/TenantControl"
+  },
+  "$defs": {
+    "ControlFrameworks": {
+      "additionalProperties": false,
+      "properties": {
+        "owasp": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Owasp",
+          "type": "array"
+        },
+        "nist": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Nist",
+          "type": "array"
+        },
+        "atlas": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Atlas",
+          "type": "array"
+        },
+        "iso42001": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Iso42001",
+          "type": "array"
+        }
+      },
+      "title": "ControlFrameworks",
+      "type": "object"
+    },
+    "TenantControl": {
+      "additionalProperties": true,
+      "description": "One row of a tenant's `.agent-rfc/security/control_registry.json` — a\ncontrol the tenant adds, evidenced by a suite in its own repository. Only\nadds: an id the provider already checks is refused where the rows are read.",
+      "properties": {
+        "id": {
+          "pattern": "^SEC-[A-Z0-9]+(?:-[A-Z0-9]+)*-[0-9]{3}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "met",
+            "partial",
+            "gap",
+            "org-owned"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "owner": {
+          "default": "tenant",
+          "enum": [
+            "framework",
+            "tenant",
+            "shared"
+          ],
+          "title": "Owner",
+          "type": "string"
+        },
+        "frameworks": {
+          "$ref": "#/$defs/ControlFrameworks"
+        },
+        "suite": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Suite"
+        },
+        "mechanism": {
+          "default": "",
+          "title": "Mechanism",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "status"
+      ],
+      "title": "TenantControl",
+      "type": "object"
+    }
+  }
+}

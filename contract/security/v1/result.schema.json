@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/security/v1/result.schema.json",
+  "$defs": {
+    "ControlFrameworks": {
+      "additionalProperties": false,
+      "properties": {
+        "owasp": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Owasp",
+          "type": "array"
+        },
+        "nist": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Nist",
+          "type": "array"
+        },
+        "atlas": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Atlas",
+          "type": "array"
+        },
+        "iso42001": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Iso42001",
+          "type": "array"
+        }
+      },
+      "title": "ControlFrameworks",
+      "type": "object"
+    },
+    "ControlRow": {
+      "additionalProperties": true,
+      "description": "One control in a `check` result.",
+      "properties": {
+        "id": {
+          "pattern": "^SEC-[A-Z0-9]+(?:-[A-Z0-9]+)*-[0-9]{3}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "title": "Title",
+          "type": "string"
+        },
+        "subject": {
+          "enum": [
+            "repository",
+            "provider"
+          ],
+          "title": "Subject",
+          "type": "string"
+        },
+        "result": {
+          "enum": [
+            "pass",
+            "fail",
+            "gap",
+            "not_applicable"
+          ],
+          "title": "Result",
+          "type": "string"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        },
+        "frameworks": {
+          "$ref": "#/$defs/ControlFrameworks"
+        },
+        "evidence": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "subject",
+        "result"
+      ],
+      "title": "ControlRow",
+      "type": "object"
+    },
+    "ProviderName": {
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "ProviderName",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "A provider's answer to `check`. A provider adds keys of its own.",
+  "properties": {
+    "schema": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema",
+      "type": "integer"
+    },
+    "verdict": {
+      "enum": [
+        "pass",
+        "fail",
+        "not_gradable"
+      ],
+      "title": "Verdict",
+      "type": "string"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    },
+    "provider": {
+      "$ref": "#/$defs/ProviderName"
+    },
+    "controls": {
+      "items": {
+        "$ref": "#/$defs/ControlRow"
+      },
+      "title": "Controls",
+      "type": "array"
+    },
+    "counts": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "propertyNames": {
+        "enum": [
+          "pass",
+          "fail",
+          "gap",
+          "not_applicable"
+        ]
+      },
+      "title": "Counts",
+      "type": "object"
+    }
+  },
+  "required": [
+    "verdict",
+    "provider"
+  ],
+  "title": "SecurityResult",
+  "type": "object"
+}

@@ -98,7 +98,7 @@ governance is aligned; work in OTS on how AgentSmith governs it is in scope, sli
 | C4 | Rules — `contract/rules/v1`, `render` / `check`; `"provider"` replaces `@framework/` paths in a tenant's `process-gates.json` | OTS's rules move into its declaration and its CI calls the declared check; KYC's `@framework/` values become `"provider"` | **Built 2026-10-04** (`rules-contract`); tenants move after the release that carries it |
 | C5 | Telemetry — `contract/telemetry/v1`: OTLP and a catalogue of attributes and instruments; `governance.telemetry.contract` on the Resource | OTS's template spans on plain OpenTelemetry — **done** as a governance-only change (uncommitted in OTS, with the frozen template work), 9/9 against the contract; KYC's smoke export passes once its pin moves | **Built 2026-10-04** (`telemetry-contract`) |
 | C6 | Evals — `contract/evals/v1`: tenant-owned datasets with outputs, the scorecard, five verdicts, closed in CI unless declared | KYC's and OTS's eval steps call the declared command; KYC declares `no_verdict: warn` where its judge quota runs out | **Built 2026-10-06** (`evals-contract`); released in v2.2.0; **both tenants moved** — KYC at 2.2.3 (#3), OTS at 2.2.3 (#7, `not_gradable` and `no_verdict` declared warnings) |
-| C7 | Security — `contract/security/v1` | vendored `fixtures/security/` goes | |
+| C7 | Security — `contract/security/v1`: `check` (a row per control, each naming whose evidence it is; the declared posture; no non-strict mode) and `redaction` (planted probes on the tenant's own wire) | KYC's strict harness step calls the declared command and its smoke emitter plants the probes; OTS's security and CD redaction steps call it, it declares `"emitter": "none"`, vendored `fixtures/security/` goes | **Built 2026-10-09** (`security-contract`); tenants move after the release that carries it. OTS stays red on SEC-RISK-001 and SEC-AGENCY-001 until its risk register and agency manifest are authored — content, the owner's |
 | C8 | Ops records — `contract/ops/v1`: run history out, HITL and UI feedback in | OTS's CD workflows send and receive by contract | |
 | C9 | Vendoring retired; `upgrade` removed | no tenant holds a framework file, checked | |
 
@@ -138,6 +138,14 @@ differs, the scorecard says so in its reason and the launcher warns — a pass a
 is not the pass the bar describes (`failure-is-not-a-result`). **Also from the same move:** an
 over-quota contract run raises two warnings, the launcher's and `run-evals.py`'s own annotation
 fired inside the provider — one verdict should speak once.
+
+**Open — the environment can still move an adversarial score (found 2026-10-09, C7 review).**
+`scripts/evals_port.py` clears every threshold variable but not `PROMPT_DENYLIST_PATH`, which
+`runtime.prompt_guard` reads before the repository's own `.agent-rfc/security/prompt_denylist.txt`:
+the shell of whoever runs `agentsmith evals run --suite adversarial` can add or swap the patterns
+the guard scores with (`environment-parity`). The security port clears it before its guard suites
+(`POSTURE_ENV`); the evals port should too, with a conformance case that sets it and expects the
+same scorecard.
 
 ---
 

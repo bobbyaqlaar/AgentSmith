@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - contract/evals/v1/**
   - scripts/run-evals.py

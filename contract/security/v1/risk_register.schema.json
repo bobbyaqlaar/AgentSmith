@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/security/v1/risk_register.schema.json",
+  "$defs": {
+    "RiskEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "mitigations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mitigations",
+          "type": "array"
+        },
+        "control_ids": {
+          "items": {
+            "pattern": "^SEC-[A-Z0-9]+(?:-[A-Z0-9]+)*-[0-9]{3}$",
+            "type": "string"
+          },
+          "title": "Control Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "description",
+        "severity",
+        "mitigations",
+        "control_ids"
+      ],
+      "title": "RiskEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "`.agent-rfc/security/risk_register.yaml`.",
+  "properties": {
+    "version": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Version"
+    },
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/RiskEntry"
+      },
+      "minItems": 1,
+      "title": "Entries",
+      "type": "array"
+    }
+  },
+  "required": [
+    "entries"
+  ],
+  "title": "RiskRegister",
+  "type": "object"
+}

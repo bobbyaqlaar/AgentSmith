@@ -181,9 +181,9 @@ Two things follow:
   accepted by your own gates *by hash*, not by asking you to review framework code you did not
   write.
 
-**Where the ports stand.** Five things a tenant needs from a governance platform; the gate and the
-rules are resolved through their contracts today, the records and telemetry are published, and the
-rest are contracts in place that still resolve to AgentSmith:
+**Where the ports stand.** Six things a tenant needs from a governance platform; the gate, the
+rules, the evals and security are resolved through their contracts today, and the records and
+telemetry are published:
 
 | Port | What it provides | Status |
 |---|---|---|
@@ -192,7 +192,7 @@ rest are contracts in place that still resolve to AgentSmith:
 | **Rules** | what the agent is told | **declared and resolved** via `contract/rules/v1` — `render` and `check`; the tenant's CI checks its rule files against the provider it declares |
 | **Records** | what CI decided, per commit | **published** — `contract/record/v1`: the record and its transport, with conformance for a sender and for a receiver; the portal and AgentSmith's provider are both held to it |
 | **Evals** | a scorecard for each of the tenant's eval suites | **declared and resolved** via `contract/evals/v1` — `run`; the tenant owns its datasets and outputs, and its CI fails on anything but a pass unless it declared that suite's exception |
-| **Security** | artifact schemas and a harness verdict | a contract in place — the `SEC-*` registry and evidence packs |
+| **Security** | a row per control for the tenant's own pack, posture and telemetry wire | **declared and resolved** via `contract/security/v1` — `check` and `redaction`; the posture checked is the declared one, a control about the provider's own code is not run for a tenant, and planted probes must not reach the tenant's wire |
 
 ---
 

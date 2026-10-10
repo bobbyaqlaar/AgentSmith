@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/security/v1/agency_manifest.schema.json",
+  "$defs": {
+    "AgencyAction": {
+      "additionalProperties": true,
+      "properties": {
+        "workflow": {
+          "minLength": 1,
+          "title": "Workflow",
+          "type": "string"
+        },
+        "action": {
+          "minLength": 1,
+          "title": "Action",
+          "type": "string"
+        },
+        "needs_hitl": {
+          "title": "Needs Hitl",
+          "type": "boolean"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "workflow",
+        "action",
+        "needs_hitl"
+      ],
+      "title": "AgencyAction",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "`.agent-rfc/security/agency_manifest.yaml` — which actions need a human.",
+  "properties": {
+    "version": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Version"
+    },
+    "actions": {
+      "items": {
+        "$ref": "#/$defs/AgencyAction"
+      },
+      "minItems": 1,
+      "title": "Actions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "actions"
+  ],
+  "title": "AgencyManifest",
+  "type": "object"
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/security/v1/tool_allowlist.schema.json",
+  "$defs": {
+    "AllowedTool": {
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "allowed": {
+          "default": true,
+          "title": "Allowed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "AllowedTool",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "`.agent-rfc/security/tool_allowlist.yaml` — an empty list denies every tool.",
+  "properties": {
+    "tools": {
+      "items": {
+        "$ref": "#/$defs/AllowedTool"
+      },
+      "title": "Tools",
+      "type": "array"
+    }
+  },
+  "title": "ToolAllowlist",
+  "type": "object"
+}

@@ -84,6 +84,7 @@
         "contract/record/v1/protocol.md",
         "contract/evals/v1/protocol.md",
         "contract/rules/v1/protocol.md",
+        "contract/security/v1/protocol.md",
         "contract/telemetry/v1/protocol.md"
       ]
     }
