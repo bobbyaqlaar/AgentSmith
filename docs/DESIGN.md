@@ -55,7 +55,7 @@ real GPG keys). Specifically real, not aspirational:
 
 Additionally implemented and verified against live infrastructure (same bar as above):
 
-- CD → Ops Portal history sync (`scripts/sync-portal-history.py`, wired into `cd-staging.yml`/`cd-production.yml` — the Federated Observability section)
+- The Ops contract (`contract/ops/v1`): a worker reports run status, dead letters and its settings to the portal with its app's own Ops token, and the portal sends a person's fix back to the app's replay webhook signed with a key it issued — the Federated Observability section
 - Shadow eval sampler (`scripts/shadow-eval.py` — samples 5% of production spans, judges async, writes Phoenix annotations, surfaces suggested promotions in the Ops Portal — the Evaluation Framework section). **CI approach:** `shadow-eval.yml` is schedule-only (opt-in nightly cron, never per-PR — a live tenant Phoenix isn't available in that context); CI coverage comes from `scripts/test/test_shadow_eval.py` (sampling determinism, judge-prompt shape) wired into `self-test.yml`'s `python-behaviour` job.
 - Ops Portal v2: real `agent_runs` table with `running`/`success`/`degraded`/`failed` aggregation per workflow, cost cap from `tenant.yaml`, Phoenix 24h trace count + error rate via GraphQL — the Federated Observability section, the LLM Gateway (Production) section
 - CD deploy/rollback automation: composite actions (`.github/actions/deploy-placeholder/`, `.github/actions/rollback-notify/`) + GHCR image build; rollback posts to Slack/Teams and fails the job whether or not a `ROLLBACK_COMMAND` is set — tenants supply the real command, the notification and job-failure are mandatory — the Deliverables Checklist (moved) section
@@ -522,7 +522,6 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `run-evals.py` | Loads tenant-local fixtures. Suites: `golden` (default), `fairness`, `hallucination`, `adversarial` (P12), `rag_poison`. `adversarial` and `rag_poison` are deterministic guard suites — scored locally by `runtime.prompt_guard`, no judge, so they gate on every commit without a credential; both fail above a miss CEILING (`ADVERSARIAL_FAIL_ABOVE` / `RAG_POISON_FAIL_ABOVE`) rather than below a score floor. `--fail-below` / `HALLUCINATION_FAIL_ABOVE`. Skips gracefully when <3 golden cases. |
 | `eval_judge.py` | Shared LLM-judge invocation (prompting + JSON parsing), factored out so `run-evals.py` and `shadow-eval.py` judge identically. |
 | `shadow-eval.py` | Async shadow-eval sampler: judges a 5% sample of already-served production traces from Phoenix post-hoc (the Evaluation Framework section). Never re-executes, never auto-promotes. |
-| `sync-portal-history.py` | Pushes `.agent-history.log` entries to the Ops Portal history-sync endpoint; skips already-synced entries. |
 | `run-security-checks.py` | `SEC-*` security harness (P12): `--mode smoke\|ci\|full`, `--strict`, `--framework`, `--evidence-pack` (OWASP / NIST / ATLAS / ISO rollups). Driven by `fixtures/security/control_registry.json`. |
 | `security/` | Harness internals: `registry.py` (control registry loader), `report.py` (evidence-pack rendering), `runners/` (one module per control check — prompt guard, tool allowlist, PII pre/post-call, moderation hook, adversarial eval, structured output, SSO revocation, risk register, noop). |
 | `delivery_model.py` | Enterprise Delivery Model soft gate: reads org policy + tenant.yaml `delivery.*`; returns ok/warn/skip, never hard-fails CI. |
@@ -535,7 +534,7 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `sync-ui-feedback.py` | Pulls Phoenix annotations; promotes unsynced negative feedback to golden dataset. |
 | `agent_logger.py` | JSON-Lines to stdout + `.agent-history.log`. Four levels: INFO/MINOR/MAJOR/CRITICAL. Calls `audit_token_velocity_circuit()`. All entries carry `owner_id`, `tenant.id` (if available), `agent.role`. |
 | `circuit_breaker.py` | Dual-tier burst/monthly guard. Dev-mode: raises `CircuitBreakerTripped`. Production: degrade ladder via LLM Gateway (see the Financial Circuit Breaker section, the LLM Gateway (Production) section). |
-| `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-history-sync`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / docs/PRODUCT_ARCHIVE.md P10a), `--check-security` (P12 smoke path), `--check-delivery-model` (warn-only gate). |
+| `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / docs/PRODUCT_ARCHIVE.md P10a), `--check-security` (P12 smoke path), `--check-delivery-model` (warn-only gate). |
 | `generate-ide-config.py` | Renders `.cursorrules` / `CLAUDE.md` / `AGENTS.md` (Codex) / `GEMINI.md` / `.github/copilot-instructions.md` (condensed — Copilot pays the length on every request) / `.agents/skills/*/skill.md` from `templates/agent-rules.yaml` (single source, the Antigravity Integration section). Called by `post-checkout`. `--check-only` regenerates in memory and diffs against the committed files, exiting 1 on drift (Pillar 6/7 CI gate — docs/PRODUCT_ARCHIVE.md P10c). Renders from the repository's committed declarations only, never the environment; `scripts/rules_port.py` serves the same render as the rules contract's `render` and `check` (`contract/rules/v1`). |
 
 ### Production Runtime (runtime/)
@@ -1312,7 +1311,6 @@ AgentSmith/
 │   ├── eval_judge.py            # Shared LLM-judge path (run-evals + shadow-eval)
 │   ├── shadow-eval.py           # 5% post-hoc production-trace sampler (the Evaluation Framework section)
 │   ├── send_dev_record.py       # The gate's record (`process_gate.py ci --json`) → the portal's Dev workspace
-│   ├── sync-portal-history.py   # .agent-history.log → Ops Portal history sync
 │   ├── delivery_model.py        # Delivery Model soft gate (ok|warn|skip)
 │   ├── delivery_evidence.py     # Promote-time evidence pack (JSON + Markdown)
 │   ├── check_bare_except.py     # AST empty-handler detector (pre-commit Guardrail 2)
@@ -1366,6 +1364,7 @@ AgentSmith/
 │   ├── architectures.py         # The structural styles `tenant init`/`adopt` record (templates/architectures.yaml)
 │   ├── adopt.py                 # `agentsmith tenant adopt` — an existing repository under the gates
 │   ├── conformance.py           # Does a provider, sender, receiver or emitter satisfy its contract? (contract/*/protocol.md)
+│   ├── ops_contract.py          # The Ops contract's messages and the one sender — run status, dead letters, settings (contract/ops/v1/)
 │   ├── telemetry_contract.py    # The telemetry catalogue, OTLP decoding, the judge and a loopback receiver (contract/telemetry/v1/)
 │   ├── sync.py                  # `agentsmith sync` — a tenant's copies of the framework, brought current
 │   ├── machine/                 # the commands' logic + ~/.agent-framework/state (mode, policy, upgrade)

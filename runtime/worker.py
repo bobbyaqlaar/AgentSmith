@@ -30,6 +30,7 @@ from __future__ import annotations
 import importlib
 import os
 import sys
+from pathlib import Path
 
 
 def main() -> None:
@@ -106,6 +107,8 @@ def main() -> None:
     for note in shadowed_notes():
         print(f"[worker] NOTE: {note}", file=sys.stderr)
 
+    _report_settings()
+
     if backend == "temporal":
         _start_temporal_worker(tenant_id)
     elif backend == "celery":
@@ -113,6 +116,23 @@ def main() -> None:
     else:
         print(f"[worker] ERROR: Unknown WORKER_BACKEND={backend!r}", file=sys.stderr)
         sys.exit(1)
+
+
+def _report_settings() -> None:
+    """What tenant.yaml declares the portal should know — the budget cap, the
+    replay webhook — sent once at start-up by the Ops contract (contract/ops/v1),
+    so no CD step has to. A replay secret written in tenant.yaml is never sent;
+    the note says where it belongs. Says so when nothing is configured."""
+    from runtime import ops_contract
+
+    message, notes = ops_contract.settings_from_tenant_yaml(Path.cwd())
+    for note in notes:
+        print(f"[worker] NOTE: {note}", file=sys.stderr)
+    if not ops_contract.configured():
+        return
+    status = ops_contract.send(message)
+    if status == 200:
+        print("[worker] settings reported to the portal (Ops contract)", file=sys.stderr)
 
 
 def _load_tenant_worker_module():

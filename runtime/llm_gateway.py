@@ -804,10 +804,35 @@ class LLMGateway:
         workflow_id=NULL regardless of what the caller passed to
         complete()).
         """
+        from runtime import ops_contract
+
+        if ops_contract.configured():
+            # The Ops contract (contract/ops/v1): this app's own Ops token decides
+            # whose run it is; the message names no tenant.
+            try:
+                from runtime.tracing import current_trace_id, inject_context
+                from runtime.version import framework_version
+
+                ops_contract.send(
+                    ops_contract.RunMessage(
+                        run_id=run_id, status=status, workflow_id=workflow_id,
+                        trace_id=trace_id or current_trace_id(),
+                        error_summary=error_summary[: ops_contract.TEXT_LIMIT] if error_summary else None,
+                        input_tokens=input_tokens, output_tokens=output_tokens, cost_usd=cost_usd,
+                        framework_version=framework_version()),
+                    headers=inject_context({}),
+                )
+            except Exception as exc:  # fail-open: a malformed report never fails the call it reports on
+                ops_contract._say_once("run-status-build", f"a run-status report could not be built: {exc}")
+            return
         ops_portal_url = os.environ.get("OPS_PORTAL_URL")
         sync_token = os.environ.get("OPS_PORTAL_SYNC_TOKEN")
         if not ops_portal_url or not sync_token:
             return
+        # The deprecated route: one token shared by every tenant, the tenant
+        # named in the body. Kept for portals not yet issuing Ops tokens.
+        ops_contract._say_once("legacy-run-status", "run status goes to the deprecated shared-token route — "
+                                                    f"issue this app an Ops token and set {ops_contract.TOKEN_ENV}")
         try:
             import httpx
 

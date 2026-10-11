@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/ops/v1/replay.schema.json",
+  "additionalProperties": true,
+  "description": "What the portal POSTs to the tenant's replay webhook, signed with the\napplication's replay key: `X-Replay-Timestamp`, and `X-Replay-Signature-V2:\nsha256=<hex HMAC-SHA256 over \"<timestamp>.<body>\">`. `taskId` keeps the name\nreceivers already deployed read.",
+  "properties": {
+    "schema": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema",
+      "type": "integer"
+    },
+    "taskId": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Taskid",
+      "type": "string"
+    },
+    "payload": {
+      "title": "Payload"
+    }
+  },
+  "required": [
+    "taskId",
+    "payload"
+  ],
+  "title": "ReplayRequest",
+  "type": "object"
+}

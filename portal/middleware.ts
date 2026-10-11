@@ -52,6 +52,10 @@ import {
 // /api/dev/ingest is an app's CI sending the process gate's record (portal
 // phase 1) — authenticated inside the handler by that app's own ingest token.
 //
+// /api/ops/ingest is an app's running workers reporting by the Ops contract
+// (contract/ops/v1) — authenticated inside the handler by that app's own Ops
+// token, which alone decides the app.
+//
 // /api/dev/scaffold/* is `agentsmith tenant init --from <id>` pulling an intake
 // and marking it consumed — authenticated inside the handler by that intake's
 // own single-use token. Creating an intake (/api/dev/intakes) is NOT excluded:
@@ -66,7 +70,7 @@ import {
 // a latent auth-bypass footgun (see docs/PRODUCT_ARCHIVE.md 2.6).
 export const config = {
   matcher:
-    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/runs/ingest(?:/|$)|api/dev/ingest(?:/|$)|api/dev/scaffold(?:/|$)|api/auth(?:/|$)).*)",
+    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/runs/ingest(?:/|$)|api/dev/ingest(?:/|$)|api/ops/ingest(?:/|$)|api/dev/scaffold(?:/|$)|api/auth(?:/|$)).*)",
 };
 
 // Strip any client-supplied copy of the trusted access header before it can

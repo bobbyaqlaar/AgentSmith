@@ -936,6 +936,7 @@ The older `ai-*` names map to these one for one
 
 | Command | Arguments | Description |
 |---|---|---|
+| `agentsmith ops` | `settings` | Send what this repository's `tenant.yaml` declares the portal should know — the budget cap, the replay webhook URL; never a secret — as an Ops `settings` message (`contract/ops/v1/protocol.md`), to `OPS_PORTAL_URL` with this app's `OPS_PORTAL_TOKEN`. For a tenant without AgentSmith's worker, which reports its settings itself at start-up. Fails on a refusal (400, 401, a redirect), warns when the portal is unwell, and says so when none is configured. |
 | `agentsmith security` | `check [--control ID]... [--evidence-dir DIR]`, `redaction --environment staging\|production [--emitter "<command>"]` | AgentSmith as a security provider (`contract/security/v1/protocol.md`). `check`: one row per control for this repository — its pack, its declared posture, its telemetry wire — as JSON; a control about AgentSmith's own code is not run for a tenant. `redaction`: run the declared emitter with planted probes against a loopback receiver and say whether one reached the wire. The request comes on stdin, or the flags write it. Exit 0 whenever it answers; `.githooks/process-gate security …` maps the verdict to a CI step. |
 | `agentsmith evals` | `[run [--suite SUITE]]` | With no verb: sync HITL feedback from Phoenix, then run the eval scorecard. `run`: AgentSmith as an evals provider (`contract/evals/v1/protocol.md`) — judge one suite of this repository's own dataset and print its scorecard as JSON; the request comes on stdin, or `--suite` writes it. Exit 0 whenever it answers; the verdict (`pass`, `fail`, `no_verdict`, `not_gradable`) is in the scorecard, and `.githooks/process-gate evals run --suite SUITE` maps it to a CI step. |
 | `agentsmith promote` | `<id> <query> <output>` | Promote a production fix to the golden dataset and re-run evals. |
@@ -969,7 +970,7 @@ The older `ai-*` names map to these one for one
 | `agentsmith tenant adopt` | `<id> [--stack STACK] [--architecture STYLE] [--agentic] [--gate GLOB]… [--framework-ref TAG] [--root DIR] [--yes]` | Brings an existing repo under the gates: prints what it found and would do, then — on a yes — gates its code, keeps its hooks, CI, rules and design doc, and prints the adoption commit. |
 | `agentsmith sync` | `[--root DIR] [--yes]` | Brings this repository's copies of the framework up to date — the gate hooks (adding any it lacks), the provider declaration, and (vendored tenants) the vendored trees — and prints a commit whose review the repository's own gates accept, because every file in it is one the framework wrote. Run it after upgrading AgentSmith. Refused in the framework's own checkout, which is what it copies from. |
 | `agentsmith gate` | `<session-start\|pre-edit\|stop\|ci\|commit\|push> [--ide IDE]`, or `kg build\|impact [--staged\|--base REF]` | Answer one gate event in the neutral profile of the gate contract (`contract/gate/v3/protocol.md`; `ci` is contract 2's — a range on stdin, the verdict, a report, and the record sent to the portal when configured; `commit` and `push` are contract 3's; `kg build` rebuilds the knowledge graph and `kg impact` names the staged change's review scope as JSON): the event as JSON on stdin, the decision as JSON on stdout. This is what a tenant names as its provider; exit 3 means this machine cannot run the gate. `--ide` reads the payload in one IDE's dialect instead of the neutral profile — what the generated hook configs pass, and what an integrator needs when the caller is an IDE rather than the contract. |
-| `agentsmith conformance` | `--provider "<command>" [--contract 1\|2\|3]`, `--port rules --provider "<command>"`, `--port telemetry --emitter "<command>" \| --export FILE`, `--port evals --provider "<command>"`, `--port security --provider "<command>"`, or `--port record --sender "<command>" [--url-env NAME] [--token-env NAME]` / `--port record --receiver URL` | Build the contract's fixture repository, replay its cases against that command, and report per case. Run it against another platform's adapter, or against `agentsmith gate`. With `--port record`: run a gate provider against a loopback portal and judge what it sends (`--sender`), or send `contract/record/v1/cases.json` to a portal's ingest address with the test token in `GOVERNANCE_RECORD_TOKEN` and judge each answer (`--receiver` — it stores the valid record, so use a test portal). With `--port rules`: build `contract/rules/v1/fixture.json`'s repository fresh per case and judge the provider's renders and checks. With `--port telemetry`: run a command with its OTLP export pointed at a loopback receiver (its own destinations removed — nothing leaves the machine) and judge what arrives against `contract/telemetry/v1/attributes.json`, or judge an OTLP/JSON export; nothing received fails. With `--port evals`: build `contract/evals/v1/fixture.json`'s repository per case, with a stub judge on loopback that answers from the fixed outputs, and judge each scorecard. With `--port security`: build `contract/security/v1/fixture.json`'s repository per case — a complete pack and a standard-library emitter — and judge each result; a provider row reported anything but not applicable fails. |
+| `agentsmith conformance` | `--provider "<command>" [--contract 1\|2\|3]`, `--port rules --provider "<command>"`, `--port telemetry --emitter "<command>" \| --export FILE`, `--port evals --provider "<command>"`, `--port security --provider "<command>"`, `--port ops --sender "<command>" \| --receiver URL \| --replay URL`, or `--port record --sender "<command>" [--url-env NAME] [--token-env NAME]` / `--port record --receiver URL` | Build the contract's fixture repository, replay its cases against that command, and report per case. Run it against another platform's adapter, or against `agentsmith gate`. With `--port record`: run a gate provider against a loopback portal and judge what it sends (`--sender`), or send `contract/record/v1/cases.json` to a portal's ingest address with the test token in `GOVERNANCE_RECORD_TOKEN` and judge each answer (`--receiver` — it stores the valid record, so use a test portal). With `--port rules`: build `contract/rules/v1/fixture.json`'s repository fresh per case and judge the provider's renders and checks. With `--port telemetry`: run a command with its OTLP export pointed at a loopback receiver (its own destinations removed — nothing leaves the machine) and judge what arrives against `contract/telemetry/v1/attributes.json`, or judge an OTLP/JSON export; nothing received fails. With `--port evals`: build `contract/evals/v1/fixture.json`'s repository per case, with a stub judge on loopback that answers from the fixed outputs, and judge each scorecard. With `--port security`: build `contract/security/v1/fixture.json`'s repository per case — a complete pack and a standard-library emitter — and judge each result; a provider row reported anything but not applicable fails. With `--port ops`: run a sender against a loopback portal under each answer it can give (`--sender`), send `contract/ops/v1/cases.json` to a portal's Ops ingest with a test Ops token in `GOVERNANCE_OPS_TOKEN` (`--receiver`), or send a signed replay request — correct, stale, under another key, unsigned — to a replay webhook holding the key in `GOVERNANCE_REPLAY_KEY` (`--replay`). |
 | `agentsmith rules` | `render [--write]` \| `check` | AgentSmith as a rules provider (`contract/rules/v1/protocol.md`): `render` prints, as JSON, every rule file this repository's agents read — rendered from its committed declarations only — with how each is placed; `check` says whether the repository still holds them. `--write` places them here (whole, or as the marked block inside a file you wrote). What a tenant names as its `rules` provider; the gates workflow runs `check` through `.githooks/process-gate rules check`. |
 | `agentsmith gate --ide <id>` | `<event> --ide claude` | The same, for a payload in an IDE's dialect: the provider translates it and answers in it. The generated IDE hook configs pass this. |
 | `agentsmith tenant promote` | `<id> --from staging --to production` | Verifies the staging eval gate, then opens a `develop → main` promotion PR. No direct push to `main`. Refuses if `<id>` doesn't exactly match the current repo's `.agenticframework/tenant.yaml` — a same-prefix tenant id (e.g. `acme` vs. `acme-sandbox`) is not a match. |
@@ -1177,11 +1178,13 @@ export HITL_BLOB_DIR="/var/agentsmith/hitl"     # or set HITL_BLOB_S3_BUCKET for
 
 # ── Ops Portal machine-to-machine ──────────────────────────────────────────────────
 export OPS_PORTAL_URL="http://localhost:3000"
-# OPS_PORTAL_SYNC_TOKEN — bearer token sent by local scripts (sync-portal-history.py,
-# verify_system.py, llm_gateway.py) as "Authorization: Bearer <token>" when calling the
-# portal's /api/sync/history and /api/runs/ingest endpoints.
-# Must match the OPS_PORTAL_SYNC_TOKEN value set in AgenticFramework/.env (the portal
-# checks that .env value against every inbound request).
+# OPS_PORTAL_TOKEN — this app's Ops token, issued by the portal (Administration › Apps ›
+# the app › Ops token). The worker sends run status, dead letters and its settings to
+# /api/ops/ingest with it (contract/ops/v1); the token alone decides which app the data is
+# for. Different from the CI's ingest token.
+# OPS_PORTAL_SYNC_TOKEN — DEPRECATED: the one token every tenant shared for /api/runs/ingest
+# and /api/sync/history. A worker with OPS_PORTAL_TOKEN no longer uses it; the portal's
+# operator turns those routes off by unsetting it in AgenticFramework/.env.
 # Generate: openssl rand -hex 32  — then set the same value in both places.
 export OPS_PORTAL_SYNC_TOKEN="<same value as AgenticFramework/.env OPS_PORTAL_SYNC_TOKEN>"
 
@@ -1275,7 +1278,7 @@ HITL_ENCRYPTION_KEY=<32-byte-hex>        # generate: openssl rand -hex 32
 > **Where:** `my-tenant-app/.env` (your own app repo root — **not** the AgentSmith root)
 > **How:** created manually or by `agentsmith tenant init` scaffolding; never committed — add `.env` to your tenant app's `.gitignore`.
 
-This file is loaded by the tenant worker at runtime and by `scripts/sync-portal-history.py` when syncing to the Ops Portal.
+This file is loaded by the tenant worker at runtime.
 
 **Provider keys go here** — whichever variable the `judge` and other roles in your `models.yaml` name
 (`api_key_env`), e.g. `GEMINI_API_KEY`. A credential this file declares — a name with `API_KEY`,
@@ -3913,35 +3916,38 @@ Temporal connection** — the Ops Portal (Next.js) has no Temporal client
 and isn't meant to gain one (this module is deliberately engine-agnostic;
 a tenant could run Celery instead). When a human edits a payload in the
 portal's `/dlq/<tenantId>` view and clicks Replay, the portal HMAC-signs
-the edited payload and POSTs it to **that tenant's own**
-`replay_webhook_url` (`tenants.replay_webhook_url`/`replay_webhook_secret`,
-synced from `.agenticframework/tenant.yaml`'s `hitl.replay_webhook_url`/
-`hitl.replay_webhook_secret` the same way `budget_cap_usd` is synced) —
-deliberately per-tenant, so a human-in-the-loop fix always reaches the
-specific team running that tenant's worker, never a single shared
-endpoint serving every tenant. `runtime/replay_webhook_server.py` is the
-reference receiver: verifies the HMAC signature, then calls
+the edited payload and POSTs it to **that tenant's own** webhook — the Ops
+contract's replay request (`contract/ops/v1/protocol.md`). Per-tenant by
+construction, so a human-in-the-loop fix always reaches the specific team
+running that tenant's worker, never a single shared endpoint serving every
+tenant, and never through a redirect. `runtime/replay_webhook_server.py` is
+the reference receiver: verifies the signature, then calls
 `DeadLetterQueue(replay_handler=make_temporal_replay_handler(client)).replay(task_id, override_payload=edited_payload)`.
 It's a stdlib `http.server` reference, not a hardened production server —
 same "pattern, not prescription" posture as `base_workflow.py`/`worker.py`;
 adapt it into your actual web framework.
 
-Concrete `.agenticframework/tenant.yaml` syntax for the sync (both keys
-required together — `scripts/sync-portal-history.py` skips the sync with
-a warning if only one is set, or if the URL isn't `http(s)`):
+Wiring it takes two things, neither of them a secret in a committed file:
+
+1. **The webhook URL**, declared in `.agenticframework/tenant.yaml`; the
+   worker reports it to the portal at start-up (an Ops `settings` message),
+   or a CI step runs `agentsmith ops settings`. `https` only.
+2. **The replay key**, issued by the portal: Administration › Apps › the app
+   › *Replay signing key*. It is shown once — set it as
+   `REPLAY_WEBHOOK_SECRET` on the worker. Rotating it there stops replays
+   signed with the old one at once.
 
 ```yaml
 hitl:
   replay_webhook_url: "https://your-internal-host:8090/replay"
-  replay_webhook_secret: "a-random-shared-secret-matching-REPLAY_WEBHOOK_SECRET"
 ```
 
-**Known limitation:** removing the `hitl` section from `tenant.yaml` does
-not clear `replay_webhook_url`/`_secret` on the portal — `upsertTenant`'s
-`COALESCE` (same as `budget_cap_usd`) means a sync only ever sets a value,
-never unsets one. To fully disable replay routing for a tenant, clear the
-columns directly: `UPDATE tenants SET replay_webhook_url = NULL,
-replay_webhook_secret = NULL WHERE tenant_id = '<id>'`.
+A `hitl.replay_webhook_secret` left in `tenant.yaml` is never sent anywhere;
+the worker says so at start-up — remove it, and issue the key in the portal.
+
+To stop replay routing for a tenant, clear the URL:
+`UPDATE tenants SET replay_webhook_url = NULL WHERE tenant_id = '<id>'` — a
+settings message only ever sets a value, never unsets one.
 
 Discarding an entry (no replay) is safe directly from the portal — it
 never needs to resume a live workflow — via `POST /api/dlq/:taskId/discard`.
@@ -4059,7 +4065,10 @@ curl -u "$OPS_PORTAL_USER:$OPS_PORTAL_PASSWORD" -X DELETE \
 # 3. Stop the worker (Cloud Run service, k8s Deployment, or local process).
 #    Dedicated tier: kubectl delete namespace tenant-<id>
 
-# 4. Clear replay-webhook routing if set (sync never unsets — docs/DESIGN.md › Production Runtime):
+# 4. Revoke the app's machine tokens: Administration › Apps › <id> › Ingest token and
+#    Ops token › Revoke — its CI and its workers are refused from then on.
+
+# 5. Clear replay-webhook routing if set (a settings message never unsets):
 #    UPDATE tenants SET replay_webhook_url = NULL, replay_webhook_secret = NULL
 #    WHERE tenant_id = '<id>';
 ```

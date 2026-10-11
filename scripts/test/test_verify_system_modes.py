@@ -102,6 +102,13 @@ def test_help_exits_zero_and_prints_usage_rather_than_running_the_scan() -> None
         assert flag in proc.stdout, f"{flag} missing from --help output"
 
 
+# Modes removed on purpose, and where they may still be named: the records of
+# what was done — the CHANGELOG, the archive, designs and reviews — which say
+# what existed then. Anywhere a reader is told what to run, they are unknown.
+_RETIRED = {"--check-history-sync": "removed with scripts/sync-portal-history.py (.agent-rfc/designs/ops-contract.md)"}
+_HISTORY = ("CHANGELOG.md", "docs/PRODUCT_ARCHIVE.md", ".agent-rfc/")
+
+
 def test_docs_do_not_reference_an_unknown_check_mode() -> None:
     """The reverse direction: a doc telling a reader to run a mode the script
     does not have.
@@ -130,6 +137,13 @@ def test_docs_do_not_reference_an_unknown_check_mode() -> None:
                 if tok.endswith(".py"):
                     owner = tok
                 elif owner == "verify_system.py" and tok != "--check-":
+                    if tok in _RETIRED and d.startswith(_HISTORY):
+                        continue
                     if tok not in dispatched:
                         bad.setdefault(tok, []).append(d)
     assert not bad, f"docs reference non-existent verify_system modes: {bad}"
+
+
+def test_a_retired_mode_is_really_gone() -> None:
+    """A retired mode is excused in the records only while the script lacks it."""
+    assert not set(_RETIRED) & _dispatched_flags()

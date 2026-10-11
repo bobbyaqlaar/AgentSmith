@@ -10,7 +10,7 @@
         "config",
         "middleware"
       ],
-      "last_modified": "2026-09-30T20:15:59Z",
+      "last_modified": "2026-10-11T06:04:41Z",
       "id": "portal/middleware.ts"
     },
     {
@@ -130,11 +130,12 @@
       "language": "python",
       "symbols": [
         "main",
+        "_report_settings",
         "_load_tenant_worker_module",
         "_start_temporal_worker",
         "_start_celery_worker"
       ],
-      "last_modified": "2026-10-07T14:24:35Z",
+      "last_modified": "2026-10-11T06:01:28Z",
       "id": "runtime/worker.py"
     },
     {
@@ -289,7 +290,7 @@
         "log_message",
         "_connect"
       ],
-      "last_modified": "2026-10-09T07:56:50Z",
+      "last_modified": "2026-10-11T06:14:16Z",
       "id": "runtime/replay_webhook_server.py"
     },
     {
@@ -434,7 +435,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-10-09T08:00:38Z",
+      "last_modified": "2026-10-11T06:21:41Z",
       "id": "runtime/llm_gateway.py"
     },
     {
@@ -528,6 +529,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_report",
         "_notify",
         "AlreadyResolvedError",
         "DLQEntry",
@@ -544,7 +546,7 @@
         "_release_claim",
         "discard"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-10-11T06:17:00Z",
       "id": "runtime/dead_letter.py"
     },
     {
@@ -635,7 +637,7 @@
         "_annotate_shadow_result",
         "run_shadow_eval"
       ],
-      "last_modified": "2026-09-18T05:04:52Z",
+      "last_modified": "2026-10-11T06:14:16Z",
       "id": "scripts/shadow-eval.py"
     },
     {
@@ -839,7 +841,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-10-09T08:37:34Z",
+      "last_modified": "2026-10-11T06:14:16Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -898,19 +900,6 @@
       ],
       "last_modified": "2026-08-25T21:41:13Z",
       "id": "scripts/delivery_evidence.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_load_tenant_yaml",
-        "_budget_cap_usd",
-        "_replay_webhook_config",
-        "_entry_id",
-        "sync"
-      ],
-      "last_modified": "2026-09-18T05:04:52Z",
-      "id": "scripts/sync-portal-history.py"
     },
     {
       "node_type": "CodebaseFile",
@@ -1062,7 +1051,6 @@
         "check_idempotency",
         "check_dlq",
         "check_hooks",
-        "check_history_sync",
         "_kg_shape",
         "_git_tracked_files",
         "check_governed",
@@ -1074,7 +1062,7 @@
         "_git_repo",
         "want"
       ],
-      "last_modified": "2026-10-09T08:37:36Z",
+      "last_modified": "2026-10-11T06:13:15Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -2832,7 +2820,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-08-25T09:42:29Z",
+      "last_modified": "2026-10-11T06:23:45Z",
       "id": "portal/test/dlqCostWidget.test.ts"
     },
     {
@@ -2923,6 +2911,9 @@
       "symbols": [
         "DLQStatus",
         "DLQEntry",
+        "DLQ_DDL",
+        "DeadLetterInput",
+        "insertDeadLetter",
         "getDLQStatus",
         "listDLQEntries",
         "getDlqEntry",
@@ -2933,7 +2924,7 @@
         "replayDlqEntry",
         "discardDlqEntry"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-10-11T06:21:50Z",
       "id": "portal/lib/dlq.ts"
     },
     {
@@ -2960,9 +2951,12 @@
         "listTenants",
         "getTenant",
         "getReplayWebhookConfig",
+        "replayStatus",
+        "setReplayWebhookSecret",
+        "updateTenantSettings",
         "upsertTenant"
       ],
-      "last_modified": "2026-09-18T15:01:04Z",
+      "last_modified": "2026-10-11T06:25:04Z",
       "id": "portal/lib/tenants.ts"
     },
     {
@@ -3060,7 +3054,7 @@
         "getFrameworkVersionByTenant",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-10-11T06:02:12Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -3158,7 +3152,7 @@
         "GET",
         "POST"
       ],
-      "last_modified": "2026-09-18T14:48:19Z",
+      "last_modified": "2026-10-11T06:23:42Z",
       "id": "portal/app/api/tenants/route.ts"
     },
     {
@@ -3185,7 +3179,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-10-11T06:06:03Z",
       "id": "portal/app/api/runs/ingest/route.ts"
     },
     {
@@ -3194,7 +3188,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-09-18T05:04:51Z",
+      "last_modified": "2026-10-11T06:23:52Z",
       "id": "portal/app/api/sync/history/route.ts"
     },
     {
@@ -3471,9 +3465,10 @@
         "test_an_empty_declaration_does_not_unset_the_shell",
         "test_a_credential_the_shell_matches_is_not_reported",
         "test_the_startup_note_names_a_credential_and_never_shows_it",
-        "_build"
+        "_build",
+        "cap"
       ],
-      "last_modified": "2026-10-07T14:24:51Z",
+      "last_modified": "2026-10-11T06:13:15Z",
       "id": "runtime/test/test_config.py"
     },
     {
@@ -3508,12 +3503,14 @@
         "_gate_kg",
         "_cmd_rules",
         "_cmd_evals_run",
+        "_cmd_ops_settings",
         "_cmd_security",
         "_security_conformance",
         "_evals_conformance",
         "_rules_conformance",
         "_telemetry_conformance",
         "_record_conformance",
+        "_ops_conformance",
         "_cmd_conformance",
         "_cmd_sync",
         "_cmd_doctor",
@@ -3542,7 +3539,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-10T13:36:41Z",
+      "last_modified": "2026-10-11T06:19:51Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4161,7 +4158,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-10T13:36:41Z",
+      "last_modified": "2026-10-11T06:19:51Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4269,9 +4266,10 @@
         "test_every_dispatched_mode_is_documented_in_help",
         "test_help_does_not_advertise_a_mode_that_does_not_exist",
         "test_help_exits_zero_and_prints_usage_rather_than_running_the_scan",
-        "test_docs_do_not_reference_an_unknown_check_mode"
+        "test_docs_do_not_reference_an_unknown_check_mode",
+        "test_a_retired_mode_is_really_gone"
       ],
-      "last_modified": "2026-09-01T19:36:38Z",
+      "last_modified": "2026-10-11T06:35:55Z",
       "id": "scripts/test/test_verify_system_modes.py"
     },
     {
@@ -5171,7 +5169,7 @@
         "remove_profile_blocks",
         "uninstall"
       ],
-      "last_modified": "2026-09-18T05:09:23Z",
+      "last_modified": "2026-10-11T06:13:15Z",
       "id": "runtime/machine/ops.py"
     },
     {
@@ -5715,7 +5713,7 @@
         "test_every_blocking_check_in_this_repos_ci_carries_the_tag",
         "_step_block"
       ],
-      "last_modified": "2026-09-26T13:53:07Z",
+      "last_modified": "2026-10-11T06:35:55Z",
       "id": "scripts/test/test_gate_steps.py"
     },
     {
@@ -6191,6 +6189,8 @@
       "language": "typescript",
       "symbols": [
         "hashToken",
+        "TOKEN_SCOPES",
+        "TokenScope",
         "newIngestToken",
         "createIngestToken",
         "resolveIngestToken",
@@ -6199,7 +6199,7 @@
         "IngestTokenStatus",
         "ingestTokenStatus"
       ],
-      "last_modified": "2026-09-18T15:23:04Z",
+      "last_modified": "2026-10-11T06:02:57Z",
       "id": "portal/lib/ingestTokens.ts"
     },
     {
@@ -6508,9 +6508,10 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [
+        "CredentialKind",
         "IngestTokenPanel"
       ],
-      "last_modified": "2026-09-18T15:21:06Z",
+      "last_modified": "2026-10-11T06:05:22Z",
       "id": "portal/components/IngestTokenPanel.tsx"
     },
     {
@@ -6526,9 +6527,10 @@
         "createApp",
         "updateApp",
         "rotateIngestToken",
-        "revokeAppIngestTokens"
+        "revokeAppIngestTokens",
+        "issueReplayKey"
       ],
-      "last_modified": "2026-09-18T15:23:04Z",
+      "last_modified": "2026-10-11T06:03:12Z",
       "id": "portal/lib/apps.ts"
     },
     {
@@ -6570,11 +6572,8 @@
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
-      "symbols": [
-        "POST",
-        "DELETE"
-      ],
-      "last_modified": "2026-09-18T15:20:18Z",
+      "symbols": [],
+      "last_modified": "2026-10-11T06:05:01Z",
       "id": "portal/app/api/admin/apps/[id]/ingest-token/route.ts"
     },
     {
@@ -6594,7 +6593,7 @@
         "dynamic",
         "AdminAppPage"
       ],
-      "last_modified": "2026-09-18T15:21:38Z",
+      "last_modified": "2026-10-11T06:05:40Z",
       "id": "portal/app/admin/apps/[id]/page.tsx"
     },
     {
@@ -7017,6 +7016,15 @@
         "_security_schema_problem",
         "_judge_security",
         "run_security",
+        "_ops_dir",
+        "OpsReport",
+        "_OpsLoopback",
+        "build_ops_fixture",
+        "run_ops_sender",
+        "ops_case_message",
+        "run_ops_receiver",
+        "_post_status",
+        "run_ops_replay",
         "passed",
         "render",
         "redirect_request",
@@ -7026,12 +7034,15 @@
         "__init__",
         "__enter__",
         "__exit__",
+        "signed",
         "do_POST",
         "log_message",
         "Handler",
-        "_send"
+        "_send",
+        "do_GET",
+        "_answer"
       ],
-      "last_modified": "2026-10-10T13:36:41Z",
+      "last_modified": "2026-10-11T06:19:56Z",
       "id": "runtime/conformance.py"
     },
     {
@@ -8745,6 +8756,137 @@
       "pillar": null,
       "created_at": "2026-10-10T18:35:13Z",
       "id": "rfc:reviews/release-2-3-0.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_Message",
+        "RunMessage",
+        "DeadLetterMessage",
+        "SettingsMessage",
+        "ReplayRequest",
+        "_say_once",
+        "configured",
+        "send",
+        "settings_from_tenant_yaml",
+        "_not_the_invalid_trace",
+        "_no_secret"
+      ],
+      "last_modified": "2026-10-11T06:16:35Z",
+      "id": "runtime/ops_contract.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "repo_env",
+        "_bare",
+        "test_the_message_schema_is_the_model",
+        "test_the_replay_schema_is_the_model",
+        "test_every_case_is_decided_by_the_model_as_the_contract_says",
+        "test_the_portal_creates_the_dead_letter_table_the_runtime_does",
+        "test_the_protocol_is_declared_reference_documentation",
+        "test_agentsmiths_settings_sender_passes_the_contract",
+        "_liar",
+        "test_a_sender_that_follows_a_redirect_is_not_conformant",
+        "test_a_sender_that_carries_the_secret_is_not_conformant",
+        "test_send_never_follows_a_redirect_and_never_raises",
+        "test_send_says_nothing_and_sends_nothing_unconfigured",
+        "test_settings_never_carry_a_secret_and_say_where_it_belongs",
+        "test_the_gateway_reports_run_status_by_the_contract_when_it_holds_an_ops_token",
+        "test_the_gateway_keeps_the_deprecated_route_without_an_ops_token",
+        "test_a_dead_letter_is_reported_with_its_error_bounded",
+        "test_the_worker_reports_its_settings_at_start_up",
+        "_free_port",
+        "test_agentsmiths_replay_webhook_passes_the_contract",
+        "test_the_ci_sender_fails_on_configuration_and_warns_on_an_outage",
+        "test_a_long_error_summary_is_bounded_not_dropped",
+        "columns"
+      ],
+      "last_modified": "2026-10-11T06:22:36Z",
+      "id": "scripts/test/test_ops_contract.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "caseMessage"
+      ],
+      "last_modified": "2026-10-11T06:07:18Z",
+      "id": "portal/test/opsContract.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-10-11T06:25:27Z",
+      "id": "portal/test/opsIngestDb.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "tokenRoutes"
+      ],
+      "last_modified": "2026-10-11T06:05:01Z",
+      "id": "portal/lib/tokenRoutes.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "OPS_LIMITS",
+        "RunInput",
+        "SettingsInput",
+        "OpsMessage",
+        "parseOpsMessage",
+        "OpsResult",
+        "handleOpsIngest"
+      ],
+      "last_modified": "2026-10-11T06:04:22Z",
+      "id": "portal/lib/opsIngest.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-10-11T06:04:41Z",
+      "id": "portal/app/api/ops/ingest/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-10-11T06:05:01Z",
+      "id": "portal/app/api/admin/apps/[id]/ops-token/route.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "POST"
+      ],
+      "last_modified": "2026-10-11T06:05:01Z",
+      "id": "portal/app/api/admin/apps/[id]/replay-key/route.ts"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "C8 \u2014 The Ops contract: what a running tenant tells its portal, and what the portal sends back",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/ops-contract.md",
+      "pillar": null,
+      "created_at": "2026-10-11T06:20:22Z",
+      "id": "rfc:designs/ops-contract.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 ops-contract (C8)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/ops-contract.md",
+      "pillar": null,
+      "created_at": "2026-10-11T06:36:17Z",
+      "id": "rfc:reviews/ops-contract.md"
     }
   ],
   "edges": [
@@ -9172,6 +9314,11 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/tenants.ts",
       "target": "portal/lib/isolation.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/tenants.ts",
+      "target": "portal/lib/auditLog.ts"
     },
     {
       "edge_type": "IMPORTS",
@@ -9757,6 +9904,61 @@
       "edge_type": "IMPORTS",
       "source": "scripts/security/redaction.py",
       "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_ops_contract.py",
+      "target": "runtime/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/tokenRoutes.ts",
+      "target": "portal/lib/apps.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/tokenRoutes.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/tokenRoutes.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/tokenRoutes.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/opsIngest.ts",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/opsIngest.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/opsIngest.ts",
+      "target": "portal/lib/runStatus.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/opsIngest.ts",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/opsIngest.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/opsIngest.ts",
+      "target": "portal/lib/tracing.ts"
     }
   ]
 }

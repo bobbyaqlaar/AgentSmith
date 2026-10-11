@@ -8,29 +8,31 @@
 //
 // Body shape:
 //   { "tenantId": "acme", "entries": [...], "budgetCapUsd"?: number,
-//     "replayWebhookUrl"?: string, "replayWebhookSecret"?: string }
+//     "replayWebhookUrl"?: ignored, "replayWebhookSecret"?: ignored }
+//
+// DEPRECATED with its sender, scripts/sync-portal-history.py (retired): a
+// worker reports its settings by the Ops contract (/api/ops/ingest,
+// contract/ops/v1). Kept, with the shared token, until an operator unsets
+// OPS_PORTAL_SYNC_TOKEN; it no longer stores a replay secret.
 //
 // budgetCapUsd (docs/PRODUCT_ARCHIVE.md P2b) is optional — when
-// scripts/sync-portal-history.py finds gateway.budget_cap_usd in this
+// the sender found gateway.budget_cap_usd in this
 // tenant's .agenticframework/tenant.yaml, it's included on every sync call
 // (not just the first) so the portal's displayed cap stays current if the
 // tenant repo's tenant.yaml changes. This is a display value only — it
 // does not enforce anything; the real enforcement is
 // runtime/llm_gateway.py's own AGENT_MONTHLY_USD_CAP on the worker.
 //
-// replayWebhookUrl/replayWebhookSecret (HITL/DLQ redesign) are the same
-// pattern — synced from this tenant's own tenant.yaml's hitl.* section —
-// but unlike budgetCapUsd they're not just a display value: the Ops
-// Portal's DLQ "Replay with edits" action actually POSTs the human-edited
-// payload to this URL, HMAC-signed with this secret, so it must stay
-// per-tenant-correct (see portal/lib/dlq.ts's replayDlqEntry()).
+// replayWebhookUrl/replayWebhookSecret in a body are ignored: where a
+// person's fix is sent, and the key it is signed with, are the app's own Ops
+// settings and the portal's issued key (contract/ops/v1) — never something a
+// caller holding the shared token can set for any tenant.
 
 import { NextResponse } from "next/server";
 import { requireBearer } from "@/lib/bearerAuth";
 import { syncHistoryEntries, type SyncEntryInput } from "@/lib/issues";
 import { upsertTenant, getTenant } from "@/lib/tenants";
 import { portalSpan, withIdentity } from "@/lib/tracing";
-import { isSafeHttpUrl } from "@/lib/safeUrl";
 
 export async function POST(request: Request) {
   const denied = requireBearer(request, { envVar: "OPS_PORTAL_SYNC_TOKEN", purpose: "sync ingestion" });
@@ -49,25 +51,28 @@ export async function POST(request: Request) {
   // Same scheme check as POST /api/tenants — this is the OTHER writer of the
   // URL the portal later POSTs a replayed payload to, and a validation that
   // lands at one of two writers is not a validation.
-  if (body.replayWebhookUrl !== undefined && body.replayWebhookUrl !== null && !isSafeHttpUrl(body.replayWebhookUrl)) {
-    return NextResponse.json({ error: "replayWebhookUrl must be an http(s) URL" }, { status: 400 });
-  }
-  const replayWebhookUrl: string | null = typeof body.replayWebhookUrl === "string" ? body.replayWebhookUrl : null;
-  const replayWebhookSecret: string | null =
-    typeof body.replayWebhookSecret === "string" ? body.replayWebhookSecret : null;
-  const hasUpdate = budgetCapUsd !== null || replayWebhookUrl !== null || replayWebhookSecret !== null;
+  // Nor a replay webhook URL. Under the one token every tenant shares, this
+  // route would let any holder point another tenant's replays — a person's fix,
+  // signed with that tenant's key — at an address of its choosing. The URL is
+  // the app's own to declare, by the Ops contract with its own Ops token.
+  const replayWebhookUrl = null;
+  // A replay secret in the body is never stored. The replay key is the
+  // portal's to issue (Administration › Apps, contract/ops/v1): this shared-
+  // token route could otherwise overwrite the issued key with whatever a
+  // caller sends, and the secret it carried came from a committed tenant.yaml.
+  const hasUpdate = budgetCapUsd !== null || replayWebhookUrl !== null;
 
   const existingTenant = await getTenant(tenantId);
   if (!existingTenant) {
     // Auto-register on first sync so a tenant doesn't need a separate
     // provisioning step before its CD pipeline can push history.
-    await upsertTenant({ tenantId, name: tenantId, budgetCapUsd, replayWebhookUrl, replayWebhookSecret });
+    await upsertTenant({ tenantId, name: tenantId, budgetCapUsd, replayWebhookUrl });
   } else if (hasUpdate) {
     // upsertTenant's UPDATE sets name unconditionally (not COALESCE) — pass
     // the tenant's own current name back, not tenantId, or this would
     // silently clobber a real display name (e.g. "Acme") to the raw id on
     // every sync that happens to carry any of these optional fields.
-    await upsertTenant({ tenantId, name: existingTenant.name, budgetCapUsd, replayWebhookUrl, replayWebhookSecret });
+    await upsertTenant({ tenantId, name: existingTenant.name, budgetCapUsd, replayWebhookUrl });
   }
 
   // Both counts, because they are different numbers: syncHistoryEntries

@@ -1,6 +1,9 @@
 // portal/lib/tenants.ts — tenant registry (docs/DESIGN.md › Tenancy Model (Independent Repositories), Federated Observability).
 
-import { getPool } from "./db";
+import type { PoolClient } from "pg";
+
+import { appendAuditEvent } from "./auditLog";
+import { getPool, withTransaction } from "./db";
 import type { Isolation } from "./isolation";
 
 /** Where an app's repository lives. Kept equal to the CHECK on tenants.repo_provider
@@ -84,6 +87,56 @@ export async function getReplayWebhookConfig(
   return { url: r.replay_webhook_url, secret: r.replay_webhook_secret };
 }
 
+/** Whether a replay key is issued, and the webhook URL the app's settings
+ *  declared — never the key. */
+export async function replayStatus(tenantId: string): Promise<{ url: string | null; keyIssued: boolean }> {
+  const { rows } = await getPool().query(
+    `SELECT replay_webhook_url, replay_webhook_secret IS NOT NULL AS key_issued FROM tenants WHERE tenant_id = $1`,
+    [tenantId],
+  );
+  return { url: rows[0]?.replay_webhook_url ?? null, keyIssued: Boolean(rows[0]?.key_issued) };
+}
+
+/** Sets the key the portal signs a tenant's replay requests with. Issued by
+ *  Administration › Apps (lib/apps.issueReplayKey); never accepted from a
+ *  tenant's own message (contract/ops/v1). */
+export async function setReplayWebhookSecret(tenantId: string, secret: string, client?: PoolClient): Promise<void> {
+  await (client ?? getPool()).query(`UPDATE tenants SET replay_webhook_secret = $2 WHERE tenant_id = $1`, [tenantId, secret]);
+}
+
+/** The settings a tenant's own Ops message declares — the budget cap and the
+ *  replay webhook URL, never a secret. A field the message leaves out keeps
+ *  what is stored. A changed replay URL is audited, in the same transaction:
+ *  it decides where a person's signed fix is sent, and an Ops token that
+ *  leaked could otherwise move it silently. */
+export async function updateTenantSettings(
+  tenantId: string,
+  settings: { budgetCapUsd: number | null; replayWebhookUrl: string | null },
+): Promise<void> {
+  await withTransaction("tenant_settings", async (client) => {
+    const { rows } = await client.query(
+      `SELECT replay_webhook_url FROM tenants WHERE tenant_id = $1 FOR UPDATE`, [tenantId]);
+    const before: string | null = rows[0]?.replay_webhook_url ?? null;
+    await client.query(
+      `UPDATE tenants SET budget_cap_usd = COALESCE($2, budget_cap_usd),
+                          replay_webhook_url = COALESCE($3, replay_webhook_url)
+        WHERE tenant_id = $1`,
+      [tenantId, settings.budgetCapUsd, settings.replayWebhookUrl],
+    );
+    if (settings.replayWebhookUrl !== null && settings.replayWebhookUrl !== before) {
+      await appendAuditEvent(
+        {
+          eventType: "config_change",
+          actorId: `app:${tenantId}`,
+          tenantId,
+          details: { action: "replay_webhook_url_changed", from: before, to: settings.replayWebhookUrl },
+        },
+        client,
+      );
+    }
+  });
+}
+
 export async function upsertTenant(t: {
   tenantId: string;
   name: string;
@@ -91,21 +144,18 @@ export async function upsertTenant(t: {
   phoenixBaseUrl?: string;
   budgetCapUsd?: number | null;
   replayWebhookUrl?: string | null;
-  replayWebhookSecret?: string | null;
 }): Promise<void> {
+  // No replay key here: it has one writer, setReplayWebhookSecret, through
+  // lib/apps.issueReplayKey — issued, shown once and audited (contract/ops/v1).
   await getPool().query(
-    `INSERT INTO tenants (tenant_id, name, isolation, phoenix_base_url, budget_cap_usd, replay_webhook_url, replay_webhook_secret)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO tenants (tenant_id, name, isolation, phoenix_base_url, budget_cap_usd, replay_webhook_url)
+     VALUES ($1, $2, $3, $4, $5, $6)
      ON CONFLICT (tenant_id) DO UPDATE SET
        name = EXCLUDED.name,
        isolation = EXCLUDED.isolation,
        phoenix_base_url = COALESCE(EXCLUDED.phoenix_base_url, tenants.phoenix_base_url),
        budget_cap_usd = COALESCE(EXCLUDED.budget_cap_usd, tenants.budget_cap_usd),
-       replay_webhook_url = COALESCE(EXCLUDED.replay_webhook_url, tenants.replay_webhook_url),
-       replay_webhook_secret = COALESCE(EXCLUDED.replay_webhook_secret, tenants.replay_webhook_secret)`,
-    [
-      t.tenantId, t.name, t.isolation ?? "shared", t.phoenixBaseUrl ?? null, t.budgetCapUsd ?? null,
-      t.replayWebhookUrl ?? null, t.replayWebhookSecret ?? null,
-    ]
+       replay_webhook_url = COALESCE(EXCLUDED.replay_webhook_url, tenants.replay_webhook_url)`,
+    [t.tenantId, t.name, t.isolation ?? "shared", t.phoenixBaseUrl ?? null, t.budgetCapUsd ?? null, t.replayWebhookUrl ?? null]
   );
 }

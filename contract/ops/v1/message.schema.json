@@ -1,0 +1,293 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/ops/v1/message.schema.json",
+  "title": "An Ops message",
+  "description": "One message an app sends its portal's Ops ingest (contract/ops/v1/protocol.md). No message names a tenant: the Ops token decides.",
+  "$defs": {
+    "DeadLetterMessage": {
+      "additionalProperties": true,
+      "description": "A task that needs a human, or an engineer, before it can go on.",
+      "properties": {
+        "schema": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "dead_letter",
+          "default": "dead_letter",
+          "title": "Kind",
+          "type": "string"
+        },
+        "task_id": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Task Id",
+          "type": "string"
+        },
+        "error": {
+          "maxLength": 4000,
+          "minLength": 1,
+          "title": "Error",
+          "type": "string"
+        },
+        "payload": {
+          "title": "Payload"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "workflow_id": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workflow Id"
+        },
+        "gate_id": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gate Id"
+        }
+      },
+      "required": [
+        "task_id",
+        "error",
+        "payload"
+      ],
+      "title": "DeadLetterMessage",
+      "type": "object"
+    },
+    "RunMessage": {
+      "additionalProperties": true,
+      "description": "One run's status. Usage is absent, never zero, when the provider reported none.",
+      "properties": {
+        "schema": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "run",
+          "default": "run",
+          "title": "Kind",
+          "type": "string"
+        },
+        "run_id": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Run Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "running",
+            "success",
+            "degraded",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "workflow_id": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workflow Id"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{32}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "not": {
+            "const": "00000000000000000000000000000000"
+          },
+          "title": "Trace Id"
+        },
+        "error_summary": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Summary"
+        },
+        "input_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Tokens"
+        },
+        "output_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Tokens"
+        },
+        "cost_usd": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Usd"
+        },
+        "framework_version": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Framework Version"
+        }
+      },
+      "required": [
+        "run_id",
+        "status"
+      ],
+      "title": "RunMessage",
+      "type": "object"
+    },
+    "SettingsMessage": {
+      "additionalProperties": true,
+      "description": "What the tenant declares the portal should know. Never a secret: the\nreplay key is the portal's to issue.",
+      "not": {
+        "required": [
+          "replay_webhook_secret"
+        ]
+      },
+      "properties": {
+        "schema": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "settings",
+          "default": "settings",
+          "title": "Kind",
+          "type": "string"
+        },
+        "budget_cap_usd": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Budget Cap Usd"
+        },
+        "replay_webhook_url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "pattern": "^https://",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replay Webhook Url"
+        }
+      },
+      "title": "SettingsMessage",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "dead_letter": "#/$defs/DeadLetterMessage",
+      "run": "#/$defs/RunMessage",
+      "settings": "#/$defs/SettingsMessage"
+    },
+    "propertyName": "kind"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/RunMessage"
+    },
+    {
+      "$ref": "#/$defs/DeadLetterMessage"
+    },
+    {
+      "$ref": "#/$defs/SettingsMessage"
+    }
+  ]
+}

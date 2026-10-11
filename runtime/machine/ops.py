@@ -237,10 +237,6 @@ def check(out: Out = print, env: Optional[Mapping[str, str]] = None) -> int:
         out("   → Run 'agentsmith promote' or resolve via Phoenix UI.")
         failed = True
 
-    if environ.get("OPS_PORTAL_URL"):
-        if _run_script("sync-portal-history.py", [], out, quiet=True) != 0:
-            out("   ⚠️  [PORTAL]  history sync to OPS_PORTAL_URL failed")
-
     out("   🎉 All checks passed — environment ready" if not failed
         else "   🛑 Health check failed — resolve issues above before running agents")
     return 1 if failed else 0

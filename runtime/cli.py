@@ -1100,6 +1100,37 @@ def _cmd_evals_run(args: argparse.Namespace) -> int:
     return done.returncode
 
 
+def _cmd_ops_settings(args: argparse.Namespace) -> int:
+    """`agentsmith ops settings` — send what this repository's tenant.yaml
+    declares the portal should know (contract/ops/v1, `settings`), for a tenant
+    without AgentSmith's worker, which reports them itself at start-up. Fails
+    on a refusal (400, 401, a redirect): that is configuration. Warns when the
+    receiver is unwell, and says so when none is configured."""
+    import subprocess as sp
+
+    from runtime import ops_contract
+
+    top = sp.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)
+    root = Path(top.stdout.strip()) if top.returncode == 0 and top.stdout.strip() else Path.cwd()
+    message, notes = ops_contract.settings_from_tenant_yaml(root)
+    for note in notes:
+        print(f"Ops: {note}", file=sys.stderr)
+    if not ops_contract.configured():
+        print(f"Ops: {ops_contract.URL_ENV} and {ops_contract.TOKEN_ENV} are not both set — nothing sent.")
+        return 0
+    status = ops_contract.send(message)
+    if status == 200:
+        print("Ops: settings stored by the portal.")
+        return 0
+    if status is not None and status < 500:
+        print(f"Ops: the portal refused the settings ({status}) — that is configuration, not an outage.",
+              file=sys.stderr)
+        return 1
+    print(f"Ops: the portal did not store the settings ({status or 'no answer'}) — the next run sends again.",
+          file=sys.stderr)
+    return 0
+
+
 def _cmd_security(args: argparse.Namespace) -> int:
     """`agentsmith security check|redaction` — AgentSmith as a security provider
     (contract/security/v1/protocol.md), answered by this installation's own
@@ -1235,6 +1266,40 @@ def _record_conformance(args: argparse.Namespace) -> int:
     return 0 if report.passed else 1
 
 
+def _ops_conformance(args: argparse.Namespace) -> int:
+    """`agentsmith conformance --port ops --sender CMD | --receiver URL | --replay URL`
+    (contract/ops/v1/protocol.md)."""
+    import tempfile
+
+    from runtime import conformance as rc
+    from runtime import ops_contract
+
+    given = [x for x in (args.sender, args.receiver, args.replay) if x]
+    if len(given) != 1:
+        print("agentsmith conformance --port ops: give one of --sender COMMAND, --receiver URL, --replay URL",
+              file=sys.stderr)
+        return 2
+    try:
+        if args.receiver or args.replay:
+            env = rc.OPS_RECEIVER_TOKEN_ENV if args.receiver else rc.OPS_REPLAY_KEY_ENV
+            secret = os.environ.get(env, "").strip()
+            if not secret:
+                what = "an Ops token the receiver issued" if args.receiver else "the replay key the webhook holds"
+                print(f"agentsmith conformance: set {env} to {what} (a test one)", file=sys.stderr)
+                return 2
+            report = (rc.run_ops_receiver(args.receiver, secret) if args.receiver
+                      else rc.run_ops_replay(args.replay, secret))
+        else:
+            with tempfile.TemporaryDirectory() as tmp:
+                report = rc.run_ops_sender(args.sender, Path(tmp) / "fixture", args.url_env or ops_contract.URL_ENV,
+                                           args.token_env or ops_contract.TOKEN_ENV)
+    except FileNotFoundError as exc:
+        print(f"agentsmith: {exc}", file=sys.stderr)
+        return 2
+    print(report.render())
+    return 0 if report.passed else 1
+
+
 def _cmd_conformance(args: argparse.Namespace) -> int:
     """`agentsmith conformance --provider "<command>"` — does that command
     satisfy the gate contract? Run it against another platform's adapter, or
@@ -1249,6 +1314,8 @@ def _cmd_conformance(args: argparse.Namespace) -> int:
         return _evals_conformance(args)
     if args.port == "security":
         return _security_conformance(args)
+    if args.port == "ops":
+        return _ops_conformance(args)
     if args.port == "rules":
         return _rules_conformance(args)
     if args.port == "telemetry":
@@ -1577,7 +1644,7 @@ def build_parser() -> argparse.ArgumentParser:
     rules.set_defaults(func=_cmd_rules)
 
     conformance = sub.add_parser("conformance", help="does a command or a portal satisfy a contract?")
-    conformance.add_argument("--port", choices=("gate", "record", "rules", "telemetry", "evals", "security"),
+    conformance.add_argument("--port", choices=("gate", "record", "rules", "telemetry", "evals", "security", "ops"),
                              default="gate",
                              help="the contract: the gate, the rules, the evals or security (a provider command), the "
                                   "record (a sender or a receiver), or telemetry (an emitter or an export)")
@@ -1588,9 +1655,12 @@ def build_parser() -> argparse.ArgumentParser:
     conformance.add_argument("--provider", metavar="COMMAND",
                              help='the provider to test, e.g. "agentsmith gate" or "agentsmith rules"')
     conformance.add_argument("--sender", metavar="COMMAND",
-                             help="record: a gate provider that sends records, run against a loopback receiver")
+                             help="record or ops: a command that sends, run against a loopback receiver")
+    conformance.add_argument("--replay", metavar="URL",
+                             help="ops: a tenant's replay webhook; the key is read from GOVERNANCE_REPLAY_KEY")
     conformance.add_argument("--receiver", metavar="URL",
-                             help="record: a portal's ingest address; the token is read from GOVERNANCE_RECORD_TOKEN")
+                             help="record or ops: a portal's ingest address; the token is read from "
+                                  "GOVERNANCE_RECORD_TOKEN (record) or GOVERNANCE_OPS_TOKEN (ops)")
     conformance.add_argument("--url-env", default=None, metavar="NAME",
                              help="record --sender: the variable the provider reads its receiver from")
     conformance.add_argument("--token-env", default=None, metavar="NAME",
@@ -1637,6 +1707,10 @@ def build_parser() -> argparse.ArgumentParser:
     evals.add_argument("--suite", choices=("golden", "fairness", "hallucination", "adversarial", "rag_poison"),
                        help="run: the suite to judge, when no request comes on stdin")
     evals.set_defaults(func=_cmd_evals)
+
+    ops = sub.add_parser("ops", help="send this repository's declared settings to its portal (contract/ops/v1)")
+    ops.add_argument("verb", choices=("settings",))
+    ops.set_defaults(func=_cmd_ops_settings)
 
     security = sub.add_parser("security", help="check this repository's security pack and posture, or what its "
                                                "telemetry carries on the wire (contract/security/v1)")

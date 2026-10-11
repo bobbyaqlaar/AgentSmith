@@ -85,7 +85,15 @@ export async function POST(request: Request) {
     // set a cap and the portal believes nothing changed.
     return NextResponse.json({ error: "budgetCapUsd must be a number" }, { status: 400 });
   }
-  for (const field of ["tenantId", "name", "replayWebhookSecret"] as const) {
+  // A replay key is not set here: Administration › Apps issues it, once and
+  // audited (contract/ops/v1); a body that carries one is refused, not ignored.
+  if (body.replayWebhookSecret !== undefined) {
+    return NextResponse.json(
+      { error: "replayWebhookSecret is not accepted — issue the replay key in Administration › Apps" },
+      { status: 400 },
+    );
+  }
+  for (const field of ["tenantId", "name"] as const) {
     if (body[field] !== undefined && body[field] !== null && typeof body[field] !== "string") {
       return NextResponse.json({ error: `${field} must be a string` }, { status: 400 });
     }
@@ -102,7 +110,6 @@ export async function POST(request: Request) {
     phoenixBaseUrl: body.phoenixBaseUrl,
     budgetCapUsd: body.budgetCapUsd ?? null,
     replayWebhookUrl: body.replayWebhookUrl ?? null,
-    replayWebhookSecret: body.replayWebhookSecret ?? null,
   });
   return NextResponse.json({ ok: true });
 }

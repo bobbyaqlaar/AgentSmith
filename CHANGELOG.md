@@ -53,6 +53,7 @@ version is itself on both wires from 1.3.0.
 
 | Emitted since | Field | Wire |
 |---|---|---|
+| Unreleased | run status, dead letters and settings by the Ops contract (`contract/ops/v1`), with the app's own Ops token | Ops ingest POST |
 | 2.1.0 | `governance.telemetry.contract` — which telemetry contract the emitter speaks (`contract/telemetry/v1`) | OTel Resource |
 | 2.0.0 | the Dev record — each commit's gate verdict, design, pillars, review passes (`process_gate.py ci --json`, `schema` 1) | Dev ingest POST |
 | 1.3.0 | `agentsmith.framework.version` | OTel Resource |
@@ -80,6 +81,50 @@ version table being consulted.
 
 
 ## [Unreleased]
+
+### Added — the Ops contract (`contract/ops/v1`)
+
+What a running tenant tells its portal, and what the portal sends back — slice C8 of the governance
+contracts. One Ops ingest takes three messages — `run`, `dead_letter`, `settings` — each authenticated
+by an **Ops token** the portal issued to the app, which alone decides whose data it is; the portal
+sends a person's fix to a dead letter back to the app's replay webhook, signed with a **replay key**
+it issued. `agentsmith conformance --port ops` scores a sender, a receiver and a replay webhook
+(AgentSmith: 5/5, 26/26 against a live portal, 4/4).
+
+- **The worker reports by the contract** when it holds `OPS_PORTAL_TOKEN`: run status from the
+  gateway, dead letters after its own store has them, its settings at start-up.
+  `agentsmith ops settings` sends the settings from CI for a tenant without the worker.
+- **Administration › Apps** issues an app's Ops token and its replay signing key, each shown once
+  and audited; tokens now have a scope (`dev` for CI, `ops` for workers), so neither stands in for
+  the other.
+
+### Security
+
+- **A tenant could write another tenant's Ops data.** `/api/runs/ingest` and `/api/sync/history`
+  trusted the tenant a body named, under one token every tenant shared; and `agent_runs` upserted on
+  `run_id` alone, so any caller could overwrite another tenant's run. The Ops ingest takes the tenant
+  from the token, and a `run_id` or `task_id` another app holds is refused (`409`) on both routes.
+- **The replay request followed redirects** — a 3xx from a tenant's webhook would resend the signed
+  fix wherever it pointed. It no longer follows one.
+- **The replay secret came from a committed file.** It was read from `tenant.yaml` and pushed over the
+  shared-token route; the portal now issues it, and `/api/sync/history` stores none.
+
+- **A replay key had more than one writer.** `/api/tenants` let a signed-in operator set it directly,
+  unaudited; it is now refused there, and the key's one writer is Administration › Apps.
+
+### Deprecated
+
+- `/api/runs/ingest` and `/api/sync/history`, and `OPS_PORTAL_SYNC_TOKEN`: kept for runtimes already
+  deployed; an operator turns them off by unsetting the token. Until then a holder of that token can
+  still add runs under any tenant (never overwrite another tenant's) and set a display budget cap —
+  never a replay URL or key any more.
+
+### Removed
+
+- `scripts/sync-portal-history.py`, `verify_system.py --check-history-sync`, and the history step in
+  the CD templates: `.agent-history.log` is gitignored, so in CD it sent only the settings the worker
+  now reports itself. The Phoenix-feedback step and its fixture PR leave `cd-production.yml`, whose
+  job drops to `contents: read`; `sync-ui-feedback.py` stays the first half of `agentsmith evals`.
 
 ## [2.3.0] — 2026-10-10
 

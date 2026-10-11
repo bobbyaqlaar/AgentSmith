@@ -41,6 +41,67 @@ export interface DLQEntry {
   createdAt: string;
 }
 
+/**
+ * The table, as runtime/dead_letter.py's `_DLQ_DDL` creates it — a duplicate
+ * this file cannot import from Python, held to it by
+ * scripts/test/test_ops_contract.py. Created here only when a dead letter
+ * arrives over the Ops contract (contract/ops/v1), so "not wired" keeps
+ * meaning "no dead letter has reached this portal by either route".
+ */
+export const DLQ_DDL = `CREATE TABLE IF NOT EXISTS dlq_entries (
+    task_id      TEXT PRIMARY KEY,
+    tenant_id    TEXT NOT NULL,
+    payload      JSONB NOT NULL,
+    error        TEXT NOT NULL,
+    reason       TEXT,
+    workflow_id  TEXT,
+    gate_id      TEXT,
+    status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'replayed', 'discarded')),
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    replayed_at  TIMESTAMPTZ,
+    discarded_at TIMESTAMPTZ
+)`;
+
+export interface DeadLetterInput {
+  taskId: string;
+  error: string;
+  payload: unknown;
+  reason: string | null;
+  workflowId: string | null;
+  gateId: string | null;
+}
+
+/**
+ * Stores a dead letter an app's worker sent, once per task id. "stored": a new
+ * entry; "duplicate": this app sent it before — resending is safe; "foreign":
+ * the task id is another app's, and nothing is written over it.
+ */
+let dlqTableReady = false;
+
+export async function insertDeadLetter(
+  tenantId: string,
+  entry: DeadLetterInput,
+): Promise<"stored" | "duplicate" | "foreign"> {
+  const pool = getPool();
+  // Once per process: a no-op CREATE still takes a brief table lock, and
+  // concurrent workers' reports would queue on it (runtime/pg_pool.ensure_schema
+  // learned the same).
+  if (!dlqTableReady) {
+    await pool.query(DLQ_DDL);
+    dlqTableReady = true;
+  }
+  const { rowCount } = await pool.query(
+    `INSERT INTO dlq_entries (task_id, tenant_id, payload, error, reason, workflow_id, gate_id)
+     VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7)
+     ON CONFLICT (task_id) DO NOTHING`,
+    [entry.taskId, tenantId, JSON.stringify(entry.payload ?? null), entry.error, entry.reason, entry.workflowId,
+     entry.gateId],
+  );
+  if ((rowCount ?? 0) > 0) return "stored";
+  const { rows } = await pool.query(`SELECT tenant_id FROM dlq_entries WHERE task_id = $1`, [entry.taskId]);
+  return rows[0]?.tenant_id === tenantId ? "duplicate" : "foreign";
+}
+
 export async function getDLQStatus(): Promise<DLQStatus> {
   const hasTable = await tableExists("dlq_entries");
   if (!hasTable) {
@@ -203,10 +264,12 @@ export async function replayDlqEntry(tenantId: string, taskId: string, editedPay
   const config = await getReplayWebhookConfig(tenantId);
   if (!config) {
     throw new ReplayNotConfiguredError(
-      `Tenant '${tenantId}' has no replay_webhook_url/secret configured — see docs/UserManual.md "Wire your platform" for HITL/DLQ.`
+      `Tenant '${tenantId}' cannot be replayed to yet: its worker declares no replay webhook URL, or no replay key is ` +
+        "issued (Administration › Apps › Replay signing key). See docs/UserManual.md › HITL gates and the recoverable-step DLQ.",
     );
   }
-  const body = JSON.stringify({ taskId, payload: editedPayload });
+  // contract/ops/v1 `replay.schema.json`: `taskId` is the name receivers already read.
+  const body = JSON.stringify({ schema: 1, taskId, payload: editedPayload });
 
   // BOTH signatures, because the receiver is the tenant's and ships on its own
   // cadence (review-levers: two-owners-two-cadences). A receiver that
@@ -226,8 +289,17 @@ export async function replayDlqEntry(tenantId: string, taskId: string, editedPay
       ...replaySignatureHeaders(config.secret, body),
     },
     body,
+    // Never followed (contract/ops/v1): a redirect would resend the signed fix
+    // — replayable inside the signature's window — wherever it pointed.
+    redirect: "manual",
     signal: AbortSignal.timeout(10_000),
   });
+  if (resp.type === "opaqueredirect" || (resp.status >= 300 && resp.status < 400)) {
+    throw new ReplayWebhookError(
+      `Tenant replay webhook answered with a redirect (${resp.status || "opaque"}) — a signed replay is never sent ` +
+        "anywhere else. Point replay_webhook_url at the webhook itself.",
+    );
+  }
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
     if (resp.status === 409) {

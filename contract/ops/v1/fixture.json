@@ -1,0 +1,48 @@
+{
+  "_about": "One valid message of each kind (contract/ops/v1/protocol.md). A receiver stores each under the application its Ops token belongs to; the cases change one thing in one of them.",
+  "messages": {
+    "run": {
+      "schema": 1,
+      "kind": "run",
+      "run_id": "run-fixture-0001",
+      "status": "success",
+      "workflow_id": "wf-fixture",
+      "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+      "input_tokens": 120,
+      "output_tokens": 48,
+      "cost_usd": 0.0021,
+      "framework_version": "2.4.0"
+    },
+    "dead_letter": {
+      "schema": 1,
+      "kind": "dead_letter",
+      "task_id": "task-fixture-0001",
+      "error": "the CRM rejected field 'acct_tier'",
+      "payload": {
+        "account": "ACME-1",
+        "fields": {
+          "acct_tier": "gold"
+        }
+      },
+      "reason": "validation_error",
+      "workflow_id": "wf-fixture",
+      "gate_id": "crm_update"
+    },
+    "settings": {
+      "schema": 1,
+      "kind": "settings",
+      "budget_cap_usd": 25.0,
+      "replay_webhook_url": "https://worker.fixture.example/replay"
+    }
+  },
+  "replay": {
+    "schema": 1,
+    "taskId": "task-fixture-0001",
+    "payload": {
+      "account": "ACME-1",
+      "fields": {
+        "tier": "gold"
+      }
+    }
+  }
+}

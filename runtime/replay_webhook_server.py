@@ -27,10 +27,9 @@ pattern on the worker side.
 
 Required env vars:
   DATABASE_URL              — same Postgres the worker's DeadLetterQueue uses
-  REPLAY_WEBHOOK_SECRET      — shared secret; must match what's configured
-                               in the portal for this tenant (sent back via
-                               .agenticframework/tenant.yaml -> sync, see
-                               docs/UserManual.md "Wire your platform")
+  REPLAY_WEBHOOK_SECRET      — the replay key the portal issued this app
+                               (Administration › Apps › Replay signing key,
+                               contract/ops/v1); never written in tenant.yaml
   TEMPORAL_ADDRESS           — e.g. "localhost:7233" (default if unset)
 
 Run: python3 replay_webhook_server.py [port, default 8090]

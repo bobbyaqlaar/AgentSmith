@@ -1,0 +1,234 @@
+{
+  "_about": "What an Ops receiver is sent, and the status each must answer (contract/ops/v1/protocol.md). Each case takes fixture.json's message of kind `message`, sets the keys in `set` (null removes nothing; it sets null), removes the keys in `drop`, and POSTs it with a valid Ops token. Only the status is matched: a receiver words its own refusals. A valid case stores data under the token's application, so point the run at a test portal.",
+  "cases": [
+    {
+      "name": "a run is stored",
+      "message": "run",
+      "set": {},
+      "drop": [],
+      "expect": 200,
+      "why": "every field valid"
+    },
+    {
+      "name": "a running report is stored",
+      "message": "run",
+      "set": {
+        "status": "running",
+        "input_tokens": null,
+        "output_tokens": null,
+        "cost_usd": null
+      },
+      "drop": [],
+      "expect": 200,
+      "why": "usage absent, never zero"
+    },
+    {
+      "name": "a dead letter is stored",
+      "message": "dead_letter",
+      "set": {},
+      "drop": [],
+      "expect": 200,
+      "why": "every field valid"
+    },
+    {
+      "name": "a dead letter with a reason of the tenant's own is stored",
+      "message": "dead_letter",
+      "set": {
+        "reason": "crm_quota"
+      },
+      "drop": [],
+      "expect": 200,
+      "why": "reason is an open category"
+    },
+    {
+      "name": "settings are stored",
+      "message": "settings",
+      "set": {},
+      "drop": [],
+      "expect": 200,
+      "why": "every field valid"
+    },
+    {
+      "name": "settings with nothing set are stored",
+      "message": "settings",
+      "set": {},
+      "drop": [
+        "budget_cap_usd",
+        "replay_webhook_url"
+      ],
+      "expect": 200,
+      "why": "an empty declaration is still one"
+    },
+    {
+      "name": "a key the receiver does not read is dropped, not refused",
+      "message": "run",
+      "set": {
+        "region": "me-central-1"
+      },
+      "drop": [],
+      "expect": 200,
+      "why": "a sender may add fields"
+    },
+    {
+      "name": "an unknown kind is refused",
+      "message": "run",
+      "set": {
+        "kind": "heartbeat"
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "three kinds in version 1"
+    },
+    {
+      "name": "another schema is refused",
+      "message": "run",
+      "set": {
+        "schema": 2
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "version 1 only"
+    },
+    {
+      "name": "a run without its id is refused",
+      "message": "run",
+      "set": {},
+      "drop": [
+        "run_id"
+      ],
+      "expect": 400,
+      "why": "run_id is required"
+    },
+    {
+      "name": "a run with an unknown status is refused",
+      "message": "run",
+      "set": {
+        "status": "paused"
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "four statuses"
+    },
+    {
+      "name": "a negative token count is refused",
+      "message": "run",
+      "set": {
+        "input_tokens": -1
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "counts are non-negative integers"
+    },
+    {
+      "name": "a fractional token count is refused",
+      "message": "run",
+      "set": {
+        "output_tokens": 2.5
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "counts are integers"
+    },
+    {
+      "name": "a trace id that is not 32 hex is refused",
+      "message": "run",
+      "set": {
+        "trace_id": "not-a-trace"
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "W3C trace id"
+    },
+    {
+      "name": "an all-zero trace id is refused",
+      "message": "run",
+      "set": {
+        "trace_id": "00000000000000000000000000000000"
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "the invalid id W3C reserves"
+    },
+    {
+      "name": "an over-long error summary is refused",
+      "message": "run",
+      "set": {
+        "error_summary": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "4,000 characters"
+    },
+    {
+      "name": "a dead letter without its error is refused",
+      "message": "dead_letter",
+      "set": {},
+      "drop": [
+        "error"
+      ],
+      "expect": 400,
+      "why": "error is required"
+    },
+    {
+      "name": "a dead letter without its payload is refused",
+      "message": "dead_letter",
+      "set": {},
+      "drop": [
+        "payload"
+      ],
+      "expect": 400,
+      "why": "payload is required — null is a payload"
+    },
+    {
+      "name": "a dead letter without its task id is refused",
+      "message": "dead_letter",
+      "set": {},
+      "drop": [
+        "task_id"
+      ],
+      "expect": 400,
+      "why": "task_id is required"
+    },
+    {
+      "name": "a replay webhook that is not https is refused",
+      "message": "settings",
+      "set": {
+        "replay_webhook_url": "http://worker.fixture.example/replay"
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "the portal sends a signed fix there"
+    },
+    {
+      "name": "a negative budget cap is refused",
+      "message": "settings",
+      "set": {
+        "budget_cap_usd": -5
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "a cap is not negative"
+    },
+    {
+      "name": "settings carrying a secret are refused",
+      "message": "settings",
+      "set": {
+        "replay_webhook_secret": "abc123"
+      },
+      "drop": [],
+      "expect": 400,
+      "why": "the replay key is the portal's to issue"
+    },
+    {
+      "name": "a message naming a tenant still writes the token's application",
+      "message": "run",
+      "set": {
+        "tenant_id": "someone-else",
+        "run_id": "run-fixture-0002"
+      },
+      "drop": [],
+      "expect": 200,
+      "why": "the token decides; a body naming a tenant decides nothing"
+    }
+  ]
+}

@@ -181,15 +181,16 @@ Two things follow:
   accepted by your own gates *by hash*, not by asking you to review framework code you did not
   write.
 
-**Where the ports stand.** Six things a tenant needs from a governance platform; the gate, the
-rules, the evals and security are resolved through their contracts today, and the records and
-telemetry are published:
+**Where the ports stand.** Seven things a tenant needs from a governance platform; the gate, the
+rules, the evals and security are resolved through their contracts today, and the records, the Ops
+records and telemetry are published:
 
 | Port | What it provides | Status |
 |---|---|---|
 | **Gate** | a decision at `session-start`, `pre-edit`, `stop`, on each commit and push, and on a CI range; the review scope from the knowledge graph | **declared and resolved** via `contract/gate/v3` — editing, commit, push and CI |
 | **Telemetry** | spans, metrics, resource attributes | **published** — `contract/telemetry/v1`: OTLP and a catalogue of every attribute and instrument; an application on plain OpenTelemetry conforms without importing AgentSmith, and `agentsmith conformance --port telemetry` judges any emitter |
 | **Rules** | what the agent is told | **declared and resolved** via `contract/rules/v1` — `render` and `check`; the tenant's CI checks its rule files against the provider it declares |
+| **Ops records** | run status, dead letters and settings out; a person's fix back in | **published** — `contract/ops/v1`: the worker reports with its app's own Ops token, which alone decides the tenant, and the portal signs each replay with a key it issued; conformance for a sender, a receiver and a replay webhook |
 | **Records** | what CI decided, per commit | **published** — `contract/record/v1`: the record and its transport, with conformance for a sender and for a receiver; the portal and AgentSmith's provider are both held to it |
 | **Evals** | a scorecard for each of the tenant's eval suites | **declared and resolved** via `contract/evals/v1` — `run`; the tenant owns its datasets and outputs, and its CI fails on anything but a pass unless it declared that suite's exception |
 | **Security** | a row per control for the tenant's own pack, posture and telemetry wire | **declared and resolved** via `contract/security/v1` — `check` and `redaction`; the posture checked is the declared one, a control about the provider's own code is not run for a tenant, and planted probes must not reach the tenant's wire |

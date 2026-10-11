@@ -35,7 +35,7 @@ import {
   revokeWidgetToken,
   revokeWidgetTokensForTenant,
 } from "../lib/widgetTokens.ts";
-import { upsertTenant } from "../lib/tenants.ts";
+import { setReplayWebhookSecret, upsertTenant } from "../lib/tenants.ts";
 
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL is required for this test (run npm run db:migrate against it first).");
@@ -66,12 +66,8 @@ await pool.query(`DROP TABLE IF EXISTS dlq_entries`);
 await pool.query(`DROP TABLE IF EXISTS llm_gateway_budget`);
 
 await upsertTenant({ tenantId: tenantA, name: tenantA, budgetCapUsd: 100 });
-await upsertTenant({
-  tenantId: tenantB,
-  name: tenantB,
-  replayWebhookUrl: "https://worker.example.test/replay",
-  replayWebhookSecret: "test-webhook-secret",
-});
+await upsertTenant({ tenantId: tenantB, name: tenantB, replayWebhookUrl: "https://worker.example.test/replay" });
+await setReplayWebhookSecret(tenantB, "test-webhook-secret");
 
 // ── Not-wired paths (python-owned tables absent) ─────────────────────────────
 
@@ -234,7 +230,8 @@ await test("replay HMAC-signs the edited payload for the tenant's own webhook", 
     globalThis.fetch = realFetch;
   }
   assert.equal(captured.url, "https://worker.example.test/replay");
-  assert.deepEqual(JSON.parse(captured.body!), { taskId: "task-3", payload: { step: 3, fixed: true } });
+  // contract/ops/v1 replay.schema.json: the schema number, and `taskId` as receivers read it.
+  assert.deepEqual(JSON.parse(captured.body!), { schema: 1, taskId: "task-3", payload: { step: 3, fixed: true } });
   const expected =
     "sha256=" + createHmac("sha256", "test-webhook-secret").update(captured.body!).digest("hex");
   assert.equal(captured.sig, expected);
@@ -269,6 +266,25 @@ await test("a non-2xx webhook response raises ReplayWebhookError (DB stays pendi
   }
   const entry = await getDlqEntry("task-3");
   assert.equal(entry?.status, "pending"); // only the tenant's receiver marks replayed
+});
+
+await test("a redirect from the webhook is never followed (contract/ops/v1)", async () => {
+  // A followed redirect would resend the signed fix — replayable inside the
+  // signature's window — wherever it pointed. The request asks fetch not to
+  // follow, and a 3xx it gets back is a failure that says so.
+  const realFetch = globalThis.fetch;
+  let asked: RequestInit | undefined;
+  globalThis.fetch = (async (_url: string, init?: RequestInit) => {
+    asked = init;
+    return new Response(null, { status: 302, headers: { location: "https://elsewhere.example/" } });
+  }) as typeof fetch;
+  try {
+    await assert.rejects(() => replayDlqEntry(tenantB, "task-3", {}), /redirect/);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  assert.equal(asked?.redirect, "manual");
+  assert.equal((await getDlqEntry("task-3"))?.status, "pending");
 });
 
 // ── Widget token scoping ─────────────────────────────────────────────────────

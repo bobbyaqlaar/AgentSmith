@@ -309,10 +309,10 @@ def _tenant_id() -> Optional[str]:
         return None
 
 
-# One sync-state file shared by shadow-eval.py, sync-portal-history.py and
-# sync-ui-feedback.py — each keeps its own keys inside it. The load/save
-# pair below was copied byte-for-byte in all three before this
-# consolidation (ReviewFindings-2026-07-18 B2).
+# One sync-state file shared by shadow-eval.py and sync-ui-feedback.py — each
+# keeps its own keys inside it. The load/save pair below was copied
+# byte-for-byte in every script that used it before this consolidation
+# (ReviewFindings-2026-07-18 B2).
 SYNC_STATE_FILE = ".agent-rfc/fixtures/sync_state.json"
 
 

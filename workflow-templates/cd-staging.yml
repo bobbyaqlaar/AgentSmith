@@ -119,14 +119,6 @@ jobs:
           ENVIRONMENT: staging
         run: python3 scripts/verify_system.py --check-redaction
 
-      # ── Sync history to the Ops Portal (optional — skips silently if the
-      # secrets below aren't configured for this tenant's GitHub Environment) ──
-      - name: "Sync history to Ops Portal"
-        env:
-          OPS_PORTAL_URL:        ${{ secrets.OPS_PORTAL_URL }}
-          OPS_PORTAL_SYNC_TOKEN: ${{ secrets.OPS_PORTAL_SYNC_TOKEN }}
-        run: python3 scripts/sync-portal-history.py
-
       # ── Post-deploy smoke: eval fail gate at 0.75 ──────────────────────────
       - name: "Post-deploy eval smoke test"
         env:

@@ -72,9 +72,12 @@ export interface UpsertAgentRunInput {
   frameworkVersion?: string | null;
 }
 
-export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<void> {
+/** Stores the run, or not: false when `runId` is already another tenant's.
+ *  run_id is unique across tenants, so without the tenant guard below one app
+ *  could overwrite another's run by reusing its id. */
+export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<boolean> {
   const finished = input.status !== "running";
-  await getPool().query(
+  const { rowCount } = await getPool().query(
     `INSERT INTO agent_runs (run_id, tenant_id, workflow_id, status, trace_id, error_summary,
                              input_tokens, output_tokens, cost_usd, framework_version, finished_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${finished ? "now()" : "NULL"})
@@ -106,7 +109,8 @@ export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<void> 
        -- mid-run, so the only way the two writes differ is one of them not
        -- carrying it — and the one that did is the one worth keeping.
        framework_version = COALESCE(EXCLUDED.framework_version, agent_runs.framework_version),
-       finished_at = ${finished ? "now()" : "agent_runs.finished_at"}`,
+       finished_at = ${finished ? "now()" : "agent_runs.finished_at"}
+     WHERE agent_runs.tenant_id = EXCLUDED.tenant_id`,
     [
       input.runId,
       input.tenantId,
@@ -120,6 +124,7 @@ export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<void> 
       input.frameworkVersion ?? null,
     ]
   );
+  return (rowCount ?? 0) > 0;
 }
 
 /** What each tenant's most recent run reported as its framework version.
