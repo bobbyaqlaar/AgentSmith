@@ -21,10 +21,9 @@ Workflow:
      "experiments" in Phoenix's API are dataset/offline-run objects, not a
      fit for annotating already-ingested production spans.
   5. Track which span_ids have already been shadow-evaluated in
-     .agent-rfc/fixtures/sync_state.json (new key, doesn't collide with
-     sync-ui-feedback.py's "synced_span_ids" or sync-portal-history.py's
-     "synced_history_entry_ids") so a scheduled re-run doesn't re-judge
-     the same span.
+     .agent-rfc/fixtures/sync_state.json (its own key, doesn't collide with
+     sync-ui-feedback.py's "synced_span_ids") so a scheduled re-run doesn't
+     re-judge the same span.
 
 Shadow evals never auto-promote to the golden dataset — that stays
 HITL-gated via `agentsmith promote`. Failures are surfaced for a human to

@@ -1460,6 +1460,55 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        name="ops_contract",
+        tests=("scripts/test/test_ops_contract.py",),
+        mutations=(
+            Mutation(
+                "the sender follows a redirect, its token along",
+                "runtime/ops_contract.py",
+                "            follow_redirects=False,",
+                "            follow_redirects=True,",
+            ),
+            Mutation(
+                "a settings message may carry the replay secret",
+                "runtime/ops_contract.py",
+                '        if "replay_webhook_secret" in (self.model_extra or {}):',
+                "        if False:",
+            ),
+            Mutation(
+                "the all-zero trace id is accepted",
+                "runtime/ops_contract.py",
+                '        if value is not None and set(value) == {"0"}:',
+                "        if False:",
+            ),
+            Mutation(
+                "the gateway keeps the shared-token route when it holds an Ops token",
+                "runtime/llm_gateway.py",
+                "        if ops_contract.configured():\n            # The Ops contract",
+                "        if False:\n            # The Ops contract",
+            ),
+            Mutation(
+                "a dead letter never reaches the portal",
+                "runtime/dead_letter.py",
+                "    if not ops_contract.configured():\n        return\n    try:\n"
+                "        message = ops_contract.DeadLetterMessage(",
+                "    if True:\n        return\n    try:\n        message = ops_contract.DeadLetterMessage(",
+            ),
+            Mutation(
+                "conformance misses a sender that followed the redirect",
+                "runtime/conformance.py",
+                '        checks.append(Check("a redirect is never followed", not portal.followed,',
+                '        checks.append(Check("a redirect is never followed", True,',
+            ),
+            Mutation(
+                "the CI sender passes a refusal",
+                "runtime/cli.py",
+                "    if status is not None and status < 500:\n        print(f\"Ops: the portal refused",
+                "    if False:\n        print(f\"Ops: the portal refused",
+            ),
+        ),
+    ),
+    Suite(
         name="record_contract",
         tests=("scripts/test/test_record_contract.py",),
         mutations=(

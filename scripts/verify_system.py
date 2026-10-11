@@ -728,93 +728,6 @@ def check_hooks() -> bool:
     return failures == 0
 
 
-def check_history_sync() -> bool:
-    """
-    CI/manual validation for scripts/sync-portal-history.py against a real
-    running Ops Portal (docs/PRODUCT_ARCHIVE.md P1b) — requires OPS_PORTAL_URL
-    and OPS_PORTAL_SYNC_TOKEN pointing at one, run from a throwaway tenant
-    repo (with .agenticframework/tenant.yaml and a fixture .agent-history.log).
-
-        OPS_PORTAL_URL=http://localhost:3000 OPS_PORTAL_SYNC_TOKEN=... \
-            python3 scripts/verify_system.py --check-history-sync
-    """
-    import subprocess
-    import tempfile
-
-    print("═══════════════════════════════════════════════════")
-    print("  History Sync Check")
-    print("═══════════════════════════════════════════════════\n")
-
-    ops_portal_url = os.environ.get("OPS_PORTAL_URL", "")
-    sync_token = os.environ.get("OPS_PORTAL_SYNC_TOKEN", "")
-    if not ops_portal_url or not sync_token:
-        _check(
-            "OPS_PORTAL_URL and OPS_PORTAL_SYNC_TOKEN set",
-            False,
-            "required for this check",
-        )
-        return False
-
-    sync_script = Path(__file__).resolve().parent / "sync-portal-history.py"
-    failures = 0
-
-    with tempfile.TemporaryDirectory() as tmp_str:
-        tmp = Path(tmp_str)
-        subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
-        tenant_id = f"verify-history-sync-{int(time.time())}"
-        (tmp / ".agenticframework").mkdir()
-        (tmp / ".agenticframework" / "tenant.yaml").write_text(
-            f"tenant:\n  id: {tenant_id}\n"
-        )
-        (tmp / ".agent-history.log").write_text(
-            '{"timestamp":"2026-01-01T00:00:00Z","level":"CRITICAL","event":"verify_check","hitl_resolved":false}\n'
-        )
-
-        env = {
-            **os.environ,
-            "OPS_PORTAL_URL": ops_portal_url,
-            "OPS_PORTAL_SYNC_TOKEN": sync_token,
-        }
-        result1 = subprocess.run(
-            ["python3", str(sync_script)],
-            cwd=tmp,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if not _check(
-            "first sync run exits 0",
-            result1.returncode == 0,
-            result1.stdout + result1.stderr,
-        ):
-            failures += 1
-
-        result2 = subprocess.run(
-            ["python3", str(sync_script)],
-            cwd=tmp,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        idempotent = "Nothing new to sync" in result2.stdout
-        if not _check(
-            "second run is idempotent (no resend)", idempotent, result2.stdout
-        ):
-            failures += 1
-
-    print()
-    print("═══════════════════════════════════════════════════")
-    print(
-        "  🎉  History sync check passed"
-        if failures == 0
-        else f"  🛑  {failures} check(s) failed"
-    )
-    print("═══════════════════════════════════════════════════")
-    return failures == 0
-
-
 def _kg_shape(kg_path: Path) -> Optional[str]:
     """The graph's meaning, with the parts that legitimately churn removed.
 
@@ -1316,7 +1229,6 @@ MODES = [
     ("--check-redaction", "trace redaction profile for $ENVIRONMENT"),
     ("--check-idempotency", "idempotency store round-trip"),
     ("--check-dlq", "dead-letter queue replay path"),
-    ("--check-history-sync", "agent history ↔ portal sync state"),
     ("--check-hooks", "hook opt-in / enterprise RFC gate"),
     ("--check-onprem-deploy", "on-prem bundle renders and self-checks"),
     ("--check-kg", "Knowledge Graph freshness (drift gate)"),
@@ -1360,8 +1272,6 @@ if __name__ == "__main__":
         sys.exit(0 if check_idempotency() else 1)
     if "--check-dlq" in sys.argv:
         sys.exit(0 if check_dlq() else 1)
-    if "--check-history-sync" in sys.argv:
-        sys.exit(0 if check_history_sync() else 1)
     if "--check-hooks" in sys.argv:
         sys.exit(0 if check_hooks() else 1)
     if "--check-onprem-deploy" in sys.argv:

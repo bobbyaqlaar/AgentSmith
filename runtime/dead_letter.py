@@ -67,6 +67,26 @@ REASON_HITL_REJECTED = "hitl_rejected"
 REASON_INFRA_ERROR = "infra_error"
 
 
+def _report(entry: "DLQEntry") -> None:
+    """The entry to the portal's HITL queue by the Ops contract (contract/ops/v1),
+    when this worker holds an Ops token — so the portal needs no share of this
+    database. The worker's own store keeps the entry either way: replay claims
+    its row here. Never raises, never blocks enqueue()."""
+    from runtime import ops_contract
+
+    if not ops_contract.configured():
+        return
+    try:
+        message = ops_contract.DeadLetterMessage(
+            task_id=entry.task_id, error=entry.error[: ops_contract.TEXT_LIMIT], reason=entry.reason,
+            workflow_id=entry.workflow_id,
+            gate_id=entry.gate_id, payload=json.loads(json.dumps(entry.payload, default=str)))
+    except Exception as exc:  # fail-open: a report that cannot be built is said, not raised
+        ops_contract._say_once("dead-letter-build", f"a dead letter could not be reported to the portal: {exc}")
+        return
+    ops_contract.send(message)
+
+
 def _notify(tenant_id: str, task_id: str, reason: Optional[str], error: str) -> None:
     """Best-effort Slack/Teams ping — never raises, never blocks enqueue()."""
     text = f"🔴 DLQ entry tenant={tenant_id} task={task_id} reason={reason or 'unspecified'}: {error}"
@@ -315,6 +335,7 @@ class DeadLetterQueue:
             conn.close()
         if inserted:
             _notify(tenant_id, entry.task_id, reason, error)
+            _report(entry)
         return entry if inserted else (self._get(entry.task_id) or entry)
 
     def list(

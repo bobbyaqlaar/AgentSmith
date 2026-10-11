@@ -1,4 +1,4 @@
-// /admin/apps/<id> — edit an app, and issue, rotate or revoke its ingest token
+// /admin/apps/<id> — edit an app, and issue, rotate or revoke its machine credentials: the CI ingest token, the Ops token and the replay signing key
 // (Administration › Apps; portal phase 1).
 
 import { AppForm } from "@/components/AppForm";
@@ -9,7 +9,7 @@ import { can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { ingestTokenStatus } from "@/lib/ingestTokens";
 import { isSafeHttpUrl } from "@/lib/safeUrl";
-import { getTenant } from "@/lib/tenants";
+import { getTenant, replayStatus } from "@/lib/tenants";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +32,8 @@ export default async function AdminAppPage({ params }: { params: { id: string } 
     );
   }
   const [token] = await ingestTokenStatus([app.tenantId]);
+  const [opsToken] = await ingestTokenStatus([app.tenantId], "ops");
+  const replay = await replayStatus(app.tenantId);
   const secretsUrl =
     app.repoProvider === "github" && app.repoUrl && isSafeHttpUrl(app.repoUrl)
       ? `${app.repoUrl.replace(/\/+$/, "").replace(/\.git$/, "")}/settings/secrets/actions`
@@ -78,6 +80,33 @@ export default async function AdminAppPage({ params }: { params: { id: string } 
           </p>
         )}
         <IngestTokenPanel appId={app.tenantId} active={token.active > 0} repoSecretsUrl={secretsUrl} />
+      </section>
+
+      <section className="space-y-3">
+        <h3 className="font-medium">Ops token</h3>
+        <p className="text-sm text-black/60 dark:text-white/60">
+          The app&apos;s running workers report run status, dead letters and their settings with this token
+          (the Ops contract). It is a different credential from the CI&apos;s.{" "}
+          {opsToken.active > 0 ? (
+            <>
+              One is issued{opsToken.issuedAt && <> — <Timestamp value={opsToken.issuedAt} /></>}
+              {opsToken.issuedBy && ` by ${opsToken.issuedBy}`}.
+            </>
+          ) : (
+            "None is issued, so the app's workers cannot report."
+          )}
+        </p>
+        <IngestTokenPanel appId={app.tenantId} active={opsToken.active > 0} repoSecretsUrl={null} kind="ops" />
+      </section>
+
+      <section className="space-y-3">
+        <h3 className="font-medium">Replay signing key</h3>
+        <p className="text-sm text-black/60 dark:text-white/60">
+          A person&apos;s fix to a dead letter is sent to the app&apos;s replay webhook, signed with this key.{" "}
+          {replay.url ? <>The app declares its webhook at <code>{replay.url}</code>. </> : "The app has not declared a webhook. "}
+          {replay.keyIssued ? "A key is issued." : "No key is issued, so nothing can be replayed."}
+        </p>
+        <IngestTokenPanel appId={app.tenantId} active={replay.keyIssued} repoSecretsUrl={null} kind="replay" />
       </section>
     </div>
   );

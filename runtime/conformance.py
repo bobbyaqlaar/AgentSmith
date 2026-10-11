@@ -27,7 +27,7 @@ import subprocess
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -1228,3 +1228,280 @@ def run_security(provider: str, workdir: Path) -> SecurityReport:
         else:
             checks.append(_judge_security(case, code, out))
     return SecurityReport(provider, checks)
+
+
+# ── The Ops contract (contract/ops/v1/) ─────────────────────────────────────
+#
+# A wire port both ways: an app's sender POSTs run status, dead letters and
+# settings to its portal's Ops ingest, and the portal POSTs a human's fix back to
+# the app's replay webhook, signed. A sender is run against a loopback receiver;
+# a receiver and a replay webhook are sent the contract's cases
+# (.agent-rfc/designs/ops-contract.md).
+
+OPS_CONTRACT = 1
+OPS_RECEIVER_TOKEN_ENV = "GOVERNANCE_OPS_TOKEN"
+OPS_REPLAY_KEY_ENV = "GOVERNANCE_REPLAY_KEY"
+# Planted in the fixture's tenant.yaml where a careless sender would find it;
+# no message may carry it. Not a credential.
+_OPS_PLANTED_SECRET = "planted-replay-secret-not-a-real-key"
+
+
+def _ops_dir() -> Path:
+    for root in (Path(os.environ["AGENTSMITH_DIR"]) if os.environ.get("AGENTSMITH_DIR") else None,
+                 Path(__file__).resolve().parent.parent, Path.home() / ".agent-framework"):
+        if root is not None and (root / "contract" / "ops" / f"v{OPS_CONTRACT}" / "cases.json").is_file():
+            return root / "contract" / "ops" / f"v{OPS_CONTRACT}"
+    raise FileNotFoundError(f"contract/ops/v{OPS_CONTRACT}/ not found in $AGENTSMITH_DIR, beside this package, "
+                            "or ~/.agent-framework — re-run install-ai-stack.sh")
+
+
+@dataclass(frozen=True)
+class OpsReport:
+    subject: str
+    checks: list[Check]
+
+    @property
+    def passed(self) -> bool:
+        return bool(self.checks) and all(c.ok for c in self.checks)
+
+    def render(self) -> str:
+        lines = [f"ops contract v{OPS_CONTRACT} — {self.subject}", ""]
+        lines += [f"  {'✅' if c.ok else '❌'} {c.name}" + (f" — {c.why}" if c.why else "") for c in self.checks]
+        kept = sum(1 for c in self.checks if c.ok)
+        lines += ["", f"{kept}/{len(self.checks)} cases" + ("" if self.passed else " — not conformant")]
+        return "\n".join(lines)
+
+
+class _OpsLoopback:
+    """A stand-in portal on 127.0.0.1. `mode` decides its answer to the Ops
+    ingest: "ok" (200), "redirect" (302 to a second address on this server,
+    which records anything that arrives — a sender that follows is caught),
+    "refuse" (401) or "unwell" (503)."""
+
+    def __init__(self) -> None:
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+        self.mode = "ok"
+        self.received: list[tuple[dict, bytes]] = []
+        self.followed: list[str] = []
+        loopback = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                # A client that follows a 302 may re-send it as a GET — with the
+                # token still attached. Any method at the second address counts.
+                if self.path.startswith("/elsewhere"):
+                    loopback.followed.append(f"GET {self.path}")
+                return self._answer(200 if self.path.startswith("/elsewhere") else 404)
+
+            def do_POST(self) -> None:
+                body = self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 2_000_000))
+                if self.path.startswith("/elsewhere"):
+                    loopback.followed.append(f"POST {self.path}")
+                    return self._answer(200)
+                if self.path != "/api/ops/ingest":
+                    return self._answer(404)
+                loopback.received.append(({k.lower(): v for k, v in self.headers.items()}, body))
+                if loopback.mode == "redirect":
+                    self.send_response(302)
+                    self.send_header("Location", f"{loopback.url}/elsewhere/api/ops/ingest")
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return None
+                return self._answer({"ok": 200, "refuse": 401, "unwell": 503}[loopback.mode])
+
+            def _answer(self, status: int) -> None:
+                data = json.dumps({"stored": 1} if status == 200 else {"error": "conformance"}).encode()
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, *_args) -> None:
+                pass
+
+        self._server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self._server.server_address[1]}"
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+
+    def __enter__(self) -> "_OpsLoopback":
+        self._thread.start()
+        return self
+
+    def __exit__(self, *_exc) -> None:
+        self._server.shutdown()
+        self._server.server_close()
+
+
+def build_ops_fixture(workdir: Path) -> Path:
+    """A repository declaring a budget cap, a replay webhook — and, where a
+    careless sender would find it, a replay secret no message may carry."""
+    import shutil
+
+    if workdir.exists():
+        shutil.rmtree(workdir)
+    (workdir / ".agenticframework").mkdir(parents=True)
+    (workdir / ".agenticframework" / "tenant.yaml").write_text(
+        "tenant:\n  id: fixture-tenant\n\nbudget:\n  monthly_usd_cap: 25\n\nhitl:\n"
+        "  replay_webhook_url: https://worker.fixture.example/replay\n"
+        f"  replay_webhook_secret: {_OPS_PLANTED_SECRET}\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q", "--template=", str(workdir)], check=True)
+    return workdir
+
+
+def run_ops_sender(command: str, workdir: Path, url_env: str = "OPS_PORTAL_URL",
+                   token_env: str = "OPS_PORTAL_TOKEN") -> OpsReport:
+    """Run `command` against a loopback receiver under each answer a portal can
+    give, and judge what it sent and how it ended."""
+    import jsonschema
+
+    schema = json.loads((_ops_dir() / "message.schema.json").read_text(encoding="utf-8"))
+    token = "aso_conformance-sender-token"
+    root = build_ops_fixture(workdir)
+    base = {k: v for k, v in os.environ.items() if k not in (url_env, token_env)}
+
+    def run(env: dict) -> tuple[int, str]:
+        try:
+            done = subprocess.run(shlex.split(command), cwd=root, env=env, capture_output=True, text=True,
+                                  check=False, timeout=120)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return 127, str(exc)
+        return done.returncode, done.stdout + done.stderr
+
+    checks: list[Check] = []
+    with _OpsLoopback() as portal:
+        configured = {**base, url_env: portal.url, token_env: token}
+
+        portal.mode = "ok"
+        code, said = run(configured)
+        sent = list(portal.received)
+        problems = []
+        for headers, body in sent:
+            if headers.get("authorization") != f"Bearer {token}":
+                problems.append("a message without its Ops token")
+            if _OPS_PLANTED_SECRET.encode() in body:
+                problems.append("a message carrying the replay secret tenant.yaml held")
+            try:
+                jsonschema.validate(json.loads(body), schema)
+            except (ValueError, jsonschema.ValidationError) as exc:
+                problems.append(f"a message the schema refuses ({str(exc).splitlines()[0][:160]})")
+        why = ("sent nothing" if not sent else "; ".join(sorted(set(problems)))
+               or (f"exited {code}" if code != 0 else ""))
+        checks.append(Check("it sends valid messages, each with its token and no secret", bool(sent) and not problems
+                            and code == 0, why))
+
+        portal.mode, portal.received = "redirect", []
+        run(configured)
+        checks.append(Check("a redirect is never followed", not portal.followed,
+                            "it followed the redirect, taking its token along" if portal.followed else ""))
+
+        portal.mode = "refuse"
+        code, _ = run(configured)
+        checks.append(Check("a refusal (401) fails it — configuration, not an outage", code != 0,
+                            "exited 0 on a 401" if code == 0 else ""))
+
+        portal.mode = "unwell"
+        code, _ = run(configured)
+        checks.append(Check("an unwell receiver (503) warns and carries on", code == 0, f"exited {code} on a 503"
+                            if code != 0 else ""))
+
+        portal.received = []
+        code, said = run(base)
+        checks.append(Check("with no receiver configured it sends nothing and says so",
+                            code == 0 and not portal.received and bool(said.strip()),
+                            f"exit {code}, {len(portal.received)} sent, {'said' if said.strip() else 'said nothing'}"
+                            if not (code == 0 and not portal.received and said.strip()) else ""))
+    return OpsReport(f"sender: {command}", checks)
+
+
+def ops_case_message(case: dict, nonce: str) -> dict:
+    """A case's message: the fixture's of its kind, `set` applied, `drop`
+    removed — with this run's ids, so a portal that has seen another app's run
+    of the contract does not answer for that app's ids."""
+    fixture = json.loads((_ops_dir() / "fixture.json").read_text(encoding="utf-8"))
+    message = {**fixture["messages"][case["message"]], **case["set"]}
+    for key in case["drop"]:
+        message.pop(key, None)
+    for key in ("run_id", "task_id"):
+        if isinstance(message.get(key), str):
+            message[key] = f"{message[key]}-{nonce}"
+    return message
+
+
+def run_ops_receiver(url: str, token: str) -> OpsReport:
+    """Every case of contract/ops/v1/cases.json, and the token's own refusals,
+    sent to a portal's Ops ingest. Only the status is matched."""
+    import secrets as _secrets
+
+    nonce = _secrets.token_hex(4)
+    cases = json.loads((_ops_dir() / "cases.json").read_text(encoding="utf-8"))["cases"]
+    checks = []
+    for case in cases:
+        status = _post_status(url, ops_case_message(case, nonce), token)
+        want = case["expect"]
+        checks.append(Check(case["name"], status == want,
+                            "" if status == want else f"answered {status}, the contract says {want}"))
+    valid = ops_case_message(cases[0], nonce)
+    for name, sent_token, want in (("no token is refused (401)", "", 401),
+                                   ("an unknown token is refused (401)", "aso_not-a-token-this-portal-issued", 401)):
+        status = _post_status(url, valid, sent_token)
+        checks.append(Check(name, status == want, "" if status == want else f"answered {status}"))
+    big = {**valid, "error_summary": None, "padding": "x" * 1_100_000}
+    status = _post_status(url, big, token)
+    checks.append(Check("a body over the limit is refused (413)", status == 413,
+                        "" if status == 413 else f"answered {status}"))
+    return OpsReport(f"receiver: {url}", checks)
+
+
+def _post_status(url: str, message, token: str, headers: Optional[dict] = None) -> int:
+    """POST one JSON body — a dict, or the exact bytes a signature covers; the
+    status, never following a redirect. 0 when nothing answered."""
+    import urllib.error
+
+    class _NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *_args, **_kwargs):
+            return None
+
+    data = message if isinstance(message, bytes) else json.dumps(message).encode()
+    request = urllib.request.Request(url, data=data, method="POST",
+                                     headers={"Content-Type": "application/json", **(headers or {}),
+                                              **({"Authorization": f"Bearer {token}"} if token else {})})
+    try:
+        with urllib.request.build_opener(_NoRedirect).open(request, timeout=30) as response:
+            return response.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+    except (urllib.error.URLError, OSError):
+        return 0
+
+
+def run_ops_replay(url: str, key: str) -> OpsReport:
+    """A tenant's replay webhook sent the contract's replay request signed
+    correctly, stale, under another key, and unsigned. A correctly signed one
+    must not be refused for its signature (any answer but 401 — whether the task
+    is there is the receiver's to say); the others must be (401)."""
+    import hashlib
+    import hmac
+    import time
+
+    fixture = json.loads((_ops_dir() / "fixture.json").read_text(encoding="utf-8"))
+    body = json.dumps(fixture["replay"]).encode()
+
+    def signed(secret: str, timestamp: int) -> dict:
+        digest = hmac.new(secret.encode(), f"{timestamp}.".encode() + body, hashlib.sha256).hexdigest()
+        return {"X-Replay-Timestamp": str(timestamp), "X-Replay-Signature-V2": f"sha256={digest}"}
+
+    now = int(time.time())
+    attempts: tuple[tuple[str, dict, Callable[[int], bool]], ...] = (
+        ("a correctly signed replay is not refused for its signature", signed(key, now), lambda s: s not in (0, 401)),
+        ("a replay signed ten minutes ago is refused (401)", signed(key, now - 600), lambda s: s == 401),
+        ("a replay signed with another key is refused (401)", signed(key + "x", now), lambda s: s == 401),
+        ("an unsigned replay is refused (401)", {}, lambda s: s == 401),
+    )
+    checks = []
+    for name, headers, ok in attempts:
+        status = _post_status(url, body, "", headers)
+        checks.append(Check(name, ok(status), "" if ok(status) else f"answered {status or 'nothing'}"))
+    return OpsReport(f"replay webhook: {url}", checks)

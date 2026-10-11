@@ -359,7 +359,8 @@ _SETUP_STEPS = frozenset({
     "npm ci",
     "npm run db:migrate",
     "Send the gate's record to the portal",
-    "Start portal for history-sync check",
+    "Start portal for the Ops contract check",
+    "Seed an app and its Ops token",
 })
 
 

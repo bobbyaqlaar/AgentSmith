@@ -8,9 +8,11 @@
 
 import { appendAuditEvent } from "./auditLog";
 import { withTransaction } from "./db";
-import { newIngestToken } from "./ingestTokens";
+import { randomBytes } from "node:crypto";
+
+import { newIngestToken, type TokenScope } from "./ingestTokens";
 import { isSafeHttpUrl } from "./safeUrl";
-import { REPO_PROVIDERS, type RepoProvider } from "./tenants";
+import { REPO_PROVIDERS, type RepoProvider, setReplayWebhookSecret } from "./tenants";
 
 /** An app id appears in URLs, CI secrets and span attributes: lower-case, digits, dashes. */
 export const APP_ID = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
@@ -118,29 +120,30 @@ export async function updateApp(id: string, input: AppInput, actor: string): Pro
 }
 
 /**
- * Revokes every live ingest token for the app and issues one new one, in one
+ * Revokes every live token of `scope` for the app and issues one new one, in one
  * transaction. Returns the new token — the only time it exists outside a hash.
+ * The other scope's token is untouched: rotating the CI token does not stop the
+ * app's workers reporting, nor the reverse.
  */
-export async function rotateIngestToken(id: string, actor: string): Promise<string> {
-  const { token, hash } = newIngestToken();
+export async function rotateIngestToken(id: string, actor: string, scope: TokenScope = "dev"): Promise<string> {
+  const { token, hash } = newIngestToken(scope);
   await withTransaction("ingest_token_rotate", async (client) => {
     const exists = await client.query(`SELECT 1 FROM tenants WHERE tenant_id = $1`, [id]);
     if (exists.rowCount === 0) throw new AppMissingError(`no app called ${id}`);
     const revoked = await client.query(
-      `UPDATE app_ingest_tokens SET revoked_at = now() WHERE tenant_id = $1 AND revoked_at IS NULL`,
-      [id],
+      `UPDATE app_ingest_tokens SET revoked_at = now() WHERE tenant_id = $1 AND scope = $2 AND revoked_at IS NULL`,
+      [id, scope],
     );
-    await client.query(`INSERT INTO app_ingest_tokens (token_hash, tenant_id, created_by) VALUES ($1, $2, $3)`, [
-      hash,
-      id,
-      actor,
-    ]);
+    await client.query(
+      `INSERT INTO app_ingest_tokens (token_hash, tenant_id, created_by, scope) VALUES ($1, $2, $3, $4)`,
+      [hash, id, actor, scope],
+    );
     await appendAuditEvent(
       {
         eventType: "config_change",
         actorId: actor,
         tenantId: id,
-        details: { action: "ingest_token_issued", revoked: revoked.rowCount ?? 0 },
+        details: { action: scope === "ops" ? "ops_token_issued" : "ingest_token_issued", revoked: revoked.rowCount ?? 0 },
       },
       client,
     );
@@ -148,18 +151,43 @@ export async function rotateIngestToken(id: string, actor: string): Promise<stri
   return token;
 }
 
-/** Revokes every live ingest token for the app. Returns how many. */
-export async function revokeAppIngestTokens(id: string, actor: string): Promise<number> {
+/** Revokes every live token of `scope` for the app. Returns how many. */
+export async function revokeAppIngestTokens(id: string, actor: string, scope: TokenScope = "dev"): Promise<number> {
   return withTransaction("ingest_token_revoke", async (client) => {
     const revoked = await client.query(
-      `UPDATE app_ingest_tokens SET revoked_at = now() WHERE tenant_id = $1 AND revoked_at IS NULL`,
-      [id],
+      `UPDATE app_ingest_tokens SET revoked_at = now() WHERE tenant_id = $1 AND scope = $2 AND revoked_at IS NULL`,
+      [id, scope],
     );
     const count = revoked.rowCount ?? 0;
     await appendAuditEvent(
-      { eventType: "config_change", actorId: actor, tenantId: id, details: { action: "ingest_token_revoked", revoked: count } },
+      {
+        eventType: "config_change",
+        actorId: actor,
+        tenantId: id,
+        details: { action: scope === "ops" ? "ops_token_revoked" : "ingest_token_revoked", revoked: count },
+      },
       client,
     );
     return count;
   });
+}
+
+/**
+ * Issues the key the portal signs this app's replay requests with
+ * (contract/ops/v1), replacing any it had. Returned once, for the app's worker
+ * to hold as REPLAY_WEBHOOK_SECRET; the portal keeps it to sign — a signing
+ * key cannot be kept as a hash. The audit records that it was issued, never it.
+ */
+export async function issueReplayKey(id: string, actor: string): Promise<string> {
+  const key = randomBytes(32).toString("hex");
+  await withTransaction("replay_key_issue", async (client) => {
+    const exists = await client.query(`SELECT 1 FROM tenants WHERE tenant_id = $1`, [id]);
+    if (exists.rowCount === 0) throw new AppMissingError(`no app called ${id}`);
+    await setReplayWebhookSecret(id, key, client);
+    await appendAuditEvent(
+      { eventType: "config_change", actorId: actor, tenantId: id, details: { action: "replay_key_issued" } },
+      client,
+    );
+  });
+  return key;
 }

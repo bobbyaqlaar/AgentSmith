@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS tenants (
 -- ALTER for this migration to actually apply to a pre-existing database
 -- (confirmed: without this, re-running the migration left `column
 -- "budget_cap_usd" does not exist` errors against pre-existing data).
--- Synced from .agenticframework/tenant.yaml's gateway.budget_cap_usd via
--- scripts/sync-portal-history.py — NULL until a tenant repo's CD pipeline
--- has synced at least once. This is a *display* cap for the Ops Portal's
+-- Reported from .agenticframework/tenant.yaml's budget cap by the app's own
+-- worker (a `settings` message, contract/ops/v1) — NULL until it has
+-- reported once. This is a *display* cap for the Ops Portal's
 -- cost page; it does not enforce anything — the actual enforcement is
 -- runtime/llm_gateway.py's own AGENT_MONTHLY_USD_CAP env var on the
 -- worker, which this is meant to mirror, not replace (deliberately not
@@ -209,6 +209,12 @@ CREATE TABLE IF NOT EXISTS app_ingest_tokens (
     revoked_at  TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_app_ingest_tokens_tenant ON app_ingest_tokens (tenant_id);
+-- What a token may write (contract/ops/v1): `dev` — its CI's gate records;
+-- `ops` — its running workers' run status, dead letters and settings. Every
+-- token issued before scopes existed is a dev token. One credential per
+-- channel: a leaked CI token cannot write Ops data, nor the reverse.
+ALTER TABLE app_ingest_tokens ADD COLUMN IF NOT EXISTS scope TEXT NOT NULL DEFAULT 'dev'
+    CHECK (scope IN ('dev', 'ops'));
 
 -- One commit as the gate judged it. Keyed on (app, commit): the same CI run
 -- posted twice leaves one row.

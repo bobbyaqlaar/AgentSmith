@@ -7,6 +7,19 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — C8: the Ops contract (2026-10-11)
+
+Design: `.agent-rfc/designs/ops-contract.md`; review: `.agent-rfc/reviews/ops-contract.md`.
+Slice C8 of `.agent-rfc/designs/governance-contracts.md`.
+
+- **`contract/ops/v1/`**: one Ops ingest for run status, dead letters and settings; the replay request
+  back to the tenant, signed. Conformance for a sender, a receiver and a replay webhook.
+- **The owner's decisions**: a per-app Ops token, separate from the CI's; dead letters over HTTP, not
+  a shared database; the replay key issued by the portal, never read from `tenant.yaml`; both CD sync
+  scripts retired.
+- **Closed on the way**: one shared token let any tenant write any tenant's runs and settings, and a
+  `run_id` upsert ignored the tenant; the replay request followed redirects.
+
 ## Released — v2.3.0 (2026-10-10)
 
 Design: `.agent-rfc/designs/release-2-3-0.md`; review: `.agent-rfc/reviews/release-2-3-0.md`.

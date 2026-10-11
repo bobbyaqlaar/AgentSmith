@@ -64,7 +64,7 @@ dev` — see `docs/UserManual.md` Part B/E and `agentsmith dashboard start`
 | Endpoint | Method | Auth | Purpose |
 |---|---|---|---|
 | `/api/tenants` | GET | Dashboard (any role) | List tenants in scope, with spend/issues/DLQ counts |
-| `/api/tenants` | POST | Dashboard (operator/admin, **and the tenant must be in the caller's scope**) | Register/update a tenant: `{ tenantId, name, isolation?, phoenixBaseUrl?, budgetCapUsd?, replayWebhookUrl?, replayWebhookSecret? }`. Both URL fields must be `http(s)`; unknown fields are ignored rather than forwarded to the database |
+| `/api/tenants` | POST | Dashboard (operator/admin, **and the tenant must be in the caller's scope**) | Register/update a tenant: `{ tenantId, name, isolation?, phoenixBaseUrl?, budgetCapUsd?, replayWebhookUrl? }`. Both URL fields must be `http(s)`; a `replayWebhookSecret` is refused — the replay key is issued in Administration › Apps; other unknown fields are ignored rather than forwarded to the database |
 | `/api/tenants/:id/cost` | GET | Dashboard | Monthly spend history + budget cap for one tenant |
 | `/api/tenants/:id/issues` | GET | Dashboard | Unresolved MAJOR/CRITICAL `.agent-history.log` entries: `{ issues, total, limit }` — `issues` is capped at `limit`, `total` is the real count |
 | `/api/tenants/:id/widget-token` | POST | Dashboard (operator/admin) | Mint a read-only widget token — plaintext returned once |
@@ -72,8 +72,11 @@ dev` — see `docs/UserManual.md` Part B/E and `agentsmith dashboard start`
 | `/api/dlq` | GET | Dashboard | `{ wired: boolean, pendingByTenant }` |
 | `/api/dlq/:taskId/replay` | POST | Dashboard (operator/admin, tenant in scope) | HMAC-signs `{ taskId, payload }` and POSTs it to the entry's tenant's `replay_webhook_url`; returns `{ ok, resumable }` — `resumable: false` means the entry has no `workflow_id`/`gate_id` to signal |
 | `/api/dlq/:taskId/discard` | POST | Dashboard (operator/admin, tenant in scope) | Marks the entry discarded directly — safe without a webhook round-trip, since it never resumes anything live |
-| `/api/runs/ingest` | POST | `Bearer $OPS_PORTAL_SYNC_TOKEN` | `runtime/llm_gateway.py`'s best-effort run-status push (`running`/`success`/`degraded`/`failed`), keyed by `runId`, grouped by `workflowId` |
-| `/api/sync/history` | POST | `Bearer $OPS_PORTAL_SYNC_TOKEN` | CD-pipeline ingestion: `.agent-history.log` entries + optional `budgetCapUsd`/`replayWebhookUrl`/`replayWebhookSecret` synced from `tenant.yaml` |
+| `/api/ops/ingest` | POST | `Bearer <app Ops token>` | The Ops contract (`contract/ops/v1`): a running app's `run`, `dead_letter` and `settings` messages, each stored under the app its token belongs to — a message names no tenant. A `run_id` or `task_id` another app holds is `409` |
+| `/api/admin/apps/:id/ops-token` | POST, DELETE | Dashboard (`admin.apps` on the app) | Issue/rotate or revoke the app's Ops token — shown once, only its hash stored, audited |
+| `/api/admin/apps/:id/replay-key` | POST | Dashboard (`admin.apps` on the app) | Issue the key replays to this app are signed with — shown once, for the worker's `REPLAY_WEBHOOK_SECRET`, audited |
+| `/api/runs/ingest` | POST | `Bearer $OPS_PORTAL_SYNC_TOKEN` | **Deprecated** — `/api/ops/ingest` replaces it. Run status for the tenant the body names, under the one token every tenant shares: until it is turned off (unset `OPS_PORTAL_SYNC_TOKEN`), a holder can add runs under any tenant, though never overwrite another tenant's |
+| `/api/sync/history` | POST | `Bearer $OPS_PORTAL_SYNC_TOKEN` | **Deprecated** — `.agent-history.log` entries and a display budget cap for the tenant the body names; a replay URL or secret in the body is ignored |
 | `/api/audit` | GET | Dashboard (admin only) | List signed audit events, each with `verified: boolean` |
 | `/api/audit/append` | POST | `Bearer $AUDIT_LOG_WRITE_TOKEN` | Append a signed audit event |
 | `/api/widget/status` | GET | `?token=` (widget token, not dashboard auth) | What the In-App Widget polls — tenant-scoped entirely by the token, never by a client-supplied tenant id |
@@ -107,12 +110,13 @@ either works standalone or together:
   listed gets no access, never an implicit-admin fallback. Session is a stateless HMAC-signed JWT cookie (`lib/sessionToken.ts`),
   revocable server-side (`revoked_sessions` table) on logout.
 
-**Machine-to-machine endpoints** (`/api/sync/*`, `/api/runs/ingest`,
+**Machine-to-machine endpoints** (`/api/sync/*`, `/api/runs/ingest`, `/api/ops/ingest`,
 `/api/dev/ingest`, `/api/dev/scaffold/*`, `/api/widget/*`, `/api/audit/append`)
 are excluded from the dashboard-auth middleware entirely — each has its own
 bearer-token/widget-token check inside the route handler, not basic-auth/SSO.
-`/api/dev/ingest` takes a per-app ingest token, and the app a request writes to
-is the token's. `/api/dev/scaffold/:id` takes a per-intake token: it reads that
+`/api/dev/ingest` takes a per-app ingest token and `/api/ops/ingest` a per-app Ops
+token — different scopes, so neither stands in for the other — and the app a
+request writes to is the token's. `/api/dev/scaffold/:id` takes a per-intake token: it reads that
 one intake and marks it consumed, once, within 24 hours of issue, and the id in
 the URL must agree with the token or the answer is 404. Creating an intake
 (`POST /api/dev/intakes`) is a signed-in person's act and needs `dev.create` — Developers and up — and refuses, with 409, an id that is already a registered app or that an open intake names.
@@ -124,8 +128,8 @@ the URL must agree with the token or the answer is 404. Creating an intake
 |---|---|---|
 | Cost | `llm_gateway_budget` | `runtime/llm_gateway.py` (read-only here) |
 | Unresolved issues | `agent_history_entries` | This portal, via `/api/sync/history` |
-| Run status | `agent_runs` | This portal, via `/api/runs/ingest` (pushed by `runtime/llm_gateway.py`) |
-| DLQ | `dlq_entries` | **`runtime/dead_letter.py`**, not this portal's migration — it creates/migrates the table itself on first `DeadLetterQueue()` construction in a worker process. `db/schema.sql` deliberately excludes it (see that file's comment) so there's one schema owner, not two competing migrations of the same table. Until at least one worker has constructed a `DeadLetterQueue`, `GET /api/dlq` reports `wired: false` — a genuine "nothing has run against this DB yet" signal, not a placeholder. |
+| Run status | `agent_runs` | This portal, via `/api/ops/ingest` (`run` messages from `runtime/llm_gateway.py`), or the deprecated `/api/runs/ingest` |
+| DLQ | `dlq_entries` | Created by the first dead letter to arrive — by the Ops contract (`/api/ops/ingest`, with the runtime's DDL, `lib/dlq.ts` `DLQ_DDL`, held equal to it by a test) or by a worker that shares this database (`runtime/dead_letter.py`). `db/schema.sql` deliberately excludes it, so until a dead letter has arrived by either route `GET /api/dlq` reports `wired: false` — a genuine "nothing has reported here yet" signal, not a placeholder. |
 | Phoenix trace stats | Phoenix's own REST (health check) + GraphQL (`traceCountByStatusTimeSeries`) | Read live from each tenant's `phoenixBaseUrl`, not cached |
 | Audit log | `audit_log` | This portal — HMAC-signed, DB-trigger-enforced append-only |
 | Dev workspace | `dev_commits`, `dev_ingest_runs` | This portal, via `/api/dev/ingest` — what each app's CI gate decided (`process_gate.py ci --json`). A cache of git: every row can be rebuilt from the app's history |

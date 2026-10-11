@@ -344,33 +344,41 @@ jobs:
       - name: "npm run build — the portal builds"
         # agentsmith:gate needs=npm
         run: npm run build
-      - name: "Start portal for history-sync check"
+      - name: "Start portal for the Ops contract check"
         env:
-          OPS_PORTAL_SYNC_TOKEN: "ci-test-sync-token-not-a-real-secret"
           OPS_PORTAL_USER: "ci"
           OPS_PORTAL_PASSWORD: "ci-test-password"
         run: |
           npm run start &
-          # No -f: a 401 (wrong token, expected) still means the server is
-          # up and responding — curl without -f only exits non-zero on an
-          # actual connection failure (refused/timeout), which is the
-          # readiness signal we want here.
+          # No -f: a 401 (no token, expected) still means the server is up
+          # and responding — curl without -f only exits non-zero on an actual
+          # connection failure (refused/timeout), the readiness signal wanted.
           for i in $(seq 1 30); do
-            curl -s -o /dev/null http://localhost:3000/api/sync/history -X POST \
-              -H "Authorization: Bearer wrong-token" -d '{}' && break
+            curl -s -o /dev/null http://localhost:3000/api/ops/ingest -X POST -d '{}' && break
             sleep 1
           done
+      - name: "Seed an app and its Ops token"
+        # The portal stores a token's SHA-256 only; this inserts the hash of a
+        # CI-only token, scoped `ops`, for a throwaway app.
+        env:
+          OPS_TOKEN: "aso_ci-ops-token-not-a-real-secret"
+        run: |
+          hash=$(printf %s "$OPS_TOKEN" | sha256sum | cut -d' ' -f1)
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+            "INSERT INTO tenants (tenant_id, name) VALUES ('ci-ops-conformance', 'ci-ops-conformance') ON CONFLICT DO NOTHING;
+             INSERT INTO app_ingest_tokens (token_hash, tenant_id, created_by, scope)
+               VALUES ('$hash', 'ci-ops-conformance', 'ci', 'ops') ON CONFLICT DO NOTHING;"
       - uses: actions/setup-python@v5
         with:
           python-version-file: ".python-version"
-      - run: pip install httpx pyyaml
-      - name: "verify_system.py --check-history-sync (against the live portal above)"
+      - run: pip install -r scripts/requirements-gate.txt
+        working-directory: ${{ github.workspace }}
+      - name: "The Ops contract, receiver side (against the live portal above)"
         # agentsmith:gate
         working-directory: ${{ github.workspace }}
         env:
-          OPS_PORTAL_URL: "http://localhost:3000"
-          OPS_PORTAL_SYNC_TOKEN: "ci-test-sync-token-not-a-real-secret"
-        run: python3 scripts/verify_system.py --check-history-sync
+          GOVERNANCE_OPS_TOKEN: "aso_ci-ops-token-not-a-real-secret"
+        run: python3 -m runtime.cli conformance --port ops --receiver http://localhost:3000/api/ops/ingest
 
   security:
     name: "Security harness"

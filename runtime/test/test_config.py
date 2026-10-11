@@ -287,26 +287,24 @@ def test_as_bool_reads_both_channels(monkeypatch):
     assert not as_bool("0") and not as_bool("") and not as_bool("maybe")
 
 
-def test_the_enforced_budget_key_is_the_one_the_portal_reports(repo):
+def test_the_enforced_budget_key_is_the_one_the_portal_reports(tmp_path):
     """One concept, one key. `gateway.budget_cap_usd` fed the Ops Portal's
     display while `budget.monthly_usd_cap` fed the gateway's enforcement, so a
     tenant declaring the enforced key showed NO cap on the dashboard while a
-    cap was in force. The old key is accepted as a fallback, not a rival."""
-    import importlib.util
-    import sys as _sys
+    cap was in force. The old key is accepted as a fallback, not a rival — in
+    the settings the Ops contract sends (runtime/ops_contract.py)."""
+    from runtime.ops_contract import settings_from_tenant_yaml
 
-    path = Path(__file__).resolve().parent.parent.parent / "scripts" / "sync-portal-history.py"
-    _sys.path.insert(0, str(path.parent))
-    spec = importlib.util.spec_from_file_location("syncph", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    def cap(doc: str):
+        (tmp_path / ".agenticframework").mkdir(exist_ok=True)
+        (tmp_path / ".agenticframework" / "tenant.yaml").write_text(doc, encoding="utf-8")
+        return settings_from_tenant_yaml(tmp_path)[0].budget_cap_usd
 
-    assert mod._budget_cap_usd({"budget": {"monthly_usd_cap": 5}}) == 5.0
-    assert mod._budget_cap_usd({"gateway": {"budget_cap_usd": 9}}) == 9.0, "legacy still works"
-    assert mod._budget_cap_usd(
-        {"budget": {"monthly_usd_cap": 5}, "gateway": {"budget_cap_usd": 9}}
-    ) == 5.0, "the enforced key wins when both are present"
-    assert mod._budget_cap_usd({}) is None
+    assert cap("budget:\n  monthly_usd_cap: 5\n") == 5.0
+    assert cap("gateway:\n  budget_cap_usd: 9\n") == 9.0, "legacy still works"
+    assert cap("budget:\n  monthly_usd_cap: 5\ngateway:\n  budget_cap_usd: 9\n") == 5.0, \
+        "the enforced key wins when both are present"
+    assert cap("tenant:\n  id: t\n") is None
 
 
 def test_override_is_the_deliberate_channel_the_strict_rule_leaves_room_for(repo, monkeypatch):

@@ -123,7 +123,7 @@ CI stays the authority.
 | npm test — cross-tenant isolation (no DB required) | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npm test` | yes |
 | npm run test:db — audit log HMAC sign/verify + tamper detection | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npm run test:db` | needs services |
 | npm run build — the portal builds | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npm run build` | needs services |
-| verify_system.py --check-history-sync (against the live portal above) | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `python3 scripts/verify_system.py --check-history-sync` | needs services |
+| The Ops contract, receiver side (against the live portal above) | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `python3 -m runtime.cli conformance --port ops --receiver http://localhost:3000/api/ops/ingest` | needs services |
 | npm test — the in-app widget | `.github/workflows/self-test.yml` · In-App Widget | `npm test` | needs npm |
 <!-- END agentsmith:gates -->
 

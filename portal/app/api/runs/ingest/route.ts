@@ -1,4 +1,9 @@
-// POST /api/runs/ingest — best-effort run-status updates from
+// POST /api/runs/ingest — DEPRECATED: the Ops contract's /api/ops/ingest
+// (contract/ops/v1) takes run status with the app's own Ops token. Kept, with
+// the shared token, for runtimes already deployed; an operator turns it off by
+// unsetting OPS_PORTAL_SYNC_TOKEN.
+//
+// Best-effort run-status updates from
 // runtime/llm_gateway.py (docs/PRODUCT_ARCHIVE.md P2a). Same auth shape as
 // /api/sync/history: a single shared bearer token
 // (OPS_PORTAL_SYNC_TOKEN — reused, not a second token, since both are
@@ -105,7 +110,7 @@ export async function POST(request: Request) {
         },
       },
       async () => {
-        await upsertAgentRun({
+        const stored = await upsertAgentRun({
           runId: body.runId,
           tenantId: body.tenantId,
           workflowId: body.workflowId ?? null,
@@ -131,7 +136,8 @@ export async function POST(request: Request) {
           // read (lib/wireContract.ts), not by discarding it here.
           frameworkVersion: versionOrNull(body.frameworkVersion),
         });
-
+        // A runId another tenant already holds is never written over.
+        if (!stored) return NextResponse.json({ error: "runId is another tenant's" }, { status: 409 });
         return NextResponse.json({ ok: true });
       },
     );
