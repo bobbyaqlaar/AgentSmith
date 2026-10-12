@@ -7,6 +7,12 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Released — v2.4.0 (2026-10-12)
+
+Design: `.agent-rfc/designs/release-2-4-0.md`; review: `.agent-rfc/reviews/release-2-4-0.md`.
+
+A MINOR carrying the Ops contract (C8): one ingest for a tenant's run status, dead letters and settings under an Ops token the portal issued, and a signed replay back under a key it issued. Nothing a 2.3.x tenant runs stops working; the 2.4.x row in `CHANGELOG.md` names what a tenant and the portal's operator will notice — the deprecated shared-token route no longer sets a replay URL or key, and the portal needs a migration.
+
 ## Completed — C8: the Ops contract (2026-10-11)
 
 Design: `.agent-rfc/designs/ops-contract.md`; review: `.agent-rfc/reviews/ops-contract.md`.

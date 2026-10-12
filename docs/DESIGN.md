@@ -9,7 +9,7 @@
 > install and operate it is in [docs/UserManual.md](UserManual.md); how it came to be this way
 > is in [docs/PRODUCT_ARCHIVE.md](PRODUCT_ARCHIVE.md).
 
-**Version:** 2.3.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
+**Version:** 2.4.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
 `pyproject.toml` — pinned together by
 `scripts/test/test_version_consistency.py`)
 **Status:** Current.
@@ -2293,7 +2293,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 2.3.x | 3.11 | 0.2 | 4.0 | **None** — a MINOR: the security contract is additive and reaches a tenant when its CI calls `process-gate security`, which needs the 2.3.0 launcher and setup step; a contract run checks the posture `tenant.yaml` declares; the harness run by path now scans the repository for SEC-GW-001 and holds the tool allowlist and agency manifest to their schemas. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
+| 2.4.x | 3.11 | 0.2 | 4.0 | **None** — a MINOR: the Ops contract is additive and reaches a tenant when its worker holds an Ops token the portal issued, or its CI runs `agentsmith ops settings`; a worker on the shared token keeps reporting and is told its route is deprecated; the history route no longer sets a replay URL or key; a replay webhook that redirects gets no replay; the portal needs `npm run db:migrate`. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
 
 ### Examples as Forks
 
