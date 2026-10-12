@@ -1509,6 +1509,42 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        name="commit_guardrails",
+        tests=("scripts/test/test_gate_guardrails.py",),
+        mutations=(
+            Mutation(
+                "an AI marker no longer blocks a commit",
+                "scripts/gate_guardrails.py",
+                'MARKER = re.compile("|".join(re.escape(m) for m in MARKERS))',
+                'MARKER = re.compile(r"(?!x)x")',
+            ),
+            Mutation(
+                "a vouched file is checked anyway",
+                "scripts/gate_guardrails.py",
+                "        if path in skip:\n            continue\n",
+                "",
+            ),
+            Mutation(
+                "the enterprise checks run with no org policy",
+                "scripts/gate_guardrails.py",
+                "        if enterprise and path.startswith(\"runtime/\")",
+                "        if path.startswith(\"runtime/\")",
+            ),
+            Mutation(
+                "the commit gate never runs the guardrails",
+                "scripts/process_gate.py",
+                '    if config.guardrails_mode == "on":\n        errors.extend(_guardrail_errors(',
+                '    if False:\n        errors.extend(_guardrail_errors(',
+            ),
+            Mutation(
+                "the vouch is asked of what is staged, not of the commit being judged",
+                "scripts/vouched_files.py",
+                "    if paths is None:\n        staged_out",
+                "    if True:\n        staged_out",
+            ),
+        ),
+    ),
+    Suite(
         name="record_contract",
         tests=("scripts/test/test_record_contract.py",),
         mutations=(

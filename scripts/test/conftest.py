@@ -24,7 +24,7 @@ def pytest_configure(config):
 
 # The gated-repo fixture lives beside the gate's own tests; re-exported here so
 # every gate suite builds the same repo shape instead of a second one.
-from test_process_gate import gated_repo  # noqa: F401 — a fixture, used by name
+from test_process_gate import gated_repo, installed_repo  # noqa: F401 — fixtures, used by name
 
 # The installed-machine fixture, same reasoning: a complete ~/.agent-framework and
 # ~/.git_templates is what makes vendoring and the machine hooks real offline, and

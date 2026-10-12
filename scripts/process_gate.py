@@ -196,6 +196,9 @@ class Config:
         # graph computes it. Same three modes and the same reason as the two
         # above: this file is read at the commit being checked.
         self.kg_mode: str = str(data.get("knowledge_graph") or "off")
+        # The commit checks the machine-wide hooks made (gate_guardrails.py):
+        # "on" unless a repo says otherwise, as the hooks were wherever they ran.
+        self.guardrails_mode: str = str(data.get("commit_guardrails") or "on")
         self.pillars_declared: bool = "pillars" in data
         self.pillar_policy, self.pillar_problems = gp.parse_policy(data.get("pillars"))
         self.extends_data = data.get("extends")
@@ -210,6 +213,8 @@ class Config:
             # config should say what the gate does. The declaration is not asked for
             # here — every config adopted before it was always governed would fail.
             errors.append(f"{CONFIG} must gate itself, or the gates can be switched off unreviewed")
+        if self.guardrails_mode not in ("on", "off"):
+            errors.append(f"{CONFIG} 'commit_guardrails' is {self.guardrails_mode!r}, not \"on\" or \"off\"")
         if self.changelog_file and not self.changelog_paths:
             errors.append(f"{CONFIG} names a changelog file but no paths that require it")
         errors.extend(f"{CONFIG} {problem}" for problem in self.pillar_problems)
@@ -1088,6 +1093,17 @@ def cmd_commit_msg(message_file: str, amend: bool = False) -> int:
     return code
 
 
+def _guardrail_errors(root: Path, files: List[str], read: Reader, message: str) -> List[str]:
+    """What the machine-wide pre-commit and commit-msg hooks guarded, over the
+    staged files the tenant wrote (.agent-rfc/designs/vendoring-retired.md)."""
+    import gate_guardrails as gg
+    from vouched_files import vouched
+
+    rfcs = [f for f in git("ls-files", "--", ".agent-rfc/*.md", cwd=root, check=False).splitlines()
+            if f.count("/") == 1]
+    return gg.check(files, read, message, vouched(root, files), gg.org_policy_present(), rfcs)
+
+
 def commit_verdict(message: str, amend: bool = False) -> Tuple[int, List[str], List[str]]:
     """May this commit be made: exit code, notes, errors. One judgement for the
     hook (`commit-msg`) and for gate contract 3's `commit` answer."""
@@ -1122,6 +1138,8 @@ def commit_verdict(message: str, amend: bool = False) -> Tuple[int, List[str], L
     evidence = gp.evidence_resolver(root, "") if config.pillar_policy.mode != "off" else None
     errors, notes = check_change(files, lines, message, read, config, added, previous, evidence,
                                  arming=previous(CONFIG) is None)
+    if config.guardrails_mode == "on":
+        errors.extend(_guardrail_errors(root, files, read, message))
 
     # A commit that skipped the gate blocks the next commit — unless the next
     # commit is the repair. pre-commit cannot decide that (no message yet), so
