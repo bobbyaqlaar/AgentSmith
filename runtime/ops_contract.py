@@ -44,12 +44,15 @@ class _Message(BaseModel):
     schema_version: Literal[1] = Field(default=1, alias="schema")
 
 
+RunStatus = Literal["running", "success", "degraded", "failed"]
+
+
 class RunMessage(_Message):
     """One run's status. Usage is absent, never zero, when the provider reported none."""
 
     kind: Literal["run"] = "run"
     run_id: str = Field(min_length=1, max_length=ID_LIMIT)
-    status: Literal["running", "success", "degraded", "failed"]
+    status: RunStatus
     workflow_id: Optional[str] = Field(default=None, max_length=ID_LIMIT)
     # W3C trace id; all-zero is the id the spec reserves as invalid.
     trace_id: Optional[str] = Field(default=None, pattern=r"^[0-9a-f]{32}$",
@@ -102,7 +105,7 @@ class SettingsMessage(_Message):
 
 
 Message = Annotated[Union[RunMessage, DeadLetterMessage, SettingsMessage], Field(discriminator="kind")]
-MESSAGE = TypeAdapter(Message)
+MESSAGE: TypeAdapter[Message] = TypeAdapter(Message)
 
 
 class ReplayRequest(_Message):
