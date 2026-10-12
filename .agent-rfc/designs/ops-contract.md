@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - contract/ops/v1/**
   - runtime/ops_contract.py
