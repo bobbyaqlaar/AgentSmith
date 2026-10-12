@@ -72,6 +72,36 @@ Over pass 3's audit and pass 4's two fixes, and the branch once more: the replay
 inside the settings transaction and rolls back with it; the retired-mode excuse is scoped to records
 and conditional on the mode being gone; the setup steps run nothing a gate would. No further finding.
 
+## Pass 6 — findings: 1
+
+CI's mypy step failed on the pushed branch, after pass 5 had signed off with "`mypy` (1.14.1)" among the gates run.
+
+1. **The type gate was recorded as run when it had not run as CI runs it** (`run-the-gates-ci-lists`).
+   The local `mypy` was a pyenv shim that does not run in this checkout. The scratchpad venv used in its place had no pydantic,
+   so every model typed as `Any`. CI installs `requirements.lock` first and found two errors:
+   - `MESSAGE` had no type annotation.
+   - `_report_run_status` took `status: str` and passed it to `RunMessage.status`, a Literal.
+
+   **Fix:** the status set is named once, `ops_contract.RunStatus`. The gateway's parameter takes it, and all six callers already
+   pass literals in it, so the parameter now states what it accepts instead of a cast hiding a wrong value. `MESSAGE` is
+   annotated `TypeAdapter[Message]`. Re-run as CI runs it: a fresh Python 3.11 venv with `requirements.lock` and
+   `requirements-lint.txt`. Before the fix it reproduced CI's two errors and no others; after it, mypy is clean.
+
+## Pass 7 — findings: 0
+
+Over pass 6's fix: the JSON schema generated from `RunMessage` is unchanged (the alias is the same Literal); no mutation names
+the changed lines; the `TYPE_CHECKING` import adds no runtime import, so the gateway still loads the sender only when it
+reports. ruff and the Ops contract and gateway tests (138) pass. No further finding.
+
+The steps CI skipped when mypy stopped its job, run on the staged tree:
+- curated mutations since `main`: 219 of 219 caught;
+- py_compile, `--check-hooks`, `--check-kg`, the evidence pack;
+- redaction for both profiles, and the unit-test step (61).
+
+The full `pytest` passed: 2410 passed, 10 skipped. The mutation runner rewrites sources in place and restores them, and the KG check
+rebuilds the graph fixture, so both left newer timestamps. Afterwards the staged diff was still the three files above, line for line,
+and the fixture's diff was timestamps only, so it was restored.
+
 ## Sign-off
 
 Group 1 · DRY & shared code — [x] checked — one sender (`runtime/ops_contract.send`) for run status, dead letters and settings; the Ops ingest writes through the stores that already existed (`upsertAgentRun`, `dlq_entries`, tenants); one route factory for both token scopes and one credential panel for all three kinds; the message and replay schemas generated from the models; the dead-letter DDL's two copies held equal by a test.
@@ -85,8 +115,10 @@ Group 7 · Auth & session integrity — [x] checked — one credential per chann
 Tests added: `scripts/test/test_ops_contract.py` (21); `portal/test/opsContract.test.ts`, `portal/test/opsIngestDb.test.ts`; the replay-redirect test in `dlqCostWidget.test.ts`; the budget-key test moved onto the settings sender; the retired-mode tests.
 Mutation-checked: `ops_contract` 7/7.
 Fixtures re-pinned: `contract/ops/v1/` new (fixture, cases, schemas); `.agent-rfc/fixtures/knowledge_graph.json` rebuilt.
-Gates run: full `pytest` on the staged tree (2410 passed, 10 skipped); portal `npm test`, `npm run test:db` against a throwaway Postgres 16, `npx tsc --noEmit`, `npm run build`; `ruff check .`; `mypy` (1.14.1); the repo-tree check; py_compile; redaction for both profiles; `--check-hooks`; `--check-kg`; the delivery evidence pack; the Ops receiver conformance against the built portal, as the self-test runs it.
+Gates run: full `pytest` on the staged tree (2410 passed, 10 skipped); portal `npm test`, `npm run test:db` against a throwaway Postgres 16, `npx tsc --noEmit`, `npm run build`; `ruff check .`; `mypy` (1.14.1) in a Python 3.11 venv holding `requirements.lock`, as CI runs it (pass 6); the repo-tree check; py_compile; redaction for both profiles; `--check-hooks`; `--check-kg`; the delivery evidence pack; the Ops receiver conformance against the built portal, as the self-test runs it.
 
 Levers reviewed: `declared-vs-enforced`, `channel-precedence`, `two-owners-two-cadences`, `single-source-of-truth`, `test-the-contract`, `implemented-not-invoked`, `failure-mode-visibility`, `grep-for-siblings`, `docs-match-behaviour`, `every-line-earns-its-place`, `run-the-gates-ci-lists`.
 
-KG query: kg:a72fc35fa3da
+KG query: kg:9baca16f8768
+
+The contract's commit (3e64477) signed off `kg:a72fc35fa3da`; this is pass 6's fix commit, three files.

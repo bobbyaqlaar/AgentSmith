@@ -33,7 +33,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 # Already a runtime dependency (requirements.lock; runtime/structured_output.py
 # imports it too) — the idempotency row is validated on the receiving side.
@@ -53,6 +53,10 @@ from runtime.moderation import (  # noqa: F401,E402 — re-export block, deliber
     reset_output_moderator,
     resolve_mode as resolve_moderation_mode,
 )
+
+if TYPE_CHECKING:  # the sender itself is imported where a report is sent
+    from runtime.ops_contract import RunStatus
+
 @dataclass
 class CompletionResult:
     """Result of a gateway-routed completion."""
@@ -767,7 +771,7 @@ class LLMGateway:
     def _report_run_status(
         self,
         run_id: str,
-        status: str,
+        status: RunStatus,
         workflow_id: Optional[str] = None,
         trace_id: Optional[str] = None,
         error_summary: Optional[str] = None,
