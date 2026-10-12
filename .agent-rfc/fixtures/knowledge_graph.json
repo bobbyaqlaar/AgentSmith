@@ -3539,7 +3539,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-12T07:26:35Z",
+      "last_modified": "2026-10-12T21:12:03Z",
       "id": "runtime/cli.py"
     },
     {
@@ -4158,7 +4158,7 @@
         "main",
         "_restore"
       ],
-      "last_modified": "2026-10-11T06:19:51Z",
+      "last_modified": "2026-10-12T21:27:12Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -4628,6 +4628,7 @@
         "cmd_session_start",
         "_without_comments",
         "cmd_commit_msg",
+        "_guardrail_errors",
         "commit_verdict",
         "cmd_commit_decision",
         "cmd_push_decision",
@@ -4681,7 +4682,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-10-12T07:18:43Z",
+      "last_modified": "2026-10-12T21:27:39Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -4783,7 +4784,7 @@
         "test_this_repo_has_adopted_the_registry",
         "context"
       ],
-      "last_modified": "2026-10-09T09:52:44Z",
+      "last_modified": "2026-10-12T21:11:15Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -5205,7 +5206,7 @@
       "symbols": [
         "pytest_configure"
       ],
-      "last_modified": "2026-10-02T20:24:49Z",
+      "last_modified": "2026-10-12T21:16:00Z",
       "id": "scripts/test/conftest.py"
     },
     {
@@ -7529,7 +7530,7 @@
         "vouched",
         "main"
       ],
-      "last_modified": "2026-10-11T09:49:31Z",
+      "last_modified": "2026-10-12T21:27:40Z",
       "id": "scripts/vouched_files.py"
     },
     {
@@ -8484,7 +8485,7 @@
         "run_scorecard",
         "spy"
       ],
-      "last_modified": "2026-10-09T09:52:44Z",
+      "last_modified": "2026-10-12T21:12:03Z",
       "id": "scripts/test/test_evals_contract.py"
     },
     {
@@ -8903,6 +8904,54 @@
       "pillar": null,
       "created_at": "2026-10-12T18:23:02Z",
       "id": "rfc:reviews/release-2-4-0.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "org_policy_present",
+        "_lines",
+        "check"
+      ],
+      "last_modified": "2026-10-12T21:27:35Z",
+      "id": "scripts/gate_guardrails.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_check",
+        "test_an_unresolved_ai_marker_blocks",
+        "test_an_ordinary_todo_does_not",
+        "test_an_empty_python_handler_blocks_by_its_syntax_tree",
+        "test_an_empty_catch_or_a_discarded_go_error_blocks",
+        "test_a_vouched_file_a_deleted_file_and_a_binary_are_not_read",
+        "test_a_vouched_file_stays_vouched_when_the_commit_is_amended",
+        "test_enterprise_checks_apply_only_with_an_org_policy",
+        "test_the_org_policy_is_the_machines",
+        "test_a_tenant_commit_carrying_a_marker_is_blocked_by_its_own_hook",
+        "test_a_repository_that_turns_them_off_is_not_checked",
+        "test_a_mode_that_is_neither_on_nor_off_is_a_config_problem",
+        "run"
+      ],
+      "last_modified": "2026-10-12T21:16:09Z",
+      "id": "scripts/test/test_gate_guardrails.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "C9 \u2014 vendoring retired (3.0.0)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/vendoring-retired.md",
+      "pillar": null,
+      "created_at": "2026-10-12T21:14:25Z",
+      "id": "rfc:designs/vendoring-retired.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 vendoring retired (C9)",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/vendoring-retired.md",
+      "pillar": null,
+      "created_at": "2026-10-12T21:14:46Z",
+      "id": "rfc:reviews/vendoring-retired.md"
     }
   ],
   "edges": [

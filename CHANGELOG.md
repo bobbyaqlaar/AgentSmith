@@ -83,6 +83,21 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the commit guardrails, in the gate
+
+The commit gate now checks what the machine-wide git hooks checked. These are
+the hooks 3.0.0 stops arming (C9, `vendoring-retired`), so a repository keeps
+the checks through the gate it declares.
+
+- **What blocks a commit,** over the staged files the repository wrote:
+  - an unresolved AI marker (`ponytail:`, `TODO: agent`, `@agent-ignore`);
+  - an empty `except` (by syntax tree), an empty JS/TS `catch {}`, or a Go `_, _ =`;
+  - with an org policy on the machine: a direct `cost_router` import under
+    `runtime/`, no RFC under `.agent-rfc/`, or no `RFC-NNN` in the message.
+- **What is skipped:** a file `scaffold.json` vouches for, unchanged since.
+- **The switch:** `process-gates.json` `commit_guardrails` is `"on"` by default;
+  AgentSmith's own config declares `"off"`.
+
 ## [2.4.0] — 2026-10-12
 
 ### Added — the Ops contract (`contract/ops/v1`)

@@ -460,6 +460,11 @@ GATE_FILES = {
     # The record is sent (gate contract 2's `ci`) and validated in the parts it
     # is sent in (contract/record/v1) through this module, so it is the gate's too.
     "scripts/send_dev_record.py": REPO / "scripts/send_dev_record.py",
+    # The commit checks the machine-wide hooks used to make (gate_guardrails.py)
+    # and the two helpers it judges with.
+    "scripts/gate_guardrails.py": REPO / "scripts/gate_guardrails.py",
+    "scripts/check_bare_except.py": REPO / "scripts/check_bare_except.py",
+    "scripts/vouched_files.py": REPO / "scripts/vouched_files.py",
     "templates/governance.json": REPO / "templates/governance.json",
     "runtime": REPO / "runtime",
 }

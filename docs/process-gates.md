@@ -19,7 +19,7 @@ the tenants that adopted it — AqlaarTeleologyStudio and KYC Sentinel. Designs:
 | **Session context** — `.claude/settings.json` SessionStart | every Claude Code session | nothing — states the rules and the pillars a design must answer, lists active designs, adds the repo's own `extends.session_start` lines, warns if the commit gate is not armed or gate spans are not being emitted | not using Claude Code |
 | **Edit gate** — PreToolUse on Edit/Write/MultiEdit/NotebookEdit | before each file edit | an edit to a gated path that no complete, *active* design note covers | editing through a shell command (the next three layers still see it) |
 | **Stop gate** — Stop | when an agent ends its turn | ending with uncommitted gated changes that have no clean review record newer than them | a second stop in a row (it warns instead of looping) |
-| **Commit gate** — `.githooks/commit-msg` | `git commit` (including `--amend`), in a clone that armed it | a commit touching gated paths without resolving `Design:` and `Review:` trailers | not arming it, `--no-verify`, and history rewrites git runs without `commit-msg` — rebase picks, cherry-picks (CI still sees all of them) |
+| **Commit gate** — `.githooks/commit-msg` | `git commit` (including `--amend`), in a clone that armed it | a commit touching gated paths without resolving `Design:` and `Review:` trailers; with `commit_guardrails` on, an unresolved AI marker or an empty handler in a staged file | not arming it, `--no-verify`, and history rewrites git runs without `commit-msg` — rebase picks, cherry-picks (CI still sees all of them) |
 | **Sweep** — `.githooks/pre-commit`, `.githooks/pre-push`, session start, stop | every commit, push, session start and turn end | a push while any commit that never passed the gate is unrepaired; the next commit must be its repair | nothing local: the sweep is what catches `--no-verify`, an unarmed clone, a rebase and a cherry-pick |
 | **CI gate** — Self-Test job `process-gates` | every push and pull request | a pushed range with any non-compliant gated commit, or tenant-facing changes without a CHANGELOG update | nothing in the repo — but it reports red after a push rather than refusing it (below) |
 
@@ -151,6 +151,18 @@ so a missing config means it was removed.
 - **`pillars`** — optional, default `off`. Whether this repo is held to the
   pillars a script can check, and to evidence in its designs' pillar answers
   (below). `"enforce"` on its own is the same as `{"mode": "enforce"}`.
+- **`commit_guardrails`** — optional, default `"on"`. The commit gate also
+  checks the staged files the repository wrote, a check that until 3.0.0 lived in
+  the machine-wide git hooks:
+  - an unresolved AI marker (`ponytail:`, `TODO: agent`, `@agent-ignore`);
+  - an empty `except` (by syntax tree; `# fail-open: <reason>` marks a
+    deliberate one), an empty JS/TS `catch {}`, or a Go `_, _ =`;
+  - with an org policy on the machine: no direct `cost_router` import under
+    `runtime/`, an RFC at `.agent-rfc/*.md`, and `RFC-NNN` in the message.
+
+  A file `scaffold.json` vouches for, and that is unchanged since, is skipped.
+  AgentSmith sets `"off"`: its tests carry these markers as fixtures, and its
+  suite runs the same rules over its tree.
 - **`changelog`** — optional. When present, a pushed range that changes `paths`
   (minus `except`, minus Markdown) must also change `file`. AgentSmith's paths are
   what `scratch-tenants.yml` rebuilds tenants on; a test keeps them equal.

@@ -78,7 +78,7 @@ def _staged_blobs(root: Path, paths: list[str]) -> dict[str, bytes]:
     return out
 
 
-def vouched(root: Path) -> list[str]:
+def vouched(root: Path, paths: list[str] | None = None) -> list[str]:
     try:
         manifest = json.loads((root / ".agenticframework" / "scaffold.json").read_text(encoding="utf-8"))
         recorded = manifest.get("files") or {}
@@ -88,10 +88,16 @@ def vouched(root: Path) -> list[str]:
         # fail-open: no manifest, or not a manifest — vouch for nothing
         return []
 
-    staged_out = _git("diff", "--cached", "--name-only", "--diff-filter=d", root=root)
-    if staged_out is None:
-        return []
-    staged = staged_out.decode("utf-8", "replace").split("\n")
+    # `paths`: the files a caller is judging — the gate's commit check passes the
+    # commit's own list, which for an --amend is measured from HEAD^ and holds
+    # more than `git diff --cached` against HEAD would.
+    if paths is None:
+        staged_out = _git("diff", "--cached", "--name-only", "--diff-filter=d", root=root)
+        if staged_out is None:
+            return []
+        staged = staged_out.decode("utf-8", "replace").split("\n")
+    else:
+        staged = list(paths)
     # Exact string membership, never a glob or a path join: the manifest is
     # repository content, and it must not be able to name anything outside what
     # this commit actually stages.
