@@ -17,7 +17,7 @@ Persisted to .agent-rfc/fixtures/knowledge_graph.json (node-link format).
 Updated by map_codebase.py on every commit and checkout.
 
 Migration note: pre-0.4 graphs stored at .agent-rfc/knowledge_graph.json.
-The post-checkout hook moves the file to the fixtures path on first run.
+Nothing moves one; rebuild it at the fixtures path (`agentsmith gate kg build`).
 
 Usage:
     from local_knowledge_graph import AgentKnowledgeGraph

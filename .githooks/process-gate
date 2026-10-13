@@ -18,7 +18,7 @@
 # Everything else — and any event no provider answered — runs AgentSmith's own
 # script, looked up in this order:
 #
-#   1. <repo>/scripts/process_gate.py      AgentSmith itself; vendored tenants (OTS)
+#   1. <repo>/scripts/process_gate.py      AgentSmith's own checkout only — never a tenant's copy
 #   2. $AGENTSMITH_DIR/scripts/            a framework checkout (installed-mode CI)
 #   3. ~/.agent-framework/scripts/         a machine install (installed-mode tenants, locally)
 #
@@ -27,8 +27,8 @@
 #
 # `rules check` asks the `rules` provider the repository declares
 # (contract/rules/v1/protocol.md) and never falls back: declared and silent
-# fails; not declared, or "none", passes and says so. `evals run --suite S`
-# asks the `evals` provider the same way (contract/evals/v1/protocol.md) and
+# fails; not declared, or "none", passes and says so. `evals run --suite S
+# [--fail-below X]` asks the `evals` provider the same way (contract/evals/v1/protocol.md) and
 # fails on anything but a pass, unless providers.json lets that verdict warn.
 # `security check` and `security redaction --environment E` ask the `security`
 # provider (contract/security/v1/protocol.md) and fail on anything but a pass.
@@ -315,6 +315,33 @@ case "$subcommand" in
     declared_contract
     exit 0
     ;;
+  kg)
+    # The gate's knowledge-graph check (contract/gate/v3/protocol.md, `kg
+    # check`): is the committed graph what the code maps to now. Asked of the
+    # declared gate provider and never falls back; no provider declared, or
+    # "none", passes and says so.
+    if [ "${2:-}" != "check" ]; then
+      echo "usage: process-gate kg check" >&2
+      exit 2
+    fi
+    provider="$(declared_gate)"
+    case "$provider" in
+      "")
+        echo "Knowledge Graph: this repository declares no gate provider (providers.json) — nothing checked."
+        exit 0 ;;
+      none)
+        echo "Knowledge Graph: this repository declares \"gate\": \"none\" (providers.json) — nothing checked."
+        exit 0 ;;
+    esac
+    (cd "$root" && $provider kg check)
+    code=$?
+    case "$code" in
+      0|1) exit "$code" ;;
+      *)
+        echo "❌ Knowledge Graph: the declared gate provider could not check the graph (exit $code) — it may be older than \`kg check\`; update it (for AgentSmith: re-run install-ai-stack.sh)." >&2
+        exit 1 ;;
+    esac
+    ;;
   rules)
     # The rules port (contract/rules/v1/protocol.md): only `check` is asked
     # from here — a render is placed by the provider tooling, not by a hook.
@@ -347,9 +374,21 @@ case "$subcommand" in
     case "$suite" in
       golden|fairness|hallucination|adversarial|rag_poison) ;;
       *)
-        echo "usage: process-gate evals run --suite golden|fairness|hallucination|adversarial|rag_poison" >&2
+        echo "usage: process-gate evals run --suite golden|fairness|hallucination|adversarial|rag_poison [--fail-below 0..1]" >&2
         exit 2 ;;
     esac
+    # `--fail-below X`: the request's own floor (contract/evals/v1, `fail_below`),
+    # ahead of the tenant's declaration — a CD smoke holds staging and production
+    # to different bars. A number in [0, 1], or the step is refused.
+    request="$(printf '{"suite":"%s"}' "$suite")"
+    if [ $# -gt 4 ]; then
+      if [ "${5:-}" != "--fail-below" ] || [ $# -ne 6 ] \
+         || ! printf '%s' "${6:-}" | grep -Eq '^(0(\.[0-9]+)?|1(\.0+)?|\.[0-9]+)$'; then
+        echo "usage: process-gate evals run --suite $suite [--fail-below 0..1] — got: ${*:5}" >&2
+        exit 2
+      fi
+      request="$(printf '{"suite":"%s","fail_below":%s}' "$suite" "$(printf '%s' "$6" | sed 's/^\./0./')")"
+    fi
     where=local
     [ -n "${GITHUB_ACTIONS:-}" ] && where=ci
     provider="$(declared_port evals)"
@@ -363,7 +402,7 @@ case "$subcommand" in
     esac
     need_python "$where" || exit 1
     # The provider's report for a person goes to stderr and streams; stdout is the scorecard.
-    answer="$(cd "$root" && printf '{"suite":"%s"}' "$suite" | $provider run)"
+    answer="$(cd "$root" && printf '%s' "$request" | $provider run)"
     code=$?
     printf '%s' "$answer" | EVALS_EXIT="$code" EVALS_SUITE="$suite" EVALS_WHERE="$where" EVALS_ROOT="$root" python3 -c '
 import json, os, sys
@@ -525,7 +564,14 @@ fail("the provider answered " + repr(verdict) + ", which is no verdict this cont
 esac
 
 gate=""
-for dir in "$root/scripts" "${AGENTSMITH_DIR:+$AGENTSMITH_DIR/scripts}" "$HOME/.agent-framework/scripts"; do
+# The repository's own scripts/ only when it IS AgentSmith — two of its markers,
+# as runtime/cli.py looks_like_framework asks. A tenant's copy of the gate is
+# never run: 3.0.0 retired vendoring (.agent-rfc/designs/vendoring-retired.md).
+own=""
+if [ -f "$root/install-ai-stack.sh" ] && [ -d "$root/workflow-templates" ]; then
+  own="$root/scripts"
+fi
+for dir in "$own" "${AGENTSMITH_DIR:+$AGENTSMITH_DIR/scripts}" "$HOME/.agent-framework/scripts"; do
   if [ -n "$dir" ] && [ -f "$dir/process_gate.py" ]; then
     gate="$dir/process_gate.py"
     break
@@ -538,7 +584,7 @@ done
 # hook's stdin is read once and replayed to each attempt.
 why=""
 if [ -z "$gate" ]; then
-  why="scripts/process_gate.py not found in this repo, \$AGENTSMITH_DIR or ~/.agent-framework — set AGENTSMITH_DIR to an AgentSmith checkout, or re-run its install-ai-stack.sh"
+  why="scripts/process_gate.py not found in \$AGENTSMITH_DIR or ~/.agent-framework — set AGENTSMITH_DIR to an AgentSmith checkout, or re-run its install-ai-stack.sh"
 else
   case "$subcommand" in
     # `replayed` is set when a declared provider already drained stdin and then

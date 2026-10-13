@@ -116,7 +116,7 @@ _AMBIENT = {
 
 def _shell_files() -> list[Path]:
     out = subprocess.run(
-        ["git", "-C", str(REPO), "ls-files", "*.sh", "hooks/*", ".githooks/*"],
+        ["git", "-C", str(REPO), "ls-files", "*.sh", ".githooks/*"],
         capture_output=True, text=True, check=False,
     ).stdout.split()
     return [REPO / p for p in out if (REPO / p).is_file() and "/test" not in p]
@@ -321,12 +321,13 @@ def test_the_shell_sweep_finds_shell_files() -> None:
     files = _shell_files()
     assert len(files) > 10, f"the shell sweep found {len(files)} files"
     names = {p.name for p in files}
-    assert "install-ai-stack.sh" in names and "post-checkout" in names, sorted(names)[:10]
+    assert "install-ai-stack.sh" in names and "process-gate" in names, sorted(names)[:10]
 
     found = _shell_inputs()
-    assert len(found) > 15, f"only {len(found)} shell inputs — the rule stopped working"
+    # Fewer since 3.0.0 retired the machine-wide hooks/; still a floor, not a count.
+    assert len(found) > 10, f"only {len(found)} shell inputs — the rule stopped working"
     # Names that are unambiguously environment inputs in shell, as a positive control.
-    for expected in ("DISABLE_AI_STACK", "AGENTSMITH_DIR", "AGENTSMITH_PYTHON"):
+    for expected in ("GOVERNANCE_PROVIDER", "AGENTSMITH_DIR", "AGENTSMITH_PYTHON"):
         assert expected in found, f"{expected} is read from the environment by shell and was missed"
 
 

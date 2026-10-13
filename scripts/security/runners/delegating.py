@@ -112,20 +112,19 @@ def budget_caps(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
 
 
 def change_gates(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
-    """SEC-CHANGE-001 — the hooks that enforce RFC/commit discipline.
+    """SEC-CHANGE-001 — the gate that enforces RFC/commit discipline.
 
-    `--check-hooks` runs the framework's own `hooks/pre-commit` and
-    `hooks/commit-msg` in throwaway repos. A vendored tenant has no `hooks/`,
-    so without the guard every tenant failed this control on
-    `bash: …/hooks/pre-commit: No such file` — a missing framework file, not a
-    tenant's change discipline.
+    `--check-hooks` commits through the framework's own `.githooks` in
+    throwaway repos, so the commit guardrails and the enterprise RFC checks are
+    judged by the gate that makes them (until 3.0.0, the machine-wide
+    `hooks/pre-commit` and `hooks/commit-msg` made them).
 
     In a contract run for a tenant, the repository's own half: its changes are
     governed by a gate provider it declares. AgentSmith's hooks are the
     provider's code, checked in the provider's own repository."""
     if not provider_code_in_scope(ctx):
         return _gate_declared(control, ctx)
-    absent = framework_component_absent(control, ctx, "hooks")
+    absent = framework_component_absent(control, ctx, ".githooks")
     if absent is not None:
         return absent
     return verify_system(control, ctx, "--check-hooks")

@@ -14,25 +14,19 @@
 #  Self-hosted mirror / fork: set AI_STACK_FRAMEWORK_REPO before running, e.g.
 #    AI_STACK_FRAMEWORK_REPO=https://github.com/acme-corp/AgentSmith ./install-ai-stack.sh
 #
-#  Enterprise mode (skips mutating git's GLOBAL init.templateDir — see
-#  docs/UserManual.md › Enterprise Pack for the MDM-distributed hooks path instead):
-#    ./install-ai-stack.sh --mode enterprise
-#    # piped form needs `-s --` to forward args through stdin:
-#    curl -fsSL .../install-ai-stack.sh | bash -s -- --mode enterprise
+#  It installs the provider — the `agentsmith` command, its scripts, runtime and
+#  templates under ~/.agent-framework — and arms no git hook outside a
+#  repository. A repository comes under the gates with `agentsmith tenant init`
+#  (new) or `agentsmith tenant adopt` (existing), which write its own .githooks.
 # =============================================================================
 
 set -uo pipefail
 
 # ── Mode flag ─────────────────────────────────────────────────────────────────
-# --mode developer (default): sets git's GLOBAL init.templateDir, so every
-#   `git init`/`git clone` on this machine picks up the hook templates
-#   (gated per-repo by the opt-in check inside each hook — see hooks/pre-commit).
-# --mode enterprise: skips the global init.templateDir mutation entirely.
-#   Intended for shared/managed machines where IT distributes hooks via the
-#   signed MDM bundle instead (enterprise/package-hook-bundle.sh +
-#   mdm-deploy-hooks.sh, see docs/UserManual.md › Enterprise Pack) — this installer still
-#   vendors scripts/templates and installs the `agentsmith` command, just without taking over
-#   every user's global git config on a machine it doesn't fully own.
+# --mode developer (default) or enterprise, recorded in the machine state. Until
+# 3.0.0 developer mode set git's GLOBAL init.templateDir so every `git init` and
+# `git clone` picked up AgentSmith's hooks; 3.0.0 arms none in either mode and
+# puts back the value it recorded (.agent-rfc/designs/vendoring-retired.md).
 INSTALL_MODE="developer"
 FORCE_FLAG_GIVEN=0
 while [ $# -gt 0 ]; do
@@ -193,7 +187,6 @@ mkdir -p "$FRAMEWORK_DIR"
 mkdir -p "$SCRIPTS_DIR"
 mkdir -p "$SHARED_DIR"
 mkdir -p "$WORKFLOW_TEMPLATES_DIR"
-mkdir -p "$TEMPLATE_DIR/hooks"
 success "$HOME/.agent-framework/ structure created"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -207,9 +200,9 @@ success "$HOME/.agent-framework/ structure created"
 # dirname is "." — the CURRENT directory. Run from inside a tenant repo, every
 # `[ -d "$INSTALLER_DIR/scripts" ]` below matched the tenant's own scripts/ and
 # copied them over the framework's. A checkout is recognised by its own
-# installer and hooks, not by whatever directory the user happened to be in.
+# installer and gate launcher, not by whatever directory the user happened to be in.
 INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "")"
-if [ -n "$INSTALLER_DIR" ] && { [ ! -f "$INSTALLER_DIR/install-ai-stack.sh" ] || [ ! -f "$INSTALLER_DIR/hooks/post-checkout" ]; }; then
+if [ -n "$INSTALLER_DIR" ] && { [ ! -f "$INSTALLER_DIR/install-ai-stack.sh" ] || [ ! -f "$INSTALLER_DIR/.githooks/process-gate" ]; }; then
   INSTALLER_DIR=""
 fi
 
@@ -372,9 +365,8 @@ if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/runtime" ]; then
 elif [ -d "$RUNTIME_DIR" ] && [ "$(ls -A "$RUNTIME_DIR" 2>/dev/null)" ]; then
   success "runtime/ already present in ~/.agent-framework/runtime/"
 else
-  warn "Not running from a local checkout — runtime/ not vendored. Any tenant"
-  warn "script that imports runtime.* (run-evals.py, verify_system.py"
-  warn "--check-redaction) will fail with ModuleNotFoundError until this machine"
+  warn "Not running from a local checkout — runtime/ not installed. The provider's"
+  warn "ports that import runtime.* fail with ModuleNotFoundError until this machine"
   warn "clones the repo and re-runs install-ai-stack.sh."
 fi
 
@@ -385,24 +377,21 @@ if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/fixtures/security" ]; then
   # the real one stale.
   mkdir -p "$FIXTURES_SECURITY_DIR"
   cp -r "$INSTALLER_DIR/fixtures/security/." "$FIXTURES_SECURITY_DIR/"
-  # The base eval fixtures run-evals.py falls back to (file-relative) — the
-  # hook vendors these into tenants per file; see hooks/post-checkout.
+  # The base eval fixtures the evals provider falls back to (file-relative).
   cp "$INSTALLER_DIR"/fixtures/*_base.json "$FRAMEWORK_DIR/fixtures/" 2>/dev/null || true
   success "fixtures/security/ copied from local repo"
 elif [ -d "$FIXTURES_SECURITY_DIR" ] && [ "$(ls -A "$FIXTURES_SECURITY_DIR" 2>/dev/null)" ]; then
   success "fixtures/security/ already present in ~/.agent-framework/fixtures/security/"
 else
-  warn "Not running from a local checkout — fixtures/security/ not vendored."
-  warn "run-security-checks.py --mode ci/--strict will crash on a missing"
-  warn "control_registry.json in any tenant until this machine clones the repo"
-  warn "and re-runs install-ai-stack.sh."
+  warn "Not running from a local checkout — fixtures/security/ not installed."
+  warn "The security port fails on a missing control_registry.json until this"
+  warn "machine clones the repo and re-runs install-ai-stack.sh."
 fi
 
 # The gate's own hooks. `agentsmith tenant init` / `tenant adopt` copy these
 # into a tenant and arm core.hooksPath at them; a machine without them provisions
 # a tenant with NO hooks at all, since a hooks path overrides .git/hooks
-# (.agent-rfc/designs/installed-architectures.md). Kept beside the framework's
-# own copy, not in ~/.git_templates, which is for the four machine hooks.
+# (.agent-rfc/designs/installed-architectures.md).
 GITHOOKS_DIR="$FRAMEWORK_DIR/.githooks"
 mkdir -p "$GITHOOKS_DIR"
 if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/.githooks" ]; then
@@ -434,28 +423,6 @@ else
     success "Workflow templates downloaded from GitHub"
   else
     warn "No workflow-templates found to install — agentsmith tenant init will fail until they're added to ~/.agent-framework/workflow-templates/"
-  fi
-fi
-
-# Composite GitHub Actions (.github/actions/) — the ci-*/cd-* workflow
-# templates reference these as `uses: ./.github/actions/<name>`, which
-# resolves inside the TENANT repo, so post-checkout/`agentsmith tenant init` must copy
-# them into each tenant repo alongside the workflows. Vendored here the same
-# way workflow-templates are.
-GITHUB_ACTIONS_DIR="$FRAMEWORK_DIR/github-actions"
-mkdir -p "$GITHUB_ACTIONS_DIR"
-if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/.github/actions" ]; then
-  cp -r "$INSTALLER_DIR/.github/actions/." "$GITHUB_ACTIONS_DIR/"
-  success "Composite GitHub Actions copied from local repo"
-elif [ "$(ls -A "$GITHUB_ACTIONS_DIR" 2>/dev/null)" ]; then
-  success "Composite GitHub Actions already present in ~/.agent-framework/github-actions/"
-else
-  info "Downloading github-actions from GitHub..."
-  GITHUB_ACTIONS_URL="${FRAMEWORK_REPO}/releases/latest/download/github-actions.tar.gz"
-  if command_exists curl && curl -fsSL "$GITHUB_ACTIONS_URL" | tar -xz -C "$GITHUB_ACTIONS_DIR" 2>/dev/null; then
-    success "Composite GitHub Actions downloaded from GitHub"
-  else
-    warn "No composite GitHub Actions found — tenant cd-staging/cd-production will fail on 'uses: ./.github/actions/*' until ~/.agent-framework/github-actions/ is populated"
   fi
 fi
 
@@ -517,7 +484,7 @@ fi
 # agent-rules.yaml above but only ever copied into a tenant repo on
 # explicit request via `agentsmith tenant onprem-scaffold` (docs/PRODUCT_ARCHIVE.md P4
 # on-prem follow-up), never written automatically the way the CI/CD
-# workflow templates are by `agentsmith tenant init`/post-checkout.
+# workflow templates are by `agentsmith tenant init`.
 if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/templates/onprem-deploy" ]; then
   rm -rf "$FRAMEWORK_DIR/templates/onprem-deploy"
   cp -r "$INSTALLER_DIR/templates/onprem-deploy" "$FRAMEWORK_DIR/templates/onprem-deploy"
@@ -644,15 +611,15 @@ if [ ! -f "$SHARED_DIR/fairness_judge_criteria_base.json" ]; then
   fi
 fi
 
-# Security pack templates (SEC-* harness artifacts) — vendored here so
-# hooks/post-checkout can seed them into each opted-in repo's
+# Security pack templates (SEC-* harness artifacts) — kept here so
+# `agentsmith tenant init` can seed them into a new repository's
 # .agent-rfc/security/. The harness has always LOOKED for these four files in
 # tenant repos; until this step nothing ever PUT them there, so every new
 # tenant started with those controls skipping/failing and had to find
 # fixtures/security/templates/ by reading the framework tree
 # (TestbedFeedback-2026-07-21 G5). Refreshed on every install (unlike the
 # eval fixtures) because these are pristine templates, never the tenant's
-# edited copies — post-checkout is what refuses to overwrite those.
+# edited copies — `tenant init` is what refuses to overwrite those.
 if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/fixtures/security/templates" ]; then
   mkdir -p "$SHARED_DIR/security"
   cp "$INSTALLER_DIR"/fixtures/security/templates/*.yaml "$SHARED_DIR/security/" 2>/dev/null || true
@@ -662,56 +629,36 @@ else
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SECTION 6 — GIT HOOK: pre-commit
+# SECTION 6 — NO MACHINE-WIDE GIT HOOKS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-header "Step 6: Writing Git Hook Templates"
+header "Step 6: Retiring Machine-Wide Git Hooks"
 
-# Hooks live as standalone files in hooks/ (repo root) — never edit them as
-# inline heredocs here. Copy from the local repo if
-# available, else fall back to downloading from GitHub releases, same
-# pattern as the scripts/ and workflow-templates/ installation steps above.
-if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/hooks" ]; then
-  cp "$INSTALLER_DIR/hooks/pre-commit" "$TEMPLATE_DIR/hooks/pre-commit"
-  cp "$INSTALLER_DIR/hooks/commit-msg" "$TEMPLATE_DIR/hooks/commit-msg"
-  cp "$INSTALLER_DIR/hooks/post-commit" "$TEMPLATE_DIR/hooks/post-commit"
-  cp "$INSTALLER_DIR/hooks/post-checkout" "$TEMPLATE_DIR/hooks/post-checkout"
-  success "Git hook templates copied from local repo"
-elif [ -x "$TEMPLATE_DIR/hooks/pre-commit" ] && [ -x "$TEMPLATE_DIR/hooks/post-checkout" ]; then
-  success "Git hook templates already present in $TEMPLATE_DIR/hooks/"
-else
-  info "Downloading hooks from GitHub..."
-  HOOKS_URL="${FRAMEWORK_REPO}/releases/latest/download/hooks.tar.gz"
-  if command_exists curl && curl -fsSL "$HOOKS_URL" | tar -xz -C "$TEMPLATE_DIR/hooks" 2>/dev/null; then
-    success "Hooks downloaded from GitHub"
+# Until 3.0.0 this step pointed git's GLOBAL init.templateDir at
+# $TEMPLATE_DIR, so every repository created or cloned on the machine got four
+# hooks: one vendored AgentSmith's code into it, one tagged and pushed on
+# commit. 3.0.0 arms none (.agent-rfc/designs/vendoring-retired.md): what their
+# pre-commit and commit-msg checked is the gate's commit check now. Put back
+# what was there before, and remove AgentSmith's own templates — each says so
+# in its second line — leaving anything else in the directory alone.
+if [ "$(git config --global init.templateDir 2>/dev/null || echo "")" = "$TEMPLATE_DIR" ]; then
+  PREVIOUS_TEMPLATE_DIR="$(cat "$FRAMEWORK_DIR/previous_template_dir" 2>/dev/null || echo "")"
+  if [ -n "$PREVIOUS_TEMPLATE_DIR" ] && [ "$PREVIOUS_TEMPLATE_DIR" != "$TEMPLATE_DIR" ]; then
+    git config --global init.templateDir "$PREVIOUS_TEMPLATE_DIR"
+    success "git init.templateDir restored to $PREVIOUS_TEMPLATE_DIR"
   else
-    error "Could not install git hooks — clone the repo and re-run: git clone ${FRAMEWORK_REPO} && ./AgentSmith/install-ai-stack.sh"
+    git config --global --unset init.templateDir
+    success "git init.templateDir unset (AgentSmith had set it; nothing was recorded before)"
   fi
 fi
-
-# ── Set permissions ────────────────────────────────────────────────────────────
-chmod +x \
-  "$TEMPLATE_DIR/hooks/pre-commit" \
-  "$TEMPLATE_DIR/hooks/commit-msg" \
-  "$TEMPLATE_DIR/hooks/post-commit" \
-  "$TEMPLATE_DIR/hooks/post-checkout"
-
-success "All four git hook templates written and made executable"
-
-# ── Link global git template dir ───────────────────────────────────────────────
-# Capture the pre-install value (if any) so `agentsmith uninstall` can restore it
-# exactly, rather than just unsetting.
-if [ "$INSTALL_MODE" = "enterprise" ]; then
-  info "Enterprise mode (--mode enterprise): skipping global git init.templateDir."
-  info "Hooks are vendored to $TEMPLATE_DIR but not linked machine-wide — distribute"
-  info "via enterprise/package-hook-bundle.sh + mdm-deploy-hooks.sh instead (docs/UserManual.md › Enterprise Pack)."
-else
-  if [ ! -f "$FRAMEWORK_DIR/previous_template_dir" ]; then
-    git config --global init.templateDir 2>/dev/null > "$FRAMEWORK_DIR/previous_template_dir" || true
+rm -f "$FRAMEWORK_DIR/previous_template_dir"
+for hook in pre-commit commit-msg post-commit post-checkout; do
+  if [ -f "$TEMPLATE_DIR/hooks/$hook" ] && sed -n 2p "$TEMPLATE_DIR/hooks/$hook" | grep -q "^# AgentSmith:"; then
+    rm -f "$TEMPLATE_DIR/hooks/$hook"
   fi
-  git config --global init.templateDir "$TEMPLATE_DIR"
-  success "Global git template directory set to $TEMPLATE_DIR"
-fi
+done
+success "No git hook is armed outside a repository — agentsmith tenant init or tenant adopt arms a repository's own"
+info "A repository cloned before this keeps copies in .git/hooks; once under the gates, they are not chained."
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 7 — MACHINE STATE, AND NO SHELL FUNCTIONS
@@ -794,24 +741,13 @@ header "Step 9: Verifying Installation"
 
 VERIFY_PASSED=1
 
-# Git template dir
-TMPL=$(git config --global init.templateDir 2>/dev/null || echo "")
-if [ "$TMPL" = "$TEMPLATE_DIR" ]; then
-  success "git init.templateDir → $TEMPLATE_DIR"
-else
-  error "git init.templateDir not set correctly (got: $TMPL)"
+# No machine-wide hook: the global template dir is not AgentSmith's.
+if [ "$(git config --global init.templateDir 2>/dev/null || echo "")" = "$TEMPLATE_DIR" ]; then
+  error "git init.templateDir still points at $TEMPLATE_DIR — re-run the installer"
   VERIFY_PASSED=0
+else
+  success "No machine-wide git hooks (init.templateDir is not AgentSmith's)"
 fi
-
-# Hooks present and executable
-for hook in pre-commit commit-msg post-commit post-checkout; do
-  if [ -x "$TEMPLATE_DIR/hooks/$hook" ]; then
-    success "Hook: $hook ✓"
-  else
-    error "Hook missing or not executable: $hook"
-    VERIFY_PASSED=0
-  fi
-done
 
 # The command runs, through the link a user's PATH resolves.
 if AGENTSMITH_VERSION="$("$AGENTSMITH_BIN_DIR/agentsmith" version 2>/dev/null)"; then

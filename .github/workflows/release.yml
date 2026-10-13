@@ -1,21 +1,18 @@
 # AgentSmith — Release CI (docs/DESIGN.md › Framework vs Application Release).
 #
-# Triggers on a vX.Y.Z tag (set by the framework's own post-commit hook's
-# semver auto-tagging, hooks/post-commit). Builds and attaches the artifacts
+# Triggers on a vX.Y.Z tag, pushed by hand on the merged release commit. Builds
+# and attaches the artifacts
 # install-ai-stack.sh falls back to downloading when run outside a local
 # checkout — these filenames are a contract, not arbitrary:
 #   scripts.tar.gz             (scripts/)
-#   hooks.tar.gz                (hooks/)
+#   githooks.tar.gz             (.githooks/ — the gate's hooks `tenant init`
+#                                and `tenant adopt` arm in a repository)
 #   workflow-templates.tar.gz   (workflow-templates/)
 #   templates.tar.gz            (templates/ — agent-rules.yaml AND the
 #                                onprem-deploy / uae-sovereign / delivery-model
 #                                trees; install-ai-stack.sh downloads this ONE
 #                                tarball for two different destinations, so it
 #                                has to carry both)
-#   github-actions.tar.gz       (.github/actions/ — composite actions the
-#                                ci-*/cd-* templates reference as
-#                                ./.github/actions/<name>; copied into each
-#                                tenant repo by post-checkout/agentsmith tenant init)
 #   install-ai-stack.sh         (the bootstrap script ITSELF, plus a .sha256)
 #
 # The installer is an asset because docs/UserManual.md documents fetching it from a
@@ -28,9 +25,7 @@
 # itself. The docs are now covered by a test too.
 #
 # Optionally GPG-signs each tarball if ORG_GPG_KEY_ID + ORG_GPG_PRIVATE_KEY
-# secrets are configured — same signing mechanism as
-# enterprise/package-hook-bundle.sh, applied to the framework's own release
-# rather than a tenant org's hook bundle.
+# secrets are configured.
 
 name: "Release"
 
@@ -57,12 +52,9 @@ jobs:
         run: |
           mkdir -p dist
           tar --exclude='__pycache__' -czf dist/scripts.tar.gz -C scripts .
-          tar -czf dist/hooks.tar.gz -C hooks .
           # The gate's hooks, which `agentsmith tenant init`/`adopt` copy into a
-          # tenant and arm core.hooksPath at. hooks.tar.gz above is the four
-          # MACHINE hooks (~/.git_templates) — a different set, and shipping only
-          # those left every install-from-release unable to arm any tenant
-          # (.agent-rfc/designs/installed-architectures.md).
+          # repository and arm core.hooksPath at. No machine-wide hooks ship:
+          # 3.0.0 retired them (.agent-rfc/designs/vendoring-retired.md).
           tar -czf dist/githooks.tar.gz -C .githooks .
           tar -czf dist/workflow-templates.tar.gz -C workflow-templates .
           # The WHOLE templates/ tree, not just agent-rules.yaml.
@@ -74,7 +66,6 @@ jobs:
           # shipped.
           tar --exclude='node_modules' --exclude='__pycache__' \
               -czf dist/templates.tar.gz -C templates .
-          tar -czf dist/github-actions.tar.gz -C .github/actions .
           # The framework environment's pinned, hashed dependencies —
           # install-ai-stack.sh builds ~/.agent-framework/.venv from it.
           cp requirements.lock dist/requirements.lock

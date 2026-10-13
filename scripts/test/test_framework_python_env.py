@@ -280,20 +280,20 @@ def test_a_piped_install_run_inside_a_tenant_does_not_treat_the_tenant_as_the_ch
 
 
 @bash_required
-@pytest.mark.parametrize("has_hooks", [True, False])
-def test_run_as_a_file_the_directory_is_a_checkout_only_if_it_looks_like_one(tmp_path, has_hooks):
+@pytest.mark.parametrize("has_launcher", [True, False])
+def test_run_as_a_file_the_directory_is_a_checkout_only_if_it_looks_like_one(tmp_path, has_launcher):
     checkout = tmp_path / "AgentSmith"
     checkout.mkdir()
     # Run as a file inside the directory, the way `./install-ai-stack.sh` is.
     (checkout / "install-ai-stack.sh").write_text(_installer_dir_block())
-    if has_hooks:
-        (checkout / "hooks").mkdir()
-        (checkout / "hooks" / "post-checkout").write_text("")
+    if has_launcher:
+        (checkout / ".githooks").mkdir()
+        (checkout / ".githooks" / "process-gate").write_text("")
     elsewhere = tmp_path / "cwd"
     elsewhere.mkdir()
     out = subprocess.run(["bash", str(checkout / "install-ai-stack.sh")], cwd=elsewhere,
                          capture_output=True, text=True, check=True)
-    assert out.stdout.strip() == (str(checkout.resolve()) if has_hooks else "")
+    assert out.stdout.strip() == (str(checkout.resolve()) if has_launcher else "")
 
 
 def test_the_verification_step_imports_from_the_framework_environment():
@@ -309,37 +309,6 @@ def test_the_release_ships_the_lock_the_installer_downloads():
 
 
 # ── the environment is actually used ────────────────────────────────────────
-
-
-_RESOLUTION = re.compile(
-    r'^AF_PYTHON="\$HOME/\.agent-framework/\.venv/bin/python"\n\[ -x "\$AF_PYTHON" \] \|\| AF_PYTHON="python3"$',
-    re.M,
-)
-
-
-@pytest.mark.parametrize("hook", ["post-commit", "post-checkout"])
-def test_hooks_run_third_party_scripts_with_the_framework_environment(hook):
-    text = (REPO / "hooks" / hook).read_text(encoding="utf-8")
-    assert len(_RESOLUTION.findall(text)) == 1, f"{hook} lacks the shared AF_PYTHON resolution"
-    for script in ("MAP_SCRIPT", "GEN_SCRIPT"):
-        assert f'python3 "${script}"' not in text, f"{hook} runs ${script} with bare python3"
-    assert '"$AF_PYTHON" "$MAP_SCRIPT"' in text
-
-
-@bash_required
-@pytest.mark.parametrize("present", [True, False])
-def test_the_hook_resolution_prefers_the_environment_and_falls_back(tmp_path, present):
-    snippet = _RESOLUTION.search((REPO / "hooks" / "post-commit").read_text(encoding="utf-8")).group(0)
-    if present:
-        py = tmp_path / ".agent-framework" / ".venv" / "bin" / "python"
-        py.parent.mkdir(parents=True)
-        py.write_text("#!/bin/sh\n")
-        py.chmod(0o755)
-    out = subprocess.run(
-        ["bash", "-c", snippet + '\necho "$AF_PYTHON"'],
-        capture_output=True, text=True, check=True, env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"},
-    ).stdout.strip()
-    assert out == (str(tmp_path / ".agent-framework/.venv/bin/python") if present else "python3")
 
 
 def test_self_test_installs_the_lock_at_the_pinned_version():

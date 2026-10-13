@@ -153,7 +153,8 @@ def test_verification_runs_the_command_through_its_link():
     assert '"$AGENTSMITH_BIN_DIR/agentsmith" version' in step9
 
 
-@pytest.mark.parametrize("path", [INSTALLER, *sorted((REPO / "hooks").iterdir())], ids=lambda p: p.name)
+@pytest.mark.parametrize("path", [INSTALLER, *sorted(p for p in (REPO / ".githooks").iterdir() if p.is_file())],
+                         ids=lambda p: p.name)
 def test_no_output_string_runs_a_command_by_accident(path):
     """A backtick inside a double-quoted `echo`/`warn` is command substitution:
     `warn "… `agentsmith dashboard start` …"` STARTS the dashboard. Written
@@ -183,7 +184,9 @@ def _leaf_paths(parser: argparse.ArgumentParser, path: tuple[str, ...] = ()) -> 
 def test_every_compat_wrapper_names_a_real_command_and_real_options():
     text = (REPO / "templates" / "shell" / "ai-compat.sh").read_text(encoding="utf-8")
     wrappers = re.findall(r'^(ai-[a-z-]+)\(\)\s*\{\s*agentsmith ([^"]*)"\$@"; \}$', text, re.M)
-    assert len(wrappers) == 17, f"expected one wrapper per removed shell function, found {len(wrappers)}"
+    # 17 removed shell functions, less `ai-stack-upgrade`: `agentsmith upgrade`
+    # itself was removed in 3.0.0 (vendoring-retired.md).
+    assert len(wrappers) == 16, f"expected one wrapper per removed shell function, found {len(wrappers)}"
     leaves = _leaf_paths(build_parser())
     for name, args in wrappers:
         tokens = args.split()

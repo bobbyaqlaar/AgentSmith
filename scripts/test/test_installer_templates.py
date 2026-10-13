@@ -83,7 +83,8 @@ def test_the_installer_copies_the_gate_hooks():
 def test_the_release_ships_the_gate_hooks():
     """An install from a release downloads what it cannot copy."""
     release = (REPO / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    assert "githooks.tar.gz" in release
+    # The build command, not the name: the workflow's header comment names it too.
+    assert re.search(r"-czf dist/githooks\.tar\.gz -C \.githooks \.", release), "the release never builds it"
     assert "githooks.tar.gz" in INSTALLER, "the installer never fetches the archive the release builds"
     assert "/releases/latest/download/githooks.tar.gz" in INSTALLER
 

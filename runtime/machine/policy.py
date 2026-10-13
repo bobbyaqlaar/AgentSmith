@@ -6,8 +6,10 @@ The policy file (`~/.agent-framework/agenticframework-org.yaml`, deployed by
 MDM — enterprise/README.md) declares `hooks.bypass_policy`. It used to be read
 only by `ai-stack-off`, while every hook exited on `DISABLE_AI_STACK=true` from
 any environment — so `DISABLE_AI_STACK=true git commit` skipped a policy of
-`disabled` without asking it. `bypass_decision` is now called by the hooks
-themselves (`agentsmith hooks bypass-check`) and by `agentsmith mode off`.
+`disabled` without asking it. `bypass_decision` was then called by the hooks
+themselves (`agentsmith hooks bypass-check`) and by `agentsmith mode off`; since
+3.0.0 there are no machine-wide hooks, and only `mode off` asks it (what is left
+of the bypass policy is on the backlog).
 """
 
 from __future__ import annotations

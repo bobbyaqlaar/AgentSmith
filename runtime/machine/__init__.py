@@ -8,6 +8,7 @@ an IDE, CI and Claude Code's hooks never saw `ai-mode-hybrid`'s export, and
 nothing could test `ai-stack-upgrade` without carving it out of a heredoc. See
 .agent-rfc/designs/agentsmith-cli.md.
 
-Import-light on purpose: `agentsmith hooks bypass-check` runs inside a git hook,
-so nothing here imports a third-party package at module level.
+Import-light: nothing here imports a third-party package at module level. (It
+was a requirement while `agentsmith hooks bypass-check` ran inside a git hook,
+until 3.0.0.)
 """

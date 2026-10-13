@@ -36,16 +36,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # The gate provider, for the graph check below — installed by its own CI
+      # setup step at the release this repository pins. First, before this job
+      # sets up its own toolchain: the provider runs on the interpreter the
+      # action installs, and the steps after keep the environment they set up.
+      - uses: "{{PROVIDER_SETUP}}"
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
 
-      # The project's own dependencies: requirements.txt or uv.lock. Shared
-      # with eval-security.yml through one composite action.
+      # The project's own dependencies: requirements.txt or uv.lock, through the
+      # provider's composite action at the release this repository pins —
+      # referenced, never copied in.
       - name: Install project dependencies
-        uses: ./.github/actions/install-python-deps
+        uses: "bobbyaqlaar/AgentSmith/.github/actions/install-python-deps@{{AGENTSMITH_REF}}"
 
       - name: Install CI tooling
         run: |
@@ -53,17 +60,7 @@ jobs:
           # a ruff release changed this gate with no commit: AqlaarTeleologyStudio
           # resolved 0.16.7, whose defaults grade far more rules than 0.15.x.
           # Bump deliberately, in this line and your own lock together.
-          pip install \
-            pytest pytest-asyncio pytest-cov httpx "ruff==0.15.20" \
-            "arize-phoenix>=4.0" \
-            "openinference-instrumentation-openai>=0.1.4" \
-            "opentelemetry-sdk>=1.20" \
-            "opentelemetry-exporter-otlp-proto-http>=1.20" \
-            "networkx>=3.0" \
-            "tiktoken>=0.5" \
-            "langchain-core>=0.2" \
-            "langchain-openai>=0.1" \
-            "langchain-anthropic>=0.1"
+          pip install pytest pytest-asyncio pytest-cov httpx "ruff==0.15.20"
 
       - name: Lint (ruff)
         # agentsmith:gate
@@ -73,15 +70,13 @@ jobs:
         # agentsmith:gate
         run: ruff format --check .
 
-      - name: "Validate Knowledge Graph (Pillar 2)"
+      - name: "Knowledge Graph is current (Pillar 2)"
         # agentsmith:gate
-        # The same check AgentSmith runs on itself. The inline version here
-        # rebuilt the graph and then counted nodes in the committed file — it
-        # never compared them, so a graph stale by months passed every time.
-        # verify_system.py captures the committed shape BEFORE regenerating.
-        # A repo with no graph at all still passes with a warning until
-        # `agentsmith tenant init` provisions one (G7).
-        run: python3 scripts/verify_system.py --check-kg
+        # The committed graph against what the code maps to now, asked of the
+        # declared gate provider (contract/gate/v3, `kg check`). A repository
+        # with no graph yet passes with a warning; a stale one fails — commit
+        # what `agentsmith gate kg build` writes.
+        run: bash .githooks/process-gate kg check
 
       - name: "RFC gate (Pillar 1)"
         # agentsmith:gate
@@ -96,19 +91,6 @@ jobs:
             exit 1
           fi
           echo "✅ RFC gate: ${RFC_COUNT} RFC(s) found."
-
-      - name: "IDE config drift check (Pillar 6/7)"
-        # agentsmith:gate
-        # Blocking since G3: the rule files are generated from one source, so
-        # drift means a repo is telling its agents something the framework did
-        # not say. Regenerate with `python3 scripts/generate-ide-config.py --write`.
-        run: python3 scripts/generate-ide-config.py --check-only
-
-      - name: "Framework health check (Pillar 3/5)"
-        env:
-          AGENT_PHOENIX_ENDPOINT: ${{ secrets.AGENT_PHOENIX_ENDPOINT || '' }}
-          AGENT_OWNER_ID: ${{ secrets.AGENT_OWNER_ID || 'ci@agenticframework' }}
-        run: python3 scripts/verify_system.py || true # non-blocking — inform, not gate
 
       - name: Run tests
         # agentsmith:gate
@@ -148,17 +130,14 @@ jobs:
   #
   # Google AI Studio's free tier allows 20 requests per day, per project, per
   # model, so a tenant on it exceeds the day's budget on the FIRST run and
-  # starves every run after. The failure is silent by design: an unreachable
-  # judge is an infrastructure state, so run-evals reports NO VERDICT and exits
-  # 0, and the check goes green having graded nothing.
+  # starves every run after. An unjudged suite is `no_verdict`, which fails the
+  # step unless providers.json declares it a warning for that suite — then the
+  # step stays green with a warning annotation that it proved nothing.
   #
-  # Two things make that survivable. run-evals emits a GitHub warning
-  # annotation and a job-summary block whenever a gate was asked to grade and
-  # could not, so an ungraded gate is visible on a green run. And if your quota
-  # cannot cover a full cycle, move the two cheaper suites onto alternating
-  # `schedule:` crons and keep golden on push — see KYC Sentinel's ci.yml for a
-  # worked example. Pacing (EVAL_RPM) does NOT help here: it limits calls per
-  # minute, not per day.
+  # If your quota cannot cover a full cycle, move the two cheaper suites onto
+  # alternating `schedule:` crons and keep golden on push — see KYC Sentinel's
+  # ci.yml for a worked example. Pacing (EVAL_RPM) does NOT help here: it
+  # limits calls per minute, not per day.
   eval-scorecard:
     name: "Eval scorecard"
     uses: ./.github/workflows/eval-scorecard.yml
@@ -176,14 +155,7 @@ jobs:
     uses: ./.github/workflows/eval-hallucination.yml
     secrets: inherit
 
-  eval-ttft-live:
-    name: "TTFT live (opt-in)"
-    uses: ./.github/workflows/eval-ttft-live.yml
-    secrets: inherit
-
   security-checks:
-    name: "Security harness"
+    name: "Security (declared provider)"
     uses: ./.github/workflows/eval-security.yml
     secrets: inherit
-    with:
-      strict: true

@@ -163,23 +163,6 @@ def test_chaining_writes_a_stub_for_each_hook_the_gate_does_not_own(repo, prior)
     assert "post-checkout 1" in _ran(repo), "the stub runs the prior post-checkout on a branch checkout"
 
 
-def test_chaining_a_post_commit_turns_autopush_off_unless_it_was_set(repo, prior):
-    _hook(prior, "post-commit", "true")
-
-    _chain(repo, prior)
-
-    assert _git(repo, "config", "--get", "agentsmith.autopush").stdout.strip() == "false"
-
-
-def test_an_explicit_autopush_is_left_alone(repo, prior):
-    _hook(prior, "post-commit", "true")
-    _git(repo, "config", "agentsmith.autopush", "true")
-
-    _chain(repo, prior)
-
-    assert _git(repo, "config", "--get", "agentsmith.autopush").stdout.strip() == "true"
-
-
 def test_the_prior_directory_is_found(repo, prior):
     sys.path.insert(0, str(REPO))
     from runtime.adopt import prior_hooks_dir

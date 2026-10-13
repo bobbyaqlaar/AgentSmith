@@ -70,8 +70,7 @@ is written, and blocking every turn of a session on a broken install would make
 the IDE unusable rather than safe. So a machine whose gate cannot run still
 starts sessions and ends turns, with a warning each time, and stops the moment
 it tries to edit or commit.
-CI installs `scripts/requirements-gate.txt`, the list that travels with the
-vendored gate.
+CI installs `scripts/requirements-gate.txt` through the provider's setup step.
 
 Decisions are spans: `agent.gate.<event>` with `agent.role=process-gate`, the
 decision, the IDE and the repo. A hook must not wait on a collector, so spans
@@ -107,9 +106,8 @@ The Claude Code hooks need nothing: they live in the committed
 `.claude/settings.json`. The session-start message says if either step above
 is missing.
 
-Arming `.githooks` replaces the tenant hooks in `~/.git_templates` for this
-clone. That is deliberate: this is the framework, not a tenant, and
-`hooks/post-commit` pushes on its own.
+Arming `.githooks` is all a clone needs: from 3.0.0 no hook is armed outside a
+repository (`.agent-rfc/designs/vendoring-retired.md`).
 
 In a tenant whose hooks were chained (Provisioning, below), a new clone also
 names the directory those hooks live in — it is local configuration, so a
@@ -175,13 +173,16 @@ so a missing config means it was removed.
 
 ## Keeping a tenant current — `agentsmith sync`
 
-A tenant holds copies: the gate hooks, the IDE hook configs, the generated rule files, and — a
-vendored tenant — the framework's own code. `agentsmith sync` refreshes what this framework owns
-in the repository it is run in, and nothing else, then prints the commit. Run twice, the second run
+A tenant holds copies: the gate hooks, the IDE hook configs and the generated rule files — never
+the framework's own code (3.0.0, `.agent-rfc/designs/vendoring-retired.md`). `agentsmith sync`
+refreshes what this framework owns in the repository it is run in, and nothing else, then prints
+the commit. Run twice, the second run
 writes nothing.
 
 It refreshes the gate hooks, the provider declaration, the IDE hook configs, the rule files'
-managed block and the gates workflow — and, for a vendored tenant, the vendored trees. **It also adds
+managed block and the gates workflow. A repository that still holds a copy of AgentSmith's code
+(`scripts/`, `runtime/`, `fixtures/`) is told so; the copy is never refreshed, and
+`verify_system --governed` fails until it is gone. **It also adds
 the gate hooks a tenant lacks:** a repository that armed the gates before `pre-commit`, `pre-push` and
 `chain` existed gets them, listed as `add`, recorded in the manifest and carried by the commit — and is
 told that the bypass sweep now runs on every commit and push. The other files a sync can create are
@@ -207,9 +208,9 @@ it syncs to AgentSmith's latest release and opens a pull request, on one branch,
 proposal is updated rather than duplicated. It proposes only — merging is a person's decision, and
 the tenant's own gates run over the pull request.
 
-An adopted repository is never vendored into, by `sync` or by `agentsmith upgrade`: both read the
-manifest's `generated_by`. Neither runs in the framework's own checkout, which is what they copy from:
-both refuse there, as `tenant init` and `tenant adopt` do, and take no override.
+`sync` does not run in the framework's own checkout, which is what it copies from: it refuses
+there, as `tenant init` and `tenant adopt` do, and takes no override. (`agentsmith upgrade`, which
+refreshed a vendored tenant, was removed in 3.0.0.)
 
 ## A provider, not a path — the gate contract
 
@@ -256,7 +257,7 @@ Commits subject rule is AgentSmith's, applied in its `commit` answer (below cont
 applies it, as it always did). Neither event falls back. A provider older than the repository's
 declared contract does not know `commit`, exits with a usage error, and the commit is blocked with
 that said — update the provider (re-run `install-ai-stack.sh`). **The provider answers with its
-own gate**, never with a copy a repository vendored; the repository's `scripts/` is used only when
+own gate**, never with a copy a repository holds; the repository's `scripts/` is used only when
 the repository is AgentSmith itself.
 
 ## Finding the script — `.githooks/process-gate`
@@ -268,7 +269,7 @@ order and runs the first it finds, relative to the repository git reports for
 the current directory (not the Claude Code session's project, which can be a
 different repo):
 
-1. `<repo>/scripts/` — AgentSmith, and vendored tenants (OTS);
+1. `<repo>/scripts/` — AgentSmith's own checkout only (two of its markers), never a tenant's copy;
 2. `$AGENTSMITH_DIR/scripts/` — a framework checkout (KYC's CI, and KYC locally
    when `AGENTSMITH_DIR` is exported);
 3. `~/.agent-framework/scripts/` — a machine install (re-run
@@ -287,11 +288,11 @@ adopted the gates.
    config, `.githooks/**` and `.claude/settings.json`.
 3. **Hooks** — copy `.githooks/commit-msg` and `.githooks/process-gate` from
    AgentSmith; merge the `hooks` block of AgentSmith's `.claude/settings.json`.
-4. **The script** — vendored tenants get `scripts/process_gate.py` (and add it to
-   `scripts/ruff.toml`'s excludes); installed-mode tenants need nothing.
-5. **CI** — a `process-gates` job with `fetch-depth: 0` running
-   `python3 <gate> ci --base <before or PR base> --head <sha>`; installed-mode
-   tenants check out the framework first and run `$AGENTSMITH_DIR/scripts/process_gate.py`.
+4. **The script** — nothing: the provider runs its own gate, installed on the
+   machine or by CI's setup step.
+5. **CI** — `agentsmith-gates.yml` (`tenant init` and `tenant adopt` write it): the
+   provider's setup step, then `bash .githooks/process-gate ci --base <before or PR
+   base> --head <sha>`.
 6. **Arm each clone** — `git config core.hooksPath .githooks`.
 
 ## The two records
@@ -446,9 +447,11 @@ with a real session's payload and the tests say whether anything else changes.
 ## Provisioning, and knowing whether it held
 
 A control a tenant has to install by hand is a control most tenants do not
-have. `agentsmith tenant init` writes the gate config, the `.githooks`
-**armed** (`core.hooksPath` is set), the Claude Code and Cursor hook configs,
-the generated rule files, a committed knowledge graph and the artifact stubs.
+have. `agentsmith tenant init` writes the gate config and the provider
+declaration, the `.githooks` **armed** (`core.hooksPath` is set), the Claude Code
+and Cursor hook configs, the generated rule files, the CI workflows (the gates
+and sync workflows among them, `--framework-ref` naming the provider release), a
+committed knowledge graph and the artifact stubs.
 It refuses to write into the framework's own checkout, and it never replaces a
 file the tenant already owns without `--force`.
 
@@ -465,15 +468,16 @@ init` and `tenant adopt` record that directory in `agentsmith.chainHooksPath`
 `pre-push` run the gate and then, if it passed, the same-named hook from there
 through `.githooks/chain`, with the same arguments and stdin; any other hook it
 has gets a one-line stub in `.githooks/`. A prior hook that fails still blocks.
-When that directory has a `post-commit`, `agentsmith.autopush` is set to `false`
-unless it was already set — the machine's post-commit pushes on its own, and a
-repository that was not pushing on commit must not start.
+When that directory has a `post-commit` of its own (not an old AgentSmith install's,
+which is never chained), `agentsmith.autopush` is set to `false` unless it was already
+set, so a repository that was not pushing on commit does not start.
 
-**Vendoring happens before the first commit.** When the repository's prior hooks
-include the machine's `post-checkout`, `tenant init` runs it once before writing
-the manifest, so the `scripts/`, `runtime/` and `fixtures/` it vendors are part of
-the scaffold, vouched for by hash like the rest. Vendored after the first commit,
-they would sit under gated paths and need a design and a review.
+**Nothing is vendored.** `tenant init` writes the scaffold — the declarations, the gate hooks,
+the rule files, the workflows pinned to the provider's setup step and its actions referenced at
+the provider, and the security pack's placeholders (never overwritten) — and copies none of
+AgentSmith's code
+(`.agent-rfc/designs/vendoring-retired.md`). An old install's `post-checkout` and `post-commit`
+left in the repository's hooks are not chained.
 
 **The commit that arms the gates.** The scaffold touches gated paths, so it needs a design and
 a review like any change. `tenant init` writes the design —
@@ -495,10 +499,10 @@ to reopen that door is itself a change to a gated file.
 **An existing repository — `agentsmith tenant adopt`.** It detects before it
 writes and prints the plan: the stack, the paths to gate (the top-level
 directories and root files git tracks for that stack, or `--gate`), the prior
-hooks, and per file whether it is created, merged or left alone. Vendored
-AgentSmith code (`scripts/`, `runtime/` as `hooks/post-checkout` wrote them) is
-not gated, and the plan says so: it is the framework's, and gating it would make
-the next re-vendoring need a design and a review of framework code. Nothing is
+hooks, and per file whether it is created, merged or left alone. A copy of
+AgentSmith's code an older install vendored (`scripts/`, `runtime/`) is left
+ungated, so it can be deleted without reviewing framework code, and the plan says
+it is no longer run and must go. Nothing is
 written without a yes (`--yes` off a terminal). It merges rather than skips: the
 gates into an existing `.claude/settings.json`, the generated rules into an
 existing `CLAUDE.md` or `AGENTS.md` between `agentsmith:rules` markers, and an
@@ -506,8 +510,8 @@ existing `CLAUDE.md` or `AGENTS.md` between `agentsmith:rules` markers, and an
 repository's CI alone and adds `.github/workflows/agentsmith-gates.yml`, which
 runs the gate from a checkout of AgentSmith at the release it names — with the run's own
 token, falling back to the `AGENTSMITH_READ_TOKEN` secret only when the provider is
-private. An adopted repository is never vendored into, and the
-machine's own `post-checkout` and `post-commit` are not chained into it. The
+private. An adopted repository is never vendored into, and an old install's
+`post-checkout` and `post-commit` are not chained into it. The
 adoption commit carries `.agent-rfc/designs/adoption.md` and the manifest, and
 stages exactly what adopt wrote; history before it is `before_adoption`.
 
@@ -560,7 +564,9 @@ files pull in, and a `KG query:` hash. That hash goes in the sign-off, and the
 commit gate recomputes it from the commit's own file list — which is why `kg impact` scopes the
 **staged** set by default: diffing the working tree counted unstaged edits, and the two hashes
 disagreed. `agentsmith gate kg build` rebuilds the graph, whose shape is published
-(`contract/gate/v3/knowledge_graph.schema.json`).
+(`contract/gate/v3/knowledge_graph.schema.json`). `agentsmith gate kg check` fails when the
+committed graph is stale and rewrites it; a tenant's CI asks it through
+`.githooks/process-gate kg check`.
 
 **The hash is the scope, not the diff.** It covers the impacted file SET, so it
 does not go stale on the next keystroke; what it says is "the reviewer looked
@@ -804,7 +810,7 @@ see Provisioning, above.
 | `'## Pillars' does not answer P3 …` | answer it: `applies — how`, `n/a — why`, or `gap — <backlog id>` |
 | `deviation D1 has no owner approval` | ask the owner; they run `agentsmith approve` and you paste the id into the entry |
 | `records no '## Sign-off' block` | sign off per group (validation-checklist Step 4) |
-| `the rules registry … does not exist` | re-sync the framework (`agentsmith upgrade`), or regenerate it with `generate-ide-config.py --registry` |
+| `the rules registry … does not exist` | re-run `install-ai-stack.sh` (the registry is the provider's), or regenerate it with `generate-ide-config.py --registry` |
 | `no interpreter could run …` | run AgentSmith's `install-ai-stack.sh`, or set `AGENTSMITH_PYTHON` |
 | `… covered by a design note that is not complete` | add the missing section, or cite a real lever in `## Levers` |
 | `Unreviewed gated changes: … no review record` | run a review pass against `docs/review-levers.md` and record it |
@@ -848,73 +854,27 @@ see Provisioning, above.
   Pro for a private repository (verified 2026-09-14 — the API answered "Upgrade
   to GitHub Pro or make this repository public"), and this repository was
   private until 2026-09-27.
-- **The pre-commit guardrails skip what the tenant did not write.** Guardrails 1–3
-  (AI markers, empty catch/except, direct `cost_router` imports) do not run over a
+- **The commit guardrails skip what the tenant did not write.** The AI-marker,
+  empty-handler and `cost_router` checks (`commit_guardrails`) do not run over a
   staged file that `.agenticframework/scaffold.json` records **and** that still
-  hashes to what the manifest recorded — the code AgentSmith vendored, unchanged.
-  A tenant cannot fix `scripts/process_gate.py`, and being asked to blocked every
-  scaffolded repository's first commit until 2026-09-29. Edit a vendored file and
-  it is checked again, because the hash no longer matches. The rules still run
-  over that code in AgentSmith's own suite, where it can be fixed
-  (`scripts/test/test_bare_except_tree.py`, `scripts/test/test_vendored_markers.py`).
-  Guardrail 4 is not skippable: it asks whether the repository has an RFC at all,
-  which is not a per-file question.
-
-  Every failure of the check that grants the skip — missing
-  `scripts/vouched_files.py`, missing `python3`, missing or unreadable manifest —
-  vouches for nothing, so the hook checks everything. A skip is only ever granted
-  by a hash that matched.
-
-- **Only the edit gate fails closed, and only in some IDEs.** If `python3` is
-  missing or the script dies, the edit gate denies — but whether an IDE honours
-  that is the IDE's to decide, and `fail_closed` in `templates/governance.json`
-  records which do. **Claude Code** and **Cursor** fail closed, by two different
-  mechanisms: Claude through `.githooks/process-gate`'s pre-edit fallback
-  printing a deny, Cursor through the `failClosed` key in its generated
-  `.cursor/hooks.json`. **Antigravity, Copilot, Gemini and Codex fail open by
-  design** — an edit there lands when the gate cannot run, and the commit, push
-  and CI gates are what hold. `scripts/test/test_fail_closed_declared.py` checks
-  each declaration against its own mechanism, so this table cannot go stale
-  quietly.
-
-  The session-start and stop hooks cannot fail closed anywhere: Claude Code
-  treats their failure as a non-blocking error, and a stop hook that blocked
-  without being able to read `stop_hook_active` could loop forever. The commit
-  and CI gates still hold.
+  hashes to what the manifest recorded — a scaffold file, unchanged. Edit it and
+  it is checked again. The RFC checks are not skippable: they ask about the
+  repository and the message, not a file.
 - **Shell-made edits skip the edit gate.** A command's file writes cannot be
   read reliably from its text. The stop, commit and CI gates check the files
   themselves.
 - **History before 2026-09-14 is not gated.** CI checks only the commits each
   push adds, and the sweep records the history it finds on first run as its
   starting point rather than failing it.
-- **The sweep's hooks are `.githooks/`.** A repo that runs the machine-wide
-  `~/.git_templates` hooks without adopting `.githooks` gets the sweep at
-  session start and in CI, but not at commit or push time. Adopting the gates
-  (`git config core.hooksPath .githooks`) is what arms those two, and every
-  sweep re-arms it when it finds it unset.
+- **The sweep's hooks are `.githooks/`.** A clone that has not armed them gets
+  the sweep at session start and in CI, but not at commit or push time. Arming
+  the gates (`git config core.hooksPath .githooks`) is what arms those two, and
+  every sweep re-arms it when it finds it unset.
 - **The sweep sees this machine's clone.** It walks local branches, not remote
   refs: what someone else pushed is their machine's and CI's business. A commit
   that reaches a remote without passing anything is caught by CI, and by the
   sweep on the next machine that fetches and works on it.
-- **New tenants do not get the gates automatically.** OTS and KYC Sentinel
-  adopted them by hand (above); `agentsmith tenant init` and the post-checkout
-  hook provision none of it. Recorded in `docs/PRODUCT_BACKLOG.md`.
 - **An installed-mode tenant's local gates follow the framework it finds.** With
   no `AGENTSMITH_DIR`, KYC's hooks run `~/.agent-framework`'s copy — as current
   as the last `install-ai-stack.sh`. Its CI runs the framework checkout's.
 
-## Tenant repositories: auto-push without disabling hooks
-
-`hooks/post-commit` auto-tags a `feat`/`fix`/`perf`/`refactor` commit and pushes
-it when the branch tracks a remote. To keep the tag and skip the push:
-
-```bash
-git config agentsmith.autopush false    # this repo
-AGENTSMITH_AUTOPUSH=0 git commit …      # one commit
-```
-
-`tenant init` and `tenant adopt` set the first when they chain a `post-commit`
-and it is unset.
-
-The only alternative used to be `git -c core.hooksPath=/dev/null commit`, which
-also skipped `pre-commit` and `commit-msg`.

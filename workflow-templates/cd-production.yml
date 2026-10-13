@@ -55,6 +55,10 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+      # The provider (contract/security/v1, contract/evals/v1) for the redaction
+      # and smoke steps below, installed by its own CI setup step at the release
+      # this repository pins. First, before anything else sets up Python.
+      - uses: "{{PROVIDER_SETUP}}"
 
       # ── GCP auth (optional — skips when neither WIF nor SA key is configured) ─
       # Must run before build-push-ghcr when pushing to Artifact Registry, and
@@ -62,7 +66,7 @@ jobs:
       # so any subsequent step calling google.auth.default() is authenticated.
       # See docs/UserManual.md › Deploy via GitHub CI/CD (GCP deployment specifics) for one-time setup instructions.
       - name: "Authenticate to GCP"
-        uses: ./.github/actions/gcp-auth
+        uses: "bobbyaqlaar/AgentSmith/.github/actions/gcp-auth@{{AGENTSMITH_REF}}"
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
@@ -75,39 +79,14 @@ jobs:
       # promotion pattern used by the AgentSmith Ops Portal.
       - name: "Build & push container image"
         id: image
-        uses: ./.github/actions/build-push-ghcr
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-          # Keyed on THIS file, not the default **/requirements.txt|pyproject.toml:
-          # the install below is a fixed list, and a Go or TS tenant has neither
-          # file, so the default glob hard-failed setup-python before anything
-          # ran (found onboarding scratch ts-react + go tenants).
-          cache-dependency-path: .github/workflows/cd-production.yml
-
-      - name: Install framework dependencies
-        run: |
-          pip install \
-            "arize-phoenix>=4.0" \
-            "openinference-instrumentation-openai>=0.1.4" \
-            "opentelemetry-sdk>=1.20" \
-            "opentelemetry-exporter-otlp-proto-http>=1.20" \
-            "networkx>=3.0" \
-            "tiktoken>=0.5" \
-            "httpx>=0.25" \
-            "langchain-core>=0.2" \
-            "langchain-openai>=0.1" \
-            "langchain-anthropic>=0.1"
+        uses: "bobbyaqlaar/AgentSmith/.github/actions/build-push-ghcr@{{AGENTSMITH_REF}}"
 
       # ── Deploy to production. Set the DEPLOY_COMMAND secret on this
       # tenant's GitHub Environment to wire in your platform — no workflow
       # YAML edit needed. Unset = no-op placeholder (docs/UserManual.md "Wire
       # your platform").
       - name: "Deploy to production"
-        uses: ./.github/actions/deploy-placeholder
+        uses: "bobbyaqlaar/AgentSmith/.github/actions/deploy-placeholder@{{AGENTSMITH_REF}}"
         env:
           IMAGE_REF: ${{ steps.image.outputs.image_ref }}
         with:
@@ -115,29 +94,27 @@ jobs:
           environment_label: production
 
       # ── Redaction compliance — production profile must scrub + truncate ────
+      # Asks the declared security provider whether its planted probes reach this
+      # repository's own telemetry wire under the production profile; with no emitter
+      # declared it answers not applicable and says so.
       - name: "Trace redaction compliance check"
-        env:
-          ENVIRONMENT: production
-        run: python3 scripts/verify_system.py --check-redaction
+        run: bash .githooks/process-gate security redaction --environment production
 
       # ── Post-deploy eval smoke test — BLOCKS on failure, no continue-on-error
       - name: "Post-deploy eval smoke test"
         env:
+          # Whichever key the judge role names, passed through by name.
           ANTHROPIC_API_KEY:      ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY:         ${{ secrets.OPENAI_API_KEY }}
           GROQ_API_KEY:           ${{ secrets.GROQ_API_KEY }}
-          GITHUB_TOKEN:           ${{ secrets.GITHUB_TOKEN }}
-          AGENT_MODEL_ARCHITECT:  ${{ secrets.AGENT_MODEL_ARCHITECT }}
-          AGENT_MODEL_COMPLEX:    ${{ secrets.AGENT_MODEL_COMPLEX }}
-          AGENT_JUDGE_MODEL:      ${{ secrets.AGENT_JUDGE_MODEL }}   # unset -> the `judge` role in models.yaml
-          AGENT_PHOENIX_ENDPOINT: ${{ secrets.AGENT_PHOENIX_ENDPOINT }}
+          GEMINI_API_KEY:         ${{ secrets.GEMINI_API_KEY }}
           AGENT_OWNER_ID:         ${{ secrets.AGENT_OWNER_ID || 'cd@agenticframework' }}
-        run: python3 scripts/run-evals.py --fail-below 0.80
+        run: bash .githooks/process-gate evals run --suite golden --fail-below 0.80
         # No continue-on-error — failure must block or trigger rollback
 
       - name: "Rollback on smoke failure"
         if: failure()
-        uses: ./.github/actions/rollback-notify
+        uses: "bobbyaqlaar/AgentSmith/.github/actions/rollback-notify@{{AGENTSMITH_REF}}"
         with:
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           teams_webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}

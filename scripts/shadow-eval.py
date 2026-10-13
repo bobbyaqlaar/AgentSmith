@@ -31,10 +31,9 @@ review via portal/lib/promotions.ts's suggested-promotion queue, not
 applied automatically.
 
 Called by:
-  - workflow-templates/shadow-eval.yml (optional, nightly cron — tenants
-    opt in by copying the template, same posture as cd-deploy.yml's
-    replacement)
   - manually: python3 scripts/shadow-eval.py --sample-rate 0.05
+    (the tenant template that ran it left in 3.0.0; a tenant's evals-port
+    suite for it is on the backlog)
 
 Requires:
   AGENT_PHOENIX_ENDPOINT — Phoenix server URL (default: http://localhost:6006)

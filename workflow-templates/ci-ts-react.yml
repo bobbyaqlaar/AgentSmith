@@ -22,6 +22,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # The gate provider, for the graph check below — installed by its own CI
+      # setup step at the release this repository pins. First, before this job
+      # sets up its own toolchain: the provider runs on the interpreter the
+      # action installs, and the steps after keep the environment they set up.
+      - uses: "{{PROVIDER_SETUP}}"
+
       # The lockfile decides the package manager. This template assumed npm
       # (`cache: npm` + `npm ci`), so a pnpm project failed setup-node before
       # any check ran. A project without a lockfile fails here, by name: CI
@@ -67,14 +73,6 @@ jobs:
           node-version: "20"
           cache: ${{ steps.pm.outputs.pm }}
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install Python dependencies
-        run: pip install pyyaml networkx
-
       - name: Install dependencies
         run: |
           if [ "$PM" = pnpm ]; then
@@ -104,15 +102,13 @@ jobs:
         # agentsmith:gate
         run: '"$PM" run --if-present lint'
 
-      - name: "Validate Knowledge Graph (Pillar 2)"
+      - name: "Knowledge Graph is current (Pillar 2)"
         # agentsmith:gate
-        # The same check AgentSmith runs on itself. The inline version here
-        # rebuilt the graph and then counted nodes in the committed file — it
-        # never compared them, so a graph stale by months passed every time.
-        # verify_system.py captures the committed shape BEFORE regenerating.
-        # A repo with no graph at all still passes with a warning until
-        # `agentsmith tenant init` provisions one (G7).
-        run: python3 scripts/verify_system.py --check-kg
+        # The committed graph against what the code maps to now, asked of the
+        # declared gate provider (contract/gate/v3, `kg check`). A repository
+        # with no graph yet passes with a warning; a stale one fails — commit
+        # what `agentsmith gate kg build` writes.
+        run: bash .githooks/process-gate kg check
 
       - name: "RFC gate (Pillar 1)"
         # agentsmith:gate
@@ -127,19 +123,6 @@ jobs:
             exit 1
           fi
           echo "✅ RFC gate: ${RFC_COUNT} RFC(s) found."
-
-      - name: "IDE config drift check (Pillar 6/7)"
-        # agentsmith:gate
-        # Blocking since G3: the rule files are generated from one source, so
-        # drift means a repo is telling its agents something the framework did
-        # not say. Regenerate with `python3 scripts/generate-ide-config.py --write`.
-        run: python3 scripts/generate-ide-config.py --check-only
-
-      - name: "Framework health check (Pillar 3/5)"
-        env:
-          AGENT_PHOENIX_ENDPOINT: ${{ secrets.AGENT_PHOENIX_ENDPOINT || '' }}
-          AGENT_OWNER_ID: ${{ secrets.AGENT_OWNER_ID || 'ci@agenticframework' }}
-        run: python3 scripts/verify_system.py || true # non-blocking — inform, not gate
 
       # Runner-agnostic: CI=true is what puts Jest into single-run mode, and
       # Vitest detects it the same way. `-- --watchAll=false --ci --coverage`
@@ -168,19 +151,12 @@ jobs:
     uses: ./.github/workflows/eval-hallucination.yml
     secrets: inherit
 
-  eval-ttft-live:
-    name: "TTFT live (opt-in)"
-    uses: ./.github/workflows/eval-ttft-live.yml
-    secrets: inherit
-
-  # The same gate ci-python-fastapi.yml runs. The harness's controls are not
-  # Python-specific — it grades THIS repo's .agent-rfc/security/ pack and the
-  # vendored runtime — so a Go or TS tenant was simply ungraded without it.
-  # Strict, like Python: a tenant still carrying the shipped placeholder pack
-  # fails here until it declares its own risks and high-impact actions.
+  # The same gate ci-python-fastapi.yml runs. The security port's controls are
+  # not Python-specific — it grades THIS repo's .agent-rfc/security/ pack, its
+  # declared posture and its telemetry wire — so a Go or TS tenant is graded
+  # too. A tenant still carrying the shipped placeholder pack fails here until
+  # it declares its own risks and high-impact actions.
   security-checks:
-    name: "Security harness"
+    name: "Security (declared provider)"
     uses: ./.github/workflows/eval-security.yml
     secrets: inherit
-    with:
-      strict: true

@@ -22,6 +22,5 @@ ai-stack-promote()          { agentsmith promote "$@"; }
 ai-tenant-init()            { agentsmith tenant init "$@"; }
 ai-tenant-promote()         { agentsmith tenant promote "$@"; }
 ai-onprem-deploy-scaffold() { agentsmith tenant onprem-scaffold "$@"; }
-ai-stack-upgrade()          { agentsmith upgrade "$@"; }
 ai-stack-scrub()            { agentsmith scrub "$@"; }
 ai-stack-uninstall()        { agentsmith uninstall "$@"; }

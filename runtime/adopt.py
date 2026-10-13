@@ -50,11 +50,12 @@ CLIENT_HOOKS = frozenset({
     "post-commit", "pre-rebase", "post-checkout", "post-merge", "post-rewrite", "reference-transaction",
     "pre-auto-gc", "post-index-change", "push-to-checkout", "sendemail-validate",
 })
-# The machine's own hooks (install-ai-stack.sh copies them into every `git init`)
-# that provision a repository: post-checkout vendors framework code and writes
-# CI workflows, post-commit tags, pushes and re-maps the graph. `tenant init`
-# wants both; an adopted repository keeps its own layout and CI, so adopt does
-# not chain them (`provisioning=False`). Its guardrail hooks still run.
+# The machine-wide hooks installs before 3.0.0 armed (copied into every
+# `git init`) that provision a repository: post-checkout vendored framework code
+# and wrote CI workflows, post-commit tagged, pushed and re-mapped the graph.
+# Never chained: 3.0.0 retires them (.agent-rfc/designs/vendoring-retired.md),
+# and a repository's .git/hooks may still hold copies. What their pre-commit and
+# commit-msg checked is now the gate's (scripts/gate_guardrails.py).
 PROVISIONING_HOOKS = frozenset({"post-checkout", "post-commit"})
 STUB = """#!/usr/bin/env bash
 # Written by `agentsmith tenant init` / `tenant adopt`: runs this hook from the
@@ -153,34 +154,34 @@ def is_machine_hook(hook: Path) -> bool:
         return False
 
 
-def stub_names(prior: Path, provisioning: bool = True) -> list[str]:
+def stub_names(prior: Path) -> list[str]:
     """The hooks in `prior` that get a stub in .githooks: every client hook the
-    gate does not own, less the machine's provisioning hooks unless wanted."""
+    gate does not own, less an old install's provisioning hooks."""
     return [hook.name for hook in _executable_hooks(prior)
             if hook.name in CLIENT_HOOKS and hook.name not in GATE_HOOKS
-            and (provisioning or hook.name not in PROVISIONING_HOOKS or not is_machine_hook(hook))]
+            and not (hook.name in PROVISIONING_HOOKS and is_machine_hook(hook))]
 
 
-def chain_hooks(root: Path, prior: Path, provisioning: bool = True) -> list[str]:
+def retired_machine_hooks(prior: Path) -> list[str]:
+    """An old install's provisioning hooks in `prior`, which are not chained."""
+    return [hook.name for hook in _executable_hooks(prior)
+            if hook.name in PROVISIONING_HOOKS and is_machine_hook(hook)]
+
+
+def chain_hooks(root: Path, prior: Path) -> list[str]:
     """Keep `prior`'s hooks running behind the gates: record the directory in
     `agentsmith.chainHooksPath` (read by .githooks/chain), and write a stub for
     each hook the gate does not own (`stub_names`). Returns the stubs written.
-
-    A post-commit that runs tags and may push on its own; a repository that has
-    not been pushing on commit must not start, so `agentsmith.autopush` is set
-    to false when it is unset."""
+    (`agentsmith.autopush`, set here until 3.0.0, was read only by AgentSmith's
+    own post-commit, which is never chained now.)"""
     _git(root, "config", "agentsmith.chainHooksPath", str(prior))
     written = []
-    for name in stub_names(prior, provisioning):
+    for name in stub_names(prior):
         stub = root / ".githooks" / name
         stub.parent.mkdir(parents=True, exist_ok=True)
         stub.write_text(STUB, encoding="utf-8")
         stub.chmod(0o755)
         written.append(f".githooks/{name}")
-    if ".githooks/post-commit" in written and not _git(root, "config", "--get", "agentsmith.autopush"):
-        _git(root, "config", "agentsmith.autopush", "false")
-        print(f"  ! {prior}/post-commit tags and pushes on commit; set `agentsmith.autopush false` here so a "
-              "commit does not start publishing. `git config agentsmith.autopush true` turns it back on.")
     return written
 
 
@@ -297,12 +298,12 @@ def plan_adoption(tenant_id: str, root: Path, *, stack: Optional[str] = None, ar
                (PROVIDERS, fate(PROVIDERS, "leave"))]
     actions += [(f".githooks/{name}", "create") for name in GATE_HOOKS]
     if plan.prior_hooks is not None:
-        actions += [(f".githooks/{name}", "create") for name in stub_names(plan.prior_hooks, provisioning=False)]
-        skipped = sorted(set(stub_names(plan.prior_hooks)) - set(stub_names(plan.prior_hooks, provisioning=False)))
+        actions += [(f".githooks/{name}", "create") for name in stub_names(plan.prior_hooks)]
+        skipped = retired_machine_hooks(plan.prior_hooks)
         if skipped:
-            plan.warnings.append(f"AgentSmith's own {' and '.join(skipped)} in {plan.prior_hooks} are not chained: "
-                                 "they vendor framework code, write CI workflows and tag commits, and an adopted "
-                                 "repository keeps its own layout and CI. Its other hooks run behind the gates")
+            plan.warnings.append(f"AgentSmith's old {' and '.join(skipped)} in {plan.prior_hooks} are not chained: "
+                                 "3.0.0 retired them (they vendored framework code, wrote CI workflows and tagged "
+                                 "commits). The repository's other hooks run behind the gates")
     actions += [(".claude/settings.json", fate(".claude/settings.json", "merge")),
                 (".cursor/hooks.json", fate(".cursor/hooks.json", "leave"))]
     try:
@@ -330,9 +331,10 @@ def plan_adoption(tenant_id: str, root: Path, *, stack: Optional[str] = None, ar
     vendored = vendored_dirs(root)
     if vendored:
         plan.warnings.append(
-            f"{', '.join(name + '/' for name in vendored)} holds vendored AgentSmith code (its own "
-            "post-checkout put it there) and is not gated — gating it would make the next re-vendoring "
-            "need a design and a review of framework code. This repository's own code is gated")
+            f"{', '.join(name + '/' for name in vendored)} still "
+            f"{'hold' if len(vendored) > 1 else 'holds'} a copy of AgentSmith's code. 3.0.0 "
+            "neither refreshes nor runs it, and `verify_system --governed` fails until it is removed — "
+            "the ports replace it. It is left ungated so it can be deleted without reviewing framework code")
     package = root / "package.json"
     if package.is_file() and "husky" in package.read_text(encoding="utf-8"):
         plan.warnings.append("package.json runs husky, which points core.hooksPath back at .husky on install and "
@@ -460,11 +462,23 @@ def workflow_setup(root: Path, ref: Optional[str] = None) -> str:
     return setup_reference(ref)
 
 
-def providers_declaration(command: str = "agentsmith gate", setup: Optional[str] = None) -> str:
+def providers_declaration(command: str = "agentsmith gate", setup: Optional[str] = None,
+                          emitter: Optional[str] = None, new_repository: bool = False) -> str:
     """Who governs this repository, as `contract/gate/v3/providers.schema.json`
     describes it. Named rather than implied: the hooks and CI ask the
     declaration, and another platform's command goes here instead
-    (.agent-rfc/designs/provider-resolution.md, gate-contract-ci.md)."""
+    (.agent-rfc/designs/provider-resolution.md, gate-contract-ci.md).
+
+    `emitter` is the security port's telemetry emitter. Left out, the security
+    check fails SEC-PII-002 until the repository names one (an existing
+    repository decides; contract/security/v1). `tenant init` passes "none": a
+    repository it just created exports no telemetry yet.
+
+    `new_repository` (tenant init) also declares that the judged suites only
+    warn while they cannot be judged: a repository with no data of its own yet
+    gets a green step that says the suite proved nothing, rather than a red one
+    — the graceful skip such a tenant had before the evals contract, now
+    declared where a reviewer reads it (contract/evals/v1)."""
     from runtime.cli import _default_framework_version
 
     major = _default_framework_version().split(".")[0]
@@ -475,9 +489,11 @@ def providers_declaration(command: str = "agentsmith gate", setup: Optional[str]
         "contract": GATE_CONTRACT,
         "providers": {"gate": {"command": command, "version": f"^{major}", "setup": setup or setup_reference()},
                       "rules": {"command": RULES_COMMAND, "version": f"^{major}", "contract": RULES_CONTRACT},
-                      "evals": {"command": EVALS_COMMAND, "version": f"^{major}", "contract": EVALS_CONTRACT},
+                      "evals": {"command": EVALS_COMMAND, "version": f"^{major}", "contract": EVALS_CONTRACT,
+                                **({verdict: {suite: "warn" for suite in ("golden", "fairness", "hallucination")}
+                                    for verdict in ("not_gradable", "no_verdict")} if new_repository else {})},
                       "security": {"command": SECURITY_COMMAND, "version": f"^{major}",
-                                   "contract": SECURITY_CONTRACT}},
+                                   "contract": SECURITY_CONTRACT, **({"emitter": emitter} if emitter else {})}},
     }, indent=2) + "\n"
 
 
@@ -509,7 +525,7 @@ def _write_rules(plan: Plan, framework: Path) -> list[str]:
 def adopt(plan: Plan) -> list[str]:
     """Carry out `plan`. Returns every path written or changed, for the commit."""
     from runtime import architectures
-    from runtime.cli import SCAFFOLD_MANIFEST, _framework_dir, _process_gates_config, _templates_dir, \
+    from runtime.cli import SCAFFOLD_MANIFEST, _framework_dir, _process_gates_config, \
         install_gate_hooks, tenant_yaml, write_scaffold_records
 
     framework = _framework_dir()
@@ -530,7 +546,7 @@ def adopt(plan: Plan) -> list[str]:
     if not (root / PROVIDERS).exists():
         put(PROVIDERS, providers_declaration(setup=setup_reference(plan.framework_ref)))
 
-    written += install_gate_hooks(root, framework, prior=plan.prior_hooks, provisioning=False)
+    written += install_gate_hooks(root, framework, prior=plan.prior_hooks)
 
     sys.path.insert(0, str(framework / "scripts"))
     import gate_ides  # type: ignore
@@ -555,17 +571,8 @@ def adopt(plan: Plan) -> list[str]:
     elif "## Architecture (target)" not in design.read_text(encoding="utf-8"):
         put("docs/DESIGN.md", design.read_text(encoding="utf-8").rstrip("\n") + "\n\n" + section)
 
-    for workflow in (GATES_WORKFLOW, SYNC_WORKFLOW):
-        if (root / workflow).exists():
-            continue
-        name = Path(workflow).name
-        template = next((d / name for d in (_templates_dir(), framework / "workflow-templates")
-                         if d is not None and (d / name).is_file()), None)
-        if template is None:
-            print(f"  ! {name} template not found — re-run install-ai-stack.sh", file=sys.stderr)
-            continue
-        put(workflow, template.read_text(encoding="utf-8").replace(
-            "{{PROVIDER_SETUP}}", setup_reference(plan.framework_ref)))
+    for workflow, text in provider_workflows(root, framework, setup_reference(plan.framework_ref)).items():
+        put(workflow, text)
 
     graph = ".agent-rfc/fixtures/knowledge_graph.json"
     mapper = framework / "scripts" / "map_codebase.py"
@@ -583,6 +590,26 @@ def adopt(plan: Plan) -> list[str]:
     if SCAFFOLD_MANIFEST not in written:
         raise AdoptError("the adoption manifest was not written — see the messages above")
     return written
+
+
+def provider_workflows(root: Path, framework: Path, setup: str) -> dict:
+    """The gates and sync workflows a repository does not have yet, each asking
+    the provider through `setup` — written by `tenant adopt` and `tenant init`
+    alike. A template that cannot be found is said, and left out."""
+    from runtime.cli import _templates_dir
+
+    out = {}
+    for workflow in (GATES_WORKFLOW, SYNC_WORKFLOW):
+        if (root / workflow).exists():
+            continue
+        name = Path(workflow).name
+        template = next((d / name for d in (_templates_dir(), framework / "workflow-templates")
+                         if d is not None and (d / name).is_file()), None)
+        if template is None:
+            print(f"  ! {name} template not found — re-run install-ai-stack.sh", file=sys.stderr)
+            continue
+        out[workflow] = template.read_text(encoding="utf-8").replace("{{PROVIDER_SETUP}}", setup)
+    return out
 
 
 def commit_command(written: Sequence[str], rfc: Optional[str] = None) -> str:

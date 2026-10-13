@@ -4,43 +4,25 @@ Optional governance layer for orgs running AgentSmith across multiple
 teams. Does not change core framework behaviour — adds enforcement,
 auditability, and isolation controls.
 
-## Org Hook Bundle
+## The org policy, and no hook bundle
 
-```bash
-# 1. IT generates an org signing keypair once (gpg --full-generate-key),
-#    keeps the private key secret, distributes the public key to MDM.
-
-# 2. On a machine with hooks already installed (install-ai-stack.sh):
-./enterprise/package-hook-bundle.sh 1.0.0 \
-  --gpg-key it-sec@example.com \
-  --org-policy ./our-org-policy.yaml \
-  --out ./dist
-
-# Produces in ./dist:
-#   agenticframework-hooks-1.0.0.tar.gz
-#   agenticframework-hooks-1.0.0.tar.gz.sig
-#   agenticframework-org.yaml
-#   mdm-deploy-hooks.sh
-
-# 3. MDM pushes ./dist + the org public key to every managed machine, then runs:
-./mdm-deploy-hooks.sh 1.0.0 --org-pubkey ./org-public-key.asc
-```
-
-`mdm-deploy-hooks.sh` verifies the GPG signature **before** extracting
-anything — a corrupted or unsigned bundle is refused, not installed.
-Verified live (see commit history / session log): happy-path install,
-tarball tampered after signing (refused, `BAD signature`), and deployment
-attempted with the wrong org's public key (refused, `No public key`).
+The org policy (`agenticframework-org.yaml`, an example beside this file) is installed on each
+managed machine at `~/.agent-framework/agenticframework-org.yaml`, beside the provider
+`install-ai-stack.sh` installs. IT distributes the installer and the policy through its own
+MDM. The signed **hook bundle** (`package-hook-bundle.sh`, `mdm-deploy-hooks.sh`) is gone in
+3.0.0, together with the machine-wide git hooks it shipped
+(`.agent-rfc/designs/vendoring-retired.md`). A repository is governed by the gate it declares,
+through its own `.githooks`, and the commit checks the bundle's hooks made under the policy
+(an `RFC-NNN` per commit, an RFC under `.agent-rfc/`, no direct `cost_router` import) are
+made by that gate. A signed bundle of the provider install and the policy is on the backlog.
 
 ## Bypass Policy Enforcement
 
-`agenticframework-org.yaml`'s `hooks.bypass_policy` is enforced wherever a
-bypass can be asked for, once the org policy file is installed at
-`~/.agent-framework/agenticframework-org.yaml`: by **the git hooks themselves**
-when a commit or checkout runs with `DISABLE_AI_STACK=true` or the machine's
-mode is `disabled`, and by `agentsmith mode off` before it records that mode.
-One decision serves both (`runtime/machine/policy.py`); the hooks reach it
-through `agentsmith hooks bypass-check`.
+`agenticframework-org.yaml`'s `hooks.bypass_policy` decides whether `agentsmith mode off` may
+record the machine as disabled (`runtime/machine/policy.py`; `agentsmith hooks bypass-check`
+asks the same question). A repository's own gate has no bypass switch to ask about: the
+`DISABLE_AI_STACK=true` the machine-wide hooks honoured left with them in 3.0.0, and a commit
+that skips the gate (`--no-verify`) is caught by the sweep and by CI whatever the policy says.
 
 | `bypass_policy` | A requested bypass |
 |---|---|
@@ -50,18 +32,12 @@ through `agentsmith hooks bypass-check`.
 | (unset in a policy file) | Granted — the policy restricts nothing |
 | anything else (`disable`, `Disabled`, …) | Refused — an unrecognised value is not read as "no restriction" |
 
-Refused — or when the check cannot run at all (the command missing, the policy
-file unreadable) — the hook runs as normal and says so: a failed check is
-enforcement, never a bypass. A consequence for MDM-managed machines that get
-the signed hook bundle but not `install-ai-stack.sh`: without
-`~/.agent-framework/.venv/bin/agentsmith` there is nothing to validate a
-break-glass token, so every bypass is refused there. Install the framework on
-machines where break-glass must work. Before 2026-09-14 only `ai-stack-off` read the
-policy, and `DISABLE_AI_STACK=true git commit` skipped every hook whatever it
-said.
+Refused — or when the check cannot run at all (the command missing, the policy file
+unreadable) — the mode is not changed, and the command says so: a failed check is enforcement,
+never a bypass.
 
-Every bypass attempt under an enterprise policy — granted or denied, from a
-hook or from `agentsmith mode off` — is written to the Ops Portal's immutable
+Every bypass attempt under an enterprise policy — granted or denied, from
+`agentsmith mode off` — is written to the Ops Portal's immutable
 audit log (`hook_bypass` event, see `portal/lib/auditLog.ts`) when
 `OPS_PORTAL_URL` and `AUDIT_LOG_WRITE_TOKEN` are configured in the environment,
 and to `~/.agent-framework/local-audit-fallback.log` when they are not or the

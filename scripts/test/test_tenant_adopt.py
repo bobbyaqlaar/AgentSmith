@@ -237,7 +237,6 @@ def test_the_gates_workflow_asks_the_declared_provider_and_names_no_framework_pa
     "resolver, stale_rel, want_rel",
     [
         ("_templates_dir", ".agent-framework/workflow-templates", "workflow-templates"),
-        ("_actions_dir", ".agent-framework/github-actions", ".github/actions"),
     ],
 )
 def test_this_checkouts_copies_beat_the_machines_installed_ones(
@@ -361,14 +360,15 @@ def test_the_machines_provisioning_hooks_are_not_chained_into_an_adopted_reposit
     seven CI workflows beside the repository's own, and every commit re-mapped
     the graph. The guardrail hooks are the repository's to keep; the
     provisioning ones are not."""
-    import shutil
-
     from runtime.adopt import adopt
 
     machine = legacy / ".git" / "hooks"
     machine.mkdir(exist_ok=True)
-    for name in ("post-checkout", "post-commit", "pre-commit"):
-        shutil.copy(REPO / "hooks" / name, machine / name)
+    # An install before 3.0.0 copied these into every `git init`; each says so
+    # in its second line. The bodies are what they did: vendor, and tag.
+    bodies = {"post-checkout": "mkdir -p scripts runtime", "post-commit": "true", "pre-commit": "true"}
+    for name, body in bodies.items():
+        (machine / name).write_text(f"#!/usr/bin/env bash\n# AgentSmith: {name}\n{body}\n")
         (machine / name).chmod(0o755)
     _git(legacy, "config", "--unset", "core.hooksPath")
 
@@ -387,10 +387,10 @@ def test_the_machines_provisioning_hooks_are_not_chained_into_an_adopted_reposit
 
 
 def test_vendored_framework_code_is_not_gated(legacy):
-    """A tenant provisioned the old way carries AgentSmith's own scripts/ and
-    runtime/, copied in by hooks/post-checkout. Gating them would make the next
-    re-vendoring need a design and a review of framework code
-    (.agent-rfc/designs/installed-architectures.md). Found adopting a real
+    """A tenant provisioned before 3.0.0 carries AgentSmith's own scripts/ and
+    runtime/. They are left ungated, so the copy can be deleted without
+    reviewing framework code, and the plan says the copy is no longer run and
+    must go (.agent-rfc/designs/vendoring-retired.md). Found adopting a real
     scratch tenant, which the synthetic fixtures had no vendored code to show."""
     _write(legacy, "scripts/run-security-checks.py", "# vendored AgentSmith harness\n")
     _write(legacy, "scripts/agent_logger.py", "# vendored\n")
@@ -402,7 +402,9 @@ def test_vendored_framework_code_is_not_gated(legacy):
 
     assert "scripts/**" not in plan.gated and "runtime/**" not in plan.gated
     assert "mypkg/**" in plan.gated, "the repository's own code is still gated"
-    assert any("vendored" in w and "scripts/" in w for w in plan.warnings), plan.warnings
+    assert any("still hold a copy" in w and "scripts/" in w and "neither refreshes nor runs" in w
+               for w in plan.warnings), \
+        plan.warnings
 
 
 def test_adopt_refuses_when_the_install_cannot_arm_the_gates(legacy, tmp_path, monkeypatch):
@@ -468,3 +470,19 @@ def test_adopt_writes_every_file_its_plan_promises(legacy):
     missing = [path for path in planned if not (legacy / path).exists()]
     assert not missing, missing
     assert ".agent-history.log" in written
+
+
+def test_an_install_without_the_docs_finds_them_in_agentsmith_dir(tmp_path, monkeypatch):
+    """An install from the release tarballs has no docs/ beside its gate, and the
+    installer tells that user to set AGENTSMITH_DIR to a checkout. An adopted
+    tenant's config names the lever doc `@framework/…`, so the gate must look
+    there next, or every review on that machine cites levers it cannot read."""
+    import process_gate as pg
+
+    monkeypatch.setattr(pg, "FRAMEWORK_ROOT", tmp_path / "installed-without-docs")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("AGENTSMITH_DIR", str(REPO))
+
+    assert pg.framework_file("docs/review-levers.md") == REPO / "docs" / "review-levers.md"
+    monkeypatch.delenv("AGENTSMITH_DIR")
+    assert pg.framework_file("docs/review-levers.md") is None

@@ -32,7 +32,6 @@ from runtime.machine.policy import (
     audit_log_event,
     bypass_decision,
     org_policy_hooks,
-    org_policy_path,
 )
 from runtime.machine.state import find_script, framework_home
 
@@ -68,6 +67,10 @@ def _http_ok(url: str, timeout: float = 3.0) -> bool:
 
 def _git_global(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", "config", "--global", *args], capture_output=True, text=True, check=False)
+
+
+def _git_global_get(key: str) -> str:
+    return _git_global("--get", key).stdout.strip()
 
 
 def _shared() -> Optional[ModuleType]:
@@ -123,9 +126,9 @@ def mode(target: Optional[str], out: Out = print, env: Optional[Mapping[str, str
     """`agentsmith mode [local|hybrid|off]`.
 
     Writes `state/mode`, which the gateway and the hooks read — an export used
-    to reach one terminal. `init.templateDir` is re-linked (local/hybrid) or
-    unset (off) only on a developer install: the shell functions did it on an
-    enterprise install too, which promises never to touch git's global config.
+    to reach one terminal. git's global config is not touched: until 3.0.0 this
+    re-linked `init.templateDir` to the machine-wide hooks, which 3.0.0 retired
+    (.agent-rfc/designs/vendoring-retired.md).
     """
     if target is None:
         current = effective_mode(env)
@@ -133,23 +136,18 @@ def mode(target: Optional[str], out: Out = print, env: Optional[Mapping[str, str
         out(f"{current} ({source})" if current else "not set — the registry's default profile applies")
         return 0
 
-    developer = state.read_install_mode(env) == "developer"
     if target == "off":
         decision = bypass_decision(env)
         if not decision.allowed:
             out(f"🛑 {decision.message}")
             return 1
         state.write_mode("disabled", env)
-        if developer:
-            _git_global("--unset", "init.templateDir")
-        out("🔒 AI Stack: DISABLED — hooks muted" + (", templates unlinked" if developer else ""))
+        out("🔒 AI Stack: DISABLED — hooks muted")
         if decision.message != "no org policy on this machine":
             out(f"⚠️  {decision.message}")
         return 0
 
     state.write_mode(target, env)
-    if developer:
-        _git_global("init.templateDir", str(Path.home() / ".git_templates"))
     banner = {"local": "🍃 LOCAL OFFLINE mode (Ollama)", "hybrid": "💎 HYBRID CLOUD mode (Claude + cost routing)"}
     out(f"AI Stack: {banner[target]} — recorded for every process on this machine")
     if (_env(env).get("AI_STACK_MODE") or "").strip() not in ("", target):
@@ -255,16 +253,10 @@ def status(out: Out = print, env: Optional[Mapping[str, str]] = None) -> int:
     current = effective_mode(env)
     out("────────────────────────────────────────────────")
     out(f"  Mode:      {current or 'not set'}")
-    requested = current == "disabled" or environ.get("DISABLE_AI_STACK") == "true"
-    if not requested:
-        hooks = "on"
-    elif org_policy_path().exists():
-        # The hooks ask the policy per run; `status` does not, so as not to
-        # write an audit event just for looking.
-        hooks = "bypass requested — the org policy decides on each hook run"
-    else:
-        hooks = "muted"
-    out(f"  Hooks:     {hooks}")
+    # No machine-wide hook since 3.0.0 (.agent-rfc/designs/vendoring-retired.md):
+    # each governed repository's .githooks run its gate, and nothing on the
+    # machine mutes them.
+    out("  Hooks:     none machine-wide — a governed repository's .githooks run its gate")
     out(f"  Install:   {state.read_install_mode(env)}  ({framework_home()})")
     out(f"  Phoenix:   {phoenix_endpoint(env)}")
     out(f"  Judge:     {judge_model() or 'unresolved'}   (from models.yaml, not the environment)")
@@ -621,7 +613,7 @@ def uninstall(yes: bool, purge: bool, out: Out = print, env: Optional[Mapping[st
     legacy shell block; `--purge` also removes ~/.agent-framework and ~/.git_templates."""
     home = framework_home()
     out("🗑  AgentSmith: machine-level uninstall. This will:")
-    out("   - Restore git init.templateDir to its pre-install value (or unset it)")
+    out("   - Restore git init.templateDir if an install before 3.0.0 left it pointing at AgentSmith's hooks")
     out("   - Remove ~/.local/bin/agentsmith and any AgentSmith block in your shell profile")
     out("   - " + ("Remove ~/.agent-framework and ~/.git_templates" if purge
                      else "Keep ~/.agent-framework (pass --purge to remove it)"))
@@ -637,17 +629,21 @@ def uninstall(yes: bool, purge: bool, out: Out = print, env: Optional[Mapping[st
         out("❌ Cancelled")
         return 1
 
-    previous = ""
-    try:
-        previous = (home / "previous_template_dir").read_text(encoding="utf-8").strip()
-    except OSError:  # fail-open: no recorded value means "unset it", handled below
-        pass
-    if previous:
-        _git_global("init.templateDir", previous)
-        out(f"✅ Restored git init.templateDir → {previous}")
-    else:
-        _git_global("--unset", "init.templateDir")
-        out("✅ Unset git init.templateDir (no prior value was recorded)")
+    # Only AgentSmith's own value is put back: 3.0.0's installer no longer sets
+    # it, and a template dir the user chose since is theirs.
+    ours = str(Path.home() / ".git_templates")
+    if _git_global_get("init.templateDir") == ours:
+        previous = ""
+        try:
+            previous = (home / "previous_template_dir").read_text(encoding="utf-8").strip()
+        except OSError:  # fail-open: no recorded value means "unset it", handled below
+            pass
+        if previous and previous != ours:
+            _git_global("init.templateDir", previous)
+            out(f"✅ Restored git init.templateDir → {previous}")
+        else:
+            _git_global("--unset", "init.templateDir")
+            out("✅ Unset git init.templateDir (no prior value was recorded)")
 
     link = Path.home() / ".local" / "bin" / "agentsmith"
     if link.is_symlink() and str(home) in os.path.realpath(link):
