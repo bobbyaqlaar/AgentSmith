@@ -22,7 +22,6 @@ import pytest
 
 from runtime.llm_gateway import _active_profile_name
 from runtime.machine import ops, policy, state
-from runtime.machine.upgrade import upgrade
 from runtime.otlp import resolve_otlp_endpoint
 
 REPO = Path(__file__).resolve().parents[2]
@@ -97,19 +96,27 @@ def test_find_script_returns_exactly_one_copy(machine, tmp_path, monkeypatch):
     tenant = tmp_path / "tenant"
     (tenant / "scripts").mkdir(parents=True)
     assert state.find_script("run-evals.py", tenant) == installed
+    # A tenant's copy is never taken (3.0.0, vendoring-retired.md)...
     (tenant / "scripts" / "run-evals.py").write_text("# tenant\n")
+    assert state.find_script("run-evals.py", tenant) == installed
+    # ...AgentSmith's own checkout is, recognised by two of its markers.
+    (tenant / "install-ai-stack.sh").write_text("")
+    (tenant / "workflow-templates").mkdir()
     assert state.find_script("run-evals.py", tenant) == tenant / "scripts" / "run-evals.py"
     assert state.find_script("nope.py", tenant) is None
 
 
-def test_a_failing_tenant_script_is_not_re_run_from_the_machine_copy(machine, tmp_path, monkeypatch, capsys):
-    """The shell functions ran `python3 scripts/X.py || python3 ~/.agent-framework/scripts/X.py`."""
+def test_a_failing_checkout_script_is_not_re_run_from_the_machine_copy(machine, tmp_path, monkeypatch, capsys):
+    """The shell functions ran `python3 scripts/X.py || python3 ~/.agent-framework/scripts/X.py`.
+    Exactly one copy runs — here AgentSmith's own checkout's."""
     installed = machine / ".agent-framework" / "scripts" / "run-evals.py"
     installed.parent.mkdir(parents=True)
     installed.write_text("import sys; print('MACHINE COPY'); sys.exit(0)\n")
     tenant = tmp_path / "tenant"
     (tenant / "scripts").mkdir(parents=True)
     (tenant / "scripts" / "run-evals.py").write_text("import sys; print('TENANT COPY'); sys.exit(3)\n")
+    (tenant / "install-ai-stack.sh").write_text("")
+    (tenant / "workflow-templates").mkdir()
     monkeypatch.chdir(tenant)
 
     rc = ops._run_script("run-evals.py", [], lambda _: None, quiet=False)
@@ -220,14 +227,14 @@ def test_audit_event_types_are_the_ones_the_portal_accepts():
 
 
 @pytest.mark.parametrize("install_mode", ["developer", "enterprise"])
-def test_mode_writes_the_file_and_touches_git_only_on_a_developer_install(machine, monkeypatch, install_mode):
+def test_mode_writes_the_file_and_never_touches_git(machine, monkeypatch, install_mode):
+    """No machine-wide hooks since 3.0.0, so nothing to link (vendoring-retired.md)."""
     monkeypatch.setattr(ops, "check", lambda out=print, env=None: 0)
     _record_install_mode(install_mode)
 
     assert ops.mode("hybrid", out=lambda _: None) == 0
     assert state.read_mode() == "hybrid"
-    expected = str(machine / ".git_templates") if install_mode == "developer" else ""
-    assert _git_global_template_dir() == expected
+    assert _git_global_template_dir() == ""
 
     assert ops.mode("off", out=lambda _: None) == 0
     assert state.read_mode() == "disabled"
@@ -245,7 +252,7 @@ def test_mode_off_is_refused_by_a_disabled_policy_and_leaves_the_mode_alone(mach
     assert any("DISABLED" in s for s in said)
 
 
-# ── scrub / onprem / tenant promote / upgrade default ───────────────────────
+# ── scrub / onprem / tenant promote ─────────────────────────────────────────
 
 
 def test_scrub_finds_the_generated_files_at_find_maxdepth_and_nothing_else(tmp_path):
@@ -295,25 +302,6 @@ def test_tenant_promote_compares_the_parsed_quoted_id(tmp_path, monkeypatch):
     assert ops.tenant_promote("acme", "dev", "production", out=lambda _: None) == 1
 
 
-def test_upgrade_without_to_declares_the_installed_release_not_1_1_0(monkeypatch):
-    """The shell function defaulted to ${FRAMEWORK_VERSION:-1.1.0}, and the
-    profile never set FRAMEWORK_VERSION."""
-    from runtime import cli
-
-    seen = {}
-    def fake_upgrade(repo, version, **_):
-        seen["v"] = version
-        return 0
-
-    monkeypatch.setattr("runtime.machine.upgrade.upgrade", fake_upgrade)
-    cli.main(["upgrade"])
-    assert seen["v"] == cli._default_framework_version() != "1.1.0"
-
-
-def test_upgrade_refuses_outside_a_tenant(tmp_path):
-    assert upgrade(tmp_path, "9.9.9", out=lambda _: None, home=tmp_path) == 1
-
-
 def test_tenant_init_records_tenant_created_once(machine, tmp_path, monkeypatch):
     """docs/UserManual.md and the portal's audit route name `agentsmith tenant init →
     tenant_created`; nothing wrote it after the scaffold left the shell profile."""
@@ -327,10 +315,10 @@ def test_tenant_init_records_tenant_created_once(machine, tmp_path, monkeypatch)
     assert len(events) == 1 and events[0]["tenantId"] == "acme"
 
 
-@pytest.mark.parametrize(
-    ("policy_text", "expected"), [(None, "muted"), ("hooks:\n  bypass_policy: disabled\n", "org policy decides")]
-)
-def test_status_does_not_call_hooks_muted_when_a_policy_decides(machine, monkeypatch, policy_text, expected):
+@pytest.mark.parametrize("policy_text", [None, "hooks:\n  bypass_policy: disabled\n"])
+def test_status_says_no_hook_is_machine_wide_and_records_nothing(machine, monkeypatch, policy_text):
+    """Nothing on the machine mutes a repository's gate since 3.0.0; status says
+    so whatever the environment asks, and looking is not a bypass attempt."""
     monkeypatch.setenv("DISABLE_AI_STACK", "true")
     monkeypatch.setattr(ops, "judge_model", lambda: "j")
     monkeypatch.setattr(ops, "_online", lambda: True)
@@ -339,7 +327,7 @@ def test_status_does_not_call_hooks_muted_when_a_policy_decides(machine, monkeyp
     said: list[str] = []
     ops.status(out=said.append)
     [hooks] = [line for line in said if line.strip().startswith("Hooks:")]
-    assert expected in hooks
+    assert "none machine-wide" in hooks and "muted" not in hooks
     assert _audit(machine) == [], "status must not record a bypass attempt"
 
 
@@ -357,6 +345,9 @@ def test_doctor_forwards_verify_system_flags(tmp_path, monkeypatch, capfd):
 
     (tmp_path / "scripts").mkdir()
     (tmp_path / "scripts" / "verify_system.py").write_text("import sys; print('ARGS', sys.argv[1:])\n")
+    # An AgentSmith checkout, so `doctor` takes this script, not the install's.
+    (tmp_path / "install-ai-stack.sh").write_text("")
+    (tmp_path / "workflow-templates").mkdir()
     monkeypatch.chdir(tmp_path)
 
     assert cli.main(["doctor", "--check-kg", "--check-hooks"]) == 0

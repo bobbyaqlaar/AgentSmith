@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 # .github/scratch-tenants/build.sh — build one scratch tenant from its app
-# source in this repository, using the AgentSmith INSTALLED on this machine
-# (~/.agent-framework and ~/.git_templates/hooks, as install-ai-stack.sh
-# writes them).
+# source in this repository, with `agentsmith tenant init` from the AgentSmith
+# INSTALLED on this machine (install-ai-stack.sh), its CI taking the provider
+# from <framework-ref> — the commit under test.
 #
-#   usage: build.sh <app> <target-dir>
-#          app = a directory under apps/ (ts-react, ts-react-pnpm, go,
-#                python-fastapi, python-uv). One stack can have several apps,
-#                one per scenario; the hook detects the stack from the files.
+#   usage: build.sh <app> <target-dir> <stack> <framework-ref>
+#          app   = a directory under apps/ (ts-react, ts-react-pnpm, go,
+#                  python-fastapi, python-uv). One stack can have several apps,
+#                  one per scenario.
+#          stack = python-fastapi | ts-react | go
 #
 # A scratch tenant is a pure OUTPUT: everything in it is a verbatim copy of
 # .github/scratch-tenants/apps/<app>/, of the shared security-pack/ and
-# SCRATCH_TENANT.md beside this script, or produced by the post-checkout hook.
-# So the build empties the target (keeping .git and its history), copies those
-# in, and fires the installed hook exactly as a checkout would. There is no
-# list of "provisioned" vs "tenant-owned" paths to keep in step with the hook.
+# SCRATCH_TENANT.md beside this script, or written by `tenant init`. So each
+# build starts a fresh orphan history: the app is committed first, as a
+# repository before AgentSmith, then scaffolded and committed with the command
+# `tenant init` prints — through the tenant's own gate, which its CI then runs
+# too. The workflow force-pushes the result (the repository is pure output). Until 3.0.0 the installed post-checkout hook did the scaffolding
+# and vendored AgentSmith's code; 3.0.0 retired both
+# (.agent-rfc/designs/vendoring-retired.md).
 #
 # <target-dir> may be an existing clone of the scratch repo (the workflow) or
 # any directory (local use: it is git-initialised if needed).
@@ -24,23 +28,24 @@
 #     the repo was edited directly, and this build would silently discard that.
 #     Move the change into apps/<app>/ instead, or set
 #     SCRATCH_TENANTS_ALLOW_MANUAL_HEAD=1 to overwrite it deliberately.
-#   - the installed hook prints any column-0 warning (⚠️/❌): a tenant onboarded
-#     from this install would be broken the same way.
-#   - the hook changes the app's .gitignore: it did not honour the declared
-#     AGENTSMITH_TENANT_VISIBILITY=private, and the next commit would stop
-#     tracking CLAUDE.md and friends.
+#   - `tenant init` fails, or prints a warning (a line starting `  !`): a tenant
+#     scaffolded from this install would be broken the same way.
+#   - the scaffold changes the app's .gitignore, or leaves AgentSmith's code in
+#     the tenant (`verify_system --governed`'s framework copies).
 
 set -euo pipefail
 
-APP_NAME="${1:?usage: build.sh <app> <target-dir>}"
-TARGET="${2:?usage: build.sh <app> <target-dir>}"
+USAGE="usage: build.sh <app> <target-dir> <stack> <framework-ref>"
+APP_NAME="${1:?$USAGE}"
+TARGET="${2:?$USAGE}"
+STACK="${3:?$USAGE}"
+REF="${4:?$USAGE}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$HERE/apps/$APP_NAME"
-HOOK="$HOME/.git_templates/hooks/post-checkout"
 WORKFLOW_AUTHOR="AgentSmith scratch-tenants"
 
 [ -d "$APP" ] || { echo "::error::no app source '$APP_NAME' at $APP" >&2; exit 2; }
-[ -f "$HOOK" ] || { echo "::error::no installed hook at $HOOK — run install-ai-stack.sh first" >&2; exit 1; }
+command -v agentsmith >/dev/null || { echo "::error::agentsmith is not on PATH — run install-ai-stack.sh first" >&2; exit 1; }
 
 mkdir -p "$TARGET"
 cd "$TARGET"
@@ -55,7 +60,13 @@ if git rev-parse --verify -q HEAD >/dev/null; then
   fi
 fi
 
-# ── 2. Empty the tree, copy the app in ───────────────────────────────────────
+# ── 2. A fresh history: the app, before AgentSmith ───────────────────────────
+git config user.name "$WORKFLOW_AUTHOR"
+git config user.email "scratch-tenants@users.noreply.github.com"
+# An earlier build armed .githooks; the app commit is made before the gates.
+git config --unset core.hooksPath 2>/dev/null || true
+git checkout -q --orphan scratch-rebuild
+git rm -rq --cached . 2>/dev/null || true
 find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 # Files git would publish (tracked, or new and not ignored), not the raw
 # directory: `cp -R` also copied a local node_modules/ or .ruff_cache/, so a
@@ -68,41 +79,49 @@ git -C "$APP" ls-files -z --cached --others --exclude-standard . |
   done
 cp "$HERE/SCRATCH_TENANT.md" SCRATCH_TENANT.md
 # The authored security pack, one copy for every app — every stack's CI runs
-# the strict harness, which fails on the shipped placeholders. Copied BEFORE
-# the hook, so the hook's never-overwrite rule for the pack stays exercised.
+# the security port, which fails on the shipped placeholders. Copied BEFORE the
+# scaffold, so `tenant init`'s never-overwrite rule for the pack stays exercised.
 mkdir -p .agent-rfc/security
 cp "$HERE/security-pack/"*.yaml .agent-rfc/security/
-mkdir -p .agenticframework
-touch .agenticframework/enabled
+find . -name __pycache__ -type d -not -path './node_modules/*' -prune -exec rm -rf {} +
+git add -A
+git commit -q -m "feat: the $APP_NAME app, before AgentSmith"
+git branch -M main
 
-# ── 3. Fire the installed hook, as `git checkout` would ──────────────────────
-# A real tenant is private and TRACKS its IDE config files. These fixture repos
-# are public — so their CI runs on free standard-runner minutes — and the hook
-# would therefore gitignore CLAUDE.md, .cursorrules and friends, leaving a
-# fixture on the opposite branch of the visibility decision from every tenant
-# it stands in for. Declaring the intent keeps the fixture faithful without
-# making it depend on where it happens to be hosted
-# (.agent-rfc/designs/tenant-visibility-override.md). The .gitignore check in
-# step 4 is what proves this reached the hook.
-export AGENTSMITH_TENANT_VISIBILITY=private
+# ── 3. Scaffold it ───────────────────────────────────────────────────────────
 LOG="$(mktemp)"
-bash "$HOOK" 2>&1 | tee "$LOG"
+if ! agentsmith tenant init "scratch-$APP_NAME" --stack "$STACK" --framework-ref "$REF" --root . >"$LOG" 2>&1; then
+  cat "$LOG"
+  echo "::error::agentsmith tenant init failed for the $APP_NAME tenant"
+  exit 1
+fi
+cat "$LOG"
 
 # ── 4. Verify ────────────────────────────────────────────────────────────────
-# Every hook warning starts in column 0 with ⚠️ or ❌. The one benign note, the
-# security pack's "These are PLACEHOLDERS" reminder, is indented. Matching the
-# prefix, not a list of messages, covers warnings added to the hook later.
-if grep -E "^(⚠️|❌)" "$LOG"; then
-  echo "::error::the installed hook could not fully provision the $APP_NAME tenant (see the lines above)"
+if grep -E "^  ! " "$LOG"; then
+  echo "::error::tenant init could not fully scaffold the $APP_NAME tenant (see the lines above)"
   exit 1
 fi
 # Both directions: an app with no .gitignore (the go tenant) must not come out
-# with one either — the hook creates the file when it appends.
+# with one either.
 if { [ -f "$APP/.gitignore" ] && ! cmp -s "$APP/.gitignore" .gitignore; } \
    || { [ ! -f "$APP/.gitignore" ] && [ -f .gitignore ]; }; then
-  echo "::error::the hook changed .gitignore — it did not honour AGENTSMITH_TENANT_VISIBILITY=private, so this fixture would stop tracking the IDE config files a real tenant tracks"
+  echo "::error::the scaffold changed .gitignore — the next commit would stop tracking files a real tenant tracks"
   diff "${APP}/.gitignore" .gitignore 2>/dev/null || cat .gitignore
   exit 1
 fi
-find . -name __pycache__ -type d -not -path './node_modules/*' -prune -exec rm -rf {} +
-echo "built $APP_NAME tenant at $TARGET"
+for dir in scripts runtime fixtures/security .github/actions; do
+  if [ -e "$dir" ] && [ ! -e "$APP/$dir" ]; then
+    echo "::error::the scaffold wrote $dir/ — 3.0.0 vendors nothing into a tenant"
+    exit 1
+  fi
+done
+
+# ── 5. Commit the scaffold through the tenant's own gate ─────────────────────
+commit="$(sed -n 's/^  \(git add -A && git commit .*\)$/\1/p' "$LOG" | head -n 1)"
+if [ -z "$commit" ]; then
+  echo "::error::tenant init printed no commit command for the $APP_NAME tenant"
+  exit 1
+fi
+eval "$commit"
+echo "built $APP_NAME tenant at $TARGET: $(git log --oneline | wc -l | tr -d ' ') commits, head $(git log -1 --format=%s)"

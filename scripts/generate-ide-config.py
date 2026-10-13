@@ -565,15 +565,17 @@ def _render_skill(skill: dict, rules: dict, ctx: dict[str, str]) -> str:
 
 def _detect_stack(repo_root: Path) -> tuple[str, str]:
     """(stack, default test command) from what the repository holds — the order
-    `tenant adopt` and hooks/post-checkout use, and the lock file the tests run
-    under (a uv project runs `uv run pytest`, a pnpm one `pnpm test`)."""
+    `tenant adopt` uses, and the tool the CI templates install with (a pnpm
+    project runs `pnpm test`; a uv project `uv run pytest`, unless a
+    requirements.txt is there too, which install-python-deps prefers)."""
     if (repo_root / "package.json").exists():
         if (repo_root / "pnpm-lock.yaml").exists():
             return "ts-react", "CI=true pnpm test"
         return "ts-react", "CI=true npm test"
     if any((repo_root / name).exists() for name in ("pyproject.toml", "Pipfile", "setup.py")) \
             or list(repo_root.glob("requirements*.txt")):
-        return "python-fastapi", "uv run pytest" if (repo_root / "uv.lock").exists() else "pytest"
+        uses_uv = (repo_root / "uv.lock").exists() and not (repo_root / "requirements.txt").exists()
+        return "python-fastapi", "uv run pytest" if uses_uv else "pytest"
     if (repo_root / "go.mod").exists():
         return "go", "go test -race ./..."
     return "generic", "echo 'No test command configured'"

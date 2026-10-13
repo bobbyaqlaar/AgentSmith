@@ -5,8 +5,8 @@ docs/scratch-tenants.md).
 
 Two layers. The workflow proves on GitHub that each built tenant's own CI goes
 green; that needs a PAT and minutes. This file is the cheap layer that runs on
-every Self-Test: it BUILDS every scratch app with the real post-checkout hook
-into a temp directory and checks the result offline, so most onboarding breaks
+every Self-Test: it BUILDS every scratch app with the real `tenant init` into a
+temp directory and checks the result offline, so most onboarding breaks
 fail here, before anything is pushed to a scratch repo. It also pins build.sh's
 safety checks and keeps the workflow matrix in step with the stacks.
 """
@@ -132,8 +132,8 @@ def test_the_uv_app_declares_what_the_requirements_app_declares():
 
 def test_apps_carry_nothing_provisioning_generates():
     """App source is only what a tenant writes. Generated files here would mask
-    the hook failing to produce them."""
-    # .agent-rfc too: the hook creates it, and the security pack inside it
+    the scaffold failing to produce them."""
+    # .agent-rfc too: the scaffold creates it, and the security pack inside it
     # comes from the ONE shared security-pack/ — an app-local copy would be a
     # second pack to drift.
     generated = {
@@ -150,11 +150,16 @@ def test_apps_carry_nothing_provisioning_generates():
         assert not present, f"apps/{app.name} contains generated paths: {present}"
 
 
-def test_the_commit_step_disarms_hooks_and_uses_the_author_build_sh_expects():
-    text = WORKFLOW.read_text(encoding="utf-8")
-    assert "git -c core.hooksPath=/dev/null commit" in text
-    assert f'git config user.name  "{BOT}"' in text
-    assert f'WORKFLOW_AUTHOR="{BOT}"' in BUILD.read_text(encoding="utf-8")
+def test_the_build_commits_as_the_author_it_checks_for_and_the_workflow_force_pushes():
+    """build.sh commits the app and then the scaffold, through the tenant's own
+    gate, on a fresh history; the workflow only pushes it (owner-approved force
+    push, 2026-10-13 — the repository is pure output)."""
+    build = BUILD.read_text(encoding="utf-8")
+    assert f'WORKFLOW_AUTHOR="{BOT}"' in build and 'git config user.name "$WORKFLOW_AUTHOR"' in build
+    assert "git checkout -q --orphan" in build
+    job = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["build"]
+    push = next(step["run"] for step in job["steps"] if step.get("name") == "Push")
+    assert "git push -q --force origin main" in push and "commit" not in push.split("#")[0]
 
 
 # ── Building for real, offline ───────────────────────────────────────────────
@@ -162,13 +167,10 @@ def test_the_commit_step_disarms_hooks_and_uses_the_author_build_sh_expects():
 
 @pytest.fixture()
 def install(tmp_path, monkeypatch):
-    """~/.agent-framework and ~/.git_templates as install-ai-stack.sh lays them out,
-    minus the venv. Completeness matters: build.sh fails on ANY hook warning, and
-    every omission here has hidden a defect. This fixture claimed to be complete
-    while copying one of three files in templates/, none of three in docs/, and one
-    of four machine hooks — so no test using it could reach a commit through the
-    process gate, or see the pre-commit guardrails run at all
-    (.agent-rfc/designs/first-commit-guardrail.md).
+    """~/.agent-framework as install-ai-stack.sh lays it out, minus the venv,
+    and no machine-wide git hook: 3.0.0 arms none (vendoring-retired.md). The
+    `agentsmith` a build runs is this checkout's (provider_shim, from
+    conftest.py), so the tenant's gate is the one being changed.
 
     Still absent, deliberately: the venv install-ai-stack.sh builds. A caller that
     needs the gate to start an interpreter names one with AGENTSMITH_PYTHON, which
@@ -179,55 +181,36 @@ def install(tmp_path, monkeypatch):
     shutil.copytree(REPO / "scripts", fw / "scripts", ignore=ignore)
     shutil.copytree(REPO / "runtime", fw / "runtime", ignore=ignore)
     shutil.copytree(REPO / "fixtures" / "security", fw / "fixtures" / "security")
-    shutil.copytree(REPO / "fixtures" / "security" / "templates", fw / "shared" / "security")
     for base in (REPO / "fixtures").glob("*_base.json"):
         shutil.copy(base, fw / "fixtures" / base.name)
     shutil.copytree(REPO / "workflow-templates", fw / "workflow-templates")
-    shutil.copytree(REPO / ".github" / "actions", fw / "github-actions")
+    shutil.copytree(REPO / ".githooks", fw / ".githooks")
     (fw / "templates").mkdir()
-    # All three the installer copies, not just the rules: governance.json is the
-    # registry the process gate reads (it runs without pyyaml) and
-    # architectures.yaml is what --architecture renders. The docstring above
-    # promised "as install-ai-stack.sh lays them out" while copying one of the
-    # three, so no test using this fixture could reach a commit through the gate
-    # (.agent-rfc/designs/first-commit-guardrail.md).
     for name in ("agent-rules.yaml", "governance.json", "architectures.yaml"):
         shutil.copy(REPO / "templates" / name, fw / "templates" / name)
-    # The three docs the installer copies too. review-levers.md is not optional
-    # reading material here: the process gate validates that a design's
-    # `## Levers` cites a real lever, and without this file it blocks the
-    # scaffold's own commit on a machine that has no checkout.
     (fw / "docs").mkdir()
     for name in ("design-review-checklist.md", "validation-checklist.md", "review-levers.md"):
         shutil.copy(REPO / "docs" / name, fw / "docs" / name)
-    # All four machine hooks the installer places here, not just post-checkout.
-    # pre-commit is the one that carries the bare-except and AI-marker guardrails,
-    # so a fixture without it cannot see a commit refused by them — which is how a
-    # tenant's first commit stayed broken while these tests were green
-    # (.agent-rfc/designs/first-commit-guardrail.md).
-    hooks = home / ".git_templates" / "hooks"
-    hooks.mkdir(parents=True)
-    for name in ("pre-commit", "commit-msg", "post-commit", "post-checkout"):
-        shutil.copy(REPO / "hooks" / name, hooks / name)
-    # post-commit auto-tags and pushes. These repos have no remote, so a push
-    # cannot reach anything, but saying so beats relying on it.
-    monkeypatch.setenv("AGENTSMITH_AUTOPUSH", "0")
-    # python3 with pyyaml for generate-ide-config.py (a bare system python3 may
-    # lack it), and a normal pycache location so a .pyc regression is visible.
+    # python3 with pyyaml for the rules render (a bare system python3 may lack
+    # it), and a normal pycache location so a .pyc regression is visible.
     shim = tmp_path / "bin"
     shim.mkdir()
     (shim / "python3").symlink_to(sys.executable)
     monkeypatch.setenv("PATH", f"{shim}{os.pathsep}{os.environ['PATH']}")
     monkeypatch.setenv("HOME", str(home))
-    monkeypatch.delenv("DISABLE_AI_STACK", raising=False)
+    monkeypatch.setenv("AGENTSMITH_PYTHON", sys.executable)
     monkeypatch.delenv("PYTHONPYCACHEPREFIX", raising=False)
     monkeypatch.delenv("SCRATCH_TENANTS_ALLOW_MANUAL_HEAD", raising=False)
     return home
 
 
-def _build(app: str, target: Path) -> subprocess.CompletedProcess:
+REF = "0123456789abcdef0123456789abcdef01234567"
+STACK_OF = {m["app"]: m["stack"] for m in _matrix()}
+
+
+def _build(app: str, target: Path, build: Path = BUILD) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["bash", str(BUILD), app, str(target)],
+        ["bash", str(build), app, str(target), STACK_OF[app], REF],
         capture_output=True, text=True, check=False, stdin=subprocess.DEVNULL,
     )
 
@@ -241,18 +224,21 @@ def _commit(target: Path, author: str) -> None:
     subprocess.run(["git", "-C", str(target), "add", "-A"], check=True)
     subprocess.run(
         ["git", "-C", str(target), "-c", f"user.name={author}", "-c", "user.email=a@x",
-         "commit", "-q", "-m", "commit"],
+         "commit", "-q", "-m", "commit", "--no-verify"],
         check=True,
     )
 
 
-# How the hook names each stack, and the test command each app's generated
-# agent rules must carry (the lockfile decides the tool).
-STACK_LABEL = {"ts-react": "TS_REACT", "go": "GO", "python-fastapi": "PYTHON_FASTAPI"}
+# The test command each app's generated agent rules must carry (the lockfile
+# decides the tool).
 TEST_CMD = {
     "ts-react": "CI=true npm test", "ts-react-pnpm": "CI=true pnpm test", "go": "go test -race ./...",
     "python-fastapi": "pytest", "python-uv": "uv run pytest",
 }
+
+
+def _git_out(target: Path, *args: str) -> str:
+    return subprocess.run(["git", "-C", str(target), *args], capture_output=True, text=True, check=True).stdout
 
 
 @needs_git
@@ -263,37 +249,31 @@ def test_each_app_builds_into_a_complete_tenant_offline(app, stack, install, tmp
     result = _build(app, target)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert f"Detected stack [{STACK_LABEL[stack]}]" in result.stdout
+    # Two commits on a fresh history: the app, then the scaffold through the gate.
+    assert _git_out(target, "log", "--format=%s").splitlines() == [
+        f"chore: scaffold scratch-{app}", f"feat: the {app} app, before AgentSmith"]
+    assert _git_out(target, "status", "--porcelain") == "", "everything init wrote is in the scaffold commit"
     # The app, verbatim.
     for rel, content in _files(APPS / app).items():
         assert (target / rel).read_bytes() == content, f"{rel} differs from the app source"
-    # What provisioning must have produced.
-    assert (target / ".github" / "workflows" / f"ci-{stack}.yml").is_file()
-    assert (target / ".github" / "actions" / "gcp-auth" / "action.yml").is_file()
-    assert (target / "scripts" / "run-security-checks.py").is_file()
-    assert sorted(p.name for p in (target / "runtime" / "test").iterdir()) == sorted([
-        "conftest.py", "test_hitl_gate.py", "test_dead_letter.py",
-        "test_llm_gateway_budget.py", "test_self_correction.py",
-    ])
+    # What the scaffold must have produced — asking the provider, holding none of it.
+    workflows = target / ".github" / "workflows"
+    for name in (f"ci-{stack}.yml", "agentsmith-gates.yml", "agentsmith-sync.yml", "eval-security.yml"):
+        assert (workflows / name).is_file(), name
+    assert f"setup-agentsmith@{REF}" in (workflows / "agentsmith-gates.yml").read_text(encoding="utf-8")
+    assert not (target / ".github" / "actions").exists()
+    assert not (target / "runtime").exists()
+    assert not (target / "scripts" / "process_gate.py").exists()
     claude_md = (target / "CLAUDE.md").read_text(encoding="utf-8")
     assert re.search(r"## Test Command\n```\n(.*)\n```", claude_md).group(1) == TEST_CMD[app]
     assert (target / "SCRATCH_TENANT.md").is_file()
     assert not list(target.rglob("*.pyc"))
     for pack_file in (SCRATCH / "security-pack").iterdir():
         assert (target / ".agent-rfc" / "security" / pack_file.name).read_bytes() == pack_file.read_bytes()
-    # The harness's own verdict, not a re-derivation of "is this a placeholder":
-    # strict, with the moderation default eval-security.yml sets, and without
-    # the framework's own job environment — Self-Test sets DATABASE_URL and a
-    # postgres idempotency backend that a tenant's security job does not have.
-    harness = subprocess.run(
-        [sys.executable, "scripts/run-security-checks.py", "--mode", "ci", "--strict"],
-        cwd=target, capture_output=True, text=True, check=False,
-        env={"PATH": os.environ["PATH"], "HOME": os.environ["HOME"], "MODERATION_HOOK": "optional"},
-    )
-    assert harness.returncode == 0, harness.stdout + harness.stderr
-    if (target / "pyproject.toml").is_file():
-        # The project's own ruff settings must still reach the vendored code.
-        assert 'extend = "../pyproject.toml"' in (target / "runtime" / "ruff.toml").read_text(encoding="utf-8")
+    # The tenant's own gate over its history, as its CI runs it.
+    gate = subprocess.run(["bash", ".githooks/process-gate", "ci", "--base", "0" * 40, "--head", "HEAD"],
+                          cwd=target, stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False)
+    assert gate.returncode == 0, gate.stdout + gate.stderr
 
 
 @needs_git
@@ -308,6 +288,7 @@ def test_a_stale_file_in_the_target_does_not_survive_a_build(install, tmp_path):
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert not (target / "security-evidence").exists()
+    assert "security-evidence" not in _git_out(target, "log", "--all", "--stat")
 
 
 @needs_git
@@ -327,78 +308,14 @@ def test_a_hand_edit_in_the_scratch_repo_fails_the_build(install, tmp_path):
 
 
 @needs_git
-@pytest.mark.parametrize("missing", ["runtime", "shared/security"])
-def test_the_build_fails_when_the_install_cannot_provision(install, tmp_path, missing):
-    """shared/security used to be skipped without a word, leaving the pack
-    half-seeded and the harness failing on files nobody said were missing."""
-    shutil.rmtree(install / ".agent-framework" / missing)
-
-    result = _build("python-fastapi", tmp_path / "tenant")
+def test_the_build_fails_when_tenant_init_does(install, tmp_path):
+    """A stack init does not know is init failing — and the build says so, rather
+    than pushing a half-scaffolded tenant."""
+    result = subprocess.run(["bash", str(BUILD), "go", str(tmp_path / "tenant"), "cobol", REF],
+                            capture_output=True, text=True, check=False, stdin=subprocess.DEVNULL)
 
     assert result.returncode == 1
-    assert "could not fully provision" in result.stdout
-
-
-@needs_git
-def test_the_build_fails_if_the_hook_rewrites_gitignore(install, tmp_path, monkeypatch):
-    """The guard has to be able to fail. build.sh declares
-    AGENTSMITH_TENANT_VISIBILITY=private so these public fixture repos still
-    track the IDE config files a real private tenant tracks; this proves the
-    build STOPS when a hook ignores that declaration, rather than publishing a
-    tenant that silently differs from the ones it stands in for.
-
-    The stimulus is a stale installed hook — one predating the override, which
-    is the realistic way this happens, since the machine install lags the
-    checkout. Simulated by renaming the variable the installed hook reads, so
-    build.sh's export reaches a hook that does not honour it.
-
-    For the go app, which has no .gitignore, the hook CREATES one — the first
-    version of this check only compared existing files and missed it.
-    """
-    installed = install / ".git_templates" / "hooks" / "post-checkout"
-    text = installed.read_text()
-    assert "AGENTSMITH_TENANT_VISIBILITY" in text, "the installed hook should read the override"
-    installed.write_text(text.replace("AGENTSMITH_TENANT_VISIBILITY", "AGENTSMITH_TENANT_VISIBILITY_OLD"))
-
-    target = tmp_path / "tenant"
-    _init(target)
-    subprocess.run(
-        ["git", "-C", str(target), "remote", "add", "origin", "https://github.com/example/scratch.git"], check=True
-    )
-    nogh = tmp_path / "nogh"
-    nogh.mkdir()
-    (nogh / "gh").write_text("#!/bin/sh\nexit 1\n")
-    (nogh / "gh").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{nogh}{os.pathsep}{os.environ['PATH']}")
-
-    result = _build("go", target)
-
-    assert result.returncode == 1
-    assert "changed .gitignore" in result.stdout + result.stderr
-    assert "AGENTSMITH_TENANT_VISIBILITY" in result.stdout + result.stderr, \
-        "the error has to name the cause, not send the reader to their gh auth"
-
-
-@needs_git
-def test_the_build_keeps_ide_configs_tracked_on_a_public_fixture(install, tmp_path, monkeypatch):
-    """The other half: with a current hook and a gh that reports PUBLIC — which
-    these five fixture repos genuinely are since 2026-09-27 — the build still
-    succeeds and leaves the IDE config files tracked."""
-    target = tmp_path / "tenant"
-    _init(target)
-    subprocess.run(
-        ["git", "-C", str(target), "remote", "add", "origin", "https://github.com/example/scratch.git"], check=True
-    )
-    public = tmp_path / "publicgh"
-    public.mkdir()
-    (public / "gh").write_text('#!/bin/sh\necho PUBLIC\n')
-    (public / "gh").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{public}{os.pathsep}{os.environ['PATH']}")
-
-    result = _build("go", target)
-
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert not (target / ".gitignore").exists(), "the declaration must keep the fixture faithful"
+    assert "tenant init failed" in result.stdout + result.stderr
 
 
 @needs_git
@@ -415,10 +332,7 @@ def test_the_build_copies_what_git_would_publish_not_local_junk(install, tmp_pat
     (app / "notes.txt").write_text("new, not ignored\n")
 
     target = tmp_path / "tenant"
-    result = subprocess.run(
-        ["bash", str(scratch / "build.sh"), "go", str(target)],
-        capture_output=True, text=True, check=False, stdin=subprocess.DEVNULL,
-    )
+    result = _build("go", target, build=scratch / "build.sh")
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert not (target / ".ruff_cache").exists()

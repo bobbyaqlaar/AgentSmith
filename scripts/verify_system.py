@@ -144,28 +144,19 @@ def run_checks() -> bool:
                 failures += 1
     print()
 
-    # ── 3. Git hooks ──────────────────────────────────────────────────────────
+    # ── 3. No machine-wide git hooks ──────────────────────────────────────────
+    # 3.0.0 arms none (.agent-rfc/designs/vendoring-retired.md); a repository is
+    # governed by its own .githooks. One left pointing at AgentSmith's old
+    # templates is reported, so a re-install can put it back.
     print("Git hooks:")
-    template_dir = Path.home() / ".git_templates" / "hooks"
-    for hook in ["pre-commit", "commit-msg", "post-commit", "post-checkout"]:
-        hook_path = template_dir / hook
-        ok = hook_path.exists() and os.access(hook_path, os.X_OK)
-        if not _check(f"hook: {hook}", ok, f"Expected at {hook_path}"):
-            failures += 1
-    # templateDir global config
-    try:
-        configured_dir = subprocess.check_output(
-            ["git", "config", "--global", "init.templateDir"],
-            text=True,
-        ).strip()
-        ok = str(template_dir) in configured_dir or configured_dir.endswith(
-            ".git_templates"
-        )
-        if not _check("git init.templateDir set", ok, f"Got: {configured_dir!r}"):
-            failures += 1
-    except subprocess.CalledProcessError:
-        if not _check("git init.templateDir set", False, "Not configured"):
-            failures += 1
+    configured_dir = subprocess.run(["git", "config", "--global", "--get", "init.templateDir"],
+                                    capture_output=True, text=True, check=False).stdout.strip()
+    stale = configured_dir.rstrip("/").endswith(".git_templates") and any(
+        (Path(configured_dir).expanduser() / "hooks" / hook).is_file()
+        for hook in ("pre-commit", "commit-msg", "post-commit", "post-checkout"))
+    if not _check("no machine-wide AgentSmith hooks", not stale,
+                  f"init.templateDir={configured_dir!r} still holds them — re-run install-ai-stack.sh"):
+        failures += 1
     print()
 
     # ── 4. Phoenix connectivity ───────────────────────────────────────────────
@@ -606,121 +597,100 @@ def check_dlq() -> bool:
 
 def check_hooks() -> bool:
     """
-    CI validation for the developer opt-in + enterprise RFC gate
-    (docs/PRODUCT_ARCHIVE.md P1a) — simulates both scenarios in throwaway git
-    repos so a regression in hooks/pre-commit / hooks/commit-msg fails CI
-    instead of only being caught by hand.
+    CI validation for the commit guardrails and the enterprise RFC checks
+    (docs/process-gates.md › commit_guardrails). Until 3.0.0 the machine-wide
+    hooks/pre-commit and hooks/commit-msg made them; the gate does now
+    (.agent-rfc/designs/vendoring-retired.md). Each scenario commits through
+    this checkout's own .githooks in a throwaway repository, so a regression in
+    the hook, the launcher or the gate fails CI rather than a tenant's commit.
     """
     import shutil
-    import subprocess
     import tempfile
 
     repo_root = Path(__file__).resolve().parent.parent
-    hooks_dir = repo_root / "hooks"
+    hooks = ("commit-msg", "pre-commit", "pre-push", "process-gate")
 
     print("═══════════════════════════════════════════════════")
-    print("  Hook Opt-In / Enterprise RFC Gate Check")
+    print("  Commit Guardrails / Enterprise RFC Check")
     print("═══════════════════════════════════════════════════\n")
 
     failures = 0
-
-    def _run(cmd: list, cwd: Path, env: dict) -> subprocess.CompletedProcess:
-        return subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True, check=False)
-
-    def _git_repo(tmp: Path, name: str) -> Path:
-        repo = tmp / name
-        repo.mkdir()
-        subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
-        subprocess.run(
-            ["git", "config", "user.email", "test@test.com"], cwd=repo, check=True
-        )
-        subprocess.run(["git", "config", "user.name", "test"], cwd=repo, check=True)
-        return repo
+    # Assembled, not written whole: a shipped file that spells a marker trips
+    # the very check it exercises (.agent-rfc/designs/first-commit-guardrail.md).
+    marker_line = "ponytail" + ": decide the schema\n"
 
     with tempfile.TemporaryDirectory() as tmp_str:
         tmp = Path(tmp_str)
 
-        # Scenario 1: no .agenticframework/enabled, no tenant.yaml, no org
-        # policy -> pre-commit must no-op even on a staged file that would
-        # otherwise trip guardrail 1 (unresolved AI marker).
-        repo1 = _git_repo(tmp, "repo1")
-        # Assembled, not written whole: this file is vendored into every tenant,
-        # and hooks/pre-commit Guardrail 1 greps STAGED files for this very
-        # marker \u2014 so the literal here blocked a tenant's first commit, where the
-        # whole vendored tree is staged at once
-        # (.agent-rfc/designs/first-commit-guardrail.md). The file written at
-        # runtime is byte-identical.
-        (repo1 / "file.py").write_text("# TODO: " + "agent fix this\n")
-        subprocess.run(["git", "add", "file.py"], cwd=repo1, check=True)
-        env1 = {**os.environ, "HOME": str(tmp / "fake_home_1")}
-        result1 = _run(["bash", str(hooks_dir / "pre-commit")], cwd=repo1, env=env1)
-        if not _check(
-            "unopted-in repo: pre-commit no-ops (exit 0) despite a tripping pattern",
-            result1.returncode == 0,
-            result1.stdout + result1.stderr,
-        ):
+        def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
+            return subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@x", *args],
+                                  env=env, capture_output=True, text=True, check=False)
+
+        def _repo(name: str, guardrails: Optional[str] = None) -> Path:
+            repo = tmp / name
+            (repo / ".githooks").mkdir(parents=True)
+            for hook in hooks:
+                shutil.copy(repo_root / ".githooks" / hook, repo / ".githooks" / hook)
+                (repo / ".githooks" / hook).chmod(0o755)
+            config: dict = {"gated": ["*.py", ".agenticframework/**", ".githooks/**"],
+                            "not_gated": ["**.md", ".agent-rfc/**"],
+                            "levers_doc": "@framework/docs/review-levers.md",
+                            "design_checklist": "@framework/docs/design-review-checklist.md"}
+            if guardrails is not None:
+                config["commit_guardrails"] = guardrails
+            (repo / ".agenticframework").mkdir()
+            (repo / ".agenticframework" / "process-gates.json").write_text(json.dumps(config))
+            subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(repo)], check=True)
+            _git(repo, "add", "-A")
+            _git(repo, "commit", "-qm", "chore: base", "--no-verify")
+            _git(repo, "config", "core.hooksPath", ".githooks")
+            return repo
+
+        def _commit(repo: Path, rel: str, text: str, message: str) -> subprocess.CompletedProcess:
+            (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+            (repo / rel).write_text(text)
+            _git(repo, "add", "-A")
+            return _git(repo, "commit", "-q", "-m", message)
+
+        home = tmp / "home"
+        home.mkdir()
+        env = {**os.environ, "HOME": str(home), "AGENTSMITH_DIR": str(repo_root),
+               "AGENTSMITH_PYTHON": sys.executable, "AGENTSMITH_STATE_DIR": str(tmp / "state")}
+        for name in ("GITHUB_STEP_SUMMARY", "CLAUDE_PROJECT_DIR"):
+            env.pop(name, None)
+
+        # Scenario 1: the repository turns the guardrails off -> a marker goes in.
+        done = _commit(_repo("off", "off"), "notes/plan.txt", marker_line, "docs: plan")
+        if not _check("commit_guardrails off: a staged marker is not checked (exit 0)",
+                      done.returncode == 0, done.stdout + done.stderr):
             failures += 1
 
-        # Scenario 2: .agenticframework/enabled present, no org policy ->
-        # pre-commit DOES enforce guardrail 1.
-        repo2 = _git_repo(tmp, "repo2")
-        (repo2 / ".agenticframework").mkdir()
-        (repo2 / ".agenticframework" / "enabled").touch()
-        # Assembled for the same reason as repo1 above.
-        (repo2 / "file.py").write_text("# TODO: " + "agent fix this\n")
-        subprocess.run(["git", "add", "."], cwd=repo2, check=True)
-        env2 = {**os.environ, "HOME": str(tmp / "fake_home_2")}
-        result2 = _run(["bash", str(hooks_dir / "pre-commit")], cwd=repo2, env=env2)
-        if not _check(
-            "opted-in repo: pre-commit enforces guardrail 1 (exit 1)",
-            result2.returncode == 1,
-            result2.stdout + result2.stderr,
-        ):
+        # Scenario 2: undeclared, so on -> the commit is refused, naming the line.
+        done = _commit(_repo("on"), "notes/plan.txt", marker_line, "docs: plan")
+        if not _check("commit_guardrails on (the default): a staged marker blocks (exit 1)",
+                      done.returncode != 0 and "notes/plan.txt:1: an unresolved AI marker" in done.stderr,
+                      done.stdout + done.stderr):
             failures += 1
 
-        # Scenario 3: enterprise org policy present + opted-in, commit
-        # message has no RFC-NNN -> commit-msg blocks.
-        repo3 = _git_repo(tmp, "repo3")
-        (repo3 / ".agenticframework").mkdir()
-        (repo3 / ".agenticframework" / "enabled").touch()
-        fake_home_3 = tmp / "fake_home_3"
-        (fake_home_3 / ".agent-framework").mkdir(parents=True)
-        (fake_home_3 / ".agent-framework" / "agenticframework-org.yaml").write_text(
-            "hooks:\n  bypass_policy: disabled\n"
-        )
-        msg_file = tmp / "msg_no_rfc.txt"
-        msg_file.write_text("feat(x): no rfc reference here\n")
-        env3 = {**os.environ, "HOME": str(fake_home_3)}
-        result3 = _run(
-            ["bash", str(hooks_dir / "commit-msg"), str(msg_file)], cwd=repo3, env=env3
-        )
-        if not _check(
-            "enterprise + opted-in, no RFC-NNN in message: commit-msg blocks (exit 1)",
-            result3.returncode == 1,
-            result3.stdout + result3.stderr,
-        ):
+        # Scenario 3: an org policy on the machine, no RFC-NNN in the message -> refused.
+        (home / ".agent-framework").mkdir()
+        (home / ".agent-framework" / "agenticframework-org.yaml").write_text("hooks:\n  bypass_policy: disabled\n")
+        enterprise = _repo("enterprise")
+        done = _commit(enterprise, ".agent-rfc/001-plan.md", "# RFC-001\n", "docs: plan")
+        if not _check("enterprise, no RFC-NNN in the message: the commit blocks (exit 1)",
+                      done.returncode != 0 and "RFC-NNN" in done.stderr, done.stdout + done.stderr):
             failures += 1
 
-        # Scenario 4: same as 3, but message DOES reference RFC-001 -> passes.
-        msg_file2 = tmp / "msg_with_rfc.txt"
-        msg_file2.write_text("feat(x): add thing (RFC-001)\n")
-        result4 = _run(
-            ["bash", str(hooks_dir / "commit-msg"), str(msg_file2)], cwd=repo3, env=env3
-        )
-        if not _check(
-            "enterprise + opted-in, RFC-001 in message: commit-msg passes (exit 0)",
-            result4.returncode == 0,
-            result4.stdout + result4.stderr,
-        ):
+        # Scenario 4: the same, with RFC-001 in the message and the RFC present -> passes.
+        done = _git(enterprise, "commit", "-q", "-m", "docs: plan (RFC-001)")
+        if not _check("enterprise, RFC-001 in the message and an RFC present: the commit passes (exit 0)",
+                      done.returncode == 0, done.stdout + done.stderr):
             failures += 1
-
-        shutil.rmtree(tmp / "fake_home_1", ignore_errors=True)
-        shutil.rmtree(tmp / "fake_home_2", ignore_errors=True)
 
     print()
     print("═══════════════════════════════════════════════════")
     print(
-        "  🎉  Hook gate check passed"
+        "  🎉  Commit guardrail check passed"
         if failures == 0
         else f"  🛑  {failures} check(s) failed"
     )
@@ -818,6 +788,37 @@ def _git_tracked_files() -> Optional[set[str]]:
     return set(proc.stdout.split())
 
 
+# What replaces each kind of framework copy a tenant may still hold
+# (.agent-rfc/designs/vendoring-retired.md).
+_COPY_REPLACEMENT = (
+    ("scripts/", "the provider's ports, through .githooks/process-gate (gate, rules, evals, security) "
+                 "or `agentsmith ops settings`"),
+    ("runtime/", "the agentsmith-runtime package, pinned in your requirements, if your code imports it"),
+    ("fixtures/security/", "the security provider's own registry and templates"),
+    ("fixtures/", "the evals provider's own base datasets"),
+    (".github/actions/", "`uses: bobbyaqlaar/AgentSmith/.github/actions/<name>@<release>`"),
+)
+
+
+def framework_copies(root: Path, framework: Path) -> list[tuple[str, str]]:
+    """Files this repository tracks at a path AgentSmith ships as code — a copy,
+    stale or not — each with what replaces it. By path, not content: a copy
+    that drifted is still a copy. Nothing in AgentSmith's own checkout."""
+    if (root / "install-ai-stack.sh").is_file() and (root / "workflow-templates").is_dir():
+        return []
+    tracked = subprocess.run(["git", "ls-files", "-z", "--", "scripts", "runtime", "fixtures", ".github/actions"],
+                             cwd=root, capture_output=True, text=True, check=False).stdout.split("\0")
+    copies = []
+    for rel in filter(None, tracked):
+        if rel.startswith("fixtures/") and not (rel.startswith("fixtures/security/") or
+                                                 (rel.count("/") == 1 and rel.endswith("_base.json"))):
+            continue
+        if (framework / rel).is_file():
+            why = next(text for prefix, text in _COPY_REPLACEMENT if rel.startswith(prefix))
+            copies.append((rel, why))
+    return copies
+
+
 def check_governed() -> bool:
     """Is this repo actually governed? Every gap at once, never just the first.
 
@@ -846,6 +847,17 @@ def check_governed() -> bool:
     want(".agent-rfc/fixtures/knowledge_graph.json", "a review's scope is computed from the graph")
     want("docs/REVIEW_LOG.md", "one review log per repo (`artifacts`)")
     want("docs/DESIGN.md", "one design artifact per repo (`artifacts`)")
+
+    copies = framework_copies(root, Path(__file__).resolve().parent.parent)
+    if copies:
+        gaps.append(f"{len(copies)} file(s) are a copy of AgentSmith's code, which 3.0.0 neither refreshes nor "
+                    "runs — remove them; what replaces each is named below")
+        by_kind: dict = {}
+        for rel, why in copies:
+            by_kind.setdefault(why, []).append(rel)
+        for why, rels in by_kind.items():
+            shown = ", ".join(rels[:5]) + (f" and {len(rels) - 5} more" if len(rels) > 5 else "")
+            gaps.append(f"  {shown} → {why}")
 
     armed = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=root,
                            capture_output=True, text=True, check=False).stdout.strip()
@@ -904,6 +916,29 @@ def check_governed() -> bool:
         print("  🎉  Governed")
     print("═══════════════════════════════════════════════════")
     return not gaps and not unproven
+
+
+def check_kg_fresh() -> bool:
+    """Is the repository's committed graph what its code maps to now? The
+    staleness half of `--check-kg`, for any governed repository — answered by
+    the gate provider as `kg check` (contract/gate/v3/protocol.md). A repository
+    with no graph yet passes with a warning: `kg build` makes one. The graph is
+    regenerated in place, so a stale one is fixed by committing it."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import map_codebase  # type: ignore
+
+    kg_path = fixtures_path("knowledge_graph.json")
+    before = _kg_shape(kg_path)
+    if before is None:
+        print("⚠️  no .agent-rfc/fixtures/knowledge_graph.json yet — `agentsmith gate kg build` writes one")
+        return True
+    map_codebase.run_map(force=True)
+    if before != _kg_shape(kg_path):
+        print("❌ knowledge_graph.json was stale — it has just been regenerated in place; COMMIT "
+              ".agent-rfc/fixtures/knowledge_graph.json (re-running now passes without the commit)")
+        return False
+    print("✅ knowledge_graph.json is up to date with the code")
+    return True
 
 
 def check_kg() -> bool:
@@ -1229,9 +1264,10 @@ MODES = [
     ("--check-redaction", "trace redaction profile for $ENVIRONMENT"),
     ("--check-idempotency", "idempotency store round-trip"),
     ("--check-dlq", "dead-letter queue replay path"),
-    ("--check-hooks", "hook opt-in / enterprise RFC gate"),
+    ("--check-hooks", "the commit guardrails / enterprise RFC checks, through the gate"),
     ("--check-onprem-deploy", "on-prem bundle renders and self-checks"),
     ("--check-kg", "Knowledge Graph freshness (drift gate)"),
+    ("--check-kg-fresh", "This repository's committed graph is current (the gate's `kg check`)"),
     ("--check-delivery-model", "delivery-model evidence soft gate"),
 ]
 
@@ -1276,6 +1312,8 @@ if __name__ == "__main__":
         sys.exit(0 if check_hooks() else 1)
     if "--check-onprem-deploy" in sys.argv:
         sys.exit(0 if check_onprem_deploy() else 1)
+    if "--check-kg-fresh" in sys.argv:
+        sys.exit(0 if check_kg_fresh() else 1)
     if "--check-kg" in sys.argv:
         sys.exit(0 if check_kg() else 1)
     if "--governed" in sys.argv:

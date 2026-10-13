@@ -17,6 +17,7 @@ scope:
   - .agenticframework/process-gates.json
   - .agent-rfc/fixtures/knowledge_graph.json
   - pyproject.toml
+  - portal/.env.example
 ---
 # C9 — vendoring retired (3.0.0)
 
@@ -89,14 +90,46 @@ Measured on `main` at v2.4.0, 2026-10-13:
   AgentSmith declares it `off`: the hooks never ran on its own commits, its tests carry the markers
   as fixtures, and its suite runs the same rules over its tree (`test_bare_except_tree.py`). The
   post-commit knowledge-graph refresh is not moved: the review's `KG query:` already makes a stale
-  graph fail.
-- **`tenant init` seeds what the hook seeded for the tenant to own.** The golden dataset and judge
-  criteria bases, and the security pack's placeholders, go into `.agent-rfc/`, never overwriting.
-  These are the tenant's data, not framework code.
+  graph fail. AgentSmith's own evidence that the checks hold, `verify_system --check-hooks`, which
+  CI and SEC-CHANGE-001 run, commits through its `.githooks` in throwaway repositories instead of
+  running the retired hooks.
+- **`tenant init` seeds the security pack's placeholders, which the hook seeded,** into
+  `.agent-rfc/security/`, never overwriting. These are the tenant's documents, not framework code.
+  It does **not** seed the golden dataset or the judge criteria, which the hook also seeded. Found
+  while building: the framework's base cases carry no `actual_output`, so under the evals contract
+  (C6) they fail SEC-EVAL-001 and can never be the repository's dataset. The design already called
+  them bootstrap-only.
+- **`tenant init` declares what a new repository truthfully is**, in the `providers.json` it now
+  writes:
+  - security `"emitter": "none"`: it exports no telemetry yet, so SEC-PII-002 is not applicable
+    rather than failed;
+  - the judged suites' `not_gradable` and `no_verdict` as warnings, until it has eval data of its
+    own.
+
+  Before C9, a fresh tenant's evals skipped silently (`run-evals` with fewer than 3 cases). The
+  warning keeps that green step and says the suite proved nothing. This is the same declaration
+  OTS's reviewed move made. `adopt` and `sync` keep C7's rule that an existing repository decides
+  its emitter.
 - **The machine's provisioning hooks are never chained.** `install_gate_hooks` always leaves out a
   prior `post-checkout` or `post-commit` that is AgentSmith's (`is_machine_hook`), as `adopt` and
   `sync` already did. A repository whose `.git/hooks` kept copies from an old install therefore stops
   vendoring once it is under the gates.
+- **`tenant init` declares the repository's providers and writes the gates and sync workflows**,
+  as `tenant adopt` does. Found while building: init wrote no `providers.json`, so an init'd
+  repository's ports said "no provider declared" and judged nothing. Until 3.0.0 the vendored
+  scripts papered over that; after it, the ports are the only route. `--framework-ref` names the
+  provider release, and every template is rendered with that setup. The placeholder is
+  `{{PROVIDER_SETUP}}`, the one the gates templates already used.
+- **The five hook-built scratch tenants are rebuilt as the adopted one is** (owner, 2026-10-13):
+  - a fresh orphan history each run;
+  - the app committed first, then the scaffold committed with the command `tenant init` prints,
+    through the tenant's own gate;
+  - force-pushed.
+
+  Their CI now runs the gates workflow too.
+- **`agentsmith mode off` and the bypass policy have nothing left to mute.** `status` stops
+  reporting hooks as muted, and `DISABLE_AI_STACK` is read by nothing. Retiring them, or giving
+  them a meaning, is on the backlog rather than decided here.
 - **Not carried over:** the hook's interactive prompt to `.gitignore` the rule files in a public
   repository. It goes on the backlog, for `tenant init` to offer non-interactively.
 

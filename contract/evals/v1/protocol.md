@@ -73,7 +73,9 @@ loop and evidence pack read.
 ## Who asks
 
 **A repository's CI**, through a step that resolves the declared provider — AgentSmith's launcher
-answers `bash .githooks/process-gate evals run --suite <suite>`. Failure is **closed**: `fail`, no
+answers `bash .githooks/process-gate evals run --suite <suite> [--fail-below X]`, the flag being the
+request's own `fail_below` (a CD smoke holds staging and production to different bars). Failure is
+**closed**: `fail`, no
 answer, and — unless the declaration says otherwise — `no_verdict` and `not_gradable` fail the
 step. Only `pass` passes.
 

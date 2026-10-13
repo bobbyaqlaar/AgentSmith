@@ -8,12 +8,12 @@ can have several, one per scenario the templates must handle.
 
 | Repo | Stack | App source | What it keeps under test |
 |---|---|---|---|
-| [agentsmith-scratch-ts-react](https://github.com/bobbyaqlaar/agentsmith-scratch-ts-react) | `ts-react` | `apps/ts-react/` — stock `create-vite` react-ts + Vitest, npm | Jest-free test command, `tsc` fallback, **a pre-existing `scripts/`** (`release.mjs`) the hook must merge into |
+| [agentsmith-scratch-ts-react](https://github.com/bobbyaqlaar/agentsmith-scratch-ts-react) | `ts-react` | `apps/ts-react/` — stock `create-vite` react-ts + Vitest, npm | Jest-free test command, `tsc` fallback, **a `scripts/` of its own** (`release.mjs`) the scaffold leaves alone |
 | [agentsmith-scratch-ts-react-pnpm](https://github.com/bobbyaqlaar/agentsmith-scratch-ts-react-pnpm) | `ts-react` | `apps/ts-react-pnpm/` — the same Vite app on **pnpm** (`pnpm-lock.yaml`, `packageManager`), no `package-lock.json` | the template picks the package manager from the lockfile: `pnpm/action-setup`, pnpm cache, `pnpm install --frozen-lockfile`, `pnpm exec tsc` |
 | [agentsmith-scratch-go](https://github.com/bobbyaqlaar/agentsmith-scratch-go) | `go` | `apps/go/` — one module, one tested package, **no `.gitignore`** | eval/CD workflows on a repo with no Python manifest; nothing masking stray files |
-| [agentsmith-scratch-python](https://github.com/bobbyaqlaar/agentsmith-scratch-python) | `python-fastapi` | `apps/python-fastapi/` — FastAPI `/healthz` + one test, `requirements.txt` | vendored `runtime/test` suites under the template's bare `pytest`, ruff isolation, **strict security harness** |
-| [agentsmith-scratch-python-uv](https://github.com/bobbyaqlaar/agentsmith-scratch-python-uv) | `python-fastapi` | `apps/python-uv/` — the same app as a **uv** project (`pyproject.toml` + `uv.lock`, dev dependency group, `[tool.ruff]`), no `requirements.txt` | the template installs the exported lock; the vendored `ruff.toml` files `extend` the project's `pyproject.toml` |
-| [agentsmith-scratch-adopted](https://github.com/bobbyaqlaar/agentsmith-scratch-adopted) | `python-fastapi` | `adopted/` — a small library with **its own CI**, built by **`tenant adopt`** (`adopt.sh`), not by the hook | **the governance contracts at this commit**: the adoption commit passes the tenant's contract-3 commit gate; its "AgentSmith gates" run installs the provider through `setup-agentsmith@<this commit>`, asks the gate's `ci` event and runs the rules check; adopt leaves its own CI alone. Rebuilt from an orphan commit and force-pushed every run |
+| [agentsmith-scratch-python](https://github.com/bobbyaqlaar/agentsmith-scratch-python) | `python-fastapi` | `apps/python-fastapi/` — FastAPI `/healthz` + one test, `requirements.txt` | the template's bare `pytest` over the app's own tests, ruff over the app alone, **the security port** with the authored pack |
+| [agentsmith-scratch-python-uv](https://github.com/bobbyaqlaar/agentsmith-scratch-python-uv) | `python-fastapi` | `apps/python-uv/` — the same app as a **uv** project (`pyproject.toml` + `uv.lock`, dev dependency group, `[tool.ruff]`), no `requirements.txt` | the template installs the exported lock; ruff reads the project's own `[tool.ruff]` |
+| [agentsmith-scratch-adopted](https://github.com/bobbyaqlaar/agentsmith-scratch-adopted) | `python-fastapi` | `adopted/` — a small library with **its own CI**, built by **`tenant adopt`** (`adopt.sh`), not `tenant init` | **the governance contracts at this commit**: the adoption commit passes the tenant's contract-3 commit gate; its "AgentSmith gates" run installs the provider through `setup-agentsmith@<this commit>`, asks the gate's `ci` event and runs the rules check; adopt leaves its own CI alone. Rebuilt from an orphan commit and force-pushed every run |
 
 ## Why they exist
 
@@ -39,8 +39,8 @@ anywhere means a framework regression, never "the placeholders again".
 
 | Layer | Where | Runs | Proves |
 |---|---|---|---|
-| **Offline build** | `scripts/test/test_scratch_tenants.py`, in Self-Test | every AgentSmith push, ~2 min | each app builds with the real hook into a complete tenant: detected as its stack, no hook warnings, the app and shared pack verbatim, the stack's workflows and actions, pruned `runtime/test`, the right test command in `CLAUDE.md`, no `.pyc` — and the **strict security harness passes** in it. Scenario apps are pinned to their base app: they may differ only in their manifest and lockfile (and the pnpm app lacks the npm app's `scripts/` fixture) |
-| **Template scripts** | `scripts/test/test_ci_package_managers.py`, in Self-Test | every AgentSmith push, seconds | the CI templates' own `run:` scripts and the `install-python-deps` action, executed with shimmed npm/pnpm/pip/uv, call the package manager the lockfile names — the same one the hook names in the agent rules |
+| **Offline build** | `scripts/test/test_scratch_tenants.py`, in Self-Test | every AgentSmith push, ~2 min | each app builds with `tenant init` into a complete tenant: no scaffold warnings, the app and shared pack verbatim, the stack's workflows pinned to the provider with its actions referenced, never copied, no AgentSmith code anywhere, the right test command in `CLAUDE.md`, no `.pyc`, and its scaffold commit passing the tenant's own gate. Scenario apps are pinned to their base app: they may differ only in their manifest and lockfile (and the pnpm app lacks the npm app's `scripts/` fixture) |
+| **Template scripts** | `scripts/test/test_ci_package_managers.py`, in Self-Test | every AgentSmith push, seconds | the CI templates' own `run:` scripts and the `install-python-deps` action, executed with shimmed npm/pnpm/pip/uv, call the package manager the lockfile names — the same one the agent rules name |
 | **Real CI** | `.github/workflows/scratch-tenants.yml` | weekly + provisioning pushes, minutes | the built tenant's own CI goes green on GitHub, and its CD fires off it |
 
 The first two catch most breaks before anything is pushed anywhere; the
@@ -53,24 +53,28 @@ without some tool, a cache key that fails).
 
 1. Checks out AgentSmith at the triggering commit, and the scratch repo.
 2. Runs **`install-ai-stack.sh`** from that checkout — the real installer, so
-   `~/.agent-framework` and `~/.git_templates/hooks` are what a developer gets.
-3. Runs **`.github/scratch-tenants/build.sh <app> tenant`**, which:
+   `~/.agent-framework` and the `agentsmith` command are what a developer gets.
+3. Runs **`.github/scratch-tenants/build.sh <app> tenant <stack> <sha>`**, which:
    - **fails if the scratch repo was edited directly** (its last commit is not
      by `AgentSmith scratch-tenants`) rather than silently discarding the edit;
-   - empties the tree (keeping `.git` history), copies `apps/<app>/` in, adds
-     the shared `security-pack/`, `SCRATCH_TENANT.md` and the opt-in marker;
-   - fires the **installed** post-checkout hook;
-   - fails on any hook warning (column-0 `⚠️`/`❌`), and if the hook changed or
-     created `.gitignore` — which means it could not confirm the repo is private.
-4. Commits (always — `--allow-empty` — so a quiet week still re-runs CI) with
-   hooks disabled, and pushes. The message names the AgentSmith commit, so each
-   scratch commit's diff is exactly what that framework change did to a tenant.
+   - starts a fresh orphan history: copies `apps/<app>/`, the shared
+     `security-pack/` and `SCRATCH_TENANT.md` in, and commits them as the app
+     before AgentSmith;
+   - runs **`agentsmith tenant init`**, its CI taking the provider from this
+     commit (`--framework-ref <sha>`);
+   - fails on any scaffold warning (a line starting `  !`), if the scaffold
+     changed or created `.gitignore`, or if it wrote AgentSmith's code anywhere;
+   - commits the scaffold with the command `tenant init` prints, through the
+     tenant's own armed gate.
+4. Force-pushes `main`: the repository is pure output, rebuilt every run
+   (owner-approved, 2026-10-13). The tenant's "AgentSmith gates" run checks the
+   scaffold commit as its CI would any other.
 5. Waits for the tenant's `CI: …` run on that commit and **fails unless it
    concludes `success`**, listing the failed jobs and steps. The job summary
    links the run.
 
 **Triggers:** Mondays 06:00 UTC; manual (`gh workflow run scratch-tenants.yml`);
-and any push to `main` touching `hooks/`, `install-ai-stack.sh`,
+and any push to `main` touching `install-ai-stack.sh`,
 `workflow-templates/`, `.github/actions/`, non-test `scripts/` or `runtime/`,
 `fixtures/`, `templates/agent-rules.yaml`, or `.github/scratch-tenants/` (which
 includes the apps).
@@ -107,35 +111,34 @@ Open the job summary's link to the tenant run, then:
 |---|---|
 | **Install AgentSmith** | installer regression, or a pinned Python dependency no longer resolves |
 | **Build**: `edited directly` | someone committed to the scratch repo. Move the change into `apps/<app>/`; to discard it instead, run once with `SCRATCH_TENANTS_ALLOW_MANUAL_HEAD=1` |
-| **Build** with a `⚠️` line | the installed hook could not vendor something — every new tenant is broken the same way. The offline test in Self-Test should have failed too |
-| **Build**: `changed .gitignore` | `gh` is not authenticated in the job (token expired), so the hook treated the repo as public |
+| **Build** with a `  !` line | `tenant init` could not scaffold something — every new tenant is broken the same way. The offline test in Self-Test should have failed too |
+| **Build**: `changed .gitignore` or `wrote scripts/` | the scaffold wrote something a tenant owns, or vendored AgentSmith's code — a regression in `tenant init` |
 | **Push**: `without \`workflow\` scope` | the token lacks **Workflows: Read and write**. Only pushes that change a workflow file need it, so it surfaces on the first template change |
 | **Checkout agentsmith-scratch-…**: `Not Found` | the token does not have that repository selected (or has expired) — edit the token's Repository access |
 | **Wait for CI**: `cannot read Actions … (HTTP 403)` | the token lacks **Actions: Read-only** — the push worked, the tenant's CI is running, the job just cannot see it |
 | **Wait for CI**: no run appeared | the tenant's CI YAML is invalid (GitHub rejected it) or a `ci-*.yml` `name:` changed |
 | **Wait for CI**: tenant step **Install project dependencies**, `needs to be updated, but --locked` | `apps/python-uv/uv.lock` no longer matches its `pyproject.toml` — run `uv lock` there and commit both |
 | **Wait for CI**: tenant step **Detect package manager** fails | the TS app has no lockfile, or one the template does not support (yarn, bun) |
-| **Wait for CI**: a tenant job failed | a template, vendored-code or app regression — reproduce locally, below |
+| **Wait for CI**: a tenant job failed | a template, provider or app regression — reproduce locally, below |
 
 Reproduce locally against your own install — no clone needed:
 
 ```bash
 ./install-ai-stack.sh --force
-.github/scratch-tenants/build.sh python-fastapi /tmp/scratch-python
+.github/scratch-tenants/build.sh python-fastapi /tmp/scratch-python python-fastapi "v$(agentsmith version)"
 cd /tmp/scratch-python && python3 -m pytest -q
 ```
 
 To see exactly what a push would change, build over a clone instead:
 
 ```bash
-git clone --template= https://github.com/bobbyaqlaar/agentsmith-scratch-python.git /tmp/scratch-python
-.github/scratch-tenants/build.sh python-fastapi /tmp/scratch-python
-cd /tmp/scratch-python && git status
+git clone https://github.com/bobbyaqlaar/agentsmith-scratch-python.git /tmp/scratch-python
+.github/scratch-tenants/build.sh python-fastapi /tmp/scratch-python python-fastapi "v$(agentsmith version)"
+cd /tmp/scratch-python && git log --oneline && git show --stat HEAD
 ```
 
-`--template=` keeps the armed global hooks out of the clone (post-commit
-pushes). Don't push from there: the next workflow build would fail on a commit
-not made by the workflow.
+Don't push from there: the workflow pushes, and a commit not made by it fails
+the next build.
 
 ## Changing the tenants
 
@@ -146,7 +149,7 @@ not made by the workflow.
   commit; the offline test checks both together before anything is pushed.
 - **The security pack** is ONE copy for every tenant,
   `.github/scratch-tenants/security-pack/`, which `build.sh` copies in; apps
-  must not carry their own. It holds only the two authored files; the hook
+  must not carry their own. It holds only the two authored files; `tenant init`
   seeds the other two, and its "never overwrite" rule stays under test because
   the authored ones are copied in first. It is a labelled fixture, not a real
   risk assessment.

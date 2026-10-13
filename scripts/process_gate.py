@@ -98,9 +98,9 @@ FRAMEWORK_ROOT = Path(__file__).resolve().parents[1]
 
 def framework_file(rel: str) -> Optional[Path]:
     """`@framework/<rel>`: beside this script, then $AGENTSMITH_DIR, then
-    ~/.agent-framework. A copy of this script vendored into a tenant's scripts/
-    has no templates/ or docs/ beside it — the framework is where it came from
-    (.agent-rfc/designs/tenant-adopt.md)."""
+    ~/.agent-framework. An install from the release tarballs has no docs/
+    beside it, and the installer tells its user to set $AGENTSMITH_DIR to a
+    checkout (.agent-rfc/designs/tenant-adopt.md)."""
     roots = [FRAMEWORK_ROOT]
     if os.environ.get("AGENTSMITH_DIR"):
         roots.append(Path(os.environ["AGENTSMITH_DIR"]))

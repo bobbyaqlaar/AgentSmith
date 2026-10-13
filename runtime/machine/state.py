@@ -112,15 +112,20 @@ def clear_phoenix_endpoint(env: Optional[Mapping[str, str]] = None) -> None:
 
 
 def find_script(name: str, cwd: Optional[Path] = None) -> Optional[Path]:
-    """A framework script: the tenant's vendored copy, else the machine's.
+    """A framework script: AgentSmith's own checkout when that is where this
+    runs, else the machine's — never a tenant's copy, which 3.0.0 neither
+    refreshes nor runs (.agent-rfc/designs/vendoring-retired.md).
 
     Exactly one is returned, never "try one, then the other". The shell
     functions ran `python3 scripts/X.py || python3 ~/.agent-framework/scripts/X.py`,
-    so a tenant script that FAILED was re-run from the framework's copy — an
-    eval gate could pass on code the tenant does not run.
+    so a script that FAILED was re-run from the other copy — an eval gate could
+    pass on code nobody meant to run.
     """
-    local = (cwd or Path.cwd()) / "scripts" / name
-    if local.is_file():
+    from runtime.cli import looks_like_framework
+
+    here = cwd or Path.cwd()
+    local = here / "scripts" / name
+    if local.is_file() and looks_like_framework(here):
         return local
     installed = framework_home() / "scripts" / name
     return installed if installed.is_file() else None

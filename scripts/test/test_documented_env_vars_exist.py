@@ -42,12 +42,12 @@ CODE_SUFFIXES = (
 )
 
 # Shell with no extension: every git hook. `.sh` was in the list from the start,
-# so this looked covered — but `hooks/post-commit`, `.githooks/process-gate` and
-# their siblings carry no suffix, and they are where SEMVER_LOOP_GUARD,
-# DISABLE_AI_STACK, AGENT_KG_DEFER and AGENTSMITH_AUTOPUSH are read. Documenting
+# so this looked covered — but `.githooks/process-gate` and its siblings carry no
+# suffix (as the machine-wide `hooks/` did until 3.0.0, where SEMVER_LOOP_GUARD,
+# DISABLE_AI_STACK, AGENT_KG_DEFER and AGENTSMITH_AUTOPUSH were read). Documenting
 # SEMVER_LOOP_GUARD in a review record was enough to make this test call it
 # "read by nothing" (.agent-rfc/designs/audit-notes-resolved.md).
-EXTENSIONLESS_SOURCE_DIRS = ("hooks/", ".githooks/")
+EXTENSIONLESS_SOURCE_DIRS = (".githooks/",)
 
 
 def _is_source(rel: str) -> bool:
@@ -57,6 +57,14 @@ def _is_source(rel: str) -> bool:
 
 # Tokens that look like environment variables but are not ours to implement.
 ALLOWED = {
+    # Read only by the machine-wide git hooks 3.0.0 retired (vendoring-retired.md).
+    # CHANGELOG.md narrates them as history, which is not a claim that they work.
+    "AGENTSMITH_AUTOPUSH",
+    "AGENT_KG_DEFER",
+    "AGENTSMITH_TENANT_VISIBILITY",
+    # Read by eval-ttft-live.yml, a template 3.0.0 retired (no port); the archive
+    # names it as history.
+    "TTFT_LIVE",
     # Documented as NOT IMPLEMENTED, tracked in docs/PRODUCT_BACKLOG.md. Listed
     # here so the test stays green while the docs stay honest — remove this
     # entry when the feature is built, and the test starts guarding it.
@@ -182,8 +190,6 @@ def test_the_sweep_reaches_extensionless_shell() -> None:
     files a variable is actually read in reports it as implemented by nothing.
     """
     blob = _code_blob()
-    assert "SEMVER_LOOP_GUARD" in blob, (
-        "hooks/post-commit reads SEMVER_LOOP_GUARD and the sweep cannot see it"
+    assert "GOVERNANCE_PROVIDER" in blob, (
+        ".githooks/process-gate reads GOVERNANCE_PROVIDER and the sweep cannot see it"
     )
-    for name in ("DISABLE_AI_STACK", "AGENTSMITH_AUTOPUSH"):
-        assert name in blob, f"{name} is read by an extensionless hook and was missed"

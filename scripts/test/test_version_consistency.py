@@ -8,8 +8,8 @@ docs/DESIGN.md's header claimed "**Version:** 1.0.0 (matches `install-ai-stack.s
 is what makes this worth a test rather than a one-off correction: the document
 told readers the invariant held, so nobody checked it.
 
-A wrong version here is not cosmetic — `agentsmith upgrade --to <version>` and a
-tenant's pinned `agentsmith-runtime @ vX.Y.Z` both resolve against real tags.
+A wrong version here is not cosmetic — a tenant's `providers.json` setup ref and its
+pinned `agentsmith-runtime @ vX.Y.Z` both resolve against real tags.
 """
 
 from __future__ import annotations

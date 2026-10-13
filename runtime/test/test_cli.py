@@ -126,25 +126,29 @@ def test_ci_callees_ship_with_their_caller(tmp_path: Path):
 
 
 @pytest.mark.parametrize("stack", STACKS)
-def test_composite_actions_ship_with_the_workflows_that_use_them(tmp_path: Path, monkeypatch, stack):
-    """`uses: ./.github/actions/<name>` resolves in the tenant's own repo. The
-    hook copied the actions; `tenant init` did not, so every CD workflow it
-    wrote failed at its first step. HOME is emptied so the checkout's own
-    actions are used, not whatever an older install left in ~/.agent-framework."""
+def test_composite_actions_are_referenced_at_the_provider_never_copied(tmp_path: Path, monkeypatch, stack):
+    """A workflow that says `uses: ./.github/actions/<name>` needs a copy in the
+    tenant. From 3.0.0 every action is referenced at the provider, at the release
+    the repository declares, and none is copied (vendoring-retired.md). HOME is
+    emptied so the checkout's own templates are used, not an older install's."""
     import re as _re
+
+    from runtime.adopt import SETUP_ACTION
 
     monkeypatch.setenv("HOME", str(tmp_path / "empty-home"))
     repo = tmp_path / "repo"
     repo.mkdir()
-    init_tenant("acme", repo, stack=stack)
+    init_tenant("acme", repo, stack=stack, framework_ref="v9.9.9")
 
-    used = set()
+    referenced = set()
     for wf in (repo / ".github" / "workflows").glob("*.yml"):
-        used |= set(_re.findall(r"uses:\s*\./\.github/actions/([\w.-]+)", wf.read_text()))
-    assert used, "expected the CD workflows to reference composite actions"
-    missing = {a for a in used if not (repo / ".github" / "actions" / a / "action.yml").is_file()}
-    assert not missing, f"workflows use actions tenant init never wrote: {missing}"
-    assert "{{TENANT_ID}}" not in (repo / ".github" / "workflows" / "cd-production.yml").read_text()
+        text = wf.read_text()
+        assert "./.github/actions/" not in text, f"{wf.name} expects a copied action"
+        referenced |= set(_re.findall(r"bobbyaqlaar/AgentSmith/\.github/actions/([\w-]+)@v9\.9\.9", text))
+    assert {"gcp-auth", "build-push-ghcr", "deploy-placeholder", "rollback-notify"} <= referenced
+    assert not (repo / ".github" / "actions").exists()
+    assert f"{SETUP_ACTION}@v9.9.9" in (repo / ".github" / "workflows" / "cd-production.yml").read_text()
+    assert "{{" + "TENANT_ID}}" not in (repo / ".github" / "workflows" / "cd-production.yml").read_text()
 
 
 def test_unknown_stack_and_isolation_are_refused(tmp_path: Path):
@@ -173,7 +177,6 @@ SHELL_FUNCTIONS_REPLACED = {
     "ai-tenant-init": ["tenant", "init", "acme"],
     "ai-tenant-promote": ["tenant", "promote", "acme", "--from", "staging", "--to", "production"],
     "ai-onprem-deploy-scaffold": ["tenant", "onprem-scaffold"],
-    "ai-stack-upgrade": ["upgrade", "--to", "1.3.0"],
     "ai-stack-scrub": ["scrub", "some/dir", "--yes"],
     "ai-stack-uninstall": ["uninstall", "--yes"],
 }
@@ -479,7 +482,8 @@ def test_a_missing_template_is_a_message_not_a_traceback(command, monkeypatch, t
         monkeypatch.setattr(cli, "init_tenant", lambda *a, **k: (_ for _ in ()).throw(missing))
         args = argparse.Namespace(tenant_id="acme", root=str(tmp_path), stack="python-fastapi",
                                   isolation="shared", force=False, allow_framework_root=False,
-                                  architecture="hexagonal", agentic=False, ide=None, from_intake=None)
+                                  architecture="hexagonal", agentic=False, ide=None, from_intake=None,
+                                  framework_ref=None)
         code = cli._cmd_tenant_init(args)
     else:
         import runtime.adopt as adopt

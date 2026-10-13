@@ -60,7 +60,6 @@
     "_about": "Paths a tenant receives. Kept equal to what .github/workflows/scratch-tenants.yml rebuilds tenants on (test_process_gate.py), minus that workflow's two own entries.",
     "file": "CHANGELOG.md",
     "paths": [
-      "hooks/**",
       ".githooks/**",
       "install-ai-stack.sh",
       "workflow-templates/**",

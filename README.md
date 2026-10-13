@@ -226,30 +226,22 @@ agentsmith sync                         # plan; --yes to write
 Full setup (env vars, `.env` files, GitHub secrets, prerequisites):
 **docs/UserManual.md › Install & Start, Create an AgentSmith-Governed Repo**. Daily commands: **docs/UserManual.md › Command Reference**.
 
-### The other transport: a vendored repository
-
-A repository can instead hold AgentSmith's own `scripts/` and `runtime/` in its tree. This is how
-onboarding worked first, it is deliberately still supported, and it is what `agentsmith tenant init`
-plus the machine hooks give you:
+### A new repository
 
 ```bash
 mkdir my-project && cd my-project && git init -b main
-git commit --allow-empty -m "chore: init"   # git runs no post-checkout on init
-mkdir -p .agenticframework && touch .agenticframework/enabled
-git checkout                                # → IDE rules, CI workflows, vendored code, Knowledge Graph
+agentsmith tenant init my-project --stack python-fastapi   # or ts-react, go
+# → the same declarations, armed gates and rules, plus CI/CD workflows for the
+#   stack that ask the provider through its pinned setup step. It prints the commit.
 ```
 
-Prefer `tenant adopt` unless you specifically want the framework's code in your repository: a
-vendored tree is a copy, and a copy is the thing that drifts. `agentsmith sync` refreshes both.
+### Nothing is installed machine-wide in your repositories
 
-### Opt-in model
-
-Hooks install machine-wide, but only *provision and enforce* in repos that
-opted in: a brand-new `git init` opts in automatically; a pre-existing or
-cloned repo is left untouched until you opt it in explicitly — by
-`agentsmith tenant adopt`, or by `touch .agenticframework/enabled` and a
-checkout. Cloning an unrelated open-source project never gets AgentSmith
-files written into it.
+No git hook is armed outside a repository, and no repository holds a copy of AgentSmith. A
+repository is governed only once `tenant init` or `tenant adopt` brings it in, by the providers it
+declares; cloning an unrelated project never gets AgentSmith files written into it. (Until 3.0.0
+the installer armed machine-wide hooks and could vendor `scripts/` and `runtime/` into a repository.
+That transport is retired: a copy is the thing that drifts.)
 
 ---
 
@@ -333,7 +325,7 @@ Kubernetes, a live OIDC provider). Operator procedures: docs/UserManual.md.
 | **Portal** | Dev workspace fed by each app's CI gate, cross-app cost/issues dashboard, per-app DLQ triage with replay, HMAC-signed tamper-evident audit log, seven per-app roles, SSO/OIDC with server-side revocation |
 | **On-Premise** | `templates/onprem-deploy/` — Docker Compose or Helm for air-gapped customers, canary + shadow routing (Traefik or Envoy) |
 | **In-App Widget** | `templates/in-app-widget/` — embeddable end-user status component, token-scoped, self-hosted |
-| **Enterprise Pack** | GPG-signed hook bundles + MDM deploy, HMAC-validated break-glass bypass, RFC-enforcement hooks, dedicated per-tenant worker pools |
+| **Enterprise Pack** | An org policy the gate reads — RFC enforcement at commit, HMAC-validated break-glass for `mode off` — and dedicated per-tenant worker pools |
 
 ---
 

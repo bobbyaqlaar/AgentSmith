@@ -61,9 +61,8 @@ curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/in
 ```
 
 The installer:
-- Writes four git hook templates to `~/.git_templates/hooks/`
-- Sets `git config --global init.templateDir`
-- Builds the framework's own Python environment, `~/.agent-framework/.venv`, from `requirements.lock` (pinned and hashed — the same file CI installs) at the Python version in `.python-version`. Nothing is installed into your system Python; the git hooks run the framework's scripts with this environment
+- Installs the provider — `agentsmith`, its scripts, runtime and templates — under `~/.agent-framework/`. It arms **no** git hook outside a repository: a repository comes under the gates with `agentsmith tenant init` or `agentsmith tenant adopt`, which write its own `.githooks`. An install before 3.0.0 set git's global `init.templateDir`; this one puts back the value it recorded and removes AgentSmith's old templates
+- Builds the framework's own Python environment, `~/.agent-framework/.venv`, from `requirements.lock` (pinned and hashed — the same file CI installs) at the Python version in `.python-version`. Nothing is installed into your system Python; the gate and the other ports run with this environment
 - Installs the `agentsmith` command into that environment and links it at `~/.local/bin/agentsmith`
 - Writes nothing to your shell profile — and removes the `ai-*` shell functions older installs appended to `~/.zshrc`, `~/.bashrc` or `~/.profile`, keeping a `*.agentsmith-bak` copy
 - Creates `~/.agent-framework/` for shared configuration, baseline fixtures and machine state (`state/`)
@@ -168,70 +167,39 @@ A passing check confirms: Phoenix is running, your mode's dependencies are avail
 ```bash
 mkdir my-project && cd my-project
 git init
-git remote add origin https://github.com/org/my-project.git
+agentsmith tenant init my-project --stack python-fastapi   # or ts-react, go
 ```
 
-The `post-checkout` hook fires on `git checkout` and `git clone` — **not** on
-`git init`, because git does not run this hook for init. A brand-new project is
-provisioned by opting in once and checking out:
+`tenant init` writes the scaffold and prints the one commit that arms the gates:
+- the gate config and the provider declaration (`.agenticframework/process-gates.json`,
+  `providers.json`), and `.githooks` armed (`core.hooksPath`);
+- the rule files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursorrules`,
+  `.github/copilot-instructions.md`, `.agents/skills/`) and the IDE hook configs;
+- the CI workflows for the stack, each asking the provider through its pinned setup step,
+  plus the gates and weekly sync workflows;
+- `.agent-rfc/security/` placeholders, never overwritten (the security port fails SEC-RISK-001 and
+  SEC-AGENCY-001 until the risk register and agency manifest say what is yours);
+- in `providers.json`, the truth about a new repository: no telemetry emitter yet (`"emitter":
+  "none"`), and judged suites that warn — visibly, "this suite proves nothing" — until it has eval
+  data of its own (`not_gradable` / `no_verdict`). Add `.agent-rfc/fixtures/golden_evals.json` with
+  your application's outputs, then remove the warnings;
+- a committed Knowledge Graph and the design, review-log and backlog stubs.
 
-```bash
-git init && git add -A && git commit -m "init"
-mkdir -p .agenticframework && touch .agenticframework/enabled
-git checkout            # hook fires here
-```
-
-The hook prints these instructions itself when it declines to provision. Once
-opted in, it automatically:
-- Creates `.agent-rfc/` and `.agent-rfc/fixtures/`
-- Writes `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.agents/skills/`, and seeds `.agent-history.log`
-- Detects your stack (TypeScript/React, Python/FastAPI, Go, or Generic)
-- Writes the appropriate `.github/workflows/ci-*.yml`
-- Seeds the Knowledge Graph by scanning your codebase
-- Copies the baseline golden dataset from `~/.agent-framework/shared/` to `.agent-rfc/fixtures/golden_evals.json`
-- Writes `.agenticframework/enabled` — this is what tells `pre-commit`,
-  `commit-msg`, and `post-commit` that this repo has opted into
-  AgentSmith. The framework's hooks are installed **globally**
-  (`git config --global init.templateDir`), so they land in every
-  `git init`/`git clone` on your machine — but `post-checkout` itself
-  skips any pre-existing repo (one that already has commit history) that
-  hasn't opted in, and the other three hooks no-op without the marker.
-  Cloning an unrelated repo therefore neither trips your AgentSmith
-  guardrails nor gets AgentSmith files written into it.
+It copies none of AgentSmith's code into the repository: the provider is installed on the machine
+and in CI (3.0.0).
 
 ### Existing Project
 
-Pre-existing and freshly cloned repos are **not** provisioned automatically —
-opt in explicitly, then re-fire the hook:
-
-```bash
-cd /path/to/existing-project
-mkdir -p .agenticframework && touch .agenticframework/enabled
-git checkout     # post-checkout now provisions — only writes missing files, never overwrites
-```
-
-Plain `git checkout`, with no path. `git checkout .` also fires the hook, but it
-first reverts every uncommitted change in the working tree — in an existing
-project, that is your work.
-
-That provisions the rules and CI; it does not arm the design and review gates. To
-bring an existing project under them, use `agentsmith tenant adopt` (Create an
-AgentSmith-Governed Repo › Bring an existing repo under the gates).
+Bring an existing repository under the gates with `agentsmith tenant adopt` (Create an
+AgentSmith-Governed Repo › Bring an existing repo under the gates). It prints its plan first, leaves
+your CI alone and adds the gates workflow beside it.
 
 ### Public vs. Private Repositories
 
-If the repository is public (checked via `gh repo view` when the `gh` CLI is
-available; otherwise any `github.com` remote is conservatively treated as
-potentially public), the hook will prompt:
-
-```
-⚠️  This repo appears to be public. Add IDE config files to .gitignore?
-    .cursorrules, CLAUDE.md, AGENTS.md, GEMINI.md,
-    .github/copilot-instructions.md and .agents/ contain system prompt content.
-    Add to .gitignore? (y/n):
-```
-
-Answer `y` to keep your rules out of public view. In CI environments this defaults to `y` automatically.
+The rule files (`.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`,
+`.github/copilot-instructions.md`, `.agents/`) contain system-prompt content. In a public repository,
+add them to `.gitignore` yourself if you do not want them published. (The machine-wide hook that
+offered this was retired in 3.0.0; offering it from `tenant init` is on the backlog.)
 
 ### Verify the Project Setup
 
@@ -553,8 +521,7 @@ agentsmith promote <case-id> "<query>" "<fix>"
 ### Multi-Repository (Multiple Separate Git Roots)
 
 The framework is installed once at the machine level. All repositories share:
-- The same git hooks (`~/.git_templates/hooks/`)
-- The same shell commands
+- The same provider (`agentsmith`, under `~/.agent-framework/`); each repository's own `.githooks` ask it
 - The same Phoenix dashboard instance
 - The same baseline golden dataset (`~/.agent-framework/shared/golden_evals_base.json`)
 
@@ -811,12 +778,15 @@ agentsmith scrub /path/to/project
 # the Framework).
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 
-# Re-apply to an opted-in project: plain `git checkout` re-fires the hook, which
-# writes only what is missing. `git init` does not run post-checkout.
-# To pull newer vendored scripts/ and runtime/ into it (needs
-# .agenticframework/tenant.yaml, which `agentsmith tenant init` writes):
-cd /path/to/project && agentsmith upgrade
+# Then bring each governed repository up to date with it: the gate hooks, the
+# provider declaration, the rule files and the gates workflow. It prints the
+# commit, which the repository's own gate accepts. (The weekly
+# agentsmith-sync.yml does this for you as a pull request.)
+cd /path/to/project && agentsmith sync
 ```
+
+Move a repository's own CI pins (`setup-agentsmith@vX`, `AgentSmith/.github/actions/<name>@vX`) and
+`framework.version` with it — those files are the repository's, and `sync` does not edit them.
 
 ---
 
@@ -843,35 +813,28 @@ curl -s http://localhost:11434/api/tags | python3 -m json.tool
 ollama pull $(agentsmith models --ollama)
 ```
 
-### Hooks Not Firing on an Existing Repo
+### Hooks Not Firing in a Repository
 
 ```bash
-# The template dir must be set before init; verify:
-git config --global init.templateDir
-
-# If empty, re-run:
-agentsmith mode local   # or agentsmith mode hybrid
-
-# Re-apply to the repo:
-cd /path/to/repo && git init
+# A governed repository runs its own .githooks; check they are armed:
+git config --get core.hooksPath      # expect: .githooks
+# If not, re-arm them (every gate sweep also does this when it finds it unset):
+git config core.hooksPath .githooks
 ```
 
-### Commit Blocked by Pre-Commit Hook
+A repository that is not under the gates yet: `agentsmith tenant init` (new) or
+`agentsmith tenant adopt` (existing). No hook is armed machine-wide.
 
-The hook blocks commits that contain:
+### Commit Blocked by the Commit Gate's Guardrails
+
+The commit gate (`commit_guardrails`, on by default) blocks a commit whose staged files contain:
 - Unresolved AI markers: `ponytail:`, `TODO: agent`, `@agent-ignore`
 - Empty catch blocks in TypeScript/JavaScript
 - Double blank identifiers in Go (`_, _ :=`)
 
-Fix the flagged code, then commit again. To bypass in an emergency:
-
-```bash
-DISABLE_AI_STACK=true git commit -m "emergency: ..."
-```
-
-On a machine with an enterprise org policy the hook asks the policy first: under
-`bypass_policy: disabled` the bypass is refused and the hook runs anyway, and
-under `break-glass` it needs a valid `AI_BREAK_GLASS_TOKEN` (enterprise/README.md).
+Fix the flagged code, then commit again. A file `scaffold.json` vouches for, unchanged since the
+scaffold wrote it, is not checked. There is no bypass switch: a commit made with `--no-verify` is
+caught by the sweep and by CI.
 
 ### Commit Message Rejected
 
@@ -951,9 +914,8 @@ The older `ai-*` names map to these one for one
 | Command | Arguments | Description |
 |---|---|---|
 | `agentsmith scrub` | `[directory] [--yes]` | Interactive removal of runtime artefacts from a project directory — lists every exact path it will delete before prompting for confirmation. |
-| `agentsmith upgrade` | `[--to VERSION]` | Refreshes the current tenant repo's vendored `scripts/`, `runtime/` (with only the five harness-delegated `runtime/test` suites) and `fixtures/` from `~/.agent-framework`, regenerates their `ruff.toml` excludes, bumps `.agenticframework/tenant.yaml`'s `framework.version`, and commits. Needs `tenant.yaml`; refused in the framework's own checkout. Leaves a foreign `runtime/` alone and does nothing in a tenant that installs `agentsmith-runtime` as a package. Does **not** refresh workflows or composite actions. Fails loudly (and stops) if the commit itself fails, rather than reporting "Upgrade complete" regardless. |
 | `agentsmith tenant onprem-scaffold` | — | Copy the on-prem deploy template (Docker Compose or Helm, `templates/onprem-deploy/`) into the current repo's `deploy/onprem/` for in-border / air-gapped clusters. Full walkthrough: docs/UserManual.md. |
-| `agentsmith uninstall` | `[--yes] [--purge] [--legacy-profile-only]` | Machine-level removal: restores `git init.templateDir` to its pre-install value, removes `~/.local/bin/agentsmith` and any AgentSmith block left in a shell profile; `--purge` also removes `~/.agent-framework` (including the command itself) and `~/.git_templates`. `--legacy-profile-only` removes just the shell-function block an install before 2.0.0 appended to a shell profile, and touches nothing else. Asks for confirmation unless `--yes`. |
+| `agentsmith uninstall` | `[--yes] [--purge] [--legacy-profile-only]` | Machine-level removal: restores `git init.templateDir` if an install before 3.0.0 left it pointing at AgentSmith's hooks, removes `~/.local/bin/agentsmith` and any AgentSmith block left in a shell profile; `--purge` also removes `~/.agent-framework` (including the command itself) and `~/.git_templates`. `--legacy-profile-only` removes just the shell-function block an install before 2.0.0 appended to a shell profile, and touches nothing else. Asks for confirmation unless `--yes`. |
 | `python3 scripts/verify_system.py --governed` | — | Is this repo actually governed? Lists every gap at once — the config, the four hooks, whether `core.hooksPath` points at them, the IDE hook configs, a committed knowledge graph, the artifact stubs — and separately whether the last `agentsmith gates run` was green **for this commit**. "Not installed" and "installed but never run" are different answers and it says which. |
 | `agentsmith gates list` | — | The gates this repo's CI declares — every step tagged `# agentsmith:gate` in `.github/workflows/`, as a table. The same table `docs/validation-checklist.md` carries, generated from the same tags, so there is no second list to drift. |
 | `agentsmith gates run` | `[--only TEXT] [--services] [--fail-fast] [--allow-install]` | Run that list here, before pushing. Three counts, never two: passed, failed, and **skipped** with the reason — a tool that is not installed, a service container CI starts, an expression only CI can answer. Dependency-install lines are dropped and named (this is not a fresh runner); `--allow-install` runs them. It does not reproduce the runner image or the setup steps, so CI stays the authority — this answers "does this gate pass here". |
@@ -966,10 +928,10 @@ The older `ai-*` names map to these one for one
 
 | Command | Arguments | Description |
 |---|---|---|
-| `agentsmith tenant init` | `<id> [--stack STACK] [--isolation shared\|dedicated] [--architecture STYLE] [--agentic] [--root DIR] [--ide NAME] [--force] [--allow-framework-root]`, or `--from INTAKE [--root DIR] [--force]` | Scaffolds `.agenticframework/tenant.yaml` and per-environment CI/CD workflows in the current repo. `--architecture` and `--agentic` are the same options `tenant adopt` takes — a new repo gets the structural style and, with `--agentic`, the agent layer (agents, allowlisted tools, the gateway, durable workflows, evals). `--from INTAKE` scaffolds from a portal intake instead — its tenant id, stack, options, IDEs and first RFC — and marks it used only once that RFC is written; it refuses the flags the intake decides. `--ide` (repeatable) writes a hook config for only the IDEs named, and records them as `workspace.ides` in `tenant.yaml` so `agentsmith sync` keeps the choice; omitted, every IDE with a verified config schema is written. `--force` overwrites existing files; `--allow-framework-root` scaffolds even inside the framework's own checkout, which is otherwise refused. |
+| `agentsmith tenant init` | `<id> [--stack STACK] [--isolation shared\|dedicated] [--architecture STYLE] [--agentic] [--root DIR] [--framework-ref REF] [--ide NAME] [--force] [--allow-framework-root]`, or `--from INTAKE [--root DIR] [--force]` | Scaffolds `.agenticframework/tenant.yaml` and per-environment CI/CD workflows in the current repo. `--architecture` and `--agentic` are the same options `tenant adopt` takes — a new repo gets the structural style and, with `--agentic`, the agent layer (agents, allowlisted tools, the gateway, durable workflows, evals). `--from INTAKE` scaffolds from a portal intake instead — its tenant id, stack, options, IDEs and first RFC — and marks it used only once that RFC is written; it refuses the flags the intake decides. `--ide` (repeatable) writes a hook config for only the IDEs named, and records them as `workspace.ides` in `tenant.yaml` so `agentsmith sync` keeps the choice; omitted, every IDE with a verified config schema is written. `--force` overwrites existing files; `--allow-framework-root` scaffolds even inside the framework's own checkout, which is otherwise refused. |
 | `agentsmith tenant adopt` | `<id> [--stack STACK] [--architecture STYLE] [--agentic] [--gate GLOB]… [--framework-ref TAG] [--root DIR] [--yes]` | Brings an existing repo under the gates: prints what it found and would do, then — on a yes — gates its code, keeps its hooks, CI, rules and design doc, and prints the adoption commit. |
-| `agentsmith sync` | `[--root DIR] [--yes]` | Brings this repository's copies of the framework up to date — the gate hooks (adding any it lacks), the provider declaration, and (vendored tenants) the vendored trees — and prints a commit whose review the repository's own gates accept, because every file in it is one the framework wrote. Run it after upgrading AgentSmith. Refused in the framework's own checkout, which is what it copies from. |
-| `agentsmith gate` | `<session-start\|pre-edit\|stop\|ci\|commit\|push> [--ide IDE]`, or `kg build\|impact [--staged\|--base REF]` | Answer one gate event in the neutral profile of the gate contract (`contract/gate/v3/protocol.md`; `ci` is contract 2's — a range on stdin, the verdict, a report, and the record sent to the portal when configured; `commit` and `push` are contract 3's; `kg build` rebuilds the knowledge graph and `kg impact` names the staged change's review scope as JSON): the event as JSON on stdin, the decision as JSON on stdout. This is what a tenant names as its provider; exit 3 means this machine cannot run the gate. `--ide` reads the payload in one IDE's dialect instead of the neutral profile — what the generated hook configs pass, and what an integrator needs when the caller is an IDE rather than the contract. |
+| `agentsmith sync` | `[--root DIR] [--yes]` | Brings this repository's copies of the framework up to date — the gate hooks (adding any it lacks), the provider declaration, the rule files' managed block and the gates workflow — and prints a commit whose review the repository's own gates accept, because every file in it is one the framework wrote. Run it after upgrading AgentSmith. Refused in the framework's own checkout, which is what it copies from. |
+| `agentsmith gate` | `<session-start\|pre-edit\|stop\|ci\|commit\|push> [--ide IDE]`, or `kg build\|impact [--staged\|--base REF]\|check` | Answer one gate event in the neutral profile of the gate contract (`contract/gate/v3/protocol.md`; `ci` is contract 2's — a range on stdin, the verdict, a report, and the record sent to the portal when configured; `commit` and `push` are contract 3's; `kg build` rebuilds the knowledge graph `kg impact` names the staged change's review scope as JSON, and `kg check` fails a committed graph that is stale, rewriting it — what a tenant's CI asks through `.githooks/process-gate kg check`): the event as JSON on stdin, the decision as JSON on stdout. This is what a tenant names as its provider; exit 3 means this machine cannot run the gate. `--ide` reads the payload in one IDE's dialect instead of the neutral profile — what the generated hook configs pass, and what an integrator needs when the caller is an IDE rather than the contract. |
 | `agentsmith conformance` | `--provider "<command>" [--contract 1\|2\|3]`, `--port rules --provider "<command>"`, `--port telemetry --emitter "<command>" \| --export FILE`, `--port evals --provider "<command>"`, `--port security --provider "<command>"`, `--port ops --sender "<command>" \| --receiver URL \| --replay URL`, or `--port record --sender "<command>" [--url-env NAME] [--token-env NAME]` / `--port record --receiver URL` | Build the contract's fixture repository, replay its cases against that command, and report per case. Run it against another platform's adapter, or against `agentsmith gate`. With `--port record`: run a gate provider against a loopback portal and judge what it sends (`--sender`), or send `contract/record/v1/cases.json` to a portal's ingest address with the test token in `GOVERNANCE_RECORD_TOKEN` and judge each answer (`--receiver` — it stores the valid record, so use a test portal). With `--port rules`: build `contract/rules/v1/fixture.json`'s repository fresh per case and judge the provider's renders and checks. With `--port telemetry`: run a command with its OTLP export pointed at a loopback receiver (its own destinations removed — nothing leaves the machine) and judge what arrives against `contract/telemetry/v1/attributes.json`, or judge an OTLP/JSON export; nothing received fails. With `--port evals`: build `contract/evals/v1/fixture.json`'s repository per case, with a stub judge on loopback that answers from the fixed outputs, and judge each scorecard. With `--port security`: build `contract/security/v1/fixture.json`'s repository per case — a complete pack and a standard-library emitter — and judge each result; a provider row reported anything but not applicable fails. With `--port ops`: run a sender against a loopback portal under each answer it can give (`--sender`), send `contract/ops/v1/cases.json` to a portal's Ops ingest with a test Ops token in `GOVERNANCE_OPS_TOKEN` (`--receiver`), or send a signed replay request — correct, stale, under another key, unsigned — to a replay webhook holding the key in `GOVERNANCE_REPLAY_KEY` (`--replay`). |
 | `agentsmith rules` | `render [--write]` \| `check` | AgentSmith as a rules provider (`contract/rules/v1/protocol.md`): `render` prints, as JSON, every rule file this repository's agents read — rendered from its committed declarations only — with how each is placed; `check` says whether the repository still holds them. `--write` places them here (whole, or as the marked block inside a file you wrote). What a tenant names as its `rules` provider; the gates workflow runs `check` through `.githooks/process-gate rules check`. |
 | `agentsmith gate --ide <id>` | `<event> --ide claude` | The same, for a payload in an IDE's dialect: the provider translates it and answers in it. The generated IDE hook configs pass this. |
@@ -979,18 +941,14 @@ The older `ai-*` names map to these one for one
 
 | Variable | Effect |
 |---|---|
-| `DISABLE_AI_STACK=true` | Hooks skip for that command. With an enterprise org policy installed, the policy decides instead (see the Troubleshooting section) |
 | `AGENTSMITH_SWEEP_BATCH` | How many unverified commits one bypass sweep checks before deferring the rest to the next one (default 200). The sweep runs at every commit, push, session start and turn end, so this bounds what any of them costs after a long fetch; nothing is skipped — an unchecked commit stays unverified |
 | `AGENTSMITH_STATE_DIR` | Where machine state is read and written instead of `~/.agent-framework/state` — the mode, install mode and dashboard endpoint. For sandboxes and test isolation; the hooks honour it too |
 | `AGENTSMITH_IDE` | Which agent is running the process gate (`claude`, `cursor`, `antigravity`, `copilot`, `gemini`, `codex`). Set by each IDE's generated hook config; it names the caller on the gate's `agent.gate.*` spans. Unset reads as `unknown`, never as a guess |
 | `CLAUDE_PROJECT_DIR` | Set by Claude Code to the session's project directory. `.githooks/process-gate` uses it **only as a last resort** for which repository it was invoked in — `git rev-parse --show-toplevel` first, this next, `$PWD` last. It names the SESSION's project, which is not the repository being committed to when a session in one repo commits in another, so it is deliberately not preferred. Nothing sets it but the IDE. |
-| `AGENTSMITH_TENANT_VISIBILITY` | Declares whether the repository being provisioned is `private`, `internal` or `public` (`internal` counts as private, as it does in `gh repo view`), instead of letting `hooks/post-checkout` detect it. Decides one thing: whether the IDE config files (`CLAUDE.md`, `.cursorrules`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.agents/`, `.agent-history.log`) are added to `.gitignore`, since they carry system prompt content. Unset detects as before — `gh repo view`, then any `github.com` remote is treated as potentially public. An unrecognised value warns and falls back to detection; it is never read as either answer. Set by `.github/scratch-tenants/build.sh`, whose fixture repos are public but must behave like the private tenants they stand in for |
 | `AGENTSMITH_PORTAL_URL` / `AGENTSMITH_INTAKE_TOKEN` | Read by `agentsmith tenant init --from <intake>`: the portal's address, and the token shown once when the intake was created. The address must be `https`, or `http` to `localhost`; a redirect is refused, because the token would go with it. The token opens that one intake, once, for 24 hours. Leave it unset at a terminal and the CLI asks for it without echo — better than an `export`, which lands in your shell history. `AGENTSMITH_PORTAL_URL` is the same variable a CI job sets for `scripts/send_dev_record.py` |
 | `AGENTSMITH_PYTHON` | The interpreter `.githooks/process-gate` runs the gate with, tried before `$AGENTSMITH_DIR/.venv`, `~/.agent-framework/.venv` and the repo's own `.venv`. It needs Python 3.11+ with pydantic and opentelemetry |
-| `SEMVER_LOOP_GUARD=true` | Prevents infinite loop in post-commit semver tagging |
-| `AGENTSMITH_AUTOPUSH=0` | post-commit still auto-tags but does not push (same as `git config agentsmith.autopush false` for one repo). Use it instead of `git -c core.hooksPath=/dev/null`, which also skips pre-commit and commit-msg |
-| `AI_BREAK_GLASS_TOKEN=<token>` | Required for any hook bypass — `DISABLE_AI_STACK=true` or `agentsmith mode off` — when the installed org policy sets `bypass_policy: break-glass` (enterprise pack, see enterprise/README.md). Must be a real IT-issued, HMAC-signed token with an expiry — not just any non-empty string — validated against `BREAK_GLASS_HMAC_KEY` on the machine. |
-| `OPS_PORTAL_URL` / `AUDIT_LOG_WRITE_TOKEN` | When both are set, `agentsmith tenant promote`, `agentsmith upgrade`, `agentsmith tenant onprem-scaffold` and every hook bypass under an org policy best-effort write signed events to the Ops Portal's audit log. If unset, or the write fails, the event is appended to `~/.agent-framework/local-audit-fallback.log` instead of being dropped. |
+| `AI_BREAK_GLASS_TOKEN=<token>` | Required for `agentsmith mode off` when the installed org policy sets `bypass_policy: break-glass` (enterprise pack, see enterprise/README.md). Must be a real IT-issued, HMAC-signed token with an expiry — not just any non-empty string — validated against `BREAK_GLASS_HMAC_KEY` on the machine. |
+| `OPS_PORTAL_URL` / `AUDIT_LOG_WRITE_TOKEN` | When both are set, `agentsmith tenant promote`, `agentsmith tenant onprem-scaffold` and every `agentsmith mode off` under an org policy best-effort write signed events to the Ops Portal's audit log. If unset, or the write fails, the event is appended to `~/.agent-framework/local-audit-fallback.log` instead of being dropped. |
 
 #### Security controls
 
@@ -1373,9 +1331,9 @@ nothing about origin.
 ### Machine install, mode, and standing infra
 
 ```bash
-# Install (the Install & Start section) — vendors scripts/hooks/templates to ~/.agent-framework,
-# sets git's global init.templateDir (developer mode; use --mode enterprise
-# to skip that — see the Enterprise Pack section).
+# Install (the Install & Start section) — the provider (agentsmith, its scripts,
+# runtime and templates) under ~/.agent-framework. No git hook is armed outside
+# a repository.
 # From a checkout instead (no release download): ./install-ai-stack.sh
 curl -fsSL https://github.com/bobbyaqlaar/AgentSmith/releases/latest/download/install-ai-stack.sh | bash
 # Nothing to reload: `agentsmith` is linked at ~/.local/bin (the installer says
@@ -1484,8 +1442,7 @@ checkout) — see README "Opt-in model".
 >
 > | What you get | How it arrives |
 > |---|---|
-> | `.agent-rfc/`, `.cursorrules`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.agents/skills/`, Knowledge Graph seed | `post-checkout` hook fires on `git init -b main` |
-> | `.agenticframework/tenant.yaml`, `.github/workflows/` (ci-*, cd-*, eval-* reusable workflows), `.github/actions/` (composite actions the CD workflows call) | `agentsmith tenant init <id> --stack <stack>` |
+> | `.agenticframework/` (tenant, gates, providers), `.githooks/`, `.agent-rfc/` (seeds included), the rule files, `.agents/skills/`, `.github/workflows/` (ci-*, cd-*, eval-*, the gates and sync workflows), Knowledge Graph seed | `agentsmith tenant init <id> --stack <stack>` |
 > | `.env` | You create from the the Install & Start section tenant-app `.env` template |
 > | `runtime/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — accessed via `$AGENTSMITH_DIR/runtime` at run time |
 >
@@ -1519,9 +1476,8 @@ lever as build-time guidance) and `docs/validation-checklist.md` (read
 before merge — a Definition-of-Done equivalent that works the levers group
 by group against the change and sets the testing/gate obligations).
 
-Both docs live under the FRAMEWORK's `docs/`, which — unlike `scripts/` and
-`templates/` — is not vendored into a tenant repo by the post-checkout hook.
-`install-ai-stack.sh` copies these two specific files (not all of `docs/`)
+Both docs live under the FRAMEWORK's `docs/`; nothing of AgentSmith is copied into
+a tenant repo. `install-ai-stack.sh` copies these two specific files (not all of `docs/`)
 into `~/.agent-framework/docs/`, so every generated pointer resolves two
 ways: `$AGENTSMITH_DIR/docs/<file>` on a live checkout, or
 `~/.agent-framework/docs/<file>` on the installed package. Both paths are
@@ -1576,18 +1532,14 @@ The gate accepts that review only on the repository's first commit and only whil
 still matches its hash; change one, or add code, and it asks for a real review. Add code in the
 next commit, under a design of its own.
 
-**Vendoring.** When the repo was created on a machine with AgentSmith installed, `git init` put the
-machine's hooks in `.git/hooks`; `tenant init` runs their `post-checkout` before writing the
-manifest, so the vendored `scripts/`, `runtime/` and `fixtures/` go into that first commit too, and
-the workflows' `scripts/*.py` steps can run. Those hooks keep running behind the gates. If the run
-says nothing was vendored, run `git init` in the repo (it adds the machine's hooks and changes
-nothing else) and re-run `tenant init` with `--force`, before the first commit.
+**Nothing is vendored.** The repository holds no copy of AgentSmith: its workflows ask the provider
+through the pinned setup step, and its hooks ask the provider installed on the machine.
 
 This writes:
 - `.agenticframework/tenant.yaml` — tenant id, isolation tier, framework version pin, per-environment Phoenix namespaces and eval thresholds
-- `.github/workflows/ci-<stack>.yml`, `cd-staging.yml`, `cd-production.yml`, plus the reusable eval / security workflows the CI file calls (`eval-scorecard.yml`, `eval-fairness.yml`, `eval-hallucination.yml`, `eval-ttft-live.yml`, `eval-security.yml`, called with `strict: true` by every stack's CI template)
-- `.github/actions/{gcp-auth,build-push-ghcr,deploy-placeholder,rollback-notify,install-python-deps}` — composite actions the workflows reference as `uses: ./.github/actions/<name>` (resolved inside this repo)
-- Copy security templates from `fixtures/security/templates/` into `.agent-rfc/security/` (risk register, agency manifest, tool allowlist, NIST profile) — see [docs/security-framework-map.md](security-framework-map.md). **CI is red until you edit two of them:** the strict harness fails on the shipped placeholder `risk_register.yaml` and `agency_manifest.yaml`, on every stack
+- `.agenticframework/providers.json` — who governs the repository: AgentSmith's gate, rules, evals and security ports, with the CI setup step at `--framework-ref` (default: this install's release)
+- `.github/workflows/ci-<stack>.yml`, `cd-staging.yml`, `cd-production.yml`, plus the reusable eval / security workflows the CI file calls (`eval-scorecard.yml`, `eval-fairness.yml`, `eval-hallucination.yml`, `eval-security.yml`) and `agentsmith-gates.yml` / `agentsmith-sync.yml`. Each asks the provider through its pinned setup step and `.githooks/process-gate`; composite actions are referenced at the provider (`bobbyaqlaar/AgentSmith/.github/actions/<name>@<ref>`), never copied
+- Seeds, never overwriting: the security templates into `.agent-rfc/security/` (risk register, agency manifest, tool allowlist, NIST profile). No eval dataset is seeded — the framework's base cases carry no `actual_output`, which the evals contract requires of a repository's own dataset; `providers.json` declares the judged suites a warning until you add one — see [docs/security-framework-map.md](security-framework-map.md). **CI is red until you edit two of them:** the security port fails on the shipped placeholder `risk_register.yaml` and `agency_manifest.yaml`, on every stack
 
 Re-running is idempotent — existing files are never overwritten (`--force` replaces them, and
 regenerates the scaffold's design and manifest).
@@ -1642,11 +1594,11 @@ this table is what to expect, not what to take on trust.
 
 What it keeps:
 
-- **Your hooks** (husky, pre-commit, `.git/hooks`) keep running, after the gate. AgentSmith's own
-  `post-checkout` and `post-commit`, which `git init` copies in, are left out: they would vendor
-  framework code and CI workflows into your repo.
+- **Your hooks** (husky, pre-commit, `.git/hooks`) keep running, after the gate. The
+  `post-checkout` and `post-commit` an AgentSmith install before 3.0.0 copied into `.git/hooks` are
+  left out: they vendored framework code and CI workflows.
 - **Your CI** is left alone. Two workflows are added: `.github/workflows/agentsmith-gates.yml`, which
-  checks out AgentSmith at the release it names and runs the gate over every push, and
+  installs the provider through its setup step at the release it names and runs the gate over every push, and
   `agentsmith-sync.yml`, which weekly brings the repository up to the framework's latest release and
   opens a pull request. Both check AgentSmith out with the run's own token; if AgentSmith is private
   to you, set the `AGENTSMITH_READ_TOKEN` repository secret (Contents: read). Nothing is vendored
@@ -1693,10 +1645,11 @@ mirrors exactly how you'd set up any real tenant app.
 ```bash
 # Run from: anywhere outside AgenticFramework/
 mkdir $REPO_DIR/oil-price-demo && cd $REPO_DIR/oil-price-demo
-git init -b main    # post-checkout hook fires: installs .agent-rfc/, .cursorrules,
-                    # CLAUDE.md, AGENTS.md, GEMINI.md,
-                    # .github/copilot-instructions.md, .agents/skills/, CI workflow templates,
-                    # Knowledge Graph seed, .agenticframework/enabled marker
+git init -b main
+agentsmith tenant init oil-price-demo --stack python-fastapi
+                    # writes .agenticframework/, .githooks/ (armed), .agent-rfc/ with its seeds,
+                    # the rule files, .agents/skills/, the CI workflows and the Knowledge Graph
+                    # seed — and prints the commit that arms the gates
 ```
 
 **Step 2 — Copy the example app files into the new directory**
@@ -2028,7 +1981,8 @@ export VECTOR_BACKEND=memory           # memory (default) | postgres (needs pgve
 **TTFT on the streaming path.** `LLMGateway.complete_stream()` records
 `ttft_ms` on `CompletionResult` and span attribute `llm.gateway.ttft_ms`;
 non-streaming `complete()` is unchanged (total-call latency only). Live
-budget gate: the Test section's `verify_ttft.py` / `TTFT_LIVE=required`.
+budget check: the Test section's `verify_ttft.py`, run in AgentSmith's own checkout
+(a tenant's evals-port suite for it is on the backlog).
 
 *Provider support:* streaming works for the direct-API providers —
 `openai`, `groq`, `ollama`, `anthropic`, `xai`, `google_ai`, and `openrouter`. The cloud-native adapters
@@ -2113,7 +2067,7 @@ python3 scripts/run-security-checks.py --mode smoke --evidence-pack ./security-e
 python3 scripts/run-evals.py --suite adversarial
 ```
 
-Tenant onboarding: `post-checkout` seeds `.agent-rfc/security/` with template
+Tenant onboarding: `agentsmith tenant init` seeds `.agent-rfc/security/` with template
 copies of `risk_register.yaml` (schema-gated), `agency_manifest.yaml`,
 `nist_profile.yaml` and `tool_allowlist.yaml` — fill them in with real
 content (existing files are never overwritten). For regulated content, declare
@@ -2133,7 +2087,7 @@ validate the framework itself; see the [full testing checklist](#full-testing-ch
 below for the exact same commands wired into CI.
 
 ```bash
-# Hooks: opt-in gate + enterprise RFC gate (throwaway repos, no side effects)
+# The gate's commit guardrails + enterprise RFC checks, through .githooks (throwaway repos, no side effects)
 python3 scripts/verify_system.py --check-hooks
 
 # Knowledge Graph: rebuild via map_codebase.py and assert non-empty with known nodes (Pillar 2 / P10a)
@@ -2585,17 +2539,15 @@ thing being judged, and it lands directly on the threshold.
 `hallucination_evals.json` (+ matching `*_judge_criteria.json`). Seed
 copies live in the framework's `fixtures/*_base.json` — copy them into the
 tenant repo's `.agent-rfc/fixtures/` and extend with domain-specific cases.
-When no tenant file exists, `run-evals.py` falls back to the framework base
-seeds (framework checkout only — a vendored tenant copy without fixtures
-skips gracefully).
+When no tenant file exists, the evals provider falls back to its own base
+seeds.
 
 **CI wiring:** every `ci-<stack>.yml` calls these as reusable workflows —
 `eval-fairness.yml` (warn-only unless repo variable `FAIRNESS_EVALS=required`),
-`eval-hallucination.yml` (hard-fail gate), `eval-ttft-live.yml` (no-ops
-unless repo variable `TTFT_LIVE=required`, since generic CI runners have no
-Ollama). All three are copied into tenant repos by `post-checkout` /
+`eval-hallucination.yml` (hard-fail gate). Both are written by
 `agentsmith tenant init` alongside `eval-scorecard.yml` — a missing callee makes
-GitHub reject the whole CI workflow as invalid.
+GitHub reject the whole CI workflow as invalid. (The live-TTFT template left in
+3.0.0: it had no port; a latency suite for the evals port is on the backlog.)
 
 **Tenant `.env` knobs (reliability pack):**
 
@@ -2650,9 +2602,6 @@ python3 scripts/verify_ttft.py            # needs a local Ollama with falcon3:1b
 MODERATION_HOOK=optional python3 scripts/run-security-checks.py --mode ci --strict
 PYTHONPATH=scripts:. pytest scripts/test/test_security_*.py -q
 python3 scripts/verify_system.py --check-security
-
-# Hook bundle signing (needs a real GPG key; see the Enterprise Pack section)
-gpg --verify agenticframework-hooks-<version>.tar.gz.sig agenticframework-hooks-<version>.tar.gz
 
 # On-prem deployment template (the Deploy via GitHub CI/CD section) — compose/proxy/Helm syntax, no live cluster needed
 python3 scripts/verify_system.py --check-onprem-deploy
@@ -3708,9 +3657,8 @@ outside the app (even by someone who disabled the trigger), or one signed
 before an `AUDIT_LOG_HMAC_KEY` rotation. The portal reports the mismatch and
 not a cause; the dashboard labels it **unverified** for that reason. `GET /api/audit` requires the `admin` role. Wired
 call sites: `agentsmith tenant init` → `tenant_created`, `agentsmith tenant promote` →
-`hitl_promotion`, `agentsmith upgrade` and `agentsmith tenant onprem-scaffold` →
-`config_change`, and any hook bypass under an enterprise policy — from a hook
-or from `agentsmith mode off` → `hook_bypass`. Set `OPS_PORTAL_URL` and `AUDIT_LOG_WRITE_TOKEN` in the
+`hitl_promotion`, `agentsmith tenant onprem-scaffold` →
+`config_change`, and any `agentsmith mode off` under an enterprise policy → `hook_bypass`. Set `OPS_PORTAL_URL` and `AUDIT_LOG_WRITE_TOKEN` in the
 shell environment those commands run in.
 
 **Local fallback:** if `OPS_PORTAL_URL`/`AUDIT_LOG_WRITE_TOKEN` aren't set,
@@ -4021,7 +3969,7 @@ Dataset Commits".
 
 | Task | Command |
 |---|---|
-| Upgrade vendored scripts in a tenant repo | `agentsmith upgrade --to <version>` |
+| Bring a governed repo up to date with this machine's AgentSmith | `agentsmith sync` in the repo — it prints the commit; `agentsmith-sync.yml` proposes the same weekly as a pull request. Move the repo's own CI pins with it |
 | Refresh this machine's framework after pulling it | `./install-ai-stack.sh` from the checkout — rebuilds `~/.agent-framework/.venv` from the lock and reinstalls `agentsmith`, so every command is the pulled version. (Shell functions used to need `--force`, and without it stayed at whatever version was first installed.) |
 | Prove onboarding still works on every stack (and npm/pnpm, pip/uv) | The **Scratch tenants** workflow — weekly, on provisioning changes, or `gh workflow run scratch-tenants.yml`. See [docs/scratch-tenants.md](scratch-tenants.md) |
 | Change code in the framework repo | Design note in `.agent-rfc/designs/` first, review record in `.agent-rfc/reviews/` after, `Design:`/`Review:` trailers on the commit. Enforced by Claude Code hooks, `.githooks/commit-msg` (`git config core.hooksPath .githooks` once per clone) and Self-Test `process-gates`. See [docs/process-gates.md](process-gates.md) |
@@ -4030,7 +3978,6 @@ Dataset Commits".
 | Rotate the audit-log HMAC key | New events sign with the new key; old events will report `verified: false` against it — re-sign history or accept the discontinuity, document which |
 | Purge expired idempotency keys | `agentsmith purge-idempotency` — `idempotency_keys.expires_at` is only read by the lookup, so an expired row stops being *returned* and never stops *existing*: one row per gateway call, kept forever. `IdempotencyStore.purge_expired()` existed the whole time with no caller anywhere, and its docstring named a `verify_system.py` check that does not call it |
 | Prune expired session revocations | `DELETE FROM revoked_sessions WHERE revoked_at < now() - interval '1 day'` — one row per SSO logout, kept forever otherwise. A revocation only matters inside the 8h token TTL, so anything older is dead weight. The instruction previously existed only as a comment inside `portal/db/schema.sql`, which is not somewhere an operator reads |
-| Rotate the org GPG signing key | Re-run `package-hook-bundle.sh` with the new key; redistribute the new public key to MDM before the next deploy |
 | Check unresolved MAJOR/CRITICAL | `agentsmith check`, or `GET /api/audit` / `GET /api/tenants` on the Ops Portal |
 | Remove the framework from a machine | `agentsmith uninstall` |
 
@@ -4045,11 +3992,11 @@ In dependency order — tenants first, shared infra second, machine last.
 **Pause vs. remove (machine):**
 
 ```bash
-agentsmith mode off          # mutes all hooks machine-wide; unlinks init.templateDir on a developer
-                             # install; refused or break-glass-gated under an org policy
-agentsmith uninstall         # restores the previous templateDir, removes the agentsmith link and any
+agentsmith mode off          # records the machine as disabled; refused or break-glass-gated under an
+                             # org policy. (No machine-wide hook exists to mute since 3.0.0.)
+agentsmith uninstall         # removes the agentsmith link and any
                              # legacy shell-profile block, asks first
-agentsmith uninstall --purge # …and deletes ~/.agent-framework and ~/.git_templates
+agentsmith uninstall --purge # …and deletes ~/.agent-framework
 ```
 
 **Retire a tenant:**
@@ -4107,45 +4054,23 @@ generated configs/fixtures, leaves your source untouched.
 Optional governance layer (docs/DESIGN.md › Enterprise Install and Compliance Pack). Full detail:
 [enterprise/README.md](../enterprise/README.md).
 
-### Generate an org signing key (once)
+### Distribute the provider and the org policy
 
-```bash
-gpg --full-generate-key
-gpg --armor --export it-sec@example.com > org-public-key.asc   # distribute to MDM
-```
-
-### Package and sign the hook bundle
-
-```bash
-# On a machine with hooks already installed:
-./enterprise/package-hook-bundle.sh 1.0.0 \
-  --gpg-key it-sec@example.com \
-  --org-policy ./our-org-policy.yaml \
-  --out ./dist
-```
-
-Produces `agenticframework-hooks-1.0.0.tar.gz` + `.sig`,
-`agenticframework-org.yaml`, `mdm-deploy-hooks.sh`.
-
-### MDM deploys to every managed machine
-
-```bash
-./mdm-deploy-hooks.sh 1.0.0 --org-pubkey ./org-public-key.asc
-```
-
-This verifies the GPG signature **before** extracting anything — a
-tampered or unsigned bundle is refused, not installed. Sets
-`git config --global init.templateDir`, installs
-`~/.agent-framework/agenticframework-org.yaml`.
+IT distributes `install-ai-stack.sh` (the provider) and the org policy
+(`~/.agent-framework/agenticframework-org.yaml`; an example is in `enterprise/`) through its own
+MDM. The signed hook bundle (`package-hook-bundle.sh`, `mdm-deploy-hooks.sh`) left in 3.0.0 with the
+machine-wide git hooks it shipped: a repository is governed by the gate it declares, through its own
+`.githooks`, and the commit checks the policy turns on (an `RFC-NNN` per commit, an RFC under
+`.agent-rfc/`, no direct `cost_router` import) are made by that gate. A signed provider-and-policy
+bundle is on the backlog.
 
 ### Bypass policy enforcement
 
-Once the org policy is installed, `hooks.bypass_policy` is enforced by the git
-hooks themselves (a commit or checkout run with `DISABLE_AI_STACK=true`, or on a
-machine whose mode is `disabled`) and by `agentsmith mode off` — one decision,
-`runtime/machine/policy.py`, which the hooks reach via
-`agentsmith hooks bypass-check`. A refusal, or a check that cannot run, leaves
-the hook enforcing:
+Once the org policy is installed, `hooks.bypass_policy` decides whether `agentsmith mode off` may
+record the machine as disabled — one decision, `runtime/machine/policy.py`, which
+`agentsmith hooks bypass-check` also asks. A repository's gate has no bypass switch: a commit made
+with `--no-verify` is caught by the sweep and by CI. A refusal, or a check that cannot run, leaves
+the mode unchanged:
 
 | Policy | A requested bypass |
 |---|---|
@@ -4164,7 +4089,7 @@ expired token is refused exactly like a missing one. If
 cannot be validated and is refused outright, regardless of what token is
 supplied.
 
-Every attempt (granted or denied) is audit-logged as `hook_bypass` —
+Every `mode off` attempt (granted or denied) is audit-logged as `hook_bypass` —
 best-effort to the Ops Portal when configured, falling back to
 `~/.agent-framework/local-audit-fallback.log` otherwise so a bypass attempt
 is never silently unrecorded (see the Monitor in Production section, "Audit log").
@@ -4175,11 +4100,10 @@ is never silently unrecorded (see the Monitor in Production section, "Audit log"
 agentsmith uninstall
 ```
 
-Restores `git init.templateDir` to its value **before** AgentSmith
-was installed (not just unset), removes the shell-rc block surgically
-(your own customizations before/after it are untouched), warns if an
-enterprise `bypass_policy: disabled` policy is present, prompts before
-removing `~/.agent-framework` / `~/.git_templates`.
+Restores `git init.templateDir` only if an install before 3.0.0 left it pointing at AgentSmith's
+hooks, removes the shell-rc block surgically (your own customizations before/after it are
+untouched), warns if an enterprise `bypass_policy: disabled` policy is present, and prompts before
+removing `~/.agent-framework` (with `--purge`).
 
 ---
 
@@ -4200,10 +4124,6 @@ portal intentionally refuses to boot half-configured.
 
 **Widget shows "invalid or revoked token"** — the token was never minted,
 was revoked, or you're pointing `portal-url` at the wrong portal instance.
-
-**`mdm-deploy-hooks.sh` refuses with "BAD signature"** — the bundle was
-modified after signing, or you're verifying against the wrong public key.
-Re-package from a clean checkout; never patch a signed tarball.
 
 **`trigger_workflow.py` fails with "Workflow execution is already running"** — a
 previous run failed mid-flight and its execution record was not cleaned up.

@@ -184,7 +184,7 @@ def _templates_dir() -> Optional[Path]:
 
     An installed `agentsmith` resolves to the same directory either way: there
     `__file__` is already under ~/.agent-framework. The fallback is for a
-    vendored tenant, whose `runtime/` has no `workflow-templates/` beside it.
+    package install of the runtime, which has no `workflow-templates/` beside it.
     """
     for candidate in (
         Path(__file__).resolve().parent.parent / "workflow-templates",
@@ -249,9 +249,23 @@ WORKFLOWS = (
     "eval-scorecard.yml",
     "eval-fairness.yml",
     "eval-hallucination.yml",
-    "eval-ttft-live.yml",
     "eval-security.yml",
 )
+
+
+def render_workflow(text: str, tenant_id: str, setup: str) -> str:
+    """A workflow template as this repository runs it. The templates ask the
+    provider only through its pinned setup step and the launcher, and reference
+    its composite actions at the same release — never a copy in the tenant
+    (.agent-rfc/designs/vendoring-retired.md). `{{PROVIDER_SETUP}}` is the
+    setup the repository declares (another platform's, if it names one), and
+    `{{AGENTSMITH_REF}}` the AgentSmith release the actions are taken from."""
+    from runtime.adopt import SETUP_ACTION
+
+    ref = setup.split("@", 1)[1] if setup.startswith(SETUP_ACTION + "@") else "v" + _default_framework_version()
+    return (text.replace("{{TENANT_ID}}", tenant_id)
+                .replace("{{PROVIDER_SETUP}}", setup)
+                .replace("{{AGENTSMITH_REF}}", ref))
 
 
 def gate_ides_module(framework: Optional[Path] = None):
@@ -259,8 +273,8 @@ def gate_ides_module(framework: Optional[Path] = None):
     resolved.
 
     Resolved through the framework directory rather than imported at module
-    scope, because `runtime/` ships vendored into tenants where `scripts/` sits
-    elsewhere. None where it is unresolvable, which is how callers tell "nothing
+    scope, because the runtime also installs as a package (`agentsmith-runtime`),
+    where `scripts/` is not beside it. None where it is unresolvable, which is how callers tell "nothing
     to check against" from "nothing chosen"; both readers below fail open, since
     a missing registry must not refuse a scaffold.
     """
@@ -288,8 +302,13 @@ def init_tenant(
     agentic: bool = False,
     ides: Optional[Sequence[str]] = None,
     rfc: Optional[dict] = None,
+    framework_ref: Optional[str] = None,
 ) -> list[str]:
     """Scaffold a tenant. Returns the paths written, relative to `root`.
+
+    `framework_ref` is the AgentSmith release (or commit) the repository's CI
+    takes the provider from — this install's release by default, as for
+    `tenant adopt`.
 
     `architecture` is a structural style (or a common name for one — `clean`,
     `n-tier`, …) and `agentic` adds the agent layer on top of it
@@ -363,6 +382,22 @@ def init_tenant(
         cfg.write_text(tenant_yaml(tenant_id, isolation=isolation, ides=ides))
         written.append(".agenticframework/tenant.yaml")
 
+    # Declared before any workflow is written: every workflow asks the provider
+    # through this setup, and the hooks and CI ask the declaration who governs
+    # (contract/gate/v3). A declaration the repository already has is kept.
+    from runtime.adopt import PROVIDERS, provider_workflows, providers_declaration, setup_reference, \
+        workflow_setup
+
+    if not (root / PROVIDERS).exists():
+        (root / PROVIDERS).parent.mkdir(parents=True, exist_ok=True)
+        # A repository this just created exports no telemetry and has no eval
+        # data of its own yet, and says so: emitter "none", and judged suites
+        # that warn while they cannot be judged (providers_declaration).
+        (root / PROVIDERS).write_text(providers_declaration(setup=setup_reference(framework_ref), emitter="none",
+                                                            new_repository=True), encoding="utf-8")
+        written.append(PROVIDERS)
+    setup = workflow_setup(root, framework_ref)
+
     templates = _templates_dir()
     if templates is None:
         print(
@@ -383,48 +418,57 @@ def init_tenant(
         if dest.exists() and not force:
             print(f"  = .github/workflows/{name} exists — left untouched")
             continue
-        # Same substitution hooks/post-checkout makes; copied verbatim, the
-        # workflows carried a literal `{{TENANT_ID}}`.
-        dest.write_text(src.read_text(encoding="utf-8").replace("{{TENANT_ID}}", tenant_id), encoding="utf-8")
+        dest.write_text(render_workflow(src.read_text(encoding="utf-8"), tenant_id, setup), encoding="utf-8")
         written.append(f".github/workflows/{name}")
+    framework = _framework_dir()
+    if framework is not None:
+        for workflow, text in provider_workflows(root, framework, setup).items():
+            (root / workflow).write_text(text, encoding="utf-8")
+            written.append(workflow)
 
-    written += _copy_composite_actions(root)
     written += _provision_governance(
         root, force=force,
         design_md=architectures.render_design_md(tenant_id, stack, style, agentic),
         session_start=architectures.session_start_line(style, agentic),
         prior=prior,
     )
-    written += _vendor(root, prior)
+    written += seed_tenant_data(root, _framework_dir())
     written += write_scaffold_records(root, tenant_id, stack, style, agentic, written, force, rfc=rfc)
     return written
 
 
-def _all_files(root: Path) -> set[str]:
-    return {p.relative_to(root).as_posix() for p in root.rglob("*")
-            if p.is_file() and ".git" not in p.relative_to(root).parts[:1]}
+# The four documents a tenant's security pack is graded on, seeded once as
+# placeholders and never overwritten — the security port fails SEC-RISK-001 and
+# SEC-AGENCY-001 until the tenant writes its own. Until 3.0.0 the machine's
+# post-checkout seeded these; `tenant init` does now
+# (.agent-rfc/designs/vendoring-retired.md). The framework's base eval cases are
+# NOT seeded: they carry no `actual_output`, so they could never be the
+# repository's dataset under contract/evals/v1.
+SECURITY_TEMPLATES = "fixtures/security/templates"
 
 
-def _vendor(root: Path, prior: Optional[Path]) -> list[str]:
-    """Run the machine's post-checkout once, before the manifest is written, so
-    the framework code it vendors is part of the scaffold the manifest vouches
-    for (.agent-rfc/designs/tenant-adopt.md). Vendoring stays the hook's job —
-    this only makes it happen before the first commit instead of never.
-    Returns the files it added."""
-    import subprocess as sp
-
-    from runtime.adopt import is_machine_hook
-
-    hook = prior / "post-checkout" if prior is not None else None
-    # The machine's hook only: the manifest vouches for what it writes, and
-    # AgentSmith can vouch for its own vendoring, not for another tool's output.
-    if hook is None or not os.access(hook, os.X_OK) or not is_machine_hook(hook):
+def seed_tenant_data(root: Path, framework: Optional[Path]) -> list[str]:
+    """Seed what is missing; returns the paths written."""
+    if framework is None:
         return []
-    before = _all_files(root)
-    done = sp.run([str(hook), "0" * 40, "0" * 40, "1"], cwd=root, capture_output=True, text=True, check=False)
-    if done.returncode != 0:
-        print(f"  ! {hook} failed while vendoring: {(done.stderr or done.stdout).strip()[-300:]}", file=sys.stderr)
-    return sorted(_all_files(root) - before)
+    templates = framework / SECURITY_TEMPLATES
+    pairs = [(f"{SECURITY_TEMPLATES}/{t.name}", f".agent-rfc/security/{t.name}")
+             for t in sorted(templates.glob("*.yaml"))] if templates.is_dir() else []
+    written = []
+    for source, dest in pairs:
+        src, target = framework / source, root / dest
+        if src.is_file() and not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(src, target)
+            written.append(dest)
+    graded = {".agent-rfc/security/risk_register.yaml": "SEC-RISK-001",
+              ".agent-rfc/security/agency_manifest.yaml": "SEC-AGENCY-001"}
+    placeholders = [path for path in written if path in graded]
+    if placeholders:
+        print(f"  ! {', '.join(placeholders)} {'are' if len(placeholders) > 1 else 'is a'} "
+              f"PLACEHOLDER{'S' if len(placeholders) > 1 else ''} — the security port fails "
+              f"{' and '.join(graded[p] for p in placeholders)} until it says what is yours")
+    return written
 
 
 SCAFFOLD_DESIGN = ".agent-rfc/designs/scaffold.md"
@@ -482,9 +526,9 @@ def write_scaffold_records(root: Path, tenant_id: str, stack: str, style: Option
         written = [*written, SCAFFOLD_RFC]
 
     files = _scaffold_files(root, written)
-    # A re-run skips what exists and is not its to replace (the composite
-    # actions, vendored code); an earlier manifest vouched for those, and still
-    # does while each is byte-for-byte what it recorded.
+    # A re-run skips what exists and is not its to replace; an earlier manifest
+    # vouched for those, and still does while each is byte-for-byte what it
+    # recorded.
     manifest_path = root / SCAFFOLD_MANIFEST
     earlier: dict = {}
     if manifest_path.is_file():
@@ -625,11 +669,11 @@ def missing_gate_hooks(framework: Path, raising: bool = False) -> list[str]:
     return missing
 
 
-def install_gate_hooks(root: Path, framework: Path, prior: Optional[Path] = None, force: bool = False,
-                       provisioning: bool = True) -> list[str]:
+def install_gate_hooks(root: Path, framework: Path, prior: Optional[Path] = None, force: bool = False) -> list[str]:
     """The gate's hooks, copied in and armed; `prior`'s hooks chained behind
-    them (runtime/adopt.py chain_hooks — `provisioning=False` leaves out the
-    machine's post-checkout and post-commit). Returns the paths written."""
+    them (runtime/adopt.py chain_hooks), never an old install's provisioning
+    post-checkout or post-commit (.agent-rfc/designs/vendoring-retired.md).
+    Returns the paths written."""
     import subprocess as sp
 
     missing_gate_hooks(framework, raising=True)
@@ -650,7 +694,7 @@ def install_gate_hooks(root: Path, framework: Path, prior: Optional[Path] = None
     if prior is not None:
         from runtime.adopt import chain_hooks
 
-        written += chain_hooks(root, prior, provisioning=provisioning)
+        written += chain_hooks(root, prior)
     return written
 
 
@@ -723,56 +767,6 @@ def _provision_governance(root: Path, force: bool = False, design_md: Optional[s
         print("  = docs/DESIGN.md exists — left untouched; its architecture section is not written")
     put("docs/DESIGN.md", design_md or "# Design\n\nThe living picture of this system.\n")
     put("docs/REVIEW_LOG.md", "# Review log\n\nAppend-only: one section per change.\n")
-    return written
-
-
-def _actions_dir() -> Optional[Path]:
-    """Composite actions the cd-* workflows call as `./.github/actions/<name>`.
-
-    This file's location first, then the machine install — the same order, for
-    the same reason, as `_templates_dir`, and it was wrong here too. On the
-    machine this was found on, ~/.agent-framework/github-actions held THREE of
-    the five actions: `install-python-deps` and `rollback-notify` were added to
-    the checkout and never re-installed. A tenant adopted there got workflows
-    calling two actions that were not copied in, which fails at the first
-    `uses:` with "Can't find 'action.yml'" — a whole-workflow rejection, not a
-    step failure. CI never saw it because the scratch tenants run
-    install-ai-stack.sh first, so their install is never stale.
-    """
-    for candidate in (
-        Path(__file__).resolve().parent.parent / ".github" / "actions",
-        Path.home() / ".agent-framework" / "github-actions",
-    ):
-        if candidate.is_dir():
-            return candidate
-    return None
-
-
-def _copy_composite_actions(root: Path) -> list[str]:
-    """`uses: ./.github/actions/<name>` resolves inside the TENANT's repo, so the
-    actions must be copied in beside the workflows that call them.
-
-    hooks/post-checkout always did this; `tenant init` wrote cd-staging.yml and
-    cd-production.yml without it, and both fail at their first `uses:` with
-    "Can't find 'action.yml'". Per action, never overwriting — a tenant may
-    have adjusted one (KYC Sentinel diffs its gcp-auth against the framework's
-    in CI precisely because they are copies).
-    """
-    source = _actions_dir()
-    if source is None:
-        print(
-            "  ! no composite actions found — cd-staging.yml/cd-production.yml will fail "
-            "at ./.github/actions/*. Re-run install-ai-stack.sh, or use a checkout.",
-            file=sys.stderr,
-        )
-        return []
-    written = []
-    for action in sorted(p for p in source.iterdir() if p.is_dir()):
-        dest = root / ".github" / "actions" / action.name
-        if dest.exists():
-            continue
-        shutil.copytree(action, dest)
-        written.append(f".github/actions/{action.name}")
     return written
 
 
@@ -868,6 +862,7 @@ def _scaffold_tenant(args: argparse.Namespace, root: Path, intake_rfc: Optional[
             agentic=args.agentic,
             ides=args.ide,
             rfc=intake_rfc,
+            framework_ref=args.framework_ref,
         )
     except FrameworkRootError as exc:
         print(f"agentsmith: refusing to scaffold here.\n{exc}", file=sys.stderr)
@@ -908,20 +903,6 @@ def _scaffold_tenant(args: argparse.Namespace, root: Path, intake_rfc: Optional[
             os.environ.get("AGENT_OWNER_ID") or "unknown",
             args.tenant_id,
             {"stack": args.stack, "isolation": args.isolation},
-        )
-    # The generated workflows run `python3 scripts/*.py` from THIS repo, and
-    # those import runtime.* and read fixtures/. Vendoring them is
-    # hooks/post-checkout's job — one implementation, not a second copy here
-    # to drift — and `init_tenant` ran it when this repository had it. When it
-    # did not, say plainly that the scaffold is not usable yet, and how to fix
-    # it BEFORE the first commit: vendored after it, the code needs a review.
-    if not (root / "scripts" / "run-security-checks.py").exists():
-        print(
-            "\nNot done yet: scripts/, runtime/ and fixtures/ are not vendored, and every "
-            "scripts/*.py step in the workflows above fails until they are.\n"
-            "This repository's hooks do not include AgentSmith's post-checkout, which vendors them. "
-            "Before the first commit, run `git init` here (it adds the machine's hooks and changes "
-            f"nothing else), then re-run `agentsmith tenant init {args.tenant_id} ... --force`."
         )
     if args.isolation == "dedicated":
         print("Apply runtime/k8s/dedicated-tenant/ to provision its own worker pool.")
@@ -1033,10 +1014,11 @@ def _cmd_gate(args: argparse.Namespace) -> int:
 
 
 def _gate_kg(scripts: Path, verb: Optional[str], base: Optional[str]) -> int:
-    """`agentsmith gate kg build|impact` — contract 3's knowledge-graph verbs:
-    build the repository's graph, or name a change's review scope as JSON
-    (contract/gate/v3/protocol.md). `impact` is the commit being made unless
-    `--base` names a ref — the scope the commit gate checks a review against."""
+    """`agentsmith gate kg build|impact|check` — contract 3's knowledge-graph
+    verbs: build the repository's graph, name a change's review scope as JSON,
+    or fail when the committed graph is stale (contract/gate/v3/protocol.md).
+    `impact` is the commit being made unless `--base` names a ref — the scope
+    the commit gate checks a review against."""
     import subprocess as sp
 
     if verb == "build":
@@ -1045,7 +1027,9 @@ def _gate_kg(scripts: Path, verb: Optional[str], base: Optional[str]) -> int:
         scope = ["--base", base] if base else ["--staged"]
         return sp.run([sys.executable, str(scripts / "local_knowledge_graph.py"), "--impact", "--json", *scope],
                       check=False).returncode
-    print("agentsmith gate kg: build | impact [--staged | --base REF]", file=sys.stderr)
+    if verb == "check":
+        return sp.run([sys.executable, str(scripts / "verify_system.py"), "--check-kg-fresh"], check=False).returncode
+    print("agentsmith gate kg: build | impact [--staged | --base REF] | check", file=sys.stderr)
     return 2
 
 
@@ -1346,7 +1330,7 @@ def _cmd_sync(args: argparse.Namespace) -> int:
         print(f"agentsmith: {exc}", file=sys.stderr)
         return 2
     print(describe(plan))
-    if not plan.stale and not plan.added and not plan.vendored:
+    if not plan.stale and not plan.added:
         print("\nNothing to do.")
         return 0
     if not args.yes:
@@ -1454,12 +1438,6 @@ def _cmd_tenant_onprem(args: argparse.Namespace) -> int:
     return ops.onprem_scaffold()
 
 
-def _cmd_upgrade(args: argparse.Namespace) -> int:
-    from runtime.machine.upgrade import upgrade
-
-    return upgrade(Path.cwd(), args.to or _default_framework_version())
-
-
 def _cmd_scrub(args: argparse.Namespace) -> int:
     from runtime.machine import ops
 
@@ -1494,8 +1472,9 @@ def _cmd_gates_run(args: argparse.Namespace) -> int:
 
 
 def _cmd_hooks_bypass_check(args: argparse.Namespace) -> int:
-    """Exit 0 when the hooks may be bypassed. Called by the four git hooks when a
-    bypass is requested and an org policy file exists — see runtime/machine/policy.py."""
+    """Exit 0 when the org policy allows a bypass — the question `mode off` asks.
+    The four machine-wide git hooks that called it retired in 3.0.0; see
+    runtime/machine/policy.py."""
     from runtime.machine.policy import bypass_decision
 
     decision = bypass_decision()
@@ -1592,6 +1571,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="add the agent layer: agents, allowlisted tools, the model gateway, durable workflows, evals",
     )
     init.add_argument("--root", default=None, help="target repo (default: cwd)")
+    init.add_argument("--framework-ref", default=None,
+                      help="the AgentSmith release or commit CI takes the provider from (default: this install's)")
     init.add_argument(
         "--ide",
         action="append",
@@ -1630,7 +1611,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     gate = sub.add_parser("gate", help="answer a gate event (contract/gate/v3 — the neutral profile)")
     gate.add_argument("event", choices=("session-start", "pre-edit", "stop", "ci", "commit", "push", "kg"))
-    gate.add_argument("verb", nargs="?", choices=("build", "impact"), help="for kg: build or impact")
+    gate.add_argument("verb", nargs="?", choices=("build", "impact", "check"),
+                      help="for kg: build, impact, or check (fails on a stale committed graph)")
     gate.add_argument("--staged", action="store_true", help="kg impact: the commit being made (the default)")
     gate.add_argument("--base", default=None, metavar="REF", help="kg impact: diff the working tree against REF")
     gate.add_argument("--ide", default=None,
@@ -1730,9 +1712,6 @@ def build_parser() -> argparse.ArgumentParser:
     promote.add_argument("output")
     promote.set_defaults(func=_cmd_promote)
 
-    upgrade = sub.add_parser("upgrade", help="refresh this vendored tenant's framework copy and commit it")
-    upgrade.add_argument("--to", default=None, help="version to declare (default: the installed release)")
-    upgrade.set_defaults(func=_cmd_upgrade)
 
     scrub = sub.add_parser("scrub", help="delete generated IDE-rule files under a directory, after listing them")
     scrub.add_argument("directory", nargs="?", default=None)
@@ -1771,12 +1750,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     gates_run.set_defaults(func=_cmd_gates_run)
 
-    hooks = sub.add_parser("hooks", help="internal: called by the git hooks").add_subparsers(
+    hooks = sub.add_parser("hooks", help="internal: the org bypass policy's decision").add_subparsers(
         dest="hooks_command", required=True
     )
-    hooks.add_parser("bypass-check", help="exit 0 when the org policy allows a hook bypass").set_defaults(
-        func=_cmd_hooks_bypass_check
-    )
+    hooks.add_parser(
+        "bypass-check", help="exit 0 when the org policy allows a bypass (`mode off` asks the same)"
+    ).set_defaults(func=_cmd_hooks_bypass_check)
 
     purge = sub.add_parser(
         "purge-idempotency", help="delete idempotency rows past their TTL"

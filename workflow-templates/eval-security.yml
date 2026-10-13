@@ -1,51 +1,31 @@
-name: Security Harness
+name: Security (declared provider)
+
+# This repository's security is checked by the security provider
+# .agenticframework/providers.json declares (contract/security/v1), installed by
+# the provider's own CI setup step at a pinned release and asked through the
+# launcher: a row per control for this repository's own security pack
+# (.agent-rfc/security/), the posture .agenticframework/tenant.yaml declares —
+# never this job's environment — and its telemetry wire through the emitter the
+# security port declares. Controls that test the provider's own code are the
+# provider's CI's, not run here. Only a pass passes; there is no non-strict
+# mode. The evidence pack is uploaded either way.
+
 on:
   workflow_call:
-    inputs:
-      strict:
-        type: boolean
-        default: false
+
 jobs:
   security:
     runs-on: ubuntu-latest
-    # Default optional so day-one tenant CI with strict:true does not fail
-    # SEC-MOD-001; regulated tenants set MODERATION_HOOK=required (+ register).
-    env:
-      MODERATION_HOOK: ${{ vars.MODERATION_HOOK || 'optional' }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      # Full requirements, not a minimal four. `--mode ci --strict` below
-      # delegates several controls straight to existing suites (SEC-HITL-001
-      # -> runtime/test/test_hitl_gate.py, SEC-BUDGET-001 ->
-      # runtime/test/test_llm_gateway_budget.py, SEC-SELF-001 ->
-      # runtime/test/test_self_correction.py — see
-      # security/runners/delegating.py), which need real deps to import. With
-      # the minimal set they fail on a missing dev dependency and report it as
-      # a compliance violation — a hollow job is not a light one.
-      # The same install ci-python-fastapi.yml uses (requirements.txt, else
-      # uv.lock; a warning for anything else). It used to be a copy of that
-      # step's guard, and missed uv when only the original learned it.
-      - uses: ./.github/actions/install-python-deps
-      # httpx + tenacity are the runtime's own core dependencies (pyproject.toml
-      # `dependencies`). Without them SEC-BUDGET-001 failed in every tenant
-      # with no requirements.txt — AqlaarTeleologyStudio: three of
-      # test_llm_gateway_budget.py's retry tests, `No module named 'httpx'`,
-      # reported as a budget-control violation.
-      - run: pip install pytest pytest-asyncio pyyaml pydantic jsonschema "httpx>=0.25,<1.0" "tenacity>=8.2,<10.0"
-      # NOT `pytest scripts/test/test_security_*.py` (removed — every one of
-      # those 8 files is framework-internal: several read
-      # fixtures/security/control_registry.json off the FRAMEWORK's own repo
-      # root, one runs hooks/post-checkout directly, and the rest are unit
-      # tests of the runners' own logic against synthetic fixtures rather
-      # than this tenant's actual repo — see AqlaarTeleologyStudio's
-      # onboarding discussion. `--mode ci --strict` below is the real,
-      # tenant-facing check: it reads THIS repo's own .agent-rfc/security/.
-      - run: python3 scripts/run-security-checks.py --mode ci ${{ inputs.strict && '--strict' || '' }}
-      - run: python3 scripts/run-security-checks.py --mode smoke --evidence-pack ./security-evidence
-      - uses: actions/upload-artifact@v4
+      - uses: "{{PROVIDER_SETUP}}"
+      - name: "Security: the declared provider (contract/security/v1)"
+        run: bash .githooks/process-gate security check --evidence-dir security-evidence
+      - name: "Upload security evidence"
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: security-evidence
           path: security-evidence/
+          if-no-files-found: ignore

@@ -197,7 +197,7 @@ jobs:
         run: |
           ENVIRONMENT=staging python3 scripts/verify_system.py --check-redaction
           ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
-      - name: "Hook opt-in / enterprise RFC gate"
+      - name: "Commit guardrails / enterprise RFC checks, through the gate"
         # agentsmith:gate
         run: python3 scripts/verify_system.py --check-hooks
       - name: "verify_system.py --check-kg (Knowledge Graph, docs/PRODUCT_ARCHIVE.md P10a)"

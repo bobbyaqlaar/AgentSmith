@@ -158,7 +158,7 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | `SEC-EVAL-002` | LLM09 | MEASURE 2.11 | — | Theme 8 | **Partial** | Shared | Fairness suite + pair parity | `--suite fairness`; extend tenant pairs |
 | `SEC-EVAL-003` | LLM09 | MEASURE 2.6 | AML.T0024 | Theme 7 | **Met** | Shared | Hallucination rate gate | `--suite hallucination`; rate ≤ threshold |
 | `SEC-BUDGET-001` | LLM04 | MANAGE 2.4 | AML.T0034 | Theme 11 | **Met** | Framework | Budget caps, degrade ladder, circuit breaker | `test_llm_gateway_budget.py` + cap breach simulation |
-| `SEC-CHANGE-001` | — | GOVERN 1.6 | — | Theme 10 | **Met** | Shared | Eval gates, hooks, RFC enforcement | CI workflow presence + hook dry-run |
+| `SEC-CHANGE-001` | — | GOVERN 1.6 | — | Theme 10 | **Met** | Shared | Eval gates, the process gate, RFC enforcement | a declared gate provider; in AgentSmith, commits through the gate's hooks in throwaway repos |
 | `SEC-DLQ-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Met** | Framework | Recoverable step + DLQ; one `dead_letter_envelope()` builder for both producers | `runtime/test/test_dead_letter.py` — envelope keys match `enqueue`, both producers use the builder (AST-checked), flattened shape rejected by name. No Postgres. |
 | `SEC-SELF-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Partial** | Shared | Opt-in `run_with_self_correction` | Unit + workflow tests; not default path |
 | `SEC-GW-001` | LLM07 | MAP 2.3 | AML.T0040 | Theme 4 | **Partial** | Shared | `llm_gateway.py` choke point | Static: tenant activities import gateway, not raw provider |
@@ -185,7 +185,7 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | LLM02 Insecure output handling | `SEC-OUTPUT-001`, `SEC-DLQ-001`, `SEC-SELF-001` | Partial | Pydantic schema gate on all structured LLM outputs in reference apps |
 | LLM03 Training data poisoning | `SEC-RAG-001`, `SEC-CHANGE-001` | Partial | Fixture PR review + poison-doc retrieval test |
 | LLM04 Model DoS | `SEC-BUDGET-001` | Met | Budget + rate tests in CI |
-| LLM05 Supply chain | `SEC-SOV-001`, `SEC-CHANGE-001` | Partial | Model registry attestation + signed enterprise hooks |
+| LLM05 Supply chain | `SEC-SOV-001`, `SEC-CHANGE-001` | Partial | Model registry attestation + the gate a repository declares, pinned to a release |
 | LLM06 Sensitive disclosure | `SEC-PII-001`, `SEC-PII-002` | Partial→Met | Pre + post PII tests mandatory in `--mode ci` |
 | LLM07 Insecure plugin/tool design | `SEC-TOOL-001`, `SEC-GW-001` | Met | Tenant allowlist enforced against registered tools; gateway-only static check now runs |
 | LLM08 Excessive agency | `SEC-HITL-001`, `SEC-AGENCY-001` | Partial | Tenant manifest of gated actions; harness verifies wiring |

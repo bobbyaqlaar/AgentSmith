@@ -1,16 +1,15 @@
 # AgentSmith — Org Policy File (docs/DESIGN.md › Enterprise Install and Compliance Pack, enterprise pack).
 #
-# IT authors this file and includes it alongside the signed hook bundle when
-# packaging a release (see scripts/package-hook-bundle.sh). MDM deploys it
-# to ~/.agent-framework/agenticframework-org.yaml on every managed machine.
-# The git hooks and `agentsmith mode off` read it from there to enforce
-# bypass_policy (runtime/machine/policy.py).
+# IT authors this file and deploys it through its own MDM to
+# ~/.agent-framework/agenticframework-org.yaml on every managed machine
+# (enterprise/README.md). `agentsmith mode off` reads it to enforce
+# bypass_policy (runtime/machine/policy.py), and a repository's gate, while it
+# is present, adds the RFC checks (docs/process-gates.md › commit_guardrails).
 
 hooks:
   version: "1.0.0"
-  # disabled    — every bypass is refused (DISABLE_AI_STACK=true, or
-  #               `agentsmith mode off`); only IT can disable hooks
-  #               (e.g. temporarily relinking init.templateDir by hand).
+  # disabled    — `agentsmith mode off` is refused. (A repository's own gate
+  #               has no bypass to ask about: --no-verify is caught in CI.)
   # break-glass — a bypass is allowed ONLY with a valid AI_BREAK_GLASS_TOKEN
   #               signed with BREAK_GLASS_HMAC_KEY, issued by IT per incident.
   #               Every use (granted or denied) is written to the

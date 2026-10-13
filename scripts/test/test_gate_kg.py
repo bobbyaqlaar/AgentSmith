@@ -318,6 +318,7 @@ def test_the_tenant_template_runs_the_same_freshness_check() -> None:
     """The inline version counted nodes in the committed file and never
     compared them — it could not see a stale graph at all."""
     template = (REPO / "workflow-templates" / "ci-python-fastapi.yml").read_text(encoding="utf-8")
-    assert "verify_system.py --check-kg" in template
-    kg_step = template.split("Validate Knowledge Graph")[1].split("- name:")[0]
+    # Asked of the declared gate provider since 3.0.0, not run from a copy.
+    assert "bash .githooks/process-gate kg check" in template
+    kg_step = template.split("Knowledge Graph is current")[1].split("- name:")[0]
     assert "continue-on-error" not in kg_step, "the graph blocks from G4"

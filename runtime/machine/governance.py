@@ -31,11 +31,14 @@ DESIGNS_DIR = ".agent-rfc/designs"
 
 
 def _candidate_dirs(name: str) -> list[Path]:
-    """Where a vendored framework file can be, most specific first: the repo
-    being worked in, an explicit checkout, the machine install, and finally this
-    module's own checkout — the one that matters when the install is stale."""
+    """Where a framework file can be, most specific first: AgentSmith's own
+    checkout when that is the repo being worked in (never a tenant's copy), an
+    explicit checkout, the machine install, and finally this module's own
+    checkout — the one that matters when the install is stale."""
+    from runtime.cli import looks_like_framework
+
     roots = [
-        Path.cwd(),
+        Path.cwd() if looks_like_framework(Path.cwd()) else None,
         Path(os.environ.get("AGENTSMITH_DIR", "")) if os.environ.get("AGENTSMITH_DIR") else None,
         framework_home(),
         Path(__file__).resolve().parents[2],

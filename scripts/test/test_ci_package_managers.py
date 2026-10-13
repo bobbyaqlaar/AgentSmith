@@ -173,10 +173,12 @@ def test_both_python_callers_install_through_the_one_action():
     """ci-python-fastapi.yml and eval-security.yml each carried a copy of the
     install guard, and only one learned about uv."""
     ci = _steps("ci-python-fastapi.yml")
-    assert any(s.get("uses") == "./.github/actions/install-python-deps" for s in ci)
-    for path in (TEMPLATES / "eval-security.yml", REPO / ".github" / "workflows" / "eval-security.yml"):
-        steps = yaml.safe_load(path.read_text(encoding="utf-8"))["jobs"]["security"]["steps"]
-        assert any(s.get("uses") == "./.github/actions/install-python-deps" for s in steps), path
+    # A tenant references the action at the provider (3.0.0, never a copy);
+    # AgentSmith's own security job uses its own.
+    assert any(s.get("uses") == "bobbyaqlaar/AgentSmith/.github/actions/install-python-deps@{{AGENTSMITH_REF}}"
+               for s in ci)
+    own = yaml.safe_load((REPO / ".github" / "workflows" / "eval-security.yml").read_text(encoding="utf-8"))
+    assert any(s.get("uses") == "./.github/actions/install-python-deps" for s in own["jobs"]["security"]["steps"])
     for text in (s.get("run", "") for s in ci):
         assert "requirements.txt" not in text and "uv export" not in text, "a second copy of the install"
 
@@ -233,23 +235,20 @@ def test_a_repo_with_no_python_manifest_gets_no_warning(tmp_path, no_real_pip_up
     assert calls == [] and "::warning" not in result.stdout
 
 
-# ── The hook's test command and the CI install agree on the tool ─────────────
+# ── The agent rules' test command and the CI install agree on the tool ──────
 #
-# The same lockfile precedence lives in bash (hooks/post-checkout, which writes
-# the agent rules' test command) and in the CI templates. Neither can import
-# the other, so this RUNS both sides over the same projects.
-
-HOOK = REPO / "hooks" / "post-checkout"
+# The same lockfile precedence lives in the rules renderer (generate-ide-config.py,
+# which writes the agent rules' test command) and in the CI templates' shell.
+# Neither can import the other, so this RUNS both sides over the same projects.
 
 
-def _hook_test_cmd(project: Path) -> str:
-    text = HOOK.read_text(encoding="utf-8")
-    block = text[text.index("# ── Detect stack"):text.index('echo "🔧 AgentSmith: Detected stack')]
-    result = subprocess.run(
-        ["bash", "-c", f'REPO_ROOT="{project}"\n{block}\nprintf "%s" "$TEST_CMD"'],
-        capture_output=True, text=True, check=True,
-    )
-    return result.stdout
+def _rules_test_cmd(project: Path) -> str:
+    import sys
+
+    sys.path.insert(0, str(REPO / "scripts"))
+    from _shared import load_script
+
+    return load_script("generate-ide-config")._detect_stack(project)[1]
 
 
 def _project(tmp_path: Path, files: list[str]) -> Path:
@@ -273,21 +272,20 @@ def _project(tmp_path: Path, files: list[str]) -> Path:
         (["package.json"], "no lockfile"),
     ],
 )
-def test_hook_and_ts_template_pick_the_same_package_manager(tmp_path, files, tool):
+def test_the_rules_and_ts_template_pick_the_same_package_manager(tmp_path, files, tool):
     project = _project(tmp_path, files)
-    hook = _hook_test_cmd(project)
+    rules = _rules_test_cmd(project)
     result, outputs = Runner(project, tmp_path).run(_step("ci-ts-react.yml", "Detect package manager")["run"])
     if tool is None:
         assert result.returncode == 1, "the template must refuse an unsupported lockfile"
-        assert hook.split()[1] in {"yarn", "bun"}, f"the hook claims {hook!r} for a {files[-1]} project"
     elif tool == "no lockfile":
         # The one deliberate divergence: CI refuses to install unpinned
         # dependencies, while the agent rules still say how to run tests.
         assert result.returncode == 1
-        assert hook == "CI=true npm test"
+        assert rules == "CI=true npm test"
     else:
         assert outputs["pm"] == tool
-        assert hook == f"CI=true {tool} test"
+        assert rules == f"CI=true {tool} test"
 
 
 @pytest.mark.parametrize(
@@ -299,13 +297,13 @@ def test_hook_and_ts_template_pick_the_same_package_manager(tmp_path, files, too
         (["pyproject.toml"], False),
     ],
 )
-def test_hook_and_python_install_agree_on_uv(tmp_path, no_real_pip_upgrade, files, uses_uv):
+def test_the_rules_and_python_install_agree_on_uv(tmp_path, no_real_pip_upgrade, files, uses_uv):
     project = _project(tmp_path, files)
     runner = Runner(project, tmp_path)
     result, _ = runner.run(_action_script())
     assert result.returncode == 0, result.stdout + result.stderr
     assert any(c.startswith("uv ") for c in runner.calls()) is uses_uv
-    assert (_hook_test_cmd(project) == "uv run pytest") is uses_uv
+    assert (_rules_test_cmd(project) == "uv run pytest") is uses_uv
 
 
 def test_the_pnpm_fallback_is_the_version_the_scratch_tenant_proves():

@@ -83,6 +83,77 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Removed — vendoring (C9, `vendoring-retired`) — **breaking**
+
+A tenant holds no copy of AgentSmith. It is governed by the providers it declares, and its CI
+installs them through the pinned setup step. This is the last slice of the governance contracts.
+
+- **No machine-wide git hooks.**
+  - The installer no longer sets git's global `init.templateDir`. It puts back the value it
+    recorded and removes its own four templates from `~/.git_templates/hooks`.
+  - `hooks/` (pre-commit, commit-msg, post-commit, post-checkout) is gone, and with it the
+    post-commit auto-tag and push. What pre-commit and commit-msg checked is the gate's
+    commit check (Added, below).
+  - `agentsmith mode` no longer re-links `init.templateDir`. `agentsmith uninstall` restores it
+    only while it still points at AgentSmith's templates.
+  - **A clone made before 3.0.0 keeps the copies git made into its `.git/hooks`**, and the
+    installer cannot find them. Under the gates they are never chained; in a clone that never
+    adopted them, `post-commit` still tags and pushes. Remove them: AgentSmith's start their
+    second line with `# AgentSmith:`.
+- **No vendoring into a repository.**
+  - `tenant init` no longer runs the machine's post-checkout or copies composite actions into
+    `.github/actions/`.
+  - `agentsmith sync` no longer refreshes a vendored `scripts/`, `runtime/` or `fixtures/`. It
+    names them instead.
+  - `agentsmith upgrade` and the `ai-stack-upgrade` alias are removed.
+- **No tenant copy is ever run.** The launcher runs `<repo>/scripts/process_gate.py` only in
+  AgentSmith's own checkout, and `agentsmith doctor` and the other machine commands find
+  scripts in the install.
+- **The Enterprise Pack's hook bundle** (`package-hook-bundle.sh`, `mdm-deploy-hooks.sh`) is gone.
+  The org policy stays, read by the provider.
+- **Workflow templates `eval-ttft-live.yml` and `shadow-eval.yml`** are gone; they had no port.
+  The release no longer ships `hooks.tar.gz` or `github-actions.tar.gz`.
+
+### Changed — the workflow templates ask the ports
+
+- Every template asks AgentSmith only through `{{PROVIDER_SETUP}}`, the setup step the repository
+  declares, and the launcher:
+  - `evals run --suite …`;
+  - `security check`, and `security redaction --environment …`;
+  - the CD smoke runs `evals run --suite golden --fail-below 0.75|0.80`.
+- Composite actions are referenced at the provider, `bobbyaqlaar/AgentSmith/.github/actions/<name>@<ref>`,
+  never copied.
+- The CI templates' knowledge-graph step asks the provider, `process-gate kg check` (Added,
+  below), instead of running a copy of `verify_system`. They drop the rule-file check (the gates
+  workflow runs it) and the informational `verify_system` step. The security job drops `strict`.
+- `tenant init` now:
+  - declares the repository's providers (`providers.json`);
+  - writes the gates and sync workflows, as `tenant adopt` does;
+  - takes `--framework-ref`;
+  - seeds the security pack's placeholders itself, never overwriting, and no eval dataset: the
+    framework's base cases carry no `actual_output`, so they could never be the repository's under
+    the evals contract;
+  - declares what a new repository truthfully is: security `"emitter": "none"`, and the judged
+    suites `not_gradable` / `no_verdict` as warnings until it has data of its own — a green step
+    that says the suite proved nothing, where the hook-era scaffold skipped silently.
+- `agentsmith tenant adopt` says that a repository's vendored copy is no longer run, and must go.
+
+### Added — `verify_system --governed` names framework copies
+
+A file a repository tracks at a path AgentSmith ships as code (`scripts/`, `runtime/`,
+`fixtures/security/`, `fixtures/*_base.json`, `.github/actions/<name>/`) is a gap, named with
+what replaces it. The check goes by path, so a stale copy counts.
+
+### Added — gate verb `kg check` (contract/gate/v3, additive)
+
+`<provider> kg check` exits 1 when the committed knowledge graph is not what the repository's
+tracked code maps to, rewriting it so the fix is a commit. `.githooks/process-gate kg check` asks
+the declared gate provider; the launcher takes no other `kg` verb.
+
+### Added — `process-gate evals run --fail-below X`
+
+The request's own floor (`fail_below`, contract/evals/v1), ahead of the repository's declaration.
+
 ### Added — the commit guardrails, in the gate
 
 The commit gate now checks what the machine-wide git hooks checked. These are

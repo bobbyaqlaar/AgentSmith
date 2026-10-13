@@ -16,6 +16,7 @@ can govern a repository end to end.
 <provider-command> <event>          event ∈ session-start | pre-edit | stop | ci | commit | push
 <provider-command> kg build
 <provider-command> kg impact [--staged | --base <ref>]
+<provider-command> kg check
 ```
 
 - **cwd** is the repository being asked about. Paths in the event are relative to it, or absolute.
@@ -83,13 +84,18 @@ A review is scoped by the change and what depends on it, and the scope is named 
 review's sign-off carries (`KG query: kg:<12 hex>`). The graph lives in the repository, at
 `.agent-rfc/fixtures/knowledge_graph.json`, in the shape `knowledge_graph.schema.json` publishes — the
 repository's own data, not a provider's artefact. A provider whose `commit` or `ci` answers check a
-review's scope offers two verbs:
+review's scope offers these verbs:
 
 - **`kg build`** writes the graph for the repository in `cwd`;
 - **`kg impact`** prints, as JSON (`kg_impact.schema.json`), the files a review must read, the lever
   groups, the changed files the graph does not know yet, and the hash. With `--staged` — the default —
   it scopes the commit being made, from the index, which is what a provider's `commit` answer checks a
-  review against; with `--base <ref>` it diffs the working tree against that ref.
+  review against; with `--base <ref>` it diffs the working tree against that ref;
+- **`kg check`** exits 1 when the committed graph is not what the repository's tracked code maps to
+  now, regenerating it in place so the fix is a commit, and 0 when it is current or there is none yet
+  (said, not silent). A repository's CI asks it through `.githooks/process-gate kg check`, which never
+  falls back; any other exit means the provider could not check, and fails the step. Added in 3.0.0;
+  a provider without it answers with a usage error.
 
 They are verbs, not events: no decision, and stdout is the result itself.
 

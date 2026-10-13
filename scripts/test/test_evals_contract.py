@@ -521,8 +521,39 @@ def test_no_declared_provider_judges_nothing_and_says_so(tmp_path, port, said):
     assert done.returncode == 0 and said in done.stdout
 
 
+def _recording_tenant(tmp_path: Path) -> tuple[Path, Path]:
+    """A tenant whose provider writes the request it was sent, then passes."""
+    root = _launcher_tenant(tmp_path, "pass")
+    seen = tmp_path / "request.json"
+    (tmp_path / "provider.py").write_text(
+        "import json, sys\n"
+        f"open({str(seen)!r}, 'w').write(sys.stdin.read())\n"
+        "print(json.dumps({'schema': 1, 'suite': 'golden', 'verdict': 'pass', 'reason': 'ok'}))\n")
+    return root, seen
+
+
+@pytest.mark.parametrize("given, sent", [(None, None), ("0.75", 0.75), ("1", 1), (".8", 0.8), ("0", 0)])
+def test_the_launcher_sends_the_bar_it_was_given(tmp_path, given, sent):
+    """A CD smoke holds staging and production to different bars: `--fail-below`
+    is the request's own `fail_below`, sent as a number, and absent when not given."""
+    root, seen = _recording_tenant(tmp_path)
+    extra = [] if given is None else ["--fail-below", given]
+    env = {"PATH": "/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin", "HOME": str(root)}
+    done = subprocess.run(["bash", str(LAUNCHER), "evals", "run", "--suite", "golden", *extra], cwd=root, env=env,
+                          capture_output=True, text=True, check=False, timeout=60)
+    assert done.returncode == 0, done.stdout + done.stderr
+    request = json.loads(seen.read_text())
+    assert request.get("fail_below") == sent and request["suite"] == "golden"
+    gm.EvalsRequest.model_validate(request)
+
+
 @pytest.mark.parametrize("args", [("evals",), ("evals", "run"), ("evals", "run", "--suite", "nope"),
-                                  ("evals", "judge", "--suite", "golden")])
+                                  ("evals", "judge", "--suite", "golden"),
+                                  ("evals", "run", "--suite", "golden", "--fail-below"),
+                                  ("evals", "run", "--suite", "golden", "--fail-below", "1.5"),
+                                  ("evals", "run", "--suite", "golden", "--fail-below", "0.8; echo hi"),
+                                  ("evals", "run", "--suite", "golden", "--fail-above", "0.8"),
+                                  ("evals", "run", "--suite", "golden", "--fail-below", "0.8", "x")])
 def test_the_launcher_refuses_a_malformed_call(tmp_path, args):
     root = _launcher_tenant(tmp_path, "pass")
     done = subprocess.run(["bash", str(LAUNCHER), *args], cwd=root, capture_output=True, text=True, check=False)

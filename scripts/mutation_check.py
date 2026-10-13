@@ -773,7 +773,7 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
     ),
     # .agent-rfc/designs/tenant-adopt.md — an existing repository under the
-    # gates, the hooks it ran kept behind them, and `tenant init` vendoring.
+    # gates, and the hooks it ran kept behind them.
     # Its tests build real repositories through real hooks, about twelve
     # minutes in CI, so it runs when what it protects changes
     # (.agent-rfc/designs/mutation-ci-scope.md).
@@ -781,15 +781,12 @@ CATALOGUE: tuple[Suite, ...] = (
         name="tenant_adopt",
         tests=(
             "scripts/test/test_hook_chain.py",
-            "scripts/test/test_hook_visibility_override.py",
             "scripts/test/test_vouched_files.py",
             "scripts/test/test_tenant_adopt.py",
             "scripts/test/test_scaffold_review.py",
-            "scripts/test/test_installed_runtime_tenant.py",
         ),
         watch=(
             ".githooks/*",
-            "hooks/*",
             "runtime/adopt.py",
             "runtime/cli.py",
             "runtime/architectures.py",
@@ -802,11 +799,9 @@ CATALOGUE: tuple[Suite, ...] = (
             "scripts/rules_port.py",
             "workflow-templates/agentsmith-gates.yml",
             "scripts/test/test_hook_chain.py",
-            "scripts/test/test_hook_visibility_override.py",
             "scripts/test/test_vouched_files.py",
             "scripts/test/test_tenant_adopt.py",
             "scripts/test/test_scaffold_review.py",
-            "scripts/test/test_installed_runtime_tenant.py",
             "scripts/test/test_scratch_tenants.py",
             "scripts/mutation_check.py",
         ),
@@ -852,16 +847,10 @@ CATALOGUE: tuple[Suite, ...] = (
                 "arming=previous is None)",
             ),
             Mutation(
-                "a vendored gate looks for @framework/ files only beside itself",
+                "an install without docs/ looks for @framework/ files only beside its gate",
                 "scripts/process_gate.py",
                 "    roots.append(Path.home() / \".agent-framework\")\n    return next(",
                 "    roots = roots[:1]\n    return next(",
-            ),
-            Mutation(
-                "adopt chains the machine's post-checkout and post-commit — they vendor into the repository",
-                "runtime/adopt.py",
-                "prior=plan.prior_hooks, provisioning=False)",
-                "prior=plan.prior_hooks, provisioning=True)",
             ),
             Mutation(
                 "the rules block is appended again on every run",
@@ -874,18 +863,6 @@ CATALOGUE: tuple[Suite, ...] = (
                 "runtime/adopt.py",
                 "        put(rel, json.dumps(gate_ides.render_config(ide, existing), indent=2) + \"\\n\")",
                 "        put(rel, json.dumps(gate_ides.render_config(ide, None), indent=2) + \"\\n\")",
-            ),
-            Mutation(
-                "an explicit autopush setting is overwritten",
-                "runtime/adopt.py",
-                'and not _git(root, "config", "--get", "agentsmith.autopush"):',
-                ":",
-            ),
-            Mutation(
-                "tenant init no longer runs the machine's post-checkout before its first commit",
-                "runtime/cli.py",
-                "    written += _vendor(root, prior)\n",
-                "",
             ),
             Mutation(
                 "a vouch survives a tenant editing the file — the skip becomes a path "
@@ -901,26 +878,6 @@ CATALOGUE: tuple[Suite, ...] = (
                 "        if False:\n            return []",
             ),
             Mutation(
-                "a declared AGENTSMITH_TENANT_VISIBILITY loses to detection — a public "
-                "fixture stops tracking the IDE configs its tenants track",
-                "hooks/post-checkout",
-                'if [ -z "$VIS_SOURCE" ] && echo "$REMOTE_URL" | grep -q "github.com"; then',
-                'if echo "$REMOTE_URL" | grep -q "github.com"; then',
-            ),
-            Mutation(
-                "a misspelt AGENTSMITH_TENANT_VISIBILITY is silently read as private",
-                "hooks/post-checkout",
-                '  *) echo "⚠️  AGENTSMITH_TENANT_VISIBILITY=',
-                '  *) VIS_SOURCE=declared; echo "',
-            ),
-            Mutation(
-                "the machine's post-checkout vendors into an adopted repository",
-                "hooks/post-checkout",
-                "   && grep -qs '\"generated_by\": \"agentsmith tenant adopt\"' "
-                "\"$REPO_ROOT/.agenticframework/scaffold.json\"; then",
-                "   && false; then",
-            ),
-            Mutation(
                 "an unfinished adoption is told it is already under the gates",
                 "runtime/adopt.py",
                 "        if committed.returncode == 0:",
@@ -931,12 +888,6 @@ CATALOGUE: tuple[Suite, ...] = (
                 "scripts/rules_port.py",
                 '        placement = "whole" if existing is None or _ours(rel, existing, titles) else "block"',
                 '        placement = "whole" if existing is None else "block"',
-            ),
-            Mutation(
-                "tenant init runs any post-checkout and vouches for what it wrote",
-                "runtime/cli.py",
-                " or not is_machine_hook(hook):",
-                ":",
             ),
             Mutation(
                 "a malformed settings file is found only after adopt has started writing",
@@ -1509,6 +1460,66 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        name="vendoring_retired",
+        tests=("scripts/test/test_vendoring_retired.py",),
+        mutations=(
+            Mutation(
+                "tenant init declares no providers, so its workflows ask nobody",
+                "runtime/cli.py",
+                "    if not (root / PROVIDERS).exists():\n        (root / PROVIDERS).parent.mkdir",
+                "    if False:\n        (root / PROVIDERS).parent.mkdir",
+            ),
+            Mutation(
+                "tenant init seeds none of the tenant's own data",
+                "runtime/cli.py",
+                "    if framework is None:\n        return []\n    templates = framework / SECURITY_TEMPLATES",
+                "    if True:\n        return []\n    templates = framework / SECURITY_TEMPLATES",
+            ),
+            Mutation(
+                "a template expects a copied action again",
+                "workflow-templates/ci-python-fastapi.yml",
+                'uses: "bobbyaqlaar/AgentSmith/.github/actions/install-python-deps@{{AGENTSMITH_REF}}"',
+                "uses: ./.github/actions/install-python-deps",
+            ),
+            Mutation(
+                "the governed check misses a copied action",
+                "scripts/verify_system.py",
+                '"scripts", "runtime", "fixtures", ".github/actions"]',
+                '"scripts", "runtime", "fixtures"]',
+            ),
+            Mutation(
+                "sync stops naming a copy it no longer refreshes",
+                "runtime/sync.py",
+                "    if plan.vendored:\n        plan.notes.append(",
+                "    if False:\n        plan.notes.append(",
+            ),
+            Mutation(
+                "the launcher runs a tenant's copy of the gate again",
+                ".githooks/process-gate",
+                'for dir in "$own" ',
+                'for dir in "$root/scripts" ',
+            ),
+            Mutation(
+                "the machine's commands take a tenant's script again",
+                "runtime/machine/state.py",
+                "    if local.is_file() and looks_like_framework(here):",
+                "    if local.is_file():",
+            ),
+            Mutation(
+                "a stale knowledge graph passes the check",
+                "scripts/verify_system.py",
+                "    if before != _kg_shape(kg_path):\n        print(\"❌ knowledge_graph.json was stale",
+                "    if False:\n        print(\"❌ knowledge_graph.json was stale",
+            ),
+            Mutation(
+                "an old install's post-checkout and post-commit are chained again",
+                "runtime/adopt.py",
+                "            and not (hook.name in PROVISIONING_HOOKS and is_machine_hook(hook))]",
+                "            ]",
+            ),
+        ),
+    ),
+    Suite(
         name="commit_guardrails",
         tests=("scripts/test/test_gate_guardrails.py",),
         mutations=(
@@ -1701,12 +1712,6 @@ CATALOGUE: tuple[Suite, ...] = (
                 "    for workflow in (GATES_WORKFLOW,):\n        template = _workflow_template(",
             ),
             Mutation(
-                "upgrade vendors into an adopted repository again",
-                "runtime/machine/upgrade.py",
-                "    if is_adopted(repo):",
-                "    if False:",
-            ),
-            Mutation(
                 "the manifest stops recording which command wrote it",
                 "runtime/cli.py",
                 '    command = generated_by or ("agentsmith tenant adopt" if adopted else "agentsmith tenant init")',
@@ -1717,12 +1722,6 @@ CATALOGUE: tuple[Suite, ...] = (
                 "runtime/sync.py",
                 "    marker = looks_like_framework(root)\n    if marker:\n        raise SyncError(",
                 "    marker = None\n    if marker:\n        raise SyncError(",
-            ),
-            Mutation(
-                "upgrade copies an install over the framework's own scripts/ and runtime/",
-                "runtime/machine/upgrade.py",
-                "    marker = looks_like_framework(repo)",
-                "    marker = None",
             ),
             Mutation(
                 "a tenant armed before the sweep is not planned the hooks it lacks",

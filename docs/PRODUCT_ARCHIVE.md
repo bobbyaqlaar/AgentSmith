@@ -7,6 +7,27 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — C9: vendoring retired (2026-10-13)
+
+Design: `.agent-rfc/designs/vendoring-retired.md`; review: `.agent-rfc/reviews/vendoring-retired.md`.
+Slice C9 of `.agent-rfc/designs/governance-contracts.md`.
+
+- **No copy of AgentSmith in a tenant, and nothing runs one**: `tenant init` vendors nothing and
+  declares its providers; every workflow template asks the provider through the launcher, and
+  composite actions are referenced at the declared release. `agentsmith upgrade` is gone; `sync` and
+  `verify_system --governed` name a copy left behind.
+- **No machine-wide git hooks**: the installer puts back the `init.templateDir` it recorded; the
+  Enterprise Pack's hook bundle retired with them.
+- **The owner's decisions**: a MAJOR (3.0.0); the hook guardrails moved into the gate; the TTFT and
+  shadow templates dropped (on the backlog as evals suites); the scratch tenants rebuilt on a fresh
+  history each run and force-pushed; oil-price-demo archived by the owner.
+- **Backlog items it closes**: a new hook guardrail getting no vouch (the gate's `check` skips vouched
+  files before any rule); the hook guardrails living outside the mechanical checks (they are the gate's
+`commit_guardrails` now, which AgentSmith itself sets off: its tests carry the markers as fixtures);
+tenants keeping an old
+  `rollback-notify` copy; new tenants not getting the gates; `ai-stack-upgrade` overwriting a tenant
+  file by name.
+
 ## Released — v2.4.0 (2026-10-12)
 
 Design: `.agent-rfc/designs/release-2-4-0.md`; review: `.agent-rfc/reviews/release-2-4-0.md`.

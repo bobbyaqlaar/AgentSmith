@@ -442,8 +442,9 @@ HOOK_FILES = {
     ".githooks/pre-commit": REPO / ".githooks/pre-commit",
     ".githooks/pre-push": REPO / ".githooks/pre-push",
 }
-# What a vendored copy of the gate carries: the script, its models and tracing,
-# the registry beside it, and the runtime its spans go through.
+# What AgentSmith's own checkout carries for the gate to run in-tree: the
+# script, its models and tracing, the registry beside it, and the runtime its
+# spans go through.
 GATE_FILES = {
     "scripts/process_gate.py": GATE,
     "scripts/gate_models.py": REPO / "scripts/gate_models.py",
@@ -470,11 +471,22 @@ GATE_FILES = {
 }
 
 
+# The launcher runs <repo>/scripts/process_gate.py only in AgentSmith's own
+# checkout, which it recognises by these two (.githooks/process-gate).
+AGENTSMITH_MARKERS = {
+    "install-ai-stack.sh": "#!/usr/bin/env bash\n",
+    "workflow-templates/.keep": "",
+}
+
+
 @pytest.fixture()
 def gated_repo(tmp_path, monkeypatch):
-    """A repo shaped like AgentSmith: the gate, its levers doc and its config in-tree."""
+    """A repo shaped like AgentSmith: the gate, its levers doc and its config in-tree
+    — and two of AgentSmith's markers, without which the launcher runs no
+    repository's own scripts/ (a tenant's copy is never the gate, from 3.0.0)."""
     return _make_repo(tmp_path, "repo", {
         **GATE_FILES,
+        **AGENTSMITH_MARKERS,
         "docs/review-levers.md": REPO / "docs/review-levers.md",
         pg.CONFIG: json.dumps(FIXTURE_CONFIG, indent=2) + "\n",
         **HOOK_FILES,
@@ -580,9 +592,11 @@ def test_the_first_commit_of_a_repo_is_checked(tmp_path, monkeypatch):
     subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(repo)], check=True)
     monkeypatch.setenv("AGENTSMITH_PYTHON", sys.executable)
     for rel, source in {**GATE_FILES, "docs/review-levers.md": REPO / "docs/review-levers.md",
-                        pg.CONFIG: CONFIG_PATH, **HOOK_FILES}.items():
+                        pg.CONFIG: CONFIG_PATH, **HOOK_FILES, **AGENTSMITH_MARKERS}.items():
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
-        if source.is_dir():
+        if isinstance(source, str):
+            (repo / rel).write_text(source)
+        elif source.is_dir():
             shutil.copytree(source, repo / rel, ignore=shutil.ignore_patterns("__pycache__", "test", "k8s"))
         else:
             shutil.copy(source, repo / rel)

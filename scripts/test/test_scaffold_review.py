@@ -160,39 +160,43 @@ def test_ci_reaches_the_same_verdict_on_the_root_commit(scaffold, tmp_path):
     assert any("generated scaffold" in note for note in record["notes"])
 
 
-# ── Vendoring (.agent-rfc/designs/tenant-adopt.md) ──────────────────────────
-# `tenant init` armed `.githooks`, which has no post-checkout, so the machine's
-# vendoring hook never ran and the first commit's CI failed at every
-# `scripts/*.py` step. `init` now runs that hook itself, before the manifest is
-# written, so the vendored framework code is part of the scaffold it vouches for.
-
-from test_scratch_tenants import install  # noqa: F401 — a fixture: a complete machine install
+# ── No hook's output in the scaffold (.agent-rfc/designs/vendoring-retired.md) ──
+# Until 3.0.0 `init` ran the machine's vendoring post-checkout itself, so the
+# copied framework code was part of what the manifest vouched for. It vendors
+# nothing now, and runs no post-checkout at all.
 
 
-def test_init_vendors_before_the_first_commit_and_the_manifest_covers_it(install, tmp_path, monkeypatch):  # noqa: F811
+def test_an_old_installs_hooks_are_neither_run_nor_chained(tmp_path, monkeypatch):
+    """A repository created on a machine with an install before 3.0.0 has its
+    vendoring post-checkout in .git/hooks. `tenant init` must not run it — the
+    scaffold would hold AgentSmith's code — nor chain it behind the gates, and
+    the first commit still passes (vendoring-retired.md)."""
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.setenv("AGENTSMITH_DIR", str(REPO))
     monkeypatch.setenv("AGENTSMITH_PYTHON", sys.executable)
-    root = tmp_path / "vendored"
+    root = tmp_path / "old-machine"
     root.mkdir()
-    subprocess.run(["git", "init", "-q", "-b", "main", f"--template={install / '.git_templates'}", str(root)],
-                   check=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)
+    hook = root / ".git" / "hooks" / "post-checkout"
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    hook.write_text("#!/usr/bin/env bash\n# AgentSmith: post-checkout\n"
+                    "mkdir -p scripts && echo x > scripts/vendored.py\n")
+    hook.chmod(0o755)
     sys.path.insert(0, str(REPO))
     from runtime.cli import init_tenant
 
     written = init_tenant("acme", root, stack="python-fastapi", architecture="layered")
 
-    assert "scripts/run-security-checks.py" in written
-    manifest = json.loads((root / ".agenticframework" / "scaffold.json").read_text())
-    assert "scripts/run-security-checks.py" in manifest["files"]
-    assert ".githooks/post-checkout" in manifest["files"], "later checkouts still reach the machine's hook"
-    assert _git(root, "config", "--get", "agentsmith.chainHooksPath").stdout.strip() == str(root / ".git" / "hooks")
+    assert not (root / "scripts").exists() and not any(p.startswith("scripts/") for p in written)
+    assert ".githooks/post-checkout" not in written, "an old install's post-checkout must not be chained"
     result = _commit(root, *FIRST_COMMIT)
     assert result.returncode == 0, result.stdout + result.stderr
+    assert not (root / "scripts").exists(), "nor run by the commit"
 
 
-def test_init_runs_only_the_machines_post_checkout(tmp_path, monkeypatch):
-    """The manifest vouches for what the hook wrote, so it must be AgentSmith's
-    vendoring, not another tool's post-checkout."""
+def test_init_runs_no_post_checkout(tmp_path, monkeypatch):
+    """The manifest vouches for what `tenant init` wrote, so no hook's output may
+    land in the scaffold — another tool's post-checkout included."""
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.setenv("AGENTSMITH_DIR", str(REPO))
     monkeypatch.setenv("AGENTSMITH_PYTHON", sys.executable)
@@ -213,16 +217,15 @@ def test_init_runs_only_the_machines_post_checkout(tmp_path, monkeypatch):
 
 
 def test_a_forced_rerun_still_vouches_for_what_the_first_run_wrote(scaffold):
-    """`--force` re-runs skip files that exist and are not theirs to replace —
-    the composite actions, vendored code — so the manifest must keep vouching
-    for them while they are unchanged, or the first commit is refused for its
-    own scaffold."""
+    """`--force` re-runs skip files that exist and are not theirs to replace, so
+    the manifest must keep vouching for them while they are unchanged, or the
+    first commit is refused for its own scaffold."""
     from runtime.cli import init_tenant
 
     init_tenant("acme", scaffold, stack="python-fastapi", architecture="clean", agentic=True, force=True)
 
     manifest = json.loads((scaffold / ".agenticframework" / "scaffold.json").read_text())
-    assert any(path.startswith(".github/actions/") for path in manifest["files"])
+    assert ".agent-rfc/security/tool_allowlist.yaml" in manifest["files"], "a seed it did not replace"
     result = _commit(scaffold, *FIRST_COMMIT)
     assert result.returncode == 0, result.stdout + result.stderr
 

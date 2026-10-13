@@ -6,10 +6,11 @@ up to date (.agent-rfc/designs/framework-sync.md).
     sync(plan)          write it; returns the paths it wrote
     commit_command(...) the commit, which the tenant's own gates accept
 
-A tenant holds the gate hooks, the IDE hook configs, the generated rule files
-and — vendored tenants — the framework's own code. `agentsmith upgrade`
-refreshed the last group only, so the rest drifted silently: the gate hooks
-changed six times in 90 days and no tenant saw any of it.
+A tenant holds the gate hooks, the IDE hook configs and the generated rule
+files. It holds none of the framework's own code: from 3.0.0 nothing is vendored
+and nothing vendored is refreshed (.agent-rfc/designs/vendoring-retired.md) — a
+repository that still holds a copy is told so, and `verify_system --governed`
+fails until it is gone.
 
 Everything here writes what THIS framework owns and nothing else. The tenant's
 code, its CI beyond the gates workflow, and its documents are not touched, which
@@ -41,7 +42,9 @@ class Plan:
     root: Path
     tenant_id: str
     stack: str
-    vendored: bool
+    # Directories that still hold a copy of AgentSmith's code (`vendored_dirs`):
+    # named, never refreshed.
+    vendored: list[str]
     framework: Path
     version: str
     stale: list[str] = field(default_factory=list)
@@ -54,12 +57,6 @@ def _manifest(root: Path) -> dict:
         return json.loads((root / MANIFEST).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-
-
-def is_adopted(root: Path) -> bool:
-    """A repository `tenant adopt` brought in: never vendored into, by either
-    path (`agentsmith sync` and `agentsmith upgrade` both read this)."""
-    return str(_manifest(root).get("generated_by", "")).endswith("tenant adopt")
 
 
 def _digest(path: Path) -> str:
@@ -91,6 +88,7 @@ def plan_sync(root: Path, *, tenant_id: Optional[str] = None, framework: Optiona
     are deliberately separate."""
     from runtime.cli import GATE_HOOKS, _default_framework_version, _framework_dir, looks_like_framework, \
         missing_gate_hooks
+    from runtime.adopt import vendored_dirs
 
     root = Path(root)
     # First, before anything is read: the framework carries process-gates.json
@@ -114,7 +112,7 @@ def plan_sync(root: Path, *, tenant_id: Optional[str] = None, framework: Optiona
 
     manifest = _manifest(root)
     plan = Plan(root=root, tenant_id=tenant_id or str(manifest.get("tenant") or root.name),
-                stack=str(manifest.get("stack") or "python-fastapi"), vendored=not is_adopted(root),
+                stack=str(manifest.get("stack") or "python-fastapi"), vendored=vendored_dirs(root),
                 framework=framework, version=_default_framework_version())
     # Stale: a file this framework owns whose copy here differs from the
     # framework's. A sync adds nothing new to a repository that did not ask for
@@ -150,9 +148,10 @@ def plan_sync(root: Path, *, tenant_id: Optional[str] = None, framework: Optiona
         elif state == "ours" and (not here.is_file() or here.read_text(encoding="utf-8") != text):
             plan.stale.append(rel)
     if plan.vendored:
-        plan.notes.append("vendored tenant: scripts/, runtime/, templates/ and fixtures/ are refreshed too")
-    else:
-        plan.notes.append("adopted repository: nothing is vendored into it")
+        plan.notes.append(
+            f"{', '.join(name + '/' for name in plan.vendored)} still hold a copy of AgentSmith's code, which "
+            "3.0.0 no longer refreshes — the ports replace it (verify_system --governed names each file). "
+            "Remove the copy in a change of its own.")
     return plan
 
 
@@ -277,7 +276,7 @@ def sync(plan: Plan) -> list[str]:
 
     # The hooks, from the one implementation `init` and `adopt` use. `force`,
     # because refreshing a stale copy is the point.
-    install_gate_hooks(root, plan.framework, force=True, provisioning=False)
+    install_gate_hooks(root, plan.framework, force=True)
     shared, _regions = _shared_files(plan)
     for rel in plan.stale:
         text = shared.get(rel)
@@ -291,11 +290,6 @@ def sync(plan: Plan) -> list[str]:
         (root / PROVIDERS).write_text(providers_declaration(), encoding="utf-8")
         written.append(PROVIDERS)
 
-    if plan.vendored:
-        from runtime.machine.upgrade import upgrade
-
-        upgrade(root, plan.version, out=lambda _line: None)
-
     # Only what actually moved: `install_gate_hooks` rewrites every hook, and a
     # commit listing files whose bytes did not change is noise a reviewer reads
     # past — and a manifest entry nobody needed.
@@ -303,7 +297,7 @@ def sync(plan: Plan) -> list[str]:
     if not written:
         return []
     written += write_scaffold_records(root, plan.tenant_id, plan.stack, None, False, written,
-                                      force=True, design=SYNC_DESIGN, adopted=not plan.vendored,
+                                      force=True, design=SYNC_DESIGN, adopted=True,
                                       generated_by=GENERATED_BY)
     return written
 
