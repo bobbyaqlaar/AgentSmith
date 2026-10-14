@@ -105,9 +105,13 @@ jobs:
         # would abort on pytest's own non-zero exit before this script
         # ever reached `code=$?` — `set +e` first is required for that
         # capture to actually happen.
+        # `python -m pytest`, not `pytest`: it puts the repository root on the
+        # import path, so tests/ can import the app (an `app/` beside `tests/`)
+        # with no pytest config. Until 3.0.0 the vendored framework tests put
+        # the root there as a side effect, and hid that bare `pytest` could not.
         run: |
           set +e
-          pytest --cov --cov-report=xml -q
+          python -m pytest --cov --cov-report=xml -q
           code=$?
           set -e
           if [ "$code" -eq 5 ]; then

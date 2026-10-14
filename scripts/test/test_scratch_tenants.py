@@ -274,6 +274,29 @@ def test_each_app_builds_into_a_complete_tenant_offline(app, stack, install, tmp
     gate = subprocess.run(["bash", ".githooks/process-gate", "ci", "--base", "0" * 40, "--head", "HEAD"],
                           cwd=target, stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False)
     assert gate.returncode == 0, gate.stdout + gate.stderr
+    if stack == "python-fastapi":
+        _the_ci_test_command_collects_the_apps_tests(target, workflows / f"ci-{stack}.yml")
+
+
+def _the_ci_test_command_collects_the_apps_tests(target: Path, workflow: Path) -> None:
+    """The stack CI's own test command, run in the built tenant: its tests import
+    the app beside them. Until 3.0.0 the vendored framework tests put the
+    repository root on the import path as a side effect, so a bare `pytest`
+    passed here and failed in every tenant without them (vendoring-retired.md)."""
+    steps = [s for job in yaml.safe_load(workflow.read_text(encoding="utf-8"))["jobs"].values()
+             for s in job.get("steps", [])]
+    [run] = [s["run"] for s in steps if s.get("name") == "Run tests"]
+    [command] = [line.strip() for line in run.splitlines() if "pytest" in line and not line.strip().startswith("#")]
+    argv = command.split()
+    if argv[0] == "python":
+        argv[0] = sys.executable
+    try:
+        import pytest_cov  # noqa: F401
+    except ImportError:  # fail-open: coverage is CI's add-on, not what is under test here
+        argv = [a for a in argv if not a.startswith("--cov")]
+    done = subprocess.run([*argv, "-p", "no:cacheprovider"], cwd=target, capture_output=True, text=True,
+                          check=False, timeout=120)
+    assert done.returncode == 0, f"`{command}` in the built tenant:\n" + done.stdout[-2000:] + done.stderr[-2000:]
 
 
 @needs_git

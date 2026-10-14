@@ -123,6 +123,9 @@ installs them through the pinned setup step. This is the last slice of the gover
   - the CD smoke runs `evals run --suite golden --fail-below 0.75|0.80`.
 - Composite actions are referenced at the provider, `bobbyaqlaar/AgentSmith/.github/actions/<name>@<ref>`,
   never copied.
+- `ci-python-fastapi.yml` runs `python -m pytest`, not `pytest`, so tests import an `app/` beside
+  `tests/` with no pytest config. The vendored framework tests had put the repository root on the
+  import path as a side effect.
 - The CI templates' knowledge-graph step asks the provider, `process-gate kg check` (Added,
   below), instead of running a copy of `verify_system`. They drop the rule-file check (the gates
   workflow runs it) and the informational `verify_system` step. The security job drops `strict`.
