@@ -8776,9 +8776,10 @@
         "test_the_installer_arms_no_hook_outside_a_repository",
         "test_kg_check_fails_a_stale_graph_and_passes_once_regenerated",
         "test_kg_check_takes_no_other_verb",
+        "test_the_provider_setup_installs_what_kg_check_imports",
         "check"
       ],
-      "last_modified": "2026-10-13T20:18:43Z",
+      "last_modified": "2026-10-14T09:31:35Z",
       "id": "scripts/test/test_vendoring_retired.py"
     }
   ],

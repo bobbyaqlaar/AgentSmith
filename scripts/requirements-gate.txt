@@ -17,3 +17,7 @@ pyyaml>=6.0,<7.0
 # declares, and every direct-API route goes through httpx. Without it a judged
 # suite can only answer no_verdict — which a tenant may have declared a warning.
 httpx>=0.25,<1.0
+# The gate's `kg check` (contract/gate/v3), which a tenant's CI asks through
+# `.githooks/process-gate kg check`, loads the knowledge graph with networkx.
+# Without it every tenant's graph step fails on an ImportError.
+networkx>=3.0,<4.0

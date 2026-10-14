@@ -104,7 +104,7 @@ on the final staged tree, because `conftest.py` changed after the first full run
   tenant's own gate on a fresh history, force-pushed (owner-approved), and the job waits on both of
   each tenant's workflows.
 - **Tests:**
-  - `test_vendoring_retired.py` (15) is new;
+  - `test_vendoring_retired.py` (13) is new;
   - eight files that tested only the retired transport are deleted;
   - the rest follow the new behaviour.
 - **Curated mutations:** a new `vendoring_retired` suite (9); eight mutations of retired code
@@ -275,21 +275,50 @@ Over pass 11's fixes, on the staged tree:
 Each retired piece searched for by name returns only history: the archive, the CHANGELOG's earlier
 releases, designs and reviews, and a legacy shell-profile fixture.
 
+# Commit 3 — the provider's CI setup installs what `kg check` imports
+
+## Pass 13 — findings: 2
+
+The first scratch-tenant build after #54 merged: five of six tenants red, the adopted one green.
+Each built, committed through its gate and pushed, and its gates workflow passed. Its stack CI
+failed one step, `Knowledge Graph is current`: `kg check` raised `ImportError: networkx`.
+
+1. **The setup action installs `scripts/requirements-gate.txt` and nothing else**, and the list
+   had no `networkx`. Locally the framework environment has it, so the tests, the review and my
+   own `kg check` runs all passed. **Fix:** the list carries `networkx`. A test blocks it and shows
+   `kg check` fails without it, and that the list names it.
+2. **This record said commit 2 added 15 tests in `test_vendoring_retired.py`; it added 13.**
+   **Fix:** 13 there; 14 with this commit's, in the sign-off.
+
+## Pass 14 — findings: 0
+
+- **CI's environment, rebuilt:** a clean Python 3.12 venv with only `requirements-gate.txt`, the
+  setup action's `agentsmith` wrapper, and a fresh `tenant init` scaffold committed through its
+  gate. `kg check` passes. With `networkx` removed from that venv it fails with CI's exact error,
+  so the rebuild is faithful.
+- **Nothing else missing:** `kg check`'s import path (`verify_system`, `map_codebase`,
+  `local_knowledge_graph`) has no other third-party import.
+- **The rest of that run:** every other job of the five tenants passed (security, the three
+  evals, the gates). In the stack CI job, the steps after the graph step were skipped, not run:
+  the RFC gate, the stack's tests, coverage, and pnpm's setup. C9 left them byte for byte as they
+  were when the pre-C9 builds passed (diffed against `bffd4d2`). The scratch build this merge
+  triggers is the first to run them, and is the proof.
+
 ## Sign-off
 
 Group 1 · DRY & shared code — [x] checked — one decision (`commit_verdict`) for the hook and gate contract 3's `commit`; the guardrails reuse `check_bare_except.find_violations` and `vouched_files.vouched`; init and adopt share `providers_declaration` and `provider_workflows`; the test loads scripts through `_shared.load_script`.
-Group 2 · Quality / safety — [x] checked — `test_gate_guardrails.py` (15), `test_vendoring_retired.py` (15) and the rewritten suites; `--check-hooks` commits through the gate; curated mutations `commit_guardrails` 5/5, `vendoring_retired` 9/9, `installed_machine` 4/4, `tenant_adopt` 18/18 (one by hand, pass 11).
+Group 2 · Quality / safety — [x] checked — `test_gate_guardrails.py` (15), `test_vendoring_retired.py` (14) and the rewritten suites; `--check-hooks` commits through the gate; curated mutations `commit_guardrails` 5/5, `vendoring_retired` 9/9, `installed_machine` 4/4, `tenant_adopt` 18/18 (one by hand, pass 11); the provider's setup environment rebuilt and `kg check` run in it (pass 14).
 Group 3 · Architecture / hygiene — [x] checked — no dependency added; a tenant holds no copy of AgentSmith and asks the providers it declares; no hook is armed outside a repository; dead code and stale text removed.
 Group 4 · Process — [x] checked — design before code, with the owner's decisions recorded; CHANGELOG Unreleased (breaking); backlog and archive; the User Manual, DESIGN, README, `process-gates.md`, `scratch-tenants.md` and `enterprise/README.md`.
 Group 5 · Intuitive UI — [x] n/a — no screen or control.
 Group 6 · Signal integrity — [x] checked — a copy left behind is named with what replaces it, never run; a fresh tenant's suites warn that they proved nothing rather than skip silently; an old provider's usage error names the fix.
 Group 7 · Auth & session integrity — [x] n/a — no credential handling; the workflows' tokens are unchanged.
 
-Tests added: `scripts/test/test_gate_guardrails.py` (15), `scripts/test/test_vendoring_retired.py` (15), `test_an_install_without_the_docs_finds_them_in_agentsmith_dir`, the `--fail-below` and `kg check` cases; eight files that tested only the retired transport deleted.
+Tests added: `scripts/test/test_gate_guardrails.py` (15), `scripts/test/test_vendoring_retired.py` (14), `test_an_install_without_the_docs_finds_them_in_agentsmith_dir`, the `--fail-below` and `kg check` cases; eight files that tested only the retired transport deleted.
 Mutation-checked: `commit_guardrails` 5/5, `vendoring_retired` 9/9, `installed_machine` 4/4, `tenant_adopt` 18/18.
 Fixtures re-pinned: `.agent-rfc/fixtures/knowledge_graph.json` — rebuilt on the final staged tree.
 Gates run: full `pytest` on the staged tree (2355 passed, 10 skipped), then the affected files after pass 11 (300 passed); `ruff check .`; `mypy` (1.14.1, Python 3.11 with `requirements.lock`); py_compile; the repo-tree check; redaction for both profiles; `--check-hooks`; `--check-kg`; the delivery evidence pack; the strict security harness.
 
 Levers reviewed: `grep-for-siblings`, `declared-vs-enforced`, `failure-mode-visibility`, `docs-match-behaviour`, `run-the-gates-ci-lists`, `every-line-earns-its-place`, `guards-must-be-able-to-fail`, `backlog-discipline`.
 
-KG query: kg:1871a76e3c3c
+KG query: kg:01bb14907e83

@@ -221,3 +221,24 @@ def test_kg_check_takes_no_other_verb(scaffolded: Path):
     done = subprocess.run(["bash", str(LAUNCHER), "kg", "build"], cwd=scaffolded,
                           capture_output=True, text=True, check=False, timeout=60)
     assert done.returncode == 2 and "usage: process-gate kg check" in done.stderr
+
+
+def test_the_provider_setup_installs_what_kg_check_imports(scaffolded: Path, tmp_path: Path):
+    """The setup step installs scripts/requirements-gate.txt and nothing else, so
+    `kg check` must run on that list. It loads the graph with networkx; without
+    it, every tenant's graph step failed on an ImportError (the scratch tenants,
+    the first run after merge). This checkout's environment has networkx, so the
+    gap only showed in CI: block it here to see the step's real dependency."""
+    blocker = tmp_path / "without_networkx.py"
+    blocker.write_text("import runpy, sys\nsys.modules['networkx'] = None\npath = sys.argv[1]\n"
+                       "sys.argv = [path] + sys.argv[2:]\nrunpy.run_path(path, run_name='__main__')\n")
+    _git(scaffolded, "add", "-A")
+    _git(scaffolded, "commit", "-qm", "scaffold", "--no-verify")
+    done = subprocess.run([sys.executable, str(blocker), str(REPO / "scripts" / "verify_system.py"),
+                           "--check-kg-fresh"],
+                          cwd=scaffolded, capture_output=True, text=True, check=False, timeout=120)
+    assert done.returncode != 0 and "networkx" in done.stderr, \
+        "kg check no longer needs networkx — drop it from the list"
+    required = [line.split("#")[0].strip() for line in
+                (REPO / "scripts" / "requirements-gate.txt").read_text(encoding="utf-8").splitlines()]
+    assert any(line.startswith("networkx") for line in required), "the setup step must install what kg check imports"

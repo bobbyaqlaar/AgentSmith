@@ -148,7 +148,8 @@ what replaces it. The check goes by path, so a stale copy counts.
 
 `<provider> kg check` exits 1 when the committed knowledge graph is not what the repository's
 tracked code maps to, rewriting it so the fix is a commit. `.githooks/process-gate kg check` asks
-the declared gate provider; the launcher takes no other `kg` verb.
+the declared gate provider; the launcher takes no other `kg` verb. The provider's CI setup step
+installs `networkx` for it (`scripts/requirements-gate.txt`).
 
 ### Added — `process-gate evals run --fail-below X`
 
