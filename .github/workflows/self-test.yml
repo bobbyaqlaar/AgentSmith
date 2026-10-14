@@ -10,6 +10,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Every curated mutation suite, weekly, whatever changed: a pull request runs
+  # only the suites its files can affect (.agent-rfc/designs/mutation-ci-fast.md).
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
 
 jobs:
   # Design before code, review before merge — checked on every pushed commit
@@ -50,14 +55,54 @@ jobs:
           AGENTSMITH_PORTAL_INGEST_TOKEN: ${{ secrets.AGENTSMITH_PORTAL_INGEST_TOKEN }}
         run: python3 scripts/send_dev_record.py "${RUNNER_TEMP:-/tmp}/dev-record.json"
 
-  python:
-    name: "Python scripts/runtime/examples"
+  # The curated mutations, dealt across four runners. Each shard edits files in
+  # place on its own checkout, so they never meet (.agent-rfc/designs/mutation-ci-fast.md).
+  mutations:
+    name: "Curated mutations (shard ${{ matrix.shard }}/4)"
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
         with:
-          # The curated mutation step compares against the push's base, which a
+          # A pull request's suites are chosen against its base, which a
           # one-commit checkout does not have (it would then run every suite).
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+          cache: "pip"
+          cache-dependency-path: "requirements.lock"
+      - run: pip install --require-hashes -r requirements.lock
+      - name: "mutation_check.py (curated — the properties we chose to defend)"
+        # agentsmith:gate
+        # A pull request runs only the suites whose files it changed — the files
+        # a suite mutates, its tests, what they import, a shared set — each
+        # skip named; `main`, the weekly run and a manual run test every suite.
+        # A base this clone cannot use runs them all.
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          pip install pytest pytest-asyncio pydantic pyyaml httpx tenacity tiktoken
+          args=()
+          if [ -n "$SHARD" ]; then args+=(--shard "$SHARD/4"); fi
+          if [ -n "$BASE" ]; then args+=(--changed-since "$BASE"); fi
+          python3 scripts/mutation_check.py "${args[@]}"
+
+  python:
+    name: "Python scripts/runtime/examples"
+    runs-on: ubuntu-latest
+    # `main` requires this check by name, not the shards: it waits for them,
+    # runs whatever they concluded, and its last step fails unless every shard
+    # succeeded — so a failed, cancelled or skipped shard fails it.
+    needs: mutations
+    if: ${{ !cancelled() }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
@@ -85,23 +130,11 @@ jobs:
         run: |
           pip install -r requirements-lint.txt
           mypy
-      - name: "mutation_check.py (curated — the properties we chose to defend)"
-        # agentsmith:gate
-        # A suite that declares `watch` (tenant_adopt: about twelve minutes of
-        # end-to-end tests) runs only when a file it watches changed since the
-        # base, and is named when skipped; every other suite always runs, and a
-        # base this clone cannot use runs them all
-        # (.agent-rfc/designs/mutation-ci-scope.md).
-        env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          pip install pytest pytest-asyncio pydantic pyyaml httpx tenacity tiktoken
-          python3 scripts/mutation_check.py --changed-since "$BASE"
       - name: "mutmut (exhaustive — ADVISORY, never gates a merge)"
         # Advisory on purpose. A surviving mutant is a question — "is this line
         # asserted, and should it be?" — not a defect, and a job that fails the
         # build on every one teaches a team to stop reading it. The curated
-        # check above is the one that gates: each of its mutations was written
+        # mutations job is the one that gates: each of its mutations was written
         # against a real defect and failed a test the day it was added.
         continue-on-error: true
         timeout-minutes: 25
@@ -218,6 +251,20 @@ jobs:
         run: |
           pip install pytest pyyaml
           PYTHONPATH=scripts:. pytest scripts/test/test_delivery_model.py scripts/test/test_fairness_evals.py runtime/test/test_input_guardrail.py -q
+      - name: "Every curated-mutation shard passed"
+        # agentsmith:gate
+        # Locally it has no shards to read, and is skipped by name; the
+        # mutation step above it runs there instead.
+        if: ${{ !cancelled() }}
+        env:
+          RESULT: ${{ needs.mutations.result }}
+        run: |
+          if [ "$RESULT" = "success" ]; then
+            echo "✅ every curated-mutation shard passed"
+          else
+            echo "::error::the curated mutations concluded '$RESULT' — open the failing 'Curated mutations' shard"
+            exit 1
+          fi
 
   python-behaviour:
     name: "Python runtime behaviour tests (Postgres-backed)"

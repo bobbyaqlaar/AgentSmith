@@ -1,20 +1,23 @@
 """
-scripts/test/test_mutation_check_scope.py — a slow mutation suite runs when what
-it protects changes (.agent-rfc/designs/mutation-ci-scope.md).
+scripts/test/test_mutation_check_scope.py — on a pull request a mutation suite
+runs when what it protects changes, and the suites that run are dealt across
+parallel shards (.agent-rfc/designs/mutation-ci-fast.md, superseding
+mutation-ci-scope.md).
 
-`--changed-since REF` skips a suite that declares `watch` when none of the files
-it watches changed; a suite without `watch` always runs; and a base the clone
-cannot use runs everything. The selection is read from real git history.
+A suite's triggers are the files its mutations edit, its tests, the repository
+modules those tests import, a shared set, and any `watch` globs it adds. A base
+the clone cannot use runs everything. The selection is read from real git
+history, and the workflow wiring from the file CI runs.
 """
 
 from __future__ import annotations
 
-import fnmatch
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts"))
@@ -22,33 +25,143 @@ sys.path.insert(0, str(REPO / "scripts"))
 import mutation_check as mc
 
 ZEROS = "0" * 40
+SELF_TEST = REPO / ".github" / "workflows" / "self-test.yml"
 
 
-def _suite(name: str, watch: tuple[str, ...] = ()) -> "mc.Suite":
-    return mc.Suite(name=name, tests=("t.py",), mutations=(), watch=watch)
+def _suite(name: str, path: str = "scripts/target.py", tests: tuple[str, ...] = ("scripts/test/test_t.py",),
+           watch: tuple[str, ...] = ()) -> "mc.Suite":
+    return mc.Suite(name=name, tests=tests, mutations=(mc.Mutation("m", path, "a", "b"),), watch=watch)
 
 
-def test_a_suite_without_watch_always_runs():
-    run, skipped = mc.select_suites((_suite("always"),), changed=set())
-    assert [s.name for s in run] == ["always"] and skipped == []
+def _names(suites) -> list[str]:
+    return [s.name for s in suites]
 
 
-def test_a_watched_suite_is_skipped_when_nothing_it_watches_changed():
-    run, skipped = mc.select_suites((_suite("slow", ("hooks/**",)),), changed={"docs/UserManual.md"})
-    assert run == []
-    assert [s.name for s, _ in skipped] == ["slow"]
-    assert "none of the files it watches changed" in skipped[0][1]
+# ── What runs on a pull request ─────────────────────────────────────────────
 
 
-def test_a_watched_suite_runs_when_a_watched_file_changed():
-    run, _ = mc.select_suites((_suite("slow", ("hooks/**", "runtime/adopt.py")),),
-                              changed={"README.md", "hooks/post-checkout"})
-    assert [s.name for s in run] == ["slow"]
+def test_a_suite_is_skipped_when_none_of_its_files_changed():
+    run, skipped = mc.select_suites((_suite("s"),), changed={"docs/UserManual.md"})
+    assert run == [] and _names(s for s, _ in skipped) == ["s"]
+    assert "none of its files changed" in skipped[0][1]
+
+
+@pytest.mark.parametrize("changed", ["scripts/target.py", "scripts/test/test_t.py"])
+def test_a_suite_runs_when_a_file_it_mutates_or_a_test_changed(changed):
+    run, _ = mc.select_suites((_suite("s"),), changed={"README.md", changed})
+    assert _names(run) == ["s"]
+
+
+@pytest.mark.parametrize("shared", ["scripts/mutation_check.py", "scripts/test/conftest.py", "requirements.lock",
+                                    "pytest.ini", ".github/workflows/self-test.yml"])
+def test_a_shared_file_runs_every_suite(shared):
+    run, skipped = mc.select_suites((_suite("a"), _suite("b", path="runtime/x.py")), changed={shared})
+    assert _names(run) == ["a", "b"] and skipped == []
+
+
+def test_a_watch_glob_still_runs_its_suite():
+    run, _ = mc.select_suites((_suite("s", watch=(".github/scratch-tenants/*",)),),
+                              changed={".github/scratch-tenants/apps/go/main.go"})
+    assert _names(run) == ["s"]
 
 
 def test_unknown_changes_run_everything():
-    run, skipped = mc.select_suites((_suite("slow", ("hooks/**",)), _suite("always")), changed=None)
-    assert [s.name for s in run] == ["slow", "always"] and skipped == []
+    run, skipped = mc.select_suites((_suite("a"), _suite("b")), changed=None)
+    assert _names(run) == ["a", "b"] and skipped == []
+
+
+def test_a_module_a_test_imports_is_a_trigger():
+    """Read from the test's syntax tree: a sibling helper, a script, a package
+    module, and a hyphenated script loaded by name."""
+    imported = mc.imported_by("scripts/test/test_scaffold_review.py")
+    assert {"scripts/test/test_process_gate.py", "runtime/cli.py"} <= imported
+    assert "scripts/generate-ide-config.py" in mc.imported_by("scripts/test/test_ci_package_managers.py")
+    assert "scripts/security/runners/delegating.py" in mc.imported_by("scripts/test/test_security_vendored_install.py")
+
+
+def test_every_suite_is_triggered_by_its_own_mutations_and_tests():
+    """The guarantee the narrowing rests on, over the real catalogue."""
+    import fnmatch
+
+    for suite in mc.CATALOGUE:
+        globs = mc.triggers(suite)
+        for path in {m.path for m in suite.mutations} | set(suite.tests):
+            assert any(fnmatch.fnmatchcase(path, glob) for glob in globs), f"{suite.name}: {path}"
+
+
+# ── Shards ──────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("count", [1, 2, 4, 7])
+def test_the_shards_cover_every_selected_suite_exactly_once(count):
+    dealt = [s.name for i in range(1, count + 1) for s in mc.shard(mc.CATALOGUE, i, count)]
+    assert sorted(dealt) == sorted(_names(mc.CATALOGUE))
+
+
+def test_the_plan_is_the_same_on_every_shard_and_balanced():
+    plans = [[_names(mc.shard(mc.CATALOGUE, i, 4)) for i in range(1, 5)] for _ in range(2)]
+    assert plans[0] == plans[1]
+    loads = [sum(mc.weight(s) for s in mc.shard(mc.CATALOGUE, i, 4)) for i in range(1, 5)]
+    heaviest = max(mc.weight(s) for s in mc.CATALOGUE)
+    assert max(loads) - min(loads) <= heaviest, loads
+
+
+def test_every_measured_minute_names_a_suite():
+    assert set(mc.MINUTES) <= set(_names(mc.CATALOGUE)), set(mc.MINUTES) - set(_names(mc.CATALOGUE))
+
+
+@pytest.mark.parametrize("spec", ["0/4", "5/4", "1/0", "x", "1-4"])
+def test_a_bad_shard_is_refused(spec):
+    done = subprocess.run([sys.executable, str(REPO / "scripts" / "mutation_check.py"), "--shard", spec, "--list"],
+                          capture_output=True, text=True, check=False, timeout=60)
+    assert done.returncode == 2 and "--shard" in done.stderr
+
+
+def test_an_empty_shard_says_so_and_passes():
+    done = subprocess.run([sys.executable, str(REPO / "scripts" / "mutation_check.py"), "--shard", "4/4",
+                           "testing_double"], capture_output=True, text=True, check=False, timeout=120)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "shard 4/4: none" in done.stdout and "no suite ran" in done.stdout
+
+
+# ── The workflow CI runs ────────────────────────────────────────────────────
+
+
+def _self_test() -> dict:
+    return yaml.safe_load(SELF_TEST.read_text(encoding="utf-8"))
+
+
+def test_the_shards_ci_runs_are_the_ones_the_runner_deals():
+    job = _self_test()["jobs"]["mutations"]
+    shards = job["strategy"]["matrix"]["shard"]
+    [step] = [s for s in job["steps"] if "mutation_check.py" in s.get("run", "")]
+    assert shards == list(range(1, len(shards) + 1))
+    assert f'if [ -n "$SHARD" ]; then args+=(--shard "$SHARD/{len(shards)}"); fi' in step["run"]
+    assert job["strategy"]["fail-fast"] is False, "one failing shard must not hide the others"
+
+
+def test_only_a_pull_request_is_narrowed():
+    """`main`, the weekly run and a manual run test every suite."""
+    workflow = _self_test()
+    on = workflow[True] if True in workflow else workflow["on"]  # YAML 1.1 reads `on:` as true
+    assert {"push", "pull_request", "schedule", "workflow_dispatch"} <= set(on)
+    [step] = [s for s in workflow["jobs"]["mutations"]["steps"] if "mutation_check.py" in s.get("run", "")]
+    assert step["env"]["BASE"] == "${{ github.event.pull_request.base.sha }}"
+    assert 'if [ -n "$BASE" ]; then args+=(--changed-since "$BASE"); fi' in step["run"]
+
+
+def test_the_required_check_fails_unless_every_shard_passed():
+    """`main` requires "Python scripts/runtime/examples" by name, not the shard
+    jobs. It waits for them, runs even when one fails, and fails unless all
+    succeeded — a failed, cancelled or skipped shard is not a pass."""
+    job = _self_test()["jobs"]["python"]
+    assert job["name"] == "Python scripts/runtime/examples"
+    assert "mutations" in ([job["needs"]] if isinstance(job["needs"], str) else job["needs"])
+    assert job["if"] == "${{ !cancelled() }}"
+    [verdict] = [s for s in job["steps"] if "needs.mutations.result" in str(s.get("env", ""))]
+    assert verdict["if"] == "${{ !cancelled() }}"
+    assert '[ "$RESULT" = "success" ]' in verdict["run"]
+    assert not any("mutation_check.py" in s.get("run", "") for s in job["steps"])
 
 
 @pytest.fixture()
@@ -94,19 +207,6 @@ def test_a_base_the_clone_cannot_use_means_unknown(history, ref):
     shallow checkout left out: the changes are unknown, not empty."""
     root, _ = history
     assert mc.changed_files(ref, cwd=root) is None
-
-
-def test_the_tenant_adopt_suite_watches_everything_it_mutates_and_tests():
-    """`watch` is a hand-kept list; this keeps it from drifting behind the
-    suite's own mutations and tests, which would skip it for a change that
-    breaks it."""
-    [suite] = [s for s in mc.CATALOGUE if s.name == "tenant_adopt"]
-    for path in {m.path for m in suite.mutations} | set(suite.tests) | {"scripts/mutation_check.py"}:
-        assert any(fnmatch.fnmatchcase(path, glob) for glob in suite.watch), f"{path} is not watched"
-
-
-def test_only_the_slow_suite_is_narrowed():
-    assert [s.name for s in mc.CATALOGUE if s.watch] == ["tenant_adopt"]
 
 
 def test_the_cli_names_a_skipped_suite_and_does_not_count_it_as_caught(tmp_path):

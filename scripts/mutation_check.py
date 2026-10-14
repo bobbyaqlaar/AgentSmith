@@ -31,6 +31,7 @@ still fails a test; do not delete it because it stopped matching.
 from __future__ import annotations
 
 import argparse
+import ast
 import fnmatch
 import os
 import signal
@@ -64,10 +65,10 @@ class Mutation:
 class Suite:
     """A group of mutations and the tests that must notice them.
 
-    `watch`, when set, lists globs of the files whose change could break what
-    the suite defends; `--changed-since` then skips the suite when none of them
-    changed (.agent-rfc/designs/mutation-ci-scope.md). A suite without `watch`
-    runs every time. Only a suite slow enough to matter declares one.
+    `--changed-since` skips a suite none of whose `triggers` changed: the files
+    its mutations edit, its tests, what those tests import, `SHARED_TRIGGERS`,
+    and `watch` — globs a suite adds for what that misses
+    (.agent-rfc/designs/mutation-ci-fast.md).
     """
 
     name: str
@@ -1459,6 +1460,22 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
         ),
     ),
+    # .agent-rfc/designs/vendoring-retired.md — what a tenant `tenant init`
+    # builds runs in its own CI, checked offline by building the scratch apps.
+    Suite(
+        name="scratch_build",
+        tests=("scripts/test/test_scratch_tenants.py",),
+        # The apps and build script the test builds from: run, not imported.
+        watch=(".github/scratch-tenants/*",),
+        mutations=(
+            Mutation(
+                "the Python CI runs bare pytest, which cannot import an app beside tests/",
+                "workflow-templates/ci-python-fastapi.yml",
+                "          python -m pytest --cov --cov-report=xml -q",
+                "          pytest --cov --cov-report=xml -q",
+            ),
+        ),
+    ),
     Suite(
         name="vendoring_retired",
         tests=("scripts/test/test_vendoring_retired.py",),
@@ -1950,19 +1967,120 @@ def changed_files(ref: str, cwd: Path = REPO) -> "set[str] | None":
     return {line for line in (diff.stdout + new.stdout).splitlines() if line}
 
 
+# A change to one of these can alter how any suite's tests run, so it runs
+# every suite (.agent-rfc/designs/mutation-ci-fast.md). Not pyproject.toml:
+# pytest reads pytest.ini here, and the rest of it is packaging and lint.
+SHARED_TRIGGERS: tuple[str, ...] = (
+    "scripts/mutation_check.py",
+    "scripts/test/conftest.py",
+    "runtime/test/conftest.py",
+    "scripts/_shared.py",
+    "requirements*.txt",
+    "requirements*.lock",
+    "pytest.ini",
+    ".python-version",
+    ".github/workflows/self-test.yml",
+)
+
+
+def _module_file(name: str, beside: Path) -> "str | None":
+    """The repository file a module name imports from a test beside `beside`:
+    a sibling, a script in scripts/, or a package module from the root."""
+    rel = name.replace(".", "/")
+    for candidate in (beside / f"{rel}.py", REPO / "scripts" / f"{rel}.py", REPO / f"{rel}.py",
+                      REPO / "scripts" / rel / "__init__.py", REPO / rel / "__init__.py"):
+        if candidate.is_file():
+            return str(candidate.relative_to(REPO))
+    return None
+
+
+def imported_by(test: str) -> set[str]:
+    """The repository files a test file imports directly, read from its syntax
+    tree: `import x`, `from x import y` (and `x.y` when that is a module), and
+    `load_script("name")` for the scripts with hyphens in their names."""
+    path = REPO / test
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        # fail-open: a test the suite cannot read fails its own baseline, loudly
+        return set()
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            names.add(node.module)
+            names.update(f"{node.module}.{alias.name}" for alias in node.names)
+        elif (isinstance(node, ast.Call) and getattr(node.func, "id", getattr(node.func, "attr", "")) == "load_script"
+              and node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str)):
+            names.add(node.args[0].value)
+    return {found for name in names if (found := _module_file(name, path.parent)) is not None}
+
+
+def triggers(suite: "Suite") -> tuple[str, ...]:
+    """Every path or glob whose change could break what `suite` defends."""
+    own = set(suite.watch) | {m.path for m in suite.mutations} | set(suite.tests)
+    for test in suite.tests:
+        own |= imported_by(test)
+    return (*sorted(own), *SHARED_TRIGGERS)
+
+
 def select_suites(suites: "tuple[Suite, ...]", changed: "set[str] | None"
                   ) -> "tuple[list[Suite], list[tuple[Suite, str]]]":
-    """-> (suites to run, (suite, why) skipped). A suite without `watch` always
-    runs, and so does every suite when `changed` is None (unknown)."""
+    """-> (suites to run, (suite, why) skipped). Every suite runs when
+    `changed` is None (unknown)."""
     run: list[Suite] = []
     skipped: list[tuple[Suite, str]] = []
     for suite in suites:
-        if changed is None or not suite.watch or any(
-                fnmatch.fnmatchcase(path, glob) for path in changed for glob in suite.watch):
+        if changed is None or any(fnmatch.fnmatchcase(path, glob)
+                                  for path in changed for glob in triggers(suite)):
             run.append(suite)
         else:
-            skipped.append((suite, "none of the files it watches changed"))
+            skipped.append((suite, "none of its files changed"))
     return run, skipped
+
+
+# Minutes each suite took in CI, measured on Self-Test run 38470842052
+# (2026-10-14). Only the shard plan reads them, and a stale value costs balance,
+# never a result. A suite missing here weighs one minute.
+MINUTES: dict[str, float] = {
+    "pii": 0.5, "tenant_scaffold": 0.6, "testing_double": 0.1, "idempotency_key": 0.2,
+    "replay_webhook": 0.2, "prompt_guard": 0.2, "structured_output": 0.4, "circuit_breaker": 0.3,
+    "conversation_memory": 0.2, "gate_binary_files": 0.2, "send_dev_record": 0.3, "intake": 2.1,
+    "chosen_ides": 0.2, "config_choices": 0.2, "degraded_defaults": 0.6, "tenant_adopt": 5.5,
+    "installed_machine": 0.3, "gate_contract": 1.4, "gate_contract_v2": 1.3, "telemetry_contract": 0.9,
+    "rules_contract": 1.4, "launcher_declaration": 1.2, "env_file_credentials": 0.3, "evals_contract": 2.8,
+    "security_contract": 4.7, "ops_contract": 0.7, "vendoring_retired": 0.7, "commit_guardrails": 0.3,
+    "record_contract": 0.8, "gate_contract_v3": 1.7, "framework_sync": 10.0,
+}
+
+
+def weight(suite: "Suite") -> float:
+    return MINUTES.get(suite.name, 1.0)
+
+
+def shard(suites: "list[Suite] | tuple[Suite, ...]", index: int, count: int) -> "list[Suite]":
+    """The suites shard `index` of `count` (1-based) runs: dealt heaviest first
+    to the lightest bin, ties to the lower bin and by name, so every shard
+    computes the same plan from the same selection. Catalogue order within."""
+    bins: list[list[Suite]] = [[] for _ in range(count)]
+    load = [0] * count
+    for suite in sorted(suites, key=lambda s: (-weight(s), s.name)):
+        target = min(range(count), key=lambda b: (load[b], b))
+        bins[target].append(suite)
+        load[target] += weight(suite)
+    mine = {s.name for s in bins[index - 1]}
+    return [s for s in suites if s.name in mine]
+
+
+def _shard_spec(text: str) -> "tuple[int, int]":
+    try:
+        index, count = (int(part) for part in text.split("/"))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"--shard takes K/N, e.g. 2/4, not {text!r}") from None
+    if count < 1 or not 1 <= index <= count:
+        raise argparse.ArgumentTypeError(f"--shard {text}: need 1 <= K <= N")
+    return index, count
 
 
 def main() -> int:
@@ -1984,8 +2102,14 @@ def main() -> int:
         "--changed-since",
         metavar="REF",
         default=None,
-        help="skip a suite that declares `watch` when none of its files changed between REF and HEAD; "
-        "a REF this clone cannot use runs every suite",
+        help="skip a suite none of whose files changed since REF; a REF this clone cannot use runs every suite",
+    )
+    parser.add_argument(
+        "--shard",
+        metavar="K/N",
+        type=_shard_spec,
+        default=None,
+        help="run only shard K of N of the selected suites (CI runs four in parallel)",
     )
     args = parser.parse_args()
 
@@ -2009,6 +2133,12 @@ def main() -> int:
         selected = tuple(run)
         for suite, why in skipped:
             print(f"⏭️  {suite.name} skipped — {why} since {args.changed_since}")
+
+    if args.shard is not None:
+        index, count = args.shard
+        selected = tuple(shard(selected, index, count))
+        names = ", ".join(s.name for s in selected) or "none"
+        print(f"🧩  shard {index}/{count}: {names}")
 
     if args.list:
         for suite in selected:

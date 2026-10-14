@@ -56,6 +56,10 @@ _EXPRESSIONS = {
     "github.sha": lambda root: _git(root, "rev-parse", "HEAD"),
     "github.event.pull_request.head.sha || github.sha": lambda root: _git(root, "rev-parse", "HEAD"),
     "github.event.pull_request.base.sha || github.event.before": lambda root: _merge_base(root),
+    # A local run is a change in progress, like a pull request.
+    "github.event.pull_request.base.sha": lambda root: _merge_base(root),
+    # One local process runs every shard of a matrix job.
+    "matrix.shard": lambda root: "",
 }
 _EXPRESSION = re.compile(r"\$\{\{\s*(.*?)\s*\}\}")
 
