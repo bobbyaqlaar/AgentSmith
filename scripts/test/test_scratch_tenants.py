@@ -275,14 +275,16 @@ def test_each_app_builds_into_a_complete_tenant_offline(app, stack, install, tmp
                           cwd=target, stdin=subprocess.DEVNULL, capture_output=True, text=True, check=False)
     assert gate.returncode == 0, gate.stdout + gate.stderr
     if stack == "python-fastapi":
-        _the_ci_test_command_collects_the_apps_tests(target, workflows / f"ci-{stack}.yml")
+        _the_ci_test_command_imports_an_app_beside_tests(workflows / f"ci-{stack}.yml", tmp_path / "layout")
 
 
-def _the_ci_test_command_collects_the_apps_tests(target: Path, workflow: Path) -> None:
-    """The stack CI's own test command, run in the built tenant: its tests import
-    the app beside them. Until 3.0.0 the vendored framework tests put the
-    repository root on the import path as a side effect, so a bare `pytest`
-    passed here and failed in every tenant without them (vendoring-retired.md)."""
+def _the_ci_test_command_imports_an_app_beside_tests(workflow: Path, layout: Path) -> None:
+    """The built tenant's own CI test command, run over the layout a FastAPI app
+    has: a package `app/` beside `tests/`, and no pytest config. Until 3.0.0 the
+    vendored framework tests put the repository root on the import path as a
+    side effect, so a bare `pytest` passed and then failed in every tenant
+    without them (vendoring-retired.md). A probe, not the scratch app's own
+    tests, so the property needs nothing installed beyond pytest."""
     steps = [s for job in yaml.safe_load(workflow.read_text(encoding="utf-8"))["jobs"].values()
              for s in job.get("steps", [])]
     [run] = [s["run"] for s in steps if s.get("name") == "Run tests"]
@@ -294,9 +296,14 @@ def _the_ci_test_command_collects_the_apps_tests(target: Path, workflow: Path) -
         import pytest_cov  # noqa: F401
     except ImportError:  # fail-open: coverage is CI's add-on, not what is under test here
         argv = [a for a in argv if not a.startswith("--cov")]
-    done = subprocess.run([*argv, "-p", "no:cacheprovider"], cwd=target, capture_output=True, text=True,
+    (layout / "app").mkdir(parents=True)
+    (layout / "app" / "__init__.py").write_text("READY = True\n")
+    (layout / "tests").mkdir()
+    (layout / "tests" / "test_probe.py").write_text("from app import READY\n\n\ndef test_the_app_imports():\n"
+                                                    "    assert READY\n")
+    done = subprocess.run([*argv, "-p", "no:cacheprovider"], cwd=layout, capture_output=True, text=True,
                           check=False, timeout=120)
-    assert done.returncode == 0, f"`{command}` in the built tenant:\n" + done.stdout[-2000:] + done.stderr[-2000:]
+    assert done.returncode == 0, f"`{command}` over app/ beside tests/:\n" + done.stdout[-2000:] + done.stderr[-2000:]
 
 
 @needs_git
