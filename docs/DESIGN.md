@@ -9,7 +9,7 @@
 > install and operate it is in [docs/UserManual.md](UserManual.md); how it came to be this way
 > is in [docs/PRODUCT_ARCHIVE.md](PRODUCT_ARCHIVE.md).
 
-**Version:** 2.4.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
+**Version:** 3.0.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
 `pyproject.toml` — pinned together by
 `scripts/test/test_version_consistency.py`)
 **Status:** Current.
@@ -2244,7 +2244,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 2.4.x | 3.11 | 0.2 | 4.0 | **None** — a MINOR: the Ops contract is additive and reaches a tenant when its worker holds an Ops token the portal issued, or its CI runs `agentsmith ops settings`; a worker on the shared token keeps reporting and is told its route is deprecated; the history route no longer sets a replay URL or key; a replay webhook that redirects gets no replay; the portal needs `npm run db:migrate`. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
+| 3.0.x | 3.11 | 0.2 | 4.0 | **MAJOR** — vendoring retired: a tenant holds no copy of AgentSmith and asks the providers it declares; no machine-wide git hooks, no `agentsmith upgrade`, no vendoring by `tenant init` or `sync`, and nothing runs a tenant's copy. A 2.x tenant's copies keep running by path, stale, until it moves: re-run the installer, pin `@v3.0.0` and `agentsmith sync`, swap each by-path step for its port (`evals run --fail-below`, `kg check`, actions at the provider), then delete what `verify_system.py --governed` names. The commit guardrails are on in every repository's gate. Full text in [`CHANGELOG.md`](../CHANGELOG.md) |
 
 ### Examples as Forks
 

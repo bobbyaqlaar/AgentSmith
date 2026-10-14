@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - workflow-templates/**
   - .githooks/process-gate
