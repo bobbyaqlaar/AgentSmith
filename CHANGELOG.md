@@ -84,6 +84,31 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — Self-Test's curated mutations: only what a pull request can affect, in parallel
+
+AgentSmith's own CI, not a tenant's (`mutation-ci-fast`). Supersedes `mutation-ci-scope`, which
+narrowed one suite.
+
+- **On a pull request, every suite is narrowed.** `mutation_check.py --changed-since` runs a suite
+  only when one of its triggers changed:
+  - the files its mutations edit;
+  - its tests, and the repository modules they import;
+  - its `watch` globs;
+  - a shared set: the runner, the `conftest.py` files, `_shared.py`, the requirements, `pytest.ini`,
+    `.python-version` and `self-test.yml`.
+
+  `main`, a weekly run and a manual run still run every suite.
+- **`--shard K/N`** deals the selected suites into N bins by the minutes each took in CI. Self-Test
+  runs four in parallel, as "Curated mutations (shard N/4)".
+- **The required check is unchanged.** "Python scripts/runtime/examples" waits for the shards and
+  fails unless every one passed.
+- **A full run takes about 10 minutes, not 39.** A pull request like the 3.0.0 release runs one
+  suite.
+- **A new suite, `scratch_build`,** holds the Python template's `python -m pytest` against
+  regressing.
+- **Locally,** `agentsmith gates run` runs the mutation step as one process against the
+  merge-base, and skips the shard verdict, which only CI can read.
+
 ## [3.0.0] — 2026-10-14
 
 ### Removed — vendoring (C9, `vendoring-retired`) — **breaking**

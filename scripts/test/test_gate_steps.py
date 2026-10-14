@@ -163,6 +163,17 @@ def test_an_unresolvable_expression_is_skipped_by_name(workflows):
     assert "CI context" in why and "secrets.DEPLOY_KEY" in why
 
 
+def test_a_sharded_pull_request_step_runs_here_as_one_whole_change():
+    """Self-Test's curated mutations: CI deals them across a matrix and narrows
+    a pull request to its base. Locally one process runs every shard, against
+    where this branch left upstream (.agent-rfc/designs/mutation-ci-fast.md)."""
+    step = next(s for s in gs.gates(REPO) if s.name.startswith("mutation_check.py"))
+    runnable, why = gs.runnable(step, root=REPO, services=False)
+    assert runnable, why
+    assert gs._resolve(step.env["SHARD"], REPO)[0] == ""
+    assert gs._resolve(step.env["BASE"], REPO)[0] == gs._merge_base(REPO)
+
+
 def test_a_job_with_services_is_skipped_unless_they_are_running(workflows):
     step = next(s for s in gs.gates(workflows) if s.name == "the database tests")
     assert not gs.runnable(step, root=REPO, services=False)[0]

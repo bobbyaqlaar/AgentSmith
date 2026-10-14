@@ -314,7 +314,14 @@ def test_the_release_ships_the_lock_the_installer_downloads():
 def test_self_test_installs_the_lock_at_the_pinned_version():
     text = (REPO / ".github/workflows/self-test.yml").read_text(encoding="utf-8")
     assert "pip install -r requirements.txt" not in text
-    assert text.count("pip install --require-hashes -r requirements.lock") == 2
+    import yaml
+
+    jobs = yaml.safe_load(text)["jobs"]
+    # The jobs that run the framework's own Python: its tests, its checks, and
+    # the curated mutations (.agent-rfc/designs/mutation-ci-fast.md).
+    for job in ("python", "python-behaviour", "mutations"):
+        runs = [step.get("run", "") for step in jobs[job]["steps"]]
+        assert "pip install --require-hashes -r requirements.lock" in runs, f"{job} does not install the lock"
     assert "python-version:" not in text, "a literal Python version beside .python-version"
     assert text.count('python-version-file: ".python-version"') == text.count("actions/setup-python@")
 

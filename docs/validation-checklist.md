@@ -103,9 +103,9 @@ CI stays the authority.
 | Gate | Workflow · job | Runs | Locally |
 |---|---|---|---|
 | Every gated commit has a design and a clean review | `.github/workflows/self-test.yml` · Process gates (design + review) | `python3 scripts/process_gate.py ci --base "$BASE" --head "$HEAD_SHA" --json "${RUNNER_TEMP:-/tmp}/dev-record.json"` | yes |
+| mutation_check.py (curated — the properties we chose to defend) | `.github/workflows/self-test.yml` · Curated mutations (shard ${{ matrix.shard }}/4) | (script) | yes |
 | ruff (lint config lives in pyproject.toml) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | mypy (shipped runtime only — see pyproject.toml for the scope) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
-| mutation_check.py (curated — the properties we chose to defend) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | py_compile sweep | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `find scripts runtime examples -name "*.py" -print0 \| xargs -0 -n1 python3 -m py_compile` | yes |
 | docs/DESIGN.md repo-tree drift check (top level + key sub-trees) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | Redaction compliance (staging + production profiles) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
@@ -114,6 +114,7 @@ CI stays the authority.
 | On-prem deploy template (Compose + Helm syntax) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-onprem-deploy` | needs helm |
 | Delivery evidence pack script | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/delivery_evidence.py` | yes |
 | Unit tests — delivery model + fairness + input guardrail | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
+| Every curated-mutation shard passed | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | pytest (runtime/test/) | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `pytest runtime/test/ -v` | needs services |
 | pytest (scripts/test/ — shadow eval sampling) | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `pytest scripts/test/ -v` | needs services |
 | verify_system.py --check-idempotency | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `python3 scripts/verify_system.py --check-idempotency` | needs services |
