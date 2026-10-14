@@ -4390,7 +4390,7 @@
         "test_adopt_sh_rebuilds_from_a_clean_history",
         "test_the_adopted_job_waits_on_both_of_the_tenants_workflows"
       ],
-      "last_modified": "2026-10-14T17:29:22Z",
+      "last_modified": "2026-10-14T18:30:57Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -8782,6 +8782,22 @@
       ],
       "last_modified": "2026-10-14T09:31:35Z",
       "id": "scripts/test/test_vendoring_retired.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Release 3.0.0",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/release-3-0-0.md",
+      "pillar": null,
+      "created_at": "2026-10-14T18:34:48Z",
+      "id": "rfc:designs/release-3-0-0.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 release 3.0.0",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/release-3-0-0.md",
+      "pillar": null,
+      "created_at": "2026-10-14T18:34:49Z",
+      "id": "rfc:reviews/release-3-0-0.md"
     }
   ],
   "edges": [

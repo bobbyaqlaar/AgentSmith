@@ -7,6 +7,12 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Released — v3.0.0 (2026-10-14)
+
+Design: `.agent-rfc/designs/release-3-0-0.md`; review: `.agent-rfc/reviews/release-3-0-0.md`.
+
+A MAJOR carrying C9: a tenant holds no copy of AgentSmith and asks the providers it declares. The 3.0.x row in `CHANGELOG.md` names what a 2.x tenant and machine lose, what keeps running stale until a tenant moves, and the order to move in, checked against OTS's and KYC Sentinel's workflows. The scratch tenants found two defects vendoring had hidden before the tag: `kg check` needed networkx in the provider's CI setup (#55), and the Python template's bare `pytest` could not import an app beside `tests/` (#56). Merged by rebase; tagged `v3.0.0` on the merged commit.
+
 ## Completed — C9: vendoring retired (2026-10-13)
 
 Design: `.agent-rfc/designs/vendoring-retired.md`; review: `.agent-rfc/reviews/vendoring-retired.md`.

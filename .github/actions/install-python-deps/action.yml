@@ -1,18 +1,17 @@
 name: "Install Python project dependencies"
 description: >-
   Installs a Python project's own dependencies into the job's interpreter, from
-  whichever manifest the project uses: requirements.txt, else uv.lock. The one
-  implementation ci-python-fastapi.yml and eval-security.yml share — each used
-  to carry its own copy, and only one of them learned about uv.
+  whichever manifest the project uses: requirements.txt, else uv.lock. A
+  tenant references it at the provider's release; it is never copied.
 
-# Why the job's interpreter and not a venv: every later step in the calling
-# workflows runs bare `pytest`, `ruff` and `python3 scripts/...`, so the
-# project's packages must be where those resolve.
+# Why the job's interpreter and not a venv: the later steps of
+# ci-python-fastapi.yml run `ruff` and `python -m pytest` on that interpreter,
+# so the project's packages must be where those resolve.
 #
 # Precedence: requirements.txt wins over uv.lock when both exist — a project
 # that keeps a requirements.txt is declaring that file as what CI installs.
-# hooks/post-checkout names the test tool by the same lockfile
-# (scripts/test/test_ci_package_managers.py pins the two against each other).
+# The rules renderer (scripts/generate-ide-config.py) names the test tool by the
+# same lockfile (scripts/test/test_ci_package_managers.py pins the two together).
 
 runs:
   using: composite
