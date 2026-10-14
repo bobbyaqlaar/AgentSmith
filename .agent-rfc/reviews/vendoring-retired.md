@@ -304,10 +304,41 @@ failed one step, `Knowledge Graph is current`: `kg check` raised `ImportError: n
   were when the pre-C9 builds passed (diffed against `bffd4d2`). The scratch build this merge
   triggers is the first to run them, and is the proof.
 
+# Commit 4 — the Python CI template can import the app it tests
+
+## Pass 15 — findings: 1
+
+The scratch build after commit 3: go, ts-react and ts-react-pnpm are green, and so is the adopted
+tenant. The graph step passes everywhere. Both Python tenants failed "Run tests", one of the steps
+the previous build skipped:
+
+1. **`ModuleNotFoundError: No module named 'app'` collecting `tests/test_healthz.py`.** The
+   template ran a bare `pytest`, which puts only `tests/` on the import path. The last green
+   build ran 38 tests, most of them AgentSmith's vendored `runtime/` tests. Their `conftest.py`
+   sits in a package, so pytest put the repository root on the path as a side effect, and the
+   app's import worked. Vendoring hid a defect in the template every fresh Python tenant would
+   hit. **Fix:** the template runs `python -m pytest`, which adds the root, against the same
+   interpreter, since both install paths of `install-python-deps` use it. The offline build test
+   now runs each built Python tenant's own "Run tests" command, read from its generated workflow,
+   inside the tenant.
+
+## Pass 16 — findings: 0
+
+- **Reproduced locally:** on the scratch app, bare `pytest` fails collection and
+  `python -m pytest` passes.
+- **The new check can fail:** with bare `pytest` put back, it fails exactly the two Python
+  builds CI failed, and the template is restored byte for byte. A curated suite for it would run
+  on every PR, because only `tenant_adopt` may be narrowed (owner, 2026-09-19,
+  `mutation-ci-scope`). It joins the CI-time question now with the owner.
+- **Not changed:** the rule files' local test command (`pytest`, or `uv run pytest`). A
+  developer's environment is the project's own and usually installs it. CI cannot assume that.
+- **No other bare test runner:** the Go and TypeScript templates run `go test` and the package
+  manager's `test`, which resolve their own modules.
+
 ## Sign-off
 
 Group 1 · DRY & shared code — [x] checked — one decision (`commit_verdict`) for the hook and gate contract 3's `commit`; the guardrails reuse `check_bare_except.find_violations` and `vouched_files.vouched`; init and adopt share `providers_declaration` and `provider_workflows`; the test loads scripts through `_shared.load_script`.
-Group 2 · Quality / safety — [x] checked — `test_gate_guardrails.py` (15), `test_vendoring_retired.py` (14) and the rewritten suites; `--check-hooks` commits through the gate; curated mutations `commit_guardrails` 5/5, `vendoring_retired` 9/9, `installed_machine` 4/4, `tenant_adopt` 18/18 (one by hand, pass 11); the provider's setup environment rebuilt and `kg check` run in it (pass 14).
+Group 2 · Quality / safety — [x] checked — `test_gate_guardrails.py` (15), `test_vendoring_retired.py` (14) and the rewritten suites; `--check-hooks` commits through the gate; curated mutations `commit_guardrails` 5/5, `vendoring_retired` 9/9, `installed_machine` 4/4, `tenant_adopt` 18/18 (one by hand, pass 11); the provider's setup environment rebuilt and `kg check` run in it (pass 14); each built Python tenant's own CI test command run offline (pass 16).
 Group 3 · Architecture / hygiene — [x] checked — no dependency added; a tenant holds no copy of AgentSmith and asks the providers it declares; no hook is armed outside a repository; dead code and stale text removed.
 Group 4 · Process — [x] checked — design before code, with the owner's decisions recorded; CHANGELOG Unreleased (breaking); backlog and archive; the User Manual, DESIGN, README, `process-gates.md`, `scratch-tenants.md` and `enterprise/README.md`.
 Group 5 · Intuitive UI — [x] n/a — no screen or control.
@@ -321,4 +352,4 @@ Gates run: full `pytest` on the staged tree (2355 passed, 10 skipped), then the 
 
 Levers reviewed: `grep-for-siblings`, `declared-vs-enforced`, `failure-mode-visibility`, `docs-match-behaviour`, `run-the-gates-ci-lists`, `every-line-earns-its-place`, `guards-must-be-able-to-fail`, `backlog-discipline`.
 
-KG query: kg:01bb14907e83
+KG query: kg:26709071d2d7
