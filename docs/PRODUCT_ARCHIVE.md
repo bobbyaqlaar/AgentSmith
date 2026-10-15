@@ -7,6 +7,25 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Completed — the governance contracts, C1–C9 (2026-10-15)
+
+Design: `.agent-rfc/designs/governance-contracts.md`. The owner's principle (2026-10-02),
+non-negotiable: AgentSmith and its tenants are decoupled by contract.
+
+- **Every port a tenant needs is a published contract:**
+  - the gate (v1–v3) and the Dev record;
+  - rules, telemetry, evals, security and Ops records.
+
+  AgentSmith is one implementation of each, with conformance checks another can run.
+- **Released across v2.1.0 to v3.0.0.** 3.0.0 retired vendoring: no tenant holds a copy of AgentSmith,
+  and no git hook is armed outside a repository.
+- **Both tenants moved through every slice they use.** OTS ended at #10 and KYC Sentinel at #6.
+  oil-price-demo, never moved, is archived.
+- **Left to the owner, as content:**
+  - OTS's ruff errors in its frozen core;
+  - its risk register and agency manifest;
+  - golden cases that carry its application's outputs.
+
 ## Released — v3.0.0 (2026-10-14)
 
 Design: `.agent-rfc/designs/release-3-0-0.md`; review: `.agent-rfc/reviews/release-3-0-0.md`.
