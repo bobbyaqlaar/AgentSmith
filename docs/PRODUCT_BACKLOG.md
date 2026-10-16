@@ -21,16 +21,24 @@ contract's dataset schemas — the release to adopt it at. v2.2.0 (2026-10-07) c
 eval steps through the declared provider, OTS's eval workflows — were waiting on it. v2.1.0
 (2026-10-05) carried the governance contracts C1–C5; v2.0.0 (2026-09-19) was the governance
 release, a MAJOR.
-**AgentSmith, KYC Sentinel and AqlaarTeleologyStudio are private** since
-2026-09-13, until AgentSmith is product-ready — see the install item below.
+**AgentSmith is public** (AGPL-3.0) — the release install works for anyone, and anyone may read
+the repository. **KYC Sentinel and AqlaarTeleologyStudio stay private.** All three were private
+from 2026-09-13; only AgentSmith flipped, in late September — nothing in this repository pins the
+day, so no date is claimed for it here. Verified anonymously 2026-10-16: the repository reports
+`PUBLIC` with `agpl-3.0`, and
+`releases/latest/download/install-ai-stack.sh` returns 200, 45,784 bytes, with a matching
+`shasum -a 256 --check` — see the install item below, whose trigger this met.
 
-Green on GitHub as of 2026-09-14: AgentSmith Self-Test, and all five scratch
-tenants' own CI (`docs/scratch-tenants.md`). KYC Sentinel's CI is green
-against the private framework (last run 2026-09-13) — strict harness 24 pass
-plus the declared `SEC-AUDIT-002` gap — and its three judged gates have
-graded live on the Gemini judge (golden 1.000, fairness 1.000, hallucination
-0.857; 2026-09-01 to 09-07). No test count is quoted — one was, and went stale
-three times in a single working session.
+Green on GitHub, checked 2026-10-16: AgentSmith **Self-Test** on `ec307b1`
+(2026-10-15), **Scratch tenants** on `67929c8` (2026-10-14 — all six, including
+the adopted tenant; `docs/scratch-tenants.md`), and **KYC Sentinel CI** on
+`9b9c5f8` (2026-10-15), the commit that moved it to v3.0.0 holding no copy of
+the framework. KYC's three judged gates have graded live on the Gemini judge
+(golden 1.000, fairness 1.000, hallucination 0.857; 2026-09-01 to 09-07) — those
+are the latest *graded* numbers, not the latest runs, because a suite with
+nothing to grade now reports `not_gradable` and the step passes by declaration.
+No test count is quoted — one was, and went stale three times in a single
+working session.
 
 The **KYC Sentinel testbed tenant** (`../KYC_Sentinel`) is built, pushed,
 CI-green and was deployed as a GCP staging smoke job on 2026-08-12 — full
@@ -288,7 +296,12 @@ and `docs/PRODUCT_ARCHIVE.md`. Each was checked still open on 2026-09-14.
   run names the placeholder file, but not that this is the expected day-one
   state. **Trigger:** the first
   external tenant onboards, or someone proposes relaxing strict to get green.
-- **Every release-download install path is broken while AgentSmith is private.**
+- **~~Every release-download install path is broken while AgentSmith is private.~~ Met
+  2026-10-16 — the repository is public and the anonymous check now passes (200, 45,784
+  bytes, `shasum -a 256 --check` OK, against v3.0.0). The "install from a checkout" notes are gone
+  from README and are conditional in UserManual ("if AgentSmith is private for you", which is still
+  true of a private fork). Ready for the archive — left here for the owner to move with the rest of
+  the row's history.**
   The documented `curl …/releases/latest/download/install-ai-stack.sh | bash`
   returns 404 to everyone — curl sends no GitHub login — and exits 0 having
   installed nothing; the installer's own fallbacks (`scripts.tar.gz`,
