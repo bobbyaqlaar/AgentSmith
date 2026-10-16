@@ -143,22 +143,35 @@ deliberately *not* built and why) is **docs/DESIGN.md › Architecture by Layer*
 AgentSmith is the reference implementation of a **contract**, not a set of files you copy.
 
 A governed repository holds one declaration — `.agenticframework/providers.json`, written by
-`agentsmith tenant adopt`:
+`agentsmith tenant init` or `agentsmith tenant adopt`:
 
 ```json
 {
-  "_about": "Who governs this repository. The hooks ask this before they ask the framework's own paths…",
-  "contract": 1,
+  "_about": "Who governs this repository. The hooks and CI ask this before anything else; `\"gate\": \"none\"` declares the repository ungoverned. See contract/gate/v3/protocol.md.",
+  "contract": 3,
   "providers": {
-    "gate": { "command": "agentsmith gate", "version": "^2" }
+    "gate": {
+      "command": "agentsmith gate",
+      "version": "^3",
+      "setup": "bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@v3.0.0"
+    },
+    "rules":    { "command": "agentsmith rules",    "version": "^3", "contract": 1 },
+    "evals":    { "command": "agentsmith evals",    "version": "^3", "contract": 1 },
+    "security": { "command": "agentsmith security", "version": "^3", "contract": 1, "emitter": "none" }
   }
 }
 ```
 
-The git hooks ask *that* — not AgentSmith's paths. At the three events the contract covers
-(`session-start`, `pre-edit`, `stop`) the resolved provider receives a JSON `GateEvent` on stdin and
-answers with a `Decision` on stdout: allow, deny, block, or extra context. `"gate": "none"` declares
-a repository deliberately ungoverned, and is never overridden by a fallback.
+One port per thing the repository needs, each naming a command and the contract version it speaks;
+a new repository also declares what it truthfully is — here, that nothing yet emits telemetry to
+check (`"emitter": "none"`), and, for the evals port, which suites may report that they had nothing
+to grade. The pinned `setup` is the step the repository's CI runs to get the provider.
+
+The git hooks ask *that* — not AgentSmith's paths. At each event the contract covers —
+`session-start`, `pre-edit` and `stop`, `commit` and `push`, `ci`, and the knowledge-graph verbs —
+the resolved provider receives a JSON `GateEvent` on stdin and answers with a `Decision` on stdout:
+allow, deny, block, or extra context. `"gate": "none"` declares a repository deliberately
+ungoverned, and is never overridden by a fallback.
 
 **CI is in the contract** since gate contract 2: a tenant's gates workflow runs its provider's
 pinned setup step and asks the declared command whether the pushed range passes, never a framework
