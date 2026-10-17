@@ -143,6 +143,65 @@ def test_walker_ignores_vendor_dirs(repo):
     assert stats["upserted"] == 2  # node_modules not walked
 
 
+def test_walker_ignores_a_checkout_living_inside_the_repo(repo):
+    """A git worktree or clone inside the tree is another branch's code, not
+    this repository's. This IDE puts one at .claude/worktrees/<name>/, and on
+    2026-10-16 that put 196 foreign nodes — a quarter of the graph — into the
+    committed fixture, which then differed by machine and failed an unrelated
+    allowlist test on names only the stale copy still had.
+
+    A worktree's `.git` is a FILE and a clone's is a DIRECTORY: both are asked
+    the same way, and either marks a directory that is not part of this tree.
+    """
+    _write_sample(repo)
+
+    worktree = repo / ".claude" / "worktrees" / "some-branch"
+    worktree.mkdir(parents=True)
+    (worktree / ".git").write_text("gitdir: /elsewhere/.git/worktrees/some-branch\n")
+    # No real retired name goes in here: test_documented_env_vars_exist.py reads
+    # every tracked source file, and one in this string would read as "that name
+    # is referenced in code again" — which is exactly how this test's first
+    # version re-broke the check that found the defect.
+    (worktree / "stale.py").write_text("OLD_SETTING = 'x'\n\ndef retired():\n    return 1\n")
+
+    clone = repo / "vendor" / "other-project"
+    clone.mkdir(parents=True)
+    (clone / ".git").mkdir()
+    (clone / "theirs.py").write_text("def theirs():\n    return 2\n")
+
+    stats = map_codebase.run_map()
+    assert stats["upserted"] == 2, "only app.py and helper.py belong to this repository"
+    kg = AgentKnowledgeGraph()
+    assert kg.find_files_by_symbol("retired") == []
+    assert kg.find_files_by_symbol("theirs") == []
+    assert kg.find_files_by_symbol("main") == ["app.py"]  # the repo's own file is still mapped
+
+
+def test_a_file_the_walker_no_longer_claims_is_purged(repo):
+    """Purging asked two questions — "not seen" AND "gone from disk" — so a
+    node the walker stopped claiming survived forever while its file existed.
+    That is why adding an ignore rule could not clean a graph that already held
+    196 nodes from an IDE worktree: the files were still there.
+
+    Not seen by the walk IS the answer; the file existing somewhere under the
+    root is not a reason to keep a node for it.
+    """
+    _write_sample(repo)
+    other = repo / "vendor" / "other-project"
+    other.mkdir(parents=True)
+    (other / "theirs.py").write_text("def theirs():\n    return 2\n")
+
+    assert map_codebase.run_map()["upserted"] == 3          # walked as ours, for now
+    assert AgentKnowledgeGraph().find_files_by_symbol("theirs") == ["vendor/other-project/theirs.py"]
+
+    (other / ".git").mkdir()                                # it is its own checkout after all
+    stats = map_codebase.run_map()
+
+    assert stats["purged"] == 1, "the node must go even though the file is still on disk"
+    assert AgentKnowledgeGraph().find_files_by_symbol("theirs") == []
+    assert AgentKnowledgeGraph().find_files_by_symbol("main") == ["app.py"]
+
+
 def test_walker_extracts_guardrails(repo):
     _write_sample(repo)
     (repo / ".cursorrules").write_text("## 1. Requirements & Design\nrules\n")

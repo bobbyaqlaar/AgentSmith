@@ -84,6 +84,25 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the knowledge graph maps this repository, not a checkout living inside it
+
+`map_codebase.py` walks the filesystem and skipped directories by name, so a git worktree or clone
+**inside** the tree was mapped as if it were this repository's code. This IDE opens worktrees at
+`.claude/worktrees/<name>/`, and one of them put **196 nodes — a quarter of the graph** — from
+another branch's copy of the portal into a locally regenerated
+`.agent-rfc/fixtures/knowledge_graph.json`. It surfaced as an unrelated test failure, on retired
+names only that stale copy still contained.
+
+- **A directory below the root that holds a `.git` entry is not this repository.** A worktree's is a
+  file and a clone's is a directory; both are skipped, wherever they sit.
+- **Purging asked one question too many.** A `CodebaseFile` node was removed only when the walk had
+  not seen it **and** its file was gone from disk — so a node the walker had stopped claiming
+  survived while the file existed, and an ignore rule could never clean a graph that already held
+  it. "This walk did not claim it" is now the whole test.
+- Effect on this repository's own graph, regenerated: **791 → 596 nodes, 291 → 215 edges**, with no
+  foreign node left. A fixture committed from CI was never affected; one regenerated on a developer
+  machine with a worktree open was, which is the parity defect being fixed.
+
 ### Changed — Self-Test's curated mutations: only what a pull request can affect, in parallel
 
 AgentSmith's own CI, not a tenant's (`mutation-ci-fast`). Supersedes `mutation-ci-scope`, which

@@ -73,9 +73,31 @@ EXTENSION_TO_LANG = {
 }
 
 
+def _nested_checkouts(root: Path) -> set[Path]:
+    """Directories below `root` that are their own git checkout.
+
+    A git worktree's `.git` is a file, a clone's is a directory; either says
+    the code below it belongs to another tree. This IDE opens worktrees at
+    `.claude/worktrees/<name>/`, and before they were skipped one of them put
+    196 foreign nodes — another branch's copy of the portal — into the
+    committed graph, which then differed by machine.
+    """
+    found: set[Path] = set()
+    for path in root.rglob(".git"):
+        try:
+            if path.parent != root and path.exists():
+                found.add(path.parent)
+        except OSError:  # fail-open: an unreadable directory stays part of the repo
+            pass
+    return found
+
+
 def _iter_source_files(root: Path):
+    nested = _nested_checkouts(root)
     for path in root.rglob("*"):
         if any(part in IGNORED_DIRS for part in path.parts):
+            continue
+        if any(checkout in path.parents for checkout in nested):
             continue
         if path.suffix in EXTENSION_TO_LANG and path.is_file():
             yield path
@@ -384,13 +406,18 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
                 f"  [{lang}] {rel_path} — {len(symbols)} symbols, {len(raw_imports)} imports"
             )
 
-    # ── Purge stale CodebaseFile nodes ────────────────────────────────────────
+    # ── Purge CodebaseFile nodes this walk did not claim ──────────────────────
+    # "Not seen by this walk" is the whole question. It used to also require the
+    # file to be GONE from disk, which kept every node the walker had stopped
+    # claiming for any other reason — an ignored directory, or a checkout living
+    # inside the repo. That is why adding an ignore rule could not clean a graph
+    # that already held 196 nodes from an IDE worktree: the files were still
+    # there, so they were never stale. `seen_files` holds every file the walk
+    # included, skipped-as-unchanged ones too, so nothing of ours is in here.
     stale = [
         node_id
         for node_id, attrs in kg._g.nodes(data=True)
-        if attrs.get("node_type") == "CodebaseFile"
-        and node_id not in seen_files
-        and not (root / node_id).exists()
+        if attrs.get("node_type") == "CodebaseFile" and node_id not in seen_files
     ]
     for node_id in stale:
         kg.remove_file(node_id)
