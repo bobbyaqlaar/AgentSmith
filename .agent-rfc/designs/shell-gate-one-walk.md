@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/gate_shell.py
   - scripts/test/test_gate_shell.py
