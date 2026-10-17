@@ -614,11 +614,23 @@ quotes — a test fixture, an `echo`, a script handed to an interpreter — is a
 argument to another program, not a command being run. This rule refused the
 repo's own tests for itself until that was fixed.
 
+**That holds for a redirect too, since 2026-10-16.** A write is found by the
+redirect operator in the tokens (`>`, `>>`, `&>` and `>|`, and the target of `2>`), so a
+protected path inside quotes — `echo 'x > .githooks/commit-msg'`, a grep
+pattern, a string handed to an interpreter — is a path being *written about* and
+passes. Until that change the check matched characters, and it refused the
+commands of its own review twice in one afternoon. Two operators it had never
+caught, `>|` and `>&`, are refused now that the operator is read as a token. A
+line that will not tokenise at all — an unbalanced quote — keeps the old
+character reading, which is stricter: there a redirect can be glued to its
+target with no operator token to find.
+
 **Stated limit, and it decides what this is worth.** It reads the command an
 IDE is about to run, not what that command does. `bash -c "$(…)"`, a script
 file, a shell alias and a Makefile target all reach git without passing
 through. So do `git config --edit`, a write straight into `.git/config`, an
-`export GIT_CONFIG_…` on an earlier line, and `env` given options of its own. That is why the sweep exists and why the commit and CI gates are the
+`export GIT_CONFIG_…` on an earlier line, `env` given options of its own, and a
+redirect whose target is a variable (`> $CONFIG`), which names no path to read. That is why the sweep exists and why the commit and CI gates are the
 ones that cannot be talked around: this layer makes the obvious bypass visible
 and costly, not impossible.
 

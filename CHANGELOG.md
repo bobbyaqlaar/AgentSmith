@@ -84,6 +84,39 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the shell pre-check reads a redirect from the tokens, not the characters
+
+A protected path written **about** — in quotes, in a grep pattern, in a string handed to an
+interpreter — was refused as if the command wrote to it: the redirect check matched characters
+while the rest of the rule had been tokenised. It refused the commands of its own review twice
+before this was written. A write is now the `>`, `>>`, `&>` and `>|` operator **as a token**, with the next
+token as its target, so `echo 'x > .githooks/commit-msg'` passes and `echo x > .githooks/commit-msg`
+is refused exactly as before.
+
+- **Two operators that were never caught are refused now**: `>|` and `>&`. The old pattern excluded
+  `|` and `&` from a target, so it found no path after either.
+- **A line that will not tokenise keeps the old character reading** — an unbalanced quote leaves the
+  operator glued to its target, with no token to find — which is the stricter answer where nothing
+  can be parsed.
+- Measured over 1,684 commands against the commit before it: 10 quoted mentions now pass, 18 `>|`
+  and `>&` writes are now refused, and nothing else changed.
+
+### Changed — the shell pre-check's two parses are one walk
+
+No behaviour change in this part; the tests and the hand mutants of `scripts/gate_shell.py` are
+unchanged and still hold (21 of 21 caught, counting the five for the redirect reading above).
+
+- Finding git's subcommand and reading `git config`'s arguments were the same walk — skip a word,
+  skip an option's value — written twice. `_walk` is that walk, and both parses use it.
+- `_git_subcommand` returns the subcommand and the words after it, so the caller drops an
+  `Optional[int]` and its slicing, and the `commit`/`push` flag checks read that subcommand's own
+  words rather than every word on the line.
+- The sentence telling you how to re-arm the hooks is written once, and the removal reason is a
+  template formatted where it is returned rather than built on every call.
+- A test gap closed with it: nothing asserted that a valueless global flag (`git --no-pager commit
+  --no-verify`) does not become the subcommand — a mutant proving that survived until three cases
+  were added.
+
 ### Fixed — the knowledge graph maps this repository, not a checkout living inside it
 
 `map_codebase.py` walks the filesystem and skipped directories by name, so a git worktree or clone

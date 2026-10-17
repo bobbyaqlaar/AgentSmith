@@ -169,6 +169,9 @@ def test_other_config_writes_are_not_refused(command) -> None:
     "git -c user.name=x commit --no-verify -m x",
     "git --git-dir ../kyc/.git commit -n -m x",
     "git --work-tree ../kyc push --no-verify",
+    "git --no-pager commit --no-verify -m x",          # a flag with no value of its own
+    "git --literal-pathspecs push --no-verify",
+    "git --no-pager config core.hooksPath /dev/null",
 ])
 def test_options_before_the_subcommand_do_not_hide_it(command) -> None:
     """The subcommand was 'the first word without a dash', so the value of
@@ -230,6 +233,54 @@ def test_an_environment_prefix_on_ordinary_work_is_not_refused() -> None:
 ])
 def test_writing_to_the_gate_itself_is_refused(command) -> None:
     assert _refused(command), command
+
+
+@pytest.mark.parametrize("command", [
+    "echo 'x > .githooks/commit-msg'",
+    'grep -F "> .claude/settings.json" docs/',
+    "python3 -c \"print('x > .githooks/pre-push')\"",
+    "echo \"writing to .agenticframework/approvals.jsonl is refused: >> appends\"",
+])
+def test_a_redirect_inside_quotes_is_an_argument_not_a_redirect(command) -> None:
+    """The sibling of test_a_bypass_inside_quotes_...: writing a test, a document
+    or an interpreter string ABOUT a protected path is not writing to it. Found
+    2026-10-16 when this rule refused the commands of its own review."""
+    assert _refused(command) is None, command
+
+
+@pytest.mark.parametrize("command", [
+    "echo x > .githooks/commit-msg",
+    "echo x >.githooks/commit-msg",            # no space
+    "echo x >> .agenticframework/approvals.jsonl",
+    "echo x >| .claude/settings.json",         # noclobber override
+    "echo x &> .githooks/pre-push",            # stdout and stderr
+    "echo x 2> .githooks/pre-push",            # one stream only
+    "cat /tmp/x > ./.githooks/commit-msg",     # a leading ./ is the same path
+])
+def test_every_redirect_form_onto_the_gate_is_refused(command) -> None:
+    reason = _refused(command)
+    assert reason and "docs/process-gates.md" in reason, command
+
+
+def test_an_operator_with_nothing_after_it_is_not_a_write() -> None:
+    """`echo x >` redirects nowhere — git, bash and this all have to survive a
+    line that ends on its operator rather than reading past the last token."""
+    assert _refused("echo x >") is None
+    assert _refused("echo x >>") is None
+
+
+def test_a_line_that_cannot_be_tokenised_keeps_the_strict_reading() -> None:
+    """An unbalanced quote is not a line this can parse: the crude split leaves
+    the redirect GLUED to its target, where the token rule sees no operator at
+    all — so the old text scan is kept for that case alone. Over-strict where
+    nothing can be read beats a write that walks through.
+
+    The glued form is the one that pins it: with a space, the crude split
+    happens to yield `>` as its own token and the token rule catches it too,
+    which is why a mutant deleting the fallback survived the first version of
+    this test."""
+    assert _refused("echo 'x >.githooks/commit-msg") is not None
+    assert _refused("echo 'x > .githooks/commit-msg") is not None
 
 
 def test_reading_those_files_is_fine() -> None:
