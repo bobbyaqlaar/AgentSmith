@@ -88,12 +88,34 @@ def test_symbol_and_impact_queries(repo):
     assert kg.impacted_files("src/a.py") == ["src/b.py"]
 
 
-def test_remove_file(repo):
+def test_remove_node(repo):
     kg = AgentKnowledgeGraph()
     kg.upsert_file("gone.py")
-    kg.remove_file("gone.py")
+    kg.remove_node("gone.py")
     assert not kg._g.has_node("gone.py")
-    kg.remove_file("never-existed.py")  # no-op, must not raise
+    kg.remove_node("never-existed.py")  # no-op, must not raise
+
+
+def test_remove_node_removes_any_node_type(repo):
+    """The behaviour the old name (`remove_file`) denied, and which the
+    guardrail purge in `map_codebase.run_map` depends on: the id is the only
+    thing that matters, whatever type of node carries it.
+
+    Untested until the rename, because a method called remove_file invited
+    tests about files — and the purge that needed this had to carry a comment
+    saying the name was wrong.
+    """
+    kg = AgentKnowledgeGraph()
+    kg.upsert_guardrail("rfc:designs/gone.md", "A design since deleted", ".agent-rfc/designs/gone.md", 1)
+    kg.upsert_file("app.py")
+    kg.inject_production_learning("incident:01", event="timeout", agent="analyst", file_hint="app.py")
+
+    kg.remove_node("rfc:designs/gone.md")
+    kg.remove_node("incident:01")
+
+    assert not kg._g.has_node("rfc:designs/gone.md")
+    assert not kg._g.has_node("incident:01")
+    assert kg._g.has_node("app.py"), "only the ids asked for are removed"
 
 
 # ── map_codebase walker ──────────────────────────────────────────────────────

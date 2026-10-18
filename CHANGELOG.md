@@ -84,6 +84,17 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — `AgentKnowledgeGraph.remove_file` is `remove_node`
+
+Internal to this repository, with no effect on a tenant: `scripts/` is not in the distributed
+package (`packages = ["runtime", …]`), and `runtime/cli.py` reaches the module as a subprocess.
+
+The method removes whatever node carries the id it is given. Its name, parameter and docstring all
+said file, so the guardrail purge added in the previous entry called it for `rfc:<path>` and
+`cursorrules:pillar:<n>` nodes under a comment saying the name was wrong. It is now
+`remove_node(node_id)`, the comment is gone, and a test removes a `Guardrail` and a
+`ProductionIncident` node directly — the behaviour the old name had kept out of the tests.
+
 ### Fixed — a guardrail node goes when the document behind it goes
 
 The knowledge graph purges a `CodebaseFile` node the walk no longer claims (previous entry), but

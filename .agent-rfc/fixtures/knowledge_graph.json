@@ -1167,13 +1167,13 @@
         "upsert_guardrail",
         "inject_production_learning",
         "add_import",
-        "remove_file",
+        "remove_node",
         "fetch_subgraph_context_window",
         "find_files_by_symbol",
         "impacted_files",
         "stats"
       ],
-      "last_modified": "2026-10-13T08:58:30Z",
+      "last_modified": "2026-10-18T08:00:51Z",
       "id": "scripts/local_knowledge_graph.py"
     },
     {
@@ -1818,7 +1818,7 @@
         "_resolve_local_import",
         "run_map"
       ],
-      "last_modified": "2026-10-18T07:55:25Z",
+      "last_modified": "2026-10-18T08:00:32Z",
       "id": "scripts/map_codebase.py"
     },
     {
@@ -4173,7 +4173,8 @@
         "test_inject_production_learning_links_file",
         "test_subgraph_context_window_hops_and_missing_anchor",
         "test_symbol_and_impact_queries",
-        "test_remove_file",
+        "test_remove_node",
+        "test_remove_node_removes_any_node_type",
         "_write_sample",
         "test_walker_upserts_symbols_and_edges",
         "test_walker_incremental_skip_and_purge",
@@ -4186,7 +4187,7 @@
         "test_walker_extracts_guardrails",
         "test_walker_extracts_superpowers_guardrails_alongside_rfc"
       ],
-      "last_modified": "2026-10-18T07:54:08Z",
+      "last_modified": "2026-10-18T08:00:21Z",
       "id": "scripts/test/test_knowledge_graph.py"
     },
     {
@@ -8908,6 +8909,22 @@
       "pillar": null,
       "created_at": "2026-10-18T07:56:19Z",
       "id": "rfc:reviews/kg-purges-guardrails.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The method that removes any node is not called `remove_file`",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/kg-remove-node-name.md",
+      "pillar": null,
+      "created_at": "2026-10-18T08:01:31Z",
+      "id": "rfc:designs/kg-remove-node-name.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the method that removes any node is not called `remove_file`",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/kg-remove-node-name.md",
+      "pillar": null,
+      "created_at": "2026-10-18T08:01:32Z",
+      "id": "rfc:reviews/kg-remove-node-name.md"
     }
   ],
   "edges": [
