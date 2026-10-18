@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - portal/package.json
   - portal/test/runtimeImageScripts.test.ts
