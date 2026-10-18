@@ -1818,7 +1818,7 @@
         "_resolve_local_import",
         "run_map"
       ],
-      "last_modified": "2026-10-16T17:27:49Z",
+      "last_modified": "2026-10-18T07:55:25Z",
       "id": "scripts/map_codebase.py"
     },
     {
@@ -4180,10 +4180,13 @@
         "test_walker_ignores_vendor_dirs",
         "test_walker_ignores_a_checkout_living_inside_the_repo",
         "test_a_file_the_walker_no_longer_claims_is_purged",
+        "test_a_guardrail_whose_document_is_gone_is_purged",
+        "test_a_pillar_removed_from_cursorrules_is_purged",
+        "test_a_production_incident_survives_the_walk",
         "test_walker_extracts_guardrails",
         "test_walker_extracts_superpowers_guardrails_alongside_rfc"
       ],
-      "last_modified": "2026-10-16T12:57:28Z",
+      "last_modified": "2026-10-18T07:54:08Z",
       "id": "scripts/test/test_knowledge_graph.py"
     },
     {
@@ -8889,6 +8892,22 @@
       "pillar": null,
       "created_at": "2026-10-18T07:42:14Z",
       "id": "rfc:reviews/mutation-check-journal.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A guardrail node goes when the document behind it goes",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/kg-purges-guardrails.md",
+      "pillar": null,
+      "created_at": "2026-10-18T07:54:50Z",
+      "id": "rfc:designs/kg-purges-guardrails.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 a guardrail node goes when the document behind it goes",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/kg-purges-guardrails.md",
+      "pillar": null,
+      "created_at": "2026-10-18T07:56:19Z",
+      "id": "rfc:reviews/kg-purges-guardrails.md"
     }
   ],
   "edges": [

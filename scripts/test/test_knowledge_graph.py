@@ -202,6 +202,67 @@ def test_a_file_the_walker_no_longer_claims_is_purged(repo):
     assert AgentKnowledgeGraph().find_files_by_symbol("main") == ["app.py"]
 
 
+def test_a_guardrail_whose_document_is_gone_is_purged(repo):
+    """A design, review or RFC becomes a `rfc:<path>` Guardrail node, and until
+    this nothing ever removed one: delete the document and the node stayed
+    forever, read by `fetch_subgraph_context_window` as a rule still in force.
+
+    Seen for real on 2026-10-17 (`rfc:designs/shell-gate-one-walk.md` surviving
+    a file that was not on disk) and reproduced on this checkout the next day
+    with a throwaway probe document.
+    """
+    _write_sample(repo)
+    rfc = repo / ".agent-rfc"
+    rfc.mkdir()
+    (rfc / "001-auth.md").write_text("# RFC 001 — Auth\n")
+    (rfc / "002-probe.md").write_text("# RFC 002 — a document about to be deleted\n")
+
+    map_codebase.run_map()
+    assert AgentKnowledgeGraph()._g.has_node("rfc:002-probe.md")
+
+    (rfc / "002-probe.md").unlink()
+    stats = map_codebase.run_map()
+
+    kg = AgentKnowledgeGraph()
+    assert not kg._g.has_node("rfc:002-probe.md"), "the document is gone; so is its guardrail"
+    assert kg._g.has_node("rfc:001-auth.md"), "the one still on disk stays"
+    assert stats["purged"] >= 1
+
+
+def test_a_pillar_removed_from_cursorrules_is_purged(repo):
+    """The sibling case, and the reason the test is "did this walk claim it?"
+    rather than "is the file gone?": `.cursorrules` is still there, but it no
+    longer produces that pillar."""
+    _write_sample(repo)
+    rules = repo / ".cursorrules"
+    rules.write_text("## 1. Requirements & Design\nr\n## 2. Build Architecture\nr\n")
+    map_codebase.run_map()
+    assert AgentKnowledgeGraph()._g.has_node("cursorrules:pillar:2")
+
+    rules.write_text("## 1. Requirements & Design\nr\n")
+    map_codebase.run_map()
+
+    kg = AgentKnowledgeGraph()
+    assert not kg._g.has_node("cursorrules:pillar:2")
+    assert kg._g.has_node("cursorrules:pillar:1")
+
+
+def test_a_production_incident_survives_the_walk(repo):
+    """ProductionIncident nodes are injected by other tooling, never produced by
+    a walk. A purge keyed on "not seen" alone would delete them on the next
+    run — the node TYPE is the filter, as it is for files."""
+    _write_sample(repo)
+    kg = AgentKnowledgeGraph()
+    kg.inject_production_learning(
+        "incident:2026-10-18-01", event="gateway timeout", agent="analyst",
+        file_hint="app.py", resolution_summary="retry ladder widened",
+    )
+
+    map_codebase.run_map()
+
+    assert AgentKnowledgeGraph()._g.has_node("incident:2026-10-18-01")
+
+
 def test_walker_extracts_guardrails(repo):
     _write_sample(repo)
     (repo / ".cursorrules").write_text("## 1. Requirements & Design\nrules\n")
