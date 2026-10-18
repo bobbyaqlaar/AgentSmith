@@ -49,7 +49,9 @@ stale rfc nodes too" — the gap this slice's predecessor (`a34c79d`) declared r
 - **A nit I am not fixing here, with the reason:** `kg.remove_file(node_id)` removes any node by id,
   so it is what this purge calls, but its name and docstring say `CodebaseFile`. Renaming it touches
   `scripts/local_knowledge_graph.py`, which this design's scope does not cover and which has other
-  callers; the call carries an inline comment instead. Offered to the owner as a rename slice.
+  callers; the call carries an inline comment instead. Offered to the owner as a rename slice —
+  **done the same day**, `.agent-rfc/designs/kg-remove-node-name.md` (`75f26e3`): the method is
+  `remove_node` and the comment is gone.
 - Re-read the whole diff: `seen_guardrails`, three `.add` calls, the purge block, three tests.
   Nothing else.
 
@@ -79,6 +81,6 @@ Gates run locally:         six by name, all passing — the process gate itself,
                           mutation step is unsharded locally (four hours yesterday); CI shards
                           it four ways
 Declared gaps:             a renamed document is a delete plus an add, as it is in git — no
-                          attempt to follow a rename. `remove_file` keeps its file-shaped name
-                          (pass 2). The deferred two-agent lock is untouched
+                          attempt to follow a rename. (`remove_file`'s name, pass 2, was fixed
+                          the same day in 75f26e3.) The deferred two-agent lock is untouched
 ```

@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/local_knowledge_graph.py
   - scripts/map_codebase.py
