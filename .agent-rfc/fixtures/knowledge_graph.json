@@ -1698,7 +1698,7 @@
         "send",
         "redirect_request"
       ],
-      "last_modified": "2026-10-13T08:06:23Z",
+      "last_modified": "2026-10-18T07:38:16Z",
       "id": "scripts/send_dev_record.py"
     },
     {
@@ -1850,6 +1850,12 @@
         "Mutation",
         "Suite",
         "_backup_dir",
+        "_git_dir",
+        "_journal_path",
+        "_sha",
+        "_write_journal",
+        "_clear_journal",
+        "_recover_journal",
         "_dirty_catalogue_files",
         "_install_restore_handlers",
         "_pytest",
@@ -1865,9 +1871,10 @@
         "shard",
         "_shard_spec",
         "main",
+        "refuse",
         "_restore"
       ],
-      "last_modified": "2026-10-14T20:21:41Z",
+      "last_modified": "2026-10-18T07:40:43Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -8841,6 +8848,47 @@
       "pillar": null,
       "created_at": "2026-10-17T11:33:08Z",
       "id": "rfc:reviews/shell-gate-one-walk.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_sha",
+        "repo",
+        "_journal",
+        "test_a_killed_run_is_undone_on_the_next_start",
+        "test_an_edited_file_is_never_silently_overwritten",
+        "test_a_file_already_put_back_only_clears_the_journal",
+        "test_a_missing_pristine_copy_refuses_rather_than_guessing",
+        "test_a_corrupt_journal_refuses_rather_than_acting",
+        "test_no_journal_is_the_normal_case",
+        "test_a_journal_naming_a_path_outside_the_repo_refuses",
+        "test_the_record_exists_while_the_mutant_is_on_disk",
+        "test_main_stops_when_recovery_refuses",
+        "test_allow_dirty_does_not_skip_the_residue_check",
+        "test_even_listing_the_suites_repairs_residue",
+        "test_a_completed_run_leaves_no_journal",
+        "_spy",
+        "_fake_pytest"
+      ],
+      "last_modified": "2026-10-18T07:40:25Z",
+      "id": "scripts/test/test_mutation_check_journal.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A killed mutation run undoes itself",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/designs/mutation-check-journal.md",
+      "pillar": null,
+      "created_at": "2026-10-18T07:42:13Z",
+      "id": "rfc:designs/mutation-check-journal.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 a killed mutation run undoes itself",
+      "source_file": "/Users/mac/Documents/Bobby/Aqlaar/Apps/AgenticFramework/.agent-rfc/reviews/mutation-check-journal.md",
+      "pillar": null,
+      "created_at": "2026-10-18T07:42:14Z",
+      "id": "rfc:reviews/mutation-check-journal.md"
     }
   ],
   "edges": [
