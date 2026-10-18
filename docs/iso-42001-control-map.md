@@ -1,5 +1,7 @@
 # ISO/IEC 42001 — AgentSmith Control Map & Evidence Checklist
 
+> **Agentic reading.** For the agent-specific reading of this standard — platform features F1–F12, the Annex A identifiers A.2–A.10, the twelve compliance test scenarios, what AgentSmith covers, what is an organisational duty and what each application must own — see `docs/agentic-42001-coverage.md`.
+
 Auditor-facing pack: how AgentSmith’s **existing** controls and artifacts
 map to an **AI Management System (AIMS)** style program under
 **ISO/IEC 42001**.

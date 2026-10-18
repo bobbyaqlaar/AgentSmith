@@ -144,6 +144,11 @@ An **undeclared** gap — `met` or `partial` with no runner — now **fails**
 
 ## Unified control registry (cross-framework)
 
+> **Annex A, agentic reading.** `docs/agentic-42001-coverage.md` maps these controls onto the
+> twelve platform features and twelve test scenarios of the agentic ISO/IEC 42001 briefing in
+> `assets/`, with the Annex A identifiers that briefing uses (A.2–A.10) and what is **not** covered.
+> The ISO column below stays thematic on purpose — see `docs/iso-42001-control-map.md`.
+
 Every row is one **harness control**. Multiple frameworks may reference the same ID.
 
 | Control ID | OWASP LLM | NIST AI RMF | MITRE ATLAS | ISO 42001 | Status | Owner | AgentSmith mechanism | Harness check |
