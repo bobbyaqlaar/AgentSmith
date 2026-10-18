@@ -33,12 +33,15 @@ from __future__ import annotations
 import argparse
 import ast
 import fnmatch
+import hashlib
+import json
 import os
 import signal
 import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -1799,6 +1802,142 @@ def _backup_dir() -> Path:
     return backup
 
 
+JOURNAL_NAME = "agentsmith-mutation-journal.json"
+PRISTINE_DIR = "agentsmith-mutation-pristine"
+
+
+def _git_dir() -> Path:
+    """Where to keep state that must not be committed and must not travel.
+
+    `git rev-parse --git-dir` rather than `REPO / ".git"`: in a worktree that
+    path is a FILE, and this repository opens worktrees
+    (.agent-rfc/designs/kg-skips-nested-checkouts.md).
+    """
+    try:
+        out = subprocess.run(["git", "rev-parse", "--git-dir"], cwd=REPO,
+                             capture_output=True, text=True, check=True).stdout.strip()
+        git_dir = Path(out)
+        return git_dir if git_dir.is_absolute() else REPO / git_dir
+    except Exception:  # fail-open: not a checkout — keep the journal beside the repo root
+        return REPO / ".git"
+
+
+def _journal_path() -> Path:
+    return _git_dir() / JOURNAL_NAME
+
+
+def _sha(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _write_journal(rel_path: str, pristine: str, mutant: str, label: str) -> None:
+    """Record the mutant about to reach disk, and keep the pristine text.
+
+    Written BEFORE the mutation, atomically, because the whole point is the run
+    that dies between the two writes. Recording the mutant's own hash as well as
+    the pristine one is what lets recovery tell this tool's residue from a
+    human's edit, byte for byte, instead of guessing.
+    """
+    journal = _journal_path()
+    copies = journal.parent / PRISTINE_DIR
+    copies.mkdir(parents=True, exist_ok=True)
+    copy = copies / rel_path.replace("/", "__")
+    copy.write_text(pristine, encoding="utf-8")
+    payload = {
+        "path": rel_path,
+        "pristine_sha256": _sha(pristine),
+        "mutant_sha256": _sha(mutant),
+        "pristine_copy": str(copy),
+        "label": label,
+        "pid": os.getpid(),
+        "started_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    staging = journal.with_suffix(".tmp")
+    staging.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    os.replace(staging, journal)          # atomic: a reader sees one state or the other
+
+
+def _clear_journal() -> None:
+    """Drop the record once the file is back. Called from the `finally` AND the
+    signal handler — the handler used to restore the file and leave the record,
+    which would make the next run refuse over a file that was already fine."""
+    journal = _journal_path()
+    try:
+        entry = json.loads(journal.read_text(encoding="utf-8"))
+    except Exception:  # fail-open: nothing readable to clean up beyond the journal itself
+        entry = {}
+    copy = entry.get("pristine_copy")
+    if copy:
+        Path(copy).unlink(missing_ok=True)
+    journal.unlink(missing_ok=True)
+
+
+def _recover_journal(allow_dirty: bool = False) -> int:
+    """Undo a killed run before this one starts. 0 to proceed, 1 to refuse.
+
+    `allow_dirty` is accepted and deliberately unused: it exists so the caller
+    cannot pass it and have recovery skipped. The flag permits the AUTHOR's
+    uncommitted work; a journal is this harness's own write, and conflating the
+    two is how `scripts/rules_port.py` kept a dropped `_ours(...)` through two
+    later runs on 2026-10-16.
+    """
+    journal = _journal_path()
+    if not journal.exists():
+        return 0
+
+    def refuse(reason: str, *extra: str) -> int:
+        print(f"🛑  refusing to run: {reason}", file=sys.stderr)
+        for line in extra:
+            print(f"      {line}", file=sys.stderr)
+        print(f"\n    The record is {journal}. Resolve it, then re-run.", file=sys.stderr)
+        return 1
+
+    try:
+        entry = json.loads(journal.read_text(encoding="utf-8"))
+        rel_path = str(entry["path"])
+        pristine_sha = str(entry["pristine_sha256"])
+        mutant_sha = str(entry["mutant_sha256"])
+        copy = Path(str(entry["pristine_copy"]))
+        label = str(entry.get("label", "an unnamed mutation"))
+    except Exception as exc:
+        return refuse(f"the mutation journal cannot be read ({type(exc).__name__}).",
+                      "A journal this harness cannot parse is not a reason to mutate more files.")
+
+    target = (REPO / rel_path).resolve()
+    if not target.is_relative_to(REPO.resolve()):
+        return refuse(f"the journal names a path outside this repository: {rel_path}")
+    if not target.exists():
+        return refuse(f"the journal names {rel_path}, which is not there now.",
+                      f"A pristine copy is at {copy}" if copy.exists() else "No pristine copy was kept.")
+
+    current = _sha(target.read_text(encoding="utf-8"))
+    if current == pristine_sha:
+        # Killed after the restore, before the cleanup: nothing to repair.
+        print(f"ℹ️   a previous run left a record for {rel_path}; the file is already as it was.",
+              file=sys.stderr)
+        _clear_journal()
+        return 0
+    if current != mutant_sha:
+        return refuse(
+            f"{rel_path} holds neither what a killed run wrote nor what it replaced.",
+            f"That run was testing: {label}",
+            f"The text it replaced is kept at {copy}" if copy.exists() else "No pristine copy was kept.",
+            "Someone has edited the file since. Diff it yourself — this will not overwrite your work.",
+        )
+    if not copy.exists():
+        return refuse(
+            f"{rel_path} still holds a killed run's mutation, and its pristine copy is gone.",
+            f"That run was testing: {label}",
+            "Restore the file from git (`git checkout -- <path>`) if you have not edited it.",
+        )
+
+    target.write_text(copy.read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"♻️   restored {rel_path} — a previous run was killed while testing: {label}",
+          file=sys.stderr)
+    _clear_journal()
+    return 0
+
+
 def _dirty_catalogue_files(suites: tuple[Suite, ...]) -> list[str]:
     """Catalogue files with uncommitted changes.
 
@@ -1832,6 +1971,7 @@ def _install_restore_handlers(target: Path, original: str) -> None:
 
     def _restore(signum, frame):  # pragma: no cover - signal path
         target.write_text(original, encoding="utf-8")
+        _clear_journal()
         print(f"\n  interrupted — restored {target.relative_to(REPO)}", file=sys.stderr)
         raise SystemExit(130)
 
@@ -1913,6 +2053,9 @@ def run_suite(suite: Suite) -> list[str]:
         )
         _install_restore_handlers(target, original)
         try:
+            _write_journal(mutation.path, original,
+                           original.replace(mutation.before, mutation.after),
+                           f"{suite.name}: {mutation.name}")
             target.write_text(original.replace(mutation.before, mutation.after),
                               encoding="utf-8")
             if target.read_text(encoding="utf-8") == original:
@@ -1921,6 +2064,7 @@ def run_suite(suite: Suite) -> list[str]:
             result = _pytest(suite.tests, first_failure=True)
         finally:
             target.write_text(original, encoding="utf-8")
+            _clear_journal()
             for sig, handler in zip(
                 (signal.SIGINT, signal.SIGTERM), previous_handlers, strict=True
             ):
@@ -2112,6 +2256,16 @@ def main() -> int:
         help="run only shard K of N of the selected suites (CI runs four in parallel)",
     )
     args = parser.parse_args()
+
+    # Before anything else, including --list: a killed run's residue is this
+    # harness's own write, and repairing it is the inverse of the damage it did,
+    # not a side effect a caller opts into. --allow-dirty permits the AUTHOR's
+    # uncommitted work and must not reach this (design: mutation-check-journal).
+    # Placed after --list's early return at first, which is how a `--list` run
+    # walked straight past a mutation it had left in the tree.
+    recovered = _recover_journal(allow_dirty=args.allow_dirty)
+    if recovered:
+        return recovered
 
     selected = CATALOGUE
     if args.suites:

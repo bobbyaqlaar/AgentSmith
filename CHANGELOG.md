@@ -84,6 +84,30 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — a killed mutation run undoes itself
+
+`mutation_check.py` rewrites the files it mutates. `SIGINT`, `SIGTERM` and an exception were already
+handled; a `SIGKILL` left the mutant on disk, and the backstop for that — refusing to start when a
+catalogue file is dirty — is skipped by `--allow-dirty`, which is what you pass whenever your own
+work is uncommitted. On 2026-10-16 a cancelled `agentsmith gates run` left `scripts/rules_port.py`
+with `_ours(...)` dropped from its placement check, and two later runs said nothing.
+
+- **A journal**, `<git-dir>/agentsmith-mutation-journal.json`, is written atomically **before** each
+  mutant reaches disk: the path, the sha256 of the pristine text, the sha256 of the mutant, a copy
+  of the pristine text, the suite and mutation, the pid and the time. It is removed when the file is
+  restored — in the `finally` **and** in the signal handler, which previously restored the file and
+  left the record behind.
+- **Recovery runs at the start of every invocation**, `--list` included, and `--allow-dirty` cannot
+  reach it: the journal is this harness's own write, not the author's uncommitted work. A file whose
+  contents are byte-for-byte the recorded mutant is restored and named; one that matches the
+  pristine text only clears the record; **anything else refuses**, naming the file, the mutation and
+  the pristine copy, and writes nothing — an edited file is never overwritten.
+- A corrupt journal, a missing pristine copy, and a journal naming a path outside the repository all
+  refuse rather than act.
+- Proven end to end, not only by tests: a real run was `kill -9`ed mid-mutation and the next
+  invocation printed `♻️ restored scripts/send_dev_record.py — a previous run was killed while
+  testing: …` and cleared the record.
+
 ### Fixed — the shell pre-check reads a redirect from the tokens, not the characters
 
 A protected path written **about** — in quotes, in a grep pattern, in a string handed to an
