@@ -8806,10 +8806,26 @@
     },
     {
       "node_type": "Guardrail",
+      "title": "The agentic 42001 coverage page is declared reference documentation",
+      "source_file": ".agent-rfc/designs/declare-agentic-coverage-doc.md",
+      "pillar": null,
+      "created_at": "2026-10-18T09:10:37Z",
+      "id": "rfc:designs/declare-agentic-coverage-doc.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the agentic 42001 coverage page is declared reference documentation",
+      "source_file": ".agent-rfc/reviews/declare-agentic-coverage-doc.md",
+      "pillar": null,
+      "created_at": "2026-10-18T09:10:38Z",
+      "id": "rfc:reviews/declare-agentic-coverage-doc.md"
+    },
+    {
+      "node_type": "Guardrail",
       "title": "The knowledge graph maps what git tracks, by repository-relative path",
       "source_file": ".agent-rfc/designs/kg-maps-what-git-tracks.md",
       "pillar": null,
-      "created_at": "2026-10-24T13:51:02Z",
+      "created_at": "2026-10-24T13:51:15Z",
       "id": "rfc:designs/kg-maps-what-git-tracks.md"
     },
     {
@@ -8817,7 +8833,7 @@
       "title": "The installer says how to apply AgentSmith to a repository",
       "source_file": ".agent-rfc/designs/installer-next-steps.md",
       "pillar": null,
-      "created_at": "2026-10-24T13:51:02Z",
+      "created_at": "2026-10-24T13:51:15Z",
       "id": "rfc:designs/installer-next-steps.md"
     },
     {
@@ -8825,7 +8841,7 @@
       "title": "Review \u2014 the knowledge graph maps what git tracks, by repository-relative path",
       "source_file": ".agent-rfc/reviews/kg-maps-what-git-tracks.md",
       "pillar": null,
-      "created_at": "2026-10-24T13:51:03Z",
+      "created_at": "2026-10-24T13:51:15Z",
       "id": "rfc:reviews/kg-maps-what-git-tracks.md"
     },
     {
@@ -8833,7 +8849,7 @@
       "title": "Review \u2014 the installer says how to apply AgentSmith to a repository",
       "source_file": ".agent-rfc/reviews/installer-next-steps.md",
       "pillar": null,
-      "created_at": "2026-10-24T13:51:03Z",
+      "created_at": "2026-10-24T13:51:16Z",
       "id": "rfc:reviews/installer-next-steps.md"
     }
   ],
