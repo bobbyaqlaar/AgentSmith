@@ -170,10 +170,16 @@ class AgentKnowledgeGraph:
         self._g.add_edge(source, target, edge_type="IMPORTS")
         self.save()
 
-    def remove_file(self, rel_path: str) -> None:
-        """Remove a stale CodebaseFile node (e.g. deleted file)."""
-        if self._g.has_node(rel_path):
-            self._g.remove_node(rel_path)
+    def remove_node(self, node_id: str) -> None:
+        """Remove the node with this id, whatever type it is; a no-op if absent.
+
+        Named `remove_file` until 2026-10-18, when the guardrail purge in
+        map_codebase had to call it for `rfc:<path>` and `cursorrules:pillar:<n>`
+        nodes and carry a comment saying the name was wrong. The id is the only
+        thing this needs, so the name says that.
+        """
+        if self._g.has_node(node_id):
+            self._g.remove_node(node_id)
             self.save()
 
     # ── Query operations ──────────────────────────────────────────────────────

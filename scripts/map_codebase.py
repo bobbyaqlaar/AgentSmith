@@ -422,7 +422,7 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
         if attrs.get("node_type") == "CodebaseFile" and node_id not in seen_files
     ]
     for node_id in stale:
-        kg.remove_file(node_id)
+        kg.remove_node(node_id)
         stats["purged"] += 1
         if verbose:
             print(f"  🗑  Purged stale node: {node_id}")
@@ -473,7 +473,7 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
         if attrs.get("node_type") == "Guardrail" and node_id not in seen_guardrails
     ]
     for node_id in stale_guardrails:
-        kg.remove_file(node_id)          # removes any node by id, despite the name
+        kg.remove_node(node_id)
         stats["purged"] += 1
         if verbose:
             print(f"  🗑  Purged stale guardrail: {node_id}")
