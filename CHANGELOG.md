@@ -84,6 +84,24 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — a guardrail node goes when the document behind it goes
+
+The knowledge graph purges a `CodebaseFile` node the walk no longer claims (previous entry), but
+**`Guardrail` nodes were never purged at all**. Every design, review, RFC and `docs/superpowers/`
+document becomes `rfc:<path>` or `superpowers:<path>`, and every `.cursorrules` pillar becomes
+`cursorrules:pillar:<n>`; once created, a node stayed forever. A deleted or renamed design still
+read as a rule in force to `fetch_subgraph_context_window`, and still counted in the scope
+`agentsmith gate kg impact` derives for a review.
+
+- A `Guardrail` node this walk did not produce is removed, counted in the existing `purged` stat.
+  "Did this walk produce it?" rather than "is the file gone?", so a `.cursorrules` pillar someone
+  deleted from a file that still exists is caught too.
+- The purge runs **after** the three extraction blocks, and filters on the node type:
+  `ProductionIncident` nodes come from `inject_production_learning`, not from a walk, and a purge
+  keyed on "not seen" alone would delete another tool's data on the next run.
+- The workaround until now was to delete the graph and rebuild it from empty, which is why a
+  repository that did that looks clean while one that did not carries every document it ever had.
+
 ### Fixed — a killed mutation run undoes itself
 
 `mutation_check.py` rewrites the files it mutates. `SIGINT`, `SIGTERM` and an exception were already

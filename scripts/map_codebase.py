@@ -348,6 +348,8 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
 
     # Track which files we see during this walk
     seen_files: set[str] = set()
+    # …and which guardrails this walk produces, for the purge after extraction.
+    seen_guardrails: set[str] = set()
     stats = {"upserted": 0, "unchanged": 0, "edges": 0, "guardrails": 0, "purged": 0}
 
     # ── Walk source files ─────────────────────────────────────────────────────
@@ -432,6 +434,7 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
             kg.upsert_guardrail(
                 gr["rule_id"], gr["title"], gr["source_file"], gr["pillar"]
             )
+            seen_guardrails.add(gr["rule_id"])
             stats["guardrails"] += 1
 
     # ── Extract guardrails from .agent-rfc/ markdown ──────────────────────────
@@ -441,6 +444,7 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
             kg.upsert_guardrail(
                 gr["rule_id"], gr["title"], gr["source_file"], gr["pillar"]
             )
+            seen_guardrails.add(gr["rule_id"])
             stats["guardrails"] += 1
 
     # ── Extract guardrails from docs/superpowers/ (specs + plans) ─────────────
@@ -450,7 +454,29 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
             kg.upsert_guardrail(
                 gr["rule_id"], gr["title"], gr["source_file"], gr["pillar"]
             )
+            seen_guardrails.add(gr["rule_id"])
             stats["guardrails"] += 1
+
+    # ── Purge Guardrail nodes this walk did not produce ───────────────────────
+    # A design, review, RFC or `.cursorrules` pillar becomes a Guardrail node,
+    # and nothing removed one: delete the document and the node stayed forever,
+    # read by fetch_subgraph_context_window as a rule still in force.
+    #
+    # After the three extractions, never beside the file purge above — run it
+    # before them and it deletes everything this run is about to add. Filtered
+    # by node type, because ProductionIncident nodes come from
+    # inject_production_learning rather than from a walk, and "not seen" alone
+    # would delete another tool's data (.agent-rfc/designs/kg-purges-guardrails.md).
+    stale_guardrails = [
+        node_id
+        for node_id, attrs in kg._g.nodes(data=True)
+        if attrs.get("node_type") == "Guardrail" and node_id not in seen_guardrails
+    ]
+    for node_id in stale_guardrails:
+        kg.remove_file(node_id)          # removes any node by id, despite the name
+        stats["purged"] += 1
+        if verbose:
+            print(f"  🗑  Purged stale guardrail: {node_id}")
 
     return stats
 
