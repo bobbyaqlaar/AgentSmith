@@ -84,6 +84,14 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the installer says how to apply AgentSmith to a repository
+
+`install-ai-stack.sh`'s closing next steps told users to apply AgentSmith with `git init`. Since
+3.0.0 no hook is armed outside a repository, so that provisions nothing. They now name
+`agentsmith tenant init <id> --stack <stack>` for a new repository and `agentsmith tenant adopt <id>`
+for an existing one. The User Manual's onboarding passages and DESIGN's note on base eval cases still
+described the hook-era model, and now say what 3.0.0 does (`installer-next-steps`).
+
 ### Changed — `AgentKnowledgeGraph.remove_file` is `remove_node`
 
 Internal to this repository, with no effect on a tenant: `scripts/` is not in the distributed
