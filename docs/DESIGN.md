@@ -826,7 +826,7 @@ The golden dataset serves two roles: dev quality gate and production calibration
 | Before staging promotion | Tenant-authored cases required (minimum: 3) | Gate active for staging deploy |
 | Production | Tenant-local cases + HITL-promoted cases from **that tenant's** production traces only | Gate active for production deploy |
 
-Framework base cases (`golden_evals_base.json`) are a bootstrap seed only. They are copied once on first checkout and are not merged into production gates. Each tenant's eval suite reflects that project's task distribution exclusively — cross-project or cross-tenant golden dataset sharing is not supported for production gates.
+Framework base cases (`golden_evals_base.json`) stay with the evals provider; since 3.0.0 none is copied into a tenant. A new tenant starts with no eval data of its own, and its judged suites warn that they proved nothing until it commits cases carrying its application's outputs. Each tenant's eval suite reflects that project's task distribution exclusively — cross-project or cross-tenant golden dataset sharing is not supported for production gates.
 
 ### Eval Thresholds by Environment
 

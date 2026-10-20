@@ -92,3 +92,13 @@ def test_the_release_ships_the_gate_hooks():
 def test_every_gate_hook_exists_to_be_copied():
     missing = [h for h in GATE_HOOKS if not (REPO / ".githooks" / h).is_file()]
     assert not missing, missing
+
+
+def test_the_installer_says_how_to_apply_agentsmith_to_a_repository():
+    """Since 3.0.0 no hook is armed outside a repository, so `git init`
+    provisions nothing; the installer shipped telling users to apply AgentSmith
+    with it (.agent-rfc/designs/installer-next-steps.md)."""
+    steps = INSTALLER.split('echo "  Next steps:"', 1)[1].split("Full documentation", 1)[0]
+    assert "agentsmith tenant init" in steps, "a new repository is scaffolded by `tenant init`"
+    assert "agentsmith tenant adopt" in steps, "an existing repository is brought under the gates by `tenant adopt`"
+    assert "git init" not in steps, "`git init` applies nothing since 3.0.0"

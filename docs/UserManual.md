@@ -531,10 +531,11 @@ Each repository has its own:
 - Knowledge Graph (`knowledge_graph.json`)
 - Budget cache (`token_velocity_cache.json`)
 
-To apply the framework to any existing repository:
+To apply the framework to an existing repository, adopt it: it prints its plan, and writes it with
+`--yes`. A new repository is scaffolded by `agentsmith tenant init` instead (below).
 
 ```bash
-cd /path/to/repo && git init
+cd /path/to/repo && agentsmith tenant adopt my-app
 ```
 
 ### Monorepo (One Git Root, Multiple Packages)
@@ -1372,7 +1373,7 @@ to a plain-process Phoenix launch with no Postgres/Ops Portal — unchanged
 from the original solo-dev behavior.
 
 **Per-repo opt-out:** `touch .agenticframework/no-shared-infra` before
-`git init`/`agentsmith tenant init` in a repo that needs full isolation (a client
+`agentsmith tenant init` in a repo that needs full isolation (a client
 demo, an air-gapped environment, or just not wanting this repo's traces on
 the shared instance). `agentsmith dashboard start` then always uses the standalone
 plain-process Phoenix path for that repo, and `agentsmith tenant init` won't nudge
@@ -1429,10 +1430,10 @@ full rationale (why this is a separate file, not a Compose profile).
 ## Create an AgentSmith-Governed Repo
 
 A **tenant** is a customer application with its own independent repository,
-agents, eval suite, and deployment track (docs/DESIGN.md › Tenancy Model (Independent Repositories)). New repos opt in
-on the first `git checkout` of a fresh repo (git does not run the hook on `git init` itself); pre-existing/cloned repos opt in explicitly
-(`mkdir -p .agenticframework && touch .agenticframework/enabled`, then any
-checkout) — see README "Opt-in model".
+agents, eval suite, and deployment track (docs/DESIGN.md › Tenancy Model (Independent Repositories)). A new
+repository is scaffolded by `agentsmith tenant init`, and an existing one is brought under the gates by
+`agentsmith tenant adopt`. No hook runs on `git init` or `git checkout`: since 3.0.0 AgentSmith arms
+none outside a repository.
 
 > **Starting a new tenant app — nothing to copy manually.**
 >
@@ -1444,22 +1445,20 @@ checkout) — see README "Opt-in model".
 > |---|---|
 > | `.agenticframework/` (tenant, gates, providers), `.githooks/`, `.agent-rfc/` (seeds included), the rule files, `.agents/skills/`, `.github/workflows/` (ci-*, cd-*, eval-*, the gates and sync workflows), Knowledge Graph seed | `agentsmith tenant init <id> --stack <stack>` |
 > | `.env` | You create from the the Install & Start section tenant-app `.env` template |
-> | `runtime/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — accessed via `$AGENTSMITH_DIR/runtime` at run time |
+> | `runtime/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — if your code imports it, pin the `agentsmith-runtime` package in your requirements |
 >
-> Every file in the first row above is a `templates/agent-rules.yaml` render,
-> including the design/validation playbooks (below) — one hook, one
-> generator, so both onboarding paths get them: a fresh `git init` and an
-> explicit opt-in on a pre-existing repo (`mkdir -p .agenticframework &&
-> touch .agenticframework/enabled`, then any checkout) run the identical
-> `generate-ide-config.py` call.
+> The rule files in the first row, the design/validation playbooks (below)
+> among them, are rendered from `templates/agent-rules.yaml` by the rules
+> provider the repository declares, so both onboarding paths get the same
+> ones: `tenant init` for a new repository and `tenant adopt` for an existing one.
 >
 > What you write yourself: `worker.py`, `workflows/`, `workflows/activities.py`
 > — use `examples/oil-price-agent/` as a structural reference only.
 >
 > ```bash
 > mkdir $REPO_DIR/my-app && cd $REPO_DIR/my-app
-> git init -b main                               # hooks fire automatically
-> agentsmith tenant init my-app --stack python-fastapi   # scaffolds tenant.yaml + CI/CD
+> git init -b main
+> agentsmith tenant init my-app --stack python-fastapi   # scaffolds tenant.yaml, the gates, CI/CD
 > # create .env from the the Install & Start section tenant-app template, then write your worker.py and workflows/
 > ```
 
