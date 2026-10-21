@@ -318,3 +318,87 @@ def test_walker_extracts_superpowers_guardrails_alongside_rfc(repo):
     }
     assert "superpowers:spec:specs/001-ingest.md" in rule_ids
     assert "superpowers:plan:plans/001-ingest.md" in rule_ids
+
+
+# ── What git tracks, by repository-relative path (kg-maps-what-git-tracks.md) ──
+
+
+@pytest.fixture()
+def checkout(monkeypatch, tmp_path):
+    """A real git repository: `repo` above fakes `.git`, which `git ls-files`
+    cannot answer for."""
+    import subprocess
+
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".gitignore").write_text(".agent-rfc/fixtures/delivery_evidence.md\ngenerated/\n")
+    (tmp_path / "app.py").write_text("def main():\n    return 1\n")
+    (tmp_path / ".agent-rfc" / "fixtures").mkdir(parents=True)
+    (tmp_path / ".agent-rfc" / "designs").mkdir()
+    (tmp_path / ".agent-rfc" / "designs" / "a.md").write_text("# A design\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], check=True)
+    return tmp_path
+
+
+def _guardrails() -> dict:
+    return {n: d for n, d in AgentKnowledgeGraph()._g.nodes(data=True) if d.get("node_type") == "Guardrail"}
+
+
+def test_an_ignored_document_or_source_file_makes_no_node(checkout):
+    """A generated, ignored document became a Guardrail node read as a rule in
+    force (`delivery_evidence.md`, written by the evidence-pack gate)."""
+    (checkout / ".agent-rfc" / "fixtures" / "delivery_evidence.md").write_text("# Delivery Model — evidence\n")
+    (checkout / "generated").mkdir()
+    (checkout / "generated" / "client.py").write_text("def made():\n    return 0\n")
+
+    map_codebase.run_map()
+
+    graph = AgentKnowledgeGraph()._g
+    assert "rfc:fixtures/delivery_evidence.md" not in graph
+    assert "generated/client.py" not in graph
+    assert "rfc:designs/a.md" in graph and "app.py" in graph
+
+
+def test_a_node_for_a_file_that_became_ignored_is_purged(checkout):
+    (checkout / ".agent-rfc" / "fixtures" / "delivery_evidence.md").write_text("# Delivery Model — evidence\n")
+    (checkout / ".gitignore").write_text("")
+    map_codebase.run_map()
+    assert "rfc:fixtures/delivery_evidence.md" in AgentKnowledgeGraph()._g
+
+    (checkout / ".gitignore").write_text(".agent-rfc/fixtures/delivery_evidence.md\n")
+    map_codebase.run_map()
+
+    assert "rfc:fixtures/delivery_evidence.md" not in AgentKnowledgeGraph()._g
+
+
+def test_an_untracked_design_not_ignored_still_maps(checkout):
+    """A design written before `git add` is the repository's: it must map."""
+    (checkout / ".agent-rfc" / "designs" / "new.md").write_text("# A new design\n")
+    map_codebase.run_map()
+    assert "rfc:designs/new.md" in AgentKnowledgeGraph()._g
+
+
+def test_source_file_is_repository_relative(checkout):
+    (checkout / ".cursorrules").write_text("## 1. Requirements & Design\nrules\n")
+    specs = checkout / "docs" / "superpowers" / "specs"
+    specs.mkdir(parents=True)
+    (specs / "001.md").write_text("# Spec 001\n")
+
+    map_codebase.run_map()
+
+    sources = {n: d["source_file"] for n, d in _guardrails().items()}
+    assert sources == {"rfc:designs/a.md": ".agent-rfc/designs/a.md",
+                       "cursorrules:pillar:1": ".cursorrules",
+                       "superpowers:spec:specs/001.md": "docs/superpowers/specs/001.md"}
+
+
+def test_outside_a_git_checkout_everything_maps(repo):
+    """`repo` fakes `.git`, so git cannot say what it tracks. Unknown is not
+    "nothing is tracked": the walk maps everything, as it always did."""
+    _write_sample(repo)
+    rfc = repo / ".agent-rfc"
+    rfc.mkdir()
+    (rfc / "001.md").write_text("# RFC 001\n")
+    assert map_codebase._mapped(repo) is None
+    map_codebase.run_map()
+    assert "rfc:001.md" in AgentKnowledgeGraph()._g

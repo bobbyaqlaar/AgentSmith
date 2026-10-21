@@ -25,6 +25,7 @@ import ast
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -92,14 +93,40 @@ def _nested_checkouts(root: Path) -> set[Path]:
     return found
 
 
-def _iter_source_files(root: Path):
+def _mapped(root: Path) -> Optional[set[str]]:
+    """The repository-relative paths git holds under `root`: tracked files,
+    plus untracked ones no ignore rule covers, so a design not yet added still
+    maps. A generated, ignored file is not the repository's, and became a node
+    anyway: the evidence pack's `delivery_evidence.md` read as a rule in force
+    (.agent-rfc/designs/kg-maps-what-git-tracks.md).
+
+    None when git cannot say — no checkout, no git, a failed `ls-files` — and
+    then every file maps, as before: unknown is not "nothing is tracked", which
+    would purge every node."""
+    try:
+        listed = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            capture_output=True, check=False,
+        )
+    except OSError:  # fail-open: no git on PATH — map everything, as the walk always did
+        return None
+    if listed.returncode != 0:
+        return None
+    return {p for p in listed.stdout.decode("utf-8", "surrogateescape").split("\0") if p}
+
+
+def _held(path: Path, root: Path, mapped: Optional[set[str]]) -> bool:
+    return mapped is None or path.relative_to(root).as_posix() in mapped
+
+
+def _iter_source_files(root: Path, mapped: Optional[set[str]] = None):
     nested = _nested_checkouts(root)
     for path in root.rglob("*"):
         if any(part in IGNORED_DIRS for part in path.parts):
             continue
         if any(checkout in path.parents for checkout in nested):
             continue
-        if path.suffix in EXTENSION_TO_LANG and path.is_file():
+        if path.suffix in EXTENSION_TO_LANG and path.is_file() and _held(path, root, mapped):
             yield path
 
 
@@ -204,7 +231,7 @@ _PARSERS = {
 _PILLAR_RE = re.compile(r"^##\s+(\d+)\.\s+(.+)$", re.MULTILINE)
 
 
-def _extract_guardrails_from_cursorrules(path: Path) -> list[dict]:
+def _extract_guardrails_from_cursorrules(path: Path, root: Path) -> list[dict]:
     guardrails = []
     try:
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -216,7 +243,7 @@ def _extract_guardrails_from_cursorrules(path: Path) -> list[dict]:
                     "rule_id": f"cursorrules:pillar:{pillar_num}",
                     "title": title,
                     "pillar": pillar_num,
-                    "source_file": str(path),
+                    "source_file": path.relative_to(root).as_posix(),
                 }
             )
     # fail-open: one unparsable .cursorrules file must not abort the whole codebase scan;
@@ -226,9 +253,11 @@ def _extract_guardrails_from_cursorrules(path: Path) -> list[dict]:
     return guardrails
 
 
-def _extract_guardrails_from_rfc(rfc_dir: Path) -> list[dict]:
+def _extract_guardrails_from_rfc(rfc_dir: Path, root: Path, mapped: Optional[set[str]] = None) -> list[dict]:
     guardrails = []
     for md_file in rfc_dir.glob("**/*.md"):
+        if not _held(md_file, root, mapped):
+            continue
         try:
             text = md_file.read_text(encoding="utf-8", errors="replace")
             # Extract first H1 or H2 as the rule title
@@ -239,7 +268,7 @@ def _extract_guardrails_from_rfc(rfc_dir: Path) -> list[dict]:
                     "rule_id": f"rfc:{md_file.relative_to(rfc_dir)}",
                     "title": title,
                     "pillar": None,
-                    "source_file": str(md_file),
+                    "source_file": md_file.relative_to(root).as_posix(),
                 }
             )
         except Exception:  # fail-open: one unparsable RFC file must not abort scanning the rest of the directory
@@ -247,7 +276,8 @@ def _extract_guardrails_from_rfc(rfc_dir: Path) -> list[dict]:
     return guardrails
 
 
-def _extract_guardrails_from_superpowers(superpowers_dir: Path) -> list[dict]:
+def _extract_guardrails_from_superpowers(superpowers_dir: Path, root: Path,
+                                         mapped: Optional[set[str]] = None) -> list[dict]:
     """Mirror of `_extract_guardrails_from_rfc` for the superpowers skill's own
     spec-before-code convention (`docs/superpowers/specs/`,
     `docs/superpowers/plans/`). A repo that adopted superpowers before — or
@@ -260,6 +290,8 @@ def _extract_guardrails_from_superpowers(superpowers_dir: Path) -> list[dict]:
         if not kind_dir.exists():
             continue
         for md_file in kind_dir.glob("**/*.md"):
+            if not _held(md_file, root, mapped):
+                continue
             try:
                 text = md_file.read_text(encoding="utf-8", errors="replace")
                 m = re.search(r"^#{1,2}\s+(.+)$", text, re.MULTILINE)
@@ -269,7 +301,7 @@ def _extract_guardrails_from_superpowers(superpowers_dir: Path) -> list[dict]:
                         "rule_id": f"superpowers:{kind[:-1]}:{md_file.relative_to(superpowers_dir)}",
                         "title": title,
                         "pillar": None,
-                        "source_file": str(md_file),
+                        "source_file": md_file.relative_to(root).as_posix(),
                     }
                 )
             except Exception:  # fail-open: one unreadable skill file must not lose
@@ -352,8 +384,11 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
     seen_guardrails: set[str] = set()
     stats = {"upserted": 0, "unchanged": 0, "edges": 0, "guardrails": 0, "purged": 0}
 
+    # What git holds, decided once for the walk and the three extractions below.
+    mapped = _mapped(root)
+
     # ── Walk source files ─────────────────────────────────────────────────────
-    for abs_path in _iter_source_files(root):
+    for abs_path in _iter_source_files(root, mapped):
         lang = EXTENSION_TO_LANG.get(abs_path.suffix, "unknown")
         rel_path = str(abs_path.relative_to(root))
         seen_files.add(rel_path)
@@ -429,8 +464,8 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
 
     # ── Extract guardrails from .cursorrules ──────────────────────────────────
     cursorrules = root / ".cursorrules"
-    if cursorrules.exists():
-        for gr in _extract_guardrails_from_cursorrules(cursorrules):
+    if cursorrules.exists() and _held(cursorrules, root, mapped):
+        for gr in _extract_guardrails_from_cursorrules(cursorrules, root):
             kg.upsert_guardrail(
                 gr["rule_id"], gr["title"], gr["source_file"], gr["pillar"]
             )
@@ -440,7 +475,7 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
     # ── Extract guardrails from .agent-rfc/ markdown ──────────────────────────
     rfc_dir = root / ".agent-rfc"
     if rfc_dir.exists():
-        for gr in _extract_guardrails_from_rfc(rfc_dir):
+        for gr in _extract_guardrails_from_rfc(rfc_dir, root, mapped):
             kg.upsert_guardrail(
                 gr["rule_id"], gr["title"], gr["source_file"], gr["pillar"]
             )
@@ -450,7 +485,7 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
     # ── Extract guardrails from docs/superpowers/ (specs + plans) ─────────────
     superpowers_dir = root / "docs" / "superpowers"
     if superpowers_dir.exists():
-        for gr in _extract_guardrails_from_superpowers(superpowers_dir):
+        for gr in _extract_guardrails_from_superpowers(superpowers_dir, root, mapped):
             kg.upsert_guardrail(
                 gr["rule_id"], gr["title"], gr["source_file"], gr["pillar"]
             )

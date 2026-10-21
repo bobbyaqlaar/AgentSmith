@@ -84,6 +84,22 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the knowledge graph maps what git tracks, by repository-relative path
+
+`scripts/map_codebase.py` never asked git what belongs to the repository, so a gitignored file became a
+node. The evidence pack's generated `delivery_evidence.md` turned into a Guardrail the agent context
+read as a rule in force. Every Guardrail node also stored an absolute `source_file`: the committed
+graph's 187 all began with one machine's home directory (`kg-maps-what-git-tracks`).
+
+- **The walk and the three document extractors map only what git holds:** tracked files, and untracked
+  ones no ignore rule covers.
+- **When git cannot say** (no checkout, no git), everything maps as before.
+- **`source_file` is repository-relative.**
+- **The regenerated graph** loses its ignored nodes: `portal/next-env.d.ts`, the evidence pack, and in
+  AgentSmith itself the 18 pillar nodes from the gitignored, generated `.cursorrules`. A tenant that
+  commits its `.cursorrules` keeps them.
+- **A `knowledge_graph` mutation suite** holds all three properties.
+
 ### Fixed — the installer says how to apply AgentSmith to a repository
 
 `install-ai-stack.sh`'s closing next steps told users to apply AgentSmith with `git init`. Since

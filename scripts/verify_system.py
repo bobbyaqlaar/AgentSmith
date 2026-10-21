@@ -731,17 +731,19 @@ def _kg_shape(kg_path: Path) -> Optional[str]:
         return None
 
     # GIT-TRACKED CodebaseFile NODES ONLY, and no Guardrail nodes. The mapper
-    # walks the filesystem, so the graph legitimately differs between machines
-    # and CI is the one that differs most:
+    # maps what git holds (kg-maps-what-git-tracks.md): tracked files, and
+    # untracked ones no ignore rule covers. The second half still differs
+    # between a working tree and a fresh runner, so this compares tracked files
+    # alone. Before that, two kinds of node differed on every run:
     #
     #   portal/next-env.d.ts   written by `next build`, gitignored. Present on
-    #                          any machine that has built the portal, absent on
-    #                          a fresh runner — the `purged: 1` in CI.
-    #   rfc:fixtures/…         Guardrail nodes are sourced from .agent-rfc docs,
-    #                          some of which are GENERATED and gitignored
-    #                          (delivery_evidence.md). Worse, they store an
-    #                          ABSOLUTE source_file path, which cannot match
-    #                          across machines at all.
+    #                          any machine that had built the portal, absent on
+    #                          a fresh runner.
+    #   rfc:fixtures/…         Guardrail nodes from GENERATED, gitignored .agent-rfc
+    #                          docs (delivery_evidence.md), each storing an
+    #                          ABSOLUTE source_file path. Both are fixed at the
+    #                          mapper; a Guardrail stays out of this comparison
+    #                          because an untracked design is still one.
     #
     # Comparing those made the gate fail on every CI run — a false-positive
     # gate, which is worse than the weak one it replaced, because the fix is to
