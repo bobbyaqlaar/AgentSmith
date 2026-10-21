@@ -1465,6 +1465,41 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     # .agent-rfc/designs/vendoring-retired.md — what a tenant `tenant init`
     # builds runs in its own CI, checked offline by building the scratch apps.
+    # .agent-rfc/designs/kg-maps-what-git-tracks.md — the knowledge graph maps
+    # what git holds, by repository-relative path, and maps everything when git
+    # cannot say.
+    Suite(
+        name="knowledge_graph",
+        tests=("scripts/test/test_knowledge_graph.py",),
+        mutations=(
+            Mutation(
+                "the graph maps files git ignores again",
+                "scripts/map_codebase.py",
+                "    return mapped is None or path.relative_to(root).as_posix() in mapped",
+                "    return True",
+            ),
+            Mutation(
+                "a design's Guardrail node stores an absolute path again",
+                "scripts/map_codebase.py",
+                '''                    "pillar": None,
+                    "source_file": md_file.relative_to(root).as_posix(),
+                }
+            )
+        except Exception:  # fail-open: one unparsable RFC file''',
+                '''                    "pillar": None,
+                    "source_file": str(md_file),
+                }
+            )
+        except Exception:  # fail-open: one unparsable RFC file''',
+            ),
+            Mutation(
+                "git that cannot answer reads as a repository holding nothing",
+                "scripts/map_codebase.py",
+                "    if listed.returncode != 0:\n        return None",
+                "    if listed.returncode != 0:\n        return set()",
+            ),
+        ),
+    ),
     Suite(
         name="scratch_build",
         tests=("scripts/test/test_scratch_tenants.py",),
