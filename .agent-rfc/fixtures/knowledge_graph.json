@@ -8876,6 +8876,37 @@
       "pillar": null,
       "created_at": "2026-10-24T14:21:38Z",
       "id": "rfc:reviews/migrate-exempt-from-extension-loader.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_tracked_paths",
+        "_entries",
+        "_second_level",
+        "_tree_of",
+        "_design_entries",
+        "test_the_parser_reads_every_shape_of_tree_line",
+        "test_the_parser_ignores_lines_that_are_not_entries",
+        "test_second_level_is_collected_per_directory",
+        "test_a_missing_tree_block_is_an_error_not_an_empty_sweep",
+        "test_the_tree_parse_found_the_repository",
+        "test_every_tracked_top_level_entry_is_in_the_tree",
+        "test_no_top_level_tree_entry_is_absent_on_disk",
+        "test_every_tracked_second_level_entry_is_in_the_tree",
+        "test_no_second_level_tree_entry_is_absent_on_disk",
+        "test_every_wildcard_tree_entry_still_matches_something"
+      ],
+      "last_modified": "2026-10-24T15:33:44Z",
+      "id": "scripts/test/test_design_tree_drift.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The repo-tree drift check belongs in pytest, not in a workflow step",
+      "source_file": ".agent-rfc/designs/design-tree-drift-is-a-pytest-test.md",
+      "pillar": null,
+      "created_at": "2026-10-24T15:33:51Z",
+      "id": "rfc:designs/design-tree-drift-is-a-pytest-test.md"
     }
   ],
   "edges": [

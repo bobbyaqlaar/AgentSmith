@@ -107,7 +107,7 @@ CI stays the authority.
 | ruff (lint config lives in pyproject.toml) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | mypy (shipped runtime only — see pyproject.toml for the scope) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | py_compile sweep | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `find scripts runtime examples -name "*.py" -print0 \| xargs -0 -n1 python3 -m py_compile` | yes |
-| docs/DESIGN.md repo-tree drift check (top level + key sub-trees) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
+| docs/DESIGN.md repo-tree drift check (top level + key sub-trees) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `pytest scripts/test/test_design_tree_drift.py -q` | yes |
 | Redaction compliance (staging + production profiles) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | Commit guardrails / enterprise RFC checks, through the gate | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-hooks` | yes |
 | verify_system.py --check-kg (Knowledge Graph, docs/PRODUCT_ARCHIVE.md P10a) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-kg` | yes |
