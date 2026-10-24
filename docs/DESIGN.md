@@ -1422,6 +1422,7 @@ AgentSmith/
 │   ├── uae-regulatory.md
 │   ├── iso-42001-control-map.md
 │   ├── security-framework-map.md # Live SEC-* status: OWASP · NIST AI RMF · ATLAS · ISO 42001
+│   ├── agentic-42001-coverage.md # What a third-party agentic 42001 briefing asks for vs. what we cover
 │   ├── delivery-model.md
 │   ├── rag-memory.md
 │   ├── team-observability.md
