@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/test/test_design_tree_drift.py
   - .github/workflows/self-test.yml
