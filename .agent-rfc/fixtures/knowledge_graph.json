@@ -8886,9 +8886,13 @@
         "_second_level",
         "_tree_of",
         "_design_entries",
+        "_tracked_second",
+        "tracked",
+        "entries",
         "test_the_parser_reads_every_shape_of_tree_line",
         "test_the_parser_ignores_lines_that_are_not_entries",
         "test_second_level_is_collected_per_directory",
+        "test_tracked_second_keeps_the_directory_and_drops_the_noise",
         "test_a_missing_tree_block_is_an_error_not_an_empty_sweep",
         "test_the_tree_parse_found_the_repository",
         "test_every_tracked_top_level_entry_is_in_the_tree",
@@ -8897,7 +8901,7 @@
         "test_no_second_level_tree_entry_is_absent_on_disk",
         "test_every_wildcard_tree_entry_still_matches_something"
       ],
-      "last_modified": "2026-10-24T15:33:44Z",
+      "last_modified": "2026-10-26T10:14:28Z",
       "id": "scripts/test/test_design_tree_drift.py"
     },
     {
@@ -8915,6 +8919,22 @@
       "pillar": null,
       "created_at": "2026-10-24T15:35:13Z",
       "id": "rfc:reviews/design-tree-drift-is-a-pytest-test.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The drift test reads the repository once, and states its filter once",
+      "source_file": ".agent-rfc/designs/tree-drift-test-reads-once.md",
+      "pillar": null,
+      "created_at": "2026-10-26T10:15:52Z",
+      "id": "rfc:designs/tree-drift-test-reads-once.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the drift test reads the repository once, and states its filter once",
+      "source_file": ".agent-rfc/reviews/tree-drift-test-reads-once.md",
+      "pillar": null,
+      "created_at": "2026-10-26T10:15:52Z",
+      "id": "rfc:reviews/tree-drift-test-reads-once.md"
     }
   ],
   "edges": [
