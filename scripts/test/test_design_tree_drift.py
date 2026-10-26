@@ -119,6 +119,39 @@ def _design_entries() -> list[tuple[int, str]]:
     return _entries(_tree_of((ROOT / "docs" / "DESIGN.md").read_text(encoding="utf-8")))
 
 
+def _tracked_second(directory: str, tracked: list[str]) -> set[str]:
+    """The second-level names tracked under `directory`, worth-a-tree-line ones
+    only.
+
+    One place, because the rule was written twice — once here and once inlined
+    into the wildcard sweep's `any(...)`, where the `IGNORE_SECOND` subtraction
+    was missing. Nothing in IGNORE_SECOND can change a wildcard verdict today,
+    so that was a divergence rather than a defect; it is the divergence that
+    gets fixed.
+    """
+    return {
+        path.split("/")[1]
+        for path in tracked
+        if path.startswith(directory + "/") and path.count("/") >= 1
+    } - IGNORE_SECOND
+
+
+@pytest.fixture(scope="module")
+def tracked() -> list[str]:
+    """`git ls-files` once per module, not once per test.
+
+    Read-only and shared, the same reason test_gate_steps.py uses a fixture for
+    its workflow tree: four tests wanted this and spawned four subprocesses.
+    """
+    return _tracked_paths()
+
+
+@pytest.fixture(scope="module")
+def entries() -> list[tuple[int, str]]:
+    """docs/DESIGN.md parsed once per module. Seven tests wanted it."""
+    return _design_entries()
+
+
 # ── the parser, against a fixture rather than against the repository ─────────
 
 FIXTURE_TREE = """\
@@ -174,6 +207,24 @@ def test_second_level_is_collected_per_directory() -> None:
     assert "pyproject.toml" not in second["scripts"], "depth 0 is not second level"
 
 
+def test_tracked_second_keeps_the_directory_and_drops_the_noise() -> None:
+    """Both sweeps that need second-level names now go through here, so the
+    `IGNORE_SECOND` subtraction is asserted directly rather than inferred from
+    whatever the repository happens to contain — which is how the wildcard
+    sweep came to be missing it."""
+    tracked = [
+        "scripts/map_codebase.py",
+        "scripts/__init__.py",
+        "scripts/test/test_thing.py",
+        "scripts/.gitignore",
+        "scripts",
+        "runtime/cli.py",
+    ]
+    assert _tracked_second("scripts", tracked) == {"map_codebase.py", "test"}
+    assert _tracked_second("runtime", tracked) == {"cli.py"}
+    assert _tracked_second("docs", tracked) == set()
+
+
 def test_a_missing_tree_block_is_an_error_not_an_empty_sweep() -> None:
     """The way this check could stop checking: no block, nothing parsed, four
     sweeps over empty sets, all green."""
@@ -184,11 +235,10 @@ def test_a_missing_tree_block_is_an_error_not_an_empty_sweep() -> None:
 # ── the repository, in the four directions it can drift ──────────────────────
 
 
-def test_the_tree_parse_found_the_repository() -> None:
+def test_the_tree_parse_found_the_repository(entries) -> None:
     """Guards the guard. If the parse returned nothing — a renamed heading, a
     reformatted tree — the four tests below would compare the repository against
     empty sets and report nothing missing."""
-    entries = _design_entries()
     top = {name for depth, name in entries if depth == 0}
     assert len(top) >= 20, f"only {len(top)} top-level entries parsed: {sorted(top)}"
     second = _second_level(entries)
@@ -197,10 +247,9 @@ def test_the_tree_parse_found_the_repository() -> None:
     }
 
 
-def test_every_tracked_top_level_entry_is_in_the_tree() -> None:
-    entries = _design_entries()
+def test_every_tracked_top_level_entry_is_in_the_tree(entries, tracked) -> None:
     top = {name for depth, name in entries if depth == 0}
-    tracked_top = {path.split("/")[0] for path in _tracked_paths()}
+    tracked_top = {path.split("/")[0] for path in tracked}
     missing = sorted(tracked_top - top - IGNORE_TOP)
     assert not missing, (
         f"missing from docs/DESIGN.md's tree (top level): {missing} — add each "
@@ -209,8 +258,8 @@ def test_every_tracked_top_level_entry_is_in_the_tree() -> None:
     )
 
 
-def test_no_top_level_tree_entry_is_absent_on_disk() -> None:
-    top = {name for depth, name in _design_entries() if depth == 0}
+def test_no_top_level_tree_entry_is_absent_on_disk(entries) -> None:
+    top = {name for depth, name in entries if depth == 0}
     ghost = sorted(name for name in top if not (ROOT / name).exists())
     assert not ghost, (
         f"in docs/DESIGN.md's tree but absent on disk (top level): {ghost} — "
@@ -218,20 +267,14 @@ def test_no_top_level_tree_entry_is_absent_on_disk() -> None:
     )
 
 
-def test_every_tracked_second_level_entry_is_in_the_tree() -> None:
-    second = _second_level(_design_entries())
-    tracked = _tracked_paths()
+def test_every_tracked_second_level_entry_is_in_the_tree(entries, tracked) -> None:
+    second = _second_level(entries)
     missing = []
     for directory in DEEP_DIRS:
         listed = second[directory]
-        tracked_second = {
-            path.split("/")[1]
-            for path in tracked
-            if path.startswith(directory + "/") and path.count("/") >= 1
-        } - IGNORE_SECOND
         missing += [
             f"{directory}/{name}"
-            for name in sorted(tracked_second)
+            for name in sorted(_tracked_second(directory, tracked))
             if not any(fnmatch.fnmatch(name, pattern) for pattern in listed)
         ]
     assert not missing, (
@@ -241,8 +284,8 @@ def test_every_tracked_second_level_entry_is_in_the_tree() -> None:
     )
 
 
-def test_no_second_level_tree_entry_is_absent_on_disk() -> None:
-    second = _second_level(_design_entries())
+def test_no_second_level_tree_entry_is_absent_on_disk(entries) -> None:
+    second = _second_level(entries)
     ghost = []
     for directory in DEEP_DIRS:
         ghost += [
@@ -259,7 +302,7 @@ def test_no_second_level_tree_entry_is_absent_on_disk() -> None:
     )
 
 
-def test_every_wildcard_tree_entry_still_matches_something() -> None:
+def test_every_wildcard_tree_entry_still_matches_something(entries, tracked) -> None:
     """The gap the ghost sweep above leaves open.
 
     A wildcard entry stands for a set of files, so there is no single path to
@@ -269,16 +312,12 @@ def test_every_wildcard_tree_entry_still_matches_something() -> None:
     claiming they exist. Matched forward instead — a pattern must still select
     at least one tracked path.
     """
-    second = _second_level(_design_entries())
-    tracked = _tracked_paths()
+    second = _second_level(entries)
     empty = []
     for directory in DEEP_DIRS:
+        names = _tracked_second(directory, tracked)
         for pattern in sorted(name for name in second[directory] if "*" in name):
-            if not any(
-                fnmatch.fnmatch(path.split("/")[1], pattern)
-                for path in tracked
-                if path.startswith(directory + "/") and path.count("/") >= 1
-            ):
+            if not any(fnmatch.fnmatch(name, pattern) for name in names):
                 empty.append(f"{directory}/{pattern}")
     assert not empty, (
         f"these wildcard entries in docs/DESIGN.md's tree match no tracked "
