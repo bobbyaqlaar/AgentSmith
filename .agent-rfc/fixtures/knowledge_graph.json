@@ -8907,6 +8907,14 @@
       "pillar": null,
       "created_at": "2026-10-24T15:33:51Z",
       "id": "rfc:designs/design-tree-drift-is-a-pytest-test.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the repo-tree drift check belongs in pytest, not in a workflow step",
+      "source_file": ".agent-rfc/reviews/design-tree-drift-is-a-pytest-test.md",
+      "pillar": null,
+      "created_at": "2026-10-24T15:35:13Z",
+      "id": "rfc:reviews/design-tree-drift-is-a-pytest-test.md"
     }
   ],
   "edges": [
