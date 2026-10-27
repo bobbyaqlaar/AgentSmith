@@ -23,6 +23,8 @@ import re
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 RUNNER = "--experimental-strip-types"
 LOADER = "--experimental-loader"
@@ -170,11 +172,43 @@ def _invocations() -> list[tuple[str, str]]:
     return found
 
 
-def test_the_sweep_finds_the_known_invocations() -> None:
+@pytest.fixture(scope="module")
+def invocations() -> tuple[tuple[str, str], ...]:
+    """The sweep once per module, not once per test.
+
+    `_invocations()` runs `git ls-files` and then reads every tracked .py, .sh
+    and .mjs file — 297 of them here, 53-103 ms warm — and three tests wanted
+    it, so two thirds of the file's dominant cost was repeated work.
+
+    A tuple, not the list `_invocations()` returns: module scope means all three
+    tests share one object, and a `.sort()` or `.append()` in one of them would
+    silently change what the others examine. Nothing mutates it today; the point
+    is that nothing can.
+    """
+    return tuple(_invocations())
+
+
+@pytest.fixture(scope="module")
+def aliases() -> tuple[str, ...]:
+    """portal/tsconfig.json's path-alias prefixes, with the premise asserted here.
+
+    Two tests need these, and both carried the same two lines verbatim —
+    including the assertion, which is the shape that let the sibling sweep in
+    test_design_tree_drift.py drift from its own rule. Asserting inside the
+    fixture states it once AND states it before either test body runs, so a
+    tsconfig with no aliases errors out naming that reason instead of leaving
+    one test comparing against an empty tuple.
+    """
+    prefixes = tuple(_alias_prefixes())
+    assert prefixes, "portal/tsconfig.json declares no path alias — the premise changed"
+    return prefixes
+
+
+def test_the_sweep_finds_the_known_invocations(invocations) -> None:
     """Guards the guard. If the sweep silently matched nothing, every assertion
     below would pass over an empty list — a green test that examined no code,
     which is the shape this repo keeps finding."""
-    labels = [w for w, _ in _invocations()]
+    labels = [w for w, _ in invocations]
     where = set(labels)
     assert any("package.json scripts.test" in w for w in where), where
     assert any("package.json scripts.db:migrate" in w for w in where), where
@@ -227,10 +261,10 @@ def test_the_loader_rule_reports_a_missing_flag() -> None:
         assert not _missing_loader(exempt, f"node {RUNNER} scripts/migrate.ts"), exempt
 
 
-def test_every_runner_invocation_passes_the_loader() -> None:
+def test_every_runner_invocation_passes_the_loader(invocations) -> None:
     missing = [
         (where, text)
-        for where, text in _invocations()
+        for where, text in invocations
         if _missing_loader(where, text)
     ]
     assert not missing, (
@@ -285,10 +319,7 @@ def _needs_resolution(specifier: str, aliases: tuple[str, ...]) -> bool:
     return specifier.startswith((".", "/")) or specifier.startswith(aliases)
 
 
-def test_what_counts_as_needing_resolution() -> None:
-    aliases = tuple(_alias_prefixes())
-    assert aliases, "portal/tsconfig.json declares no path alias — the premise changed"
-
+def test_what_counts_as_needing_resolution(aliases) -> None:
     for specifier in ["./constantTime", "../lib/authz", "/abs/path", *(a + "lib/db" for a in aliases)]:
         assert _needs_resolution(specifier, aliases), f"{specifier} resolves without the loader?"
     for specifier in ["pg", "node:fs", "node:path", "next/server", "@opentelemetry/api"]:
@@ -312,7 +343,7 @@ def test_the_specifier_sweep_recognises_every_import_form() -> None:
     assert found - EXPECTED_SPECIFIERS == {"./commented-out"}, sorted(found)
 
 
-def test_the_exempt_invocations_import_nothing_needing_resolution() -> None:
+def test_the_exempt_invocations_import_nothing_needing_resolution(invocations, aliases) -> None:
     """The premise EXEMPT_INVOCATIONS rests on, as a test rather than a comment.
 
     An entry point is exempt from the loader because there is nothing for the
@@ -328,16 +359,13 @@ def test_the_exempt_invocations_import_nothing_needing_resolution() -> None:
     relative or aliased. Bare specifiers reach node_modules and `node:` ones the
     runtime, neither of which the loader is involved in.
     """
-    swept = {where: text for where, text in _invocations()}
+    swept = {where: text for where, text in invocations}
     stale = EXEMPT_INVOCATIONS - set(swept)
     assert not stale, (
         f"these exemptions name invocations the sweep no longer finds: {stale} — "
         "an exemption whose invocation moved stops exempting anything and "
         "silently stops being checked here too"
     )
-
-    aliases = tuple(_alias_prefixes())
-    assert aliases, "portal/tsconfig.json declares no path alias — the premise changed"
 
     checked = []
     for where in sorted(EXEMPT_INVOCATIONS):
