@@ -730,25 +730,34 @@ def _kg_shape(kg_path: Path) -> Optional[str]:
     if tracked is None:
         return None
 
-    # GIT-TRACKED CodebaseFile NODES ONLY, and no Guardrail nodes. The mapper
-    # maps what git holds (kg-maps-what-git-tracks.md): tracked files, and
-    # untracked ones no ignore rule covers. The second half still differs
-    # between a working tree and a fresh runner, so this compares tracked files
-    # alone. Before that, two kinds of node differed on every run:
+    # GIT-TRACKED NODES ONLY. The mapper maps what git holds
+    # (kg-maps-what-git-tracks.md): tracked files, and untracked ones no ignore
+    # rule covers. The second half still differs between a working tree and a
+    # fresh runner, so this compares tracked paths alone. Two kinds of node
+    # differed on every run before that filter existed:
     #
     #   portal/next-env.d.ts   written by `next build`, gitignored. Present on
     #                          any machine that had built the portal, absent on
     #                          a fresh runner.
     #   rfc:fixtures/…         Guardrail nodes from GENERATED, gitignored .agent-rfc
     #                          docs (delivery_evidence.md), each storing an
-    #                          ABSOLUTE source_file path. Both are fixed at the
-    #                          mapper; a Guardrail stays out of this comparison
-    #                          because an untracked design is still one.
+    #                          ABSOLUTE source_file path.
     #
     # Comparing those made the gate fail on every CI run — a false-positive
     # gate, which is worse than the weak one it replaced, because the fix is to
-    # delete it. What is left is exactly what goes stale when someone edits
-    # committed code without regenerating.
+    # delete it.
+    #
+    # The remedy for the second one used to be excluding the whole Guardrail
+    # NODE TYPE, which took the true positives with it: beeb838 committed a
+    # graph missing rfc:reviews/design-tree-drift-is-a-pytest-test.md, this
+    # function reported no drift, and all 11 checks passed over it — 7 of them
+    # required for the merge. Of the 184
+    # Guardrails in the graph, 184 were git-tracked and none was compared. The
+    # filter is trackedness, the same test the files get — a Guardrail's
+    # source_file is the repo-relative path of the rfc document it came from,
+    # so a generated one is excluded by the rule rather than by its type, and an
+    # absolute path is excluded because _git_tracked_files returns relative ones
+    # and an absolute path is never a member.
     nodes = sorted(
         (
             n.get("id"),
@@ -758,13 +767,27 @@ def _kg_shape(kg_path: Path) -> Optional[str]:
         for n in data.get("nodes", [])
         if n.get("node_type") == "CodebaseFile" and n.get("id") in tracked
     )
+    # id, title and pillar — NOT created_at. local_knowledge_graph.add_guardrail
+    # preserves an existing node's created_at and stamps now() only for a node
+    # that is new, and a new node already differs by its presence. Comparing the
+    # timestamp would make the shape depend on a clock, which is what
+    # last_modified is excluded for.
+    guardrails = sorted(
+        (n.get("id"), n.get("title"), n.get("pillar"))
+        for n in data.get("nodes", [])
+        if n.get("node_type") == "Guardrail" and n.get("source_file") in tracked
+    )
     raw_edges = data.get("edges", data.get("links", []))
     edges = sorted(
         (e.get("source"), e.get("target"), e.get("edge_type") or e.get("type"))
         for e in raw_edges
         if e.get("source") in tracked and e.get("target") in tracked
     )
-    return json.dumps({"nodes": nodes, "edges": edges}, sort_keys=True, default=str)
+    return json.dumps(
+        {"nodes": nodes, "guardrails": guardrails, "edges": edges},
+        sort_keys=True,
+        default=str,
+    )
 
 
 def _git_tracked_files() -> Optional[set[str]]:
@@ -939,7 +962,20 @@ def check_kg_fresh() -> bool:
         print("❌ knowledge_graph.json was stale — it has just been regenerated in place; COMMIT "
               ".agent-rfc/fixtures/knowledge_graph.json (re-running now passes without the commit)")
         return False
-    print("✅ knowledge_graph.json is up to date with the code")
+    # Say what was compared. "up to date with the code" read as a guarantee
+    # about the whole graph, and on beeb838 it was not one:
+    # Guardrails were outside the comparison entirely. Naming the scope keeps a
+    # green verdict from being read as more than it is — a design's BODY can
+    # still change without its title, and the mapper stores no digest of that.
+    # Parsed back from the shape rather than recounted from the graph: the
+    # shape IS what was compared, so counting anything else would report a
+    # scope the verdict does not rest on.
+    counted = json.loads(before)
+    print(
+        "✅ knowledge_graph.json matches the code — compared "
+        f"{len(counted['nodes'])} tracked file(s), {len(counted['guardrails'])} guardrail(s) "
+        f"and {len(counted['edges'])} edge(s) by name, language, symbols, title and pillar"
+    )
     return True
 
 

@@ -34,6 +34,7 @@ from __future__ import annotations
 import fnmatch
 import re
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -93,7 +94,7 @@ def _entries(tree: str) -> list[tuple[int, str]]:
     return entries
 
 
-def _second_level(entries: list[tuple[int, str]]) -> dict[str, set[str]]:
+def _second_level(entries: Sequence[tuple[int, str]]) -> dict[str, set[str]]:
     """DEEP_DIRS -> the second-level names the tree lists under each."""
     second: dict[str, set[str]] = {directory: set() for directory in DEEP_DIRS}
     current_top = None
@@ -119,7 +120,7 @@ def _design_entries() -> list[tuple[int, str]]:
     return _entries(_tree_of((ROOT / "docs" / "DESIGN.md").read_text(encoding="utf-8")))
 
 
-def _tracked_second(directory: str, tracked: list[str]) -> set[str]:
+def _tracked_second(directory: str, tracked: Sequence[str]) -> set[str]:
     """The second-level names tracked under `directory`, worth-a-tree-line ones
     only.
 
@@ -137,19 +138,24 @@ def _tracked_second(directory: str, tracked: list[str]) -> set[str]:
 
 
 @pytest.fixture(scope="module")
-def tracked() -> list[str]:
+def tracked() -> tuple[str, ...]:
     """`git ls-files` once per module, not once per test.
 
     Read-only and shared, the same reason test_gate_steps.py uses a fixture for
     its workflow tree: four tests wanted this and spawned four subprocesses.
+
+    A tuple, because module scope means every test receives one object and a
+    `.sort()` or `.append()` in any of them would change what the others
+    examine, with the failure surfacing in a test that did nothing wrong.
     """
-    return _tracked_paths()
+    return tuple(_tracked_paths())
 
 
 @pytest.fixture(scope="module")
-def entries() -> list[tuple[int, str]]:
-    """docs/DESIGN.md parsed once per module. Seven tests wanted it."""
-    return _design_entries()
+def entries() -> tuple[tuple[int, str], ...]:
+    """docs/DESIGN.md parsed once per module. Seven tests wanted it. A tuple for
+    the same reason `tracked` is one."""
+    return tuple(_design_entries())
 
 
 # ── the parser, against a fixture rather than against the repository ─────────

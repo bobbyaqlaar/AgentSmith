@@ -84,6 +84,32 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the knowledge-graph drift gate compares guardrails, not just files
+
+`kg check` reported **"knowledge_graph.json is up to date with the code"** over a graph missing a
+committed review record's `Guardrail` node, and all 11 checks passed over it — 7 of them required
+(`beeb838`, found by diffing node ids by hand). `scripts/verify_system.py::_kg_shape` excluded the
+whole `Guardrail` node type, because nodes from generated, gitignored `.agent-rfc` documents differ
+between a working tree and a fresh runner and made the gate fail on every run. The remedy was
+applied to the type instead of to the untracked nodes, and took the true positives with it: of the
+184 guardrails in the graph, 184 were git-tracked and none was compared.
+
+- **The filter is trackedness, the same test the file nodes get.** A guardrail's `source_file` is
+  the repository-relative path of the document it came from, so a generated one is excluded by the
+  rule rather than by its type, and an absolute path is excluded because `git ls-files` answers in
+  relative ones.
+- **`id`, `title` and `pillar` are compared, not `created_at`** — `add_guardrail` preserves an
+  existing node's timestamp and stamps `now()` only for a new node, which already differs by its
+  presence.
+- **What it catches:** a tracked design or review added, removed, renamed or retitled without
+  regenerating. **What it still does not:** an edit to a document's body that leaves its title
+  alone — the mapper stores no digest of the content.
+- **The green verdict now names what it compared** (`compared N tracked file(s), N guardrail(s) and
+  N edge(s) by name, language, symbols and title`), so it cannot be read as a stronger claim than
+  it is.
+- **Six tests** in `scripts/test/test_kg_drift_gate.py`, three of which fail against the previous
+  shape (`kg-check-sees-tracked-guardrails`).
+
 ### Fixed — the knowledge graph maps what git tracks, by repository-relative path
 
 `scripts/map_codebase.py` never asked git what belongs to the repository, so a gitignored file became a
