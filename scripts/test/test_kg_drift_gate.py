@@ -54,7 +54,11 @@ def write_graph(tmp_path: Path):
     """
     counter = iter(range(1000))
 
-    def _write(symbols: list[str], mtime: str = MTIME_B) -> Path:
+    def _write(
+        symbols: list[str],
+        mtime: str = MTIME_B,
+        rails: list[dict] | None = None,
+    ) -> Path:
         graph = {
             "nodes": [
                 {
@@ -63,7 +67,8 @@ def write_graph(tmp_path: Path):
                     "language": "python",
                     "symbols": symbols,
                     "last_modified": mtime,
-                }
+                },
+                *(rails or []),
             ],
             "edges": [
                 {
@@ -181,3 +186,125 @@ def test_the_gate_forces_a_full_rebuild(monkeypatch) -> None:
     vs.check_kg()
 
     assert seen.get("force") is True, "check_kg must force a full re-parse"
+
+
+# ── Guardrail nodes: tracked ones are compared, generated ones are not ───────
+#
+# The gate reported "✅ knowledge_graph.json is up to date with the code" over a
+# graph missing rfc:reviews/design-tree-drift-is-a-pytest-test.md (beeb838,
+# 2026-10-26), and 11 CI checks passed over it, because _kg_shape excluded the
+# whole Guardrail node type. The exclusion existed for untracked, GENERATED rfc
+# docs; these pin the narrower rule that replaced it.
+
+
+def _rail(
+    path: str,
+    title: str = "A design",
+    pillar: str | None = None,
+    created: str = MTIME_A,
+) -> dict:
+    """A Guardrail node as the mapper writes one: `source_file` is the document's
+    repository-relative path, and the id is that path without `.agent-rfc/`."""
+    return {
+        "id": "rfc:" + path.split(".agent-rfc/", 1)[-1],
+        "node_type": "Guardrail",
+        "title": title,
+        "source_file": path,
+        "pillar": pillar,
+        "created_at": created,
+    }
+
+
+@pytest.fixture
+def vs_rfc(vs, monkeypatch):
+    """`vs` with the rfc documents these tests name counted as tracked.
+
+    Every test below needed the same two lines to stub `_git_tracked_files`
+    wider; one fixture states it once. The stub matters for the same reason the
+    `vs` docstring gives: without it every Guardrail is filtered out as
+    untracked, every shape compares equal, and the tests pass having examined
+    nothing — which is the defect this file exists to prevent.
+    """
+    monkeypatch.setattr(
+        vs,
+        "_git_tracked_files",
+        lambda: TRACKED | {".agent-rfc/designs/d.md", ".agent-rfc/reviews/r.md"},
+    )
+    return vs
+
+
+def test_shape_catches_a_removed_guardrail(vs_rfc, write_graph) -> None:
+    """The staleness that got through: a committed review record with no node.
+
+    This is the exact shape of beeb838 — the graph was regenerated before the
+    review file existed, so the file is tracked and the node is absent.
+    """
+    both = write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md"), _rail(".agent-rfc/reviews/r.md")])
+    one = write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md")])
+    assert vs_rfc._kg_shape(both) != vs_rfc._kg_shape(one)
+
+
+def test_shape_catches_a_retitled_guardrail(vs_rfc, write_graph) -> None:
+    """A design renamed in its heading is a different guardrail to anyone
+    reading the graph, and the mapper stores the title, so the graph is stale
+    until it is regenerated."""
+    before = write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md", title="The old name")])
+    after = write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md", title="The new name")])
+    assert vs_rfc._kg_shape(before) != vs_rfc._kg_shape(after)
+
+
+def test_shape_catches_a_changed_pillar(vs_rfc, write_graph) -> None:
+    """`pillar` is one of the three fields compared, and nothing else here varies
+    it — so dropping it from the tuple would change no test result, which is a
+    branch no input reaches rather than a guard. The .cursorrules extractor
+    writes it, and a rule moving between pillars is a graph that needs
+    regenerating."""
+    p2 = write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md", pillar="2")])
+    p7 = write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md", pillar="7")])
+    assert vs_rfc._kg_shape(p2) != vs_rfc._kg_shape(p7)
+
+
+def test_untracked_guardrails_are_excluded(vs_rfc, write_graph) -> None:
+    """Why the whole node type was excluded in the first place, kept as a rule.
+
+    `agentsmith delivery evidence` writes .agent-rfc/fixtures/delivery_evidence.md,
+    which is gitignored. A machine that has run it has that Guardrail and a fresh
+    runner does not, so comparing it failed every CI run — and a gate that always
+    fails gets deleted, which is worse than the weak one it replaced.
+    """
+    without = write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md")])
+    with_generated = write_graph(["f"], rails=[
+        _rail(".agent-rfc/designs/d.md"),
+        _rail(".agent-rfc/fixtures/delivery_evidence.md", title="Delivery evidence"),
+    ])
+    assert vs_rfc._kg_shape(without) == vs_rfc._kg_shape(with_generated)
+
+
+def test_absolute_source_paths_are_excluded(vs_rfc, write_graph) -> None:
+    """The same rule covers the absolute-path case without a special branch:
+    _git_tracked_files returns repo-relative paths, so an absolute one is never
+    a member."""
+    plain = write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md")])
+    absolute = write_graph(["f"], rails=[
+        _rail(".agent-rfc/designs/d.md"),
+        _rail("/Users/someone/repo/.agent-rfc/fixtures/delivery_evidence.md"),
+    ])
+    assert vs_rfc._kg_shape(plain) == vs_rfc._kg_shape(absolute)
+
+
+def test_shape_ignores_guardrail_created_at(vs_rfc, write_graph) -> None:
+    """add_guardrail preserves an existing node's created_at and stamps now()
+    only for a new node, which already differs by its presence. Comparing the
+    timestamp would make the shape depend on a clock — what last_modified is
+    excluded for."""
+    old = write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md", created=MTIME_A)])
+    new = write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md", created=MTIME_B)])
+    assert vs_rfc._kg_shape(old) == vs_rfc._kg_shape(new)
+
+
+def test_guardrails_are_actually_in_the_shape(vs_rfc, write_graph) -> None:
+    """Guards the guard. Every assertion above compares two shapes, so all of
+    them would pass over a shape that dropped guardrails entirely — which is the
+    state this slice is fixing. This one looks."""
+    shape = vs_rfc._kg_shape(write_graph(["f"], rails=[_rail(".agent-rfc/designs/d.md", title="A design")]))
+    assert "rfc:designs/d.md" in shape and "A design" in shape
