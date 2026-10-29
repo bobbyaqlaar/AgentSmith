@@ -99,7 +99,9 @@ how this surfaced).
   gap the governed check reports forever — that answers whether a graph exists, which is a different
   question from whether it is current.
 - **One `_run_tool` helper** runs the installed tools that decorate a scaffold, reports a failure and
-  does not raise: a scaffold is not abandoned because a tool that decorates it did not run.
+  does not raise: a scaffold is not abandoned because a tool that decorates it did not run. Its
+  callers guard `_framework_dir()`, which returns `Optional[Path]`: with no framework installed the
+  placeholder graph is still written, so a scaffold is never left without one.
 - **Two tests** on the scaffold's own graph contents — every rfc record mapped, and no absolute
   `source_file` — asserting the graph rather than the gate's verdict, so a gate that stopped
   comparing guardrails cannot make them pass (`scaffold-graph-knows-its-own-records`).
