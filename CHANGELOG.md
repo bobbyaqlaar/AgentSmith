@@ -84,6 +84,31 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — `agentsmith gates run` checks the range CI checks
+
+`scripts/gate_steps.py::_merge_base` resolved `@{upstream}`, which on a feature branch is **that
+branch's own remote** rather than the branch it merges into. CI passes
+`github.event.pull_request.base.sha` — the base branch. The two differ the moment a branch is
+pushed, and the local gate was wrong in both directions:
+
+- **A false negative, the serious one.** Once a branch was fully pushed the range was **empty**, and
+  the gate printed `Checked 0 commit(s)` beside `gates: 1 passed` — success reported over nothing.
+  Any "gates run locally" citation made after a push was this.
+- **A false positive.** With a `CHANGELOG.md` entry sitting in an already-pushed commit, a later
+  push of the same branch was refused for a missing entry that CI could see. A gate that refuses
+  what CI accepts teaches people to push and see.
+
+`refs/remotes/origin/HEAD` names the base branch now, falling back to `origin/main` and then
+`HEAD~1`. On the branch this shipped from, the local base became byte-identical to CI's and the
+range went from 0 commits to 5. **Known limit:** for a branch opened against another branch, CI's
+base is that parent and this returns the default branch, so a local range is *wider* than CI's —
+more commits checked, not fewer. Four tests, three of which fail against the old resolution, plus
+one for each link of the fallback chain (`gate-base-is-the-base-branch`).
+
+The per-commit CHANGELOG rule itself was never the bug: `scripts/process_gate.py` evaluates it over
+the union of files across the range, which is right — release notes are a property of a change, not
+of each commit in it.
+
 ### Fixed — a scaffolded tenant's graph knows the records the scaffold wrote
 
 `agentsmith tenant init` ran the knowledge-graph mapper **before**

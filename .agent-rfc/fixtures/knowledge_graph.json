@@ -1677,7 +1677,7 @@
         "render_table",
         "swap"
       ],
-      "last_modified": "2026-10-14T20:21:41Z",
+      "last_modified": "2026-10-29T21:06:51Z",
       "id": "scripts/gate_steps.py"
     },
     {
@@ -3230,9 +3230,16 @@
         "test_this_repos_gates_are_its_own_ci_not_the_templates",
         "test_the_cli_lists_them",
         "test_every_blocking_check_in_this_repos_ci_carries_the_tag",
-        "_step_block"
+        "_step_block",
+        "_run",
+        "_sha",
+        "branch_repo",
+        "test_the_base_is_the_base_branch_not_the_branchs_own_remote",
+        "test_the_range_is_not_empty_once_everything_is_pushed",
+        "test_the_base_uses_origin_main_when_origin_head_is_unset",
+        "test_the_base_falls_back_when_no_base_branch_is_known"
       ],
-      "last_modified": "2026-10-14T20:21:41Z",
+      "last_modified": "2026-10-29T21:07:32Z",
       "id": "scripts/test/test_gate_steps.py"
     },
     {
@@ -8997,6 +9004,22 @@
       "pillar": null,
       "created_at": "2026-10-29T20:36:09Z",
       "id": "rfc:reviews/scaffold-graph-knows-its-own-records.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The local gate's base is the base branch, not the branch's own remote",
+      "source_file": ".agent-rfc/designs/gate-base-is-the-base-branch.md",
+      "pillar": null,
+      "created_at": "2026-10-29T21:08:29Z",
+      "id": "rfc:designs/gate-base-is-the-base-branch.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the local gate's base is the base branch",
+      "source_file": ".agent-rfc/reviews/gate-base-is-the-base-branch.md",
+      "pillar": null,
+      "created_at": "2026-10-29T21:08:29Z",
+      "id": "rfc:reviews/gate-base-is-the-base-branch.md"
     }
   ],
   "edges": [
