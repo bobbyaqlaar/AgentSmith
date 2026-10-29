@@ -242,3 +242,46 @@ def test_the_provider_setup_installs_what_kg_check_imports(scaffolded: Path, tmp
     required = [line.split("#")[0].strip() for line in
                 (REPO / "scripts" / "requirements-gate.txt").read_text(encoding="utf-8").splitlines()]
     assert any(line.startswith("networkx") for line in required), "the setup step must install what kg check imports"
+
+
+def test_the_scaffolded_graph_knows_the_scaffold_records(scaffolded: Path):
+    """`tenant init` used to run the mapper BEFORE write_scaffold_records, so the
+    graph it committed knew none of the rfc documents the scaffold had yet to
+    write: 17 guardrails at init against 19 a moment later, from the same mapper
+    with the same flags. Every tenant the framework scaffolded was therefore
+    born with a stale graph, and nothing said so until `kg check` began
+    comparing tracked Guardrail nodes.
+
+    Asserts the graph's CONTENTS, not the gate's verdict — a gate that stopped
+    comparing guardrails must not be able to make this pass.
+    """
+    graph = json.loads((scaffolded / ".agent-rfc" / "fixtures" / "knowledge_graph.json").read_text())
+    mapped = {n["id"] for n in graph["nodes"] if n.get("node_type") == "Guardrail"}
+
+    records = sorted(
+        p.relative_to(scaffolded).as_posix()
+        for p in [*scaffolded.glob(".agent-rfc/*.md"), *scaffolded.glob(".agent-rfc/designs/*.md")]
+    )
+    assert records, "the scaffold wrote no rfc records — this guard would pass over an empty list"
+    missing = [r for r in records if "rfc:" + r.split(".agent-rfc/", 1)[1] not in mapped]
+    assert not missing, (
+        f"the scaffolded graph does not know {missing} — the mapper ran before "
+        "write_scaffold_records wrote them, so the tenant's first commit carries "
+        "a graph that is already stale"
+    )
+
+
+def test_the_scaffolded_graph_stores_repository_relative_sources(scaffolded: Path):
+    """The other half of the same symptom, and the one a stale machine install
+    reintroduces: an installed mapper predating 6fafbd0 writes an ABSOLUTE
+    source_file, which `_kg_shape` cannot match against `git ls-files` and so
+    silently drops from the comparison."""
+    graph = json.loads((scaffolded / ".agent-rfc" / "fixtures" / "knowledge_graph.json").read_text())
+    absolute = sorted(
+        n["id"] for n in graph["nodes"]
+        if n.get("node_type") == "Guardrail" and str(n.get("source_file", "")).startswith("/")
+    )
+    assert not absolute, (
+        f"{absolute} store an absolute source_file — re-run install-ai-stack.sh "
+        "if the machine install predates 6fafbd0"
+    )

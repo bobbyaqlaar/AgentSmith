@@ -705,6 +705,7 @@
         "render_workflow",
         "gate_ides_module",
         "init_tenant",
+        "_run_tool",
         "seed_tenant_data",
         "_scaffold_files",
         "write_scaffold_records",
@@ -757,7 +758,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-17T03:53:49Z",
+      "last_modified": "2026-10-29T20:34:42Z",
       "id": "runtime/cli.py"
     },
     {
@@ -2015,7 +2016,7 @@
         "_repo",
         "_commit"
       ],
-      "last_modified": "2026-10-28T12:48:30Z",
+      "last_modified": "2026-10-28T13:10:14Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -3868,9 +3869,11 @@
         "test_kg_check_fails_a_stale_graph_and_passes_once_regenerated",
         "test_kg_check_takes_no_other_verb",
         "test_the_provider_setup_installs_what_kg_check_imports",
+        "test_the_scaffolded_graph_knows_the_scaffold_records",
+        "test_the_scaffolded_graph_stores_repository_relative_sources",
         "check"
       ],
-      "last_modified": "2026-10-14T09:31:35Z",
+      "last_modified": "2026-10-29T20:30:59Z",
       "id": "scripts/test/test_vendoring_retired.py"
     },
     {
@@ -8978,6 +8981,22 @@
       "pillar": null,
       "created_at": "2026-10-28T12:49:52Z",
       "id": "rfc:reviews/kg-check-sees-tracked-guardrails.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A scaffolded tenant's graph knows the records the scaffold wrote",
+      "source_file": ".agent-rfc/designs/scaffold-graph-knows-its-own-records.md",
+      "pillar": null,
+      "created_at": "2026-10-29T20:36:09Z",
+      "id": "rfc:designs/scaffold-graph-knows-its-own-records.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 a scaffolded tenant's graph knows the records the scaffold wrote",
+      "source_file": ".agent-rfc/reviews/scaffold-graph-knows-its-own-records.md",
+      "pillar": null,
+      "created_at": "2026-10-29T20:36:09Z",
+      "id": "rfc:reviews/scaffold-graph-knows-its-own-records.md"
     }
   ],
   "edges": [
