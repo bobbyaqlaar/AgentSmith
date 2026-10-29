@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -422,3 +423,115 @@ def _step_block(raw: str, name: str, first_line: str) -> str:
     if index == -1:
         index = raw.find(first_line)
     return raw[index: index + 400] if index != -1 else ""
+
+
+# ── the base of a local range ────────────────────────────────────────────────
+#
+# _merge_base used `@{upstream}`, which on a feature branch is that branch's own
+# remote, not the branch it merges into. CI passes
+# github.event.pull_request.base.sha — the base branch. The two differ the
+# moment a branch is pushed, in both directions: a CHANGELOG entry in an
+# already-pushed commit made the local gate refuse what CI accepted, and once
+# everything was pushed the range was EMPTY and the gate reported a pass over
+# nothing.
+
+
+def _run(root, *args):
+    subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=True)
+
+
+def _sha(root, ref="HEAD"):
+    return subprocess.run(["git", "rev-parse", ref], cwd=root, capture_output=True,
+                          text=True, check=True).stdout.strip()
+
+
+@pytest.fixture
+def branch_repo(tmp_path: Path):
+    """A repo with `main`, a feature branch two commits ahead, and a
+    remote-tracking ref for BOTH, so `@{upstream}` and the base branch differ —
+    which is the situation every pushed feature branch is in."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    _run(root, "init", "-q", "--template=", "-b", "main")
+    _run(root, "config", "user.email", "t@t")
+    _run(root, "config", "user.name", "t")
+    (root / "a.txt").write_text("1\n")
+    _run(root, "add", "-A")
+    _run(root, "commit", "-qm", "chore: base")
+    base = _sha(root)
+    _run(root, "update-ref", "refs/remotes/origin/main", base)
+    _run(root, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+
+    _run(root, "checkout", "-q", "-b", "feature")
+    shas = []
+    for n in (2, 3):
+        (root / "a.txt").write_text(f"{n}\n")
+        _run(root, "add", "-A")
+        _run(root, "commit", "-qm", f"chore: step {n}")
+        shas.append(_sha(root))
+    # Both commits "pushed": the branch's remote-tracking ref is at its tip and
+    # the branch tracks it, exactly as after `git push -u`. The remote's url and
+    # FETCH REFSPEC are required, not decoration — without them `@{upstream}`
+    # fails with "not stored as a remote-tracking branch", the helper falls
+    # through to origin/main, and these tests pass without reproducing anything.
+    _run(root, "update-ref", "refs/remotes/origin/feature", shas[-1])
+    _run(root, "config", "remote.origin.url", str(root))
+    _run(root, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
+    _run(root, "config", "branch.feature.remote", "origin")
+    _run(root, "config", "branch.feature.merge", "refs/heads/feature")
+    upstream = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+        cwd=root, capture_output=True, text=True, check=True).stdout.strip()
+    assert upstream == "origin/feature", (
+        f"the fixture did not reproduce a pushed branch: @{{upstream}} is {upstream!r}"
+    )
+    return root, base, shas
+
+
+def test_the_base_is_the_base_branch_not_the_branchs_own_remote(branch_repo) -> None:
+    """What CI calls the base: where the branch left `main`."""
+    root, base, _shas = branch_repo
+    assert gs._merge_base(root) == base
+
+
+def test_the_range_is_not_empty_once_everything_is_pushed(branch_repo) -> None:
+    """The false negative, pinned directly. With `@{upstream}` as the base, a
+    fully pushed branch has an EMPTY range and every per-commit check passes
+    over nothing — `Checked 0 commit(s)` printed beside `gates: 1 passed`."""
+    root, _base, shas = branch_repo
+    span = subprocess.run(["git", "rev-list", f"{gs._merge_base(root)}..HEAD"], cwd=root,
+                          capture_output=True, text=True, check=True).stdout.split()
+    assert sorted(span) == sorted(shas), (
+        "a fully pushed branch must still present every commit it adds to the "
+        "base branch, or the gate reports a pass having checked nothing"
+    )
+
+
+def test_the_base_uses_origin_main_when_origin_head_is_unset(branch_repo) -> None:
+    """The middle link of the fallback chain, which nothing else reaches.
+
+    A clone sets refs/remotes/origin/HEAD; `git init` plus `git remote add` does
+    not, so a working checkout can have origin/main and no origin/HEAD. Without
+    this, replacing `or "origin/main"` with `or ""` changes no test result — the
+    other two cases resolve origin/HEAD or fall through to HEAD~1 either way.
+    """
+    root, base, _shas = branch_repo
+    _run(root, "symbolic-ref", "--delete", "refs/remotes/origin/HEAD")
+    assert gs._merge_base(root) == base
+
+
+def test_the_base_falls_back_when_no_base_branch_is_known(tmp_path: Path) -> None:
+    """`git clone` sets refs/remotes/origin/HEAD; `git init` plus `git remote
+    add` does not. With neither it nor origin/main, HEAD~1 is the range — which
+    is what a one-commit branch's range is anyway."""
+    root = tmp_path / "solo"
+    root.mkdir()
+    _run(root, "init", "-q", "--template=", "-b", "main")
+    _run(root, "config", "user.email", "t@t")
+    _run(root, "config", "user.name", "t")
+    for n in (1, 2):
+        (root / "a.txt").write_text(f"{n}\n")
+        _run(root, "add", "-A")
+        _run(root, "commit", "-qm", f"chore: {n}")
+    first = _sha(root, "HEAD~1")
+    assert gs._merge_base(root) == first

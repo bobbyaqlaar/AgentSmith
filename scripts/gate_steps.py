@@ -70,11 +70,28 @@ def _git(root: Path, *args: str) -> str:
 
 
 def _merge_base(root: Path) -> str:
-    """What CI would call the base of this range: where this branch left the
-    upstream one. Falls back to the previous commit, which is what a one-commit
-    branch's range is anyway."""
-    upstream = _git(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}") or "origin/main"
-    return _git(root, "merge-base", upstream, "HEAD") or _git(root, "rev-parse", "HEAD~1")
+    """What CI calls the base of this range: where this branch left the BASE
+    branch.
+
+    Not `@{upstream}`, which this used and which on a feature branch is that
+    branch's OWN remote. The two differ the moment a branch is pushed, and in
+    both directions: a CHANGELOG entry sitting in an already-pushed commit made
+    the local gate refuse a tree CI accepted, and once everything was pushed the
+    range was EMPTY — `Checked 0 commit(s)` printed beside `gates: 1 passed`, a
+    gate reporting success over nothing
+    (.agent-rfc/designs/gate-base-is-the-base-branch.md).
+
+    `refs/remotes/origin/HEAD` names the base branch and `git clone` sets it;
+    `git init` plus `git remote add` does not, hence the chain down to
+    origin/main and then HEAD~1 — the range a one-commit branch has anyway.
+
+    KNOWN LIMIT: for a branch opened against another branch, CI's
+    `pull_request.base.sha` is that parent and this returns the default branch,
+    so a local range is WIDER than CI's. Wider checks more commits, not fewer,
+    and a local run cannot know which base a pull request will declare.
+    """
+    base = _git(root, "symbolic-ref", "--short", "-q", "refs/remotes/origin/HEAD") or "origin/main"
+    return _git(root, "merge-base", base, "HEAD") or _git(root, "rev-parse", "HEAD~1")
 
 
 class Step(NamedTuple):
