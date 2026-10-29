@@ -432,9 +432,33 @@ def init_tenant(
         session_start=architectures.session_start_line(style, agentic),
         prior=prior,
     )
-    written += seed_tenant_data(root, _framework_dir())
+    written += seed_tenant_data(root, framework)
     written += write_scaffold_records(root, tenant_id, stack, style, agentic, written, force, rfc=rfc)
+    # LAST, deliberately: the graph maps what the scaffold wrote, and
+    # write_scaffold_records above is the step that writes the rfc documents.
+    # Run any earlier and the committed graph does not know them, which is how
+    # every scaffolded tenant came to be born stale
+    # (.agent-rfc/designs/scaffold-graph-knows-its-own-records.md).
+    _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")
     return written
+
+
+def _run_tool(script: Path, root: Path, *args: str) -> None:
+    """Run one installed tool against `root`, or do nothing if it is not there.
+
+    A failure is reported and not raised: a scaffold is not abandoned because a
+    tool that decorates it did not run. One function because the two callers
+    reported it identically, and a split copy of an error message is how the two
+    stop agreeing.
+    """
+    import subprocess as sp  # function-local, as every other caller here does it
+
+    if not script.is_file():
+        return
+    done = sp.run([sys.executable, str(script), *args], cwd=root,
+                  capture_output=True, text=True, check=False)
+    if done.returncode != 0:
+        print(f"  ! {script.name} did not complete: {done.stderr.strip()[:200]}", file=sys.stderr)
 
 
 # The four documents a tenant's security pack is graded on, seeded once as
@@ -702,8 +726,6 @@ def _provision_governance(root: Path, force: bool = False, design_md: Optional[s
                           session_start: Optional[str] = None, prior: Optional[Path] = None) -> list[str]:
     """The gates, armed, plus what they read: the config, the hooks, the IDE
     hook configs, the generated rule files, a committed graph and the stubs."""
-    import subprocess as sp
-
     written: list[str] = []
     framework = _framework_dir()
 
@@ -740,16 +762,17 @@ def _provision_governance(root: Path, force: bool = False, design_md: Optional[s
         except Exception as exc:  # a scaffold that half-works says which half
             print(f"  ! IDE hook configs not written ({exc})", file=sys.stderr)
 
-        for script, args in (
-            (framework / "scripts" / "generate-ide-config.py",
-             ["--repo-root", str(root), "--rules-file", str(framework / "templates" / "agent-rules.yaml")]),
-            (framework / "scripts" / "map_codebase.py", ["--quiet"]),
-        ):
-            if script.is_file():
-                done = sp.run([sys.executable, str(script), *args], cwd=root,
-                              capture_output=True, text=True, check=False)
-                if done.returncode != 0:
-                    print(f"  ! {script.name} did not complete: {done.stderr.strip()[:200]}", file=sys.stderr)
+        # The mapper is NOT run here. It used to be, and `init_tenant` calls this
+        # before write_scaffold_records, so the graph was built before the rfc
+        # documents the scaffold goes on to write: 17 guardrails at init against
+        # 19 from the same mapper a moment later, and every tenant born with a
+        # stale graph (.agent-rfc/designs/scaffold-graph-knows-its-own-records.md).
+        # `init_tenant` runs it last instead. What stays here is the placeholder
+        # below, which answers a different question — does a graph FILE exist —
+        # because a missing one is a gap the governed check reports forever.
+        _run_tool(framework / "scripts" / "generate-ide-config.py", root,
+                  "--repo-root", str(root),
+                  "--rules-file", str(framework / "templates" / "agent-rules.yaml"))
         graph = root / ".agent-rfc" / "fixtures" / "knowledge_graph.json"
         if not graph.is_file():
             # A repo with no code yet still gets a graph: an empty one is a

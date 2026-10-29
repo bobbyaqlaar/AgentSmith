@@ -84,6 +84,31 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — a scaffolded tenant's graph knows the records the scaffold wrote
+
+`agentsmith tenant init` ran the knowledge-graph mapper **before**
+`write_scaffold_records`, so the graph it committed knew none of the `.agent-rfc` documents the
+scaffold went on to write. Measured on a fresh scaffold: **17** guardrails at init, **19** from the
+same mapper with the same flags a moment later, the two extra being `rfc:001-scaffold.md` and
+`rfc:designs/scaffold.md`. Every tenant the framework has scaffolded was born with a stale graph,
+and nothing reported it because the drift gate compared no guardrails at all (fixed below, which is
+how this surfaced).
+
+- **The mapper runs last**, once everything a scaffold writes is on disk. `_provision_governance`
+  still writes an empty placeholder graph when there is nothing to map, because a missing file is a
+  gap the governed check reports forever — that answers whether a graph exists, which is a different
+  question from whether it is current.
+- **One `_run_tool` helper** runs the installed tools that decorate a scaffold, reports a failure and
+  does not raise: a scaffold is not abandoned because a tool that decorates it did not run.
+- **Two tests** on the scaffold's own graph contents — every rfc record mapped, and no absolute
+  `source_file` — asserting the graph rather than the gate's verdict, so a gate that stopped
+  comparing guardrails cannot make them pass (`scaffold-graph-knows-its-own-records`).
+
+**If your machine install predates `map_codebase`'s git-tracked mapping** (no `_mapped()`, no
+`--exclude-standard`), it writes absolute `source_file` paths and the drift gate silently drops those
+nodes. Re-run `install-ai-stack.sh` from a current checkout; the second test above names this as the
+remedy when it fails.
+
 ### Fixed — the knowledge-graph drift gate compares guardrails, not just files
 
 `kg check` reported **"knowledge_graph.json is up to date with the code"** over a graph missing a
