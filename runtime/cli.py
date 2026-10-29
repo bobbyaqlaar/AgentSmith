@@ -439,7 +439,8 @@ def init_tenant(
     # Run any earlier and the committed graph does not know them, which is how
     # every scaffolded tenant came to be born stale
     # (.agent-rfc/designs/scaffold-graph-knows-its-own-records.md).
-    _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")
+    if framework is not None:
+        _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")
     return written
 
 
