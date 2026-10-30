@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/verify_system.py
   - scripts/test/test_kg_drift_gate.py

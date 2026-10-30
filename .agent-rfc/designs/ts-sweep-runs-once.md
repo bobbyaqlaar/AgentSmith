@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/test/test_ts_runner_invocations.py
 ---

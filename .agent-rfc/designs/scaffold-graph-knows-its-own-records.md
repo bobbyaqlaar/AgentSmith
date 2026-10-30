@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - runtime/cli.py
   - scripts/test/test_vendoring_retired.py
