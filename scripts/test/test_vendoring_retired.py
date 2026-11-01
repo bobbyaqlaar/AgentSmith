@@ -285,3 +285,36 @@ def test_the_scaffolded_graph_stores_repository_relative_sources(scaffolded: Pat
         f"{absolute} store an absolute source_file — re-run install-ai-stack.sh "
         "if the machine install predates 6fafbd0"
     )
+
+
+def test_a_scaffold_without_an_installed_framework_still_completes(tmp_path: Path, monkeypatch):
+    """The mapper is the one step `init_tenant` runs out of the INSTALLED
+    framework, so it is the one step with nothing to run when there is no
+    install. Its `framework is not None` guard was put there by mypy
+    (`Unsupported left operand type for / ("None")`), not by a test — every
+    other test in this file scaffolds inside a checkout, where `_framework_dir`
+    always answers. This is the case that reaches the guard: without it,
+    `framework / "scripts"` raises TypeError on the LAST line of the scaffold,
+    after every file is on disk, so the caller sees a failure over a repository
+    that is in fact complete.
+
+    `_templates_dir` is deliberately not patched: it resolves beside this file,
+    so the workflow-writing half still runs and the run reaches the guard
+    instead of returning early.
+    """
+    monkeypatch.setattr("runtime.cli._framework_dir", lambda: None)
+    root = tmp_path / "tenant"
+    root.mkdir()
+    _git(root, "init", "-q", "--template=")
+
+    written = init_tenant("acme", root, stack="python-fastapi", framework_ref="abc1234")
+
+    assert "README.md" in written, (
+        f"the scaffold stopped before write_scaffold_records ({written}) — it never "
+        "reached the mapper guard, so this test proves nothing about it"
+    )
+    # No graph, and that is the right answer: the mapper writes it, and without
+    # an install there is no mapper to run. Pinned so that a later change which
+    # DOES map without an install is noticed here rather than in a tenant.
+    assert not (root / ".agent-rfc" / "fixtures" / "knowledge_graph.json").exists(), \
+        "a graph appeared without an installed framework — which mapper wrote it?"

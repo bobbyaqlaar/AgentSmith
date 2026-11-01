@@ -168,7 +168,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-10-13T20:44:53Z",
+      "last_modified": "2026-10-31T20:57:48Z",
       "id": "runtime/sync.py"
     },
     {
@@ -552,7 +552,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-10-16T13:08:32Z",
+      "last_modified": "2026-10-31T20:58:11Z",
       "id": "runtime/adopt.py"
     },
     {
@@ -758,7 +758,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-10-29T20:55:57Z",
+      "last_modified": "2026-10-31T21:11:02Z",
       "id": "runtime/cli.py"
     },
     {
@@ -1677,7 +1677,7 @@
         "render_table",
         "swap"
       ],
-      "last_modified": "2026-10-29T21:06:51Z",
+      "last_modified": "2026-10-31T21:11:12Z",
       "id": "scripts/gate_steps.py"
     },
     {
@@ -1870,7 +1870,7 @@
         "refuse",
         "_restore"
       ],
-      "last_modified": "2026-10-24T13:50:41Z",
+      "last_modified": "2026-10-31T20:56:45Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -2016,7 +2016,7 @@
         "_repo",
         "_commit"
       ],
-      "last_modified": "2026-10-28T13:10:14Z",
+      "last_modified": "2026-10-31T21:11:09Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -3239,7 +3239,7 @@
         "test_the_base_uses_origin_main_when_origin_head_is_unset",
         "test_the_base_falls_back_when_no_base_branch_is_known"
       ],
-      "last_modified": "2026-10-29T21:07:32Z",
+      "last_modified": "2026-10-31T18:30:20Z",
       "id": "scripts/test/test_gate_steps.py"
     },
     {
@@ -3811,7 +3811,7 @@
         "_write",
         "fake_run_map"
       ],
-      "last_modified": "2026-10-28T12:47:15Z",
+      "last_modified": "2026-10-30T06:59:49Z",
       "id": "scripts/test/test_kg_drift_gate.py"
     },
     {
@@ -3878,9 +3878,10 @@
         "test_the_provider_setup_installs_what_kg_check_imports",
         "test_the_scaffolded_graph_knows_the_scaffold_records",
         "test_the_scaffolded_graph_stores_repository_relative_sources",
+        "test_a_scaffold_without_an_installed_framework_still_completes",
         "check"
       ],
-      "last_modified": "2026-10-29T20:30:59Z",
+      "last_modified": "2026-10-31T20:55:00Z",
       "id": "scripts/test/test_vendoring_retired.py"
     },
     {
@@ -6149,7 +6150,7 @@
         "clear_phoenix_endpoint",
         "find_script"
       ],
-      "last_modified": "2026-10-13T20:45:09Z",
+      "last_modified": "2026-10-31T20:57:58Z",
       "id": "runtime/machine/state.py"
     },
     {
@@ -8922,7 +8923,7 @@
         "test_no_second_level_tree_entry_is_absent_on_disk",
         "test_every_wildcard_tree_entry_still_matches_something"
       ],
-      "last_modified": "2026-10-28T12:45:08Z",
+      "last_modified": "2026-10-30T06:59:49Z",
       "id": "scripts/test/test_design_tree_drift.py"
     },
     {
@@ -9020,6 +9021,22 @@
       "pillar": null,
       "created_at": "2026-10-29T21:08:29Z",
       "id": "rfc:reviews/gate-base-is-the-base-branch.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The three gate fixes of 2026-10-30 get curated mutations",
+      "source_file": ".agent-rfc/designs/curated-mutations-for-todays-gates.md",
+      "pillar": null,
+      "created_at": "2026-10-31T21:13:42Z",
+      "id": "rfc:designs/curated-mutations-for-todays-gates.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review \u2014 the three gate fixes of 2026-10-30/31 get curated mutations",
+      "source_file": ".agent-rfc/reviews/curated-mutations-for-todays-gates.md",
+      "pillar": null,
+      "created_at": "2026-10-31T21:13:42Z",
+      "id": "rfc:reviews/curated-mutations-for-todays-gates.md"
     }
   ],
   "edges": [
