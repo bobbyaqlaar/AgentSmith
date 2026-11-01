@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/mutation_check.py
   - scripts/test/test_vendoring_retired.py

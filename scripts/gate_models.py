@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import datetime
+from collections.abc import Iterator
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
@@ -82,6 +83,8 @@ CheckKind = Literal["design", "review", "mechanical"]
 # The two ids the records cite each other by: a deviation in a design, and the
 # approval the owner recorded at a terminal.
 _DEVIATION_ID = r"(?:[A-Z]+-)?D\d+"
+# A deviation entry, withdrawn or not: `~~` still ends the entry before it.
+_OPENS_DEVIATION = re.compile(rf"^-\s*(?:~~\s*)?{_DEVIATION_ID}\b")
 _APPROVAL_ID = r"A-[0-9a-f]{8}"
 
 
@@ -831,13 +834,16 @@ def parse_deviations(section: str) -> tuple[list[Deviation], list[str]]:
         return [], ["'## Deviations' is empty — write `none`, or one entry per deviation"]
     found: list[Deviation] = []
     errors: list[str] = []
-    for line in stripped.splitlines():
+    for line, continuation in _blocks(stripped, _OPENS_DEVIATION):
         if re.match(r"^-\s*~~", line):
             continue
         entry = re.match(rf"^-\s*({_DEVIATION_ID})\b(.*)$", line)
         if not entry:
             continue
-        ident, rest = entry.group(1), entry.group(2)
+        ident = entry.group(1)
+        # The WHOLE entry: an `approval:` id that wrapped read as no approval at
+        # all (.agent-rfc/designs/answer-is-the-whole-answer.md).
+        rest = "\n".join([entry.group(2), continuation])
         approval = re.search(rf"approval:\s*({_APPROVAL_ID})\b", rest)
         if any(d.id == ident for d in found):
             errors.append(f"deviation {ident} is listed twice")
@@ -910,6 +916,46 @@ _ANSWER = re.compile(
 _MEANT_AS_ANSWER = re.compile(r"^-\s*P\d+\b")
 
 
+def _blocks(section: str, opens: "re.Pattern[str]") -> Iterator[tuple[str, str]]:
+    """Each line that `opens` matches, with the lines that belong to it.
+
+    A block runs to the next line `opens` matches, the next markdown heading, or
+    the end of the section. Entries delimit entries and a bare `- ` does not: a
+    nested sub-bullet belongs to the entry above it, and ending a block on any
+    bullet would make a sub-bullet invisible — the same defect one level down.
+    Because only an entry can end a block, no entry is ever credited with a
+    neighbour's text (.agent-rfc/designs/answer-is-the-whole-answer.md).
+    """
+    lines = section.splitlines()
+    starts = [i for i, line in enumerate(lines) if opens.match(line.strip())]
+    for position, start in enumerate(starts):
+        end = starts[position + 1] if position + 1 < len(starts) else len(lines)
+        heading = next((i for i in range(start + 1, end) if lines[i].lstrip().startswith("#")), end)
+        yield lines[start], "\n".join(lines[start + 1:heading])
+
+
+def _answers(section: str) -> Iterator[tuple["re.Match[str]", str]]:
+    """Each parsed answer and all of its text after the verdict — see `_blocks`
+    for what belongs to an answer.
+
+    An answer is not its first line. `check_pillars` and `check_evidence` both
+    read `section.splitlines()` and judged one, so an answer that wrapped was
+    judged on a fragment of itself: five of the fourteen answers in
+    `.agent-rfc/designs/curated-mutations-for-todays-gates.md` were refused for
+    naming nothing that can be looked up while naming tracked paths one line
+    down (.agent-rfc/designs/answer-is-the-whole-answer.md).
+
+    A line MEANT as an answer that `_ANSWER` cannot parse is skipped here but
+    still ended the block before it — it is somebody's answer either way — and
+    `check_pillars` quotes it instead of letting it vanish.
+    """
+    for first, continuation in _blocks(section, _MEANT_AS_ANSWER):
+        match = _ANSWER.match(first.strip())
+        if not match:
+            continue
+        yield match, "\n".join([match.group("rest"), continuation])
+
+
 def pillar_kinds(section: str) -> dict[str, str]:
     """Each answered pillar's kind — applies, n/a, gap, deviation — read by the
     same pattern `check_pillars` judges. `unrecognised` for an answer that
@@ -919,12 +965,20 @@ def pillar_kinds(section: str) -> dict[str, str]:
         match = _ANSWER.match(line.strip())
         if not match:
             continue
-        verdict = match.group("verdict").strip("* ").rstrip(" —").lower()
+        verdict = _verdict(match).lower()
         kind = "deviation" if verdict.startswith("deviation") else (
             verdict if verdict in ("applies", "n/a", "gap") else "unrecognised")
         for number in re.findall(r"\d+", match.group("ids")):
             kinds[f"P{number}"] = kind
     return kinds
+
+
+def _verdict(match: "re.Match[str]") -> str:
+    """The verdict, without the bold markers a deviation carries or the dash that
+    may follow it. Written out three times before this — `pillar_kinds` then
+    lowercases it, both checks compare it — and a fourth copy is how they stop
+    agreeing."""
+    return match.group("verdict").strip("* ").rstrip(" —")
 
 
 def _detail(rest: str) -> str:
@@ -936,13 +990,10 @@ def check_pillars(section: str, registry: Registry, deviations: list[Deviation])
     answered: set[int] = set()
     known = {p.id: p for p in registry.pillars}
     deviation_ids = {d.id for d in deviations}
-    for line in section.splitlines():
-        match = _ANSWER.match(line.strip())
-        if not match:
-            continue
+    for match, rest in _answers(section):
         ids = [int(i) for i in re.findall(r"\d+", match.group("ids"))]
-        verdict = match.group("verdict").strip("* ").rstrip(" —")
-        detail = _detail(match.group("rest"))
+        verdict = _verdict(match)
+        detail = _detail(rest)
         label = match.group("ids")
         for pid in ids:
             if pid not in known:
@@ -994,15 +1045,15 @@ def check_evidence(section: str, resolve) -> list[str]:
     everyone to write the evidence without them.
     """
     errors: list[str] = []
-    for line in section.splitlines():
-        match = _ANSWER.match(line.strip())
-        if not match:
-            continue
-        verdict = match.group("verdict").strip("* ").rstrip(" —")
+    for match, rest in _answers(section):
+        verdict = _verdict(match)
         if verdict != "applies":
             continue
         label = match.group("ids")
-        tokens = re.findall(r"`([^`]+)`", match.group("rest"))
+        # Deduplicated, order kept: `resolve` memoises, but the refusal message
+        # quotes these and a token repeated across an answer's lines should be
+        # quoted once.
+        tokens = list(dict.fromkeys(re.findall(r"`([^`]+)`", rest)))
         if not tokens:
             errors.append(
                 f"{label} applies — the answer names nothing that can be looked up; name the path, test "

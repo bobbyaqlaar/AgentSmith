@@ -424,6 +424,34 @@ Small, specific, and deliberately not fixed in that release.
 
 ## Future Phases — confirmed gaps, not yet scheduled
 
+### The stop gate cannot tell a mutation harness's edit from an unreviewed change
+
+Raised 2026-11-01, while `scripts/mutation_check.py` was running in the background
+as a turn ended. The stop gate refused with
+
+> `runtime/cli.py`: no complete active design note covers it
+
+and it was right about the file and wrong about the cause: the harness had
+`runtime/cli.py` mutated in place at that instant (`tenant_scaffold`, `quoted_id`
+→ `tenant_id`) and would restore it a second later. The design that covers
+`runtime/cli.py` is `done`, correctly, because nothing in the slice changes it.
+
+So a long catalogue run and a turn boundary cannot coexist: the gate reads a
+transient edit as unreviewed work and blocks. Worse than the noise is the habit it
+teaches — the remedy that looks right is to re-open a finished design, or to stop
+running the harness.
+
+The harness already knows which files it is holding: it writes pristine copies to
+a backup directory and keeps a journal, which is how it restores a file after a
+killed run (`♻️ restored runtime/idempotency.py`).
+
+**Fix:** have the harness publish the set of files it currently holds — the journal
+it already keeps is enough — and have `scripts/process_gate.py` treat a file listed
+there as held rather than unreviewed, naming it as such in the output rather than
+staying silent. Both halves matter: a gate that silently ignores a path is worse
+than one that blocks on it.
+
+
 ### "caught" does not say which test caught it
 
 Raised 2026-11-01 while cataloguing the mutants for `kg_drift_gate`, `gate_steps`

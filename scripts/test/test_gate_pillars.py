@@ -162,6 +162,22 @@ def test_n_a_and_gap_answers_need_no_token(enforcing):
     assert result.returncode == 0, result.stderr
 
 
+def test_an_answer_whose_token_is_on_a_continuation_line_passes_the_gate(enforcing):
+    """End to end, through a real commit: the refusal the owner hit on
+    2026-11-01 (.agent-rfc/designs/answer-is-the-whole-answer.md). Five of
+    fourteen answers in one design were refused for naming nothing, each naming a
+    tracked path one line below its first.
+    """
+    wrapped = (f"- {DESIGN_PILLARS} applies — each was worked at length for this\n"
+               f"  change, against {TOKEN} in particular.")
+    _records(enforcing, DESIGN.replace(ANSWER, wrapped))
+    _write(enforcing, "scripts/tool.py", "print(1)\n")
+
+    result = _commit(enforcing, MESSAGE)
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_off_asks_for_no_evidence(gated_repo):
     _policy(gated_repo, None)
     _records(gated_repo, PROSE)
