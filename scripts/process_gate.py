@@ -44,10 +44,12 @@ import hashlib
 import json
 import os
 import re
+import select
 import subprocess
 import sys
+import time
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import IO, Callable, Dict, List, Optional, Tuple
 
 # The gate must not change the tree it checks: importing its own modules would
 # otherwise drop scripts/__pycache__/ into the repo, which the stop and commit
@@ -2103,6 +2105,67 @@ def _traced(command: str, root: Path, run: Callable[[], int]) -> int:
     return code
 
 
+# How long a hook or a contract decision waits for the payload it was spawned
+# with. A payload is a few hundred bytes written at once, so this is far beyond
+# any real write and far below a turn boundary anyone would notice.
+_STDIN_DEADLINE = 2.0
+
+
+def _payload_text(stream: "IO[str]", deadline: float = _STDIN_DEADLINE) -> str:
+    """The payload on `stream`, or "" if it does not arrive within `deadline`.
+
+    `stream.read()` returns at EOF, and a caller that spawns the gate without
+    closing stdin never sends one — so the gate ran for as long as that caller
+    lived, not for as long as its own work took: 0.76s against /dev/null, 8.49s
+    against a pipe held open for 8s, and three runs of 8, 11 and 25 minutes in one
+    session that ended only when they were killed
+    (.agent-rfc/designs/hook-answers-without-its-payload.md).
+
+    That is the worst shape a gate can take. `main` fails CLOSED for `pre-edit` so
+    that a gate which cannot evaluate does not silently stop gating — and a read
+    that never returns reaches neither the deny nor the allow. All three callers
+    had it: the hook events, contract 3's `commit` and contract 2's `range`.
+
+    A writer that sends its JSON and holds the pipe open now yields that JSON at
+    the deadline instead of never, which is strictly better than before. A stream
+    with no file descriptor — a StringIO, an in-process double — cannot block, so
+    it is read directly.
+
+    Reads the FILE DESCRIPTOR, which is what makes the deadline possible and what
+    constrains the caller: anything already pulled into `stream`'s own text buffer
+    is invisible here, so this must be the first read of `stream`. Its one caller,
+    `main`, reads stdin nowhere else.
+    """
+    try:
+        fd = stream.fileno()
+    except (AttributeError, OSError, ValueError):
+        return stream.read()
+    # A bytearray, not a list of chunks: an empty read must not be able to make
+    # "something arrived" true. With a list, a mutation that stops noticing EOF
+    # appends b"" forever and `not chunks` goes false, so the silence below reads
+    # as "the payload came" — the mutant survived until this was a length.
+    data = bytearray()
+    end = time.monotonic() + deadline
+    while True:
+        left = end - time.monotonic()
+        if left <= 0:
+            if not data:
+                # Waited and got nothing, which is not the same event as being
+                # handed nothing: /dev/null and a closed pipe answer at once and
+                # stay silent. Without this line the fix would turn a visible hang
+                # into an invisible decision on a payload never received.
+                print(f"process gate: no payload within {deadline:g}s — deciding "
+                      "without it; the caller did not close stdin", file=sys.stderr)
+            break
+        if not select.select([fd], [], [], left)[0]:
+            continue
+        piece = os.read(fd, 65536)
+        if not piece:
+            break  # EOF: the writer closed, which is the ordinary case
+        data += piece
+    return bytes(data).decode("utf-8", "replace")
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     if UNUSABLE:
         print(f"process gate cannot run here: {UNUSABLE}. It needs the framework environment "
@@ -2148,7 +2211,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         except ValueError as exc:
             print(f"process gate: {exc}", file=sys.stderr)
             return 1
-        raw = sys.stdin.read() if not sys.stdin.isatty() else ""
+        raw = "" if sys.stdin.isatty() else _payload_text(sys.stdin)
         handler = {"session-start": cmd_session_start, "pre-edit": cmd_pre_edit, "stop": cmd_stop}[args.command]
         try:
             payload = json.loads(raw) if raw.strip() else {}
@@ -2169,7 +2232,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return _traced("sweep", repo_root(), lambda: cmd_sweep(args.report))
     if args.command == "commit-msg":
         if args.decision:
-            raw = sys.stdin.read() if not sys.stdin.isatty() else ""
+            raw = "" if sys.stdin.isatty() else _payload_text(sys.stdin)
             try:
                 event = gm.GateEventV3.model_validate_json(raw or "{}")
                 if event.kind != "commit":
@@ -2186,7 +2249,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.decision:
         # The event arrives on stdin, as every contract event does; --base and
         # --head are the fallback for a caller running the gate by hand.
-        raw = sys.stdin.read() if not sys.stdin.isatty() else ""
+        raw = "" if sys.stdin.isatty() else _payload_text(sys.stdin)
         base, head = args.base, args.head
         if raw.strip():
             try:

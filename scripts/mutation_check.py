@@ -1996,6 +1996,63 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
         ),
     ),
+    # .agent-rfc/designs/hook-answers-without-its-payload.md — the gate answers
+    # whether or not its payload arrives. No suite owned test_process_gate.py.
+    Suite(
+        name="hook_payload",
+        tests=("scripts/test/test_process_gate.py",),
+        mutations=(
+            Mutation(
+                "the payload read waits for an EOF the caller may never send",
+                "scripts/process_gate.py",
+                'raw = "" if sys.stdin.isatty() else _payload_text(sys.stdin)',
+                'raw = "" if sys.stdin.isatty() else sys.stdin.read()',
+                expect=3,
+            ),
+            Mutation(
+                "a wait that expired with nothing read says nothing",
+                "scripts/process_gate.py",
+                '''\
+            if not data:
+''', 
+                '''\
+            if False:
+''', 
+            ),
+            Mutation(
+                "a payload that did arrive is reported as missing",
+                "scripts/process_gate.py",
+                '''\
+            if not data:
+''', 
+                '''\
+            if True:
+''', 
+            ),
+            Mutation(
+                "EOF is not noticed, so a closed pipe pays the whole deadline",
+                "scripts/process_gate.py",
+                '''\
+        if not piece:
+            break  # EOF: the writer closed, which is the ordinary case
+''', 
+                '''\
+        if False:
+            break  # EOF: the writer closed, which is the ordinary case
+''', 
+            ),
+            Mutation(
+                "a stream with no file descriptor yields nothing instead of its text",
+                "scripts/process_gate.py",
+                '''\
+        return stream.read()
+''', 
+                '''\
+        return ""
+''', 
+            ),
+        ),
+    ),
 )
 
 

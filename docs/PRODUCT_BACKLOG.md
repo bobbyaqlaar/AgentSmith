@@ -424,7 +424,45 @@ Small, specific, and deliberately not fixed in that release.
 
 ## Future Phases — confirmed gaps, not yet scheduled
 
+### Nine more unbounded `sys.stdin.read()` calls, same defect as the gate's
+
+Raised 2026-11-01 in Pass 2 of `hook-answers-without-its-payload`, by sweeping the
+data rather than the directory. The gate's three reads are fixed; these nine are
+the same line, unfixed:
+
+| file | lines |
+|---|---|
+| `scripts/rules_port.py` | 211 |
+| `scripts/security_port.py` | 234 |
+| `scripts/evals_port.py` | 235 |
+| `runtime/cli.py` | 1025, 1075, 1094, 1154 |
+| `.githooks/process-gate` | 221, 409 (inline `python3 -`) |
+
+Each waits for an EOF its caller may never send. The three ports are contract
+endpoints the launcher invokes with a pipe it closes, and the `runtime/cli.py`
+paths are `conformance` and the CLI's own stdin readers — so none is known to hang
+today. That is a statement about the callers in this repository, not about the
+code, which is exactly the reasoning this slice had to retract for the gate's two
+`--decision` paths.
+
+**Why it is not fixed here:** `_payload_text` lives in `scripts/process_gate.py`,
+and the gate deliberately does not import its own modules. Sharing it means
+putting it in `scripts/_shared.py` (or beside it) and having four modules plus two
+inline hook scripts take it from there — a different change from bounding the
+gate's own read, with its own tests per caller. Doing it inside this slice would
+have meant five more gated files under a design written for one.
+
+**Fix:** move the helper to a shared module, point all nine at it, and give each
+caller the held-open-pipe test the gate now has.
+
+
 ### The stop gate cannot tell a mutation harness's edit from an unreviewed change
+
+**Update 2026-11-01:** the *other* half of that day's confusion — "the stop gate is
+slow" — turned out to be `sys.stdin.read()` waiting for an EOF nobody sent, and is
+fixed (`hook-answers-without-its-payload`). This item is unaffected: the harness
+really does hold gated files mid-run, and the gate really does read that as
+unreviewed work. Two separate defects that presented as one symptom.
 
 Raised 2026-11-01, while `scripts/mutation_check.py` was running in the background
 as a turn ended. The stop gate refused with
