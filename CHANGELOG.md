@@ -84,6 +84,52 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — a pillar answer is read whole, not first-line-only
+
+`scripts/gate_models.py::check_evidence` and `check_pillars` both iterated
+`section.splitlines()` and judged each `## Pillars` answer from **the line that opened it**, so
+every answer long enough to wrap was judged on a fragment of itself.
+
+Measured on `.agent-rfc/designs/curated-mutations-for-todays-gates.md`: **five of fourteen answers
+were refused while naming real, tracked paths one line down.** P4 got *"the answer names nothing
+that can be looked up"* against an answer whose second line read ``the 11 new entries in
+`scripts/mutation_check.py` must fail at least one named test``. The fix the gate forced was to
+move the backticks up a line — which taught nothing, changed no evidence, and cost two blocked
+commits. A check that refuses correct work teaches people to reshape prose until it passes, which
+is the "sixteen lines of it applies" form the evidence rule exists to prevent.
+
+Grepping `_ANSWER` found **two more rules with the same defect**, neither reported:
+
+- a `gap` whose backlog id sits on a continuation line was refused for naming no id;
+- an `applies` or `n/a` whose reason sits on a continuation line read as saying nothing.
+
+Both were held up only by the convention of writing the id and the reason on the first line. A
+review pass then swept `splitlines()` across the file and found a **third**, in `parse_deviations`:
+a deviation's `approval:` id that wrapped was invisible, so an entry the owner *had* approved was
+refused for having no approval.
+
+One helper, `_blocks(section, opens)`, now yields each entry with all of its text, to the next line
+that opens an entry, the next heading, or the end of the section; `_answers` and `parse_deviations`
+both sit on it. Entries delimit entries and a bare `- ` does not: a nested sub-bullet belongs to
+the entry above it, and ending a block on any bullet would reintroduce the same defect one level
+down. Because only an entry can end a block, **no entry is ever credited with a neighbour's text**
+— the one way this change could have made the checks weaker, and it has a test on both paths.
+`_OPENS_DEVIATION` matches a withdrawn entry too, so a struck-through `- ~~D2 …~~` still ends the
+live entry above it rather than being swallowed into it with its approval id.
+
+`pillar_kinds` keeps reading line by line on purpose: it reads only the verdict, which `_ANSWER`
+can match only on the line that opens an answer.
+
+**Declared:** the check is deliberately more permissive — it was refusing answers that satisfied
+it. What is new is that more text counts as "the answer", so unrelated prose under an answer
+carrying a resolving backtick would now satisfy it. Each token must still resolve against what the
+commit tracks, so the bar per token is unchanged; only the span of text searched moves.
+
+15 new test cases, 6 of which fail against the old code, including one through a real commit. A
+new `record_blocks` curated suite — 9 mutations, all caught, and each verified to fail the test
+that asserts its own property — so a later edit cannot collapse the block reader back to one line
+unnoticed (`answer-is-the-whole-answer`).
+
 ### Added — the three gate fixes of 2026-10-30/31 are re-run by CI
 
 `_kg_shape` (`scripts/verify_system.py`), `init_tenant`'s tail (`runtime/cli.py`) and

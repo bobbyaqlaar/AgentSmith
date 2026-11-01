@@ -1934,6 +1934,68 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
         ),
     ),
+    # .agent-rfc/designs/answer-is-the-whole-answer.md — `_blocks` reads a record
+    # entry whole. No suite owned test_gate_models.py or test_gate_pillars.py.
+    Suite(
+        name="record_blocks",
+        tests=("scripts/test/test_gate_models.py", "scripts/test/test_gate_pillars.py"),
+        mutations=(
+            Mutation(
+                "an entry is judged on its line alone again",
+                "scripts/gate_models.py",
+                '        yield lines[start], "\\n".join(lines[start + 1:heading])',
+                '        yield lines[start], ""',
+            ),
+            Mutation(
+                "a block runs past the next entry, so an entry borrows its neighbour's text",
+                "scripts/gate_models.py",
+                '        end = starts[position + 1] if position + 1 < len(starts) else len(lines)',
+                '        end = len(lines)',
+            ),
+            Mutation(
+                "a heading inside the section no longer ends a block",
+                "scripts/gate_models.py",
+                '        heading = next((i for i in range(start + 1, end) if lines[i].lstrip().startswith("#")), end)',
+                '        heading = end',
+            ),
+            Mutation(
+                "an unparseable answer line stops ending the block above it",
+                "scripts/gate_models.py",
+                '    for first, continuation in _blocks(section, _MEANT_AS_ANSWER):',
+                '    for first, continuation in _blocks(section, _ANSWER):',
+            ),
+            Mutation(
+                "a nested sub-bullet ends its parent's block",
+                "scripts/gate_models.py",
+                '    starts = [i for i, line in enumerate(lines) if opens.match(line.strip())]',
+                '    starts = [i for i, line in enumerate(lines) if line.strip().startswith("-")]',
+            ),
+            Mutation(
+                "a pillar answer drops its continuation lines",
+                "scripts/gate_models.py",
+                '        yield match, "\\n".join([match.group("rest"), continuation])',
+                '        yield match, match.group("rest")',
+            ),
+            Mutation(
+                "a deviation entry drops its continuation lines, losing a wrapped approval id",
+                "scripts/gate_models.py",
+                '        rest = "\\n".join([entry.group(2), continuation])',
+                '        rest = entry.group(2)',
+            ),
+            Mutation(
+                "a withdrawn deviation stops opening a block, so the entry above swallows it",
+                "scripts/gate_models.py",
+                '_OPENS_DEVIATION = re.compile(rf"^-\\s*(?:~~\\s*)?{_DEVIATION_ID}\\b")',
+                '_OPENS_DEVIATION = re.compile(rf"^-\\s*{_DEVIATION_ID}\\b")',
+            ),
+            Mutation(
+                "a token repeated across an entry's lines is quoted once per occurrence",
+                "scripts/gate_models.py",
+                '        tokens = list(dict.fromkeys(re.findall(r"`([^`]+)`", rest)))',
+                '        tokens = re.findall(r"`([^`]+)`", rest)',
+            ),
+        ),
+    ),
 )
 
 
