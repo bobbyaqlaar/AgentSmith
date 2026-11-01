@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/gate_models.py
   - scripts/test/test_gate_models.py

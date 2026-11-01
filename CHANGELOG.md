@@ -84,6 +84,50 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the gate answers whether or not its payload arrives
+
+`scripts/process_gate.py` read its payload with `sys.stdin.read()`, in **three** places: the hook
+events (`session-start`, `pre-edit`, `stop`), gate contract 3's `commit`, and gate contract 2's
+`range`. `read()` returns at **EOF**, and a caller that spawns the gate without closing stdin never
+sends one — so the gate ran for as long as that caller lived, not for as long as its own work took.
+
+| stdin | before | after |
+|---|---|---|
+| `/dev/null` (EOF at once) | 0.76 s | 0.82 s |
+| the payload, then close | 0.61 s | 0.62 s |
+| a pipe held open, nothing written | **the writer's lifetime** | **2.8 s** |
+
+Three runs in one session sat at **8, 11 and 25 minutes** and ended only when they were killed.
+Nothing was slow: the gate had not started. It was reported as "the stop gate is slow", and
+diagnosed wrongly three times — a shell stuck in a heredoc, then `scripts/map_codebase.py`, then
+CPU contention from the mutation harness — before `ps` showing an 11-minute-old `process_gate.py
+stop` settled it. `scripts/gate_tracing.py::ship` was ruled out too: it bounds itself to one
+1-second timeout and returns on the first failure.
+
+This is the worst shape a gate can take. `main` fails **closed** for `pre-edit` precisely so that a
+gate which cannot evaluate does not silently stop gating — and a read that never returns reaches
+neither the deny nor the allow. Any host that spawns these hooks with an inherited pipe hangs the
+editor's turn instead of the gate.
+
+`_payload_text(stream, deadline)` now reads until EOF **or** `_STDIN_DEADLINE` (2 s), whichever
+comes first, and returns what arrived. A writer that sends its JSON and then holds the pipe open
+yields that JSON at the deadline instead of never. A TTY still answers at once. A stream with no
+file descriptor is read directly, since it cannot block.
+
+**The timeout is reported, not swallowed:** expiring with *no bytes at all* prints one line to
+stderr naming the deadline, because being handed nothing and waiting for nothing are two different
+events. `/dev/null` and a closed pipe stay silent. Without that line the fix would turn a visible
+hang into an invisible decision on a payload that never came.
+
+The first draft of this change excluded the two `--decision` paths, on the grounds that a contract
+client closes its pipe. That is an assumption about someone else's code rather than a property of
+this one, and the two paths that decide whether a **commit** and a **push** may proceed are the last
+place to rely on it. All three go through the helper.
+
+6 tests through the real entry point; 4 of them do not return at all against the old read, which is
+the defect itself rather than a proxy for it. New `hook_payload` curated suite, 5 mutations
+(`hook-answers-without-its-payload`).
+
 ### Fixed — a pillar answer is read whole, not first-line-only
 
 `scripts/gate_models.py::check_evidence` and `check_pillars` both iterated

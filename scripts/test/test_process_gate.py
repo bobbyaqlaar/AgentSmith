@@ -1184,3 +1184,120 @@ def test_this_repo_has_adopted_the_registry():
     """AgentSmith declares it, so every commit from G1 on is held to it — the
     grandfathering above is for history, not an opt-out."""
     assert "registry" in json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+
+
+# ── a gate answers whether or not its payload arrives ────────────────────────
+# .agent-rfc/designs/hook-answers-without-its-payload.md. `sys.stdin.read()`
+# returns at EOF, so a caller that spawns the gate without closing stdin used to
+# make it run for as long as that caller lived: three runs of 8, 11 and 25
+# minutes in one session, every one ended by being killed.
+
+
+def _gate_with_open_stdin(*args: str, hold: float = 20.0) -> tuple[float, int, str]:
+    """Run the gate with stdin on a pipe nobody writes to and nobody closes —
+    the shape that produced the long runs — and say how long it took to answer.
+
+    `hold` outlives the deadline by an order of magnitude on purpose: against the
+    unbounded read this call does not return at all, which is the defect rather
+    than a proxy for it.
+    """
+    read_fd, write_fd = os.pipe()
+    started = time.monotonic()
+    try:
+        proc = subprocess.Popen([sys.executable, str(GATE), *args], stdin=read_fd,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=REPO)
+        os.close(read_fd)
+        try:
+            _out, err = proc.communicate(timeout=hold)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
+            raise AssertionError(
+                f"the gate did not answer within {hold}s with stdin held open — it is waiting for "
+                "an EOF the caller never sends, and a gate that never returns never denies either"
+            ) from None
+    finally:
+        os.close(write_fd)
+    return time.monotonic() - started, proc.returncode, err
+
+
+@needs_git
+def test_a_hook_answers_when_nobody_closes_stdin() -> None:
+    elapsed, code, err = _gate_with_open_stdin("stop")
+
+    assert code == 0, err
+    assert elapsed < pg._STDIN_DEADLINE + 5, f"answered in {elapsed:.1f}s"
+    assert "no payload within" in err, (
+        "the wait expiring with nothing read must say so — otherwise the fix turns a "
+        "visible hang into an invisible decision on a payload never received", err)
+
+
+@needs_git
+@pytest.mark.parametrize("args", [
+    ("commit-msg", "--decision"),   # gate contract 3's `commit`
+    ("ci", "--decision"),           # gate contract 2's `range`
+])
+def test_a_contract_decision_answers_when_nobody_closes_stdin(args) -> None:
+    """The two paths that decide whether a commit and a push may proceed had the
+    same unbounded read. The first draft of the design excluded them on the
+    grounds that a contract client closes its pipe — an assumption about someone
+    else's code, not a property of this one."""
+    elapsed, _code, err = _gate_with_open_stdin(*args)
+
+    assert elapsed < pg._STDIN_DEADLINE + 5, f"answered in {elapsed:.1f}s"
+    assert "no payload within" in err, err
+
+
+@needs_git
+def test_a_closed_pipe_answers_at_once_and_says_nothing() -> None:
+    """/dev/null and a closed pipe answered: they are a different event from a
+    wait that expired, so they must stay silent."""
+    done = subprocess.run([sys.executable, str(GATE), "stop"], input="", capture_output=True,
+                          text=True, check=False, cwd=REPO)
+
+    assert done.returncode == 0, done.stderr
+    assert "no payload within" not in done.stderr, done.stderr
+
+
+@needs_git
+def test_a_payload_that_arrives_is_used_whoever_holds_the_pipe() -> None:
+    """A writer that sends its JSON and then holds the pipe open yields that JSON
+    at the deadline instead of never.
+
+    `session-start` is the discriminator, because its answer depends only on the
+    payload's `cwd`: pointed at this repository it prints the instructions block,
+    pointed outside any adopting repository it prints nothing. The first version
+    of this test asserted `"could not run" in err or returncode == 0` against
+    `stop`, and `stop` exits 0 in both cases — so the clause carried it and the
+    test proved nothing. Measured: with cwd=/ the gate printed no stdout and no
+    stderr at all.
+    """
+    read_fd, write_fd = os.pipe()
+    try:
+        proc = subprocess.Popen([sys.executable, str(GATE), "session-start"], stdin=read_fd,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=REPO)
+        os.close(read_fd)
+        os.write(write_fd, json.dumps({"cwd": "/"}).encode())   # written, NOT closed
+        out, err = proc.communicate(timeout=30)
+    finally:
+        os.close(write_fd)
+
+    assert "no payload within" not in err, ("the payload did arrive, so nothing should "
+                                            "report that it did not", err)
+    assert out.strip() == "", (
+        "the gate answered about this checkout, so it used its own directory rather than "
+        "the cwd the payload gave it", out[:200])
+
+    # The control: without a payload it DOES answer about this checkout, so the
+    # assertion above fails when the payload is ignored rather than when it is read.
+    default = subprocess.run([sys.executable, str(GATE), "session-start"], input="",
+                             capture_output=True, text=True, check=False, cwd=REPO)
+    assert "process-gate" in default.stdout or "design" in default.stdout, default.stdout[:200]
+
+
+def test_a_stream_with_no_file_descriptor_is_read_directly() -> None:
+    """A StringIO cannot block, so it is not worth a select loop — and the helper
+    must not raise on one."""
+    import io
+
+    assert pg._payload_text(io.StringIO('{"cwd":"/tmp"}')) == '{"cwd":"/tmp"}'
