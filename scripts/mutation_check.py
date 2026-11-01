@@ -1572,6 +1572,49 @@ CATALOGUE: tuple[Suite, ...] = (
                 "            and not (hook.name in PROVISIONING_HOOKS and is_machine_hook(hook))]",
                 "            ]",
             ),
+            # .agent-rfc/designs/curated-mutations-for-todays-gates.md — the
+            # scaffold's own graph. Caught by hand when the slice landed; these
+            # are the same three mutants, re-runnable.
+            Mutation(
+                "a scaffolded tenant is born with no graph of its own records",
+                "runtime/cli.py",
+                '''    if framework is not None:
+        _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")''',
+                '''    if False:
+        _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")''',
+            ),
+            Mutation(
+                "the mapper runs before the records exist again, so every tenant is born stale",
+                "runtime/cli.py",
+                '''\
+    written += write_scaffold_records(root, tenant_id, stack, style, agentic, written, force, rfc=rfc)
+    # LAST, deliberately: the graph maps what the scaffold wrote, and
+    # write_scaffold_records above is the step that writes the rfc documents.
+    # Run any earlier and the committed graph does not know them, which is how
+    # every scaffolded tenant came to be born stale
+    # (.agent-rfc/designs/scaffold-graph-knows-its-own-records.md).
+    if framework is not None:
+        _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")
+''',
+                '''\
+    # LAST, deliberately: the graph maps what the scaffold wrote, and
+    # write_scaffold_records above is the step that writes the rfc documents.
+    # Run any earlier and the committed graph does not know them, which is how
+    # every scaffolded tenant came to be born stale
+    # (.agent-rfc/designs/scaffold-graph-knows-its-own-records.md).
+    if framework is not None:
+        _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")
+    written += write_scaffold_records(root, tenant_id, stack, style, agentic, written, force, rfc=rfc)
+''',
+            ),
+            Mutation(
+                "the scaffold's last step divides None by a path when nothing is installed",
+                "runtime/cli.py",
+                '''    if framework is not None:
+        _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")''',
+                '''    if True:
+        _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")''',
+            ),
         ),
     ),
     Suite(
@@ -1825,6 +1868,69 @@ CATALOGUE: tuple[Suite, ...] = (
                 "runtime/cli.py",
                 "            tenant_id, stack, style, agentic, [*files, SCAFFOLD_MANIFEST], registry.get(",
                 "            tenant_id, stack, style, agentic, files, registry.get(",
+            ),
+        ),
+    ),
+    # .agent-rfc/designs/curated-mutations-for-todays-gates.md — the three gate
+    # fixes of 2026-10-30/31 had their mutants run by hand and recorded in prose.
+    # These are the same mutants, re-runnable.
+    Suite(
+        name="kg_drift_gate",
+        tests=("scripts/test/test_kg_drift_gate.py",),
+        mutations=(
+            Mutation(
+                "guardrails leave the compared shape, as in beeb838",
+                "scripts/verify_system.py",
+                '        {"nodes": nodes, "guardrails": guardrails, "edges": edges},',
+                '        {"nodes": nodes, "guardrails": [], "edges": edges},',
+            ),
+            Mutation(
+                "a retitled guardrail reads as unchanged",
+                "scripts/verify_system.py",
+                '        (n.get("id"), n.get("title"), n.get("pillar"))',
+                '        (n.get("id"), None, n.get("pillar"))',
+            ),
+            Mutation(
+                "a guardrail moved to another pillar reads as unchanged",
+                "scripts/verify_system.py",
+                '        (n.get("id"), n.get("title"), n.get("pillar"))',
+                '        (n.get("id"), n.get("title"), None)',
+            ),
+            Mutation(
+                "generated and absolute-path guardrails are compared again",
+                "scripts/verify_system.py",
+                '        if n.get("node_type") == "Guardrail" and n.get("source_file") in tracked',
+                '        if n.get("node_type") == "Guardrail"',
+            ),
+            Mutation(
+                "the shape depends on a clock again",
+                "scripts/verify_system.py",
+                '        (n.get("id"), n.get("title"), n.get("pillar"))',
+                '        (n.get("id"), n.get("title"), n.get("pillar"), n.get("created_at"))',
+            ),
+        ),
+    ),
+    Suite(
+        name="gate_steps",
+        tests=("scripts/test/test_gate_steps.py",),
+        mutations=(
+            Mutation(
+                "the range's base is the branch's own remote again, so a pushed branch has an empty range",
+                "scripts/gate_steps.py",
+                '    base = _git(root, "symbolic-ref", "--short", "-q", "refs/remotes/origin/HEAD") or "origin/main"',
+                '    base = "@{upstream}"',
+            ),
+            Mutation(
+                "a repository without origin/HEAD gets no base branch at all",
+                "scripts/gate_steps.py",
+                '    base = _git(root, "symbolic-ref", "--short", "-q", "refs/remotes/origin/HEAD") or "origin/main"',
+                '    base = _git(root, "symbolic-ref", "--short", "-q", "refs/remotes/origin/HEAD") or ""',
+            ),
+            Mutation(
+                "a branch with no merge base gets no range instead of its one commit",
+                "scripts/gate_steps.py",
+                '    return _git(root, "merge-base", base, "HEAD") or _git(root, "rev-parse", "HEAD~1")',
+                '    return _git(root, "merge-base", base, "HEAD") or ""',
             ),
         ),
     ),

@@ -84,6 +84,42 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — the three gate fixes of 2026-10-30/31 are re-run by CI
+
+`_kg_shape` (`scripts/verify_system.py`), `init_tenant`'s tail (`runtime/cli.py`) and
+`_merge_base` (`scripts/gate_steps.py`) landed with mutation evidence recorded **in prose, in a
+review record**. The mutants were real and every one failed a test, but `scripts/mutation_check.py`
+had no entry for any of them, so **CI re-ran none of them** — a guard could be removed from two
+gates and the `scripts/verify_system.py` drift check with the suite still green. That is the exact
+failure `_kg_shape` was fixed for: `beeb838` committed a graph missing a Guardrail node, the check
+reported no drift, and 11 checks passed over it.
+
+**11 new curated mutations, all caught** (`python3 scripts/mutation_check.py kg_drift_gate gate_steps vendoring_retired`
+reports 20 mutations, 20 caught):
+
+- new suite `kg_drift_gate` — 5 mutations: guardrails dropped from the compared shape (the
+  `beeb838` regression itself), title not compared, pillar not compared, the trackedness filter
+  dropped so generated and absolute-path guardrails churn again, and `created_at` added so the
+  shape depends on a clock.
+- new suite `gate_steps` — 3 mutations, one per link of `_merge_base`'s chain: the base back to
+  `@{upstream}`, no `origin/main` fallback, no `HEAD~1` fallback.
+- `vendoring_retired` extended by 3: the mapper never runs, the mapper runs **before**
+  `write_scaffold_records` (the original ordering bug, expressed as a reorder), and the
+  `framework is not None` guard removed.
+
+The last of those needed a test first. That guard was put there by **mypy**
+(`Unsupported left operand type for / ("None")`), not by a test — every scaffold test runs inside a
+checkout, where `_framework_dir` always answers — so a mutation removing it would have survived and
+could not honestly be catalogued. `test_a_scaffold_without_an_installed_framework_still_completes`
+is that case: without the guard, the scaffold's **last** line raises `TypeError` after every file
+is already on disk.
+
+**Declared limit:** the catalogue proves a mutation is *caught*, not that it is *complete*; mutmut's
+non-blocking job remains the exhaustive half and gains nothing here. The reorder entry's `before`
+spans the comment that explains the ordering, so rewriting that comment makes the target stale —
+intended, and the module's documented remedy applies (re-point and re-confirm, never delete)
+(`curated-mutations-for-todays-gates`).
+
 ### Fixed — `agentsmith gates run` checks the range CI checks
 
 `scripts/gate_steps.py::_merge_base` resolved `@{upstream}`, which on a feature branch is **that

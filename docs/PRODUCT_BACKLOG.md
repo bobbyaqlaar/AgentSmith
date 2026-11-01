@@ -424,6 +424,43 @@ Small, specific, and deliberately not fixed in that release.
 
 ## Future Phases — confirmed gaps, not yet scheduled
 
+### "caught" does not say which test caught it
+
+Raised 2026-11-01 while cataloguing the mutants for `kg_drift_gate`, `gate_steps`
+and the three `runtime/cli.py` additions (`curated-mutations-for-todays-gates`).
+
+`scripts/mutation_check.py` prints `caught` when **any** test in the suite fails.
+A mutation that breaks the file outright — a bad parse, a missing import — reads
+identically to one caught by the test that asserts the property, so a catalogue
+entry can look like evidence while proving only that the file still has to
+compile. It matters most for a multi-statement entry, which is the kind most
+likely to break something unrelated.
+
+For the 11 entries added on 2026-11-01 this was closed by hand: each was applied
+on its own and the failing test names read off, and each failed the test named in
+its own entry with the rest of the suite still passing. That check is not
+re-runnable, which is the same shape of gap the 11 entries themselves closed.
+
+**Fix:** record the expected failing test per `Mutation` (optional field) and have
+the runner report `caught by an unexpected test` as its own verdict, distinct
+from `caught` and from `survived`. Small and additive; the runner already parses
+pytest's output.
+
+### `MINUTES` is measured in CI and goes stale silently
+
+Raised 2026-11-01, same slice. `scripts/mutation_check.py::MINUTES` holds per-suite
+CI durations measured once, on Self-Test run 38470842052 (2026-10-14), and a suite
+missing from it weighs one minute. `vendoring_retired` has since grown from 9
+mutations to 12 — three of them full tenant scaffolds — while its entry still says
+0.7, and `kg_drift_gate`, `gate_steps`, `knowledge_graph` and `scratch_build` are
+absent. A local measurement cannot be mixed into a CI-measured table honestly, so
+nothing was changed here.
+
+Costs shard balance only, never a result — the module's own comment says so, and it
+is right. **Fix:** refresh the whole table from one weekly full run rather than
+patching single rows, and note the run id beside it as the current comment does.
+
+
 ### A score records its judge but not its rubric version
 
 Raised 2026-09-03 by an outside critique of LLM-judge practice, and it lands.
