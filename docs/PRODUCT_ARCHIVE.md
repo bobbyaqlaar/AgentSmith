@@ -7,6 +7,22 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Closed — the backlog review of 2026-11-03
+
+Every entry in `docs/PRODUCT_BACKLOG.md` was checked against the code and CI. These left it:
+
+- **Done and listed as active:** the G1–G7 table; the C1–C9 table (`docs/PRODUCT_ARCHIVE.md` holds each slice).
+- **Made moot by 3.0.0:** `sync` staging a vendored refresh and ignoring `upgrade`'s exit code (`runtime/sync.py` no longer
+  mentions it); `ai-stack-upgrade` overwriting files; a non-checkout install getting an old CLI; the lessons about machine
+  hooks and global copies.
+- **Already true:** "tenant CI templates run no process-gates job" (listed twice; `tenant init` writes `agentsmith-gates.yml`);
+  KYC's CI testing framework HEAD (it pins `v3.0.0`); "`agency_manifest` is ungraded" (held by SEC-AGENCY-001 since C7); the
+  release-install entry marked met on 2026-10-16.
+- **Moot by circumstance:** Actions minutes (the repository is public); the local `.venv` on 3.14 (`.python-version`, the lock
+  and `agentsmith gates run`); KYC's `cd-staging.yml` being unverified, and the article and open GCP cost, which moved into the
+  launch plan.
+- **Corrected:** "the release install works for anyone" was wrong (`release-install-path`).
+
 ## Completed — the governance contracts, C1–C9 (2026-10-15)
 
 Design: `.agent-rfc/designs/governance-contracts.md`. The owner's principle (2026-10-02),
