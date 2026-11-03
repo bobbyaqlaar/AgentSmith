@@ -1,0 +1,33 @@
+AgentSmith
+Copyright (C) 2026 Aqlaar Tech FZE LLC
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, version 3 (AGPL-3.0-only).
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+The full text is in the file LICENSE.
+
+Source code: https://github.com/bobbyaqlaar/AgentSmith
+
+Running a modified copy as a network service
+--------------------------------------------
+AGPL-3.0 section 13 requires that, if you modify this program, your modified
+version prominently offers everyone interacting with it remotely an opportunity
+to receive its Corresponding Source. The Ops Portal's footer carries that offer:
+set AGENTSMITH_SOURCE_URL to where your modified source is published.
+
+Third-party software
+--------------------
+Dependencies, with their licences, are listed in THIRD_PARTY_LICENSES.md.
+
+docker-compose.yml starts separately licensed services alongside this program.
+They are not combined with it and keep their own licences. Arize Phoenix in
+particular is licensed under the Elastic License 2.0, which restricts offering
+it to third parties as a hosted or managed service.
+
+Trademarks
+----------
+The AGPL grants no rights in the AgentSmith name or logo. See TRADEMARK.md.

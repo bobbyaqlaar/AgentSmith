@@ -87,7 +87,11 @@
         "contract/rules/v1/protocol.md",
         "contract/security/v1/protocol.md",
         "contract/telemetry/v1/protocol.md",
-        "docs/agentic-42001-coverage.md"
+        "docs/agentic-42001-coverage.md",
+        "SECURITY.md",
+        "CONTRIBUTING.md",
+        "CODE_OF_CONDUCT.md",
+        "THIRD_PARTY_LICENSES.md"
       ]
     }
   }

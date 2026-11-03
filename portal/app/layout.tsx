@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import { currentAccess } from "@/lib/currentAccess";
+import { COPYRIGHT, LICENSE_URL, sourceUrl } from "@/lib/legal";
 import { WORKSPACES, workspacesFor } from "@/lib/workspaces";
 // Imported, not served from public/: portal/Dockerfile copies .next/static,
 // where a static import lands, and not public/. `unoptimized` because Next's
@@ -65,6 +66,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span className="inline-flex items-center gap-1.5">
               <Image src={aqlaarMark} alt="" width={20} height={18} unoptimized />
               Aqlaar
+            </span>
+            <span className="ml-auto flex flex-wrap items-center gap-x-1.5">
+              <span>{COPYRIGHT}.</span>
+              <span>
+                Licensed under the{" "}
+                <a href={LICENSE_URL} className="underline">
+                  AGPL-3.0
+                </a>
+                , with no warranty.
+              </span>
+              <a href={sourceUrl(process.env.AGENTSMITH_SOURCE_URL)} className="underline">
+                Source
+              </a>
             </span>
           </div>
         </footer>
