@@ -81,12 +81,11 @@ def test_the_installer_copies_the_gate_hooks():
 
 
 def test_the_release_ships_the_gate_hooks():
-    """An install from a release downloads what it cannot copy."""
-    release = (REPO / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    # The build command, not the name: the workflow's header comment names it too.
-    assert re.search(r"-czf dist/githooks\.tar\.gz -C \.githooks \.", release), "the release never builds it"
-    assert "githooks.tar.gz" in INSTALLER, "the installer never fetches the archive the release builds"
-    assert "/releases/latest/download/githooks.tar.gz" in INSTALLER
+    """An install from a release installs from the release's source archive, which
+    must carry them (test_release_artifact_contract.py builds it for real)."""
+    build = (REPO / "scripts" / "build_release_assets.sh").read_text(encoding="utf-8")
+    assert ".githooks/process-gate" in build, "the archive is not held to carrying the gate's hooks"
+    assert '"$INSTALLER_DIR/.githooks/."' in INSTALLER
 
 
 def test_every_gate_hook_exists_to_be_copied():

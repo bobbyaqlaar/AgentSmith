@@ -933,6 +933,8 @@ CATALOGUE: tuple[Suite, ...] = (
         tests=(
             "scripts/test/test_installer_templates.py",
             "runtime/test/test_cli.py",
+            "scripts/test/test_release_install.py",
+            "scripts/test/test_release_artifact_contract.py",
         ),
         mutations=(
             Mutation(
@@ -954,10 +956,26 @@ CATALOGUE: tuple[Suite, ...] = (
                 "    missing_gate_hooks(framework)",
             ),
             Mutation(
-                "the release stops shipping the gate's hooks",
-                ".github/workflows/release.yml",
-                "tar -czf dist/githooks.tar.gz -C .githooks .",
-                "true",
+                "a failed release download carries on to a half-install",
+                "install-ai-stack.sh",
+                '''    exit 1
+  fi
+  if command_exists shasum; then''',
+                '''  fi
+  if command_exists shasum; then''',
+            ),
+            Mutation(
+                "a download that fails its checksum is installed anyway",
+                "install-ai-stack.sh",
+                '''    error "agentsmith-source.tar.gz does not match its checksum. Nothing was installed."
+    exit 1''',
+                '''    error "agentsmith-source.tar.gz does not match its checksum. Nothing was installed."''',
+            ),
+            Mutation(
+                "the release's source archive leaves out what the first commit reads",
+                "scripts/build_release_assets.sh",
+                '-o "$out/agentsmith-source.tar.gz" HEAD',
+                '-o "$out/agentsmith-source.tar.gz" HEAD scripts',
             ),
         ),
     ),

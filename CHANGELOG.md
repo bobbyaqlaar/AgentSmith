@@ -84,6 +84,25 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — installing from a release works
+
+The README's Quick Start failed from the published release: the installer warned that it had not
+installed `docs/`, `runtime/` or `fixtures/security/` and exited 0, the first commit on a new or adopted
+repository was refused, and `process-gate security check` crashed. Re-running it never upgraded an
+existing install. No CI ran that path (`release-install-path`).
+
+- **One path.** The release publishes `agentsmith-source.tar.gz`, the tagged tree. Outside a checkout the
+  installer fetches the archive of its own version, verifies its checksum, and installs from it exactly
+  as from a checkout. So a re-run upgrades.
+- **A failed or corrupt download stops the install**, exit 1, before anything is written.
+- **`scripts.tar.gz`, `githooks.tar.gz`, `workflow-templates.tar.gz`, `templates.tar.gz` and
+  `requirements.lock` are no longer release assets.** A 3.0.0 installer script run after this release
+  fetches `latest`, finds them gone, and reports a failed install: use the current one.
+- **`scripts/check_release_install.sh`** runs the Quick Start for real, in an empty `HOME`: the installer,
+  `tenant init` and `tenant adopt` with the commits they print, and each port. Self-Test runs it on assets
+  built from the commit, inside its required Python job, and `release.yml` runs it on the published URL.
+- `AI_STACK_RELEASE_BASE` points the installer at a mirror.
+
 ### Fixed — the gate answers whether or not its payload arrives
 
 `scripts/process_gate.py` read its payload with `sys.stdin.read()`, in **three** places: the hook
