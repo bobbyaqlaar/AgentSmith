@@ -235,32 +235,6 @@ mkdir -p "$3/bin"; printf '#!/bin/bash\\nexit 1\\n' > "$3/bin/python"; chmod +x 
     assert "could not build" in result.stderr
 
 
-@bash_required
-def test_an_old_pip_freeze_is_never_mistaken_for_the_lock(tmp_path):
-    framework = tmp_path / "home" / ".agent-framework"
-    framework.mkdir(parents=True)
-    (framework / "requirements.lock").write_text("arize-phoenix==17.9.0\nprophet==1.1\n")
-
-    result = _step3(tmp_path, stubs={"uv": _UV, "curl": _NO_CURL}, installer_dir=None)
-
-    assert result.returncode == 1
-    assert "No requirements.lock" in result.stderr
-    assert not [c for c in _calls(tmp_path) if c.startswith("uv ")], "uv ran against a pip freeze"
-
-
-@bash_required
-def test_offline_reinstall_reuses_a_previously_installed_lock(tmp_path):
-    framework = tmp_path / "home" / ".agent-framework"
-    framework.mkdir(parents=True)
-    shutil.copy(LOCK, framework / "requirements.lock")
-
-    result = _step3(tmp_path, stubs={"uv": _UV, "curl": _NO_CURL}, installer_dir=None)
-
-    assert result.returncode == 0, result.stderr
-    assert "reusing the one from the previous install" in result.stdout
-    assert any(c.startswith("uv pip sync") for c in _calls(tmp_path))
-
-
 def _installer_dir_block() -> str:
     text = INSTALLER.read_text(encoding="utf-8")
     m = re.search(r'^INSTALLER_DIR="\$\(cd .*?^fi$', text, re.S | re.M)
@@ -301,11 +275,6 @@ def test_the_verification_step_imports_from_the_framework_environment():
     step9 = text[text.index('header "Step 9'):]
     assert '"$VENV_PYTHON" -c "import yaml, networkx' in step9
     assert 'python3 -c "import phoenix"' not in _installer_code()
-
-
-def test_the_release_ships_the_lock_the_installer_downloads():
-    assert "releases/latest/download/requirements.lock" in INSTALLER.read_text(encoding="utf-8")
-    assert "cp requirements.lock dist/requirements.lock" in (REPO / ".github/workflows/release.yml").read_text()
 
 
 # ── the environment is actually used ────────────────────────────────────────

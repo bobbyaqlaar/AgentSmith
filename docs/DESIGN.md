@@ -1281,8 +1281,9 @@ tenant.id = "acme" AND environment = "production"
 ### Framework Distribution Repository
 
 Distributed from `github.com/bobbyaqlaar/AgentSmith` as a curl-able
-installer plus versioned release artifacts (`scripts.tar.gz`, `githooks.tar.gz`,
-`workflow-templates.tar.gz`, `templates.tar.gz`, `widget.js` — see `release.yml`). Installation commands, including pinned-
+installer plus versioned release assets (`install-ai-stack.sh`, `agentsmith-source.tar.gz`, their
+checksums, `widget.js` — see `scripts/build_release_assets.sh`). Outside a checkout the installer
+fetches its own version's source archive and installs from it, the path a checkout takes. Installation commands, including pinned-
 version and checksum-verified variants, live in docs/UserManual.md › Install & Start.
 
 ### Repository Structure
@@ -1300,6 +1301,8 @@ AgentSmith/
 │   ├── notifier.py
 │   ├── run-evals.py             # golden | fairness | hallucination | adversarial | rag_poison
 │   ├── run-security-checks.py   # SEC-* harness (P12): smoke|ci|full, --strict, --evidence-pack
+│   ├── build_release_assets.sh  # What a release publishes: the source archive, the installer, their checksums
+│   ├── check_release_install.sh # A stranger's path against a release URL: install, tenant init, adopt, first commits
 │   ├── mutation_check.py        # Curated mutation testing — the guards, and proof their tests bite
 │   ├── security/                # Harness internals: registry.py, report.py, runners/, schemas/
 │   ├── eval_judge.py            # Shared LLM-judge path (run-evals + shadow-eval)

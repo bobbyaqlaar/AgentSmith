@@ -202,8 +202,51 @@ success "$HOME/.agent-framework/ structure created"
 # copied them over the framework's. A checkout is recognised by its own
 # installer and gate launcher, not by whatever directory the user happened to be in.
 INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "")"
-if [ -n "$INSTALLER_DIR" ] && { [ ! -f "$INSTALLER_DIR/install-ai-stack.sh" ] || [ ! -f "$INSTALLER_DIR/.githooks/process-gate" ]; }; then
+if { [ ! -f "$INSTALLER_DIR/install-ai-stack.sh" ] || [ ! -f "$INSTALLER_DIR/.githooks/process-gate" ]; }; then
   INSTALLER_DIR=""
+fi
+
+# Outside a checkout — `curl … | bash` — fetch this release's own source and
+# install from it, through the one path a checkout takes. There used to be a
+# second path: a few directories downloaded piecemeal, warnings about the rest,
+# exit 0. It left a machine whose first commit the gate refused, and no CI ran it
+# (.agent-rfc/designs/release-install-path.md). A download that fails stops here,
+# before anything is written. AI_STACK_RELEASE_BASE: a mirror, or CI's built assets.
+RELEASE_SOURCE=""
+if [ -z "$INSTALLER_DIR" ]; then
+  RELEASE_BASE="${AI_STACK_RELEASE_BASE:-${FRAMEWORK_REPO}/releases/download/v${FRAMEWORK_VERSION}}"
+  RELEASE_SOURCE="$(mktemp -d)"
+  trap 'rm -rf "$RELEASE_SOURCE"' EXIT
+  info "Downloading AgentSmith ${FRAMEWORK_VERSION} from ${RELEASE_BASE}..."
+  if ! command_exists curl; then
+    error "curl is required to install from a release. Or install from a checkout: git clone ${FRAMEWORK_REPO} && ./AgentSmith/install-ai-stack.sh"
+    exit 1
+  fi
+  if ! curl -fsSL "${RELEASE_BASE}/agentsmith-source.tar.gz" -o "$RELEASE_SOURCE/agentsmith-source.tar.gz" \
+     || ! curl -fsSL "${RELEASE_BASE}/agentsmith-source.tar.gz.sha256" -o "$RELEASE_SOURCE/agentsmith-source.tar.gz.sha256"; then
+    error "Could not download ${RELEASE_BASE}/agentsmith-source.tar.gz. Nothing was installed."
+    error "Or install from a checkout: git clone ${FRAMEWORK_REPO} && ./AgentSmith/install-ai-stack.sh"
+    exit 1
+  fi
+  if command_exists shasum; then
+    RELEASE_CHECK=(shasum -a 256 --check --status)
+  elif command_exists sha256sum; then
+    RELEASE_CHECK=(sha256sum --check --status)
+  else
+    error "Neither shasum nor sha256sum found: cannot verify the download. Nothing was installed."
+    exit 1
+  fi
+  if ! (cd "$RELEASE_SOURCE" && "${RELEASE_CHECK[@]}" agentsmith-source.tar.gz.sha256); then
+    error "agentsmith-source.tar.gz does not match its checksum. Nothing was installed."
+    exit 1
+  fi
+  mkdir "$RELEASE_SOURCE/src"
+  if ! tar -xzf "$RELEASE_SOURCE/agentsmith-source.tar.gz" -C "$RELEASE_SOURCE/src"; then
+    error "Could not unpack agentsmith-source.tar.gz. Nothing was installed."
+    exit 1
+  fi
+  INSTALLER_DIR="$RELEASE_SOURCE/src"
+  success "AgentSmith ${FRAMEWORK_VERSION} downloaded and verified"
 fi
 
 header "Step 3: Building the Framework Python Environment"
@@ -230,21 +273,9 @@ lock_python_version() {
   sed -n 's/.*uv pip compile .*--python-version \([0-9][0-9.]*\).*/\1/p' "$1" 2>/dev/null | head -1
 }
 
-if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/requirements.lock" ]; then
+if [ -f "$INSTALLER_DIR/requirements.lock" ]; then
   cp "$INSTALLER_DIR/requirements.lock" "$LOCK_FILE"
-  success "requirements.lock copied from local repo"
-elif command_exists curl && curl -fsSL "${FRAMEWORK_REPO}/releases/latest/download/requirements.lock" -o "$LOCK_FILE.download" 2>/dev/null \
-     && [ -n "$(lock_python_version "$LOCK_FILE.download")" ]; then
-  mv "$LOCK_FILE.download" "$LOCK_FILE"
-  success "requirements.lock downloaded from GitHub"
-elif [ -n "$(lock_python_version "$LOCK_FILE")" ]; then
-  rm -f "$LOCK_FILE.download"
-  warn "Could not fetch requirements.lock — reusing the one from the previous install."
-else
-  rm -f "$LOCK_FILE.download"
-  error "No requirements.lock: not running from a checkout, and the release download failed."
-  error "Clone the repo and re-run: git clone ${FRAMEWORK_REPO} && ./AgentSmith/install-ai-stack.sh"
-  exit 1
+  success "requirements.lock installed"
 fi
 PY_PIN="$(lock_python_version "$LOCK_FILE")"
 if [ -z "$PY_PIN" ]; then
@@ -288,11 +319,7 @@ info "  earlier install put there are left alone."
 # dependency, pinned and hashed; resolving the package's ranges again could
 # move a version the lock chose. After the sync, because `uv pip sync` removes
 # anything the lock does not list — this package included.
-if [ -n "$INSTALLER_DIR" ]; then
-  AGENTSMITH_PACKAGE="$INSTALLER_DIR"
-else
-  AGENTSMITH_PACKAGE="agentsmith-runtime @ git+${FRAMEWORK_REPO}@v${FRAMEWORK_VERSION}"
-fi
+AGENTSMITH_PACKAGE="$INSTALLER_DIR"
 if command_exists uv; then
   uv pip install --quiet --no-deps --reinstall --python "$VENV_PYTHON" "$AGENTSMITH_PACKAGE"
 else
@@ -322,37 +349,16 @@ esac
 
 header "Step 4: Installing Agent Scripts"
 
-if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/scripts" ]; then
+if [ -d "$INSTALLER_DIR/scripts" ]; then
   # Running from cloned repo — copy local scripts
   cp -r "$INSTALLER_DIR/scripts/." "$SCRIPTS_DIR/"
-  success "Scripts copied from local repo"
-elif [ -d "$SCRIPTS_DIR" ] && [ "$(ls -A "$SCRIPTS_DIR" 2>/dev/null)" ]; then
-  success "Scripts already present in ~/.agent-framework/scripts/"
-else
-  # Download from GitHub releases
-  info "Downloading scripts from GitHub..."
-  SCRIPTS_URL="${FRAMEWORK_REPO}/releases/latest/download/scripts.tar.gz"
-  if command_exists curl; then
-    if curl -fsSL "$SCRIPTS_URL" | tar -xz -C "$SCRIPTS_DIR" 2>/dev/null; then
-      success "Scripts downloaded from GitHub"
-    else
-      warn "Could not download scripts from GitHub. Manual copy may be needed."
-      warn "Clone the repo and re-run: git clone ${FRAMEWORK_REPO} && ./AgentSmith/install-ai-stack.sh"
-    fi
-  fi
+  success "Scripts installed"
 fi
 
-# runtime/ (the production runtime library, `pip install agentsmith-runtime`
-# nowhere actually resolves — confirmed against PyPI's own API: no such
-# project exists there) and fixtures/security/ (the control registry
-# run-security-checks.py's --mode ci/--strict needs — _install_root() only
-# ever looks file-relative, never at $AGENTSMITH_DIR, so it crashed outright
-# in any tenant). Found onboarding AqlaarTeleologyStudio. Vendored the same
-# way scripts/ now is: no GitHub-release tarball for either yet, so this
-# copies from a local checkout only and warns rather than downloads — same
-# as the design/validation playbook docs step below.
+# runtime/ (the production runtime library) and fixtures/security/ (the control
+# registry the security port reads, file-relative).
 RUNTIME_DIR="$FRAMEWORK_DIR/runtime"
-if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/runtime" ]; then
+if [ -d "$INSTALLER_DIR/runtime" ]; then
   mkdir -p "$RUNTIME_DIR"
   cp -r "$INSTALLER_DIR/runtime/." "$RUNTIME_DIR/"
   find "$RUNTIME_DIR" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
@@ -361,17 +367,11 @@ if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/runtime" ]; then
   # working tree doesn't know that. Committed once into a real tenant before
   # this exclusion existed; never again.
   rm -rf "$RUNTIME_DIR/.hitl_blobs"
-  success "runtime/ copied from local repo"
-elif [ -d "$RUNTIME_DIR" ] && [ "$(ls -A "$RUNTIME_DIR" 2>/dev/null)" ]; then
-  success "runtime/ already present in ~/.agent-framework/runtime/"
-else
-  warn "Not running from a local checkout — runtime/ not installed. The provider's"
-  warn "ports that import runtime.* fail with ModuleNotFoundError until this machine"
-  warn "clones the repo and re-runs install-ai-stack.sh."
+  success "runtime/ installed"
 fi
 
 FIXTURES_SECURITY_DIR="$FRAMEWORK_DIR/fixtures/security"
-if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/fixtures/security" ]; then
+if [ -d "$INSTALLER_DIR/fixtures/security" ]; then
   # `security/.`, not `security`: when the destination already exists — any
   # re-install — `cp -r src dest` nests the copy at dest/security/ and leaves
   # the real one stale.
@@ -379,13 +379,7 @@ if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/fixtures/security" ]; then
   cp -r "$INSTALLER_DIR/fixtures/security/." "$FIXTURES_SECURITY_DIR/"
   # The base eval fixtures the evals provider falls back to (file-relative).
   cp "$INSTALLER_DIR"/fixtures/*_base.json "$FRAMEWORK_DIR/fixtures/" 2>/dev/null || true
-  success "fixtures/security/ copied from local repo"
-elif [ -d "$FIXTURES_SECURITY_DIR" ] && [ "$(ls -A "$FIXTURES_SECURITY_DIR" 2>/dev/null)" ]; then
-  success "fixtures/security/ already present in ~/.agent-framework/fixtures/security/"
-else
-  warn "Not running from a local checkout — fixtures/security/ not installed."
-  warn "The security port fails on a missing control_registry.json until this"
-  warn "machine clones the repo and re-runs install-ai-stack.sh."
+  success "fixtures/security/ installed"
 fi
 
 # The gate's own hooks. `agentsmith tenant init` / `tenant adopt` copy these
@@ -394,43 +388,22 @@ fi
 # (.agent-rfc/designs/installed-architectures.md).
 GITHOOKS_DIR="$FRAMEWORK_DIR/.githooks"
 mkdir -p "$GITHOOKS_DIR"
-if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/.githooks" ]; then
+if [ -d "$INSTALLER_DIR/.githooks" ]; then
   cp -r "$INSTALLER_DIR/.githooks/." "$GITHOOKS_DIR/"
   chmod +x "$GITHOOKS_DIR"/* 2>/dev/null || true
-  success "Process-gate hooks copied from local repo"
-elif [ -n "$(ls -A "$GITHOOKS_DIR" 2>/dev/null)" ]; then
-  success "Process-gate hooks already present in ~/.agent-framework/.githooks/"
-else
-  info "Downloading process-gate hooks from GitHub..."
-  GITHOOKS_URL="${FRAMEWORK_REPO}/releases/latest/download/githooks.tar.gz"
-  if command_exists curl && curl -fsSL "$GITHOOKS_URL" | tar -xz -C "$GITHOOKS_DIR" 2>/dev/null; then
-    chmod +x "$GITHOOKS_DIR"/* 2>/dev/null || true
-    success "Process-gate hooks downloaded from GitHub"
-  else
-    warn "No .githooks found — agentsmith tenant init/adopt will refuse to arm the gates until they're added to ~/.agent-framework/.githooks/"
-  fi
+  success "Process-gate hooks installed"
 fi
 
-if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/workflow-templates" ]; then
+if [ -d "$INSTALLER_DIR/workflow-templates" ]; then
   cp -r "$INSTALLER_DIR/workflow-templates/." "$WORKFLOW_TEMPLATES_DIR/"
-  success "Workflow templates copied from local repo"
-elif [ -d "$WORKFLOW_TEMPLATES_DIR" ] && [ "$(ls -A "$WORKFLOW_TEMPLATES_DIR" 2>/dev/null)" ]; then
-  success "Workflow templates already present in ~/.agent-framework/workflow-templates/"
-else
-  info "Downloading workflow-templates from GitHub..."
-  WORKFLOW_TEMPLATES_URL="${FRAMEWORK_REPO}/releases/latest/download/workflow-templates.tar.gz"
-  if command_exists curl && curl -fsSL "$WORKFLOW_TEMPLATES_URL" | tar -xz -C "$WORKFLOW_TEMPLATES_DIR" 2>/dev/null; then
-    success "Workflow templates downloaded from GitHub"
-  else
-    warn "No workflow-templates found to install — agentsmith tenant init will fail until they're added to ~/.agent-framework/workflow-templates/"
-  fi
+  success "Workflow templates installed"
 fi
 
 # agent-rules.yaml — single source of truth for .cursorrules/CLAUDE.md/Antigravity
 # skill generation (docs/DESIGN.md › Ten Operational Pillars, Antigravity Integration). The post-checkout hook reads
 # it from here via scripts/generate-ide-config.py.
 mkdir -p "$FRAMEWORK_DIR/templates"
-if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/templates/agent-rules.yaml" ]; then
+if [ -f "$INSTALLER_DIR/templates/agent-rules.yaml" ]; then
   cp "$INSTALLER_DIR/templates/agent-rules.yaml" "$FRAMEWORK_DIR/templates/agent-rules.yaml"
   # governance.json is agent-rules.yaml compiled for the process gate, which
   # runs without pyyaml. Copied together: a machine with one and not the other
@@ -443,17 +416,7 @@ if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/templates/agent-rules.yaml" ]
   # (scripts/test/test_installer_templates.py).
   [ -f "$INSTALLER_DIR/templates/architectures.yaml" ] && \
     cp "$INSTALLER_DIR/templates/architectures.yaml" "$FRAMEWORK_DIR/templates/architectures.yaml"
-  success "agent-rules.yaml + governance.json + architectures.yaml copied from local repo"
-elif [ -f "$FRAMEWORK_DIR/templates/agent-rules.yaml" ]; then
-  success "agent-rules.yaml already present in ~/.agent-framework/templates/"
-else
-  info "Downloading agent-rules.yaml from GitHub..."
-  AGENT_RULES_URL="${FRAMEWORK_REPO}/releases/latest/download/templates.tar.gz"
-  if command_exists curl && curl -fsSL "$AGENT_RULES_URL" | tar -xz -C "$FRAMEWORK_DIR/templates" 2>/dev/null; then
-    success "agent-rules.yaml downloaded from GitHub"
-  else
-    warn "No agent-rules.yaml found — post-checkout hook will fail to generate IDE config until it's added to ~/.agent-framework/templates/"
-  fi
+  success "agent-rules.yaml + governance.json + architectures.yaml installed"
 fi
 
 # Design/validation playbook docs — agent-rules.yaml's design_review and
@@ -466,17 +429,13 @@ fi
 # any tenant running on the installed package rather than a live checkout —
 # `declared-vs-enforced`, applied to this framework's own installer.
 mkdir -p "$FRAMEWORK_DIR/docs"
-if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/docs/design-review-checklist.md" ]; then
+if [ -f "$INSTALLER_DIR/docs/design-review-checklist.md" ]; then
   # review-levers.md too: the process gates (scripts/process_gate.py) validate a
   # design's cited levers against it, and an installed-mode tenant (KYC
   # Sentinel) has no copy of its own — its config points at @framework/.
   cp "$INSTALLER_DIR/docs/design-review-checklist.md" "$INSTALLER_DIR/docs/validation-checklist.md" \
      "$INSTALLER_DIR/docs/review-levers.md" "$FRAMEWORK_DIR/docs/"
-  success "design/validation playbook docs and review levers copied from local repo"
-elif [ -f "$FRAMEWORK_DIR/docs/design-review-checklist.md" ]; then
-  success "design/validation playbook docs already present in ~/.agent-framework/docs/"
-else
-  warn "No design-review-checklist.md/validation-checklist.md found locally — generated IDE rules will point at \$AGENTSMITH_DIR only. Set AGENTSMITH_DIR to a live framework checkout, or copy these two files into ~/.agent-framework/docs/ yourself."
+  success "design/validation playbook docs and review levers installed"
 fi
 
 # On-prem/air-gapped deployment template (Docker Compose + Traefik/Envoy
@@ -485,20 +444,10 @@ fi
 # explicit request via `agentsmith tenant onprem-scaffold` (docs/PRODUCT_ARCHIVE.md P4
 # on-prem follow-up), never written automatically the way the CI/CD
 # workflow templates are by `agentsmith tenant init`.
-if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/templates/onprem-deploy" ]; then
+if [ -d "$INSTALLER_DIR/templates/onprem-deploy" ]; then
   rm -rf "$FRAMEWORK_DIR/templates/onprem-deploy"
   cp -r "$INSTALLER_DIR/templates/onprem-deploy" "$FRAMEWORK_DIR/templates/onprem-deploy"
-  success "onprem-deploy template copied from local repo"
-elif [ -d "$FRAMEWORK_DIR/templates/onprem-deploy" ]; then
-  success "onprem-deploy template already present in ~/.agent-framework/templates/"
-else
-  info "Downloading onprem-deploy template from GitHub..."
-  ONPREM_TEMPLATE_URL="${FRAMEWORK_REPO}/releases/latest/download/templates.tar.gz"
-  if command_exists curl && curl -fsSL "$ONPREM_TEMPLATE_URL" | tar -xz -C "$FRAMEWORK_DIR/templates" 2>/dev/null; then
-    success "onprem-deploy template downloaded from GitHub"
-  else
-    warn "No onprem-deploy template found — agentsmith tenant onprem-scaffold will fail until it's added to ~/.agent-framework/templates/onprem-deploy/"
-  fi
+  success "onprem-deploy template installed"
 fi
 
 # Standing observability stack: docker-compose.yml + init-db/ (Phoenix +
@@ -511,7 +460,7 @@ fi
 # launch and this vendoring step is simply skipped (no error).
 if command_exists docker; then
   mkdir -p "$OBSERVABILITY_DIR"
-  if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/docker-compose.yml" ]; then
+  if [ -f "$INSTALLER_DIR/docker-compose.yml" ]; then
     cp "$INSTALLER_DIR/docker-compose.yml" "$OBSERVABILITY_DIR/docker-compose.yml"
     cp -r "$INSTALLER_DIR/init-db" "$OBSERVABILITY_DIR/init-db"
     mkdir -p "$OBSERVABILITY_DIR/portal"
@@ -522,13 +471,6 @@ if command_exists docker; then
     (cd "$INSTALLER_DIR/portal" && tar -cf - --exclude=node_modules --exclude=.next --exclude='.env*' .) \
       | (cd "$OBSERVABILITY_DIR/portal" && tar -xf -)
     success "Observability stack (Phoenix + Postgres + Ops Portal) vendored to $OBSERVABILITY_DIR"
-  elif [ -f "$OBSERVABILITY_DIR/docker-compose.yml" ]; then
-    success "Observability stack already present in $OBSERVABILITY_DIR"
-  else
-    warn "Not running from a local checkout — observability stack not vendored."
-    warn "agentsmith dashboard start will fall back to a standalone Phoenix until"
-    warn "you clone the repo and re-run install-ai-stack.sh, or manually copy"
-    warn "docker-compose.yml + init-db/ + portal/ into $OBSERVABILITY_DIR."
   fi
 else
   info "Docker not found — skipping standing observability stack (agentsmith dashboard start"
@@ -544,31 +486,8 @@ header "Step 5: Installing Baseline Fixtures"
 
 # Golden dataset base — generic agent correctness cases
 if [ ! -f "$SHARED_DIR/golden_evals_base.json" ]; then
-  if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/fixtures/golden_evals_base.json" ]; then
+  if [ -f "$INSTALLER_DIR/fixtures/golden_evals_base.json" ]; then
     cp "$INSTALLER_DIR/fixtures/golden_evals_base.json" "$SHARED_DIR/"
-  else
-    cat > "$SHARED_DIR/golden_evals_base.json" << 'FIXTURES_EOF'
-[
-  {
-    "id": "base_001",
-    "input": "Write a function that validates an email address.",
-    "expected_tool": "code_generation",
-    "reference_output": "A function using regex or a validation library that checks format, domain, and TLD. Must handle edge cases and raise a typed exception on failure — not return None or swallow the error."
-  },
-  {
-    "id": "base_002",
-    "input": "Refactor this module to remove the database call from the constructor.",
-    "expected_tool": "code_refactor",
-    "reference_output": "Constructor takes a pre-built connection object as a parameter (dependency injection). No network calls in __init__. All database operations moved to explicit methods."
-  },
-  {
-    "id": "base_003",
-    "input": "Add retry logic to this API call.",
-    "expected_tool": "code_generation",
-    "reference_output": "Uses a standard retry library (tenacity, retry, or platform-native). Exponential backoff with jitter. Maximum retry count defined. All exceptions are logged — none swallowed."
-  }
-]
-FIXTURES_EOF
   fi
   success "Baseline golden dataset written to ~/.agent-framework/shared/"
 else
@@ -577,16 +496,8 @@ fi
 
 # Custom judge criteria base
 if [ ! -f "$SHARED_DIR/custom_judge_criteria_base.json" ]; then
-  if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/fixtures/custom_judge_criteria_base.json" ]; then
+  if [ -f "$INSTALLER_DIR/fixtures/custom_judge_criteria_base.json" ]; then
     cp "$INSTALLER_DIR/fixtures/custom_judge_criteria_base.json" "$SHARED_DIR/"
-  else
-    cat > "$SHARED_DIR/custom_judge_criteria_base.json" << 'CRITERIA_EOF'
-{
-  "name": "AgentSmith_Base_Scorecard",
-  "instructions": "You are a senior principal systems architect auditing autonomous agent code. Grade each submission on a strict binary score (1 = pass, 0 = fail) against three immutable rules:\n\n1. PONYTAIL COMPLIANCE: Uses native platform or standard library capabilities only. Fails if it installs unapproved third-party dependencies or builds over-engineered custom abstractions.\n2. CAVEMAN COMPRESSION: Output is direct code or data. Fails if the agent added pleasantries, summaries, or explanatory meta-commentary around the code.\n3. MARCH OF NINES: No empty catch/except blocks, no loose timeouts, no unhandled None returns on error paths. Must display defensive, explicit error handling.\n\n=== HISTORICAL LEARNINGS ===\nFail any submission that violates the rules below:",
-  "historical_learnings": []
-}
-CRITERIA_EOF
   fi
   success "Baseline judge criteria written to ~/.agent-framework/shared/"
 else
@@ -595,17 +506,15 @@ fi
 
 # Fairness eval suite base (paired bias audits — UAE / ISO theme)
 if [ ! -f "$SHARED_DIR/fairness_evals_base.json" ]; then
-  if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/fixtures/fairness_evals_base.json" ]; then
+  if [ -f "$INSTALLER_DIR/fixtures/fairness_evals_base.json" ]; then
     cp "$INSTALLER_DIR/fixtures/fairness_evals_base.json" "$SHARED_DIR/"
     success "Baseline fairness evals written to ~/.agent-framework/shared/"
-  else
-    info "fairness_evals_base.json not found in installer — skip (optional suite)"
   fi
 else
   success "Baseline fairness evals already present"
 fi
 if [ ! -f "$SHARED_DIR/fairness_judge_criteria_base.json" ]; then
-  if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/fixtures/fairness_judge_criteria_base.json" ]; then
+  if [ -f "$INSTALLER_DIR/fixtures/fairness_judge_criteria_base.json" ]; then
     cp "$INSTALLER_DIR/fixtures/fairness_judge_criteria_base.json" "$SHARED_DIR/"
     success "Baseline fairness judge criteria written to ~/.agent-framework/shared/"
   fi
@@ -620,12 +529,10 @@ fi
 # (TestbedFeedback-2026-07-21 G5). Refreshed on every install (unlike the
 # eval fixtures) because these are pristine templates, never the tenant's
 # edited copies — `tenant init` is what refuses to overwrite those.
-if [ -n "$INSTALLER_DIR" ] && [ -d "$INSTALLER_DIR/fixtures/security/templates" ]; then
+if [ -d "$INSTALLER_DIR/fixtures/security/templates" ]; then
   mkdir -p "$SHARED_DIR/security"
   cp "$INSTALLER_DIR"/fixtures/security/templates/*.yaml "$SHARED_DIR/security/" 2>/dev/null || true
   success "Security pack templates written to ~/.agent-framework/shared/security/"
-else
-  info "security templates not found in installer — tenant .agent-rfc/security/ will not be seeded"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -696,7 +603,7 @@ fi
 
 # Optional muscle memory: ai-* names as one-line wrappers. Never sourced here.
 mkdir -p "$FRAMEWORK_DIR/shell"
-if [ -n "$INSTALLER_DIR" ] && [ -f "$INSTALLER_DIR/templates/shell/ai-compat.sh" ]; then
+if [ -f "$INSTALLER_DIR/templates/shell/ai-compat.sh" ]; then
   cp "$INSTALLER_DIR/templates/shell/ai-compat.sh" "$FRAMEWORK_DIR/shell/ai-compat.sh"
   info "Old ai-* names, if you want them: source ~/.agent-framework/shell/ai-compat.sh"
 fi
@@ -797,7 +704,12 @@ echo "     agentsmith tenant init <id> --stack <stack>   # a new repository"
 echo "     agentsmith tenant adopt <id>                  # an existing one: prints a plan; --yes to write it"
 echo ""
 echo "  Full documentation:"
-DOCS_AT="${INSTALLER_DIR:-https://github.com/bobbyaqlaar/AgentSmith/blob/main}"
+# From a release, the source was a temporary directory: point at the tag instead.
+if [ -n "$RELEASE_SOURCE" ]; then
+  DOCS_AT="${FRAMEWORK_REPO}/blob/v${FRAMEWORK_VERSION}"
+else
+  DOCS_AT="$INSTALLER_DIR"
+fi
 echo "     Readme:     $DOCS_AT/README.md"
 echo "     User guide: $DOCS_AT/docs/UserManual.md"
 echo "     Design:     $DOCS_AT/docs/DESIGN.md"

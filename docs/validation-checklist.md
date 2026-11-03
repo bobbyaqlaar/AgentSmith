@@ -112,6 +112,7 @@ CI stays the authority.
 | Commit guardrails / enterprise RFC checks, through the gate | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-hooks` | yes |
 | verify_system.py --check-kg (Knowledge Graph, docs/PRODUCT_ARCHIVE.md P10a) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-kg` | yes |
 | On-prem deploy template (Compose + Helm syntax) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-onprem-deploy` | needs helm |
+| The release installs, and its first commits pass | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | Delivery evidence pack script | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/delivery_evidence.py` | yes |
 | Unit tests — delivery model + fairness + input guardrail | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | Every curated-mutation shard passed | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |

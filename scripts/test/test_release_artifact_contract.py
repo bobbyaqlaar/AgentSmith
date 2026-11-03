@@ -1,19 +1,17 @@
 """
-scripts/test/test_release_artifact_contract.py — the artifacts release.yml
-builds must be exactly the ones install-ai-stack.sh downloads.
+scripts/test/test_release_artifact_contract.py — what a release publishes must be
+what install-ai-stack.sh fetches and what the docs hand a user.
 
-These two files form a contract with no shared definition: release.yml names
-tarballs in a `run:` block, and install-ai-stack.sh fetches
-`releases/latest/download/<name>` from a different file in a different
-language. Nothing connected them, and they had already come apart —
-`templates.tar.gz` was built from the single file `templates/agent-rules.yaml`
-while the installer fetched that same tarball a second time expecting
-`templates/onprem-deploy/` inside it, so `agentsmith tenant onprem-scaffold` was
-permanently broken on any remote install, with a `warn` as the only symptom.
+These files form a contract with no shared definition: the installer names assets
+by URL, docs/UserManual.md tells a user to fetch them, and
+scripts/build_release_assets.sh builds them. Nothing connected them, and they
+had come apart more than once: the installer fetched a tarball that lacked what
+it expected; the documented installer URL 404'd at every version.
 
-A release is the one artifact you cannot fix in place after the fact: every
-machine that runs the `curl | bash` one-liner gets whatever shipped. Worth a
-test that runs before the tag, not after.
+A release is the one artifact you cannot fix in place after the fact. These run a
+real build rather than reading a workflow's text, and
+scripts/check_release_install.sh runs the stranger's whole path in CI
+(.agent-rfc/designs/release-install-path.md).
 """
 
 from __future__ import annotations
@@ -21,152 +19,82 @@ from __future__ import annotations
 import re
 import subprocess
 import tarfile
-import tempfile
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[2]
+BUILD = REPO / "scripts" / "build_release_assets.sh"
 RELEASE_YML = REPO / ".github" / "workflows" / "release.yml"
 INSTALLER = REPO / "install-ai-stack.sh"
 # Docs that hand a user a release URL to run or verify.
-DOC_FILES = ("README.md", "docs/UserManual.md", "docs/UserManual.md")
+DOC_FILES = ("README.md", "docs/UserManual.md")
 
-_DOWNLOAD_URL = re.compile(r"releases/latest/download/([\w.-]+)")
-_TAR_BUILD = re.compile(r"-czf\s+dist/([\w.-]+)")
-_COPY_BUILD = re.compile(r"cp\s+\S+\s+dist/([\w.-]+)")
-_SHASUM_BUILD = re.compile(r"shasum[^\n]*>\s*([\w.-]+)")
+_REQUESTED = re.compile(r"\$\{RELEASE_BASE\}/([\w-]+(?:\.[\w-]+)*)")
 # Any release-download URL in the docs, pinned or latest.
-_DOC_RELEASE_URL = re.compile(
-    r"releases/(?:latest|download/[^/\s]+)/download/([\w.-]+)"
-    r"|releases/download/[^/\s]+/([\w.-]+)"
-)
+_DOC_RELEASE_URL = re.compile(r"releases/(?:latest/download|download/[^/\s]+)/([\w-]+(?:\.[\w-]+)*)")
 
 
-def _requested_artifacts() -> set[str]:
-    return set(_DOWNLOAD_URL.findall(INSTALLER.read_text(encoding="utf-8")))
-
-
-def _built_artifacts() -> set[str]:
-    text = RELEASE_YML.read_text(encoding="utf-8")
-    return (
-        set(_TAR_BUILD.findall(text))
-        | set(_COPY_BUILD.findall(text))
-        | set(_SHASUM_BUILD.findall(text))
-    )
-
-
-def _doc_referenced_artifacts() -> dict[str, set[str]]:
-    """Release assets each doc tells a user to fetch."""
-    out: dict[str, set[str]] = {}
-    for name in DOC_FILES:
-        text = (REPO / name).read_text(encoding="utf-8")
-        found = {a or b for a, b in _DOC_RELEASE_URL.findall(text)}
-        if found:
-            out[name] = found
+@pytest.fixture(scope="module")
+def built(tmp_path_factory) -> Path:
+    out = tmp_path_factory.mktemp("dist")
+    done = subprocess.run(["bash", str(BUILD), str(out)], capture_output=True, text=True, check=False)
+    assert done.returncode == 0, done.stdout + done.stderr
     return out
 
 
-def test_every_downloaded_artifact_is_built() -> None:
-    missing = _requested_artifacts() - _built_artifacts()
-    assert not missing, (
-        f"install-ai-stack.sh downloads artifacts release.yml never builds: "
-        f"{sorted(missing)} — a fresh remote install would 404 on them"
-    )
+def _names(built: Path) -> set[str]:
+    return {p.name for p in built.iterdir()}
 
 
-def test_the_installer_itself_is_a_release_asset() -> None:
-    """The bootstrap script has to ship as an asset, not just build others.
-
-    Regression: the release published only the tarballs install-ai-stack.sh
-    downloads, so `curl .../releases/download/<tag>/install-ai-stack.sh | bash`
-    — the first command in docs/UserManual.md — 404'd at every version that ever
-    existed. The pre-existing tests here could not catch it by construction:
-    they check artifacts the installer *downloads*, and it does not download
-    itself. Nothing surfaced it either, because `curl -fsSL … | bash` on a 404
-    exits 0 (curl writes to stderr, bash runs an empty script, the pipeline
-    reports bash's status), so a wrong URL looks like a clean install.
-    """
-    built = _built_artifacts()
-    assert "install-ai-stack.sh" in built, (
-        "release.yml never copies install-ai-stack.sh into dist/ — the "
-        "documented curl-bootstrap URL will 404"
-    )
-    assert "install-ai-stack.sh.sha256" in built, (
-        "no checksum published for the installer, but docs/UserManual.md documents "
-        "verifying one before executing it"
-    )
+def test_every_asset_the_installer_fetches_is_built(built):
+    requested = set(_REQUESTED.findall(INSTALLER.read_text(encoding="utf-8")))
+    assert requested >= {"agentsmith-source.tar.gz", "agentsmith-source.tar.gz.sha256"}, requested
+    assert not requested - _names(built), "the installer fetches what the build never makes: a remote install fails"
 
 
-def test_docs_only_reference_artifacts_the_release_builds() -> None:
-    """Closes the loop the installer-only check left open.
-
-    docs/UserManual.md documented fetching `install-ai-stack.sh` and its `.sha256`
-    from a release for an entire version cycle while neither was published.
-    A doc that hands someone a URL is as much a part of the release contract as
-    the installer is.
-    """
-    built = _built_artifacts()
-    bad = {
-        doc: sorted(refs - built)
-        for doc, refs in _doc_referenced_artifacts().items()
-        if refs - built
-    }
-    assert not bad, (
-        f"docs reference release assets that release.yml never builds: {bad} — "
-        f"built assets are {sorted(built)}"
-    )
+def test_the_installer_itself_is_a_release_asset(built):
+    """Regression: the documented `curl .../releases/download/<tag>/install-ai-stack.sh
+    | bash` 404'd at every version that ever existed, and `curl -fsSL … | bash` on a
+    404 exits 0, so a wrong URL looked like a clean install."""
+    assert {"install-ai-stack.sh", "install-ai-stack.sh.sha256"} <= _names(built)
 
 
-def test_templates_tarball_carries_both_destinations() -> None:
-    """install-ai-stack.sh fetches templates.tar.gz for TWO destinations:
-    agent-rules.yaml (IDE config generation) and onprem-deploy/
-    (agentsmith tenant onprem-scaffold). One archive has to satisfy both."""
-    with tempfile.TemporaryDirectory() as tmp:
-        archive = Path(tmp) / "templates.tar.gz"
-        subprocess.run(
-            [
-                "tar",
-                "--exclude=node_modules",
-                "--exclude=__pycache__",
-                "-czf",
-                str(archive),
-                "-C",
-                str(REPO / "templates"),
-                ".",
-            ],
-            check=True,
-        )
-        with tarfile.open(archive) as tf:
-            names = {n.lstrip("./") for n in tf.getnames()}
-
-    assert "agent-rules.yaml" in names, "IDE config generation would break"
-    assert any(n.startswith("onprem-deploy/") for n in names), (
-        "agentsmith tenant onprem-scaffold would break on a remote install"
-    )
-    assert not any("node_modules" in n for n in names), "build artifact leaked into the release"
+def test_each_checksum_names_its_file_bare(built):
+    """The docs pipe the file into `shasum -a 256 --check`, which resolves the name
+    against the current directory, so a path in it fails."""
+    for name in ("install-ai-stack.sh", "agentsmith-source.tar.gz"):
+        assert (built / f"{name}.sha256").read_text().split()[1] == name
 
 
-def test_artifacts_extract_flat() -> None:
-    """install-ai-stack.sh does `tar -xz -C "$DEST"`, so an archive with a
-    top-level directory prefix double-nests every path it installs. release.yml
-    checks this in CI; checking it here means a broken build step fails before
-    the tag exists rather than after."""
-    specs = {
-        "scripts.tar.gz": REPO / "scripts",
-        "githooks.tar.gz": REPO / ".githooks",
-        "workflow-templates.tar.gz": REPO / "workflow-templates",
-        "templates.tar.gz": REPO / "templates",
-    }
-    with tempfile.TemporaryDirectory() as tmp:
-        for name, source in specs.items():
-            archive = Path(tmp) / name
-            subprocess.run(
-                ["tar", "--exclude=node_modules", "--exclude=__pycache__",
-                 "-czf", str(archive), "-C", str(source), "."],
-                check=True,
-            )
-            with tarfile.open(archive) as tf:
-                tops = {n.lstrip("./").split("/")[0] for n in tf.getnames() if n not in (".", "./")}
-            assert len(tops) > 1, (
-                f"{name} collapses to a single top-level entry {tops} — it would "
-                f"double-nest on extraction"
-            )
+def test_docs_only_reference_assets_the_release_builds(built):
+    """A doc that hands someone a URL is as much a part of the contract as the
+    installer is."""
+    for doc in DOC_FILES:
+        refs = set(_DOC_RELEASE_URL.findall((REPO / doc).read_text(encoding="utf-8")))
+        assert not refs - _names(built), f"{doc} references assets the release never builds: {refs - _names(built)}"
+
+
+def test_the_source_archive_unpacks_as_a_checkout(built):
+    """The installer recognises a checkout by its own file and the gate launcher, at
+    the top level, so a prefix directory would break the one install path."""
+    with tarfile.open(built / "agentsmith-source.tar.gz") as archive:
+        names = set(archive.getnames())
+    assert {"install-ai-stack.sh", ".githooks/process-gate"} <= names
+    # What the first commit and the ports read at run time: the installer's second
+    # path once installed without these, and the gate refused the first commit.
+    assert {"docs/review-levers.md", "runtime/cli.py", "fixtures/security/control_registry.json"} <= names
+
+
+def test_the_source_archive_holds_only_tracked_files(built):
+    tracked = set(subprocess.run(["git", "-C", str(REPO), "ls-tree", "-r", "--name-only", "HEAD"],
+                                 capture_output=True, text=True, check=True).stdout.splitlines())
+    with tarfile.open(built / "agentsmith-source.tar.gz") as archive:
+        files = {m.name for m in archive.getmembers() if m.isfile()}
+    assert not files - tracked, f"the archive carries what git does not track: {sorted(files - tracked)[:5]}"
+    assert not any(n.endswith(".env") or "node_modules/" in n for n in files)
+
+
+def test_the_release_builds_through_the_shared_script():
+    """One build, or what Self-Test's check exercises is not what ships."""
+    assert "bash scripts/build_release_assets.sh dist" in RELEASE_YML.read_text(encoding="utf-8")

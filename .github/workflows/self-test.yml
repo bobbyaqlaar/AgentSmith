@@ -180,6 +180,16 @@ jobs:
         run: python3 scripts/verify_system.py --check-onprem-deploy
       - name: "Delivery Model soft gate (warn-only)"
         run: python3 scripts/verify_system.py --check-delivery-model
+      - name: "The release installs, and its first commits pass"
+        # agentsmith:gate
+        # The README's Quick Start against assets built from this commit, in an
+        # empty HOME. Inside this required job, so it gates a merge. Scratch
+        # tenants install from a checkout; this is the path a stranger takes
+        # (.agent-rfc/designs/release-install-path.md).
+        run: |
+          dist="$(mktemp -d)"
+          bash scripts/build_release_assets.sh "$dist"
+          bash scripts/check_release_install.sh "file://$dist"
       - name: "Delivery evidence pack script"
         # agentsmith:gate
         run: python3 scripts/delivery_evidence.py
