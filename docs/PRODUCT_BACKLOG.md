@@ -1,188 +1,70 @@
 # AgentSmith — Remaining To-Do Items
 
-**Last reviewed:** 2026-09-14 (onboarding audit; current-state section re-verified)
+**Last reviewed:** 2026-11-03: every entry checked against the code and CI. What that closed is in
+`docs/PRODUCT_ARCHIVE.md`.
 
-> **Scope:** this document owns only *not-yet-done* work: the active item and
-> confirmed future gaps with their trigger conditions. Completed build history
-> lives in `docs/PRODUCT_ARCHIVE.md`; the formal specification is `docs/DESIGN.md`;
-> operator procedures are `docs/UserManual.md`; release notes are `CHANGELOG.md`.
+> **Scope:** this document owns only *not-yet-done* work. Completed build history lives in
+> `docs/PRODUCT_ARCHIVE.md`; the formal specification is `docs/DESIGN.md`; operator procedures are
+> `docs/UserManual.md`; release notes are `CHANGELOG.md`.
 >
-> If an entry here says something is missing, check it still is — this file
-> spent a week claiming the testbed deploy had not started, six days after it
-> had.
+> If an entry here says something is missing, check it still is. On 2026-11-03 this file said "the release
+> install works for anyone", on the strength of a 200 and a checksum. Run from scratch, a stranger's first commit
+> was refused.
 
-## Current state (2026-10-14)
+## Current state (2026-11-03)
 
-**v3.0.0 is the latest release** (2026-10-14) — vendoring retired (C9), a MAJOR: a tenant holds no copy of AgentSmith and asks the providers it declares; no machine-wide git hooks; the commit guardrails in the gate. v2.4.0 (2026-10-12) — the Ops contract (C8), a MINOR: run status, dead letters and settings to the portal under a per-app Ops token, and a signed replay back under a key the portal issues. v2.3.0 (2026-10-10) — the security contract (C7): a tenant's own pack, declared posture and telemetry wire, checked by the provider it declares. v2.2.3 (2026-10-09) — the provider's CI setup step can call an eval's
-judge, and the launcher reads a declaration with evals warnings as the contract it declares. v2.2.2 (2026-10-08): a repository's `.env` wins for its credentials over a shell export, and
-`agentsmith doctor` reports exported keys. v2.2.1 (2026-10-07) patched the evals
-contract's dataset schemas — the release to adopt it at. v2.2.0 (2026-10-07) carried the evals contract (C6), a MINOR
-(`CHANGELOG.md` › 2.2.x in the compatibility matrix). C6's tenant steps below — KYC Sentinel's
-eval steps through the declared provider, OTS's eval workflows — were waiting on it. v2.1.0
-(2026-10-05) carried the governance contracts C1–C5; v2.0.0 (2026-09-19) was the governance
-release, a MAJOR.
-**AgentSmith is public** (AGPL-3.0) — the release install works for anyone, and anyone may read
-the repository. **KYC Sentinel and AqlaarTeleologyStudio stay private.** All three were private
-from 2026-09-13; only AgentSmith flipped, in late September — nothing in this repository pins the
-day, so no date is claimed for it here. Verified anonymously 2026-10-16: the repository reports
-`PUBLIC` with `agpl-3.0`, and
-`releases/latest/download/install-ai-stack.sh` returns 200, 45,784 bytes, with a matching
-`shasum -a 256 --check` — see the install item below, whose trigger this met.
-
-Green on GitHub, checked 2026-10-16: AgentSmith **Self-Test** on `ec307b1`
-(2026-10-15), **Scratch tenants** on `67929c8` (2026-10-14 — all six, including
-the adopted tenant; `docs/scratch-tenants.md`), and **KYC Sentinel CI** on
-`9b9c5f8` (2026-10-15), the commit that moved it to v3.0.0 holding no copy of
-the framework. KYC's three judged gates have graded live on the Gemini judge
-(golden 1.000, fairness 1.000, hallucination 0.857; 2026-09-01 to 09-07) — those
-are the latest *graded* numbers, not the latest runs, because a suite with
-nothing to grade now reports `not_gradable` and the step passes by declaration.
-No test count is quoted — one was, and went stale three times in a single
-working session.
-
-The **KYC Sentinel testbed tenant** (`../KYC_Sentinel`) is built, pushed,
-CI-green and was deployed as a GCP staging smoke job on 2026-08-12 — full
-history in `docs/PRODUCT_ARCHIVE.md` "T1–T4". Promotion has been suspended since
-then; its `cd-staging.yml` was rewritten for the private framework on
-2026-09-13 and has not run since.
-
-**The one open build item is running it against real backends** — see below.
+**v3.0.0 is the latest release**, and it is broken for a stranger (see Stage 1, step 1). The governance
+contracts C1–C9 are complete. **AgentSmith is public (AGPL-3.0)**; KYC Sentinel and AqlaarTeleologyStudio are
+private. KYC is on 3.0.0 with green CI. OTS is on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
+two security controls awaiting its own content: do not use it as a showcase.
 
 ---
 
-## Active: Governance enforcement (G1–G7) 🟡 IN PROGRESS (2026-09-15)
+## The launch: two stages (owner, 2026-11-03)
 
-Owner requirement: every AgentSmith-governed repo follows the design, review, gating and CI rules **without exception**, in any IDE (Claude Code, Cursor, Antigravity, VS Code Copilot, Gemini CLI, Codex), with no GitHub-plan dependency. The knowledge graph is built from day one and drives reviews. The owner is asked at design start for any deviation. There is one artifact per document type.
+**Target: Friday 6 November, end of day.** The owner's decisions: AGPL-3.0 stays; the package becomes `agentsmith`;
+the repository stays `bobbyaqlaar/AgentSmith`, because `uses: Aqlaar/AgentSmith` would have to be a real repository
+under that owner, and `aqlaar` on GitHub is an existing user account; launch in two stages.
 
-Evidence: OTS template slices S1/S2 (no spans, dataclasses, KG skipped, CI subset, no sign-off). Root causes and mechanisms are in `.agent-rfc/designs/governance-enforcement.md`. Tenant side: OTS PB-104 (T1–T7).
+### Stage 1: public preview, "governance for building with AI agents"
 
-| Slice | What | Status |
-|---|---|---|
-| G1 | Hooks in the framework environment (Pydantic + spooled OTel spans); `governance.json` registry generated from `agent-rules.yaml`; design needs `## Pillars / ## Deviations / ## Dependencies`; TTY-only `agentsmith approve` + `approvals.jsonl`; review sign-off parsed; "Design start: ask the owner" block in every rule file | **Done 2026-09-16** (`dde56b3`, `62810c3`) — review `.agent-rfc/reviews/governance-enforcement.md`; declaring `registry` in a repo's config is what adopts the design-time rules, so history and tenants that have not adopted are unaffected |
-| G3 | Bypass sweep over every locally reachable commit, with `.git/agentsmith/verified`; `.githooks/pre-commit` (reports, re-arms) and `.githooks/pre-push` (refuses); `commit-msg` requires a `Repairs:` trailer while anything is outstanding; `agentsmith gates repair`; the IDE-drift CI step blocks | **Done 2026-09-16** — review `.agent-rfc/reviews/governance-enforcement-g3.md`. The Knowledge Graph CI step stays warn-only until G4 provisions the graph |
-| G5a | Artifact registry, the `artifacts` check with a per-repo mode, `records: single`, and the cross-reference rule — as code, no documents moved | **Done 2026-09-17** — review `.agent-rfc/reviews/governance-enforcement-g5a.md`. AgentSmith runs `report`: `python3 scripts/process_gate.py artifacts` lists the 21 items G5b has to fix |
-| G5b | The migrations: **OTS first**, **AgentSmith second** (reordered by the owner on 2026-09-18). AgentSmith: one file per type, numbered cross-references gone, `artifacts: enforce`, and the design, manual and README distilled to the current system and its reasons | **AgentSmith done 2026-09-18** — review `.agent-rfc/reviews/artifact-consolidation.md`. OTS's migration remains |
-| Later | The portal's Ops pages answer 404 for an app outside the user's grants; the Dev pages show "You do not have access" and "No app called …" as two screens, as the approved specification asks. Align Ops, or record why the two workspaces differ | Trigger: the next change to an Ops page |
-| Later | A Dev ingest record does not say which gate judged it. A backfill (`ci --json` over old history) judges every commit by today's rules, so commits that passed at the time can show as failed. Record the gate's version in the record, and show it | Trigger: the first backfill, or before phase 2 |
-| Later | The Ops dead-letter queue's **Discard** fires with no confirmation, though it cannot be undone (`irreversible-needs-confirmation`). Administration's token panel shows the pattern: say what stops, then confirm | Trigger: the next change to the DLQ page |
-| Later | Tenant CI templates (`workflow-templates/ci-*.yml`) run no process-gates job: a tenant gets the local hooks from `tenant init`, but nothing in CI checks its pushed commits or sends its record to the portal's Dev workspace. Add the job — gate, then `scripts/send_dev_record.py` — with its own design: it changes every tenant's CI, and the scratch tenants' generated commits carry no design trailers | Trigger: the first tenant that registers in the Dev workspace, or owner request |
-| Later | A pointer by heading name (`docs/DESIGN.md › Section`) dies when that heading is renamed, and nothing reads it: the cross-reference rule reads pointers with a digit, on the lines a change adds. Catching it needs a check on the target side — a renamed or removed heading, and every pointer that named it | Trigger: the next dead heading-name pointer found |
-| G6a | Evidence tokens in every `applies` answer; `P7-pydantic` and `P3-tracing` over the files a commit touches; `agentsmith pillars`; per-repo `pillars` policy with a ratcheting allowlist | **Done 2026-09-17** — review `.agent-rfc/reviews/governance-enforcement-g6a.md`. AgentSmith runs `enforce` with 18 seeded allowlist entries |
-| G6b | Six more mechanical checks (`P2-dependencies`, `P7-async`, `P7-ts-any`, `P7-use-client`, `P10-gateway`, `P12-secrets`) and the narrowing of `P7-pydantic` to models built from data the code did not write | **Done 2026-09-17** — review `.agent-rfc/reviews/governance-enforcement-g6b.md`. Ten fixes rather than exemptions; the allowlist shrank from 18 entries to 2 |
-| G6c | `agentsmith gates list` / `run` execute the `# agentsmith:gate` steps locally, with skips named (missing tool, service container, CI-only expression) and install lines dropped; the checklist's gates table is generated from the same tags | **Done 2026-09-17** — review `.agent-rfc/reviews/governance-enforcement-g6c.md`. 19 gates tagged here, and 20 across the tenant templates — 6 each in `ci-python-fastapi.yml` and `ci-ts-react.yml`, 7 in `ci-go.yml`, 1 in `agentsmith-gates.yml` |
-| G2a | `--ide` adapters for six IDEs (one `GateEvent` in, each dialect's answer out), golden payload fixtures, the `ides` registry section, and generated hook configs where the schema is verified | **Done 2026-09-17** — review `.agent-rfc/reviews/governance-enforcement-g2a.md`. Cursor re-verified from vendor docs; Claude and Cursor configs generated, four await a confirmed schema |
-| G2b | The shell pre-check: `--no-verify`, `core.hooksPath` overrides, `agentsmith approve` and writes to the gate's own files, refused in Claude Code and Cursor | **Done 2026-09-18** — review `.agent-rfc/reviews/governance-enforcement-g2b.md`. Deny-only: the cross-IDE warn channel does not exist, and the stop gate already catches a gated shell write |
-| G4 | `--impact` maps a diff to the files a review must read, the lever groups and a `KG query:` hash the sign-off carries and the commit gate recomputes; session start prints the scope; the tenant CI template runs the same freshness check, blocking | **Done 2026-09-18** — review `.agent-rfc/reviews/governance-enforcement-g4.md`. Provisioning a graph at onboarding stays in G7 |
-| G7 | `tenant init` provisions the config, the armed hooks, the IDE hook configs, the rule files, a committed KG and the artifact stubs; `verify_system.py --governed` lists provisioning gaps and evidence gaps separately; the stop gate and the sweep write `.agent-history.log` | **Done 2026-09-18** — review `.agent-rfc/reviews/governance-enforcement-g7.md`. G1–G7 are complete; G5b's migrations are what remain |
-| Later | Antigravity, VS Code Copilot, Gemini CLI and Codex: confirm each hook CONFIG schema from a real session, then generate their configs. The adapters and fixtures are in place; what is missing is the shape of the file each tool reads | Trigger: when a session on that IDE can paste one |
-| Later | husky's `prepare` script points `core.hooksPath` back at `.husky` on every `npm install`, disarming the gates in an adopted repository; `tenant adopt` warns, and the sweep re-arms only an unset path. Re-arm from a husky-compatible hook, or teach the sweep to re-arm a path it did not set | Trigger: the first adopted repository that uses husky |
-| Later | The tenant CI templates (`ci-<stack>.yml`) still run no process-gate job; `workflow-templates/agentsmith-gates.yml` is one `tenant init` could also write | Trigger: the next tenant CI template change |
-| Later | KYC Sentinel migrates to `records: single` (D4 ends) | Trigger: after G5a ships |
-| Later | `tenant.yaml` is not covered by the IDE-config gitignore block. `docs/DESIGN.md` › IDE Config Security claimed for an unknown length of time that a `.agenticframework/tenant.yaml` holding a non-default tenant id or non-public endpoint URLs was "also included in the gitignore prompt for public repos". The machine-wide `post-checkout` (retired in 3.0.0) appended seven IDE-config paths and never included it. The doc now says so; whether the file should be ignored on a public repo is undecided — it is also the file `agentsmith tenant init` expects to be committed, so ignoring it is not obviously right | Trigger: a public tenant repo that carries real endpoint URLs in tenant.yaml |
-| Now | The generated rule files (`.cursorrules`, `CLAUDE.md`, `GEMINI.md`, the Antigravity skills) are gitignored in this repo, so each clone's copies go stale whenever `agent-rules.yaml` changes and nothing can check them in CI. This one had carried the pre-`4f8e26a` P8 wording since slice B — the rule text agents in this repo were reading was two days out of date. Regenerated by hand on 2026-09-17; the fix is for the installer and `agentsmith sync` to regenerate them | Trigger: G2 |
-| Later | Scope-derived pillar subset — ask only the pillars a change's paths implicate, each still carrying evidence. Held until G4: deriving the subset needs the impact query, and a wrong subset silently excuses a pillar | Trigger: G4 shipped and its impact query trusted |
-| Later | Two agents in one checkout: owner decided 2026-09-16 to keep the lock a future extension. Evidence if it recurs: that morning a `mutation_check` run in a second session rewrote tracked files under an active session, and the stop gate's findings changed between turns. **It recurred 2026-10-17**: two `gates run` invocations overlapped in one session, and `scripts/rules_port.py` and `runtime/adopt.py` each showed as modified while neither was edited — the stop gate reported an uncovered gated file twice for files a mutation run was holding. The journal added that day (`mutation-check-journal`) records the pid of the run that owns a mutation, so a lock is now a small step rather than new machinery | Trigger: owner request, or the next collision |
-| Later | `sync` ignores `upgrade`'s exit code (`runtime/sync.py`, `upgrade(root, …, out=lambda _line: None)`): when the vendored refresh fails — no `tenant.yaml`, no installed scripts — `sync` prints nothing about it and still reports "vendored tenant: scripts/, runtime/, templates/ and fixtures/ are refreshed too" (`failure-is-not-a-result`). Surface the failure and leave the vendored note off a sync that did not vendor | Trigger: the next change to `runtime/sync.py` after the framework-root guard |
+The claim: *an AI coding agent cannot merge code in a governed repository without a design, a review and a passing
+gate, and every decision is on the record.* True today, tested on two tenants and six scratch tenants. Ops is
+labelled preview.
 
----
-
-## Active: Governance contracts — every port, Dev and Ops 🟡 DESIGNED (2026-10-02)
-
-Owner principle (2026-10-02), non-negotiable: AgentSmith and its tenants are decoupled **by contract**.
-A tenant holds declarations, its own data and hash-recorded shims that call a declared command — no
-framework code, no framework path. Umbrella design: `.agent-rfc/designs/governance-contracts.md`
-(finishes `governance-providers.md`; reverses its decision to keep vendoring as a transport).
-
-**OTS is the proving ground.** Its core function (template model, ingest, API) is frozen until its
-governance is aligned; work in OTS on how AgentSmith governs it is in scope, slice by slice below.
-
-| Slice | AgentSmith | Tenant step that proves it | Status |
+| # | Step | Who | Day |
 |---|---|---|---|
-| C1 | Gate v2 — the CI event, dev record as its output, a provider setup step for CI; `agentsmith-gates.yml` calls the declared command | OTS declares `providers.json`, CI calls the provider, vendored gate files go; KYC pins a release | **Built 2026-10-02** (`gate-contract-ci`); released in v2.1.0 — tenants can move |
-| C2 | Gate contract 3 — commit and push; the knowledge graph as gate evidence | hooks in OTS and KYC become stubs; `map_codebase.py` leaves OTS | **Built 2026-10-03** (`gate-local-events`); tenants move after the release that carries it |
-| C3 | Records — `contract/record/v1` | `send_dev_record.py` is never a tenant's file — already true since C1 (no tenant sends a record); proven by sender and receiver conformance | **Built 2026-10-04** (`record-contract`) |
-| C4 | Rules — `contract/rules/v1`, `render` / `check`; `"provider"` replaces `@framework/` paths in a tenant's `process-gates.json` | OTS's rules move into its declaration and its CI calls the declared check; KYC's `@framework/` values become `"provider"` | **Built 2026-10-04** (`rules-contract`); tenants move after the release that carries it |
-| C5 | Telemetry — `contract/telemetry/v1`: OTLP and a catalogue of attributes and instruments; `governance.telemetry.contract` on the Resource | OTS's template spans on plain OpenTelemetry — **done** as a governance-only change (uncommitted in OTS, with the frozen template work), 9/9 against the contract; KYC's smoke export passes once its pin moves | **Built 2026-10-04** (`telemetry-contract`) |
-| C6 | Evals — `contract/evals/v1`: tenant-owned datasets with outputs, the scorecard, five verdicts, closed in CI unless declared | KYC's and OTS's eval steps call the declared command; KYC declares `no_verdict: warn` where its judge quota runs out | **Built 2026-10-06** (`evals-contract`); released in v2.2.0; **both tenants moved** — KYC at 2.2.3 (#3), OTS at 2.2.3 (#7, `not_gradable` and `no_verdict` declared warnings) |
-| C7 | Security — `contract/security/v1`: `check` (a row per control, each naming whose evidence it is; the declared posture; no non-strict mode) and `redaction` (planted probes on the tenant's own wire) | KYC's strict harness step calls the declared command and its smoke emitter plants the probes; OTS's security and CD redaction steps call it, it declares `"emitter": "none"`, vendored `fixtures/security/` goes | **Built 2026-10-09** (`security-contract`); released in v2.3.0; **both tenants moved** 2026-10-10 — KYC (#4: 14/14 repository controls, its smoke emitter probed on the wire, `moderation.mode: required` declared) and OTS (#8: `"emitter": "none"`, vendored `fixtures/security/` gone). OTS stays red on SEC-RISK-001 and SEC-AGENCY-001 until its risk register and agency manifest are authored — content, the owner's |
-| C8 | Ops records — `contract/ops/v1`: run status, dead letters and settings out with a per-app Ops token; a signed replay in, under a key the portal issues; the shared-token routes deprecated, the history sync retired | OTS's CD drops the history and Phoenix steps and sends its settings by contract; KYC's HITL comment stops asking for a secret in `tenant.yaml` | **Released in v2.4.0** (2026-10-12; `ops-contract`); **both tenants moved** 2026-10-13 — OTS (#9: settings by `agentsmith ops settings` as CD's last step, the history and Phoenix-feedback steps gone) and KYC (#5: the worker sends its settings through `ops_contract`) |
-| C9 | Vendoring retired; `upgrade` removed; no machine-wide git hooks; the global guardrails in the gate | OTS drops its vendored `scripts/` and `runtime/` and moves its CD smoke to the evals port; KYC references `gcp-auth` at the provider; oil-price-demo archived by the owner | **Released in v3.0.0** (2026-10-14; `vendoring-retired`, #54 with fixes #55 and #56 the scratch tenants found); **both tenants moved** 2026-10-15 — OTS (#10: the CD smoke and the CI graph step on the ports, actions from the provider, the 108 vendored files removed) and KYC (#6: `gcp-auth` from the provider, the runtime `@v3.0.0`; CI green). OTS's CI stays red at ruff, on 69 errors in `services/` and `ReferenceDocs/` that predate 3.0.0, and its CD smoke is `not_gradable` until its golden cases carry the application's outputs — both the owner's content. oil-price-demo archived by the owner 2026-10-15. **The programme is complete** |
+| 1 | ✅ Installing from a release works (`release-install-path`, merged; first released in 3.0.1) | Claude | Tue 3 |
+| 2 | AGPL notices and community files (`agpl-compliance`) | Claude | Tue 3 |
+| 3 | Release 3.0.1; `release.yml`'s verify job green on the real URL | Claude | Tue 3 |
+| 4 | ✅ Private vulnerability reporting on, which `SECURITY.md` relies on | Owner | Tue 3 |
+| 5 | Rename `runtime` to `agentsmith`; release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Wed 4 |
+| 6 | First run: a new repository's red security job says it is expected, and what to write to get green (fires the onboarding item below) | Claude | Wed 4 |
+| 7 | Honest coverage: OWASP Agentic Top 10 and EU AI Act mapped in `docs/security-framework-map.md`, with gaps said (gaps 1 and 8) | Claude | Wed 4 |
+| 8 | Small fixes with the release: `PROMPT_DENYLIST_PATH` in the evals port; DLQ **Discard** confirmation; pin `phoenix:latest`; delete `ai-compat.sh`; the widget's dead `cdn.agenticframework.io`; `oil-price-demo` in live docs | Claude | Thu 5 |
+| 9 | Secret scan over **full history**, not only the tree (the pattern check so far covered the tree) | Claude | Thu 5 |
+| 10 | README leads with the three audiences and states its limits: edit-time enforcement on Claude Code and Cursor only (rule files and CI elsewhere), Windows untested, yarn, bun and Poetry unsupported, Ops in preview | Claude | Thu 5 |
+| 11 | Confirm with counsel: copyright holder in `NOTICE` (Aqlaar Tech FZE LLC, assigned?), `TRADEMARK.md` (names Bobby Rajagopal), and what AGPL means for a tenant importing the runtime. Say whether OTS, KYC and GCP project `agentsmith-500916` may stay named in a public repository | Owner | Thu 5 |
+| 12 | Set the repository's description and topics (it still says "Universal agentic framework") | Owner, or say go | Thu 5 |
+| 13 | Rehearsal: `check_release_install.sh` on the final release, then the README followed by hand on a clean machine or account | Claude and owner | Fri 6 |
+| 14 | Publish the announcement. The honest story is the strongest: what building a real tenant found in the framework | Owner | Fri 6 |
 
-**Closed 2026-10-06 — CI proves the contracts on an adopted scratch tenant** (`scratch-adopted`):
-`agentsmith-scratch-adopted` is rebuilt by `tenant adopt` pinned to each commit; its gates run installs
-the provider through the setup action at that commit and its adoption commit passes its own gate.
+### Stage 2: "the DevOps platform for AI-infused and agent apps"
 
-**Open — `sync` on a vendored tenant stages a refresh it cannot commit (found 2026-10-06, OTS).**
-`sync` calls `upgrade`, which `git add`s the refreshed `scripts/`, `runtime/`, `templates/` and tries to
-commit them; the tenant's gate refuses (no design), `sync` discards `upgrade`'s output, and the staged
-framework code is swept into the "vouched" sync commit by the command sync prints. OTS's move left the
-refresh out by hand. Fix with C9 (vendoring retired), or sooner: `sync` stops calling `upgrade`, or says
-plainly what it staged. **Also from the tenant moves:** `sync` leaves hooks a tenant already holds
-uncommitted out of its commit list and manifest (KYC's `chain`, `pre-commit`); its "vendored tenant"
-note prints for a package tenant (KYC), where `upgrade` vendors nothing; and `agentsmith gate` /
-`agentsmith rules` block on an open, empty stdin (the launcher always writes one, so CI is safe).
-**And from KYC's evals move (2026-10-07):** `sync` moves `providers.json`'s gate `setup` to the new
-release but leaves a gates workflow the tenant wrote itself at the old one, and says nothing — the
-declaration and the CI step disagree until someone notices (KYC's was moved by hand).
-**And from OTS's evals move (2026-10-09):** `sync` and the rules check disagree on whose a whole-file
-rule file is. OTS's `.cursorrules` predates the manifest recording rule files (its `scaffold.json`
-lists only `.agent-rfc/001-scaffold.md`), so `ownership()` reads it as `theirs` and `sync` leaves it
-silently; but the rules check in CI holds it to the pinned provider's render, and that render names
-the provider's version in its header — so every pin move fails CI on one line (OTS's was re-rendered
-by hand at 2.2.3, `724d030`). Fix: a file the declared rules provider renders is the provider's for
-`sync` whatever the manifest says (refresh it, or name it as `edited` and stop), and the header stops
-carrying a version the rules check compares.
+The claim needs evidence a preview does not: a real app, on real traffic, traced back to the design that shaped it.
+**6 November is possible only in the narrow form below, and only if the owner supplies step 15 by Wednesday noon.
+Otherwise Stage 1 ships on the 6th and Stage 2 the following week.** Stage 1 does not depend on it.
 
-**Open — a judge that is not the one the bars were calibrated for is not flagged (found 2026-10-07,
-KYC).** A tenant's bars are calibrated against one grader (KYC's 0.95 / 0.95 / 0.75 against
-`gemini-3-flash-preview`), but the judge a run uses is whatever the machine's mode selects: on a
-machine in `local` mode KYC's judge resolves to `falcon3:3b`, which its own `models.yaml` calls
-uncalibrated, and the provider grades against the same bars without a word. The scorecard records
-the judge that answered (`judge_models_used`) but not the judge the bars belong to. Fix: the judge
-role in `models.yaml` names the grader its `fail_below` was calibrated on; when the answering judge
-differs, the scorecard says so in its reason and the launcher warns — a pass against a borrowed bar
-is not the pass the bar describes (`failure-is-not-a-result`). **Also from the same move:** an
-over-quota contract run raises two warnings, the launcher's and `run-evals.py`'s own annotation
-fired inside the provider — one verdict should speak once.
+| # | Step | Who |
+|---|---|---|
+| 15 | Provide for KYC staging: Cloud SQL and Temporal (reuse or tear down what is billing in `agentsmith-500916`), `GEMINI_API_KEY` and `OPENROUTER_API_KEY` set on its environment, a deployed portal and its Ops token | Owner |
+| 16 | KYC live on staging: the worker as a service, Phoenix and portal wired | Claude |
+| 17 | One real HITL round trip through the portal, and one production case promoted, with screenshots | Claude and owner |
+| 18 | **The accountability chain (gap 2):** a run carries its commit, so a production run links to its commit, design and approvals | Claude |
+| 19 | **A kill switch (gap 4):** an app or agent stopped from the portal, the gateway refusing its calls | Claude |
+| 20 | Publish the article, with the screenshots from step 17 | Owner |
 
-**Open — evals-port suites for live latency and shadow comparison (found 2026-10-13, C9).**
-`eval-ttft-live.yml` and `shadow-eval.yml` left the templates in 3.0.0: they ran `verify_ttft.py` and
-`shadow-eval.py` by path and had no port. OTS ran the TTFT one (opt-in). Fix: `ttft` and `shadow` suites
-in the evals contract, so a tenant asks for them like the others.
-
-**Open — `tenant init` offering the rule files' `.gitignore` in a public repository (found 2026-10-13, C9).**
-The machine-wide `post-checkout` asked, for a repository it judged public, whether to gitignore the rule
-files (system-prompt content). It retired in 3.0.0 and `tenant init` does not ask. Fix: a non-interactive
-flag (`--public`) that writes the block, and a line in the plan when the remote looks public.
-
-**Open — a signed bundle of the provider and the org policy (found 2026-10-13, C9).**
-The Enterprise Pack's signed hook bundle retired with the machine-wide hooks. IT now distributes
-`install-ai-stack.sh` and the policy by its own means. Fix: a signed, versioned bundle of both, verified
-before install, as the hook bundle was.
-
-**Open — `agentsmith mode off` and the bypass policy have nothing left to mute (found 2026-10-13, C9).**
-They gated the machine-wide hooks. A repository's gate has no bypass switch, so `mode off` now records a
-`disabled` mode that only `status` and `check` read, and `DISABLE_AI_STACK` is read by nothing. Decide:
-retire them, or give `disabled` a meaning (e.g. the gateway refusing calls).
-
-**Open — human feedback into a tenant's own evaluation data (found 2026-10-11, C8).**
-`sync-ui-feedback.py` promoted negative Phoenix annotations into the golden dataset from tenant CD
-and opened a PR with them; C8 retired it from CD (it was not an Ops record, and wrote cases without
-the `actual_output` the evals contract requires). It stays the first half of `agentsmith evals` on a
-developer's machine. Fix: a feedback feed the tenant pulls — from its portal or its trace store — into
-cases the evals contract can grade, as an evals-data feature.
-
-**Open — the environment can still move an adversarial score (found 2026-10-09, C7 review).**
-`scripts/evals_port.py` clears every threshold variable but not `PROMPT_DENYLIST_PATH`, which
-`runtime.prompt_guard` reads before the repository's own `.agent-rfc/security/prompt_denylist.txt`:
-the shell of whoever runs `agentsmith evals run --suite adversarial` can add or swap the patterns
-the guard scores with (`environment-parity`). The security port clears it before its guard suites
-(`POSTURE_ENV`); the evals port should too, with a conformance case that sets it and expects the
-same scorecard.
-
----
-
-## Active: KYC Sentinel "Running live" 🟡 NOT STARTED
+### KYC Sentinel "Running live": what it needs
 
 **Goal:** take the tenant from offline/smoke-job to serving real traffic, so
 the observability, HITL and promotion loops are exercised end-to-end rather
@@ -234,227 +116,93 @@ code blocker; deliberately deferred when the deploy pipeline was proven.
 
 Append progress to `KYC_Sentinel/DEVLOG.md` as you go.
 
----
-
-## Demo publication (LinkedIn / Substack / Medium) 🟡 NOT STARTED
-
-**Subject: KYC Sentinel**, not oil-price-demo. This file previously carried two
-contradictory versions of this item; oil-price-demo was superseded as the demo
-tenant when the purpose-built testbed was built.
-
-**Trigger:** partially fired. The framework story and the tenant build are
-publishable now; the operational screenshots (live Phoenix traces, a real HITL
-round-trip) need "Running live" above.
-
-**Article content:**
-
-1. The framework architecture — the sixteen pillars, multi-agent, eval scorecard.
-2. Building KYC Sentinel: why KYC is the domain where compliance features are
-   load-bearing rather than decorative (`docs/testbed-tenant-spec.md` opening).
-3. What building a tenant found in the framework — G1–G10, then the 1.1.0
-   review findings. The honest version of this is the most useful part: a HITL
-   gate that could approve without a human, a security harness grading the
-   wrong repo, a "graceful skip" that failed CI.
-4. CI/CD: GitHub Actions → GCP Cloud Run via WIF (keyless).
-5. Screenshots: Phoenix traces, Ops Portal, HITL DLQ flow, eval scorecard.
-
-**Source material:** `docs/PRODUCT_ARCHIVE.md` (build history, use as structure),
-`README.md` (intro), `CHANGELOG.md` 1.1.0 (what the review found).
-
-**Open cost:** Cloud SQL `temporal-pg` (~$7–10/month) and `temporal-server`
-Cloud Run (min-instances=1) in `agentsmith-500916` are still live from the
-oil-price-demo work. Either reuse them for KYC Sentinel's "Running live" or
-tear them down — they are currently billing for nothing. Owner: Bobby.
 
 ---
 
-Each future item records a **trigger condition** (the concrete signal that
-means "build this now," not a calendar date), so a future session can decide
-whether the trigger has fired instead of re-litigating whether the gap matters.
+## Where the industry is, and how AgentSmith stands ahead
 
-**Settled design decisions (do not re-open without a concrete reason):**
-- MCP integration stays tenant-owned (BYO) — the framework ships no MCP
-  client/server. Rationale in docs/DESIGN.md › Architecture by Layer.
-- LLM self-correction is a separate opt-in method
-  (`run_with_self_correction`), never inserted in front of the human DLQ path.
-- The default model registry is local-only. Cloud tiers are a deliberate
-  per-tenant opt-in, not something a budget breach can reach.
+Researched 2026-11-03. Most sources are vendor write-ups, so market claims are directional. Check anything quoted
+externally against the primary source.
 
----
+**The market has split into camps, and none joins Dev to Ops:**
 
-## Open from the onboarding audit (2026-09-13/14)
+| Camp | Examples | What they do | What they do not |
+|---|---|---|---|
+| GRC suites | Credo AI, IBM watsonx.governance, ServiceNow AI Control Tower, OneTrust | Inventory, policy packs, reports for auditors | See how the code was built |
+| Agent control planes | Microsoft Agent 365, Kore.ai | A registry and controls for agents in production | Govern the change that produced them |
+| Runtime security | Zenity, Noma; **Microsoft Agent Governance Toolkit** (open source, maps all ten OWASP agentic risks) | Policy enforcement while agents run | Say why the agent is built this way |
+| LLM observability and evals | Langfuse, LangSmith, Phoenix, Braintrust | Traces, scores | Stop a merge on a missing design |
+| Coding-agent security | Pillar, Endor Labs, OX | Controls on Claude Code, Cursor, Codex | Follow the code into production |
 
-Found running every stack through a real scratch tenant's CI
-(`docs/scratch-tenants.md`); fixed items are in `CHANGELOG.md` [Unreleased]
-and `docs/PRODUCT_ARCHIVE.md`. Each was checked still open on 2026-09-14.
+**AgentSmith's position:** the one record from design to production run, in git, for any stack, under published
+contracts someone else could implement. Its own history is the demonstration: every commit in a public repository
+carries its design and review. To stand ahead: finish the chain (gap 2), sign what it records (gap 5), answer the checklist buyers now bring (gaps 1, 3, 8), and say it plainly.
 
-- **A day-one tenant's CI is red on every stack.** The strict harness fails on
-  the shipped placeholder `risk_register.yaml` / `agency_manifest.yaml` (even
-  non-strict fails on the manifest), and since 2026-09-14 Go and TS run it
-  too. Deliberate — a placeholder is not a declaration — and now said in the
-  hook's onboarding message and docs/UserManual.md's `tenant init` steps. The red
-  run names the placeholder file, but not that this is the expected day-one
-  state. **Trigger:** the first
-  external tenant onboards, or someone proposes relaxing strict to get green.
-- **~~Every release-download install path is broken while AgentSmith is private.~~ Met
-  2026-10-16 — the repository is public and the anonymous check now passes (200, 45,784
-  bytes, `shasum -a 256 --check` OK, against v3.0.0). The "install from a checkout" notes are gone
-  from README and are conditional in UserManual ("if AgentSmith is private for you", which is still
-  true of a private fork). Ready for the archive — left here for the owner to move with the rest of
-  the row's history.**
-  The documented `curl …/releases/latest/download/install-ai-stack.sh | bash`
-  returns 404 to everyone — curl sends no GitHub login — and exits 0 having
-  installed nothing; the installer's own fallbacks (`scripts.tar.gz`,
-  `workflow-templates.tar.gz`, `templates.tar.gz`, `githooks.tar.gz`) fail the same way for anyone running it outside a checkout.
-  README, UserManual and OPERATIONS now say to install from a checkout
-  (verified 2026-09-14: anonymous release page HTTP 404). **Trigger:** the repo
-  goes public — then remove those notes — or the first collaborator who is not
-  on this machine needs to install, at which point `gh release download` (which
-  carries the login) should replace the anonymous URLs.
-  *2026-09-25: the owner is flipping the repository to public. This item closes
-  on that flip and not before — verify anonymously (`curl -sI` the release asset
-  with no credential) rather than assuming, then remove the notes from README,
-  UserManual and OPERATIONS. The tenant workflows no longer wait on it: they take
-  the run's own token and fall back to the secret only for a private provider
-  (`.agent-rfc/designs/public-provider-checkout.md`).*
-- **KYC Sentinel's CI tests framework HEAD while it deploys v1.3.0.** Its
-  `ci.yml` checks out `bobbyaqlaar/AgentSmith` with no `ref`, but its
-  requirements pin `agentsmith-runtime @ …@v1.3.0`. **Trigger:** the next
-  framework change that breaks compatibility with a pinned version.
-- **KYC Sentinel's `cd-staging.yml` image build/push/deploy is unverified.**
-  Rewritten for the private framework (BuildKit secret, `--image`), never run:
-  GCP promotion is suspended. **Trigger:** promotion resumes.
-- **`ai-*` wrappers ship for one more release.** `templates/shell/ai-compat.sh`
-  (copied to `~/.agent-framework/shell/`, never sourced by the installer) maps
-  the old shell-function names onto `agentsmith`. **Trigger:** cutting the next
-  minor release — delete it, its installer copy step and its test.
-- **Clones made before 3.0.0 keep the machine hooks git copied into `.git/hooks`.**
-  3.0.0 stops arming them and the installer cannot find existing clones. Under
-  the gates they are never chained; in a clone that never adopted the gates,
-  `post-commit` still tags and pushes. The CHANGELOG says how to find and remove
-  them. **Trigger:** a report of an unexpected tag or push from an old clone —
-  then a command that removes them from a named clone (`agentsmith doctor --fix`).
-- **A non-checkout install gets the CLI of the release tag, not `main`.**
-  `install-ai-stack.sh` outside a checkout installs
-  `agentsmith-runtime @ git+…@v$FRAMEWORK_VERSION`; v1.3.0 predates
-  `runtime/machine/`, so that `agentsmith` has no `mode`, `check`, `dashboard`
-  or `upgrade`. Moot while every release download 404s (entry above).
-  **Trigger:** tagging the next release, which carries the commands.
-- **The TS template supports npm and pnpm only; the Python install, pip and
-  uv only.** Yarn/bun fail by name; Poetry/Pipenv get a warning and no
-  dependencies. **Trigger:** a tenant on one of them — add a scratch app for it
-  first (`docs/scratch-tenants.md` § Changing the tenants).
-- **Local gates do not match Self-Test.** On a Python 3.14 venv, `mypy` fails
-  on numpy's stubs; `verify_system.py --check-idempotency`/`--check-dlq` need
-  `DATABASE_URL`. Since 2026-09-14 the checkout has a `.python-version`
-  (3.11) and a `requirements.lock`, so `uv venv && uv pip sync
-  requirements.lock` in the checkout builds what Self-Test runs; the local
-  `.venv` on this machine predates that and is still 3.14. **Trigger:** a
-  local gate is trusted as the pre-push check again.
-- **Self-Test's security harness job does not install `requirements.lock`.**
-  Since 2026-09-14 Self-Test's Python jobs and `install-ai-stack.sh` install
-  the hashed lock, but the `security` job calls the tenant-facing
-  `eval-security.yml`, whose `install-python-deps` action installs
-  `requirements.txt` — ranges resolved against the index on the day. Left as
-  is because that action is a tenant contract (a tenant has no
-  `requirements.lock`). **Trigger:** a harness run that passes locally and
-  fails in CI (or the reverse) on a dependency version, or the next change to
-  `install-python-deps`.
-- **The framework environment assumes a POSIX venv layout.** `install-ai-stack.sh`
-  and the hooks look for `~/.agent-framework/.venv/bin/python`; a native
-  Windows Python under Git Bash puts it at `Scripts/python.exe`, so the
-  installer's verification would fail and the hooks would fall back to
-  `python3`. WSL is unaffected. Untested — there is no Windows runner.
-  **Trigger:** the first Windows (non-WSL) install.
-- **Actions minutes.** With AgentSmith private, Self-Test alone was ≈1,900
-  job-minutes/30 days (measured 2026-09-13) against GitHub Free's 2,000 —
-  before the offline scratch build's strict harness runs added ~2 minutes to
-  every Self-Test (2026-09-14), and before the five scratch tenants' weekly and
-  per-change runs. **Trigger:** the first month a
-  run is queued for lack of minutes.
+**What to lean on, because it is true and rare:** the gates fail closed, where hook-based tools are commonly reported
+to fail open; guardrails are mutation-tested, so they are shown to be able to fail; "this suite proved nothing"
+is reported as such; CI re-checks what the IDE hook checked; self-hosted, with sovereign routing.
 
-## Known gaps carried forward from the 1.1.0 review
+### Glaring gaps, in order
 
-Small, specific, and deliberately not fixed in that release.
+Each was checked absent from the code on 2026-11-03.
 
-- **`SEC-TOOL-001` verifies the mechanism, not your allowlist.** Its runner
-  smoke-tests `ToolRegistry` deny-by-default against the shipped *template*,
-  so a tenant's green SEC-TOOL-001 says the enforcement works — not that the
-  tenant's own `tool_allowlist.yaml` is sane. **Trigger:** an auditor reads the
-  evidence pack as a statement about the tenant's tools.
-- ~~**12 of 23 `SEC-*` controls have no runner**~~ — **closed.** All are bound.
-  The last four (`audit_hmac`, `dlq_check`, `sovereign_smoke`, `rag_poison`)
-  were closed by separating the claim that needs infrastructure from the claim
-  that does not, rather than by relabelling anything: HMAC tamper-evidence is
-  provable offline and append-only enforcement is a database trigger, so the
-  latter became **`SEC-AUDIT-002`** and is the one remaining declared gap. An
-  undeclared gap — `met`/`partial` with no runner — fails `--strict`.
-  Live status: `docs/security-framework-map.md`.
-- **`agency_manifest` is authored but ungraded** — both the framework's and
-  KYC's manifests are real content that nothing validates (see above).
-- **A tenant that removes its controls removes the gate with them.** Both
-  detection gates are conditional on the control existing: the fairness parity
-  floor applies only `if min_parity is not None`, and the hallucination
-  detection-miss floor only `if hallucination_miss is not None`. Delete the
-  `pair_id`s from a fairness fixture, or the planted case from a hallucination
-  one, and the suite still passes on `avg_score` alone having measured no bias
-  and no detection. Both report the absence honestly — "NOT MEASURED", "no
-  positive control in this suite" — so this is a reporting-is-right,
-  gate-is-silent split, not a false green.
+1. **No OWASP Top 10 for Agentic Applications mapping** (published December 2025). `docs/security-framework-map.md`
+   maps the LLM Top 10 only, and the first thing a buyer of agent governance asks is now this list. Microsoft's open-source
+   toolkit claims all ten. **Fix:** map the `SEC-*` controls, and name what is uncovered. *Stage 1.*
+2. **The accountability chain stops at the commit.** A production run carries no commit (`app_commit` appears nowhere;
+   portal phase 4), so "why does this agent do that?" cannot be answered from a trace. This is the differentiator no
+   camp above has. *Stage 2.*
+3. **MCP and tool supply chain ungoverned.** Tool poisoning, rug-pulled definitions and shadow MCP are the concerns of
+   2026. Pinning a tool definition and blocking on drift is reported missing from at least one gateway, and signing is not
+   required by the protocol. AgentSmith checks nothing about a repository's `.mcp.json`. **Fix, without shipping a client:** the
+   repository declares its MCP servers and tool-definition hashes, and the gate fails on an undeclared server or a drifted
+   definition. Small, and ahead of most. *First after launch.*
+4. **No kill switch**, listed "not covered" in `docs/agentic-42001-coverage.md` (F12, S10). `agentsmith mode off` meanwhile
+   records a state nothing reads (below): give it this meaning. *Stage 2.*
+5. **Evidence is not signed.** A gate record is a JSON file and a commit, which an auditor must take on trust. Microsoft's
+   toolkit signs an attestation per deployment; no AI-provenance predicate is settled in SLSA or in-toto, so there is room to
+   lead. **Fix:** an in-toto attestation of each gate verdict, signed keylessly in CI. *After launch.*
+6. **A record does not say who wrote the change, or who judged it.** `contract/record/v1` has no agent or model, and no gate
+   version, so a backfill judges old commits by today's rules. Attribution by `Co-authored-by` is known to be weak. **Fix:**
+   the IDE hook knows the agent: record it, and the gate's version. *After launch.*
+7. **No `gen_ai.*` telemetry.** `contract/telemetry/v1` defines its own attributes. OpenTelemetry's GenAI conventions, with
+   agent and MCP spans, are still in Development but are what every observability tool reads. **Fix:** emit both, and
+   pin the conventions' version. *After launch.*
+8. **No EU AI Act mapping.** The coverage docs lead with UAE and ISO themes. The Digital Omnibus (in force 27 July 2026, per
+   law-firm summaries; confirm against the Official Journal) moved Annex III high-risk duties to 2 December 2027 and Annex I
+   to 2 August 2028; Article 50 transparency applied from 2 August 2026. **Fix:** map it, with those dates. *Stage 1.*
+9. **Agent evals stop at the answer.** Suites judge an output. Agents fail in the path: wrong tool, wrong order, a skipped
+   approval. **Fix:** a `trajectory` suite in the evals contract, graded from traces, plus the rubric digest below.
+   *After launch.*
+10. **Prompt injection into the coding agent itself is unchecked in CI.** In April 2026 researchers hijacked Claude Code,
+    Gemini CLI and Copilot through malicious pull-request titles. **Fix:** a gate check that fails a workflow passing untrusted
+    event text to an agent. Small, and a strong demonstration. *After launch.*
+11. **Edit-time enforcement on two of six IDEs.** Copilot, Codex and Gemini CLI now have hook and managed-policy surfaces.
+    Confirm each schema from a real session, then generate its config; Copilot first, for reach. *After launch.*
 
-  The framework's own fixtures are guarded by tests (`test_fairness_evals.py`
-  asserts pairs exist, `test_hallucination_evals.py` asserts a positive control
-  does), so this is reachable only through a tenant override. Left alone
-  deliberately: making it hard-fail would red-build every tenant whose fixture
-  predates the control, which is a release decision, not a fix.
-  **Trigger:** a tenant's fairness or hallucination gate is green and someone
-  asks what it measured. Found in the 2026-08-24 review pass.
-- ~~**`.env.swp`**~~ — **gone.** The orphaned vim swap file is no longer on
-  disk and was never tracked. This entry outlived the file it described.
-- ~~**`scripts/verify_ttft.py:21`**~~ — **closed.** `from pathlib import Path`
-  is no longer imported there and `ruff check` is clean on that file. The
-  remaining `noqa` on the `_shared` import is deliberate and still correct.
-
-  Both of the above were verified as false on 2026-08-24, which is the header's
-  own instruction working: *"If an entry here says something is missing, check
-  it still is."* A backlog that describes a fixed problem costs the same
-  attention as one that describes a real one, and spends it on nothing.
+Sources: [Gartner AI governance platforms](https://www.gartner.com/reviews/market/ai-governance-platforms) ·
+[Gartner agent management platforms](https://www.gartner.com/reviews/market/ai-agent-management-platforms) ·
+[Microsoft Agent Governance Toolkit](https://opensource.microsoft.com/blog/2026/04/02/introducing-the-agent-governance-toolkit/) ·
+[State of MCP security, Microsoft](https://techcommunity.microsoft.com/blog/microsoft-security-blog/the-state-of-mcp-security-in-2026/4531327) ·
+[MCP tool poisoning, CSA](https://labs.cloudsecurityalliance.org/research/csa-research-note-mcp-tool-poisoning-auto-execution-20260701/) ·
+[EU AI Act Omnibus, Gibson Dunn](https://www.gibsondunn.com/eu-ai-act-omnibus-agreement-postponed-high-risk-deadlines-and-other-key-changes/) ·
+[Omnibus finalised, Orrick](https://www.orrick.com/en/Insights/2026/07/EU-AI-Act-Update-Digital-Omnibus-Finalizes-8-Compliance-Changes) ·
+[OTel GenAI status](https://dev.to/azena-ai/opentelemetrys-genai-semantic-conventions-are-not-stable-yet-heres-what-actually-shipped-in-2026-3mke) ·
+[AI provenance, TODO Group](https://todogroup.org/blog/2026-07-14-verifiable-provenance-ai-assisted-contributions/) ·
+[Coding-agent controls, Endor Labs](https://www.endorlabs.com/learn/critical-controls-coding-agents)
 
 ---
 
-## Future Phases — confirmed gaps, not yet scheduled
+## After Stage 2, in order
 
-### Nine more unbounded `sys.stdin.read()` calls, same defect as the gate's
+**First-run friction.** All 14 pillars for a one-line change is the most likely reason a newcomer gives up. *Scope-derived
+pillar subset:* ask only the pillars a change's paths implicate, each still carrying evidence. Held until G4, which has
+shipped, and its impact query is trusted.
 
-Raised 2026-11-01 in Pass 2 of `hook-answers-without-its-payload`, by sweeping the
-data rather than the directory. The gate's three reads are fixed; these nine are
-the same line, unfixed:
+**A day-one tenant's CI is red on every stack, by design.** Stage 1 step 6 explains it. Whether it should stay red for a new
+repository is still worth asking once outsiders try it. Do not relax strict merely to get green.
 
-| file | lines |
-|---|---|
-| `scripts/rules_port.py` | 211 |
-| `scripts/security_port.py` | 234 |
-| `scripts/evals_port.py` | 235 |
-| `runtime/cli.py` | 1025, 1075, 1094, 1154 |
-| `.githooks/process-gate` | 221, 409 (inline `python3 -`) |
-
-Each waits for an EOF its caller may never send. The three ports are contract
-endpoints the launcher invokes with a pipe it closes, and the `runtime/cli.py`
-paths are `conformance` and the CLI's own stdin readers — so none is known to hang
-today. That is a statement about the callers in this repository, not about the
-code, which is exactly the reasoning this slice had to retract for the gate's two
-`--decision` paths.
-
-**Why it is not fixed here:** `_payload_text` lives in `scripts/process_gate.py`,
-and the gate deliberately does not import its own modules. Sharing it means
-putting it in `scripts/_shared.py` (or beside it) and having four modules plus two
-inline hook scripts take it from there — a different change from bounding the
-gate's own read, with its own tests per caller. Doing it inside this slice would
-have meant five more gated files under a design written for one.
-
-**Fix:** move the helper to a shared module, point all nine at it, and give each
-caller the held-open-pipe test the gate now has.
-
+**The gate's own loose ends:**
 
 ### The stop gate cannot tell a mutation harness's edit from an unreviewed change
 
@@ -489,6 +237,36 @@ there as held rather than unreviewed, naming it as such in the output rather tha
 staying silent. Both halves matter: a gate that silently ignores a path is worse
 than one that blocks on it.
 
+### Nine more unbounded `sys.stdin.read()` calls, same defect as the gate's
+
+Raised 2026-11-01 in Pass 2 of `hook-answers-without-its-payload`, by sweeping the
+data rather than the directory. The gate's three reads are fixed; these nine are
+the same line, unfixed:
+
+| file | lines |
+|---|---|
+| `scripts/rules_port.py` | 211 |
+| `scripts/security_port.py` | 234 |
+| `scripts/evals_port.py` | 235 |
+| `runtime/cli.py` | 1025, 1075, 1094, 1154 |
+| `.githooks/process-gate` | 221, 409 (inline `python3 -`) |
+
+Each waits for an EOF its caller may never send. The three ports are contract
+endpoints the launcher invokes with a pipe it closes, and the `runtime/cli.py`
+paths are `conformance` and the CLI's own stdin readers — so none is known to hang
+today. That is a statement about the callers in this repository, not about the
+code, which is exactly the reasoning this slice had to retract for the gate's two
+`--decision` paths.
+
+**Why it is not fixed here:** `_payload_text` lives in `scripts/process_gate.py`,
+and the gate deliberately does not import its own modules. Sharing it means
+putting it in `scripts/_shared.py` (or beside it) and having four modules plus two
+inline hook scripts take it from there — a different change from bounding the
+gate's own read, with its own tests per caller. Doing it inside this slice would
+have meant five more gated files under a design written for one.
+
+**Fix:** move the helper to a shared module, point all nine at it, and give each
+caller the held-open-pipe test the gate now has.
 
 ### "caught" does not say which test caught it
 
@@ -527,6 +305,8 @@ is right. **Fix:** refresh the whole table from one weekly full run rather than
 patching single rows, and note the run id beside it as the current comment does.
 
 
+**Evals credibility:**
+
 ### A score records its judge but not its rubric version
 
 Raised 2026-09-03 by an outside critique of LLM-judge practice, and it lands.
@@ -559,30 +339,95 @@ failure-driven rather than uncertainty-driven (no active learning); no linkage
 from eval scores to business outcomes. The first is cheap and worth doing; the
 last needs holdouts and traffic volume this project does not have.
 
-### Team-shared RFC store (`AGENT_SHARED_RFC_DIR`) — specified, never built
+**Open — a judge that is not the one the bars were calibrated for is not flagged (found 2026-10-07,
+KYC).** A tenant's bars are calibrated against one grader (KYC's 0.95 / 0.95 / 0.75 against
+`gemini-3-flash-preview`), but the judge a run uses is whatever the machine's mode selects: on a
+machine in `local` mode KYC's judge resolves to `falcon3:3b`, which its own `models.yaml` calls
+uncalibrated, and the provider grades against the same bars without a word. The scorecard records
+the judge that answered (`judge_models_used`) but not the judge the bars belong to. Fix: the judge
+role in `models.yaml` names the grader its `fail_below` was calibrated on; when the answering judge
+differs, the scorecard says so in its reason and the launcher warns — a pass against a borrowed bar
+is not the pass the bar describes (`failure-is-not-a-result`). **Also from the same move:** an
+over-quota contract run raises two warnings, the launcher's and `run-evals.py`'s own annotation
+fired inside the provider — one verdict should speak once.
 
-Found 2026-09-01 during a documentation audit. `AGENT_SHARED_RFC_DIR` was
-documented in **docs/UserManual.md** with two copy-pasteable `export` lines and the
-claim that "agents and `run-evals.py` also read from this directory", and in
-**docs/DESIGN.md** in three places including a security boundary for it. Nothing in
-the codebase has ever read the variable, and there is no shared-RFC concept in
-any module.
+**Open — evals-port suites for live latency and shadow comparison (found 2026-10-13, C9).**
+`eval-ttft-live.yml` and `shadow-eval.yml` left the templates in 3.0.0: they ran `verify_ttft.py` and
+`shadow-eval.py` by path and had no port. OTS ran the TTFT one (opt-in). Fix: `ttft` and `shadow` suites
+in the evals contract, so a tenant asks for them like the others.
 
-Both documents now say so. What is worth keeping from the old text is the
-constraint, which was the considered part: sharing is **within one
-organisation's workspace only** — shared RFC edges must not span tenant
-repositories, and this must never become a path for cross-tenant production
-data linkage. The Knowledge Graph stays strictly per-repo regardless.
+**Open — human feedback into a tenant's own evaluation data (found 2026-10-11, C8).**
+`sync-ui-feedback.py` promoted negative Phoenix annotations into the golden dataset from tenant CD
+and opened a PR with them; C8 retired it from CD (it was not an Ops record, and wrote cases without
+the `actual_output` the evals contract requires). It stays the first half of `agentsmith evals` on a
+developer's machine. Fix: a feedback feed the tenant pulls — from its portal or its trace store — into
+cases the evals contract can grade, as an evals-data feature.
 
-**Trigger:** a team asks for RFC specs visible across their repositories. Until
-then a symlink into each repo's `.agent-rfc/` does the job and does not pretend
-to be a feature.
+**`sync` and declarations a tenant edited.** Found on every tenant move. `sync` leaves a hand-edited `providers.json` at its
+old setup pin and `^N` range, and a gates workflow a tenant wrote; `ownership()` and the rules check disagree on whose
+`.cursorrules` is; hooks a tenant already holds uncommitted stay out of its commit list. Fix: a file the declared provider
+renders is the provider's for `sync`, and it names what it left and why.
 
-**Lesson, which is the general one from that audit:** a variable that is read by
-nothing fails silently by construction. There is no error to see, so the only
-thing standing between a user and a false belief is whether the documentation is
-true. `scripts/test/test_documented_env_vars_exist.py` now checks that every
-environment variable named in the docs is read somewhere.
+**`agentsmith mode off` and the bypass policy have nothing left to mute** (found 2026-10-13). `mode off` records a state only
+`status` and `check` read, and `DISABLE_AI_STACK` is read by nothing. Gap 4 gives it a meaning, or retire it.
+
+**Open — `tenant init` offering the rule files' `.gitignore` in a public repository (found 2026-10-13, C9).**
+The machine-wide `post-checkout` asked, for a repository it judged public, whether to gitignore the rule
+files (system-prompt content). It retired in 3.0.0 and `tenant init` does not ask. Fix: a non-interactive
+flag (`--public`) that writes the block, and a line in the plan when the remote looks public.
+
+**Open — a signed bundle of the provider and the org policy (found 2026-10-13, C9).**
+The Enterprise Pack's signed hook bundle retired with the machine-wide hooks. IT now distributes
+`install-ai-stack.sh` and the policy by its own means. Fix: a signed, versioned bundle of both, verified
+before install, as the hook bundle was.
+
+**Smaller, each with its trigger:**
+
+| Item | Trigger |
+|---|---|
+| A clone made before 3.0.0 keeps the machine hooks in `.git/hooks`; where it never adopted the gates, `post-commit` still tags and pushes. The CHANGELOG says how to remove them | A report of an unexpected tag; then `agentsmith doctor --fix` |
+| husky's `prepare` points `core.hooksPath` back at `.husky`, disarming the gates; `tenant adopt` warns | The first adopted repository using husky |
+| Portal: Ops answers 404 for an app outside a user's grants, Dev shows two screens. Align them | The next change to an Ops page |
+| A pointer by heading name dies when the heading is renamed, and nothing reads it | The next dead pointer |
+| `tenant.yaml` is outside the IDE-config gitignore block; it may hold real endpoint URLs | A public tenant carrying them |
+| Rule files are gitignored here, so a clone's copies go stale when `agent-rules.yaml` changes | Agents in this repository read stale rules again |
+| `mutation_check.py --list` runs the journal recovery, so listing suites during a live run restores the file under mutation, and that mutant can read as a false survivor (hit 2026-11-03). The journal should name its owner's pid, and `--list` should not recover | Do with the next change to the runner |
+| Two agents in one checkout: a lock. It recurred 2026-10-17, and the mutation journal makes it small | Owner request, or the next collision |
+| KYC Sentinel moves to `records: single` | KYC's next governance change |
+| Self-Test's security job installs `requirements.txt` ranges, not the lock, through a tenant-facing action | A harness run that differs by dependency version |
+| The framework environment assumes a POSIX venv layout; there is no Windows runner | The first native Windows install |
+| npm and pnpm only; pip and uv only. Yarn and bun fail by name, Poetry and Pipenv get a warning | A tenant on one; add a scratch app first |
+| `AGENT_SHARED_RFC_DIR`: specified once, never built, and now documented as such. Sharing stays within one organisation | A team asks for RFCs across repositories |
+
+**Known gaps from the 1.1.0 review:**
+
+- **`SEC-TOOL-001` verifies the mechanism, not your allowlist.** Its runner
+  smoke-tests `ToolRegistry` deny-by-default against the shipped *template*,
+  so a tenant's green SEC-TOOL-001 says the enforcement works — not that the
+  tenant's own `tool_allowlist.yaml` is sane. **Trigger:** an auditor reads the
+  evidence pack as a statement about the tenant's tools.
+- **A tenant that removes its controls removes the gate with them.** Both
+  detection gates are conditional on the control existing: the fairness parity
+  floor applies only `if min_parity is not None`, and the hallucination
+  detection-miss floor only `if hallucination_miss is not None`. Delete the
+  `pair_id`s from a fairness fixture, or the planted case from a hallucination
+  one, and the suite still passes on `avg_score` alone having measured no bias
+  and no detection. Both report the absence honestly — "NOT MEASURED", "no
+  positive control in this suite" — so this is a reporting-is-right,
+  gate-is-silent split, not a false green.
+
+  The framework's own fixtures are guarded by tests (`test_fairness_evals.py`
+  asserts pairs exist, `test_hallucination_evals.py` asserts a positive control
+  does), so this is reachable only through a tenant override. Left alone
+  deliberately: making it hard-fail would red-build every tenant whose fixture
+  predates the control, which is a release decision, not a fix.
+  **Trigger:** a tenant's fairness or hallucination gate is green and someone
+  asks what it measured. Found in the 2026-08-24 review pass.
+
+
+---
+
+## Later: confirmed gaps, each waiting on its trigger
 
 ### Compliance gap status boards (pointers, not copies)
 
@@ -658,14 +503,16 @@ Multi-turn planner/tool-choice correction stays out of scope.
 (Emirates ID, email, phone, Luhn cards). Content moderation (toxicity) stays
 out of framework scope — tenants declare a `moderation.hook`.
 
-### Package rename — `runtime` → `agentsmith_runtime`
+---
 
-The distribution is `agentsmith-runtime` but imports as the generic top-level
-`runtime`, which could collide in a crowded virtualenv. Noted in
-`pyproject.toml`.
-
-**Trigger:** a real collision, or the next major version — it breaks every
-`from runtime.X import Y` in every tenant at once, so it is a 2.0.0 change.
+**Settled design decisions (do not re-open without a concrete reason):**
+- MCP integration stays tenant-owned (BYO): the framework ships no MCP client or server. Rationale in
+  docs/DESIGN.md › Architecture by Layer. **Governing a repository's MCP declarations is a different thing,
+  and is proposed below (gap 3).**
+- LLM self-correction is a separate opt-in method
+  (`run_with_self_correction`), never inserted in front of the human DLQ path.
+- The default model registry is local-only. Cloud tiers are a deliberate
+  per-tenant opt-in, not something a budget breach can reach.
 
 ---
 
@@ -764,37 +611,6 @@ Operational lessons distilled from past phases; full incident context in
 - **Groq 429 retry needs FULL JITTER** — `(2**attempt)*5 + random.uniform(0, 3)`.
   A bare `2**n * 5` gives concurrent CI jobs identical waits. Baked into
   `scripts/cost_router.py`.
-- **`# fail-open:` convention + global-copy drift** — the pre-commit hook
-  executes the GLOBAL `~/.agent-framework/scripts/check_bare_except.py`, not
-  the repo copy; sync both when changing checker behaviour.
-- **The same drift bites the agent RULES, and it is easy to miss because the
-  repo tests all pass.** `git init` runs `~/.git_templates/hooks/post-checkout`,
-  which reads `~/.agent-framework/templates/agent-rules.yaml` and
-  `~/.agent-framework/scripts/generate-ide-config.py`. Edit the repo alone and a
-  freshly provisioned project still gets the OLD pillars — observed 2026-08-17,
-  where the repo had 14 pillars and 6 targets while a real `git init` produced 10
-  pillars and 3. Nothing failed; it just quietly provisioned the previous
-  version. After changing `templates/agent-rules.yaml`,
-  `scripts/generate-ide-config.py` or `hooks/*`:
-
-      cp templates/agent-rules.yaml       ~/.agent-framework/templates/
-      cp scripts/generate-ide-config.py   ~/.agent-framework/scripts/
-      cp hooks/post-checkout              ~/.git_templates/hooks/
-
-  That targeted copy is the FAST path, and it is deliberately not the supported
-  one. Re-running the installer from the checkout is:
-
-      bash install-ai-stack.sh    # from the repo root
-
-  When `INSTALLER_DIR` resolves to a checkout it overwrites the global copies of
-  `scripts/`, `templates/agent-rules.yaml` and all four `hooks/*` — so it also
-  refreshes `workflow-templates/`, `github-actions/` and the on-prem template,
-  which the three `cp` lines above miss. It has no skip flags, so it re-runs the
-  whole install (pip, Ollama checks); use the `cp` shortcut when you have touched
-  only rules or hooks, and the installer when you have touched anything else.
-
-  Either way, verify against a throwaway `git init` rather than trusting the
-  copy — that is what turned this up.
 - **Cloud SQL from Cloud Run** — use the Auth Proxy
   (`--add-cloudsql-instances`, Unix-socket `DATABASE_URL`), never
   `sslmode=no-verify`; grant the Compute SA `roles/cloudsql.client` and
@@ -806,7 +622,3 @@ Operational lessons distilled from past phases; full incident context in
 - **WIF attribute condition is one expression** — adding a repo means updating
   `==` to `in [...]`, or the new repo gets
   `unauthorized_client: rejected by attribute condition`.
-- **oil-price-demo: cherry-pick, don't rebase** — the post-commit hook
-  regenerates the Knowledge Graph on every git operation. `AGENT_KG_DEFER=1 git
-  rebase ...` now skips the per-step rebuild (run `python3
-  scripts/map_codebase.py` once afterwards).
