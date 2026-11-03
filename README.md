@@ -153,7 +153,7 @@ A governed repository holds one declaration — `.agenticframework/providers.jso
     "gate": {
       "command": "agentsmith gate",
       "version": "^3",
-      "setup": "bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@v3.0.0"
+      "setup": "bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@v3.0.1"
     },
     "rules":    { "command": "agentsmith rules",    "version": "^3", "contract": 1 },
     "evals":    { "command": "agentsmith evals",    "version": "^3", "contract": 1 },

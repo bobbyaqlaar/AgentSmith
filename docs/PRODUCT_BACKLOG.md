@@ -11,11 +11,11 @@
 > install works for anyone", on the strength of a 200 and a checksum. Run from scratch, a stranger's first commit
 > was refused.
 
-## Current state (2026-11-03)
+## Current state (2026-11-04)
 
-**v3.0.0 is the latest release**, and it is broken for a stranger (see Stage 1, step 1). The governance
+**v3.0.1 is the latest release**, and `release.yml` runs the Quick Start on its published URL. The governance
 contracts C1–C9 are complete. **AgentSmith is public (AGPL-3.0)**; KYC Sentinel and AqlaarTeleologyStudio are
-private. KYC is on 3.0.0 with green CI. OTS is on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
+private. KYC is on 3.0.0 with green CI, and OTS on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
 two security controls awaiting its own content: do not use it as a showcase.
 
 ---
@@ -35,7 +35,7 @@ labelled preview.
 | # | Step | Who | Day |
 |---|---|---|---|
 | 1 | ✅ Installing from a release works (`release-install-path`, merged; first released in 3.0.1) | Claude | Tue 3 |
-| 2 | AGPL notices and community files (`agpl-compliance`) | Claude | Tue 3 |
+| 2 | ✅ AGPL notices and community files (`agpl-compliance`, merged) | Claude | Tue 3 |
 | 3 | Release 3.0.1; `release.yml`'s verify job green on the real URL | Claude | Tue 3 |
 | 4 | ✅ Private vulnerability reporting on, which `SECURITY.md` relies on | Owner | Tue 3 |
 | 5 | Rename `runtime` to `agentsmith`; release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Wed 4 |

@@ -7,6 +7,10 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Release 3.0.1 (2026-11-04)
+
+The install fix (`release-install-path`) and the AGPL notices (`agpl-compliance`), for the launch. See `CHANGELOG.md`.
+
 ## Closed — the backlog review of 2026-11-03
 
 Every entry in `docs/PRODUCT_BACKLOG.md` was checked against the code and CI. These left it:
