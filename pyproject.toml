@@ -89,6 +89,8 @@ dev = ["pytest>=8.0,<9.0", "pytest-asyncio>=0.23,<1.0"]
 Homepage = "https://github.com/bobbyaqlaar/AgentSmith"
 
 [tool.setuptools]
+# A wheel is conveyed: it must carry the licence and the notice.
+license-files = ["LICENSE", "NOTICE"]
 # Explicit list, not auto-discovery: the repo root also contains scripts/,
 # portal/, templates/, examples/ and fixtures/, none of which are Python
 # packages meant for distribution.

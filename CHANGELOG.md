@@ -103,6 +103,20 @@ existing install. No CI ran that path (`release-install-path`).
   built from the commit, inside its required Python job, and `release.yml` runs it on the published URL.
 - `AI_STACK_RELEASE_BASE` points the installer at a mirror.
 
+### Added — AGPL-3.0 notices, and the files a public project needs
+
+AgentSmith stays AGPL-3.0-only (`agpl-compliance`).
+
+- **`NOTICE`:** copyright, the licence notice and warranty disclaimer, the source, what section 13 asks of
+  someone running a modified copy, and the separately licensed services.
+- **The Ops Portal's footer** shows the legal notices and a Source link. **If you run a modified portal as a
+  network service, set `AGENTSMITH_SOURCE_URL`** to where your source is published.
+- **`THIRD_PARTY_LICENSES.md`**, generated from the lockfiles, with a test that fails on a package missing from
+  it or on a licence no one has reviewed.
+- `widget.js` carries the notice, and wheels carry `LICENSE` and `NOTICE`.
+- **`SECURITY.md`, `CONTRIBUTING.md`** (a DCO sign-off, contributions under the same licence),
+  **`CODE_OF_CONDUCT.md`**, and issue and pull-request templates.
+
 ### Fixed — the gate answers whether or not its payload arrives
 
 `scripts/process_gate.py` read its payload with `sys.stdin.read()`, in **three** places: the hook

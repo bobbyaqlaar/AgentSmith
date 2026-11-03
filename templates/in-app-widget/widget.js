@@ -1,4 +1,8 @@
 /**
+ * @license AGPL-3.0-only
+ * Copyright (C) 2026 Aqlaar Tech FZE LLC. No warranty. Source and full licence:
+ * https://github.com/bobbyaqlaar/AgentSmith (NOTICE, LICENSE).
+ *
  * AgentSmith In-App Widget — <agent-status>
  *
  * Embeddable, read-only status component for tenant applications

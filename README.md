@@ -387,8 +387,17 @@ ISO 42001 map, the delivery model, RAG and memory, team observability — is und
 
 ## License and Trademark
 
-Released under the
-[GNU Affero General Public License v3.0 (AGPL-3.0)](./LICENSE).
+Copyright © 2026 Aqlaar Tech FZE LLC. Released under the
+[GNU Affero General Public License v3.0 (AGPL-3.0-only)](./LICENSE), with no warranty; see
+[NOTICE](./NOTICE) and [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md).
+
+If you run a **modified** copy of the Ops Portal as a network service, AGPL-3.0 section 13 requires you to
+offer its users your source: set `AGENTSMITH_SOURCE_URL`, and the footer's Source link points there. If your
+application imports `agentsmith-runtime`, read the licence with that in mind, and take legal advice for your
+situation. This paragraph is a pointer, not legal advice.
+
+Contributions are welcome under the same licence: see [CONTRIBUTING.md](./CONTRIBUTING.md). To report a
+vulnerability, see [SECURITY.md](./SECURITY.md).
 
 The name **AgentSmith**, the AgentSmith logo, and associated marks are
 subject to trademark protections — the software license grants no rights to
