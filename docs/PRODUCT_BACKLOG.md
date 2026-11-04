@@ -36,7 +36,7 @@ labelled preview.
 |---|---|---|---|
 | 1 | ✅ Installing from a release works (`release-install-path`, merged; first released in 3.0.1) | Claude | Tue 3 |
 | 2 | ✅ AGPL notices and community files (`agpl-compliance`, merged) | Claude | Tue 3 |
-| 3 | Release 3.0.1; `release.yml`'s verify job green on the real URL | Claude | Tue 3 |
+| 3 | ✅ Release 3.0.1; `release.yml`'s verify job green on the real URL | Claude | Tue 3 |
 | 4 | ✅ Private vulnerability reporting on, which `SECURITY.md` relies on | Owner | Tue 3 |
 | 5 | Rename `runtime` to `agentsmith`; release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Wed 4 |
 | 6 | First run: a new repository's red security job says it is expected, and what to write to get green (fires the onboarding item below) | Claude | Wed 4 |

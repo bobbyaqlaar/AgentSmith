@@ -977,6 +977,21 @@ CATALOGUE: tuple[Suite, ...] = (
                 '-o "$out/agentsmith-source.tar.gz" HEAD',
                 '-o "$out/agentsmith-source.tar.gz" HEAD scripts',
             ),
+            Mutation(
+                "a name found early in a long listing is reported missing",
+                "scripts/build_release_assets.sh",
+                '''if ! grep -qxF "$needed" <<<"$listing"; then''',
+                '''if ! printf '%s\\n' "$listing" | grep -qxF "$needed"; then''',
+            ),
+            Mutation(
+                "a name absent from the archive is no longer reported",
+                "scripts/build_release_assets.sh",
+                '''    echo "❌ agentsmith-source.tar.gz is missing $needed" >&2
+    exit 1
+''',
+                '''    echo "❌ agentsmith-source.tar.gz is missing $needed" >&2
+''',
+            ),
         ),
     ),
 

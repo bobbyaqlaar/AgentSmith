@@ -29,7 +29,9 @@ listing="$(tar -tzf "$out/agentsmith-source.tar.gz")"
 for needed in install-ai-stack.sh .githooks/process-gate docs/review-levers.md \
               docs/design-review-checklist.md runtime/cli.py requirements.lock \
               fixtures/security/control_registry.json templates/governance.json; do
-  if ! printf '%s\n' "$listing" | grep -qxF "$needed"; then
+  # A here-string, not a pipe: `grep -q` leaves at its first match, and under
+  # pipefail a writer left behind reads as "missing", as it did tagging v3.0.1.
+  if ! grep -qxF "$needed" <<<"$listing"; then
     echo "❌ agentsmith-source.tar.gz is missing $needed" >&2
     exit 1
   fi
