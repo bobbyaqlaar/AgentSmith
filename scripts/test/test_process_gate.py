@@ -19,6 +19,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -1201,11 +1202,16 @@ def _gate_with_open_stdin(*args: str, hold: float = 20.0) -> tuple[float, int, s
     unbounded read this call does not return at all, which is the defect rather
     than a proxy for it.
     """
+    # A repository of its own: after the wait these paths read history, and the
+    # time that takes grows with whichever branch this suite happens to run on.
+    scratch = tempfile.TemporaryDirectory()
+    _git(Path(scratch.name), "init", "-q", "--template=")
+    _git(Path(scratch.name), "commit", "-q", "--allow-empty", "-m", "chore: start")
     read_fd, write_fd = os.pipe()
     started = time.monotonic()
     try:
         proc = subprocess.Popen([sys.executable, str(GATE), *args], stdin=read_fd,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=REPO)
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=scratch.name)
         os.close(read_fd)
         try:
             _out, err = proc.communicate(timeout=hold)
@@ -1218,6 +1224,7 @@ def _gate_with_open_stdin(*args: str, hold: float = 20.0) -> tuple[float, int, s
             ) from None
     finally:
         os.close(write_fd)
+        scratch.cleanup()
     return time.monotonic() - started, proc.returncode, err
 
 
@@ -1242,10 +1249,9 @@ def test_a_contract_decision_answers_when_nobody_closes_stdin(args) -> None:
     same unbounded read. The first draft of the design excluded them on the
     grounds that a contract client closes its pipe — an assumption about someone
     else's code, not a property of this one."""
-    # `hold` is the bound. These paths read the range after the wait, so their
-    # elapsed time measures the repository and the runner, not the read.
-    _elapsed, _code, err = _gate_with_open_stdin(*args)
+    elapsed, _code, err = _gate_with_open_stdin(*args)
 
+    assert elapsed < pg._STDIN_DEADLINE + 5, f"answered in {elapsed:.1f}s"
     assert "no payload within" in err, err
 
 
