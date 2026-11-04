@@ -84,6 +84,11 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — a contract decision's test bounds the wait, not the gate's work
+
+`test_a_contract_decision_answers_when_nobody_closes_stdin` failed a PR at 7.05s against 7s: `ci --decision` reads the range after
+its wait, so the time grew with the repository and the runner. Its twenty-second `hold` still catches a gate waiting for an EOF.
+
 ### Fixed — the release build reports a file missing only when it is
 
 Tagging `v3.0.1` failed at the build step with "agentsmith-source.tar.gz is missing install-ai-stack.sh", and the file was
