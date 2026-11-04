@@ -16,6 +16,7 @@ scripts/check_release_install.sh runs the stranger's whole path in CI
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import tarfile
@@ -87,8 +88,11 @@ def test_the_source_archive_unpacks_as_a_checkout(built):
 
 
 def test_the_source_archive_holds_only_tracked_files(built):
-    tracked = set(subprocess.run(["git", "-C", str(REPO), "ls-tree", "-r", "--name-only", "HEAD"],
-                                 capture_output=True, text=True, check=True).stdout.splitlines())
+    tracked = set(
+        subprocess.run(
+            ["git", "-C", str(REPO), "ls-tree", "-r", "--name-only", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.splitlines()
+    )
     with tarfile.open(built / "agentsmith-source.tar.gz") as archive:
         files = {m.name for m in archive.getmembers() if m.isfile()}
     assert not files - tracked, f"the archive carries what git does not track: {sorted(files - tracked)[:5]}"
@@ -98,3 +102,45 @@ def test_the_source_archive_holds_only_tracked_files(built):
 def test_the_release_builds_through_the_shared_script():
     """One build, or what Self-Test's check exercises is not what ships."""
     assert "bash scripts/build_release_assets.sh dist" in RELEASE_YML.read_text(encoding="utf-8")
+
+
+def _build_with_listing(tmp_path: Path, listing: str) -> subprocess.CompletedProcess:
+    """The real build, with `tar -tzf` answering `listing`."""
+    stubs = tmp_path / "bin"
+    stubs.mkdir()
+    (tmp_path / "listing").write_text(listing, encoding="utf-8")
+    stub = stubs / "tar"
+    stub.write_text(f'#!/bin/sh\ncat "{tmp_path / "listing"}"\n', encoding="utf-8")
+    stub.chmod(0o755)
+    return subprocess.run(
+        ["bash", str(BUILD), str(tmp_path / "dist")],
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PATH": f"{stubs}{os.pathsep}{os.environ['PATH']}"},
+    )
+
+
+def _needed_names() -> list[str]:
+    text = BUILD.read_text(encoding="utf-8")
+    block = text[text.index("for needed in") : text.index("; do\n  # A here-string")]
+    return block.replace("for needed in", "").replace("\\", " ").split()
+
+
+def test_a_name_found_early_in_a_long_listing_is_not_reported_missing(tmp_path):
+    """Tagging v3.0.1 failed on "missing install-ai-stack.sh" with the file present.
+
+    The listing is longer than a pipe buffer, so a `printf | grep -q` is always
+    still writing when grep leaves at its first match.
+    """
+    padding = "".join(f"padding/{i:06}.txt\n" for i in range(50_000))
+    listing = "\n".join(_needed_names()) + "\n" + padding
+    result = _build_with_listing(tmp_path, listing)
+    assert result.returncode == 0, result.stderr
+
+
+def test_a_name_really_absent_from_the_listing_is_still_reported(tmp_path):
+    names = _needed_names()
+    result = _build_with_listing(tmp_path, "\n".join(names[1:]) + "\n")
+    assert result.returncode == 1
+    assert f"missing {names[0]}" in result.stderr

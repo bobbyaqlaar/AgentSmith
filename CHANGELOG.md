@@ -84,6 +84,13 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — the release build reports a file missing only when it is
+
+Tagging `v3.0.1` failed at the build step with "agentsmith-source.tar.gz is missing install-ai-stack.sh", and the file was
+there. `scripts/build_release_assets.sh` piped the archive's listing into `grep -q` under `pipefail`, so a writer left behind
+when grep found its match read as absent. It depended on timing: Self-Test had passed on the same commit. The check now
+reads the listing with no pipe, and holds both directions in a test.
+
 ## [3.0.1] — 2026-11-04
 
 ### Fixed — installing from a release works
