@@ -1242,9 +1242,10 @@ def test_a_contract_decision_answers_when_nobody_closes_stdin(args) -> None:
     same unbounded read. The first draft of the design excluded them on the
     grounds that a contract client closes its pipe — an assumption about someone
     else's code, not a property of this one."""
-    elapsed, _code, err = _gate_with_open_stdin(*args)
+    # `hold` is the bound. These paths read the range after the wait, so their
+    # elapsed time measures the repository and the runner, not the read.
+    _elapsed, _code, err = _gate_with_open_stdin(*args)
 
-    assert elapsed < pg._STDIN_DEADLINE + 5, f"answered in {elapsed:.1f}s"
     assert "no payload within" in err, err
 
 
