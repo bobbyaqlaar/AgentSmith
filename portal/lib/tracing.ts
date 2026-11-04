@@ -1,7 +1,7 @@
 // portal/lib/tracing.ts — the portal's own spans.
 //
 // WHAT WAS MISSING. The worker injects a W3C `traceparent` on its way here
-// (runtime/tracing.inject_context) and app/api/runs/ingest stores the trace id
+// (agentsmith/tracing.inject_context) and app/api/runs/ingest stores the trace id
 // on the row, so a portal page can LINK to the trace. That is correlation, not
 // tracing: the trace itself ended at the process boundary, because the portal
 // emitted nothing. "Follow this request across services" — the entire point —
@@ -18,7 +18,7 @@
 //
 // WHAT PORTAL SPANS DELIBERATELY DO NOT CARRY: request bodies, query
 // parameters, row values, tokens. The Python side can afford payloads because
-// every span it exports passes through runtime/trace_redactor.py; nothing here
+// every span it exports passes through agentsmith/trace_redactor.py; nothing here
 // does. Parameterised SQL is recorded because it is code — the values travel
 // separately as `params` and are never touched. Exception messages are the one
 // remaining place data could reach a span, which is why `db.statement` is the
@@ -58,7 +58,7 @@ const IDENTITY_KEY = createContextKey("agentsmith.portal.identity");
  * including ones started by code that has never heard of tenants, like the
  * pool in lib/db.ts — is stamped by PortalIdentityProcessor.
  *
- * This is `runtime/tenancy.agent_context()`, and it exists for the same
+ * This is `agentsmith/tenancy.agent_context()`, and it exists for the same
  * reason: threading tenant_id through every call site by hand is a rule, and
  * the audit found that most call sites forgot it.
  */
@@ -83,7 +83,7 @@ export function identityAttributes(identity: PortalIdentity): Attributes {
 const STATEMENT_CHARS = 2000;
 
 export function truncate(text: string, limit = STATEMENT_CHARS): string {
-  // Marked rather than silently clipped, exactly as runtime/tracing.py does —
+  // Marked rather than silently clipped, exactly as agentsmith/tracing.py does —
   // a reader must not take a truncated statement for the whole one.
   return text.length > limit ? `${text.slice(0, limit)}…[truncated at ${limit} chars]` : text;
 }

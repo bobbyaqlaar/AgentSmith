@@ -110,7 +110,7 @@ if { [ -f "$APP/.gitignore" ] && ! cmp -s "$APP/.gitignore" .gitignore; } \
   diff "${APP}/.gitignore" .gitignore 2>/dev/null || cat .gitignore
   exit 1
 fi
-for dir in scripts runtime fixtures/security .github/actions; do
+for dir in scripts agentsmith runtime fixtures/security .github/actions; do
   if [ -e "$dir" ] && [ ! -e "$APP/$dir" ]; then
     echo "::error::the scaffold wrote $dir/ — 3.0.0 vendors nothing into a tenant"
     exit 1

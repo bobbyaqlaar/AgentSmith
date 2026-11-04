@@ -401,8 +401,8 @@ def test_the_exempt_invocations_import_nothing_needing_resolution(invocations, a
 
 def test_shared_root_matches_runtime_root(tmp_path) -> None:
     """`scripts/_shared._repo_root` deliberately mirrors
-    `runtime.config.repo_root` rather than importing it: scripts/ is
-    machine-installed and runtime/ is a pip package, they are not guaranteed
+    `agentsmith.config.repo_root` rather than importing it: scripts/ is
+    machine-installed and agentsmith/ is a pip package, they are not guaranteed
     co-located, and these scripts run standalone before anything has put the
     install root on sys.path.
 
@@ -417,7 +417,7 @@ def test_shared_root_matches_runtime_root(tmp_path) -> None:
     _sys.path.insert(0, str(ROOT))
     _sys.path.insert(0, str(ROOT / "scripts"))
     from _shared import _repo_root as shared_root
-    from runtime.config import repo_root as runtime_root
+    from agentsmith.config import repo_root as runtime_root
 
     outer = tmp_path / "outer"
     (outer / ".git").mkdir(parents=True)
@@ -452,9 +452,9 @@ DOTENV_CASES = [
 
 
 def test_dotenv_parsers_agree() -> None:
-    """`runtime.config._dotenv_value` deliberately mirrors
+    """`agentsmith.config._dotenv_value` deliberately mirrors
     `scripts/_shared._dotenv_value` — neither module can import the other.
-    `runtime/` ships as a pip package that must not depend on machine-installed
+    `agentsmith/` ships as a pip package that must not depend on machine-installed
     scripts, and scripts run standalone before anything puts runtime on
     sys.path; importing across that boundary the other way broke CI on every
     standalone script.
@@ -468,7 +468,7 @@ def test_dotenv_parsers_agree() -> None:
     _sys.path.insert(0, str(ROOT))
     _sys.path.insert(0, str(ROOT / "scripts"))
     from _shared import _dotenv_value as scripts_parse
-    from runtime.config import _dotenv_value as runtime_parse
+    from agentsmith.config import _dotenv_value as runtime_parse
 
     for case in DOTENV_CASES:
         assert runtime_parse(case) == scripts_parse(case), (

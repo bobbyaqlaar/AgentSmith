@@ -38,7 +38,7 @@ entries:
     mitigations:
       - prompt_guard.is_enforcing() is one shared definition of "blocking" for the gateway and the SEC-PROMPT-001 harness, so the control cannot report Met while enforcement is off.
       - input_guardrail.detect_pii and trace_redactor share one Luhn validator, so pre-call and post-call PII detection cannot diverge.
-      - runtime/test/ covers each guardrail; the security harness runs --strict in framework self-test.
+      - agentsmith/test/ covers each guardrail; the security harness runs --strict in framework self-test.
     control_ids:
       - SEC-GW-001
       - SEC-PROMPT-001
@@ -55,7 +55,7 @@ entries:
     severity: high
     mitigations:
       - Callers pass gate_result= when they already hold the needs_hitl decision, so no second execution can disagree with the first.
-      - runtime/test/test_hitl_gate.py asserts the resume activity never runs without an approval signal, and runs without Temporal or Postgres so it is not skipped locally.
+      - agentsmith/test/test_hitl_gate.py asserts the resume activity never runs without an approval signal, and runs without Temporal or Postgres so it is not skipped locally.
       - HITL timeout dead-letters rather than failing the workflow, so a parked request is never lost.
     control_ids:
       - SEC-HITL-001
@@ -68,7 +68,7 @@ entries:
       move traffic across a trust boundary without an operator acting.
     severity: medium
     mitigations:
-      - runtime/models.yaml is local-only (all Ollama, all zero-cost); the ladder can only degrade to a smaller local model.
+      - agentsmith/models.yaml is local-only (all Ollama, all zero-cost); the ladder can only degrade to a smaller local model.
       - Groq and Vertex AI entries ship commented out — opting in is a deliberate edit.
       - degrade_tier is recorded on every span, so a degrade is observable in Phoenix and the Ops Portal.
     control_ids:
@@ -85,7 +85,7 @@ entries:
     mitigations:
       - The judge role is declared in models.yaml and resolved by one function (scripts/_shared.py judge_model()), so CI evals and a tenant's runtime judge cannot drift onto different models by accident.
       - The framework judge (falcon3:3b) is deliberately not the architect model; a test asserts judge_independence_warning stays silent against the live registry.
-      - runtime.judging holds the shared citation-grounding and pair-parity primitives, so the CI gate and per-request enforcement run identical logic.
+      - agentsmith.judging holds the shared citation-grounding and pair-parity primitives, so the CI gate and per-request enforcement run identical logic.
     control_ids:
       - SEC-EVAL-001
       - SEC-EVAL-003

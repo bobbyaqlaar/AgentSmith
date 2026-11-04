@@ -1,7 +1,7 @@
 /**
  * portal/test/replaySignature.test.ts — the replay webhook's outbound signatures.
  *
- * The portal signs; runtime/replay_webhook_server.py verifies. They are
+ * The portal signs; agentsmith/replay_webhook_server.py verifies. They are
  * operated by different people and ship on different cadences, so this asserts
  * the wire shape both sides agreed on rather than "a signature was produced".
  *
@@ -78,7 +78,7 @@ check("the signature covers the body", () => {
 });
 
 check("the exact bytes the Python receiver expects for a known input", () => {
-  // Pinned cross-language. runtime/test/test_replay_webhook_signature.py builds
+  // Pinned cross-language. agentsmith/test/test_replay_webhook_signature.py builds
   // the same value; if either side changes its derivation, one of the two fails.
   const h = replaySignatureHeaders(SECRET, BODY, NOW_MS);
   assert.equal(

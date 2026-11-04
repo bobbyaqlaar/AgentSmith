@@ -78,7 +78,7 @@ test("only the fields that must be given are required", () => {
 });
 
 test("tenant_id follows the portal's app id rule, the narrower of the two", () => {
-  // Each of these passes runtime/cli.py TENANT_ID_PATTERN and would scaffold,
+  // Each of these passes agentsmith/cli.py TENANT_ID_PATTERN and would scaffold,
   // then be refused when the tenant registers as a portal app.
   for (const id of ["Acme", "acme_orders", "acme.orders", "acme-", "a".repeat(64)]) {
     refused({ ...good(), tenant_id: id }, "tenant_id");

@@ -31,7 +31,7 @@ export function toneForRunStatus(status: string): BadgeTone {
   return "neutral"; // "running" / "unknown"
 }
 
-// DLQ entry reason (runtime/dead_letter.py's REASON_* constants) —
+// DLQ entry reason (agentsmith/dead_letter.py's REASON_* constants) —
 // "needs a human decision" (warning) vs. "needs an engineer" (danger),
 // the distinction docs/PRODUCT_ARCHIVE.md's HITL/DLQ redesign added a
 // structured `reason` column specifically to let this view render.

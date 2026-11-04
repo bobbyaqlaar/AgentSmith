@@ -3,10 +3,10 @@
 Short-term conversation buffer + long-term vector retrieval for Delivery
 Model need #4 (standard RAG functions).
 
-## Short-term — `runtime/conversation_memory.py`
+## Short-term — `agentsmith/conversation_memory.py`
 
 ```python
-from runtime.conversation_memory import ConversationMemory
+from agentsmith.conversation_memory import ConversationMemory
 
 mem = ConversationMemory(token_budget=4000)
 mem.add("user", "long conversation…")
@@ -17,10 +17,10 @@ gateway.complete(mem.as_messages())
 Evicts **oldest** messages when over budget (`tiktoken`; char/4 fallback).
 Summarization eviction is v2.
 
-## Long-term — `runtime/vector_store.py` + `runtime/embeddings.py`
+## Long-term — `agentsmith/vector_store.py` + `agentsmith/embeddings.py`
 
 ```python
-from runtime.vector_store import make_vector_store
+from agentsmith.vector_store import make_vector_store
 
 store = make_vector_store()  # VECTOR_BACKEND=memory (default)
 store.add(ids=["doc1"], texts=["UAE Falcon residency checklist…"])

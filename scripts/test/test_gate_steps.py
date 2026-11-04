@@ -351,7 +351,7 @@ def test_this_repos_gates_are_its_own_ci_not_the_templates() -> None:
 
 def test_the_cli_lists_them() -> None:
     result = subprocess.run(
-        [sys.executable, "-m", "runtime.cli", "gates", "list"],
+        [sys.executable, "-m", "agentsmith.cli", "gates", "list"],
         cwd=REPO, capture_output=True, text=True, check=False,
     )
     assert result.returncode == 0, result.stderr

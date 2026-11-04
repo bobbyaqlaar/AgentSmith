@@ -1,6 +1,6 @@
 // portal/test/recordCases.ts — a record contract case's body: fixture.json's
 // record with the one thing the case changes (contract/record/v1/cases.json says
-// how). The same rules as runtime/conformance.py's record_body, which runs the
+// how). The same rules as agentsmith/conformance.py's record_body, which runs the
 // cases against any receiver over HTTP.
 
 import { readFileSync } from "node:fs";

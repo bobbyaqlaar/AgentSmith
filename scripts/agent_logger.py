@@ -28,7 +28,7 @@ Level = Literal["INFO", "MINOR", "MAJOR", "CRITICAL"]
 # _shared.py since they were byte-for-byte duplicated across most of
 # scripts/*.py (this file was the canonical version _shared.py was lifted
 # from — see that module's docstring for why it's not also shared with
-# runtime/llm_gateway.py's separate copy).
+# agentsmith/llm_gateway.py's separate copy).
 from _shared import _repo_root, _iso_now, _tenant_id  # noqa: E402
 
 
@@ -80,9 +80,9 @@ def _owner(dotted: str, env_var: str, git_key: str) -> str:
     Outside a tenant — the dev-session tooling this logger mostly serves — git
     already knows the answer and needs no configuration at all.
 
-    The import is guarded because `scripts/` is machine-installed and `runtime/`
+    The import is guarded because `scripts/` is machine-installed and `agentsmith/`
     ships as a pip package: a standalone invocation from a tenant directory has
-    no `runtime` on sys.path, and an unguarded import here killed AgentLogger's
+    no `agentsmith` on sys.path, and an unguarded import here killed AgentLogger's
     constructor — the same defect, and the same day, as the one `_load_dotenv`
     in `_shared` documents at length.
 
@@ -98,8 +98,8 @@ def _owner(dotted: str, env_var: str, git_key: str) -> str:
     a dead process.
     """
     try:
-        from runtime.config import resolve
-    except ImportError:  # standalone script: runtime/ is not on sys.path
+        from agentsmith.config import resolve
+    except ImportError:  # standalone script: agentsmith/ is not on sys.path
         ambient = os.environ.get(env_var, "").strip()
         return ambient or (_git_config(git_key) or "unknown")
 

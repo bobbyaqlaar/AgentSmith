@@ -6,11 +6,11 @@ invoked as `python3 scripts/whatever.py`, which puts this directory on
 sys.path[0] automatically, the same mechanism scripts/run-evals.py and
 scripts/shadow-eval.py already rely on to import scripts/eval_judge.py.
 
-Deliberately NOT shared with runtime/llm_gateway.py's own copy of
-_repo_root() — runtime/ is vendored/deployed independently of scripts/
-(a tenant repo can carry runtime/ without scripts/ at all), so importing
+Deliberately NOT shared with agentsmith/llm_gateway.py's own copy of
+_repo_root() — agentsmith/ is vendored/deployed independently of scripts/
+(a tenant repo can carry agentsmith/ without scripts/ at all), so importing
 from here would create a coupling that breaks that independence. The
-duplication between scripts/ and runtime/ is a real architectural
+duplication between scripts/ and agentsmith/ is a real architectural
 boundary, not an oversight; only the duplication *within* scripts/ is
 consolidated here.
 
@@ -26,13 +26,13 @@ What lives here, and what deliberately does not:
 
 Not here on purpose:
 
-  * runtime/prompt_guard._denylist_path and
-    runtime/tool_registry.default_allowlist_path are structurally identical
+  * agentsmith/prompt_guard._denylist_path and
+    agentsmith/tool_registry.default_allowlist_path are structurally identical
     (env var → .agent-rfc/security/<file> → None), but they are runtime
     modules, share no import, and are each usable standalone. Sharing them
     would mean inventing a module for eight lines or coupling two guardrails
     that are deliberately independent.
-  * The _FALLBACK_* maps below mirror runtime/provider_dispatch. That
+  * The _FALLBACK_* maps below mirror agentsmith/provider_dispatch. That
     duplication is a version-skew shim with its own drift tests, not an
     oversight — see their comments.
 """
@@ -50,9 +50,9 @@ from typing import Any, Optional
 # Resolution order (see judge_model() below):
 #   1. AGENT_JUDGE_MODEL env var — one-off override, no code change
 #   2. the `judge` role in the MERGED model registry: framework
-#      runtime/models.yaml ← tenant models.yaml ← tenant.yaml
+#      agentsmith/models.yaml ← tenant models.yaml ← tenant.yaml
 #      gateway.routing_overrides
-#   3. DEFAULT_JUDGE_MODEL below — last resort, only when runtime/ isn't
+#   3. DEFAULT_JUDGE_MODEL below — last resort, only when agentsmith/ isn't
 #      importable at all
 #
 # (2) is why this is no longer a bare constant. A hardcoded id here made the
@@ -68,7 +68,7 @@ from typing import Any, Optional
 # Docs referencing the default: docs/DESIGN.md › Installation Procedure, Resolved Design Decisions,
 # docs/UserManual.md › Install & Start,
 # docs/UserManual.md › Running Evaluations.
-# Kept in step with the `judge` role in runtime/models.yaml so the fallback and
+# Kept in step with the `judge` role in agentsmith/models.yaml so the fallback and
 # the registry never name different graders.
 DEFAULT_JUDGE_MODEL = "falcon3:3b"
 
@@ -83,7 +83,7 @@ def role_model(role: str, fallback: str) -> str:
 
     The single accessor every scripts/*.py should use instead of hardcoding a
     model name. `fallback` is a last resort for scripts-only installs with no
-    runtime/ on the path — it is NOT a second source of truth, so keep it equal
+    agentsmith/ on the path — it is NOT a second source of truth, so keep it equal
     to what models.yaml says for that role.
     """
     registry = load_registry() or {}
@@ -111,7 +111,7 @@ def role_credential_env(role: str) -> Optional[str]:
     if not cfg:
         return None
     try:
-        from runtime.provider_dispatch import credential_env_for_model
+        from agentsmith.provider_dispatch import credential_env_for_model
 
         return credential_env_for_model(cfg)
     except Exception:
@@ -120,12 +120,12 @@ def role_credential_env(role: str) -> Optional[str]:
         # it imports). Degrade to the same mapping rather than returning None:
         # None means "can't tell, don't skip", which in CI meant running twelve
         # judge calls that all 401'd and failed the build. Broke KYC Sentinel's
-        # CI exactly that way — scripts/ from the checkout, runtime/ from the
+        # CI exactly that way — scripts/ from the checkout, agentsmith/ from the
         # v1.1.0 wheel.
         return _fallback_credential_env(cfg)
 
 
-# Mirrors runtime.provider_dispatch._DEFAULT_API_KEY_ENV. Duplicated on
+# Mirrors agentsmith.provider_dispatch._DEFAULT_API_KEY_ENV. Duplicated on
 # purpose and only reachable when that module is too old to ask — the
 # alternative is a hard version coupling between scripts/ and the pinned
 # runtime, which is the thing the vendoring boundary exists to avoid.
@@ -165,19 +165,19 @@ def provider_models(provider: str) -> list[str]:
 
 
 def load_registry() -> Optional[dict]:
-    """The merged model registry, or None when runtime/ isn't available.
+    """The merged model registry, or None when agentsmith/ isn't available.
 
     Every scripts/*.py file is invoked as `python3 scripts/whatever.py`, which
     puts `scripts/` on sys.path[0] — NOT the repo root — so a bare
-    `import runtime` fails in exactly the normal invocation path and this
+    `import agentsmith` fails in exactly the normal invocation path and this
     would silently fall back forever. (Caught by running verify_system.py for
     real: it reported the registry as unreadable while pytest, which has the
     root on the path, read it fine.) The insert below is the same one several
-    scripts/*.py already do before importing runtime.
+    scripts/*.py already do before importing agentsmith.
 
-    runtime/ is still imported lazily and its absence tolerated: scripts/ is
+    agentsmith/ is still imported lazily and its absence tolerated: scripts/ is
     installed to ~/.agent-framework/scripts and invoked inside tenant repos
-    that may carry no runtime/ at all (the vendoring boundary in this module's
+    that may carry no agentsmith/ at all (the vendoring boundary in this module's
     docstring). Resolving a default must not turn that into a hard dependency —
     hence None, and the caller falls back.
     """
@@ -193,10 +193,10 @@ def load_registry() -> Optional[dict]:
         sys.path.insert(0, str(install_root))
     registry: Optional[dict]
     try:
-        from runtime.llm_gateway import load_model_registry
+        from agentsmith.llm_gateway import load_model_registry
 
         registry = load_model_registry() or None
-    except Exception:  # fail-open: no runtime/, or an unreadable registry
+    except Exception:  # fail-open: no agentsmith/, or an unreadable registry
         registry = None
     _REGISTRY_CACHE[cwd] = registry
     return registry
@@ -249,16 +249,16 @@ def judge_model() -> str:
 def _repo_root(start: Optional[Path] = None) -> Path:
     """Nearest ancestor holding `.agenticframework/` or `.git/`; else cwd.
 
-    `start` mirrors `runtime.config.repo_root`'s parameter of the same shape.
+    `start` mirrors `agentsmith.config.repo_root`'s parameter of the same shape.
     It exists so `_load_dotenv`'s standalone fallback can resolve a caller-given
     root without a third copy of this walk.
 
-    A DELIBERATE mirror of runtime.config.repo_root, not an oversight — the same
+    A DELIBERATE mirror of agentsmith.config.repo_root, not an oversight — the same
     arrangement as `_FALLBACK_EXHAUSTION_MARKERS` below, and for the same reason.
-    `scripts/` is machine-installed (~/.agent-framework/scripts) while `runtime/`
+    `scripts/` is machine-installed (~/.agent-framework/scripts) while `agentsmith/`
     is a pip package; they are not guaranteed to be co-located, and these scripts
     run standalone, before anything has put the install root on sys.path. An
-    earlier attempt to import runtime here passed the whole local suite — pytest
+    earlier attempt to import agentsmith here passed the whole local suite — pytest
     puts the repo root on the path — and failed in CI with
     `ModuleNotFoundError: No module named 'runtime'` on the first standalone
     script invocation.
@@ -372,13 +372,13 @@ def _dotenv_value(raw: str) -> str:
 def _load_dotenv(root: Optional[Path] = None) -> None:
     """Best-effort load of repo-root .env into os.environ (no overwrite).
 
-    Prefers runtime.config.load_env_file when `runtime` is importable, and only
+    Prefers agentsmith.config.load_env_file when `agentsmith` is importable, and only
     then. This used to be the ONLY loader in the codebase, which is why the
     runtime never saw .env at all: scripts got it, workers did not. Delegating
     fixed that — and reintroduced, three lines below `_repo_root`, the exact
     import that `_repo_root`'s docstring exists to warn against. `scripts/` is
-    machine-installed and `runtime/` is a pip package; a standalone script run
-    from a tenant directory has no `runtime` on sys.path, and an unconditional
+    machine-installed and `agentsmith/` is a pip package; a standalone script run
+    from a tenant directory has no `agentsmith` on sys.path, and an unconditional
     import here kills the process before it does any work.
 
     That is not hypothetical. It took out the KYC Sentinel judged-eval split run
@@ -395,15 +395,15 @@ def _load_dotenv(root: Optional[Path] = None) -> None:
     pinned by `test_shared_and_runtime_loaders_agree`.
     """
     try:
-        from runtime.config import load_env_file
-    except ImportError:  # standalone script: runtime/ is not on sys.path
+        from agentsmith.config import load_env_file
+    except ImportError:  # standalone script: agentsmith/ is not on sys.path
         _load_dotenv_standalone(root)
         return
 
     load_env_file(root)
 
 
-# runtime.config.CREDENTIAL_NAME, mirrored for script-only processes; a test
+# agentsmith.config.CREDENTIAL_NAME, mirrored for script-only processes; a test
 # holds the two to the same pattern.
 _CREDENTIAL_NAME = re.compile(r"(?:^|_)(?:API_KEY|TOKEN|SECRET|PASSWORD)(?:_|$)")
 _CREDENTIALS_SAID: set[str] = set()
@@ -448,11 +448,11 @@ def _dotenv_pairs(path: Path) -> list[tuple[str, str]]:
 
 
 def _load_dotenv_standalone(root: Optional[Path] = None) -> None:
-    """The os.environ half of `runtime.config.load_env_file`, for script-only
+    """The os.environ half of `agentsmith.config.load_env_file`, for script-only
     processes. A DELIBERATE mirror — see `_load_dotenv`.
 
     `_ENV_FILE` is deliberately not reproduced. Nothing in a scripts-only
-    process can read it: the only readers are `runtime.config.resolve` and
+    process can read it: the only readers are `agentsmith.config.resolve` and
     `shadowed_env`, and if those were importable this branch would not run.
     Keeping a second copy of that dict here would create a state that agrees
     with the runtime's by luck rather than by construction.
@@ -463,7 +463,7 @@ def _load_dotenv_standalone(root: Optional[Path] = None) -> None:
             os.environ[key] = value
         elif value and os.environ[key] != value and _CREDENTIAL_NAME.search(key) \
                 and key not in _standalone_env_overrides(path.parent):
-            # A declared credential wins over the shell, as in runtime.config.
+            # A declared credential wins over the shell, as in agentsmith.config.
             os.environ[key] = value
             if key not in _CREDENTIALS_SAID:
                 _CREDENTIALS_SAID.add(key)

@@ -30,14 +30,14 @@ pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git require
 V1 = REPO / "contract" / "gate" / "v1"
 V2 = REPO / "contract" / "gate" / "v2"
 LAUNCHER = REPO / ".githooks" / "process-gate"
-PROVIDER = f"{sys.executable} -m runtime.cli gate"
+PROVIDER = f"{sys.executable} -m agentsmith.cli gate"
 
 
 # ── The published contract ────────────────────────────────────────────────────
 
 
 def test_agentsmith_passes_contract_2(tmp_path, monkeypatch):
-    from runtime import conformance
+    from agentsmith import conformance
 
     monkeypatch.setenv("AGENTSMITH_DIR", str(REPO))
     monkeypatch.setenv("PYTHONPATH", str(REPO))
@@ -91,7 +91,7 @@ def test_every_history_step_changes_something():
 def test_what_adopt_declares_is_a_valid_contract_2_declaration():
     import jsonschema
 
-    from runtime.adopt import providers_declaration
+    from agentsmith.adopt import providers_declaration
 
     schema = json.loads((V2 / "providers.schema.json").read_text(encoding="utf-8"))
     declared = json.loads(providers_declaration())
@@ -118,7 +118,7 @@ def test_a_version_1_declaration_still_reads_as_version_1():
 
 @pytest.fixture()
 def fixture_repo(tmp_path):
-    from runtime.conformance import build_fixture
+    from agentsmith.conformance import build_fixture
 
     return build_fixture(tmp_path / "repo", 2)
 
@@ -217,7 +217,7 @@ def _decide(root: Path, base: str, head: str, **env: str) -> dict:
     for unset in ("AGENTSMITH_PORTAL_URL", "AGENTSMITH_PORTAL_INGEST_TOKEN", "GITHUB_ACTIONS"):
         if unset not in env:
             run_env.pop(unset, None)
-    done = subprocess.run([sys.executable, "-m", "runtime.cli", "gate", "ci"], cwd=root, env=run_env,
+    done = subprocess.run([sys.executable, "-m", "agentsmith.cli", "gate", "ci"], cwd=root, env=run_env,
                           input=json.dumps({"kind": "range", "base": base, "head": head}),
                           capture_output=True, text=True, check=False)
     assert done.returncode == 0, done.stderr

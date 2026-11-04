@@ -152,14 +152,14 @@ extensions (e.g. richer fairness stats, portal streaming UI).
 │  └──────────────────────────────┬──────────────────────────────────┘   │
 │                                  │                                      │
 │  ┌───────────────────────────────▼──────────────────────────────────┐  │
-│  │  Worker Pool  (runtime/worker.py)                                │  │
+│  │  Worker Pool  (agentsmith/worker.py)                                │  │
 │  │  • Partitioned by tenant.id                                      │  │
 │  │  • Shared pool (default) | Dedicated pool (isolation: dedicated) │  │
 │  └───────────────────────────────┬──────────────────────────────────┘  │
 │                                  │                                      │
 │  ┌───────────────────┐   ┌───────▼────────────────────────────────┐   │
 │  │  LLM Gateway      │   │  Ops Portal  (portal/)                 │   │
-│  │  (runtime/        │   │  • Multi-tenant pipeline view          │   │
+│  │  (agentsmith/        │   │  • Multi-tenant pipeline view          │   │
 │  │   llm_gateway.py) │   │  • Cost by tenant/agent/model          │   │
 │  │  Per-tenant budget│   │  • Queue depth, unresolved issues      │   │
 │  │  Degrade ladder   │   │  • Suggested HITL promotion queue      │   │
@@ -200,9 +200,9 @@ git commit / PR                           (gates)
   └─ ci-<stack>.yml → eval-scorecard/fairness/hallucination (the Evaluation Framework section, the CI/CD via GitHub Actions section)
 
 Production workflow                       (cloud, Layer 2)
-  └─ runtime/worker.py (Temporal/Celery, partitioned by tenant.id, the Production Runtime section)
-       └─ runtime/workflows/base_workflow.py
-            ├─ activities call runtime/llm_gateway.py
+  └─ agentsmith/worker.py (Temporal/Celery, partitioned by tenant.id, the Production Runtime section)
+       └─ agentsmith/workflows/base_workflow.py
+            ├─ activities call agentsmith/llm_gateway.py
             │    ├─ input_guardrail.py scrubs PII pre-call (the Trace Redaction section)
             │    ├─ budget backend reserves spend atomically (the LLM Gateway (Production) section)
             │    ├─ provider_dispatch.py builds the provider request (the LLM Gateway (Production) section)
@@ -335,7 +335,7 @@ In hybrid mode, prompts and completions are transmitted to cloud provider APIs (
 
 Three-node topology: Architect → Developer → Validator (HITL interrupt on max retries).
 
-Domain agent topologies (e.g., ingestion → prediction → decision → order) are defined **in each tenant repo**, not in the framework. The framework provides reference workflows in `examples/` and `runtime/workflows/`.
+Domain agent topologies (e.g., ingestion → prediction → decision → order) are defined **in each tenant repo**, not in the framework. The framework provides reference workflows in `examples/` and `agentsmith/workflows/`.
 
 ### Pillar 10 — Cost-Optimization Routing
 
@@ -344,7 +344,7 @@ Domain agent topologies (e.g., ingestion → prediction → decision → order) 
 | Context | Routing mechanism |
 |---|---|
 | Dev / IDE sessions | `cost_router.py` — keyword + token heuristics |
-| Production | LLM Gateway (`runtime/llm_gateway.py`) — per-model pricing, per-tenant budget, degrade path |
+| Production | LLM Gateway (`agentsmith/llm_gateway.py`) — per-model pricing, per-tenant budget, degrade path |
 
 `cost_router.py` limitations: not wired into IDEs, uses brittle heuristics, no per-model accurate accounting. Acceptable for dev sessions; inadequate for production multi-tenant cost control.
 
@@ -362,7 +362,7 @@ tool output, file contents, web pages, error strings, ticket text. Content that
 instructs the agent to change behaviour, ignore prior rules or reveal
 configuration is quoted to the user and refused, never obeyed.
 
-In code, model input routes through `runtime/prompt_guard.py`; retrieved context
+In code, model input routes through `agentsmith/prompt_guard.py`; retrieved context
 routes through `scan_documents()`, which quarantines poisoned chunks
 **individually**. Rejecting an entire retrieval because one chunk is poisoned
 would let an attacker plant a single document matching every query and silence
@@ -457,7 +457,7 @@ design choice that's recorded here as settled.
 |---|---|---|
 | **Reasoning & Planning** | Fixed-topology reference patterns (Architect→Developer→Validator), not a generic planner | the Multi-Agent Execution Modes section (execution modes), the Evaluation Framework section (eval framework scores the output of these patterns) |
 | **Tool Orchestration** | Activity *execution* + recovery exists (Temporal); tool *registration*/schema-extraction (e.g. an `@tool` decorator) and LLM-driven tool-call selection do not — `llm_gateway.py.complete()` sends a prompt and receives text, no function-calling fields in the provider request | the Production Runtime section (Production Runtime), the LLM Gateway (Production) section (LLM Gateway) |
-| **Memory Management** | **Short-term:** `runtime/conversation_memory.py` (token-budget truncate-oldest). **Long-term structured:** Knowledge Graph (the Knowledge Graph section). **Long-term vector:** `runtime/vector_store.py` + `embeddings.py` (memory/pgvector; HashEmbedder default, sentence-transformers optional). Gateway does not auto-RAG — tenant wires retrieve→prompt. See `docs/rag-memory.md` | the Knowledge Graph section, `docs/rag-memory.md` |
+| **Memory Management** | **Short-term:** `agentsmith/conversation_memory.py` (token-budget truncate-oldest). **Long-term structured:** Knowledge Graph (the Knowledge Graph section). **Long-term vector:** `agentsmith/vector_store.py` + `embeddings.py` (memory/pgvector; HashEmbedder default, sentence-transformers optional). Gateway does not auto-RAG — tenant wires retrieve→prompt. See `docs/rag-memory.md` | the Knowledge Graph section, `docs/rag-memory.md` |
 | **Perception & Input Parsing** | Narrow JSON-from-text extraction (`re.search` + `json.loads`, no schema validation) in the reference pipelines; no dynamic prompt-template engine (prompts are inline f-strings) | the Multi-Agent Execution Modes section |
 | **Human-in-the-Loop (HITL)** | The most built-out layer — approve/reject, edit-and-resume, and opt-in LLM self-correction before DLQ. See the Production Runtime section "HITL Pause / Resume" for the full split and the recorded reasoning for Temporal signals over Slack+Retool/LangGraph-interrupt alternatives, and for the portal-webhook-bridge design over a direct portal-side Temporal client | the Production Runtime section, the Enterprise Install and Compliance Pack section (HITL RBAC) |
 
@@ -467,7 +467,7 @@ design choice that's recorded here as settled.
 |---|---|---|
 | **Observability & Traceability** | Full span attribution (tenant/agent/cost/tokens) via OTel→Phoenix. TTFT via opt-in `LLMGateway.complete_stream()` (`ttft_ms` on result + `llm.gateway.ttft_ms` span) for direct-API providers (openai/groq/ollama/anthropic); cloud-native adapters fall back to `complete()` with `ttft_ms=None`. Guardrail evidence (`guardrail_counts`) returned on every result | the Universal Observability Platform section, the LLM Gateway (Production) section |
 | **Reliability & Accuracy** | `correctness`/`tool_accuracy`/`latency`/`hallucination` scored per case (the Evaluation Framework section). Hallucination rate hard-fail via `HALLUCINATION_FAIL_ABOVE`. Auto-retry is three-tiered: Temporal retries transient failures automatically; `run_with_self_correction` can ask the gateway for one corrected JSON payload before DLQ; `run_with_recoverable_step` deliberately disables bare retries for validation-shaped failures (`RetryPolicy(maximum_attempts=1)`) since they need a *different* payload | the Evaluation Framework section, the Production Runtime section |
-| **Security & Guardrails** | Pre-call: `runtime/input_guardrail.py` scrubs PII in prompts before `_invoke()` (`INPUT_GUARDRAIL`); post-call: `trace_redactor.py` for observability. Content-moderation models remain tenant-pluggable, not shipped | the Trace Redaction section, `input_guardrail.py` |
+| **Security & Guardrails** | Pre-call: `agentsmith/input_guardrail.py` scrubs PII in prompts before `_invoke()` (`INPUT_GUARDRAIL`); post-call: `trace_redactor.py` for observability. Content-moderation models remain tenant-pluggable, not shipped | the Trace Redaction section, `input_guardrail.py` |
 | **Explainability** | Infrastructure-level: HMAC-signed, tamper-evident, append-only audit log (the Enterprise Install and Compliance Pack section) + full OTel trace history — not per-decision natural-language reasoning narration | the Enterprise Install and Compliance Pack section, the Universal Observability Platform section |
 | **Scalability & Performance** | Workflow concurrency via Temporal's shared/dedicated worker-pool model (the Tenancy Model (Independent Repositories) section, the Production Runtime section); app-version traffic-shaping via on-prem canary routing, customer's choice of Traefik or Envoy (the Production Runtime section "On-Premise / Air-Gapped Deployment"). TTFT budget check: `complete_stream()` + `scripts/verify_ttft.py` in AgentSmith's own checkout (streaming providers only — see the LLM Gateway (Production) section; a tenant's evals-port suite for it is on the backlog) | the Tenancy Model (Independent Repositories) section, the Production Runtime section |
 | **Data Bias & Fairness** | v1 suite: `run-evals.py --suite fairness` with paired fixtures + fairness judge field / pair parity; not a full statistical disparate-impact package | the Evaluation Framework section |
@@ -518,7 +518,7 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `cost_router.py` | Dev-mode routing: token count + keyword analysis → model selection. Not suitable for production. See the LLM Gateway (Production) section for production LLM Gateway. |
 | `network_watchdog.py` | Socket ping to `1.1.1.1:53`. Auto-switches active LLM endpoint. Background keepalive thread. |
 | `notifier.py` | Cross-platform desktop notifications via `plyer` + `osascript` (macOS). Background webhook thread (Slack / Teams / custom). |
-| `run-evals.py` | Loads tenant-local fixtures. Suites: `golden` (default), `fairness`, `hallucination`, `adversarial` (P12), `rag_poison`. `adversarial` and `rag_poison` are deterministic guard suites — scored locally by `runtime.prompt_guard`, no judge, so they gate on every commit without a credential; both fail above a miss CEILING (`ADVERSARIAL_FAIL_ABOVE` / `RAG_POISON_FAIL_ABOVE`) rather than below a score floor. `--fail-below` / `HALLUCINATION_FAIL_ABOVE`. Skips gracefully when <3 golden cases. |
+| `run-evals.py` | Loads tenant-local fixtures. Suites: `golden` (default), `fairness`, `hallucination`, `adversarial` (P12), `rag_poison`. `adversarial` and `rag_poison` are deterministic guard suites — scored locally by `agentsmith.prompt_guard`, no judge, so they gate on every commit without a credential; both fail above a miss CEILING (`ADVERSARIAL_FAIL_ABOVE` / `RAG_POISON_FAIL_ABOVE`) rather than below a score floor. `--fail-below` / `HALLUCINATION_FAIL_ABOVE`. Skips gracefully when <3 golden cases. |
 | `eval_judge.py` | Shared LLM-judge invocation (prompting + JSON parsing), factored out so `run-evals.py` and `shadow-eval.py` judge identically. |
 | `shadow-eval.py` | Async shadow-eval sampler: judges a 5% sample of already-served production traces from Phoenix post-hoc (the Evaluation Framework section). Never re-executes, never auto-promotes. |
 | `run-security-checks.py` | `SEC-*` security harness (P12): `--mode smoke\|ci\|full`, `--strict`, `--framework`, `--evidence-pack` (OWASP / NIST / ATLAS / ISO rollups). Driven by `fixtures/security/control_registry.json`. |
@@ -527,7 +527,7 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `delivery_evidence.py` | Promote-time evidence pack (JSON + Markdown) collecting scorecard/fairness/redaction/HITL artifacts into `.agent-rfc/fixtures/`. |
 | `check_bare_except.py` | AST detector for empty exception handlers (the commit gate's guardrails); `# fail-open: <reason>` opts a handler out. |
 | `vouched_files.py` | Which staged files `.agenticframework/scaffold.json` vouches for and that still hash to what it recorded — the files AgentSmith wrote into a tenant. The commit gate's guardrails skip exactly those, asked of the files the commit judges. Every failure (no manifest, unreadable, no git) vouches for nothing, so everything is checked. |
-| `_shared.py` | Consolidated helpers (`_repo_root`, Phoenix REST get/post, `judge_model()` — reads the `judge` role from `models.yaml` via a lazy, optional `runtime/` import). Helpers are otherwise deliberately not shared with `runtime/` (vendoring boundary — see module docstring). |
+| `_shared.py` | Consolidated helpers (`_repo_root`, Phoenix REST get/post, `judge_model()` — reads the `judge` role from `models.yaml` via a lazy, optional `agentsmith/` import). Helpers are otherwise deliberately not shared with `agentsmith/` (vendoring boundary — see module docstring). |
 | `test/` | Framework self-tests for the above (run by `self-test.yml`). |
 | `promote-learning.py` | Appends to `golden_evals.json`; archives resolution as judge learning (versioned, not FIFO-evicted); marks log entry `hitl_resolved: true` with `hitl_resolved_by` + `hitl_resolved_at`. |
 | `sync-ui-feedback.py` | Pulls Phoenix annotations; promotes unsynced negative feedback to golden dataset. |
@@ -536,48 +536,48 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `verify_system.py` | Full health check: Python, packages, hooks, Phoenix, Ollama, identity, unresolved issues. CI flags: `--check-hooks`, `--check-redaction`, `--check-idempotency`, `--check-dlq`, `--check-onprem-deploy`, `--check-kg` (rebuilds the Knowledge Graph via `map_codebase.py` and asserts it is non-empty with the known `scripts/` nodes — Pillar 2 / docs/PRODUCT_ARCHIVE.md P10a), `--check-security` (P12 smoke path), `--check-delivery-model` (warn-only gate). |
 | `generate-ide-config.py` | Renders `.cursorrules` / `CLAUDE.md` / `AGENTS.md` (Codex) / `GEMINI.md` / `.github/copilot-instructions.md` (condensed — Copilot pays the length on every request) / `.agents/skills/*/skill.md` from `templates/agent-rules.yaml` (single source, the Antigravity Integration section). Called by `tenant init` and the rules provider. `--check-only` regenerates in memory and diffs against the committed files, exiting 1 on drift (Pillar 6/7 CI gate — docs/PRODUCT_ARCHIVE.md P10c). Renders from the repository's committed declarations only, never the environment; `scripts/rules_port.py` serves the same render as the rules contract's `render` and `check` (`contract/rules/v1`). |
 
-### Production Runtime (runtime/)
+### Production Runtime (agentsmith/)
 
 See Section 25 for full specification (the Trace Redaction section redaction, the LLM Gateway (Production) section gateway).
 
 | File | Purpose |
 |---|---|
-| `runtime/worker.py` | Temporal/Celery worker entrypoint. Partitioned by `tenant.id`. |
-| `runtime/llm_gateway.py` | Production LLM routing with per-model pricing, per-tenant budget enforcement, degrade ladder. `complete()` + `complete_stream()` (ttft_ms). |
-| `runtime/models.yaml` | Framework default model registry (the LLM Gateway (Production) section); overridable per tenant. |
-| `runtime/provider_dispatch.py` | Shared provider request building/parsing for `llm_gateway.py` and `scripts/cost_router.py` (Vertex AI, Azure OpenAI, Bedrock, Huawei ModelArts, Groq, Ollama). |
-| `runtime/pg_pool.py` | Process-wide Postgres connection pool shared by the budget backend, idempotency store, and DLQ (`PG_POOL_MAX`, default 5). Pooled `.close()` releases, never tears down. `ensure_schema(dsn, ddl, key=…)` runs a backend's table bootstrap **once per (DSN, table) per process** — those three each created their own table on construction, and a gateway is built per activity, so on Postgres that was a DDL round-trip per workflow step plus the brief table lock a no-op `CREATE TABLE` still takes. |
-| `runtime/environment.py` | Canonical fail-closed `$ENVIRONMENT` resolver used framework-wide. |
-| `runtime/input_guardrail.py` | Pre-call PII scrub (PDPL / Emirates ID, email, phone, Luhn cards) — SEC-PII precall. |
-| `runtime/trace_redactor.py` | Environment-aware OTLP span scrubbing before export (the Trace Redaction section), encrypted HITL blobs. |
-| `runtime/luhn.py` | Single shared Luhn validator used by both `input_guardrail.py` and `trace_redactor.py` (pre/post-call card detection can never diverge). |
-| `runtime/testing.py` | Shipped test doubles — `FakeGateway` (scripted responses, recorded calls, budget simulation, prompt assertions) and `RecordingGateway` (wraps a live gateway). Deliberately no more capable than the real gateway: it refuses to stream what the real one cannot. Override `_resolve_text(call)` for domain scripting. |
-| `runtime/judging.py` | Shared judge primitives (G7): `citations_grounded` (hallucination — every citation must resolve to a retrieved id), `pair_parity` / `parity_violation` (fairness), `judge_independence_warning` (E3 — a judge model must not be the model it grades). `run-evals.py` imports these, so the CI eval gate and a tenant's per-request check run the SAME logic. |
-| `runtime/tracing.py` | Span helpers for non-LLM steps (G8): `agent_span()` context manager for tenant pipeline steps, and `record_tool_call` (child span per tool call, emitted by `ToolRegistry.invoke`). No-ops without OpenTelemetry. |
-| `runtime/prompt_guard.py` | Pre-call prompt-injection heuristics (SEC-PROMPT-001). `PROMPT_GUARD=off\|warn\|default\|strict`, blocking by default; `warn` is the observe-first rollout tier (findings on `CompletionResult.prompt_guard_reasons`). `is_enforcing()` is the single definition of "blocking", shared with the harness runner. `scan_documents(docs)` applies the same heuristics to RETRIEVED context and quarantines poisoned documents **individually** (SEC-RAG-001) — rejecting a whole retrieval because one chunk is poisoned lets an attacker plant a document matching every query and silence the assistant. Detection delegates to `scan_prompt`, so a rule added for direct injection covers retrieval automatically. |
-| `runtime/moderation.py` | Pluggable output moderation hook (SEC-MOD-001), `MODERATION_HOOK=off\|optional\|required`. |
-| `runtime/structured_output.py` | `parse_llm_json` — fenced/bare JSON extraction + Pydantic validation (SEC-OUTPUT-001). |
-| `runtime/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (the Architecture by Layer section). |
-| `runtime/version.py` | `framework_version()` — the running framework's version, for the OTel Resource and the run-status POST. `warn_if_declared_version_differs()` warns once at worker startup when the running framework crosses a **MAJOR** boundary from the `framework.version` this tenant declares. Minor and patch differences are silent by design: backward compatibility within a major is AgentSmith's obligation, so a tenant on 1.3.x running 1.9 is the promise being kept, and warning there would train an operator to skip warnings. Needs no git, tags or checkout. An installed release reports bare; a source checkout reports `x.y.z+src`, because a working copy's pyproject version says which release it descends from and nothing about what it contains. |
-| `runtime/otlp.py` | `resolve_otlp_endpoint()` / `span_exporter()` / `metric_exporter()` — the one place an endpoint variable becomes an OTLP URL. Four callers did this separately and only `portal/lib/tracing.ts` handled a base that already names `/v1/traces`; that version is the one ported here, and the TS copy is pinned by a parsing test. |
-| `runtime/pii_patterns.py` | The PII shapes `input_guardrail.py` and `trace_redactor.py` both read, plus `ascii_digits()`. Extracted for the reason `runtime/luhn.py` was: the pre-call and pre-export halves of one control disagreed about what PII is. |
-| `runtime/security_paths.py` | `security_artefact_path()` — the env-override-then-convention lookup `prompt_guard` and `tool_registry` had each implemented separately. |
-| `runtime/tenancy.py` | `resolve_tenant_id()` (explicit → `AGENT_TENANT_ID`/`TENANT_ID` → `tenant.yaml` → raise) and the `agent_context()` contextvars that `AgentIdentityProcessor` stamps onto every span. |
-| `runtime/cli.py` | The `agentsmith` console script (`[project.scripts]`) — every operator command (the Command Interface section). `tenant init` owns the scaffold that used to be a zsh heredoc in `~/.zshrc`; `doctor` delegates to `verify_system`; `purge-idempotency` deletes expired rows from `idempotency_keys`, which nothing had ever deleted from. The commands it replaced were shell functions in `~/.zshrc` until 2026-09-14. |
-| `runtime/machine/` | The operator commands' logic and the machine state they share: `state.py` (`~/.agent-framework/state/` — mode, install mode, dashboard endpoint; `find_script`), `policy.py` (org policy, break-glass tokens, audit log, the one bypass decision the hooks and `mode off` use), `ops.py` (mode, check, status, models, dashboard, evals, promote, tenant promote, on-prem scaffold, scrub, uninstall). Import-light: the hooks call it. |
-| `runtime/metrics.py` | OTel counters and histograms. Spans are the wrong instrument for a rate: sampled, expensive to scan, worse as traffic grows. Carries the cache hit ratio, which was previously only logged. |
-| `runtime/prompt_identity.py` | `prompt.system.sha256` — a digest of the system turn, which changes when a human edits the instructions and not when the input changes. The join column for "answers degraded on Tuesday", available without a template engine. |
-| `runtime/config.py` | `load_env_file()` — the runtime loaded no `.env` at all before this, only `scripts/` did — and `resolve()`, the single precedence: explicit → `.env` → `tenant.yaml` → ambient `os.environ` → documented default or raise. **The ambient environment is last, not second** — a value a shell happens to export must not outrank one the tenant declared and committed, which is why `env_overrides` exists for the cases where it should. A credential the `.env` declares is written into `os.environ` over an exported one — its readers have only `os.environ` — and the override is named, never shown. Stated in full, with the 30× budget breach that inverted it, in `runtime/config.py`'s module docstring. |
-| `runtime/conversation_memory.py` | Short-term token-window message buffer (RAG substrate). |
-| `runtime/embeddings.py` / `runtime/vector_store.py` | Pluggable embedders (hash / sentence-transformers) + memory/pgvector store — long-term retrieval. |
-| `runtime/idempotency.py` | Idempotency key store and deduplication (Redis or Postgres). |
-| `runtime/dead_letter.py` | Failed task queue and replay API (DLQ). |
-| `runtime/self_correction.py` | Opt-in corrected-payload loop helper (never inserted before the human DLQ path). |
-| `runtime/temporal_replay.py` | Concrete Temporal `replay_handler` — signals a live, parked workflow. |
-| `runtime/replay_webhook_server.py` | Reference receiver for the Ops Portal's "Replay with edits" action. |
-| `runtime/workflows/` | Reference durable workflows (tenant repos own their production definitions). |
-| `runtime/requirements-runtime.txt` | Minimal runtime-only dependency set (installed independently of `scripts/`). |
-| `runtime/test/` | Runtime self-tests (no external infra; run by `self-test.yml`). |
+| `agentsmith/worker.py` | Temporal/Celery worker entrypoint. Partitioned by `tenant.id`. |
+| `agentsmith/llm_gateway.py` | Production LLM routing with per-model pricing, per-tenant budget enforcement, degrade ladder. `complete()` + `complete_stream()` (ttft_ms). |
+| `agentsmith/models.yaml` | Framework default model registry (the LLM Gateway (Production) section); overridable per tenant. |
+| `agentsmith/provider_dispatch.py` | Shared provider request building/parsing for `llm_gateway.py` and `scripts/cost_router.py` (Vertex AI, Azure OpenAI, Bedrock, Huawei ModelArts, Groq, Ollama). |
+| `agentsmith/pg_pool.py` | Process-wide Postgres connection pool shared by the budget backend, idempotency store, and DLQ (`PG_POOL_MAX`, default 5). Pooled `.close()` releases, never tears down. `ensure_schema(dsn, ddl, key=…)` runs a backend's table bootstrap **once per (DSN, table) per process** — those three each created their own table on construction, and a gateway is built per activity, so on Postgres that was a DDL round-trip per workflow step plus the brief table lock a no-op `CREATE TABLE` still takes. |
+| `agentsmith/environment.py` | Canonical fail-closed `$ENVIRONMENT` resolver used framework-wide. |
+| `agentsmith/input_guardrail.py` | Pre-call PII scrub (PDPL / Emirates ID, email, phone, Luhn cards) — SEC-PII precall. |
+| `agentsmith/trace_redactor.py` | Environment-aware OTLP span scrubbing before export (the Trace Redaction section), encrypted HITL blobs. |
+| `agentsmith/luhn.py` | Single shared Luhn validator used by both `input_guardrail.py` and `trace_redactor.py` (pre/post-call card detection can never diverge). |
+| `agentsmith/testing.py` | Shipped test doubles — `FakeGateway` (scripted responses, recorded calls, budget simulation, prompt assertions) and `RecordingGateway` (wraps a live gateway). Deliberately no more capable than the real gateway: it refuses to stream what the real one cannot. Override `_resolve_text(call)` for domain scripting. |
+| `agentsmith/judging.py` | Shared judge primitives (G7): `citations_grounded` (hallucination — every citation must resolve to a retrieved id), `pair_parity` / `parity_violation` (fairness), `judge_independence_warning` (E3 — a judge model must not be the model it grades). `run-evals.py` imports these, so the CI eval gate and a tenant's per-request check run the SAME logic. |
+| `agentsmith/tracing.py` | Span helpers for non-LLM steps (G8): `agent_span()` context manager for tenant pipeline steps, and `record_tool_call` (child span per tool call, emitted by `ToolRegistry.invoke`). No-ops without OpenTelemetry. |
+| `agentsmith/prompt_guard.py` | Pre-call prompt-injection heuristics (SEC-PROMPT-001). `PROMPT_GUARD=off\|warn\|default\|strict`, blocking by default; `warn` is the observe-first rollout tier (findings on `CompletionResult.prompt_guard_reasons`). `is_enforcing()` is the single definition of "blocking", shared with the harness runner. `scan_documents(docs)` applies the same heuristics to RETRIEVED context and quarantines poisoned documents **individually** (SEC-RAG-001) — rejecting a whole retrieval because one chunk is poisoned lets an attacker plant a document matching every query and silence the assistant. Detection delegates to `scan_prompt`, so a rule added for direct injection covers retrieval automatically. |
+| `agentsmith/moderation.py` | Pluggable output moderation hook (SEC-MOD-001), `MODERATION_HOOK=off\|optional\|required`. |
+| `agentsmith/structured_output.py` | `parse_llm_json` — fenced/bare JSON extraction + Pydantic validation (SEC-OUTPUT-001). |
+| `agentsmith/tool_registry.py` | `@tool` decorator + YAML allowlist, deny-by-default in strict mode (SEC-TOOL-001). MCP stays tenant-owned (the Architecture by Layer section). |
+| `agentsmith/version.py` | `framework_version()` — the running framework's version, for the OTel Resource and the run-status POST. `warn_if_declared_version_differs()` warns once at worker startup when the running framework crosses a **MAJOR** boundary from the `framework.version` this tenant declares. Minor and patch differences are silent by design: backward compatibility within a major is AgentSmith's obligation, so a tenant on 1.3.x running 1.9 is the promise being kept, and warning there would train an operator to skip warnings. Needs no git, tags or checkout. An installed release reports bare; a source checkout reports `x.y.z+src`, because a working copy's pyproject version says which release it descends from and nothing about what it contains. |
+| `agentsmith/otlp.py` | `resolve_otlp_endpoint()` / `span_exporter()` / `metric_exporter()` — the one place an endpoint variable becomes an OTLP URL. Four callers did this separately and only `portal/lib/tracing.ts` handled a base that already names `/v1/traces`; that version is the one ported here, and the TS copy is pinned by a parsing test. |
+| `agentsmith/pii_patterns.py` | The PII shapes `input_guardrail.py` and `trace_redactor.py` both read, plus `ascii_digits()`. Extracted for the reason `agentsmith/luhn.py` was: the pre-call and pre-export halves of one control disagreed about what PII is. |
+| `agentsmith/security_paths.py` | `security_artefact_path()` — the env-override-then-convention lookup `prompt_guard` and `tool_registry` had each implemented separately. |
+| `agentsmith/tenancy.py` | `resolve_tenant_id()` (explicit → `AGENT_TENANT_ID`/`TENANT_ID` → `tenant.yaml` → raise) and the `agent_context()` contextvars that `AgentIdentityProcessor` stamps onto every span. |
+| `agentsmith/cli.py` | The `agentsmith` console script (`[project.scripts]`) — every operator command (the Command Interface section). `tenant init` owns the scaffold that used to be a zsh heredoc in `~/.zshrc`; `doctor` delegates to `verify_system`; `purge-idempotency` deletes expired rows from `idempotency_keys`, which nothing had ever deleted from. The commands it replaced were shell functions in `~/.zshrc` until 2026-09-14. |
+| `agentsmith/machine/` | The operator commands' logic and the machine state they share: `state.py` (`~/.agent-framework/state/` — mode, install mode, dashboard endpoint; `find_script`), `policy.py` (org policy, break-glass tokens, audit log, the one bypass decision the hooks and `mode off` use), `ops.py` (mode, check, status, models, dashboard, evals, promote, tenant promote, on-prem scaffold, scrub, uninstall). Import-light: the hooks call it. |
+| `agentsmith/metrics.py` | OTel counters and histograms. Spans are the wrong instrument for a rate: sampled, expensive to scan, worse as traffic grows. Carries the cache hit ratio, which was previously only logged. |
+| `agentsmith/prompt_identity.py` | `prompt.system.sha256` — a digest of the system turn, which changes when a human edits the instructions and not when the input changes. The join column for "answers degraded on Tuesday", available without a template engine. |
+| `agentsmith/config.py` | `load_env_file()` — the runtime loaded no `.env` at all before this, only `scripts/` did — and `resolve()`, the single precedence: explicit → `.env` → `tenant.yaml` → ambient `os.environ` → documented default or raise. **The ambient environment is last, not second** — a value a shell happens to export must not outrank one the tenant declared and committed, which is why `env_overrides` exists for the cases where it should. A credential the `.env` declares is written into `os.environ` over an exported one — its readers have only `os.environ` — and the override is named, never shown. Stated in full, with the 30× budget breach that inverted it, in `agentsmith/config.py`'s module docstring. |
+| `agentsmith/conversation_memory.py` | Short-term token-window message buffer (RAG substrate). |
+| `agentsmith/embeddings.py` / `agentsmith/vector_store.py` | Pluggable embedders (hash / sentence-transformers) + memory/pgvector store — long-term retrieval. |
+| `agentsmith/idempotency.py` | Idempotency key store and deduplication (Redis or Postgres). |
+| `agentsmith/dead_letter.py` | Failed task queue and replay API (DLQ). |
+| `agentsmith/self_correction.py` | Opt-in corrected-payload loop helper (never inserted before the human DLQ path). |
+| `agentsmith/temporal_replay.py` | Concrete Temporal `replay_handler` — signals a live, parked workflow. |
+| `agentsmith/replay_webhook_server.py` | Reference receiver for the Ops Portal's "Replay with edits" action. |
+| `agentsmith/workflows/` | Reference durable workflows (tenant repos own their production definitions). |
+| `agentsmith/requirements-runtime.txt` | Minimal runtime-only dependency set (installed independently of `scripts/`). |
+| `agentsmith/test/` | Runtime self-tests (no external infra; run by `self-test.yml`). |
 
 ### Observability Surfaces
 
@@ -585,10 +585,10 @@ See Section 25 for full specification (the Trace Redaction section redaction, th
 |---|---|
 | `portal/` | Ops dashboard (Next.js or equivalent). Multi-tenant pipeline view, cost, queue depth, unresolved issues, HITL promotion queue. SSO/OIDC when enterprise pack enabled. |
 | `portal/instrumentation.ts` → `instrumentation.node.ts` | Registers the portal's OTel provider before the first request. The SDK is behind a dynamic import guarded on `NEXT_RUNTIME` — it cannot load on the Edge runtime `middleware.ts` uses. No OTLP endpoint configured → nothing is registered and the portal behaves as it did before it was instrumented. |
-| `portal/lib/tracing.ts` | `portalSpan()`, `withIdentity()` (the OTel-context analogue of `runtime/tenancy.agent_context`), `currentTraceId()`, and `resolveTracesEndpoint()` — which detects an `OTEL_EXPORTER_OTLP_ENDPOINT` that already names `/v1/traces`, because this repo's own convention puts one there and the JS exporter appends its own. API-only, so it is safe to import from Edge code. |
+| `portal/lib/tracing.ts` | `portalSpan()`, `withIdentity()` (the OTel-context analogue of `agentsmith/tenancy.agent_context`), `currentTraceId()`, and `resolveTracesEndpoint()` — which detects an `OTEL_EXPORTER_OTLP_ENDPOINT` that already names `/v1/traces`, because this repo's own convention puts one there and the JS exporter appends its own. API-only, so it is safe to import from Edge code. |
 | `portal/lib/wireContract.ts` | Which fields a given framework version can emit, so an absent value can say WHY. IT runs the portal and the business runs the tenants on independent cadences, so the portal always reads a fleet spanning several versions; `emits()` answers yes/no/**unknown** and `explainAbsent()` distinguishes "this version never reported it" from "this version should have and did not". |
-| `portal/lib/spanIdentity.ts` | Pillar 3 for the portal, split as `runtime/tracing.py` splits it: per-process facts on the Resource (`service.name`, `project.name`, `environment`, `agent.role: ops-portal`), per-request facts (`tenant.id`, `portal.actor.role`) stamped at span start by `PortalIdentityProcessor`. |
-| `portal/lib/environment.ts` | Deliberate mirror of `runtime/environment.py`'s alias table, pinned by a drift test in `portal/test/tracing.test.ts`. Two services must not disagree about which environment they are in. |
+| `portal/lib/spanIdentity.ts` | Pillar 3 for the portal, split as `agentsmith/tracing.py` splits it: per-process facts on the Resource (`service.name`, `project.name`, `environment`, `agent.role: ops-portal`), per-request facts (`tenant.id`, `portal.actor.role`) stamped at span start by `PortalIdentityProcessor`. |
+| `portal/lib/environment.ts` | Deliberate mirror of `agentsmith/environment.py`'s alias table, pinned by a drift test in `portal/test/tracing.test.ts`. Two services must not disagree about which environment they are in. |
 | `templates/in-app-widget/` | Embeddable component (React/Vanilla). Shows last agent run status, tenant-scoped trace link, error summary. Read-only; tenant-scoped auth. |
 
 ### Data Files
@@ -609,8 +609,8 @@ See Section 25 for full specification (the Trace Redaction section redaction, th
 
 ## Command Interface
 
-Every command is a subcommand of `agentsmith` (`runtime/cli.py`, logic in
-`runtime/machine/`), installed into `~/.agent-framework/.venv` and linked at
+Every command is a subcommand of `agentsmith` (`agentsmith/cli.py`, logic in
+`agentsmith/machine/`), installed into `~/.agent-framework/.venv` and linked at
 `~/.local/bin/agentsmith`. Machine state is files in `~/.agent-framework/state/`
 (`AGENTSMITH_STATE_DIR` overrides), so it reaches every process — IDEs, git GUIs
 and hooks included — not only the shell that set it. docs/UserManual.md › Command Reference is
@@ -642,7 +642,7 @@ mode since 3.0.0.
 
 | Command | Action |
 |---|---|
-| `agentsmith dashboard start` | Starts the standing Docker stack, else a standalone Phoenix (`uvx --from arize-phoenix phoenix serve`) on `$AGENT_PHOENIX_PORT`. Writes `state/phoenix-endpoint`, which `runtime/otlp.py` reads after the environment. |
+| `agentsmith dashboard start` | Starts the standing Docker stack, else a standalone Phoenix (`uvx --from arize-phoenix phoenix serve`) on `$AGENT_PHOENIX_PORT`. Writes `state/phoenix-endpoint`, which `agentsmith/otlp.py` reads after the environment. |
 | `agentsmith dashboard stop` | Stops it and removes `state/phoenix-endpoint`. |
 
 ### Evaluation & Self-Improvement
@@ -742,20 +742,20 @@ For internal registries, the installer supports fetching from a private artifact
 | `OPENAI_API_KEY` | Required for hybrid mode | `sk-...` |
 | `ANTHROPIC_API_KEY` | Required for hybrid mode | `sk-ant-...` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP base; when unset (and `AGENT_PHOENIX_ENDPOINT` too), Python falls back to the endpoint `agentsmith dashboard start` recorded | `http://localhost:6006/v1/traces` |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Traces-only override, read by the Ops Portal **and by `runtime/otlp.py`**. Used as-is; takes precedence over the variable above | *(unset)* |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Traces-only override, read by the Ops Portal **and by `agentsmith/otlp.py`**. Used as-is; takes precedence over the variable above | *(unset)* |
 | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Metrics-only override, same precedence. Without it the metrics endpoint is derived from the base URL above — and a base that already names `/v1/traces`, which this repo's own convention sets, has that path replaced rather than appended to | *(unset)* |
-| `AGENT_JUDGE_MODEL` | Names a judge ONLY where no `judge` role is declared | *(unset)* — the `judge` role in `models.yaml` wins and an ignored value is logged (framework default `falcon3:3b`); `scripts/_shared.py:DEFAULT_JUDGE_MODEL` is the last-resort fallback when `runtime/` isn't importable |
+| `AGENT_JUDGE_MODEL` | Names a judge ONLY where no `judge` role is declared | *(unset)* — the `judge` role in `models.yaml` wins and an ignored value is logged (framework default `falcon3:3b`); `scripts/_shared.py:DEFAULT_JUDGE_MODEL` is the last-resort fallback when `agentsmith/` isn't importable |
 | `AGENT_OWNER_ID` | Real user identity. **No longer exported to the shell profile** — ambient there, it outranked every tenant's declared `tenant.owner` and was absent in CI entirely. Resolution: `tenant.owner` → this → `git config user.email` | *(from tenant.yaml, then git)* |
 | `AGENT_OWNER_NAME` | Display name. Override for `tenant.owner_name`; falls back to `git config user.name` | *(from tenant.yaml, then git)* |
 | `AGENT_PHOENIX_ENDPOINT` | Phoenix URL | `http://localhost:6006` |
-| `AGENT_MONTHLY_USD_CAP` | Dev session monthly budget. Also the production `LLMGateway`'s fallback budget cap (`runtime/llm_gateway.py:LLMGateway.__init__`) when a tenant doesn't pass an explicit `budget_cap_usd` — same env var, same default, both layers | `150.0` |
+| `AGENT_MONTHLY_USD_CAP` | Dev session monthly budget. Also the production `LLMGateway`'s fallback budget cap (`agentsmith/llm_gateway.py:LLMGateway.__init__`) when a tenant doesn't pass an explicit `budget_cap_usd` — same env var, same default, both layers | `150.0` |
 | `PROMPT_GUARD` | Overrides `security.prompt_guard` in tenant.yaml. `off\|warn\|default\|strict` | `default` |
 | `INPUT_GUARDRAIL` | Overrides `security.input_guardrail`. `off\|default\|custom` | `default` (`off` in development) |
 | `MODERATION_HOOK` | Overrides `moderation.mode`. `off\|optional\|required` | `optional` |
 | `TOOL_ALLOWLIST_STRICT` | Overrides `security.tool_allowlist_strict` — deny-by-default tool calls | `false` |
 | `ENABLE_IP_REDACTION` | Overrides `security.ip_redaction` | `false` |
 | `TRACE_TOOL_PAYLOADS` | Overrides `security.trace_tool_payloads` — put tool arguments and results on the span. Off by default: a new egress channel. When on they use `input.value`/`output.value`, which `trace_redactor` already scrubs | `false` |
-| `AGENT_TENANT_ID` | Tenant this process serves. Second in `runtime/tenancy.py:resolve_tenant_id`'s order — after an explicit argument, before `.agenticframework/tenant.yaml`'s `tenant.id`. Set it on a **dedicated** worker pool; leave it unset on a shared pool, where the tenant varies per request and is passed explicitly. Unresolved raises rather than defaulting: this id partitions the budget ledger, the audit log and cross-tenant isolation | *(from tenant.yaml)* |
+| `AGENT_TENANT_ID` | Tenant this process serves. Second in `agentsmith/tenancy.py:resolve_tenant_id`'s order — after an explicit argument, before `.agenticframework/tenant.yaml`'s `tenant.id`. Set it on a **dedicated** worker pool; leave it unset on a shared pool, where the tenant varies per request and is passed explicitly. Unresolved raises rather than defaulting: this id partitions the budget ledger, the audit log and cross-tenant isolation | *(from tenant.yaml)* |
 | `AGENT_PROJECT_NAME` | `service.name` / `project.name` on the OTel Resource. Defaults to the repo directory name — the one identifier a repo-derived value is right for, since nothing partitions on it | *(repo name)* |
 | `AGENT_NOTIFY_WEBHOOK` | Notification webhook — Slack, Teams or custom. `scripts/notifier.py` POSTs to it from a daemon thread, so a notification never stalls an agent. This row used to sit under a second, Slack-specific webhook variable (AI&#95;STACK&#95;SLACK&#95;WEBHOOK, removed 2026-09-01) that nothing read; a reader wiring up Slack had even odds of picking the one with no implementation behind it | `https://...` |
 
@@ -786,8 +786,8 @@ For internal registries, the installer supports fetching from a private artifact
 - Checkpointer: Postgres (Temporal) or Redis; **`MemorySaver` is prohibited in production**
 - Scheduling: per-tenant cron defined in tenant repo config
 - HITL pause: workflow signal + Phoenix annotation poll with timeout; DLQ on expiry
-- Worker isolation: shared pool with `tenant_id` partition. `tenant.isolation: dedicated` is a **marker, not a control** -- no code reads it; it tells an operator to apply `runtime/k8s/dedicated-tenant/`. The topology is provisioned out of band.
-- LLM routing: all calls via LLM Gateway (`runtime/llm_gateway.py`) — not `cost_router.py`
+- Worker isolation: shared pool with `tenant_id` partition. `tenant.isolation: dedicated` is a **marker, not a control** -- no code reads it; it tells an operator to apply `agentsmith/k8s/dedicated-tenant/`. The topology is provisioned out of band.
+- LLM routing: all calls via LLM Gateway (`agentsmith/llm_gateway.py`) — not `cost_router.py`
 
 ### Mode Switching Logic
 
@@ -1000,7 +1000,7 @@ org cap (enterprise pack — optional)
 | Level | Backing store | Enforced by |
 |---|---|---|
 | Session (dev) | `.agent-rfc/fixtures/token_velocity_cache.json` | `circuit_breaker.py` |
-| Tenant (production) | LLM Gateway store (Postgres or Redis) | `runtime/llm_gateway.py` |
+| Tenant (production) | LLM Gateway store (Postgres or Redis) | `agentsmith/llm_gateway.py` |
 | Org (enterprise) | `agenticframework-org.yaml` + Gateway | Enterprise pack |
 
 ### Dev Session — Dual-Tier Protection
@@ -1139,7 +1139,7 @@ workflow:
   task_queue: acme                  # TASK_QUEUE
 
 # Written only when `tenant init --ide` declared one, and read by
-# runtime.config.chosen_ides — the single reader shared by `tenant init`,
+# agentsmith.config.chosen_ides — the single reader shared by `tenant init`,
 # `tenant adopt`, `agentsmith sync` and `generate-ide-config.py --hooks`, so the
 # choice survives a sync instead of being restored on the next run. Absent,
 # empty or unreadable means every IDE with a verified config schema.
@@ -1150,7 +1150,7 @@ workspace:
 `tenant.yaml` carries no per-environment block. `phoenix_namespace` is read by
 nothing, and the other two would mislead: `redaction_profile` reads as a security control and is
 not one: the active profile comes from `$ENVIRONMENT` via
-`runtime/environment.py`, which is fail-closed to `production`, and it stays out
+`agentsmith/environment.py`, which is fail-closed to `production`, and it stays out
 of this file deliberately so that a checked-in `development` cannot disable
 redaction. `eval_fail_below` belongs on the judge binding in `models.yaml`,
 because a threshold is calibrated against one grader and has to move when that
@@ -1338,7 +1338,7 @@ AgentSmith/
 │   ├── evals_port.py            # The evals contract's `run` — AgentSmith as an evals provider, over run-evals.py's scoring (contract/evals/v1/)
 │   ├── security_port.py         # The security contract's `check` and `redaction` — AgentSmith as a security provider, over the harness's runners (contract/security/v1/)
 │   └── generate-ide-config.py  # Reads templates/agent-rules.yaml, writes target-repo IDE config
-├── runtime/                     # Production runtime components
+├── agentsmith/                     # Production runtime components
 │   ├── worker.py
 │   ├── llm_gateway.py           # complete() + complete_stream() (ttft_ms)
 │   ├── models.yaml              # Framework default model registry (the LLM Gateway (Production) section)
@@ -1463,7 +1463,7 @@ AgentSmith/
 │                                # No providers.json here: AgentSmith IS the provider, so its hooks
 │                                # resolve to its own scripts/ — a TENANT gets one from `tenant adopt`
 ├── init-db/                     # Postgres bootstrap for docker-compose.yml (creates agenticframework DB)
-├── pyproject.toml               # Packages runtime/ as `agentsmith-runtime` (the Production Runtime section) — pip-installable by tenants
+├── pyproject.toml               # Packages agentsmith/ as `agentsmith-runtime` (the Production Runtime section) — pip-installable by tenants
 ├── .python-version              # The Python version: the framework environment, requirements.lock and Self-Test all use it
 ├── requirements.txt             # The one dependency catalog — never installed directly
 ├── requirements.lock            # Compiled from requirements.txt (uv, hashed); CI and install-ai-stack.sh install it into ~/.agent-framework/.venv
@@ -1485,7 +1485,7 @@ AgentSmith/
 
 This tree is the **only** copy — README.md links here instead of carrying
 its own. `self-test.yml` diffs the top-level entries above — plus the
-second-level entries of `scripts/`, `runtime/`, `docs/`, and `fixtures/`
+second-level entries of `scripts/`, `agentsmith/`, `docs/`, and `fixtures/`
 (the depth at which the P12 additions drifted undetected) — against
 `git ls-files` so drift fails CI instead of accumulating silently.
 
@@ -1498,9 +1498,9 @@ actually checkable without live infra:
 - `ruff check .` — config in `pyproject.toml`. The selection is deliberate
   rather than maximal; the two families measured and rejected (`S`, `BLE`) are
   recorded there with their counts and the reason
-- `mypy` over the shipped runtime only (`runtime/`, excluding its tests) —
+- `mypy` over the shipped runtime only (`agentsmith/`, excluding its tests) —
   scoped in `pyproject.toml`, with the reason the tests are excluded
-- `py_compile` sweep over `scripts/`, `runtime/`, `examples/`
+- `py_compile` sweep over `scripts/`, `agentsmith/`, `examples/`
 - `bash -n` / `zsh -n` on `install-ai-stack.sh`, `enterprise/*.sh`, `hooks/*`
 - ShellCheck (advisory, non-blocking — no existing baseline to compare against)
 - Ops Portal: `tsc --noEmit` + `next build`
@@ -1828,10 +1828,10 @@ agentsmith sync
 ### Worker Topology
 
 ```
-runtime/worker.py entrypoint
+agentsmith/worker.py entrypoint
     │
     ├─ Reads tenant.id from task context
-    ├─ All LLM calls → runtime/llm_gateway.py (not cost_router.py)
+    ├─ All LLM calls → agentsmith/llm_gateway.py (not cost_router.py)
     ├─ All spans carry tenant.id, workflow.id, workflow.run_id
     └─ All failures → dead_letter.py (DLQ)
 ```
@@ -1842,14 +1842,14 @@ Dedicated pool: tenant gets own worker deployment. Configured via `tenant.isolat
 
 ### Idempotency Key Design
 
-Every workflow activity is assigned an idempotency key derived from a hash of its input parameters. Duplicate activity submissions (e.g., on retry after crash) are detected and short-circuited. `runtime/idempotency.py` manages the key store (Redis or Postgres-backed).
+Every workflow activity is assigned an idempotency key derived from a hash of its input parameters. Duplicate activity submissions (e.g., on retry after crash) are detected and short-circuited. `agentsmith/idempotency.py` manages the key store (Redis or Postgres-backed).
 
-Unlike the budget backend (the LLM Gateway (Production) section, which has an in-memory option for dev/CI), idempotency has **no in-memory fallback** — only `_RedisBackend` and `_PostgresBackend` (`IDEMPOTENCY_BACKEND` env var, default `redis`). If `REDIS_URL`/`DATABASE_URL` isn't set or the backend can't connect, `LLMGateway._make_idempotency_store()` (`runtime/llm_gateway.py:355-367`) catches the failure, logs a warning, and degrades to no idempotency store at all — the gateway still runs, but duplicate-call suppression silently doesn't happen until a real backend is reachable.
+Unlike the budget backend (the LLM Gateway (Production) section, which has an in-memory option for dev/CI), idempotency has **no in-memory fallback** — only `_RedisBackend` and `_PostgresBackend` (`IDEMPOTENCY_BACKEND` env var, default `redis`). If `REDIS_URL`/`DATABASE_URL` isn't set or the backend can't connect, `LLMGateway._make_idempotency_store()` (`agentsmith/llm_gateway.py:355-367`) catches the failure, logs a warning, and degrades to no idempotency store at all — the gateway still runs, but duplicate-call suppression silently doesn't happen until a real backend is reachable.
 
 ### Dead-Letter Queue
 
 Failed activities — including ones a human can *fix and replay*, not just
-ones that exhaust retries — are moved to the DLQ (`runtime/dead_letter.py`).
+ones that exhaust retries — are moved to the DLQ (`agentsmith/dead_letter.py`).
 Operations:
 
 ```python
@@ -1883,7 +1883,7 @@ parked* workflow a replay should resume, as opposed to a terminated
 dead-letter with nothing left to resume.
 
 `replay()`'s constructor-supplied `replay_handler` is workflow-engine-
-specific and pluggable; `runtime/temporal_replay.py`'s
+specific and pluggable; `agentsmith/temporal_replay.py`'s
 `make_temporal_replay_handler(client)` is the concrete Temporal
 implementation — it signals the workflow at `entry.workflow_id` with
 `human_fix_payload(gate_id, fix)`.
@@ -1894,7 +1894,7 @@ aggregate pending count.
 
 ### HITL Pause / Resume
 
-Two related patterns in `runtime/workflows/base_workflow.py`, for two
+Two related patterns in `agentsmith/workflows/base_workflow.py`, for two
 different kinds of human intervention:
 
 **Approve/reject** (`run_with_hitl_gate`) — workflow waits on a boolean
@@ -1949,7 +1949,7 @@ intended retry mechanism, not Temporal's.
 the model to repair a failing payload once before escalating to the human
 edit-and-resume path. On activity failure, the workflow calls
 `self_correct_payload_activity`, which builds `LLMGateway(tenant_id=...)`
-and delegates to `runtime/self_correction.py` to request only corrected JSON
+and delegates to `agentsmith/self_correction.py` to request only corrected JSON
 and parse it. If the corrected payload still fails after
 `max_self_correction_attempts` (default 1), the method calls
 `run_with_recoverable_step` with the last payload. Existing
@@ -1963,7 +1963,7 @@ portal HMAC-signs the edit and POSTs it to **that tenant's own**
 `hitl.replay_webhook_secret`, same mechanism as `gateway.budget_cap_usd`)
 — deliberately per-tenant, so a fix is always routed to the team running
 that tenant's worker, never a shared cross-tenant endpoint.
-`runtime/replay_webhook_server.py` is the reference receiver: verifies
+`agentsmith/replay_webhook_server.py` is the reference receiver: verifies
 the signature, then calls
 `DeadLetterQueue(replay_handler=make_temporal_replay_handler(client)).replay(task_id, override_payload=...)`.
 
@@ -1984,7 +1984,7 @@ schedules:
 
 ### Domain Workflow Ownership
 
-Reference workflows in `runtime/workflows/` demonstrate patterns only. Tenant repos define their own production workflow files. Framework workflows are never deployed directly as tenant production code.
+Reference workflows in `agentsmith/workflows/` demonstrate patterns only. Tenant repos define their own production workflow files. Framework workflows are never deployed directly as tenant production code.
 
 ### On-Premise / Air-Gapped Deployment
 
@@ -2141,11 +2141,11 @@ first, and the retired header names too. A header grant naming an unknown role o
 
 ### `trace_redactor.py` Integration
 
-`runtime/trace_redactor.py` acts as an OTLP processor — it intercepts spans before export and applies the active redaction profile:
+`agentsmith/trace_redactor.py` acts as an OTLP processor — it intercepts spans before export and applies the active redaction profile:
 
 ```python
 # profile/tenant_id are optional overrides; normally resolved automatically —
-# profile via runtime/environment.py:get_environment(), tenant_id per-span
+# profile via agentsmith/environment.py:get_environment(), tenant_id per-span
 # (see "Per-Span Tenant Binding" below).
 redactor = TraceRedactor()
 provider.add_span_processor(redactor)
@@ -2153,7 +2153,7 @@ provider.add_span_processor(redactor)
 
 ### Canonical Environment Resolution
 
-`runtime/environment.py:get_environment()` is the single source of truth for
+`agentsmith/environment.py:get_environment()` is the single source of truth for
 `$ENVIRONMENT`, shared by `trace_redactor.py` (redaction profile) and
 `scripts/multi_agent_system.py` (checkpointer selection). It is
 **fail-closed**: an unset or unrecognized value (e.g. a typo) resolves to
@@ -2168,7 +2168,7 @@ misconfiguration.
 ### Per-Span Tenant Binding
 
 `TraceRedactor` resolves the tenant id for HITL blob encryption from the
-span's own `tenant.id` attribute (set by `runtime/llm_gateway.py` and the
+span's own `tenant.id` attribute (set by `agentsmith/llm_gateway.py` and the
 agent scripts) inside `on_end()`, not from a value captured once at
 `__init__`/process-construction time. On a shared (non-dedicated) worker
 pool processing spans for multiple tenants in one process, binding
@@ -2225,7 +2225,7 @@ python3 scripts/verify_system.py --check-redaction
   Tenants conform to these specs irrespective of version and upgrade on their own
   schedule; the framework is what has to keep working under a tenant already in
   production. A change that cannot be made compatible belongs in a MAJOR, and
-  `runtime/version.py` warns a tenant at startup when it is running across one.
+  `agentsmith/version.py` warns a tenant at startup when it is running across one.
 - **It applies from 1.3.0 forward. 1.3.x is the one release that broke it** —
   five breaking changes shipped as a MINOR, listed in that row of the
   compatibility matrix. Recorded rather than quietly restated as a rule the
@@ -2277,7 +2277,7 @@ Centralised production LLM routing, distinct from the dev-mode `cost_router.py` 
 
 ### Gateway API
 
-`runtime/llm_gateway.py` exposes:
+`agentsmith/llm_gateway.py` exposes:
 
 ```python
 gateway.complete(
@@ -2328,7 +2328,7 @@ OpenAI-compatible endpoint, so a Claude served that way speaks `openai_chat`
 rather than `anthropic_messages`.
 
 ```yaml
-# models.yaml — framework defaults (runtime/models.yaml)
+# models.yaml — framework defaults (agentsmith/models.yaml)
 default_profile: local
 
 catalog:                          # model REFERENCES — present, not routed
@@ -2425,13 +2425,13 @@ prod topology but not the typical dev/CI one.
 
 ### Mandatory Gateway Enforcement
 
-All production workers import `runtime/llm_gateway.py` and **must not** import `cost_router.py` directly. The framework's `pre-commit` hook (enterprise mode — an org policy file present at `~/.agent-framework/agenticframework-org.yaml`) greps staged `runtime/*.py` files for direct `cost_router` imports and blocks the commit if found.
+All production workers import `agentsmith/llm_gateway.py` and **must not** import `cost_router.py` directly. The framework's `pre-commit` hook (enterprise mode — an org policy file present at `~/.agent-framework/agenticframework-org.yaml`) greps staged `agentsmith/*.py` files for direct `cost_router` imports and blocks the commit if found.
 
 ### Shared Provider Dispatch
 
-`runtime/llm_gateway.py` and the dev-mode `scripts/cost_router.py` share
+`agentsmith/llm_gateway.py` and the dev-mode `scripts/cost_router.py` share
 request-building and response-parsing logic via
-`runtime/provider_dispatch.py` (`build_request`, `parse_response`,
+`agentsmith/provider_dispatch.py` (`build_request`, `parse_response`,
 `infer_provider`) — only the provider-dispatch shape (Anthropic Messages API
 vs. OpenAI-compatible chat completions) is shared; each file's own
 routing/budget/degrade-ladder logic, which legitimately differs between the
@@ -2445,7 +2445,7 @@ above. Cloud-hosted models don't — each cloud vendor has its own auth scheme
 and request/response envelope, not just a different host. `models.yaml`
 entries with `provider: vertex_ai | azure_openai | bedrock |
 huawei_modelarts` are dispatched instead to a `CloudProviderAdapter`
-(`runtime/provider_dispatch.py`):
+(`agentsmith/provider_dispatch.py`):
 
 | Provider | Auth | URL shape | Required `models.yaml` fields | Default region | Live-verified? |
 |---|---|---|---|---|---|
@@ -2475,7 +2475,7 @@ provider, just no longer the default; verify model availability live
 before relying on one, especially for Bedrock (no AWS credentials were
 available to test its GCC region the way Vertex AI's was).
 
-`runtime/models.yaml` carries a live-verified `vertex_gemini` role
+`agentsmith/models.yaml` carries a live-verified `vertex_gemini` role
 (`gemini-2.5-flash` / `us-central1`) **commented out**, since the default
 registry is local-only (the LLM Gateway (Production) section "Model Registry"); it was never in the
 architect/developer/validator degrade chain even when active, because most
@@ -2484,7 +2484,7 @@ the same block in a tenant `models.yaml`, then route to it via
 `model_hint="vertex_gemini"` or a tenant's `routing_overrides`.
 
 All four adapters are covered by mocked request/response-shape tests
-(`runtime/test/test_provider_dispatch_cloud.py`); `vertex_ai` additionally
+(`agentsmith/test/test_provider_dispatch_cloud.py`); `vertex_ai` additionally
 has the live verification described above. The Huawei ModelArts adapter
 in particular is the least-documented in English-language sources; its
 signing implementation follows Huawei's published algorithm structure but
@@ -2494,7 +2494,7 @@ should be verified against a real deployment before production use.
 
 Both the LLM Gateway's Postgres/Redis budget period key and the Ops
 Portal's "current month" lookup (`portal/lib/cost.ts`) are pinned to UTC
-explicitly (`runtime/llm_gateway.py:_current_period()` uses `time.gmtime()`,
+explicitly (`agentsmith/llm_gateway.py:_current_period()` uses `time.gmtime()`,
 not the server's local time) — a worker running in a non-UTC timezone would
 otherwise disagree with the portal for several hours around a month
 boundary about which period a charge belongs to.
@@ -2646,10 +2646,10 @@ harness for every tenant app:
 | `fixtures/security/control_registry.json` | Canonical SEC-* registry |
 | `.agent-rfc/security/` | Tenant risk register, agency manifest, tool allowlist, adversarial overlays |
 | `workflow-templates/eval-security.yml` | CI gate (`strict: true` in every tenant CI template — Go, Python, TS — + framework self-test) |
-| `runtime/prompt_guard.py` | Prompt injection heuristics (`PROMPT_GUARD`); retrieved-context scanning (`scan_documents`) |
-| `runtime/structured_output.py` | Pydantic JSON parse gate |
-| `runtime/tool_registry.py` | `@tool` + YAML allowlist |
-| `runtime/moderation.py` | Pluggable output moderator (`MODERATION_HOOK`) |
+| `agentsmith/prompt_guard.py` | Prompt injection heuristics (`PROMPT_GUARD`); retrieved-context scanning (`scan_documents`) |
+| `agentsmith/structured_output.py` | Pydantic JSON parse gate |
+| `agentsmith/tool_registry.py` | `@tool` + YAML allowlist |
+| `agentsmith/moderation.py` | Pluggable output moderator (`MODERATION_HOOK`) |
 
 | Theme | Status | Primary AgentSmith evidence |
 |---|---|---|

@@ -1,5 +1,5 @@
 // portal/lib/spanIdentity.ts — pillar 3 for the portal, split the same way
-// runtime/tracing.py splits it.
+// agentsmith/tracing.py splits it.
 //
 // PER-PROCESS facts (service, project, environment, owner, the portal's own
 // component role) go on the Resource, where every span inherits them and no
@@ -51,7 +51,7 @@ export function resourceAttributes(env: NodeJS.ProcessEnv = process.env): Record
 /**
  * Stamps the per-request half onto every span at START.
  *
- * At start, not at end, for the reason runtime/tracing.py gives: an exporter
+ * At start, not at end, for the reason agentsmith/tracing.py gives: an exporter
  * may sample or route on the attributes, and a span that learns its tenant
  * only when it closes has already been routed without one.
  *

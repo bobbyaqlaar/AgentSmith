@@ -71,13 +71,13 @@ def legacy(tmp_path, monkeypatch):
 
 
 def _plan(root: Path, **kw):
-    from runtime.adopt import plan_adoption
+    from agentsmith.adopt import plan_adoption
 
     return plan_adoption("legacy", root, **kw)
 
 
 def _adopt(root: Path, **kw) -> list[str]:
-    from runtime.adopt import adopt
+    from agentsmith.adopt import adopt
 
     return adopt(_plan(root, architecture="clean", **kw))
 
@@ -117,7 +117,7 @@ def test_a_given_glob_replaces_detection(legacy):
 
 def test_without_yes_and_no_terminal_nothing_is_written(legacy):
     result = subprocess.run(
-        [sys.executable, "-m", "runtime.cli", "tenant", "adopt", "legacy", "--root", str(legacy)],
+        [sys.executable, "-m", "agentsmith.cli", "tenant", "adopt", "legacy", "--root", str(legacy)],
         cwd=REPO, capture_output=True, text=True, check=False, stdin=subprocess.DEVNULL,
         env={**os.environ},
     )
@@ -136,7 +136,7 @@ def test_without_yes_and_no_terminal_nothing_is_written(legacy):
     ("malformed-settings", "not valid JSON"),
 ])
 def test_a_repository_adopt_is_not_for_is_refused_before_anything_is_written(tmp_path, legacy, state, says):
-    from runtime.adopt import AdoptError
+    from agentsmith.adopt import AdoptError
 
     root = legacy
     if state == "no-commit":
@@ -188,7 +188,7 @@ def test_a_rule_file_agentsmith_generated_is_regenerated_not_merged_into(legacy)
 
     plan = _plan(legacy)
     assert dict(plan.actions)["AGENTS.md"] == "regenerate"
-    from runtime.adopt import adopt
+    from agentsmith.adopt import adopt
 
     adopt(plan)
     agents = (legacy / "AGENTS.md").read_text()
@@ -197,7 +197,7 @@ def test_a_rule_file_agentsmith_generated_is_regenerated_not_merged_into(legacy)
 
 
 def test_the_rules_block_is_replaced_not_repeated():
-    from runtime.adopt import merge_rules_block
+    from agentsmith.adopt import merge_rules_block
 
     once = merge_rules_block(OWN_RULES, "rules v1\n")
     twice = merge_rules_block(once, "rules v2\n")
@@ -220,7 +220,7 @@ def test_the_gates_workflow_asks_the_declared_provider_and_names_no_framework_pa
     """Gate contract 2 (.agent-rfc/designs/gate-contract-ci.md): the workflow runs
     the provider's pinned setup step and asks through the tenant's own launcher.
     It used to check AgentSmith out and run two of its scripts by path."""
-    from runtime.adopt import SETUP_ACTION
+    from agentsmith.adopt import SETUP_ACTION
 
     _adopt(legacy, framework_ref="v9.9.9")
 
@@ -260,7 +260,7 @@ def test_this_checkouts_copies_beat_the_machines_installed_ones(
     not, and nothing was red
     (.agent-rfc/designs/public-front-door.md).
     """
-    import runtime.cli as cli
+    import agentsmith.cli as cli
 
     stale = tmp_path / "home" / stale_rel
     stale.mkdir(parents=True)
@@ -277,7 +277,7 @@ def test_this_checkouts_copies_beat_the_machines_installed_ones(
 
 
 def _adoption_commit(root: Path, written: list[str]) -> subprocess.CompletedProcess:
-    from runtime.adopt import ADOPTION_DESIGN
+    from agentsmith.adopt import ADOPTION_DESIGN
 
     _git(root, "add", "--", *written)
     return _git(root, "commit", "-m", "chore: adopt AgentSmith gates",
@@ -297,7 +297,7 @@ def test_the_adoption_commit_goes_in_though_it_is_not_the_first(legacy):
 
 
 def test_the_printed_commit_stages_by_name(legacy):
-    from runtime.adopt import commit_command
+    from agentsmith.adopt import commit_command
 
     command = commit_command(_adopt(legacy))
 
@@ -360,7 +360,7 @@ def test_the_machines_provisioning_hooks_are_not_chained_into_an_adopted_reposit
     seven CI workflows beside the repository's own, and every commit re-mapped
     the graph. The guardrail hooks are the repository's to keep; the
     provisioning ones are not."""
-    from runtime.adopt import adopt
+    from agentsmith.adopt import adopt
 
     machine = legacy / ".git" / "hooks"
     machine.mkdir(exist_ok=True)
@@ -388,7 +388,7 @@ def test_the_machines_provisioning_hooks_are_not_chained_into_an_adopted_reposit
 
 def test_vendored_framework_code_is_not_gated(legacy):
     """A tenant provisioned before 3.0.0 carries AgentSmith's own scripts/ and
-    runtime/. They are left ungated, so the copy can be deleted without
+    agentsmith/. They are left ungated, so the copy can be deleted without
     reviewing framework code, and the plan says the copy is no longer run and
     must go (.agent-rfc/designs/vendoring-retired.md). Found adopting a real
     scratch tenant, which the synthetic fixtures had no vendored code to show."""
@@ -400,7 +400,7 @@ def test_vendored_framework_code_is_not_gated(legacy):
 
     plan = _plan(legacy)
 
-    assert "scripts/**" not in plan.gated and "runtime/**" not in plan.gated
+    assert "scripts/**" not in plan.gated and "agentsmith/**" not in plan.gated
     assert "mypkg/**" in plan.gated, "the repository's own code is still gated"
     assert any("still hold a copy" in w and "scripts/" in w and "neither refreshes nor runs" in w
                for w in plan.warnings), \
@@ -412,7 +412,7 @@ def test_adopt_refuses_when_the_install_cannot_arm_the_gates(legacy, tmp_path, m
     empty directory — no gates, and not its own hooks either, since a hooks path
     overrides .git/hooks. Refused in the plan, before anything is written
     (.agent-rfc/designs/installed-architectures.md)."""
-    from runtime.adopt import AdoptError
+    from agentsmith.adopt import AdoptError
 
     install = tmp_path / "install"
     (install / "scripts").mkdir(parents=True)
@@ -447,7 +447,7 @@ def test_adopt_declares_who_governs_the_repository(legacy):
 def test_adopt_writes_the_sync_workflow_so_a_tenant_hears_about_upgrades(legacy):
     """A tenant only learns it is behind when someone thinks to check; the
     scheduled workflow is what removes that (.agent-rfc/designs/sync-pull-request.md)."""
-    from runtime.adopt import SYNC_WORKFLOW
+    from agentsmith.adopt import SYNC_WORKFLOW
 
     plan = _plan(legacy)
     assert dict(plan.actions)[SYNC_WORKFLOW] == "create"

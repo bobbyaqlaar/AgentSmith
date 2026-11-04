@@ -40,8 +40,8 @@ def _setup_otel(project_name: str, session_id: str) -> Any:
         # processor and the redactor, which this file assembled without for as
         # long as it assembled its own. README.md offers this file as a shape to
         # copy, so the shape has to be the right one.
-        from runtime.otlp import span_exporter
-        from runtime.tracing import configure_tracing
+        from agentsmith.otlp import span_exporter
+        from agentsmith.tracing import configure_tracing
 
         from _shared import _tenant_id
 
@@ -59,7 +59,7 @@ def _setup_otel(project_name: str, session_id: str) -> Any:
         )
         return trace.get_tracer("agenticframework")
     except Exception:
-        from runtime.tracing import NoopTracer
+        from agentsmith.tracing import NoopTracer
 
         return NoopTracer()
 

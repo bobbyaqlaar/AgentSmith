@@ -2,7 +2,7 @@
 # --architecture` offers, and the agentic overlay `--agentic` adds to any of
 # them (.agent-rfc/designs/tenant-architecture.md).
 #
-# One catalogue, read by runtime/architectures.py and nothing else. Paths are
+# One catalogue, read by agentsmith/architectures.py and nothing else. Paths are
 # relative to the stack's source root (app/ for python-fastapi, src/ for
 # ts-react, internal/ for go), written as <src>/…
 #

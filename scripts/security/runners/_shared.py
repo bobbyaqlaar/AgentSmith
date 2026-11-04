@@ -4,7 +4,7 @@ an existing verifier, extracted so runners stay thin.
 
 Every check the harness needs already exists somewhere: `verify_system.py` has
 the `--check-*` family, `run-evals.py` owns fixture loading and thresholds, and
-`runtime/test/` and `scripts/test/` hold suites that already assert the
+`agentsmith/test/` and `scripts/test/` hold suites that already assert the
 behaviour a control claims. A runner's job is to point at one of those and
 translate its outcome into a ControlResult — not to re-implement the check,
 which would give the harness a second opinion that can drift from the one CI
@@ -151,7 +151,7 @@ def load_run_evals(root: Path):
     suite falls back to which base file, and how a threshold resolves.
 
     The root arguments still matter: the harness may run from a tenant
-    directory, so `runtime.*` and `scripts/*` must be importable before
+    directory, so `agentsmith.*` and `scripts/*` must be importable before
     run-evals executes.
     """
     for extra in (str(root), str(root / "scripts")):
@@ -173,7 +173,7 @@ def guard_suite(
 
     Two controls work this way — adversarial prompt injection (SEC-ADV-001) and
     RAG poisoning (SEC-RAG-001). Both score every case locally with
-    `runtime.prompt_guard`, both count misses rather than averaging quality, and
+    `agentsmith.prompt_guard`, both count misses rather than averaging quality, and
     both fail above a threshold instead of below one. Written twice they would
     have been two near-identical files free to drift on the one number that
     matters; the differences are the suite name and the scorer, so those are
@@ -255,14 +255,14 @@ def eval_suite_gateable(
 
 # ── Context and result helpers ───────────────────────────────────────────────
 #
-# Every runner needs the framework root (usually to import `runtime.*`) and
+# Every runner needs the framework root (usually to import `agentsmith.*`) and
 # builds ControlResults by hand. Five runners each carried their own
 # `sys.path.insert(0, str(root))`; ten repeated `Path(ctx["root"])`. Extracted
 # so a runner reads as the check it performs rather than its preamble.
 
 
 def framework_root(ctx: dict[str, Any]) -> Path:
-    """The framework checkout, with `runtime.*` importable.
+    """The framework checkout, with `agentsmith.*` importable.
 
     Runners import guardrail modules to exercise them directly. The path insert
     was duplicated in every runner that does, and omitting it fails only on the
@@ -334,7 +334,7 @@ def framework_component_absent(
 
     Some controls verify AgentSmith's own components — the Ops Portal
     (`portal/`), the git hooks (`hooks/`) — rather than anything a tenant
-    owns. A tenant receives `scripts/`, `runtime/` and `fixtures/security/`
+    owns. A tenant receives `scripts/`, `agentsmith/` and `fixtures/security/`
     vendored into its own tree, never those, so the install root there is the
     tenant's and the component is structurally absent. Reporting that as
     `fail: missing portal files` told AqlaarTeleologyStudio its compliance was
@@ -350,7 +350,7 @@ def framework_component_absent(
     if (root / component).exists():
         return None
     try:
-        from runtime.cli import looks_like_framework
+        from agentsmith.cli import looks_like_framework
     except ImportError:  # fail-open: no runtime to ask, so run the real check
         return None
     if looks_like_framework(root):
@@ -425,7 +425,7 @@ def declared_choice(
     `(None, "")` when it declares nothing. A YAML boolean is a problem, not a
     word: a bare `off` parses as False, and reading that as "off" would turn a
     control off by writing something that was never a valid value — the rule
-    `runtime.config.resolve_choice` keeps for the runtime."""
+    `agentsmith.config.resolve_choice` keeps for the runtime."""
     node, problem = declared_value(ctx, dotted)
     if problem or node is None:
         return None, problem

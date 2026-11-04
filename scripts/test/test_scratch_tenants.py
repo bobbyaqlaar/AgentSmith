@@ -33,7 +33,7 @@ WORKFLOW = REPO / ".github" / "workflows" / "scratch-tenants.yml"
 BOT = "AgentSmith scratch-tenants"
 
 sys.path.insert(0, str(REPO))
-from runtime.cli import STACKS
+from agentsmith.cli import STACKS
 
 needs_git = pytest.mark.skipif(
     shutil.which("git") is None or shutil.which("bash") is None, reason="git and bash required"
@@ -137,7 +137,7 @@ def test_apps_carry_nothing_provisioning_generates():
     # comes from the ONE shared security-pack/ — an app-local copy would be a
     # second pack to drift.
     generated = {
-        ".github", "runtime", "fixtures", ".agents", ".cursorrules", "CLAUDE.md", "AGENTS.md",
+        ".github", "agentsmith", "fixtures", ".agents", ".cursorrules", "CLAUDE.md", "AGENTS.md",
         "GEMINI.md", ".agenticframework", "SCRATCH_TENANT.md", ".agent-history.log", ".agent-rfc",
     }
     apps = [p for p in APPS.iterdir() if p.is_dir()]
@@ -179,7 +179,7 @@ def install(tmp_path, monkeypatch):
     fw = home / ".agent-framework"
     ignore = shutil.ignore_patterns("__pycache__", ".hitl_blobs")
     shutil.copytree(REPO / "scripts", fw / "scripts", ignore=ignore)
-    shutil.copytree(REPO / "runtime", fw / "runtime", ignore=ignore)
+    shutil.copytree(REPO / "agentsmith", fw / "agentsmith", ignore=ignore)
     shutil.copytree(REPO / "fixtures" / "security", fw / "fixtures" / "security")
     for base in (REPO / "fixtures").glob("*_base.json"):
         shutil.copy(base, fw / "fixtures" / base.name)
@@ -262,7 +262,7 @@ def test_each_app_builds_into_a_complete_tenant_offline(app, stack, install, tmp
         assert (workflows / name).is_file(), name
     assert f"setup-agentsmith@{REF}" in (workflows / "agentsmith-gates.yml").read_text(encoding="utf-8")
     assert not (target / ".github" / "actions").exists()
-    assert not (target / "runtime").exists()
+    assert not (target / "agentsmith").exists()
     assert not (target / "scripts" / "process_gate.py").exists()
     claude_md = (target / "CLAUDE.md").read_text(encoding="utf-8")
     assert re.search(r"## Test Command\n```\n(.*)\n```", claude_md).group(1) == TEST_CMD[app]

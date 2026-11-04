@@ -66,10 +66,10 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
          indistinguishable from having none, and the deny path is the half that
          can regress without anyone noticing.
     """
-    framework_root(ctx)  # makes runtime.* importable
+    framework_root(ctx)  # makes agentsmith.* importable
     allowlist_path = tenant_security(ctx) / "tool_allowlist.yaml"
 
-    from runtime.tool_registry import ToolNotAllowedError, ToolRegistry, load_allowlist
+    from agentsmith.tool_registry import ToolNotAllowedError, ToolRegistry, load_allowlist
 
     if not allowlist_path.exists():
         return failed(

@@ -84,34 +84,34 @@ CATALOGUE: tuple[Suite, ...] = (
     Suite(
         name="pii",
         tests=(
-            "runtime/test/test_input_guardrail.py",
-            "runtime/test/test_trace_redactor.py",
-            "runtime/test/test_luhn_parity.py",
+            "agentsmith/test/test_input_guardrail.py",
+            "agentsmith/test/test_trace_redactor.py",
+            "agentsmith/test/test_luhn_parity.py",
         ),
         mutations=(
             Mutation(
                 "digits are not normalised — an Emirates ID in Arabic-Indic "
                 "numerals stops being PII",
-                "runtime/pii_patterns.py",
+                "agentsmith/pii_patterns.py",
                 "return text.translate(_DIGIT_TRANSLATION)",
                 "return text",
             ),
             Mutation(
                 "the redactor forgets the personal identifiers it was taught",
-                "runtime/trace_redactor.py",
+                "agentsmith/trace_redactor.py",
                 "for pattern in (_EMIRATES_ID_HYPHEN, _EMIRATES_ID_DIGITS, _PHONE):",
                 "for pattern in ():",
             ),
             Mutation(
                 "the blob stores the SCRUBBED text instead of the original — the "
                 "compliance guarantee becomes a no-op",
-                "runtime/trace_redactor.py",
+                "agentsmith/trace_redactor.py",
                 '                        self._blob_store_for(tenant_id).put(ref, "\\n".join(strings))',
                 "                        self._blob_store_for(tenant_id).put(ref, \"\\n\".join(scrubbed))",
             ),
             Mutation(
                 "a blob that does not decrypt is returned as nonsense instead of raising",
-                "runtime/trace_redactor.py",
+                "agentsmith/trace_redactor.py",
                 "        except Exception as exc:\n"
                 "            raise RuntimeError(\n"
                 '                f"HITL blob {ref!r} for tenant={self.tenant_id!r} did not decrypt "',
@@ -122,20 +122,20 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "get() silently reads the local directory even when S3 is the backend",
-                "runtime/trace_redactor.py",
+                "agentsmith/trace_redactor.py",
                 '        if os.environ.get("HITL_BLOB_S3_BUCKET"):\n            raise NotImplementedError(',
                 '        if False:\n            raise NotImplementedError(',
             ),
             Mutation(
                 "the tenant id is spliced into the key variable raw — a hyphenated "
                 "tenant silently shares the fleet key again",
-                "runtime/trace_redactor.py",
+                "agentsmith/trace_redactor.py",
                 '        return re.sub(r"[^A-Za-z0-9]", "_", tenant_id).upper()',
                 "        return tenant_id.upper()",
             ),
             Mutation(
                 "falling back to the fleet-wide HITL key stops being reported",
-                "runtime/trace_redactor.py",
+                "agentsmith/trace_redactor.py",
                 "                warn_degraded_default(\n"
                 '                    f"hitl-shared-key:{self.tenant_id}",',
                 "                _unused = (\n"
@@ -144,19 +144,19 @@ CATALOGUE: tuple[Suite, ...] = (
             Mutation(
                 "the key value is stripped before hashing — every existing blob "
                 "becomes undecryptable",
-                "runtime/trace_redactor.py",
+                "agentsmith/trace_redactor.py",
                 "            return value if value and value.strip() else None",
                 "            return value.strip() if value and value.strip() else None",
             ),
             Mutation(
                 "the fallback tenant goes back to reading TENANT_ID raw",
-                "runtime/trace_redactor.py",
+                "agentsmith/trace_redactor.py",
                 "            self.default_tenant_id = resolve_tenant_id(tenant_id)",
                 '            self.default_tenant_id = tenant_id or os.environ.get("TENANT_ID", "unknown")',
             ),
             Mutation(
                 "an unresolvable tenant becomes the empty string, not 'unknown'",
-                "runtime/trace_redactor.py",
+                "agentsmith/trace_redactor.py",
                 '            self.default_tenant_id = "unknown"',
                 '            self.default_tenant_id = ""',
             ),
@@ -164,43 +164,43 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="tenant_scaffold",
-        tests=("runtime/test/test_cli.py",),
+        tests=("agentsmith/test/test_cli.py",),
         mutations=(
             Mutation(
                 "the tenant id goes back into the YAML unquoted — `init off` writes "
                 "a boolean",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "  id: {quoted_id}\n  name: {quoted_id}",
                 "  id: {tenant_id}\n  name: {tenant_id}",
             ),
             Mutation(
                 "any tenant id is accepted again",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "    if not TENANT_ID_PATTERN.match(tenant_id):",
                 "    if False:",
             ),
             Mutation(
                 "an empty tenant id is accepted",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "    if not isinstance(tenant_id, str) or not tenant_id.strip():",
                 "    if False:",
             ),
             Mutation(
                 "validation moves back after the first mkdir, leaving a partial "
                 "scaffold behind",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "    validate_tenant_id(tenant_id)\n    if isolation not in ISOLATIONS:",
                 "    if isolation not in ISOLATIONS:",
             ),
             Mutation(
                 "the declared version is a hardcoded literal again",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "  version: \"{framework_version or _default_framework_version()}\"",
                 '  version: "1.3.0"',
             ),
             Mutation(
                 "the source-checkout marker leaks into the tenant's declared version",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "    return version[: -len(SOURCE_SUFFIX)] if version.endswith(SOURCE_SUFFIX) else version",
                 "    return version",
             ),
@@ -209,26 +209,26 @@ CATALOGUE: tuple[Suite, ...] = (
     Suite(
         name="testing_double",
         tests=(
-            "runtime/test/test_testing_double_parity.py",
-            "runtime/test/test_prompt_identity.py",
+            "agentsmith/test/test_testing_double_parity.py",
+            "agentsmith/test/test_prompt_identity.py",
         ),
         mutations=(
             Mutation(
                 "the double goes back to its own inline flattening — a multimodal "
                 "prompt raises TypeError out of FakeGateway",
-                "runtime/testing.py",
+                "agentsmith/testing.py",
                 "            content_text(m.get(\"content\")) for m in prompt if isinstance(m, dict)",
                 "            m.get(\"content\", \"\") for m in prompt if isinstance(m, dict)",
             ),
             Mutation(
                 "content_text stops flattening typed parts",
-                "runtime/prompt_identity.py",
+                "agentsmith/prompt_identity.py",
                 "    if isinstance(content, list):",
                 "    if False:",
             ),
             Mutation(
                 "None content stops being empty text",
-                "runtime/prompt_identity.py",
+                "agentsmith/prompt_identity.py",
                 '    return "" if content is None else str(content)',
                 "    return str(content)",
             ),
@@ -236,18 +236,18 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="idempotency_key",
-        tests=("runtime/test/test_idempotency_key.py",),
+        tests=("agentsmith/test/test_idempotency_key.py",),
         mutations=(
             Mutation(
                 "default=str returns — a set of strings keys differently in every "
                 "process and the crash-retry pays twice",
-                "runtime/idempotency.py",
+                "agentsmith/idempotency.py",
                 "    canonical = json.dumps(payload, sort_keys=True, default=_canonical)",
                 "    canonical = json.dumps(payload, sort_keys=True, default=str)",
             ),
             Mutation(
                 "sets stop being sorted — iteration order decides the key again",
-                "runtime/idempotency.py",
+                "agentsmith/idempotency.py",
                 "        return sorted(\n"
                 "            value, key=lambda item: json.dumps(item, sort_keys=True, default=_canonical)\n"
                 "        )",
@@ -255,13 +255,13 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "sort_keys goes away — dict insertion order decides the key",
-                "runtime/idempotency.py",
+                "agentsmith/idempotency.py",
                 "    canonical = json.dumps(payload, sort_keys=True, default=_canonical)",
                 "    canonical = json.dumps(payload, sort_keys=False, default=_canonical)",
             ),
             Mutation(
                 "an unstable payload is accepted instead of refused",
-                "runtime/idempotency.py",
+                "agentsmith/idempotency.py",
                 "    raise UnstableIdempotencyKey(",
                 "    return str(value)\n    raise UnstableIdempotencyKey(",
             ),
@@ -269,37 +269,37 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="replay_webhook",
-        tests=("runtime/test/test_replay_webhook_signature.py",),
+        tests=("agentsmith/test/test_replay_webhook_signature.py",),
         mutations=(
             Mutation(
                 "the tolerance window is removed — a captured request is valid forever",
-                "runtime/replay_webhook_server.py",
+                "agentsmith/replay_webhook_server.py",
                 "    if drift > SIGNATURE_TOLERANCE_SECONDS:",
                 "    if False:",
             ),
             Mutation(
                 "a non-finite timestamp skips the window again (NaN beats every "
                 "comparison)",
-                "runtime/replay_webhook_server.py",
+                "agentsmith/replay_webhook_server.py",
                 "    if not math.isfinite(sent_at):\n        return False, \"malformed timestamp\"",
                 "    if False:\n        return False, \"malformed timestamp\"",
             ),
             Mutation(
                 "the timestamp leaves the signed material — replaying a body with a "
                 "fresh timestamp works",
-                "runtime/replay_webhook_server.py",
+                "agentsmith/replay_webhook_server.py",
                 '    signed = timestamp_header.encode() + b"." + body',
                 "    signed = body",
             ),
             Mutation(
                 "the tolerance is widened to a day",
-                "runtime/replay_webhook_server.py",
+                "agentsmith/replay_webhook_server.py",
                 "SIGNATURE_TOLERANCE_SECONDS = 300",
                 "SIGNATURE_TOLERANCE_SECONDS = 86400",
             ),
             Mutation(
                 "signature comparison stops being constant-time",
-                "runtime/replay_webhook_server.py",
+                "agentsmith/replay_webhook_server.py",
                 "    if not hmac.compare_digest(expected, signature_header[len(\"sha256=\") :]):",
                 '    if expected != signature_header[len("sha256=") :]:',
             ),
@@ -308,19 +308,19 @@ CATALOGUE: tuple[Suite, ...] = (
     Suite(
         name="prompt_guard",
         tests=(
-            "runtime/test/test_prompt_guard.py",
+            "agentsmith/test/test_prompt_guard.py",
             "scripts/test/test_security_prompt_guard_enforcement.py",
         ),
         mutations=(
             Mutation(
                 "matching goes back to raw text — every Unicode evasion works again",
-                "runtime/prompt_guard.py",
+                "agentsmith/prompt_guard.py",
                 "probe = _normalise(text)",
                 "probe = text",
             ),
             Mutation(
                 "separators accept whitespace only — 'ignore-all-previous' passes",
-                "runtime/prompt_guard.py",
+                "agentsmith/prompt_guard.py",
                 r"[\s\-_]+",
                 r"\s+",
                 # One per pattern in the module; all of them have to go, or the
@@ -329,7 +329,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "ZWJ/ZWNJ count as padding — ordinary Persian and emoji trip the guard",
-                "runtime/prompt_guard.py",
+                "agentsmith/prompt_guard.py",
                 '_LEGITIMATE_FORMAT_CHARS = {"\\u200c", "\\u200d"}',
                 "_LEGITIMATE_FORMAT_CHARS = set()",
             ),
@@ -337,23 +337,23 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="structured_output",
-        tests=("runtime/test/test_structured_output.py",),
+        tests=("agentsmith/test/test_structured_output.py",),
         mutations=(
             Mutation(
                 "an untagged fence outranks an explicit ```json one",
-                "runtime/structured_output.py",
+                "agentsmith/structured_output.py",
                 "    out.extend(tagged)\n    out.extend(untagged)\n    out.extend(other)",
                 "    out.extend(untagged)\n    out.extend(tagged)\n    out.extend(other)",
             ),
             Mutation(
                 "bare spans stop being ordered by opener — `[{...}]` loses its brackets",
-                "runtime/structured_output.py",
+                "agentsmith/structured_output.py",
                 "sorted(spans, key=lambda item: item[0])",
                 "spans",
             ),
             Mutation(
                 "the first candidate wins without being parsed",
-                "runtime/structured_output.py",
+                "agentsmith/structured_output.py",
                 "    for label, candidate in candidates:\n"
                 "        if _is_json(candidate):\n"
                 "            return label, candidate\n"
@@ -362,43 +362,43 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "_is_json calls everything JSON",
-                "runtime/structured_output.py",
+                "agentsmith/structured_output.py",
                 "    except (json.JSONDecodeError, ValueError):\n        return False",
                 "    except (json.JSONDecodeError, ValueError):\n        return True",
             ),
             Mutation(
                 "every fence tag counts as json — ```python hijacks extraction",
-                "runtime/structured_output.py",
+                "agentsmith/structured_output.py",
                 "        if tag in _JSON_TAGS:",
                 "        if True:",
             ),
             Mutation(
                 "the fence tag stops being captured",
-                "runtime/structured_output.py",
+                "agentsmith/structured_output.py",
                 r'r"```([A-Za-z0-9_+.-]*)[ \t]*\r?\n?(.*?)```"',
                 r'r"```(?:json|JSON)?()[ \t]*\r?\n?(.*?)```"',
             ),
             Mutation(
                 "an empty fence becomes a candidate and gets blamed for the failure",
-                "runtime/structured_output.py",
+                "agentsmith/structured_output.py",
                 "        if not body:\n            continue",
                 "        if False:\n            continue",
             ),
             Mutation(
                 "a parse failure stops naming the block it tried",
-                "runtime/structured_output.py",
+                "agentsmith/structured_output.py",
                 'f"invalid JSON in {origin}: {exc}"',
                 'f"invalid JSON: {exc}"',
             ),
             Mutation(
                 "a schema failure stops naming the block it tried",
-                "runtime/structured_output.py",
+                "agentsmith/structured_output.py",
                 'f"schema validation failed for {origin}: {exc}"',
                 'f"schema validation failed: {exc}"',
             ),
             Mutation(
                 "the error quotes the model's payload into the log",
-                "runtime/structured_output.py",
+                "agentsmith/structured_output.py",
                 'f"invalid JSON in {origin}: {exc}"',
                 'f"invalid JSON in {candidate}: {exc}"',
             ),
@@ -464,29 +464,29 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="conversation_memory",
-        tests=("runtime/test/test_memory_and_vector.py",),
+        tests=("agentsmith/test/test_memory_and_vector.py",),
         mutations=(
             Mutation(
                 "nothing is protected — eviction deletes the system prompt first",
-                "runtime/conversation_memory.py",
+                "agentsmith/conversation_memory.py",
                 'PROTECTED_ROLES = frozenset({"system"})',
                 "PROTECTED_ROLES = frozenset()",
             ),
             Mutation(
                 "the guard swallows the budget — nothing is ever evicted",
-                "runtime/conversation_memory.py",
+                "agentsmith/conversation_memory.py",
                 "            if len(evictable) <= 1:\n                break",
                 "            if len(evictable) <= 99:\n                break",
             ),
             Mutation(
                 "the estimate goes back to chars//4 — Arabic reads 65% low",
-                "runtime/conversation_memory.py",
+                "agentsmith/conversation_memory.py",
                 "    return max(1, int(alnum / 4 + symbols * 0.6 + non_ascii * 1.2))",
                 "    return max(1, len(text) // 4)",
             ),
             Mutation(
                 "the buffer stops saying it cannot shrink",
-                "runtime/conversation_memory.py",
+                "agentsmith/conversation_memory.py",
                 "        if total > self.token_budget:\n            logger.warning(",
                 "        if False:\n            logger.warning(",
             ),
@@ -544,72 +544,72 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="intake",
-        tests=("runtime/test/test_intake.py",),
+        tests=("agentsmith/test/test_intake.py",),
         mutations=(
             Mutation(
                 "the token goes to any address, plain http included",
-                "runtime/intake.py",
+                "agentsmith/intake.py",
                 '    return parsed.scheme == "https" or '
                 '(parsed.scheme == "http" and parsed.hostname in ("localhost", "127.0.0.1"))',
                 "    return True",
             ),
             Mutation(
                 "redirects are followed — and urllib carries the Authorization header with them",
-                "runtime/intake.py",
+                "agentsmith/intake.py",
                 "_OPENER = urllib.request.build_opener(_NoRedirect)",
                 "_OPENER = urllib.request.build_opener()",
             ),
             Mutation(
                 "the token is in the Intake's repr, so a traceback or a debug print shows it",
-                "runtime/intake.py",
+                "agentsmith/intake.py",
                 "    _token: str = field(repr=False)",
                 '    _token: str = ""',
             ),
             Mutation(
                 "an intake id reaches the URL unchecked — `--from ../admin` becomes a path",
-                "runtime/intake.py",
+                "agentsmith/intake.py",
                 "    if not INTAKE_ID.match(intake_id):",
                 "    if False:",
             ),
             Mutation(
                 "a tenant id the portal could never register is scaffolded anyway",
-                "runtime/intake.py",
+                "agentsmith/intake.py",
                 "    if not APP_ID.match(tenant_id):",
                 "    if False:",
             ),
             Mutation(
                 "the stack is trusted because the portal accepted it",
-                "runtime/intake.py",
+                "agentsmith/intake.py",
                 '    if record["stack"] not in STACKS:',
                 "    if False:",
             ),
             Mutation(
                 "fields the CLI does not know are accepted silently",
-                "runtime/intake.py",
+                "agentsmith/intake.py",
                 "    if unknown or missing:",
                 "    if missing:",
             ),
             Mutation(
                 "a newline in an acceptance criterion starts a heading of its own in the RFC",
-                "runtime/intake.py",
+                "agentsmith/intake.py",
                 '    return [" ".join(_clean(v, LIMITS["item"], field).split()) for v in value]',
                 '    return [_clean(v, LIMITS["item"], field) for v in value]',
             ),
             Mutation(
                 "a portal that is down reads as something the author must change, not a retry",
-                "runtime/intake.py",
+                "agentsmith/intake.py",
                 "        if exc.code >= 500:",
                 "        if False:",
             ),
             Mutation(
                 "an intake is consumed though its RFC never landed — the author's text is lost",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 '    if not (landed.is_file() and landed.read_text(encoding="utf-8") == expected):',
                 "    if False:",
             ),
             Mutation(
                 "--from and a flag it decides are both accepted, and one silently wins",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "        if args.tenant_id is not None or given:",
                 "        if False:",
             ),
@@ -617,33 +617,33 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="chosen_ides",
-        tests=("runtime/test/test_chosen_ides.py",),
+        tests=("agentsmith/test/test_chosen_ides.py",),
         mutations=(
             Mutation(
                 "an unreadable declaration wires NO editor instead of every one — a "
                 "typo in tenant.yaml silently leaves the pre-edit gate unconsulted",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 "    if not isinstance(declared, list):\n        return every",
                 "    if not isinstance(declared, list):\n        return ()",
             ),
             Mutation(
                 "a declaration naming nothing available returns empty rather than "
                 "falling back — `ides: [gemini]` disarms both verified editors",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 "    return tuple(ide for ide in every if ide in declared) or every",
                 "    return tuple(ide for ide in every if ide in declared)",
             ),
             Mutation(
                 "the declaration is read from the cache again, so the file `tenant "
                 "init` writes mid-run is not seen and the choice is discarded",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 'tenant_config(root, refresh=True).get("workspace")',
                 'tenant_config(root).get("workspace")',
             ),
             Mutation(
                 "the file's own strings reach the path instead of the framework's "
                 "constants — `ides` becomes an arbitrary path source",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 "    return tuple(ide for ide in every if ide in declared) or every",
                 "    return tuple(declared) or every",
             ),
@@ -651,19 +651,19 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="config_choices",
-        tests=("runtime/test/test_config_choices.py",),
+        tests=("agentsmith/test/test_config_choices.py",),
         mutations=(
             Mutation(
                 "a YAML boolean is no longer noticed — a bare `off` is discarded "
                 "in silence again",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 "    if isinstance(raw, bool):",
                 "    if False:",
             ),
             Mutation(
                 "the boolean is translated to a word — `prompt_guard: false` "
                 "disables the guard",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 '            f"Using {fallback!r}; accepted: {\', \'.join(options)}.",\n'
                 "        )\n"
                 "        return fallback",
@@ -673,19 +673,19 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "an unrecognised value goes back to being replaced silently",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 '    warn_once(\n        f"config-choice-unknown:{dotted}",',
                 '    _unused = (\n        f"config-choice-unknown:{dotted}",',
             ),
             Mutation(
                 "unset starts warning too — the signal drowns in noise",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 "    if not text:\n        return fallback",
                 "    if False:\n        return fallback",
             ),
             Mutation(
                 "the input guard's development fallback becomes the production one",
-                "runtime/input_guardrail.py",
+                "agentsmith/input_guardrail.py",
                 '    fallback = "off" if get_environment() == "development" else "default"',
                 '    fallback = "default"',
             ),
@@ -694,20 +694,20 @@ CATALOGUE: tuple[Suite, ...] = (
     Suite(
         name="degraded_defaults",
         tests=(
-            "runtime/test/test_degraded_defaults.py",
-            "runtime/test/test_memory_and_vector.py",
-            "runtime/test/test_llm_gateway_budget.py",
+            "agentsmith/test/test_degraded_defaults.py",
+            "agentsmith/test/test_memory_and_vector.py",
+            "agentsmith/test/test_llm_gateway_budget.py",
         ),
         mutations=(
             Mutation(
                 "an empty selector stops meaning unset — BUDGET_BACKEND='' crashes again",
-                "runtime/environment.py",
+                "agentsmith/environment.py",
                 '    raw = os.environ.get(var, "").strip().lower()\n    if not raw:\n        return default',
                 "    raw = os.environ.get(var, default).lower()",
             ),
             Mutation(
                 "a typo'd backend silently resolves to the default",
-                "runtime/environment.py",
+                "agentsmith/environment.py",
                 "    if raw not in options:\n        raise ValueError(",
                 "    if False:\n        raise ValueError(",
             ),
@@ -715,62 +715,62 @@ CATALOGUE: tuple[Suite, ...] = (
                 # Re-pointed when warn_once was extracted: the level choice moved
                 # but the property it defends did not.
                 "a degraded default is logged at the same level everywhere",
-                "runtime/environment.py",
+                "agentsmith/environment.py",
                 '    level = logging.ERROR if environment in {"staging", "production"} '
                 "else logging.INFO",
                 "    level = logging.INFO",
             ),
             Mutation(
                 "one degraded default silences the others",
-                "runtime/environment.py",
+                "agentsmith/environment.py",
                 "    if key in _degraded_warned:\n        return\n    _degraded_warned.add(key)",
                 "    if _degraded_warned:\n        return\n    _degraded_warned.add(key)",
             ),
             Mutation(
                 "the warning repeats on every call",
-                "runtime/environment.py",
+                "agentsmith/environment.py",
                 "    if key in _degraded_warned:\n        return\n    _degraded_warned.add(key)",
                 "    _degraded_warned.add(key)",
             ),
             Mutation(
                 "the per-worker spend cap stops announcing itself",
-                "runtime/llm_gateway.py",
+                "agentsmith/llm_gateway.py",
                 '    warn_degraded_default(\n        "budget-backend-memory",',
                 '    _unused = (\n        "budget-backend-memory",',
             ),
             Mutation(
                 "the in-process vector index stops announcing itself",
-                "runtime/vector_store.py",
+                "agentsmith/vector_store.py",
                 '    warn_degraded_default(\n        "vector-backend-memory",',
                 '    _unused = (\n        "vector-backend-memory",',
             ),
             Mutation(
                 "VECTOR_BACKEND aliases are narrowed — a tenant on =pgvector breaks",
-                "runtime/vector_store.py",
+                "agentsmith/vector_store.py",
                 '_VECTOR_ALIASES = ("memory", "mem", "inmemory", "postgres", "pgvector", "pg")',
                 '_VECTOR_ALIASES = ("memory", "postgres")',
             ),
             Mutation(
                 "the fake embedder stops announcing itself",
-                "runtime/embeddings.py",
+                "agentsmith/embeddings.py",
                 '    warn_degraded_default(\n        "embedder-hash",',
                 '    _unused = (\n        "embedder-hash",',
             ),
             Mutation(
                 "the embedder identity collapses to its dimension",
-                "runtime/embeddings.py",
+                "agentsmith/embeddings.py",
                 '        return f"hash:{self.dim}"',
                 '        return f"{self.dim}"',
             ),
             Mutation(
                 "the retrieval span stops naming the embedder",
-                "runtime/vector_store.py",
+                "agentsmith/vector_store.py",
                 '        if embedder:\n            span.set_attribute("agent.retrieval.embedder", embedder)',
                 "        pass",
             ),
             Mutation(
                 "_identity_of raises on an embedder that predates `identity`",
-                "runtime/vector_store.py",
+                "agentsmith/vector_store.py",
                 "    try:\n        value = embedder.identity\n    except Exception:\n        return None",
                 "    value = embedder.identity",
             ),
@@ -791,9 +791,9 @@ CATALOGUE: tuple[Suite, ...] = (
         ),
         watch=(
             ".githooks/*",
-            "runtime/adopt.py",
-            "runtime/cli.py",
-            "runtime/architectures.py",
+            "agentsmith/adopt.py",
+            "agentsmith/cli.py",
+            "agentsmith/architectures.py",
             "templates/architectures.yaml",
             "templates/governance.json",
             "scripts/process_gate.py",
@@ -864,7 +864,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "adopt replaces the repository's Claude settings instead of merging into them",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 "        put(rel, json.dumps(gate_ides.render_config(ide, existing), indent=2) + \"\\n\")",
                 "        put(rel, json.dumps(gate_ides.render_config(ide, None), indent=2) + \"\\n\")",
             ),
@@ -883,7 +883,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "an unfinished adoption is told it is already under the gates",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 "        if committed.returncode == 0:",
                 "        if True:",
             ),
@@ -895,26 +895,26 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "a malformed settings file is found only after adopt has started writing",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 "    for rel in (\".claude/settings.json\", \".cursor/hooks.json\"):\n"
                 "        if (root / rel).is_file():",
                 "    for rel in ():\n        if (root / rel).is_file():",
             ),
             Mutation(
                 "a --force re-run stops vouching for what an earlier run wrote",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 '            earlier = json.loads(manifest_path.read_text(encoding="utf-8")).get("files") or {}',
                 "            earlier = {}",
             ),
             Mutation(
                 "adopt gates the vendored framework code it finds",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 "and head not in vendored:",
                 "and head not in ():",
             ),
             Mutation(
                 "adopt writes over a repository even when the gates cannot be armed",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 "    missing = missing_gate_hooks(framework)\n    if missing:",
                 "    missing = []\n    if missing:",
             ),
@@ -932,7 +932,7 @@ CATALOGUE: tuple[Suite, ...] = (
         name="installed_machine",
         tests=(
             "scripts/test/test_installer_templates.py",
-            "runtime/test/test_cli.py",
+            "agentsmith/test/test_cli.py",
             "scripts/test/test_release_install.py",
             "scripts/test/test_release_artifact_contract.py",
         ),
@@ -951,7 +951,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "an install with no gate hooks arms core.hooksPath anyway",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "    missing_gate_hooks(framework, raising=True)",
                 "    missing_gate_hooks(framework)",
             ),
@@ -1001,14 +1001,14 @@ CATALOGUE: tuple[Suite, ...] = (
         name="gate_contract",
         tests=(
             "scripts/test/test_gate_contract.py",
-            "runtime/test/test_conformance.py",
+            "agentsmith/test/test_conformance.py",
             "scripts/test/test_provider_resolution.py",
             "scripts/test/test_tenant_adopt.py",
         ),
         mutations=(
             Mutation(
                 "the adapter goes back to saying `allow` by staying silent",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 '    if done.returncode == 0 and not done.stdout.strip():\n'
                 '        print(json.dumps({"decision": "allow", "text": ""}))\n'
                 "        return 0\n",
@@ -1023,7 +1023,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "a refusal with no reason passes conformance",
-                "runtime/conformance.py",
+                "agentsmith/conformance.py",
                 '    if decision in ("deny", "block") and not text.strip():',
                 "    if False:",
             ),
@@ -1048,14 +1048,14 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "adopt stops declaring who governs the repository",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 "    if not (root / PROVIDERS).exists():\n"
                 "        put(PROVIDERS, providers_declaration(setup=setup_reference(plan.framework_ref)))",
                 "    pass",
             ),
             Mutation(
                 "a provider that cannot run is scored as a wrong answer",
-                "runtime/conformance.py",
+                "agentsmith/conformance.py",
                 "    if code == CANNOT_RUN:",
                 "    if False:",
             ),
@@ -1125,62 +1125,62 @@ CATALOGUE: tuple[Suite, ...] = (
         mutations=(
             Mutation(
                 "an emitter that exported nothing is judged conformant",
-                "runtime/telemetry_contract.py",
+                "agentsmith/telemetry_contract.py",
                 '    checks.append(Check("something was exported", bool(spans or metrics),',
                 '    checks.append(Check("something was exported", True,',
             ),
             Mutation(
                 "spans inside a run are never asked for their identity",
-                "runtime/telemetry_contract.py",
+                "agentsmith/telemetry_contract.py",
                 "    unidentified = [f\"{s.name} lacks {e.name}\" for s in spans if s.span_id in inside",
                 "    unidentified = [f\"{s.name} lacks {e.name}\" for s in spans if False",
             ),
             Mutation(
                 "a span is inside a run only if it carries run.id itself — children escape",
-                "runtime/telemetry_contract.py",
+                "agentsmith/telemetry_contract.py",
                 "            node = by_id.get(node.parent_id)",
                 "            node = None",
             ),
             Mutation(
                 "conditional attributes are never checked",
-                "runtime/telemetry_contract.py",
+                "agentsmith/telemetry_contract.py",
                 "            holds, present = _holds(entry.when, span.attributes), entry.name in span.attributes",
                 "            holds = present = True",
             ),
             Mutation(
                 "a catalogued attribute of the wrong type passes",
-                "runtime/telemetry_contract.py",
+                "agentsmith/telemetry_contract.py",
                 "                if not _typed(known.type, kind):",
                 "                if False:",
             ),
             Mutation(
                 "any name under any family counts as catalogued",
-                "runtime/telemetry_contract.py",
+                "agentsmith/telemetry_contract.py",
                 "        families = [e for e in self.entries if e.where == where and e.family "
                 "and name.startswith(e.name)]",
                 "        families = [e for e in self.entries if e.where == where and e.family]",
             ),
             Mutation(
                 "the receiver reads a body of any size",
-                "runtime/telemetry_contract.py",
+                "agentsmith/telemetry_contract.py",
                 "                if signal is None or length <= 0 or length > MAX_BODY_BYTES:",
                 "                if signal is None or length <= 0:",
             ),
             Mutation(
                 "the CI setup shim answers with a vendored tenant's own CLI",
                 ".github/actions/setup-agentsmith/action.yml",
-                'exec "%s" -P -m runtime.cli',
-                'exec "%s" -m runtime.cli',
+                'exec "%s" -P -m agentsmith.cli',
+                'exec "%s" -m agentsmith.cli',
             ),
             Mutation(
                 "the weekly sync runs a vendored tenant's own sync",
                 "workflow-templates/agentsmith-sync.yml",
-                "run: python3 -P -m runtime.cli sync --yes",
-                "run: python3 -m runtime.cli sync --yes",
+                "run: python3 -P -m agentsmith.cli sync --yes",
+                "run: python3 -m agentsmith.cli sync --yes",
             ),
             Mutation(
                 "the runtime library stops naming the contract it speaks",
-                "runtime/tracing.py",
+                "agentsmith/tracing.py",
                 '        "governance.telemetry.contract": 1,\n',
                 "",
             ),
@@ -1211,7 +1211,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "the caller writes what a provider renders without checking a path",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 "        return port.gm.RulesRender.model_validate_json(done.stdout)",
                 "        return port.gm.RulesRender.model_construct(files=[port.gm.RulesFile.model_construct(**f) "
                 "for f in json.loads(done.stdout)['files']])",
@@ -1230,7 +1230,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "sync renames a document the tenant chose, not only what adopt wrote",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 """        text = re.sub(rf'("{key}"\\s*:\\s*)"{re.escape(legacy)}"', r'\\1"provider"', text)""",
                 """        text = re.sub(rf'("{key}"\\s*:\\s*)"@framework/[^"]*"', r'\\1"provider"', text)""",
             ),
@@ -1262,29 +1262,29 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="env_file_credentials",
-        tests=("runtime/test/test_config.py", "scripts/test/test_env_file_credentials.py"),
+        tests=("agentsmith/test/test_config.py", "scripts/test/test_env_file_credentials.py"),
         mutations=(
             Mutation(
                 "a stale export beats the credential the repository declares",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 "        elif value and os.environ[key] != value and is_credential(key):",
                 "        elif False:",
             ),
             Mutation(
                 "env_overrides no longer lets the shell win for a credential",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 "    if key in env_overrides(root):\n        return\n    os.environ[key] = value",
                 "    if False:\n        return\n    os.environ[key] = value",
             ),
             Mutation(
                 "the warning shows the declared key",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 '        print(f"⚠️  {key} in this shell differs from {path}',
                 '        print(f"⚠️  {key}={value} in this shell differs from {path}',
             ),
             Mutation(
                 "the startup note shows a credential's record as a value",
-                "runtime/config.py",
+                "agentsmith/config.py",
                 "    return [f\"{var}{'' if value == REDACTED else '=' + repr(value)} in the environment",
                 "    return [f\"{var}{'=' + repr(value)} in the environment",
             ),
@@ -1389,7 +1389,7 @@ CATALOGUE: tuple[Suite, ...] = (
                 "the environment's posture beats the declared one",
                 "scripts/security/runners/prompt_guard.py",
                 '    mode, problem = declared_choice(ctx, "security.prompt_guard", MODES)',
-                '    mode, problem = __import__("runtime.prompt_guard", fromlist=["_"]).resolve_mode(), ""',
+                '    mode, problem = __import__("agentsmith.prompt_guard", fromlist=["_"]).resolve_mode(), ""',
             ),
             Mutation(
                 "a probe that reached the wire passes",
@@ -1453,44 +1453,44 @@ CATALOGUE: tuple[Suite, ...] = (
         mutations=(
             Mutation(
                 "the sender follows a redirect, its token along",
-                "runtime/ops_contract.py",
+                "agentsmith/ops_contract.py",
                 "            follow_redirects=False,",
                 "            follow_redirects=True,",
             ),
             Mutation(
                 "a settings message may carry the replay secret",
-                "runtime/ops_contract.py",
+                "agentsmith/ops_contract.py",
                 '        if "replay_webhook_secret" in (self.model_extra or {}):',
                 "        if False:",
             ),
             Mutation(
                 "the all-zero trace id is accepted",
-                "runtime/ops_contract.py",
+                "agentsmith/ops_contract.py",
                 '        if value is not None and set(value) == {"0"}:',
                 "        if False:",
             ),
             Mutation(
                 "the gateway keeps the shared-token route when it holds an Ops token",
-                "runtime/llm_gateway.py",
+                "agentsmith/llm_gateway.py",
                 "        if ops_contract.configured():\n            # The Ops contract",
                 "        if False:\n            # The Ops contract",
             ),
             Mutation(
                 "a dead letter never reaches the portal",
-                "runtime/dead_letter.py",
+                "agentsmith/dead_letter.py",
                 "    if not ops_contract.configured():\n        return\n    try:\n"
                 "        message = ops_contract.DeadLetterMessage(",
                 "    if True:\n        return\n    try:\n        message = ops_contract.DeadLetterMessage(",
             ),
             Mutation(
                 "conformance misses a sender that followed the redirect",
-                "runtime/conformance.py",
+                "agentsmith/conformance.py",
                 '        checks.append(Check("a redirect is never followed", not portal.followed,',
                 '        checks.append(Check("a redirect is never followed", True,',
             ),
             Mutation(
                 "the CI sender passes a refusal",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "    if status is not None and status < 500:\n        print(f\"Ops: the portal refused",
                 "    if False:\n        print(f\"Ops: the portal refused",
             ),
@@ -1553,13 +1553,13 @@ CATALOGUE: tuple[Suite, ...] = (
         mutations=(
             Mutation(
                 "tenant init declares no providers, so its workflows ask nobody",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "    if not (root / PROVIDERS).exists():\n        (root / PROVIDERS).parent.mkdir",
                 "    if False:\n        (root / PROVIDERS).parent.mkdir",
             ),
             Mutation(
                 "tenant init seeds none of the tenant's own data",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "    if framework is None:\n        return []\n    templates = framework / SECURITY_TEMPLATES",
                 "    if True:\n        return []\n    templates = framework / SECURITY_TEMPLATES",
             ),
@@ -1576,8 +1576,14 @@ CATALOGUE: tuple[Suite, ...] = (
                 '"scripts", "runtime", "fixtures"]',
             ),
             Mutation(
+                "the governed check stops finding a pre-3.0.0 copy of the package",
+                "scripts/verify_system.py",
+                'if (framework / shipped).is_file():',
+                'if (framework / rel).is_file():',
+            ),
+            Mutation(
                 "sync stops naming a copy it no longer refreshes",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 "    if plan.vendored:\n        plan.notes.append(",
                 "    if False:\n        plan.notes.append(",
             ),
@@ -1589,7 +1595,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "the machine's commands take a tenant's script again",
-                "runtime/machine/state.py",
+                "agentsmith/machine/state.py",
                 "    if local.is_file() and looks_like_framework(here):",
                 "    if local.is_file():",
             ),
@@ -1601,7 +1607,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "an old install's post-checkout and post-commit are chained again",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 "            and not (hook.name in PROVISIONING_HOOKS and is_machine_hook(hook))]",
                 "            ]",
             ),
@@ -1610,7 +1616,7 @@ CATALOGUE: tuple[Suite, ...] = (
             # are the same three mutants, re-runnable.
             Mutation(
                 "a scaffolded tenant is born with no graph of its own records",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 '''    if framework is not None:
         _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")''',
                 '''    if False:
@@ -1618,7 +1624,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "the mapper runs before the records exist again, so every tenant is born stale",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 '''\
     written += write_scaffold_records(root, tenant_id, stack, style, agentic, written, force, rfc=rfc)
     # LAST, deliberately: the graph maps what the scaffold wrote, and
@@ -1642,7 +1648,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "the scaffold's last step divides None by a path when nothing is installed",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 '''    if framework is not None:
         _run_tool(framework / "scripts" / "map_codebase.py", root, "--quiet")''',
                 '''    if True:
@@ -1669,8 +1675,8 @@ CATALOGUE: tuple[Suite, ...] = (
             Mutation(
                 "the enterprise checks run with no org policy",
                 "scripts/gate_guardrails.py",
-                "        if enterprise and path.startswith(\"runtime/\")",
-                "        if path.startswith(\"runtime/\")",
+                "        if enterprise and path.startswith(\"agentsmith/\")",
+                "        if path.startswith(\"agentsmith/\")",
             ),
             Mutation(
                 "the commit gate never runs the guardrails",
@@ -1704,25 +1710,25 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "the receiver suite passes a receiver whatever it answers",
-                "runtime/conformance.py",
+                "agentsmith/conformance.py",
                 "        checks.append(Check(case.name, status == case.expect,",
                 "        checks.append(Check(case.name, True,",
             ),
             Mutation(
                 "the sender suite passes a sender that sends nothing",
-                "runtime/conformance.py",
+                "agentsmith/conformance.py",
                 '                            decision == "allow" and bool(received) and problem is None,',
                 '                            decision == "allow",',
             ),
             Mutation(
                 "the sender suite passes a sender that follows a redirect with the token",
-                "runtime/conformance.py",
+                "agentsmith/conformance.py",
                 '                            decision == "deny" and not elsewhere,',
                 "                            True,",
             ),
             Mutation(
                 "the sender suite passes a sender that sends no token",
-                "runtime/conformance.py",
+                "agentsmith/conformance.py",
                 '        bearer = bool(received) and all(auth == f"Bearer {token}" for auth, _body in received)',
                 "        bearer = True",
             ),
@@ -1766,7 +1772,7 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "the provider answers with a tenant's vendored copy of the gate",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "    if looks_like_framework(here) and",
                 "    if True and",
             ),
@@ -1801,68 +1807,68 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "a sync claims to have written files it did not touch",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 "    written = [path for path in dict.fromkeys(written) if _changed(root, path)]",
                 "    written = list(dict.fromkeys(written))",
             ),
             Mutation(
                 "a stale hook is not noticed, so a sync never refreshes anything",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 "        if here.is_file() and hook.is_file() and _digest(here) != _digest(hook):",
                 "        if False:",
             ),
             Mutation(
                 "a file the tenant edited is refreshed anyway — their work is clobbered",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 '        if state == "edited":',
                 "        if False:",
             ),
             Mutation(
                 "a rule file is rewritten whole, losing the tenant's own prose around the block",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 "            shared[file.path] = port.place(existing, file)",
                 "            shared[file.path] = file.text",
             ),
             Mutation(
                 "Claude's settings are judged by the whole file, so a tenant's own permissions "
                 "freeze their gate wiring",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 "        if (rel in _MERGED or rel in regions) and here.is_file():",
                 "        if rel in regions and here.is_file():",
             ),
             Mutation(
                 "adopt stops writing the sync workflow — a tenant never hears it is behind",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 "    for workflow in (GATES_WORKFLOW, SYNC_WORKFLOW):\n        if (root / workflow).exists():",
                 "    for workflow in (GATES_WORKFLOW,):\n        if (root / workflow).exists():",
             ),
             Mutation(
                 "the sync workflow is not kept current, so it proposes from a stale copy of itself",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 "    for workflow in (GATES_WORKFLOW, SYNC_WORKFLOW):\n        template = _workflow_template(",
                 "    for workflow in (GATES_WORKFLOW,):\n        template = _workflow_template(",
             ),
             Mutation(
                 "the manifest stops recording which command wrote it",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 '    command = generated_by or ("agentsmith tenant adopt" if adopted else "agentsmith tenant init")',
                 '    command = "agentsmith tenant adopt" if adopted else "agentsmith tenant init"',
             ),
             Mutation(
                 "sync scaffolds a tenant into the framework's own checkout again",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 "    marker = looks_like_framework(root)\n    if marker:\n        raise SyncError(",
                 "    marker = None\n    if marker:\n        raise SyncError(",
             ),
             Mutation(
                 "a tenant armed before the sweep is not planned the hooks it lacks",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 '    plan.added = [f".githooks/{hook}" for hook in GATE_HOOKS',
                 '    plan.added = [f".githooks/{hook}" for hook in () and GATE_HOOKS',
             ),
             Mutation(
                 "the hooks a sync adds are armed but left out of its manifest and commit",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 "    written += plan.stale + plan.added",
                 "    written += plan.stale",
             ),
@@ -1874,31 +1880,31 @@ CATALOGUE: tuple[Suite, ...] = (
             ),
             Mutation(
                 "a sync commits files its arming design does not cover",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "        after = architectures.extend_design_scope(before, [*written, SCAFFOLD_MANIFEST])",
                 "        after = before",
             ),
             Mutation(
                 "sync rewrites another provider's declared setup step to AgentSmith's",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 '    if declared and not declared.startswith(SETUP_ACTION + "@"):',
                 "    if False:",
             ),
             Mutation(
                 "sync never moves an untouched declaration to contract 2",
-                "runtime/sync.py",
+                "agentsmith/sync.py",
                 "    if (root / PROVIDERS).is_file():",
                 "    if False:",
             ),
             Mutation(
                 "adopt declares an older gate contract, so a new tenant's commits and pushes never ask its provider",
-                "runtime/adopt.py",
+                "agentsmith/adopt.py",
                 "GATE_CONTRACT = 3\n",
                 "GATE_CONTRACT = 2\n",
             ),
             Mutation(
                 "a scaffold design leaves out the manifest committed beside it",
-                "runtime/cli.py",
+                "agentsmith/cli.py",
                 "            tenant_id, stack, style, agentic, [*files, SCAFFOLD_MANIFEST], registry.get(",
                 "            tenant_id, stack, style, agentic, files, registry.get(",
             ),
@@ -2410,7 +2416,7 @@ def changed_files(ref: str, cwd: Path = REPO) -> "set[str] | None":
 SHARED_TRIGGERS: tuple[str, ...] = (
     "scripts/mutation_check.py",
     "scripts/test/conftest.py",
-    "runtime/test/conftest.py",
+    "agentsmith/test/conftest.py",
     "scripts/_shared.py",
     "requirements*.txt",
     "requirements*.lock",

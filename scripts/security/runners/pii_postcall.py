@@ -21,7 +21,7 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     """
     if not is_contract(ctx):
         return verify_system(control, ctx, "--check-redaction")
-    framework_root(ctx)  # runtime.telemetry_contract, for the loopback receiver
+    framework_root(ctx)  # agentsmith.telemetry_contract, for the loopback receiver
     from security.redaction import check, declared_emitter
 
     root = Path(ctx["tenant_root"])

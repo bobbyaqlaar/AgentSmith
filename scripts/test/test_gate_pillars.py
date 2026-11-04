@@ -202,7 +202,7 @@ ROUTE = (
     "async def healthz():\n    return {}\n"
 )
 TRACED_ROUTE = (
-    'from fastapi import FastAPI\nfrom runtime.tracing import agent_span\n\napp = FastAPI()\n\n\n'
+    'from fastapi import FastAPI\nfrom agentsmith.tracing import agent_span\n\napp = FastAPI()\n\n\n'
     '@app.get("/healthz")\nasync def healthz():\n    with agent_span("healthz"):\n        return {}\n'
 )
 
@@ -383,7 +383,7 @@ def test_dropping_the_policy_is_a_weakening(enforcing):
 def test_the_first_policy_a_repo_declares_is_its_seed(gated_repo):
     _policy(gated_repo, None)
     _policy(gated_repo, {"mode": "enforce", "allow": [
-        {"check": "P7-pydantic", "path": "runtime/llm_gateway.py", "why": "pre-existing at adoption"},
+        {"check": "P7-pydantic", "path": "agentsmith/llm_gateway.py", "why": "pre-existing at adoption"},
     ]}, commit=False)
     _records(gated_repo, POLICY_DESIGN)
     _write(gated_repo, "scripts/tool.py", "print(1)\n")
@@ -547,7 +547,8 @@ def test_an_internal_value_object_is_not_a_model(enforcing):
 def test_a_dataclass_that_is_a_request_body_is_refused(enforcing):
     _records(enforcing)
     _write(enforcing, "scripts/tool.py",
-           'from dataclasses import dataclass\nfrom fastapi import FastAPI\nfrom runtime.tracing import agent_span\n\n'
+           'from dataclasses import dataclass\nfrom fastapi import FastAPI\n'
+           'from agentsmith.tracing import agent_span\n\n'
            'app = FastAPI()\n\n\n@dataclass\nclass Order:\n    sku: str\n\n\n'
            '@app.post("/orders")\nasync def create(order: Order):\n'
            '    with agent_span("create"):\n        return order\n')
@@ -561,7 +562,7 @@ def test_a_dataclass_that_is_a_request_body_is_refused(enforcing):
 def test_a_route_handler_that_blocks_the_loop_is_refused(enforcing):
     _records(enforcing)
     _write(enforcing, "scripts/tool.py",
-           'from fastapi import FastAPI\nfrom runtime.tracing import agent_span\n\napp = FastAPI()\n\n\n'
+           'from fastapi import FastAPI\nfrom agentsmith.tracing import agent_span\n\napp = FastAPI()\n\n\n'
            '@app.get("/healthz")\ndef healthz():\n    with agent_span("healthz"):\n        return {}\n')
 
     result = _commit(enforcing, MESSAGE)
@@ -634,8 +635,8 @@ def test_a_provider_sdk_outside_the_gateway_is_refused(enforcing):
 def test_the_gateway_is_where_the_sdk_belongs(enforcing):
     """The gateway's own modules are part of the rule, not an allowlist entry:
     one rule, written once."""
-    _records(enforcing, _design("runtime/**"))
-    _write(enforcing, "runtime/llm_gateway.py", "import anthropic\n\nclient = anthropic.Anthropic()\n")
+    _records(enforcing, _design("agentsmith/**"))
+    _write(enforcing, "agentsmith/llm_gateway.py", "import anthropic\n\nclient = anthropic.Anthropic()\n")
 
     assert _commit(enforcing, MESSAGE).returncode == 0
 

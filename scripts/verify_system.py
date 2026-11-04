@@ -95,12 +95,12 @@ def _required_ollama_models() -> list[str]:
     of model names drifts silently, and this one had — it still named
     llama3/mistral/gemma2 long after the registry moved on, so the check told
     users to pull models nothing used while the ones the gateway needs went
-    unverified. Falls back to that historical list only if runtime/ isn't
+    unverified. Falls back to that historical list only if agentsmith/ isn't
     importable (scripts-only install).
     """
     from _shared import provider_models
 
-    # Same helper `agentsmith models --ollama` uses (runtime/machine/ops.py),
+    # Same helper `agentsmith models --ollama` uses (agentsmith/machine/ops.py),
     # so the health check and this check can never disagree about what to pull.
     return provider_models("ollama") or ["qwen2.5", "llama3.2:3b", "falcon3:3b", "smollm2"]
 
@@ -371,7 +371,7 @@ def check_redaction() -> bool:
         python3 scripts/verify_system.py --check-redaction
     """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from runtime.trace_redactor import TraceRedactor
+    from agentsmith.trace_redactor import TraceRedactor
 
     redactor = TraceRedactor()
     fixtures = [
@@ -471,7 +471,7 @@ def check_redaction() -> bool:
 
 def check_idempotency() -> bool:
     """
-    CI validation for the idempotency store (runtime/idempotency.py) against
+    CI validation for the idempotency store (agentsmith/idempotency.py) against
     a real Postgres — requires DATABASE_URL pointing at a throwaway database.
 
         DATABASE_URL=postgresql://test:test@localhost:5432/test \
@@ -479,7 +479,7 @@ def check_idempotency() -> bool:
     """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     os.environ.setdefault("IDEMPOTENCY_BACKEND", "postgres")
-    from runtime.idempotency import IdempotencyStore, make_key
+    from agentsmith.idempotency import IdempotencyStore, make_key
 
     print("═══════════════════════════════════════════════════")
     print("  Idempotency Store Check")
@@ -518,14 +518,14 @@ def check_idempotency() -> bool:
 
 def check_dlq() -> bool:
     """
-    CI validation for the dead-letter queue (runtime/dead_letter.py) against
+    CI validation for the dead-letter queue (agentsmith/dead_letter.py) against
     a real Postgres — requires DATABASE_URL pointing at a throwaway database.
 
         DATABASE_URL=postgresql://test:test@localhost:5432/test \
             python3 scripts/verify_system.py --check-dlq
     """
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from runtime.dead_letter import DeadLetterQueue
+    from agentsmith.dead_letter import DeadLetterQueue
 
     print("═══════════════════════════════════════════════════")
     print("  Dead-Letter Queue Check")
@@ -838,7 +838,9 @@ def framework_copies(root: Path, framework: Path) -> list[tuple[str, str]]:
         if rel.startswith("fixtures/") and not (rel.startswith("fixtures/security/") or
                                                  (rel.count("/") == 1 and rel.endswith("_base.json"))):
             continue
-        if (framework / rel).is_file():
+        # A copy holds the package under its pre-4.0.0 name, so look for it under this one.
+        shipped = f"agentsmith/{rel[len('runtime/'):]}" if rel.startswith("runtime/") else rel
+        if (framework / shipped).is_file():
             why = next(text for prefix, text in _COPY_REPLACEMENT if rel.startswith(prefix))
             copies.append((rel, why))
     return copies

@@ -3,7 +3,7 @@ scripts/test/test_env_file_credentials.py — a repository's .env wins for its
 credentials in script-only processes too, and `agentsmith doctor` reports where
 the shell would have overridden one (.agent-rfc/designs/env-file-credentials.md).
 
-The runtime half is in runtime/test/test_config.py.
+The runtime half is in agentsmith/test/test_config.py.
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ from _shared import load_script
 
 
 def test_the_standalone_credential_rule_is_the_runtimes():
-    """A deliberate mirror — scripts run where runtime/ is absent — pinned."""
-    from runtime.config import CREDENTIAL_NAME
+    """A deliberate mirror — scripts run where agentsmith/ is absent — pinned."""
+    from agentsmith.config import CREDENTIAL_NAME
 
     assert _shared._CREDENTIAL_NAME.pattern == CREDENTIAL_NAME.pattern
 

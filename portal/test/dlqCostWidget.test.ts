@@ -4,8 +4,8 @@
 // "test against real infra, not mocks" pattern as auditLog.test.ts; runs
 // in the portal CI job's test:db lane.
 //
-// dlq_entries and llm_gateway_budget are owned by runtime/dead_letter.py
-// and runtime/llm_gateway.py respectively (not db/schema.sql) — this test
+// dlq_entries and llm_gateway_budget are owned by agentsmith/dead_letter.py
+// and agentsmith/llm_gateway.py respectively (not db/schema.sql) — this test
 // creates them with the same DDL those owners use, exactly as a worker
 // would have.
 //
@@ -238,7 +238,7 @@ await test("replay HMAC-signs the edited payload for the tenant's own webhook", 
 });
 
 await test("a 409 from the receiver is 'already resolved', not a failure", async () => {
-  // runtime/dead_letter.py claims the row before it signals, so a repeated
+  // agentsmith/dead_letter.py claims the row before it signals, so a repeated
   // replay is refused. The portal must not report that refusal as a webhook
   // failure — an operator would go looking for a problem that does not exist.
   const original = globalThis.fetch;

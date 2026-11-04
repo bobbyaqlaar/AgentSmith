@@ -45,11 +45,11 @@ TREE_BLOCK = re.compile(r"### Repository Structure\n\n```\n(.*?)\n```", re.S)
 TREE_LINE = re.compile(r"^((?:(?:│   )|(?:    ))*)[├└]── (.+)$")
 
 # Second-level entries are diffed for these directories only. The list is the
-# set that has actually drifted: scripts/, runtime/, docs/ and fixtures/ from
+# set that has actually drifted: scripts/, agentsmith/, docs/ and fixtures/ from
 # ReviewFindings-2026-07-18 A2, and workflow-templates/ added 2026-09-27 when
 # agentsmith-gates.yml and agentsmith-sync.yml turned out to be absent from the
 # tree's description of the directory holding them.
-DEEP_DIRS = ["scripts", "runtime", "docs", "fixtures", "workflow-templates"]
+DEEP_DIRS = ["scripts", "agentsmith", "docs", "fixtures", "workflow-templates"]
 # Tracked but not worth a tree line: package markers and per-directory ignore
 # files say nothing about what a directory is for, and `.claude/` is this
 # repository's own agent configuration rather than part of the product.
@@ -168,7 +168,7 @@ FIXTURE_TREE = """\
 │   ├── test/
 │   │   └── test_thing.py
 │   └── *_judge_criteria_base.json
-├── runtime/
+├── agentsmith/
 │   └── k8s/dedicated-tenant/   # a path contributes its first component
 └── pyproject.toml
 """
@@ -182,7 +182,7 @@ FIXTURE_ENTRIES = [
     (1, "test"),
     (2, "test_thing.py"),
     (1, "*_judge_criteria_base.json"),
-    (0, "runtime"),
+    (0, "agentsmith"),
     (1, "k8s"),
     (0, "pyproject.toml"),
 ]
@@ -208,7 +208,7 @@ def test_second_level_is_collected_per_directory() -> None:
         "test",
         "*_judge_criteria_base.json",
     }
-    assert second["runtime"] == {"k8s"}
+    assert second["agentsmith"] == {"k8s"}
     assert second["docs"] == set(), "a DEEP_DIR absent from the tree collects nothing"
     assert "pyproject.toml" not in second["scripts"], "depth 0 is not second level"
 
@@ -224,10 +224,10 @@ def test_tracked_second_keeps_the_directory_and_drops_the_noise() -> None:
         "scripts/test/test_thing.py",
         "scripts/.gitignore",
         "scripts",
-        "runtime/cli.py",
+        "agentsmith/cli.py",
     ]
     assert _tracked_second("scripts", tracked) == {"map_codebase.py", "test"}
-    assert _tracked_second("runtime", tracked) == {"cli.py"}
+    assert _tracked_second("agentsmith", tracked) == {"cli.py"}
     assert _tracked_second("docs", tracked) == set()
 
 

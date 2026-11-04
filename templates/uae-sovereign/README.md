@@ -125,5 +125,5 @@ ops runbooks / audit packs — not slide decks.
 
 - [`docs/uae-regulatory.md`](../../docs/uae-regulatory.md) — five UAE mandates
 - [`docs/PRODUCT_BACKLOG.md`](../../docs/PRODUCT_BACKLOG.md) — UAE Regulatory Alignment
-- [`runtime/models.yaml`](../../runtime/models.yaml) — framework defaults + endpoint notes
+- [`agentsmith/models.yaml`](../../agentsmith/models.yaml) — framework defaults + endpoint notes
 - [`docs/UserManual.md`](../../docs/UserManual.md) — local vs hybrid, on-prem, portal

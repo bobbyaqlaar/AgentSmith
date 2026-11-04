@@ -14,7 +14,7 @@ version: 1
 entries:
   - id: RISK-SCRATCH-001
     description: >-
-      Provisioned framework code (scripts/, runtime/, workflows) is replaced by
+      Provisioned framework code (scripts/, agentsmith/, workflows) is replaced by
       automation on every scratch-tenants run; a regression in AgentSmith lands
       here before any real tenant sees it.
     severity: low

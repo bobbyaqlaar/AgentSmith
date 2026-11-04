@@ -1,7 +1,7 @@
 // portal/lib/dlq.ts — dead-letter queue depth + per-entry triage for the
 // Ops Portal (docs/PRODUCT_ARCHIVE.md HITL/DLQ redesign).
 //
-// runtime/dead_letter.py's DeadLetterQueue is Postgres-backed and creates
+// agentsmith/dead_letter.py's DeadLetterQueue is Postgres-backed and creates
 // `dlq_entries` itself (CREATE TABLE IF NOT EXISTS) the first time a worker
 // constructs one against DATABASE_URL — not via this portal's own
 // migration (db/schema.sql deliberately excludes it; see that file's
@@ -14,7 +14,7 @@
 // directly — the portal has no Temporal client and isn't meant to gain
 // one (dead_letter.py's replay_handler is deliberately engine-agnostic).
 // Instead it HMAC-signs the edited payload and POSTs it to the entry's
-// OWN tenant's replay_webhook_url (see runtime/replay_webhook_server.py)
+// OWN tenant's replay_webhook_url (see agentsmith/replay_webhook_server.py)
 // — per-tenant by construction, so a human-in-the-loop fix always reaches
 // the specific team running that tenant's worker, never a shared,
 // cross-tenant endpoint.
@@ -42,7 +42,7 @@ export interface DLQEntry {
 }
 
 /**
- * The table, as runtime/dead_letter.py's `_DLQ_DDL` creates it — a duplicate
+ * The table, as agentsmith/dead_letter.py's `_DLQ_DDL` creates it — a duplicate
  * this file cannot import from Python, held to it by
  * scripts/test/test_ops_contract.py. Created here only when a dead letter
  * arrives over the Ops contract (contract/ops/v1), so "not wired" keeps
@@ -84,7 +84,7 @@ export async function insertDeadLetter(
 ): Promise<"stored" | "duplicate" | "foreign"> {
   const pool = getPool();
   // Once per process: a no-op CREATE still takes a brief table lock, and
-  // concurrent workers' reports would queue on it (runtime/pg_pool.ensure_schema
+  // concurrent workers' reports would queue on it (agentsmith/pg_pool.ensure_schema
   // learned the same).
   if (!dlqTableReady) {
     await pool.query(DLQ_DDL);
@@ -116,7 +116,7 @@ export async function getDLQStatus(): Promise<DLQStatus> {
 }
 
 async function hasReasonColumns(): Promise<boolean> {
-  // All three were added together (runtime/dead_letter.py) — checking one
+  // All three were added together (agentsmith/dead_letter.py) — checking one
   // is representative of the others.
   return columnExists("dlq_entries", "reason");
 }
@@ -211,7 +211,7 @@ export class ReplayAlreadyResolvedError extends Error {}
  * Sends the (possibly human-edited) payload to this entry's tenant's own
  * replay_webhook_url, HMAC-signed with that tenant's replay_webhook_secret.
  * Does NOT update dlq_entries itself — the tenant's receiver
- * (runtime/replay_webhook_server.py) is responsible for calling
+ * (agentsmith/replay_webhook_server.py) is responsible for calling
  * DeadLetterQueue.replay(taskId, override_payload=...), so the DB never
  * reflects "replayed" merely because the portal notified someone.
  *
@@ -250,7 +250,7 @@ export function replaySignatureHeaders(
     "X-Replay-Signature":
       "sha256=" + createHmac("sha256", secret).update(body).digest("hex"),
     // `timestamp.body`, checked against a five-minute window by
-    // runtime/replay_webhook_server.py. The timestamp is inside the signed
+    // agentsmith/replay_webhook_server.py. The timestamp is inside the signed
     // material: a header alone could be replaced by whoever replays the body.
     "X-Replay-Timestamp": timestamp,
     "X-Replay-Signature-V2":
@@ -279,7 +279,7 @@ export async function replayDlqEntry(tenantId: string, taskId: string, editedPay
   //
   // Legacy is a signature over the body alone, so it never expires: a captured
   // request stays replayable for as long as the secret does. v2 signs
-  // `timestamp.body` and runtime/replay_webhook_server.py rejects anything
+  // `timestamp.body` and agentsmith/replay_webhook_server.py rejects anything
   // outside a five-minute window. The legacy header goes away in the release
   // that drops support for receivers older than that change.
   const resp = await fetch(config.url, {
@@ -303,7 +303,7 @@ export async function replayDlqEntry(tenantId: string, taskId: string, editedPay
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
     if (resp.status === 409) {
-      // runtime/dead_letter.py claims the row before signalling, so a second
+      // agentsmith/dead_letter.py claims the row before signalling, so a second
       // replay — a retry, a double-click, a resent webhook — is refused rather
       // than re-running the workflow. That refusal is the system working.
       throw new ReplayAlreadyResolvedError(

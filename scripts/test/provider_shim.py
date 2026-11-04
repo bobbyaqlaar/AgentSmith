@@ -33,7 +33,7 @@ def install() -> Path:
         f'export AGENTSMITH_DIR="${{AGENTSMITH_DIR:-{REPO}}}"\n'
         # -P: `python -m` otherwise puts the working directory first on the
         # path — inside a vendored tenant, its own older `runtime/`.
-        f'PYTHONPATH="{REPO}${{PYTHONPATH:+:$PYTHONPATH}}" exec "{sys.executable}" -P -m runtime.cli "$@"\n',
+        f'PYTHONPATH="{REPO}${{PYTHONPATH:+:$PYTHONPATH}}" exec "{sys.executable}" -P -m agentsmith.cli "$@"\n',
         encoding="utf-8",
     )
     shim.chmod(0o755)

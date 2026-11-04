@@ -19,7 +19,7 @@ IngestionAgent  →  PredictionAgent  →  DecisionAgent
 
 See `../workflows/oil_price_workflow.py` and `../workflows/activities.py`.
 `OilPricePredictionWorkflow` actually subclasses
-`runtime/workflows/base_workflow.py`'s `BaseAgentWorkflow` (§25) — not just
+`agentsmith/workflows/base_workflow.py`'s `BaseAgentWorkflow` (§25) — not just
 "follows the same shape," it inherits the `hitl_approved` signal directly
 and demonstrates both of the framework's HITL patterns:
 - The price-anomaly/low-confidence gate above waits via the inherited

@@ -16,7 +16,7 @@ Opt-in deployment artifact for tenants whose customers run the agent app on
 their own hardware instead of a managed cloud platform — see
 `docs/UserManual.md` "On-premise / air-gapped deployment". This directory is
 copied into a tenant repo as `deploy/onprem/` by `agentsmith tenant onprem-scaffold`
-(runtime/machine/ops.py); it is never auto-written by `agentsmith tenant init` the way
+(agentsmith/machine/ops.py); it is never auto-written by `agentsmith tenant init` the way
 the CI/CD workflow templates are, because not every tenant needs it.
 
 ## The contract this template assumes
@@ -36,7 +36,7 @@ know or care what's inside your agent app. It only assumes your app:
    uses — pick whatever port, set it in `.env`.
 3. **Reads all configuration from environment variables.** No calls out to
    AWS Secrets Manager / GCP Secret Manager / any cloud metadata service —
-   consistent with `runtime/environment.py`'s existing fail-closed
+   consistent with `agentsmith/environment.py`'s existing fail-closed
    `ENVIRONMENT` resolver and the rest of the framework's `.env` convention.
    On Kubernetes the same variables are sourced from a `Secret` instead —
    your app code doesn't need to know which. The chart deliberately ships no

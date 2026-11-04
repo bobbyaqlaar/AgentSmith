@@ -22,7 +22,7 @@
     },
     "runner": "pii_precall",
     "check_type": "unit",
-    "mechanism": "runtime/input_guardrail.py pre-call scrub"
+    "mechanism": "agentsmith/input_guardrail.py pre-call scrub"
   },
   {
     "id": "SEC-PII-002",
@@ -46,7 +46,7 @@
     },
     "runner": "pii_postcall",
     "check_type": "unit",
-    "mechanism": "runtime/trace_redactor.py + CD --check-redaction"
+    "mechanism": "agentsmith/trace_redactor.py + CD --check-redaction"
   },
   {
     "id": "SEC-HITL-001",
@@ -271,7 +271,7 @@
     },
     "runner": "dlq_check",
     "check_type": "unit",
-    "mechanism": "Recoverable step + DLQ \u2014 the dead-letter envelope contract, asserted by runtime/test/test_dead_letter.py: both producers (run_with_hitl_gate, run_with_recoverable_step) build the envelope through dead_letter_envelope() rather than hand-rolling it, its keys are exactly what DeadLetterQueue.enqueue accepts, and dlq_enqueue_activity rejects the legacy flattened shape by name. Runs without Postgres. Whether a row actually lands in the table is integration scope and is NOT claimed here."
+    "mechanism": "Recoverable step + DLQ \u2014 the dead-letter envelope contract, asserted by agentsmith/test/test_dead_letter.py: both producers (run_with_hitl_gate, run_with_recoverable_step) build the envelope through dead_letter_envelope() rather than hand-rolling it, its keys are exactly what DeadLetterQueue.enqueue accepts, and dlq_enqueue_activity rejects the legacy flattened shape by name. Runs without Postgres. Whether a row actually lands in the table is integration scope and is NOT claimed here."
   },
   {
     "id": "SEC-SELF-001",
@@ -341,7 +341,7 @@
     },
     "runner": "prompt_guard",
     "check_type": "unit",
-    "mechanism": "runtime/prompt_guard.py heuristics + tenant denylist"
+    "mechanism": "agentsmith/prompt_guard.py heuristics + tenant denylist"
   },
   {
     "id": "SEC-OUTPUT-001",
@@ -363,7 +363,7 @@
     },
     "runner": "structured_output",
     "check_type": "unit",
-    "mechanism": "runtime/structured_output.py parse_llm_json + Pydantic"
+    "mechanism": "agentsmith/structured_output.py parse_llm_json + Pydantic"
   },
   {
     "id": "SEC-TOOL-001",
@@ -387,7 +387,7 @@
     },
     "runner": "tool_allowlist",
     "check_type": "unit",
-    "mechanism": "runtime/tool_registry.py + tool_allowlist.yaml"
+    "mechanism": "agentsmith/tool_registry.py + tool_allowlist.yaml"
   },
   {
     "id": "SEC-MOD-001",
@@ -411,7 +411,7 @@
     },
     "runner": "moderation_hook",
     "check_type": "unit",
-    "mechanism": "runtime/moderation.py register_output_moderator + MODERATION_HOOK"
+    "mechanism": "agentsmith/moderation.py register_output_moderator + MODERATION_HOOK"
   },
   {
     "id": "SEC-RISK-001",
@@ -525,7 +525,7 @@
     },
     "runner": "rag_poison",
     "check_type": "eval",
-    "mechanism": "RAG poisoning defence \u2014 runtime.prompt_guard.scan_documents quarantines poisoned retrieved context per-document (rejecting the whole retrieval on one bad chunk would hand an attacker a denial of service). Gated by `run-evals.py --suite rag_poison` over fixtures/rag_poison_base.json, which pairs every poisoned document with a benign twin on the same subject so a guard that quarantines everything cannot score perfectly. Miss ceiling RAG_POISON_FAIL_ABOVE (default 0.10). Deterministic and local \u2014 no judge, no credentials. CLAIMS detection of poisoned context before prompt assembly; does NOT claim a model would resist the instruction if the document reached it."
+    "mechanism": "RAG poisoning defence \u2014 agentsmith.prompt_guard.scan_documents quarantines poisoned retrieved context per-document (rejecting the whole retrieval on one bad chunk would hand an attacker a denial of service). Gated by `run-evals.py --suite rag_poison` over fixtures/rag_poison_base.json, which pairs every poisoned document with a benign twin on the same subject so a guard that quarantines everything cannot score perfectly. Miss ceiling RAG_POISON_FAIL_ABOVE (default 0.10). Deterministic and local \u2014 no judge, no credentials. CLAIMS detection of poisoned context before prompt assembly; does NOT claim a model would resist the instruction if the document reached it."
   },
   {
     "id": "SEC-AGENCY-001",

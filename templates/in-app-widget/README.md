@@ -19,7 +19,7 @@ injection regression test, and wired against the Ops Portal's
 `/api/widget/status` endpoint.
 
 `running` is a reachable status (docs/PRODUCT_ARCHIVE.md P2a/P2c) —
-`runtime/llm_gateway.py`'s `complete()` posts best-effort run-start/end
+`agentsmith/llm_gateway.py`'s `complete()` posts best-effort run-start/end
 events to `POST /api/runs/ingest` (gated on `OPS_PORTAL_URL`/
 `OPS_PORTAL_SYNC_TOKEN` being set), landing in the portal's `agent_runs`
 table. `portal/lib/runStatus.ts` aggregates every call sharing one

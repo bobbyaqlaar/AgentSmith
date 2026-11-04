@@ -286,7 +286,7 @@ def _p3_tracing(src: Source) -> List[str]:
 # allowlist: "no provider SDK outside the gateway" is one rule, and writing the
 # exception down twice would let the two drift. Matched by suffix so a tenant's
 # vendored copy counts.
-GATEWAY_FILES = ("runtime/llm_gateway.py", "runtime/provider_dispatch.py", "scripts/cost_router.py")
+GATEWAY_FILES = ("agentsmith/llm_gateway.py", "agentsmith/provider_dispatch.py", "scripts/cost_router.py")
 PROVIDER_MODULES = ("openai", "anthropic", "cohere", "mistralai", "litellm", "ollama", "groq",
                     "together", "replicate", "google.generativeai", "vertexai")
 

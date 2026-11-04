@@ -38,7 +38,7 @@ labelled preview.
 | 2 | ✅ AGPL notices and community files (`agpl-compliance`, merged) | Claude | Tue 3 |
 | 3 | ✅ Release 3.0.1; `release.yml`'s verify job green on the real URL | Claude | Tue 3 |
 | 4 | ✅ Private vulnerability reporting on, which `SECURITY.md` relies on | Owner | Tue 3 |
-| 5 | Rename `runtime` to `agentsmith`; release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Wed 4 |
+| 5 | Rename `agentsmith` to `agentsmith`; release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Wed 4 |
 | 6 | First run: a new repository's red security job says it is expected, and what to write to get green (fires the onboarding item below) | Claude | Wed 4 |
 | 7 | Honest coverage: OWASP Agentic Top 10 and EU AI Act mapped in `docs/security-framework-map.md`, with gaps said (gaps 1 and 8) | Claude | Wed 4 |
 | 8 | Small fixes with the release: `PROMPT_DENYLIST_PATH` in the evals port; DLQ **Discard** confirmation; pin `phoenix:latest`; delete `ai-compat.sh`; the widget's dead `cdn.agenticframework.io`; `oil-price-demo` in live docs | Claude | Thu 5 |
@@ -215,12 +215,12 @@ unreviewed work. Two separate defects that presented as one symptom.
 Raised 2026-11-01, while `scripts/mutation_check.py` was running in the background
 as a turn ended. The stop gate refused with
 
-> `runtime/cli.py`: no complete active design note covers it
+> `agentsmith/cli.py`: no complete active design note covers it
 
 and it was right about the file and wrong about the cause: the harness had
-`runtime/cli.py` mutated in place at that instant (`tenant_scaffold`, `quoted_id`
+`agentsmith/cli.py` mutated in place at that instant (`tenant_scaffold`, `quoted_id`
 → `tenant_id`) and would restore it a second later. The design that covers
-`runtime/cli.py` is `done`, correctly, because nothing in the slice changes it.
+`agentsmith/cli.py` is `done`, correctly, because nothing in the slice changes it.
 
 So a long catalogue run and a turn boundary cannot coexist: the gate reads a
 transient edit as unreviewed work and blocks. Worse than the noise is the habit it
@@ -229,7 +229,7 @@ running the harness.
 
 The harness already knows which files it is holding: it writes pristine copies to
 a backup directory and keeps a journal, which is how it restores a file after a
-killed run (`♻️ restored runtime/idempotency.py`).
+killed run (`♻️ restored agentsmith/idempotency.py`).
 
 **Fix:** have the harness publish the set of files it currently holds — the journal
 it already keeps is enough — and have `scripts/process_gate.py` treat a file listed
@@ -248,11 +248,11 @@ the same line, unfixed:
 | `scripts/rules_port.py` | 211 |
 | `scripts/security_port.py` | 234 |
 | `scripts/evals_port.py` | 235 |
-| `runtime/cli.py` | 1025, 1075, 1094, 1154 |
+| `agentsmith/cli.py` | 1025, 1075, 1094, 1154 |
 | `.githooks/process-gate` | 221, 409 (inline `python3 -`) |
 
 Each waits for an EOF its caller may never send. The three ports are contract
-endpoints the launcher invokes with a pipe it closes, and the `runtime/cli.py`
+endpoints the launcher invokes with a pipe it closes, and the `agentsmith/cli.py`
 paths are `conformance` and the CLI's own stdin readers — so none is known to hang
 today. That is a statement about the callers in this repository, not about the
 code, which is exactly the reasoning this slice had to retract for the gate's two
@@ -271,7 +271,7 @@ caller the held-open-pipe test the gate now has.
 ### "caught" does not say which test caught it
 
 Raised 2026-11-01 while cataloguing the mutants for `kg_drift_gate`, `gate_steps`
-and the three `runtime/cli.py` additions (`curated-mutations-for-todays-gates`).
+and the three `agentsmith/cli.py` additions (`curated-mutations-for-todays-gates`).
 
 `scripts/mutation_check.py` prints `caught` when **any** test in the suite fails.
 A mutation that breaks the file outright — a bad parse, a missing import — reads
@@ -449,7 +449,7 @@ Live status for the two compliance tracks is maintained in one place each — do
 
 ### Tool Orchestration — provider function-calling wire-up
 
-**Shipped:** `runtime/tool_registry.py` (`@tool` + YAML allowlist,
+**Shipped:** `agentsmith/tool_registry.py` (`@tool` + YAML allowlist,
 `SEC-TOOL-001`, tenant-attributed spans). MCP stays **bring-your-own**.
 
 **Remaining gap:** `llm_gateway.complete()` still does not emit provider
@@ -461,7 +461,7 @@ the gateway request, not only fixed activity sequences.
 
 ### Perception & Input Parsing — prompt templating
 
-**Shipped:** `runtime/structured_output.py` (`parse_llm_json`,
+**Shipped:** `agentsmith/structured_output.py` (`parse_llm_json`,
 `SEC-OUTPUT-001`).
 
 **Remaining gap:** no reusable prompt-template engine; prompts are inline
@@ -469,7 +469,7 @@ f-strings (KYC Sentinel has four such prompts across its agents).
 
 **Trigger:** 2+ real call sites sharing the same prompt structure.
 
-**Fix sketch:** `runtime/prompt_templates.py` — a minimal Jinja2 or
+**Fix sketch:** `agentsmith/prompt_templates.py` — a minimal Jinja2 or
 `string.Template` wrapper.
 
 ### Memory / RAG — remaining extensions (v1 shipped)
@@ -526,7 +526,7 @@ Operational lessons distilled from past phases; full incident context in
   found `main` had been red for three commits: the portal could not build
   (`node:crypto` reached the Edge bundle via `middleware → authz → constantTime`),
   `SEC-RBAC-001` failed on a missing loader, and docs/DESIGN.md was missing
-  `runtime/security_paths.py`. None were in the reviewed diff; all three were in
+  `agentsmith/security_paths.py`. None were in the reviewed diff; all three were in
   what the branch was about to ship.
 
   Two habits would have caught all of them, and both are cheap:
@@ -585,7 +585,7 @@ Operational lessons distilled from past phases; full incident context in
 
 - **A test double must never be more capable than the real thing.** KYC
   Sentinel's original fake gateway aliased `complete_stream` to `complete`,
-  hiding a production crash on the analyst's own route. `runtime/testing.py`'s
+  hiding a production crash on the analyst's own route. `agentsmith/testing.py`'s
   shipped double now refuses to stream what the real gateway can't.
 - **A guard assertion inside the `try` it guards is not a guard.** Two F-scenario
   drivers raised `AssertionError` inside a block caught by

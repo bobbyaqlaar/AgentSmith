@@ -39,7 +39,7 @@ _GROUPS = (
     ("scripts/process_gate", (2, 6)),
     ("scripts/gate_", (2, 6)),
     (".githooks/", (2, 6)),
-    ("runtime/", (2, 3)),
+    ("agentsmith/", (2, 3)),
     ("scripts/", (2, 4)),
     ("workflow-templates/", (4, 6)),
     (".github/workflows/", (4, 6)),

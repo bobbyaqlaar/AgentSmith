@@ -172,7 +172,7 @@ def test_scripts_has_exactly_one_script_loader() -> None:
     the security harness loaded it once per eval control.
 
     Matched by AST rather than text, so a file that merely NAMES the function —
-    this test does — is not counted. runtime/ is exempt by design: it is
+    this test does — is not counted. agentsmith/ is exempt by design: it is
     vendored independently and must not import scripts/.
     """
     import ast

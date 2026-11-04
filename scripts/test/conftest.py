@@ -1,9 +1,9 @@
 """
 scripts/test/conftest.py — isolate these tests from this machine's `agentsmith` state.
 
-The same isolation as runtime/test/conftest.py, for a run that collects only
+The same isolation as agentsmith/test/conftest.py, for a run that collects only
 scripts/test/: `agentsmith mode` and `agentsmith dashboard start` write
-~/.agent-framework/state/, which the gateway and runtime/otlp.py read after the
+~/.agent-framework/state/, which the gateway and agentsmith/otlp.py read after the
 environment, so without this a developer's mode would decide what these tests
 resolve.
 """

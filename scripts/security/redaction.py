@@ -67,7 +67,7 @@ def declared_emitter(root: Path) -> Optional[str]:
 
 def check(root: Path, environment: str, emitter: Optional[str], timeout: int = 300) -> Redaction:
     """Run `emitter` for `environment`'s profile and judge what arrived."""
-    from runtime.telemetry_contract import OTLP_DESTINATIONS, LoopbackCollector, flatten
+    from agentsmith.telemetry_contract import OTLP_DESTINATIONS, LoopbackCollector, flatten
 
     if emitter is None:
         return Redaction("not_gradable", "the repository declares no emitter — name the command that exports one "

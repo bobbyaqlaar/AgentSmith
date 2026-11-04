@@ -43,7 +43,7 @@ POSTURE_ENV = ("PROMPT_GUARD", "INPUT_GUARDRAIL", "MODERATION_HOOK", "MODERATION
 
 
 def _version() -> str:
-    from runtime.version import framework_version
+    from agentsmith.version import framework_version
 
     return framework_version()
 
@@ -51,7 +51,7 @@ def _version() -> str:
 def _own(root: Path) -> bool:
     """Whether the repository is this provider's own checkout — the one place
     its own code is the repository's to check."""
-    from runtime.cli import looks_like_framework
+    from agentsmith.cli import looks_like_framework
 
     return bool(looks_like_framework(root))
 

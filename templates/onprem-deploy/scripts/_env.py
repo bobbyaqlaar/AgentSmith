@@ -13,7 +13,7 @@ Deliberately NOT importing `scripts/_shared._dotenv_value`, which implements the
 same rule. `templates/onprem-deploy/` is a standalone bundle: it is copied to a
 customer's on-prem host, often air-gapped (see bundle-airgapped.sh), where the
 framework's `scripts/` directory does not exist. That is the same architectural
-boundary `_shared` already documents for `runtime/`. What this file removes is
+boundary `_shared` already documents for `agentsmith/`. What this file removes is
 the duplication WITHIN the bundle, which is the part that could drift silently
 between two scripts shipped side by side.
 """

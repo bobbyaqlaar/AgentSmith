@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # scripts/
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root (runtime/)
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root (agentsmith/)
 
 import cost_router
 
@@ -340,14 +340,14 @@ def test_http_error_without_a_body_still_reports_the_status(monkeypatch) -> None
 
 # ── A provider that reports no usage must not be silently unmetered ──────────
 #
-# runtime/provider_dispatch.parse_response returns Optional[int]: a response
+# agentsmith/provider_dispatch.parse_response returns Optional[int]: a response
 # with no `usage` block yields None rather than a fabricated 0. cost_router
 # handed that straight to audit_token_velocity_circuit, whose arithmetic raised
 # TypeError into a blanket `except Exception: pass` — so the call counted
 # toward neither the 5-minute burst window nor the monthly cap, and nothing was
 # printed, logged or raised.
 #
-# runtime/llm_gateway.py's sibling path already warned and billed the reserved
+# agentsmith/llm_gateway.py's sibling path already warned and billed the reserved
 # estimate for exactly this response shape. This call site is in another
 # package, which is the whole reason it was missed (review-levers: grep-for-siblings).
 

@@ -9,7 +9,7 @@
 #
 # This is the machine-wide standing stack — vendored to
 # ~/.agent-framework/observability/ and managed via `agentsmith dashboard start` /
-# `agentsmith dashboard stop` (runtime/machine/ops.py) so every repo on this machine
+# `agentsmith dashboard stop` (agentsmith/machine/ops.py) so every repo on this machine
 # shares one Phoenix + one Ops Portal rather than each spinning up its own.
 # A repo can opt out entirely with `touch .agenticframework/no-shared-infra`
 # (see hooks/post-checkout) — see docs/UserManual.md › Install & Start.
@@ -173,7 +173,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://phoenix:6006/v1/traces}"
       # Same values the workers use, or the two sides label one deployment two
       # ways. ENVIRONMENT fails closed to "production" when unset (see
-      # runtime/environment.py and its portal mirror).
+      # agentsmith/environment.py and its portal mirror).
       ENVIRONMENT:            "${ENVIRONMENT:-development}"
       AGENT_PROJECT_NAME:     "${AGENT_PROJECT_NAME:-}"
       AGENT_OWNER_ID:         "${AGENT_OWNER_ID:-}"

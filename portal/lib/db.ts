@@ -1,5 +1,5 @@
 // portal/lib/db.ts — shared Postgres pool. Same DATABASE_URL as
-// runtime/llm_gateway.py's Postgres budget backend (docs/DESIGN.md › Federated Observability).
+// agentsmith/llm_gateway.py's Postgres budget backend (docs/DESIGN.md › Federated Observability).
 //
 // The pool traces its own queries (lib/tracing.ts). Instrumented HERE, inside
 // the class, rather than at the twenty-eight `getPool().query(...)` call sites
@@ -17,7 +17,7 @@ let pool: Pool | null = null;
 
 /** The leading keyword, when it is one we recognise. Kept to a closed set:
  *  the span name is built from it, and an unbounded value there is a new span
- *  name per query — the cardinality mistake runtime/metrics.py warns about,
+ *  name per query — the cardinality mistake agentsmith/metrics.py warns about,
  *  wearing a different hat.
  *
  *  Exported for test/tracing.test.ts only. */
@@ -44,7 +44,7 @@ export function isPassthroughQuery(args: unknown[]): boolean {
  *
  * `db.statement` is the PARAMETERISED text — code, not data. The values live
  * in the second argument and are never recorded: a portal span has no redactor
- * behind it (the Python side's runtime/trace_redactor.py protects only the
+ * behind it (the Python side's agentsmith/trace_redactor.py protects only the
  * worker's spans), so nothing that could hold a row value goes on.
  */
 // `Pool.query` is an overload set (streams, array configs, text+values,
@@ -89,7 +89,7 @@ export function getPool(): Pool {
   if (!pool) {
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) {
-      throw new Error("DATABASE_URL is not set. The Ops Portal requires the same Postgres instance used by runtime/llm_gateway.py.");
+      throw new Error("DATABASE_URL is not set. The Ops Portal requires the same Postgres instance used by agentsmith/llm_gateway.py.");
     }
     pool = new TracedPool({ connectionString: databaseUrl, max: 10 });
   }
@@ -133,7 +133,7 @@ export async function tableExists(tableName: string): Promise<boolean> {
   return Boolean(rows[0]?.exists);
 }
 
-// dlq_entries is migrated by runtime/dead_letter.py (Python), not this
+// dlq_entries is migrated by agentsmith/dead_letter.py (Python), not this
 // portal's own schema.sql — a worker running an older dead_letter.py
 // before the reason/workflow_id/gate_id columns existed means this table
 // can lag behind what the portal's code expects. Check before querying

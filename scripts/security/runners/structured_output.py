@@ -17,7 +17,7 @@ class _SmokeModel(BaseModel):
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     framework_root(ctx)   # sys.path side effect; return value unused
 
-    from runtime.structured_output import StructuredOutputError, parse_llm_json
+    from agentsmith.structured_output import StructuredOutputError, parse_llm_json
 
     failures: list[str] = []
 

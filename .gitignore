@@ -36,7 +36,7 @@ portal/next-env.d.ts
 templates/in-app-widget/node_modules/
 
 # Runtime local blobs (dev)
-runtime/.hitl_blobs/
+agentsmith/.hitl_blobs/
 
 # circuit_breaker.py's local dev-session state cache
 .agent-rfc/fixtures/token_velocity_cache.json

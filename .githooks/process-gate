@@ -565,7 +565,7 @@ esac
 
 gate=""
 # The repository's own scripts/ only when it IS AgentSmith — two of its markers,
-# as runtime/cli.py looks_like_framework asks. A tenant's copy of the gate is
+# as agentsmith/cli.py looks_like_framework asks. A tenant's copy of the gate is
 # never run: 3.0.0 retired vendoring (.agent-rfc/designs/vendoring-retired.md).
 own=""
 if [ -f "$root/install-ai-stack.sh" ] && [ -d "$root/workflow-templates" ]; then

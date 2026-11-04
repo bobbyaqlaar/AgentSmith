@@ -1,7 +1,7 @@
 """
 scripts/security/runners/adversarial_eval.py — SEC-ADV-001.
 
-Prompt-injection / jailbreak probes, scored locally by `runtime.prompt_guard`.
+Prompt-injection / jailbreak probes, scored locally by `agentsmith.prompt_guard`.
 The body is `_shared.guard_suite`, shared with the RAG poisoning control: both
 count misses against a ceiling rather than averaging quality against a floor,
 and keeping one implementation means the two cannot drift on that number.

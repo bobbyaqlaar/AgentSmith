@@ -113,7 +113,7 @@ container, a CI job -- where no file declares the key.
 
 ```bash
 # Ask the model registry what this install actually routes to, and pull it.
-# Do NOT hardcode a model list — it comes from runtime/models.yaml, and inside
+# Do NOT hardcode a model list — it comes from agentsmith/models.yaml, and inside
 # a tenant repo it picks up that tenant's overrides too.
 ollama pull $(agentsmith models --ollama)     # one-time
 
@@ -256,7 +256,7 @@ agentsmith mode hybrid
 ```
 
 - Same four roles, but pointed at cloud providers instead of Ollama. **The
-  shipped `runtime/models.yaml` is local-only** — its Groq and Vertex AI
+  shipped `agentsmith/models.yaml` is local-only** — its Groq and Vertex AI
   entries are commented out with their verification notes, so hybrid mode does
   nothing until you uncomment one or declare cloud routes in a tenant
   `models.yaml`.
@@ -863,7 +863,7 @@ echo '{"config": {}, "monthly_accumulated_spend_usd": 0, "current_month_identifi
 ## Command Reference
 
 The canonical `agentsmith` command table. Every command is a subcommand of one
-program (`runtime/cli.py`), so `agentsmith <command> --help` is always current.
+program (`agentsmith/cli.py`), so `agentsmith <command> --help` is always current.
 The older `ai-*` names map to these one for one
 (`~/.agent-framework/shell/ai-compat.sh`).
 
@@ -1120,14 +1120,14 @@ export AGENT_MONTHLY_USD_CAP="50"               # hard cap across all projects (
 # a single run; exporting it from your profile overrides every tenant's own
 # declared judge route.
 
-# ── Production runtime (only needed when running runtime/ against real backends) ───
+# ── Production runtime (only needed when running agentsmith/ against real backends) ───
 export DATABASE_URL="postgresql://user:pass@localhost:5433/agenticframework"
 export REDIS_URL="redis://localhost:6379/0"     # only if IDEMPOTENCY_BACKEND=redis
 export TEMPORAL_ADDRESS="localhost:7233"        # only if WORKER_BACKEND=temporal
 export IDEMPOTENCY_BACKEND="postgres"           # postgres | redis | memory
 export BUDGET_BACKEND="postgres"                # postgres | redis
 # PG_POOL_MAX=5 — max pooled Postgres connections per DSN per worker process
-# (runtime/pg_pool.py, shared by budget/idempotency/DLQ stores). Keep
+# (agentsmith/pg_pool.py, shared by budget/idempotency/DLQ stores). Keep
 # workers × PG_POOL_MAX + the portal's own pool (10) under the server's
 # max_connections. Default is fine for most deployments.
 
@@ -1445,7 +1445,7 @@ none outside a repository.
 > |---|---|
 > | `.agenticframework/` (tenant, gates, providers), `.githooks/`, `.agent-rfc/` (seeds included), the rule files, `.agents/skills/`, `.github/workflows/` (ci-*, cd-*, eval-*, the gates and sync workflows), Knowledge Graph seed | `agentsmith tenant init <id> --stack <stack>` |
 > | `.env` | You create from the the Install & Start section tenant-app `.env` template |
-> | `runtime/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — if your code imports it, pin the `agentsmith-runtime` package in your requirements |
+> | `agentsmith/` (LLM gateway, base workflow, idempotency, DLQ, …) | **Never copied** — if your code imports it, pin the `agentsmith-runtime` package in your requirements |
 >
 > The rule files in the first row, the design/validation playbooks (below)
 > among them, are rendered from `templates/agent-rules.yaml` by the rules
@@ -1660,7 +1660,7 @@ cp -r $AGENTSMITH_DIR/examples/oil-price-agent/. .
 # Copy the model registry — defines which LLM each model_hint routes to.
 # Without this, the worker falls back to built-in defaults which may reference
 # deprecated model IDs and cause 400 errors from the Anthropic/OpenAI API.
-cp $AGENTSMITH_DIR/runtime/models.yaml .
+cp $AGENTSMITH_DIR/agentsmith/models.yaml .
 ```
 
 **Step 3 — Create the tenant `.env`**
@@ -1703,7 +1703,7 @@ set -a && source .env && set +a   # load tenant .env into current shell
 
 python3 -c "
 import sys, asyncio
-sys.path.insert(0, '$AGENTSMITH_DIR/runtime')
+sys.path.insert(0, '$AGENTSMITH_DIR/agentsmith')
 from llm_gateway import LLMGateway
 async def main():
     gw = LLMGateway(tenant_id='oil-price-demo')
@@ -1763,19 +1763,19 @@ python3 resolve_hitl.py --reject  # or reject
 ## Configure Features
 
 `scripts/multi_agent_system.py` / `local_agent_stack.py` are the **dev/IDE**
-path. Production agent execution uses `runtime/` instead — never deployed
+path. Production agent execution uses `agentsmith/` instead — never deployed
 directly from this repo (tenant repos build their own worker image, docs/DESIGN.md › Production Runtime).
 
 ### LLM Gateway — models, budget, degrade ladder
 
 ```python
-from runtime.llm_gateway import LLMGateway
+from agentsmith.llm_gateway import LLMGateway
 
 gateway = LLMGateway(tenant_id="acme", budget_cap_usd=150.0)
 result = await gateway.complete(prompt="...", model_hint="developer")
 ```
 
-Model registry: `runtime/models.yaml` (framework defaults) →
+Model registry: `agentsmith/models.yaml` (framework defaults) →
 tenant-repo-root `models.yaml` (override) → `.agenticframework/tenant.yaml`
 `gateway.routing_overrides` (per-role shorthand).
 
@@ -1818,12 +1818,12 @@ export ENVIRONMENT=development   # explicit opt-in for local/IDE work — see no
 ```
 
 ```python
-from runtime.trace_redactor import TraceRedactor
+from agentsmith.trace_redactor import TraceRedactor
 provider.add_span_processor(TraceRedactor())
 ```
 
 `$ENVIRONMENT` is resolved by the shared, **fail-closed**
-`runtime/environment.py:get_environment()` — an unset or unrecognized value
+`agentsmith/environment.py:get_environment()` — an unset or unrecognized value
 (typo, blank, etc.) resolves to `"production"`, never to `"development"`.
 This is a deliberate change from "missing var = least-restrictive
 default": a worker that loses its `ENVIRONMENT` var should fail toward
@@ -1846,7 +1846,7 @@ spans for more than one tenant in the same process.
 reference on `<attr>.hitl_blob_ref`; `HITLBlobStore.get()` decrypts it:
 
 ```python
-from runtime.trace_redactor import HITLBlobStore
+from agentsmith.trace_redactor import HITLBlobStore
 print(HITLBlobStore("kyc-sentinel").get("<trace_id>.<span_id>.input.value"))
 ```
 
@@ -1885,7 +1885,7 @@ docs/DESIGN.md › Framework vs Application Release). Local/IDE runs must set `E
 The eval-side suites are the Test section "Reliability & compliance suites". These are the runtime components that
 shipped with the same pack — each opt-in, none changes existing callers:
 
-**Pre-call input guardrail (PDPL — `runtime/input_guardrail.py`).**
+**Pre-call input guardrail (PDPL — `agentsmith/input_guardrail.py`).**
 Scrubs PII from prompts *before* the provider call inside
 `llm_gateway.complete()` — decision-path masking, distinct from
 `trace_redactor.py`'s post-call observability scrubbing (the Configure Features section "Trace redaction"). Default
@@ -1900,7 +1900,7 @@ export INPUT_GUARDRAIL=default   # off | default | custom
 Tenant-specific vocabularies: `register_input_guardrail(fn)` +
 `INPUT_GUARDRAIL=custom`.
 
-**Prompt injection guard (`runtime/prompt_guard.py`).** Runs *before* the
+**Prompt injection guard (`agentsmith/prompt_guard.py`).** Runs *before* the
 input guardrail inside `complete()` / `complete_stream()`. Heuristics +
 denylist. `PROMPT_GUARD=off|warn|default|strict` — **`default` (blocking) is
 what ships**, and any unrecognised value falls back to it, so a typo can
@@ -1921,15 +1921,15 @@ promote that tenant to `default`. Before G9 this was impossible — `default`
 and `strict` both hard-blocked, so the only way to observe the guard was to
 turn it `off`.
 
-**Structured output (`runtime/structured_output.py`).** `parse_llm_json(...)`
+**Structured output (`agentsmith/structured_output.py`).** `parse_llm_json(...)`
 validates LLM text against a Pydantic model — prefer this over bare
 `json.loads` in tenant activities (`SEC-OUTPUT-001`).
 
-**Tool allowlist (`runtime/tool_registry.py`).** `@tool` registration +
+**Tool allowlist (`agentsmith/tool_registry.py`).** `@tool` registration +
 `.agent-rfc/security/tool_allowlist.yaml`; unlisted tools raise
 `ToolNotAllowedError` (`SEC-TOOL-001`).
 
-**Output moderation hook (`runtime/moderation.py`).** Pluggable classifier,
+**Output moderation hook (`agentsmith/moderation.py`).** Pluggable classifier,
 `MODERATION_HOOK=optional|required|off`. Two ways to supply it:
 
 1. `register_output_moderator(fn)` at worker startup — imperative, wins over
@@ -1959,7 +1959,7 @@ validates LLM text against a Pydantic model — prefer this over bare
    invisible to the harness — regulated tenants were told to set exactly
    the value that made their strict CI un-passable.
 
-**LLM self-correction before human DLQ (`runtime/self_correction.py`).**
+**LLM self-correction before human DLQ (`agentsmith/self_correction.py`).**
 `BaseAgentWorkflow.run_with_self_correction()` asks the gateway for one
 corrected JSON payload on activity failure and retries the same activity
 (`max_self_correction_attempts`, default 1) before falling through to
@@ -1967,8 +1967,8 @@ corrected JSON payload on activity failure and retries the same activity
 `run_with_recoverable_step` callers are unchanged; tenants opt in per step.
 
 **Memory / RAG substrate (see [docs/rag-memory.md](rag-memory.md)).**
-Short-term `runtime/conversation_memory.py` (token-budget truncate-oldest);
-long-term `runtime/vector_store.py` + `runtime/embeddings.py`. The gateway
+Short-term `agentsmith/conversation_memory.py` (token-budget truncate-oldest);
+long-term `agentsmith/vector_store.py` + `agentsmith/embeddings.py`. The gateway
 does **not** auto-RAG — the tenant wires `store.query()` results into its
 own prompts.
 
@@ -1998,7 +1998,7 @@ carries the pre-call PII redactions the gateway performed
 for PDPL/GDPR reviews. `prompt_guard_reasons` carries non-blocking
 prompt-guard findings.
 
-**Installing the runtime in a tenant app.** `runtime/` is a pip-installable
+**Installing the runtime in a tenant app.** `agentsmith/` is a pip-installable
 package (`agentsmith-runtime`), so a tenant depends on it like any other
 library instead of bootstrapping `sys.path`:
 
@@ -2009,18 +2009,18 @@ pip install "agentsmith-runtime @ git+https://github.com/bobbyaqlaar/AgentSmith@
 
 Backends are extras, matching the runtime's own lazy imports — take only
 what you use: `[postgres]`, `[redis]`, `[temporal]`, `[hitl]`, `[cloud]`,
-or `[all]`. Then `from runtime.llm_gateway import LLMGateway` works from any
+or `[all]`. Then `from agentsmith.llm_gateway import LLMGateway` works from any
 directory, and a tenant Dockerfile builds from the tenant repo alone.
 
 For development against a live framework checkout, set `AGENTSMITH_DIR` —
 tenant code that follows the `agents/_framework.py` pattern prefers it over
 the installed copy, so framework edits take effect without reinstalling.
 
-**Testing your tenant app.** `runtime/testing.py` ships `FakeGateway` and
+**Testing your tenant app.** `agentsmith/testing.py` ships `FakeGateway` and
 `RecordingGateway` — use them instead of hand-rolling a double:
 
 ```python
-from runtime.testing import FakeGateway
+from agentsmith.testing import FakeGateway
 
 gw = FakeGateway(responses={"analyst": '{"rating": "LOW"}'},
                  providers={"analyst": "anthropic"})
@@ -2114,7 +2114,7 @@ ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
 docker run -d --name pg-test -e POSTGRES_PASSWORD=test -e POSTGRES_USER=test -e POSTGRES_DB=test -p 5432:5432 postgres:16-alpine
 export DATABASE_URL="postgresql://test:test@localhost:5432/test"
 export IDEMPOTENCY_BACKEND=postgres
-pytest runtime/test/ -v
+pytest agentsmith/test/ -v
 python3 scripts/verify_system.py --check-idempotency
 python3 scripts/verify_system.py --check-dlq
 
@@ -2198,7 +2198,7 @@ running (Phoenix + Postgres + Ops Portal).
 
 This demonstrates `run_with_recoverable_step` without needing a full
 Temporal cluster — simulating the exact "agent hallucinated a field name"
-scenario directly against `runtime/dead_letter.py`, the same code path a
+scenario directly against `agentsmith/dead_letter.py`, the same code path a
 real recoverable-step failure goes through:
 
 ```bash
@@ -2210,7 +2210,7 @@ real recoverable-step failure goes through:
 set -a; source .env; set +a
 DATABASE_URL="postgresql://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD:-phoenix}@localhost:5433/agenticframework" \
   python3 -c "
-import sys; sys.path.insert(0, 'runtime')
+import sys; sys.path.insert(0, '.')
 from dead_letter import DeadLetterQueue, REASON_VALIDATION_ERROR
 dlq = DeadLetterQueue()
 entry = dlq.enqueue(
@@ -2235,7 +2235,7 @@ print('Created DLQ entry:', entry.task_id)
   `replay_webhook_url` configured yet either). To see a *real* resumable
   entry and an actual live-workflow resume, run the Create an AgentSmith-Governed Repo section's example-app Option B with the
   `95` outlier, let it park on the HITL gate, then check `/dlq/oil-price-demo`
-  while it's waiting — that entry, if you wire up `runtime/replay_webhook_server.py`
+  while it's waiting — that entry, if you wire up `agentsmith/replay_webhook_server.py`
   per the HITL & DLQ Operations section, *is* resumable.
 
 **3. In-App Widget**
@@ -2271,13 +2271,13 @@ reload the widget before reporting a terminal one:
 ```bash
 set -a; source .env; set +a
 OPS_PORTAL_URL=http://localhost:3000 OPS_PORTAL_SYNC_TOKEN="$OPS_PORTAL_SYNC_TOKEN" python3 -c "
-import sys; sys.path.insert(0, 'runtime')
+import sys; sys.path.insert(0, '.')
 from llm_gateway import LLMGateway
 LLMGateway(tenant_id='oil-price-demo')._report_run_status('manual-demo-run', 'running')
 "
 # Reload the widget HTML now — it shows Working. Then:
 OPS_PORTAL_URL=http://localhost:3000 OPS_PORTAL_SYNC_TOKEN="$OPS_PORTAL_SYNC_TOKEN" python3 -c "
-import sys; sys.path.insert(0, 'runtime')
+import sys; sys.path.insert(0, '.')
 from llm_gateway import LLMGateway
 LLMGateway(tenant_id='oil-price-demo')._report_run_status('manual-demo-run', 'success')
 "
@@ -2313,7 +2313,7 @@ exception: it turns the build red, because it is not infrastructure weather.
 That fifth row exists because a withdrawn model does not throw — it 404s — and
 reported like an exhausted quota the two are opposite facts: a quota clears
 itself overnight, a withdrawn model never clears and the repo is pointing at a
-config error. `runtime.provider_dispatch.is_model_gone` classifies it —
+config error. `agentsmith.provider_dispatch.is_model_gone` classifies it —
 phrase-based (`model_not_found`, `does not exist`, `has been deprecated`, …)
 rather than a bare status code, for the same reason `is_provider_exhausted`
 is: "404" appears in request IDs and token counts, and a 404 only counts here
@@ -2419,7 +2419,7 @@ llama-3.3-70b-versatile:
 The catalog is an offer to any tenant that wants an entry — deleting it just
 means the next person shopping for a cheap model doesn't see it; leaving it
 unmarked, with live-looking cost figures, means they see it and pick it.
-`runtime/test/test_no_role_binds_a_dead_model.py` fails if any profile's `use`
+`agentsmith/test/test_no_role_binds_a_dead_model.py` fails if any profile's `use`
 still names a `decommissioned: true` entry — `degrade_to` is exempt, since it
 names a role, not a model.
 
@@ -2429,7 +2429,7 @@ There are two provider-calling paths, and they behave differently on purpose:
 
 | | Workload path | Eval path |
 |---|---|---|
-| Module | `runtime/llm_gateway.py` | `scripts/cost_router.py` |
+| Module | `agentsmith/llm_gateway.py` | `scripts/cost_router.py` |
 | Callers | workers, activities, tenant agents | `eval_judge.py` only |
 | On provider exhaustion | walks the `degrade_to` chain | **fails — no fallback** |
 | Budget, prompt guard, moderation, redaction | yes | no |
@@ -2564,7 +2564,7 @@ Minimal real validation for each subsystem (no mocks):
 
 ```bash
 # Framework scripts + shell
-find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
+find scripts agentsmith examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
 bash -n install-ai-stack.sh && zsh -n install-ai-stack.sh
 
 # Lint and types. Both are CI gates and neither was one until 2026-08-26 —
@@ -2591,10 +2591,10 @@ ENVIRONMENT=production python3 scripts/verify_system.py --check-redaction
 python3 scripts/run-evals.py --suite fairness
 python3 scripts/run-evals.py --suite hallucination
 python3 scripts/run-evals.py --suite adversarial
-pytest runtime/test/test_input_guardrail.py runtime/test/test_ttft_stream.py \
-       runtime/test/test_self_correction.py runtime/test/test_memory_and_vector.py \
-       runtime/test/test_prompt_guard.py runtime/test/test_structured_output.py \
-       runtime/test/test_tool_registry.py runtime/test/test_moderation.py -q
+pytest agentsmith/test/test_input_guardrail.py agentsmith/test/test_ttft_stream.py \
+       agentsmith/test/test_self_correction.py agentsmith/test/test_memory_and_vector.py \
+       agentsmith/test/test_prompt_guard.py agentsmith/test/test_structured_output.py \
+       agentsmith/test/test_tool_registry.py agentsmith/test/test_moderation.py -q
 python3 scripts/verify_ttft.py            # needs a local Ollama with falcon3:1b pulled
 
 # Security harness (P12 — Self-Test security job, strict)
@@ -2608,7 +2608,7 @@ python3 scripts/verify_system.py --check-onprem-deploy
 # Dedicated worker pool manifests — kubectl (even --dry-run=client) needs a
 # reachable cluster for API discovery; a free local one takes ~30s:
 brew install kind && kind create cluster --name af-test
-runtime/k8s/dedicated-tenant/render.sh acme nginx:alpine --apply
+agentsmith/k8s/dedicated-tenant/render.sh acme nginx:alpine --apply
 kubectl get pods -n tenant-acme   # CreateContainerConfigError until you create the Secret — expected
 kind delete cluster --name af-test
 ```
@@ -3127,7 +3127,7 @@ correctly propagates a red job status after rollback/notify run.
 one example value — that's enough if your tenant app stays on the local-only
 framework defaults or only talks to direct Anthropic/OpenAI APIs. If it routes
 any `model_hint` to `provider: vertex_ai` (the `vertex_gemini` role, shipped
-commented-out in `runtime/models.yaml` — uncomment it there or declare it in
+commented-out in `agentsmith/models.yaml` — uncomment it there or declare it in
 your tenant `models.yaml`), CI/CD needs two more things `DEPLOY_COMMAND` alone
 doesn't give you: a way for GitHub Actions to authenticate to GCP, and a
 decision about *what kind* of compute actually runs `worker.py`.
@@ -3147,7 +3147,7 @@ need to set the right secrets on each GitHub Environment:
 | `GCP_PROJECT_ID` | `my-gcp-project` | Used in `DEPLOY_COMMAND` / `models.yaml` |
 
 `VertexAIAdapter` resolves credentials via `google.auth.default()`
-(`runtime/provider_dispatch.py`) — after `gcp-auth` runs, ADC is written to
+(`agentsmith/provider_dispatch.py`) — after `gcp-auth` runs, ADC is written to
 the runner filesystem so any subsequent step (`gcloud`, `kubectl`, the Python
 gateway) is automatically authenticated.
 
@@ -3195,7 +3195,7 @@ DEPLOY_COMMAND = "gcloud container clusters get-credentials YOUR_CLUSTER --regio
 Set `GCP_PROJECT_ID` as a GitHub Environment variable (not secret — no
 credential, just a project identifier) so `DEPLOY_COMMAND` can reference
 `$GCP_PROJECT_ID` without hardcoding it in the workflow YAML or in
-`runtime/models.yaml` (docs/DESIGN.md › LLM Gateway (Production) "Cloud-Native Provider Adapters").
+`agentsmith/models.yaml` (docs/DESIGN.md › LLM Gateway (Production) "Cloud-Native Provider Adapters").
 
 **Live-verification status**: the Vertex AI *call path* was verified
 live against a real GCP project (`gemini-2.5-flash` via
@@ -3291,7 +3291,7 @@ Browser → Streamlit (Cloud Run: YOUR_UI_SERVICE)
 | Variable | Default | Notes |
 |---|---|---|
 | `TEMPORAL_ADDRESS` | `localhost:7233` | Override to point at your live Temporal server |
-| `TEMPORAL_TLS` | `` (empty) | Enables TLS to the Temporal server. Accepts `1`, `true`, `yes` or `on` (case-insensitive); anything else leaves TLS **off**. Read by `runtime/temporal_client.connect`, which every worker and client script now uses — previously only the example scripts read it, and they compared against `"true"`, so the `"1"` documented here silently disabled TLS. |
+| `TEMPORAL_TLS` | `` (empty) | Enables TLS to the Temporal server. Accepts `1`, `true`, `yes` or `on` (case-insensitive); anything else leaves TLS **off**. Read by `agentsmith/temporal_client.connect`, which every worker and client script now uses — previously only the example scripts read it, and they compared against `"true"`, so the `"1"` documented here silently disabled TLS. |
 | `TENANT_ID` | *(required)* | Must match the tenant ID registered in the worker |
 | `PORT` | `8080` | Set automatically by Cloud Run |
 
@@ -3355,7 +3355,7 @@ If you scaffolded with `--isolation dedicated`, provision the tenant's own
 Kubernetes worker pool:
 
 ```bash
-cd runtime/k8s/dedicated-tenant
+cd agentsmith/k8s/dedicated-tenant
 ./render.sh acme my-registry/acme-worker:1.0.0 --apply
 
 kubectl create secret generic agenticframework-secrets -n tenant-acme \
@@ -3368,7 +3368,7 @@ kubectl create secret generic agenticframework-secrets -n tenant-acme \
 The Deployment will sit at `CreateContainerConfigError` until that secret
 exists — this is intentional, not a bug: it cannot silently start without
 tenant-scoped credentials. See
-[runtime/k8s/dedicated-tenant/README.md](../runtime/k8s/dedicated-tenant/README.md).
+[agentsmith/k8s/dedicated-tenant/README.md](../agentsmith/k8s/dedicated-tenant/README.md).
 
 ---
 
@@ -3455,7 +3455,7 @@ via USB drive, secure copy, or a private registry mirror.
 **Secrets:** strictly `.env` (Compose) or a pre-existing Kubernetes
 `Secret` referenced by `envSecretName` (Helm) — no AWS Secrets Manager /
 GCP Secret Manager call anywhere in this template, matching
-`runtime/environment.py`'s existing fail-closed `ENVIRONMENT` resolver
+`agentsmith/environment.py`'s existing fail-closed `ENVIRONMENT` resolver
 convention used framework-wide.
 
 Full detail: `templates/onprem-deploy/README.md`,
@@ -3536,7 +3536,7 @@ differently.
 Portal spans carry `tenant.id`, `portal.actor.role` (the RBAC role of the human
 who acted, blank for machine-to-machine calls), and parameterised SQL. They do
 **not** carry request bodies, bound query values or replayed payloads:
-`runtime/trace_redactor.py` scrubs the worker's spans, and nothing stands
+`agentsmith/trace_redactor.py` scrubs the worker's spans, and nothing stands
 between a portal span and the collector.
 
 **Users and roles (optional):** set `OPS_PORTAL_USERS` instead of the single
@@ -3740,7 +3740,7 @@ Mint a replacement and update the tenant's embed snippet afterward.
 The token is the **only** access-control boundary — `tenant-id` is a
 display label. A forged `tenant-id` cannot read another tenant's data.
 
-Status prefers the `agent_runs` table (populated by `runtime/llm_gateway.py`'s
+Status prefers the `agent_runs` table (populated by `agentsmith/llm_gateway.py`'s
 best-effort `POST /api/runs/ingest` on call start/end) when an open or recent
 run exists for the tenant, so `running` is a real, reachable status — not
 just `success` / `degraded` / `failed`. Falls back to the most recent synced
@@ -3785,7 +3785,7 @@ tenant (the Monitor in Production section above).
 
 ### HITL gates and the recoverable-step DLQ (Temporal)
 
-`runtime/workflows/base_workflow.py` has two related but distinct patterns:
+`agentsmith/workflows/base_workflow.py` has two related but distinct patterns:
 
 - **`run_with_hitl_gate`** — the original approve/reject pattern: execute →
   if review is requested, wait on the `hitl_approved` signal (boolean) up
@@ -3823,10 +3823,10 @@ up to 10 minutes. The method's own attempt loop is the intended retry
 mechanism (only after a human supplies a *different* payload), not
 Temporal's.
 
-`runtime/idempotency.py` and `runtime/dead_letter.py` are Postgres-backed
+`agentsmith/idempotency.py` and `agentsmith/dead_letter.py` are Postgres-backed
 (`IDEMPOTENCY_BACKEND=postgres`/`redis`, `DATABASE_URL`/`REDIS_URL`) — both
 create their own table on first use, same pattern as
-`runtime/llm_gateway.py`'s budget backend. Verify against a throwaway
+`agentsmith/llm_gateway.py`'s budget backend. Verify against a throwaway
 Postgres:
 
 ```bash
@@ -3836,7 +3836,7 @@ python3 scripts/verify_system.py --check-idempotency
 python3 scripts/verify_system.py --check-dlq
 ```
 
-**Closing the HITL/DLQ loop end-to-end** — `runtime/dead_letter.py`'s
+**Closing the HITL/DLQ loop end-to-end** — `agentsmith/dead_letter.py`'s
 `enqueue()` now accepts `reason` (`validation_error`/`tool_call_error`/
 `hitl_timeout`/`hitl_rejected`/`infra_error` — see the `REASON_*`
 constants), `workflow_id`, and `gate_id`, and posts to
@@ -3852,7 +3852,7 @@ failing payload.
 `DeadLetterQueue.replay(task_id)` still takes an optional `replay_handler`
 callback at construction — without one, `replay()` only marks the entry
 `status="replayed"` and logs the attempt; it does NOT automatically
-resume anything. **`runtime/temporal_replay.py`'s `make_temporal_replay_handler(client)`
+resume anything. **`agentsmith/temporal_replay.py`'s `make_temporal_replay_handler(client)`
 is the concrete Temporal implementation** — it signals the *live, still-
 parked* workflow at `entry.workflow_id` (only resumable because
 `run_with_recoverable_step` kept it alive, unlike a terminated
@@ -3867,7 +3867,7 @@ the edited payload and POSTs it to **that tenant's own** webhook — the Ops
 contract's replay request (`contract/ops/v1/protocol.md`). Per-tenant by
 construction, so a human-in-the-loop fix always reaches the specific team
 running that tenant's worker, never a single shared endpoint serving every
-tenant, and never through a redirect. `runtime/replay_webhook_server.py` is
+tenant, and never through a redirect. `agentsmith/replay_webhook_server.py` is
 the reference receiver: verifies the signature, then calls
 `DeadLetterQueue(replay_handler=make_temporal_replay_handler(client)).replay(task_id, override_payload=edited_payload)`.
 It's a stdlib `http.server` reference, not a hardened production server —
@@ -4066,7 +4066,7 @@ bundle is on the backlog.
 ### Bypass policy enforcement
 
 Once the org policy is installed, `hooks.bypass_policy` decides whether `agentsmith mode off` may
-record the machine as disabled — one decision, `runtime/machine/policy.py`, which
+record the machine as disabled — one decision, `agentsmith/machine/policy.py`, which
 `agentsmith hooks bypass-check` also asks. A repository's gate has no bypass switch: a commit made
 with `--no-verify` is caught by the sweep and by CI. A refusal, or a check that cannot run, leaves
 the mode unchanged:

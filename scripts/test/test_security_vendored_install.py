@@ -6,7 +6,7 @@ still fail in the framework checkout.
 Found auditing AqlaarTeleologyStudio (2026-09-13): its strict harness reported
 fail=9, and three of those were `missing portal files` (SEC-AUDIT-001,
 SEC-RBAC-001, SEC-SSO-001) plus one `hooks/pre-commit: No such file`
-(SEC-CHANGE-001). A tenant gets scripts/, runtime/ and fixtures/security/
+(SEC-CHANGE-001). A tenant gets scripts/, agentsmith/ and fixtures/security/
 vendored into its own tree — never portal/ or hooks/ — so those were
 structural absences reported as compliance failures. `--mode smoke` includes
 SEC-AUDIT-001, so every tenant's eval-security.yml smoke step failed too.
@@ -48,7 +48,7 @@ def _ctx(root: Path) -> dict:
 @pytest.fixture()
 def vendored_tenant(tmp_path: Path) -> Path:
     """What the hook leaves: vendored dirs, and no portal/ or hooks/."""
-    for d in ("scripts", "runtime", "fixtures/security"):
+    for d in ("scripts", "agentsmith", "fixtures/security"):
         (tmp_path / d).mkdir(parents=True)
     return tmp_path
 

@@ -27,7 +27,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 import gate_models as gm
 
 V1 = REPO / "contract" / "rules" / "v1"
-PROVIDER = f"{sys.executable} -m runtime.cli rules"
+PROVIDER = f"{sys.executable} -m agentsmith.cli rules"
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git required")
 
@@ -42,7 +42,7 @@ def provider_env(monkeypatch):
 
 
 def test_agentsmith_passes_the_rules_contract(tmp_path, provider_env):
-    from runtime import conformance
+    from agentsmith import conformance
 
     report = conformance.run_rules(PROVIDER, tmp_path / "work")
 
@@ -79,7 +79,7 @@ def test_the_declared_port_is_the_model():
 def test_what_adopt_declares_names_the_rules_provider_under_both_contracts():
     import jsonschema
 
-    from runtime.adopt import providers_declaration
+    from agentsmith.adopt import providers_declaration
 
     declared = json.loads(providers_declaration())
     jsonschema.validate(declared, json.loads((V1 / "providers.schema.json").read_text()))
@@ -148,7 +148,7 @@ def _stub(tmp_path: Path, *, note: str, reads_env: bool) -> str:
 
 
 def test_a_provider_that_ignores_the_tenants_notes_and_drift_fails(tmp_path, provider_env):
-    from runtime import conformance
+    from agentsmith import conformance
 
     report = conformance.run_rules(_stub(tmp_path, note="", reads_env=False), tmp_path / "work")
 
@@ -159,7 +159,7 @@ def test_a_provider_that_ignores_the_tenants_notes_and_drift_fails(tmp_path, pro
 
 
 def test_a_provider_that_reads_the_environment_fails(tmp_path, provider_env):
-    from runtime import conformance
+    from agentsmith import conformance
 
     notes = "\n".join(conformance.rules_fixture()["notes"])
     report = conformance.run_rules(_stub(tmp_path, note=notes, reads_env=True), tmp_path / "work")
@@ -173,7 +173,7 @@ def test_a_provider_that_reads_the_environment_fails(tmp_path, provider_env):
 
 
 def _port():
-    from runtime.adopt import rules_port
+    from agentsmith.adopt import rules_port
 
     return rules_port(REPO)
 
@@ -242,7 +242,7 @@ def _bad_provider(tmp_path: Path, path: str) -> str:
 
 
 def test_a_render_that_names_a_hook_is_refused_and_nothing_is_written(tmp_path):
-    from runtime.adopt import RulesUnavailable, rendered_rules
+    from agentsmith.adopt import RulesUnavailable, rendered_rules
 
     root = _tenant(tmp_path, _bad_provider(tmp_path, ".githooks/pre-push"))
 
@@ -252,7 +252,7 @@ def test_a_render_that_names_a_hook_is_refused_and_nothing_is_written(tmp_path):
 
 
 def test_a_provider_that_gives_no_render_is_named(tmp_path):
-    from runtime.adopt import RulesUnavailable, rendered_rules
+    from agentsmith.adopt import RulesUnavailable, rendered_rules
 
     (tmp_path / "provider.py").write_text("import sys\nsys.exit(3)\n")
     root = _tenant(tmp_path, f"{sys.executable} {tmp_path / 'provider.py'}")
@@ -262,7 +262,7 @@ def test_a_provider_that_gives_no_render_is_named(tmp_path):
 
 
 def test_none_declared_renders_nothing(tmp_path):
-    from runtime.adopt import rendered_rules
+    from agentsmith.adopt import rendered_rules
 
     root = _tenant(tmp_path, "unused")
     (root / ".agenticframework" / "providers.json").write_text(json.dumps(
@@ -393,7 +393,7 @@ def test_provider_names_the_gate_providers_own_document():
 
 
 def test_adopt_writes_provider_not_this_installs_paths():
-    from runtime.cli import _process_gates_config
+    from agentsmith.cli import _process_gates_config
 
     config = json.loads(_process_gates_config("python-fastapi"))
     assert {config[k] for k in ("registry", "levers_doc", "design_checklist")} == {"provider"}
@@ -401,7 +401,7 @@ def test_adopt_writes_provider_not_this_installs_paths():
 
 
 def test_sync_renames_only_what_adopt_wrote_and_leaves_every_other_byte():
-    from runtime.sync import provider_documents
+    from agentsmith.sync import provider_documents
 
     before = ('{\n  "gated": ["src/**"],\n  "registry": "@framework/templates/governance.json",\n'
               '  "levers_doc":   "@framework/docs/review-levers.md",\n'

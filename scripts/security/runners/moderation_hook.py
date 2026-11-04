@@ -68,7 +68,7 @@ def _declared(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     import subprocess
 
     if provider_code_in_scope(ctx):
-        from runtime import moderation as mod
+        from agentsmith import moderation as mod
 
         broken = _api_smoke(mod)
         if broken:
@@ -115,7 +115,7 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     if is_contract(ctx):
         return _declared(control, ctx)
 
-    from runtime import moderation as mod
+    from agentsmith import moderation as mod
 
     strict = bool(ctx.get("strict", False)) or os.environ.get("SECURITY_STRICT", "") == "1"
     mode = os.environ.get("MODERATION_HOOK", "").strip().lower()

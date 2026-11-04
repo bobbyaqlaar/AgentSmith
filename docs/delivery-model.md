@@ -31,7 +31,7 @@ Ids used in `delivery_model.approved_platforms` and tenant `delivery.platform`:
 | Platform id | Meaning | Starter |
 |---|---|---|
 | `dev-local` | Local Ollama / laptop | `AI_STACK_MODE=local` |
-| `hybrid-cloud` | Approved cloud providers + shared Phoenix | `runtime/models.yaml` + gateway |
+| `hybrid-cloud` | Approved cloud providers + shared Phoenix | `agentsmith/models.yaml` + gateway |
 | `on-prem` | Customer hardware / air-gap | [`templates/onprem-deploy/`](../templates/onprem-deploy/) |
 | `uae-sovereign` | In-border + Falcon/sovereign API | [`templates/uae-sovereign/`](../templates/uae-sovereign/) |
 | `dedicated-k8s` | Dedicated tenant worker pool | `tenant.isolation: dedicated` |

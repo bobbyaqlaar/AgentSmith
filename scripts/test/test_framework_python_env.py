@@ -296,6 +296,6 @@ def test_self_test_installs_the_lock_at_the_pinned_version():
 
 
 def test_the_standalone_phoenix_fallback_uses_a_subcommand_phoenix_has():
-    ops = (REPO / "runtime" / "machine" / "ops.py").read_text(encoding="utf-8")
+    ops = (REPO / "agentsmith" / "machine" / "ops.py").read_text(encoding="utf-8")
     assert '[uvx, "--from", "arize-phoenix", "phoenix", "serve"' in ops
     assert "phoenix.server.main launch" not in _installer_code() + ops

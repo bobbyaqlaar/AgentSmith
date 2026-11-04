@@ -41,7 +41,7 @@ actions:
       The framework primitive tenants use to make an action non-autonomous.
       Listed here as the contract itself: the resume activity must not run
       without either needs_hitl=false or a recorded hitl_approved signal
-      (runtime/test/test_hitl_gate.py).
+      (agentsmith/test/test_hitl_gate.py).
 
   - workflow: BaseAgentWorkflow
     action: run_with_recoverable_step

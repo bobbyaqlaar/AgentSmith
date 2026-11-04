@@ -29,7 +29,7 @@ import gate_models as gm
 from _shared import load_script
 
 V1 = REPO / "contract" / "evals" / "v1"
-PROVIDER = f"{sys.executable} -m runtime.cli evals"
+PROVIDER = f"{sys.executable} -m agentsmith.cli evals"
 LAUNCHER = REPO / ".githooks" / "process-gate"
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git required")
@@ -54,7 +54,7 @@ def _port():
 
 
 def test_agentsmith_passes_the_evals_contract(tmp_path, provider_env):
-    from runtime import conformance
+    from agentsmith import conformance
 
     report = conformance.run_evals(PROVIDER, tmp_path / "work")
 
@@ -76,7 +76,7 @@ def _liar(tmp_path: Path) -> str:
 
 
 def test_a_provider_that_always_passes_is_not_conformant(tmp_path):
-    from runtime import conformance
+    from agentsmith import conformance
 
     report = conformance.run_evals(_liar(tmp_path), tmp_path / "work")
 
@@ -93,7 +93,7 @@ def test_the_stub_judge_scores_from_the_markers_and_refuses_a_call_without_its_k
     import urllib.error
     import urllib.request
 
-    from runtime import conformance
+    from agentsmith import conformance
 
     def ask(judge, key):
         body = json.dumps({"model": "stub-judge", "messages": [
@@ -116,7 +116,7 @@ def test_a_judged_suite_cannot_grade_without_httpx(tmp_path):
     installs — lists httpx: every direct-API judge route goes through it, and
     without it a judged suite can only answer no_verdict, which a tenant may
     have declared a warning (.agent-rfc/designs/setup-evals-provider.md)."""
-    from runtime import conformance
+    from agentsmith import conformance
 
     blocker = tmp_path / "without_httpx.py"
     blocker.write_text("import runpy, sys\nsys.modules['httpx'] = None\npath = sys.argv[1]\n"
@@ -137,7 +137,7 @@ def test_a_judged_suite_cannot_grade_without_httpx(tmp_path):
 
 
 def test_a_scorecard_with_a_failing_exit_code_is_not_an_answer(tmp_path):
-    from runtime import conformance
+    from agentsmith import conformance
 
     script = tmp_path / "exits_one.py"
     script.write_text("import json, sys\nrequest = json.loads(sys.stdin.read())\n"
@@ -195,7 +195,7 @@ def test_the_declared_port_is_the_model():
 def test_what_adopt_declares_names_the_evals_provider_under_both_contracts():
     import jsonschema
 
-    from runtime.adopt import providers_declaration
+    from agentsmith.adopt import providers_declaration
 
     declared = json.loads(providers_declaration())
     jsonschema.validate(declared, json.loads((V1 / "providers.schema.json").read_text()))

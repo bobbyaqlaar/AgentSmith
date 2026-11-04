@@ -73,7 +73,7 @@ export async function POST(request: Request, { params }: { params: { taskId: str
   // one from the older run_with_hitl_gate's terminal dead-letter, not
   // run_with_recoverable_step. The webhook call above still happened
   // (the tenant's receiver decides what to do — restart fresh, etc.),
-  // but the reference receiver (runtime/replay_webhook_server.py) just
+  // but the reference receiver (agentsmith/replay_webhook_server.py) just
   // logs a warning and no-ops on a live signal when these are missing —
   // "ok":true alone would otherwise read as "resumed," which isn't
   // necessarily true here.

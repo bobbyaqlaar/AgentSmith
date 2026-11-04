@@ -3,7 +3,7 @@
 # IT authors this file and deploys it through its own MDM to
 # ~/.agent-framework/agenticframework-org.yaml on every managed machine
 # (enterprise/README.md). `agentsmith mode off` reads it to enforce
-# bypass_policy (runtime/machine/policy.py), and a repository's gate, while it
+# bypass_policy (agentsmith/machine/policy.py), and a repository's gate, while it
 # is present, adds the RFC checks (docs/process-gates.md › commit_guardrails).
 
 hooks:
@@ -26,7 +26,7 @@ sso:
   issuer: "https://corp.okta.com"
   client_id: "REPLACE_ME"
 
-# Best-effort audit log write target (see runtime/machine/policy.py's
+# Best-effort audit log write target (see agentsmith/machine/policy.py's
 # audit_log_event and portal/app/api/audit/append/route.ts). Optional —
 # if unset, hook_bypass events are still enforced locally, just not logged
 # centrally.

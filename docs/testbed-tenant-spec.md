@@ -96,7 +96,7 @@ Engineered failure paths (each is a demo scenario AND an E2E test):
 # .agenticframework/tenant.yaml (excerpt)
 tenant:
   id: kyc-sentinel
-  isolation: dedicated          # exercises runtime/k8s/dedicated-tenant/
+  isolation: dedicated          # exercises agentsmith/k8s/dedicated-tenant/
 framework:
   version: "1.0.x"
 gateway:

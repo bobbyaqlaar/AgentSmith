@@ -24,7 +24,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts"))
 import gate_models as gm
 
-from runtime.machine import governance
+from agentsmith.machine import governance
 
 DESIGN = """---
 status: active
@@ -76,7 +76,7 @@ def _run_on_a_terminal(repo: Path, args: list[str], typed: str) -> tuple[int, st
         os.chdir(repo)
         os.environ["PYTHONPATH"] = str(REPO)                # the framework checkout this test runs from
         os.execv(sys.executable, [sys.executable, "-c",
-                                  "import sys; from runtime.cli import main; sys.exit(main())", *args])
+                                  "import sys; from agentsmith.cli import main; sys.exit(main())", *args])
     os.write(fd, typed.encode())
     output = b""
     while True:
@@ -92,7 +92,7 @@ def _run_on_a_terminal(repo: Path, args: list[str], typed: str) -> tuple[int, st
 
 def test_an_agent_shell_cannot_record_an_approval(repo):
     result = subprocess.run(
-        [sys.executable, "-c", "import sys; from runtime.cli import main; sys.exit(main())",
+        [sys.executable, "-c", "import sys; from agentsmith.cli import main; sys.exit(main())",
          "approve", ".agent-rfc/designs/change.md", "D1", "--statement", "go ahead"],
         capture_output=True, text=True, check=False, cwd=repo, stdin=subprocess.DEVNULL,
         start_new_session=True,                             # no controlling terminal, like an agent's shell

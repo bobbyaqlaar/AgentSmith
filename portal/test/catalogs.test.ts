@@ -13,11 +13,11 @@
 // passed every test.
 //
 // The database cannot import TypeScript, so this is the same treatment
-// lib/environment.ts's mirror of runtime/environment.py gets: read the other
+// lib/environment.ts's mirror of agentsmith/environment.py gets: read the other
 // side and compare.
 //
 // Two sets have their owner in Python rather than SQL: the stacks and IDEs a
-// tenant intake may name (lib/intakes.ts), whose owners are runtime/cli.py
+// tenant intake may name (lib/intakes.ts), whose owners are agentsmith/cli.py
 // STACKS and scripts/gate_ides.py GENERATED. Same treatment, other language.
 
 import assert from "node:assert/strict";
@@ -103,7 +103,7 @@ test("tenants.repo_provider matches REPO_PROVIDERS", () => {
 });
 
 test("an intake's stacks are the CLI's STACKS", () => {
-  assert.deepEqual([...INTAKE_STACKS], pythonTuple("runtime/cli.py", "STACKS"));
+  assert.deepEqual([...INTAKE_STACKS], pythonTuple("agentsmith/cli.py", "STACKS"));
 });
 
 test("an intake's IDEs are the ones gate_ides can write a config for", () => {
@@ -141,8 +141,8 @@ test("the constraint reader actually reads constraints", () => {
   // would compare two empty arrays and pass having checked nothing.
   assert.ok(checkConstraintValues("isolation").length >= 2);
   assert.throws(() => checkConstraintValues("no_such_column"));
-  assert.ok(pythonTuple("runtime/cli.py", "ISOLATIONS").length >= 2);
-  assert.throws(() => pythonTuple("runtime/cli.py", "NO_SUCH_TUPLE"));
+  assert.ok(pythonTuple("agentsmith/cli.py", "ISOLATIONS").length >= 2);
+  assert.throws(() => pythonTuple("agentsmith/cli.py", "NO_SUCH_TUPLE"));
 });
 
 console.log(`\n${passed} passed`);

@@ -8,7 +8,7 @@ HITL triggers (see examples/oil-price-agent/agents/README.md):
   - Price anomaly > 3 standard deviations: pause workflow, alert ops team
   - Model confidence < 0.6: pause for human review before order
 
-Actually subclasses runtime/workflows/base_workflow.py's BaseAgentWorkflow
+Actually subclasses agentsmith/workflows/base_workflow.py's BaseAgentWorkflow
 (it didn't, for a while — this file used to reimplement the same
 hitl_approved signal + wait_condition inline, which worked but meant this
 "reference example" never actually demonstrated the base class it claimed
@@ -44,7 +44,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta
 
-# runtime/ and runtime/workflows/ must already be on sys.path before this
+# agentsmith/ and agentsmith/workflows/ must already be on sys.path before this
 # module is imported — done by the importer (worker.py for real deployment;
 # test fixtures the same way), deliberately NOT here. This module defines
 # the workflow class, which Temporal's sandbox re-imports for determinism

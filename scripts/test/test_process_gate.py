@@ -113,7 +113,7 @@ def test_agentsmith_config_is_valid_and_gates_itself():
     ("path", "gated"),
     [
         ("scripts/process_gate.py", True),
-        ("runtime/test/test_x.py", True),
+        ("agentsmith/test/test_x.py", True),
         (".github/workflows/self-test.yml", True),
         ("install-ai-stack.sh", True),
         ("requirements-lint.txt", True),
@@ -356,8 +356,8 @@ def test_a_trailer_naming_a_missing_file_says_so():
 
 
 def test_the_design_scope_must_cover_every_gated_file():
-    errors, _ = _check(["scripts/lib/a.py", "runtime/b.py", ".agent-rfc/reviews/change.md"])
-    assert any("does not cover runtime/b.py" in e for e in errors)
+    errors, _ = _check(["scripts/lib/a.py", "agentsmith/b.py", ".agent-rfc/reviews/change.md"])
+    assert any("does not cover agentsmith/b.py" in e for e in errors)
 
 
 def test_a_review_not_changed_in_the_commit_cannot_vouch_for_it():
@@ -467,7 +467,7 @@ GATE_FILES = {
     "scripts/check_bare_except.py": REPO / "scripts/check_bare_except.py",
     "scripts/vouched_files.py": REPO / "scripts/vouched_files.py",
     "templates/governance.json": REPO / "templates/governance.json",
-    "runtime": REPO / "runtime",
+    "agentsmith": REPO / "agentsmith",
 }
 
 
@@ -775,8 +775,8 @@ def test_session_start_lists_the_pillars_and_a_repos_own_extra_lines(gated_repo)
 
 @needs_git
 def test_session_start_says_when_gate_spans_are_not_emitted(gated_repo):
-    shutil.rmtree(gated_repo / "runtime")
-    _git(gated_repo, "commit", "-qam", "chore: drop runtime", "--no-verify")
+    shutil.rmtree(gated_repo / "agentsmith")
+    _git(gated_repo, "commit", "-qam", "chore: drop the package", "--no-verify")
     context = json.loads(_hook(gated_repo, "session-start", {"cwd": str(gated_repo)}).stdout)
     text = context["hookSpecificOutput"]["additionalContext"]
     assert "gate spans NOT emitted" in text
@@ -925,7 +925,7 @@ def test_pre_edit_denies_an_uncovered_gated_path_and_allows_a_covered_one(gated_
 
     _write(gated_repo, ".agent-rfc/designs/change.md", DESIGN)
     assert _decision(_hook(gated_repo, "pre-edit", _edit(gated_repo, "scripts/lib/a.py"))) == "allow"
-    assert _decision(_hook(gated_repo, "pre-edit", _edit(gated_repo, "runtime/b.py"))) == "deny", "outside the scope"
+    assert _decision(_hook(gated_repo, "pre-edit", _edit(gated_repo, "agentsmith/b.py"))) == "deny", "outside the scope"
 
     _write(gated_repo, ".agent-rfc/designs/change.md", DESIGN.replace("status: active", "status: done"))
     finished = _hook(gated_repo, "pre-edit", _edit(gated_repo, "scripts/lib/a.py"))
@@ -999,9 +999,9 @@ def test_stop_requires_the_review_to_be_newer_than_the_change(gated_repo):
 @needs_git
 def test_stop_catches_a_gated_change_no_design_covers(gated_repo):
     """An edit made through Bash never met the edit gate; the stop gate sees it."""
-    _write(gated_repo, "runtime/b.py", "x = 1\n")
+    _write(gated_repo, "agentsmith/b.py", "x = 1\n")
     result = json.loads(_hook(gated_repo, "stop", {"cwd": str(gated_repo)}).stdout)
-    assert "runtime/b.py: no complete active design note covers it" in result["reason"]
+    assert "agentsmith/b.py: no complete active design note covers it" in result["reason"]
 
 
 @needs_git

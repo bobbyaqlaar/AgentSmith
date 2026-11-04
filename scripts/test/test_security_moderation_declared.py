@@ -21,7 +21,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts"))
 
-from runtime import moderation as mod
+from agentsmith import moderation as mod
 from security.registry import ControlSpec, FrameworkTags
 from security.runners.moderation_hook import run as run_moderation
 
@@ -35,7 +35,7 @@ def _control() -> ControlSpec:
         frameworks=FrameworkTags(owasp=["LLM01"], nist=["MAP 2.6"], atlas=[], iso42001=[9]),
         runner="moderation_hook",
         check_type="unit",
-        mechanism="runtime/moderation.py",
+        mechanism="agentsmith/moderation.py",
     )
 
 
@@ -52,7 +52,7 @@ def tenant(tmp_path, monkeypatch):
     (tmp_path / "tenant_clf.py").write_text(
         textwrap.dedent(
             """
-            from runtime.moderation import ModerationResult
+            from agentsmith.moderation import ModerationResult
 
             def classify(text: str) -> ModerationResult:
                 bad = "forbidden" in text.lower()

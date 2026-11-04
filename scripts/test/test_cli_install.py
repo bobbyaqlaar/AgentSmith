@@ -23,8 +23,8 @@ from pathlib import Path
 
 import pytest
 
-from runtime.cli import build_parser
-from runtime.machine.ops import remove_profile_blocks
+from agentsmith.cli import build_parser
+from agentsmith.machine.ops import remove_profile_blocks
 
 REPO = Path(__file__).resolve().parents[2]
 INSTALLER = REPO / "install-ai-stack.sh"

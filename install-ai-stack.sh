@@ -355,19 +355,21 @@ if [ -d "$INSTALLER_DIR/scripts" ]; then
   success "Scripts installed"
 fi
 
-# runtime/ (the production runtime library) and fixtures/security/ (the control
+# agentsmith/ (the production runtime library) and fixtures/security/ (the control
 # registry the security port reads, file-relative).
-RUNTIME_DIR="$FRAMEWORK_DIR/runtime"
-if [ -d "$INSTALLER_DIR/runtime" ]; then
+RUNTIME_DIR="$FRAMEWORK_DIR/agentsmith"
+# Where this lived before 4.0.0. Left behind, a stale `runtime` stays importable.
+rm -rf "$FRAMEWORK_DIR/runtime"
+if [ -d "$INSTALLER_DIR/agentsmith" ]; then
   mkdir -p "$RUNTIME_DIR"
-  cp -r "$INSTALLER_DIR/runtime/." "$RUNTIME_DIR/"
+  cp -r "$INSTALLER_DIR/agentsmith/." "$RUNTIME_DIR/"
   find "$RUNTIME_DIR" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
   # Local HITL-gate test-run scratch data (gitignored in the framework's own
-  # checkout, .gitignore:runtime/.hitl_blobs/) — a plain `cp -r` from a live
+  # checkout, .gitignore:agentsmith/.hitl_blobs/) — a plain `cp -r` from a live
   # working tree doesn't know that. Committed once into a real tenant before
   # this exclusion existed; never again.
   rm -rf "$RUNTIME_DIR/.hitl_blobs"
-  success "runtime/ installed"
+  success "agentsmith/ installed"
 fi
 
 FIXTURES_SECURITY_DIR="$FRAMEWORK_DIR/fixtures/security"
@@ -454,7 +456,7 @@ fi
 # Postgres) and the Ops Portal source (built into a container image by
 # `agentsmith dashboard start`, not run via npm directly on the host). Vendored the
 # same way scripts/workflow-templates/templates are above — see
-# runtime/machine/ops.py (dashboard_start/dashboard_stop) for what actually
+# agentsmith/machine/ops.py (dashboard_start/dashboard_stop) for what actually
 # starts/stops it. Docker itself is optional: if it's not installed,
 # `agentsmith dashboard start` falls back to a standalone Phoenix (uvx)
 # launch and this vendoring step is simply skipped (no error).
@@ -573,7 +575,7 @@ info "A repository cloned before this keeps copies in .git/hooks; once under the
 
 header "Step 7: Recording Machine State"
 
-# Every operator command is `agentsmith <command>` (runtime/cli.py). This step
+# Every operator command is `agentsmith <command>` (agentsmith/cli.py). This step
 # used to append 18 shell functions to the profile, which reached interactive
 # shells only — a git GUI, an IDE, CI and Claude Code's hooks never had them,
 # and a mode "set" by one was an export in one terminal. Machine state is now

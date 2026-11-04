@@ -42,7 +42,7 @@ def tenant(tmp_path, monkeypatch):
     root.mkdir()
     subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)
     sys.path.insert(0, str(REPO))
-    from runtime.cli import init_tenant
+    from agentsmith.cli import init_tenant
 
     init_tenant("acme", root, stack="python-fastapi")
     return root
@@ -93,7 +93,7 @@ def test_the_gates_are_live_and_the_extra_modes_are_off(tenant) -> None:
 def test_the_scaffold_leaves_a_tenants_own_files_alone(tenant) -> None:
     (tenant / "README.md").write_text("the tenant's own words\n", encoding="utf-8")
     sys.path.insert(0, str(REPO))
-    from runtime.cli import init_tenant
+    from agentsmith.cli import init_tenant
 
     init_tenant("acme", tenant, stack="python-fastapi")
 
@@ -236,7 +236,7 @@ def test_the_line_is_the_shape_the_checker_already_reads(tmp_path) -> None:
     """`agentsmith check` surfaces unresolved MAJOR/CRITICAL entries; writing a
     different shape would mean writing a second reader."""
     sys.path.insert(0, str(REPO))
-    from runtime.machine.ops import _unresolved_log_entries
+    from agentsmith.machine.ops import _unresolved_log_entries
 
     gate_history.record(tmp_path, "stop_gate_blocked", "two files")
 

@@ -1,7 +1,7 @@
 # templates/uae-sovereign/models.yaml — EXAMPLE tenant registry
 #
 # Copy to the tenant repo root as `models.yaml` so llm_gateway loads it over
-# runtime/models.yaml defaults.
+# agentsmith/models.yaml defaults.
 #
 # Pattern A (active below): UAE-hosted Ollama + Falcon 3.
 #   Live-verified 2026-07-10 (local Ollama OpenAI-compat /v1):

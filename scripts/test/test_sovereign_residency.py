@@ -136,7 +136,7 @@ def test_a_checkout_without_the_template_is_not_applicable(tmp_path: Path) -> No
 def test_the_runner_walks_the_same_chain_as_the_gateway() -> None:
     """The check and the runtime must not have separate opinions about where a
     degrade goes."""
-    from runtime.llm_gateway import degrade_chain
+    from agentsmith.llm_gateway import degrade_chain
 
     roles = {"a": _ollama(degrade_to="b"), "b": _ollama(degrade_to="c"), "c": _ollama()}
     assert degrade_chain(roles, "a") == ["a", "b", "c"]

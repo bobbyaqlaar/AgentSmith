@@ -56,7 +56,7 @@ def _adopted(tmp_path, monkeypatch):
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "feat: the tenant's own code")
 
-    from runtime.adopt import adopt, plan_adoption
+    from agentsmith.adopt import adopt, plan_adoption
 
     written = adopt(plan_adoption("t", root, architecture="layered"))
     _git(root, "add", "--", *written)
@@ -86,7 +86,7 @@ def moved_on(tmp_path):
 
 
 def _sync(root: Path, **kw):
-    from runtime.sync import plan_sync, sync
+    from agentsmith.sync import plan_sync, sync
 
     return sync(plan_sync(root, **kw))
 
@@ -160,7 +160,7 @@ def test_an_adopted_repository_is_never_vendored_into(tenant):
     _sync(tenant)
 
     assert not (tenant / "scripts").exists(), "adoption promised no vendored framework code"
-    assert not (tenant / "runtime").exists()
+    assert not (tenant / "agentsmith").exists()
 
 
 def test_the_manifest_records_what_this_sync_wrote(tenant, moved_on):
@@ -184,12 +184,12 @@ def framework_like(tmp_path):
     (root / "workflow-templates").mkdir(parents=True)
     (root / "install-ai-stack.sh").write_text("#!/bin/sh\n")
     (root / ".agenticframework").mkdir()
-    (root / ".agenticframework" / "process-gates.json").write_text('{"gated": ["runtime/**"]}\n')
+    (root / ".agenticframework" / "process-gates.json").write_text('{"gated": ["agentsmith/**"]}\n')
     (root / ".agenticframework" / "tenant.yaml").write_text("tenant:\n  id: t\n")
-    (root / "runtime").mkdir()
-    (root / "runtime" / "llm_gateway.py").write_text("# the framework's own\n")
-    (root / "runtime" / "test").mkdir()
-    (root / "runtime" / "test" / "test_own.py").write_text("def test_own(): pass\n")
+    (root / "agentsmith").mkdir()
+    (root / "agentsmith" / "llm_gateway.py").write_text("# the framework's own\n")
+    (root / "agentsmith" / "test").mkdir()
+    (root / "agentsmith" / "test" / "test_own.py").write_text("def test_own(): pass\n")
     subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)
     return root
 
@@ -204,15 +204,15 @@ def _an_install(tmp_path: Path) -> Path:
     home = tmp_path / "install"
     (home / "scripts").mkdir(parents=True)
     (home / "scripts" / "process_gate.py").write_text("# an install's copy\n")
-    (home / "runtime").mkdir()
-    (home / "runtime" / "llm_gateway.py").write_text("# an install's copy\n")
+    (home / "agentsmith").mkdir()
+    (home / "agentsmith" / "llm_gateway.py").write_text("# an install's copy\n")
     return home
 
 
 def test_sync_refuses_the_frameworks_own_checkout(framework_like):
     """On 2026-10-01 a sync here wrote four tenant files into the framework,
     re-moded its hooks and printed a commit marking it a tenant of itself."""
-    from runtime.sync import SyncError, plan_sync
+    from agentsmith.sync import SyncError, plan_sync
 
     before = _tree(framework_like)
     with pytest.raises(SyncError) as refused:
@@ -224,7 +224,7 @@ def test_sync_refuses_the_frameworks_own_checkout(framework_like):
 
 
 def test_the_sync_command_exits_2_and_writes_nothing(framework_like, capsys):
-    from runtime.cli import main
+    from agentsmith.cli import main
 
     before = _tree(framework_like)
     assert main(["sync", "--yes", "--root", str(framework_like)]) == 2
@@ -235,7 +235,7 @@ def test_the_sync_command_exits_2_and_writes_nothing(framework_like, capsys):
 def test_sync_recognises_this_very_checkout():
     """The markers are read from files that can be renamed; if they drift, this
     fails instead of the guard quietly stopping. plan_sync writes nothing."""
-    from runtime.sync import SyncError, plan_sync
+    from agentsmith.sync import SyncError, plan_sync
 
     with pytest.raises(SyncError, match="AgentSmith's own checkout"):
         plan_sync(REPO)
@@ -321,7 +321,7 @@ def test_a_tenants_own_settings_do_not_freeze_their_gate_wiring(tenant):
 def test_a_file_the_tenant_edited_is_left_alone_and_named(tenant):
     """The manifest vouches for `.cursor/hooks.json`, but the tenant has since
     changed it: a sync that clobbered it would lose their work."""
-    from runtime.sync import plan_sync
+    from agentsmith.sync import plan_sync
 
     config = json.loads((tenant / ".cursor" / "hooks.json").read_text())
     config["hooks"]["stop"][0]["timeout"] = 120  # one line: their tuning, their file now
@@ -347,7 +347,7 @@ def test_the_gates_workflow_follows_the_framework_it_runs(tenant):
     it was adopted from."""
     import re
 
-    from runtime.adopt import SETUP_ACTION
+    from agentsmith.adopt import SETUP_ACTION
 
     workflow = tenant / ".github" / "workflows" / "agentsmith-gates.yml"
     older = re.sub(rf"{re.escape(SETUP_ACTION)}@v\S+", f"{SETUP_ACTION}@v1.9.0", workflow.read_text())
@@ -375,7 +375,7 @@ def test_everything_a_sync_refreshed_goes_in_one_commit_the_gates_accept(tenant)
 
 def test_the_sync_workflow_is_refreshed_like_everything_else_the_framework_owns(tenant):
     """It keeps itself current by the rule it exists to run."""
-    from runtime.adopt import SYNC_WORKFLOW
+    from agentsmith.adopt import SYNC_WORKFLOW
 
     stale = tenant / SYNC_WORKFLOW
     stale.write_text(stale.read_text().replace("agentsmith/sync", "agentsmith/old-branch"))
@@ -435,7 +435,7 @@ def armed_before_g3(tmp_path, monkeypatch):
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "feat: the tenant's own code")
 
-    from runtime.adopt import adopt, plan_adoption
+    from agentsmith.adopt import adopt, plan_adoption
 
     written = adopt(plan_adoption("t", root, architecture="layered", gate=["mypkg/**", ".agenticframework/**"]))
     manifest_path = root / ".agenticframework" / "scaffold.json"
@@ -463,7 +463,7 @@ def armed_before_g3(tmp_path, monkeypatch):
 
 
 def test_a_tenant_armed_before_the_sweep_is_planned_the_hooks_it_lacks(armed_before_g3):
-    from runtime.sync import describe, plan_sync
+    from agentsmith.sync import describe, plan_sync
 
     plan = plan_sync(armed_before_g3)
 
@@ -503,7 +503,7 @@ def test_a_tenant_with_no_arming_design_gets_one_that_covers_the_whole_commit(ar
 
 
 def test_the_scope_edit_appends_only_what_is_missing_and_keeps_the_prose():
-    from runtime.architectures import extend_design_scope
+    from agentsmith.architectures import extend_design_scope
 
     text = "---\nstatus: done\nscope:\n  - a\n---\n# Adopt t\n\n  - not a scope line\n"
 
@@ -521,7 +521,7 @@ def test_the_scope_edit_appends_only_what_is_missing_and_keeps_the_prose():
 
 def test_an_untouched_contract_1_declaration_moves_to_the_current_contract_with_its_workflow(tenant):
     """One sync pull request moves a tenant's CI onto the declared provider."""
-    from runtime.adopt import SETUP_ACTION
+    from agentsmith.adopt import SETUP_ACTION
 
     declaration = tenant / ".agenticframework" / "providers.json"
     declaration.write_text(json.dumps({"contract": 1, "providers": {"gate": {
@@ -532,7 +532,7 @@ def test_an_untouched_contract_1_declaration_moves_to_the_current_contract_with_
 
     assert ".agenticframework/providers.json" in written
     declared = json.loads(declaration.read_text())
-    from runtime.adopt import GATE_CONTRACT
+    from agentsmith.adopt import GATE_CONTRACT
 
     assert declared["contract"] == GATE_CONTRACT >= 2
     assert declared["providers"]["gate"]["setup"].startswith(f"{SETUP_ACTION}@v")
@@ -554,7 +554,7 @@ def test_a_declaration_naming_another_provider_is_theirs_and_its_setup_is_what_c
         "an edited declaration is not something the framework wrote — it needs a real review"
     _git(tenant, "reset", "-q")
 
-    from runtime.sync import plan_sync
+    from agentsmith.sync import plan_sync
 
     plan = plan_sync(tenant)
     assert ".agenticframework/providers.json" not in plan.stale
@@ -572,7 +572,7 @@ def test_an_adopted_config_naming_this_installs_paths_is_moved_to_provider_and_s
     the provider's install layout, in its declaration. Sync names them
     `"provider"`, touches nothing else in the file, and the tenant's own gate
     accepts the commit (.agent-rfc/designs/rules-contract.md)."""
-    import runtime.cli as cli
+    import agentsmith.cli as cli
 
     original = cli._process_gates_config
 

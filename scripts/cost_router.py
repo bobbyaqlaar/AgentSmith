@@ -9,7 +9,7 @@ Routing logic:
 Route table — each tier resolves in this order:
   1. its AGENT_MODEL_* env var (per-run override, no code change)
   2. the matching role in models.yaml (framework ← tenant ← routing_overrides)
-  3. a literal fallback, used only when runtime/ isn't importable
+  3. a literal fallback, used only when agentsmith/ isn't importable
 
   env var                 registry role
   AGENT_MODEL_ARCHITECT   architect
@@ -40,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _shared import role_model
 
 
-# Mirrors runtime.provider_dispatch._EXHAUSTION_MARKERS. Duplicated on purpose
+# Mirrors agentsmith.provider_dispatch._EXHAUSTION_MARKERS. Duplicated on purpose
 # and only reachable when that module is too old to ask: a tenant pins a
 # framework VERSION, so scripts/ can be newer than the runtime package it
 # imports. Adding the import to call()'s required-import tuple instead would
@@ -99,7 +99,7 @@ def _exhausted(exc: Exception) -> bool:
     judge.
     """
     try:
-        from runtime.provider_dispatch import is_provider_exhausted
+        from agentsmith.provider_dispatch import is_provider_exhausted
 
         return is_provider_exhausted(exc)
     except Exception:
@@ -348,7 +348,7 @@ def _ollama_base_url() -> str:
     """Ollama's OpenAI-compatible base, tolerating OLLAMA_BASE_URL with or
     without the `/v1` suffix.
 
-    runtime/llm_gateway.py reads the same variable as `${OLLAMA_BASE_URL}/v1`,
+    agentsmith/llm_gateway.py reads the same variable as `${OLLAMA_BASE_URL}/v1`,
     appending the suffix itself, so a tenant that sets the bare host — which is
     what Ollama's own docs show — worked on the workload path and 404'd on the
     eval path (`.../chat/completions` instead of `.../v1/chat/completions`).
@@ -382,11 +382,11 @@ def _credential_for(model: str, default_env: str) -> str:
     judge call, from a config that is correct everywhere else.
 
     Falls back silently when the registry can't be read — scripts/ is installed
-    to ~/.agent-framework and may run with no runtime/ on the path.
+    to ~/.agent-framework and may run with no agentsmith/ on the path.
     """
     try:
         from _shared import load_registry
-        from runtime.provider_dispatch import credential_env_for_model
+        from agentsmith.provider_dispatch import credential_env_for_model
 
         for cfg in (load_registry() or {}).values():
             if cfg.get("id") != model:
@@ -419,7 +419,7 @@ def _registry_route(model: str) -> Optional[ModelRoute]:
     """
     try:
         from _shared import load_registry
-        from runtime.provider_dispatch import credential_env_for_model
+        from agentsmith.provider_dispatch import credential_env_for_model
 
         for cfg in (load_registry() or {}).values():
             if cfg.get("id") != model:
@@ -438,7 +438,7 @@ def _registry_route(model: str) -> Optional[ModelRoute]:
             # ("opt-in, not a hard requirement"). Reading only the declared
             # name sends an EMPTY auth header and 401s every call — the same
             # failure _credential_for was written to fix, reintroduced here.
-            from runtime.provider_dispatch import default_api_key_env
+            from agentsmith.provider_dispatch import default_api_key_env
 
             env = credential_env_for_model(cfg)
             # The fallback is the PROVIDER default, not the declared name —
@@ -451,7 +451,7 @@ def _registry_route(model: str) -> Optional[ModelRoute]:
                 api_key=_credential_for(model, fallback) if env else "",
                 tier="forced",
             )
-    except Exception:  # fail-open: no runtime/ on the path, unreadable registry
+    except Exception:  # fail-open: no agentsmith/ on the path, unreadable registry
         return None
     return None
 
@@ -561,27 +561,27 @@ def call(
         import httpx
 
         try:
-            from runtime.provider_dispatch import (
+            from agentsmith.provider_dispatch import (
                 build_request,
                 infer_provider,
                 parse_response,
             )
         except ImportError:
-            # Add the repo ROOT, not runtime/: the runtime's modules import
-            # each other as `runtime.X` (framework G6), so a flat runtime/
+            # Add the repo ROOT, not agentsmith/: the runtime's modules import
+            # each other as `agentsmith.X` (framework G6), so a flat agentsmith/
             # path no longer resolves them.
             import sys as _sys
             from pathlib import Path as _Path
 
             _sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
-            from runtime.provider_dispatch import (
+            from agentsmith.provider_dispatch import (
                 build_request,
                 infer_provider,
                 parse_response,
             )
 
         # Request building / response parsing shared with
-        # runtime/llm_gateway.py via runtime/provider_dispatch.py — this
+        # agentsmith/llm_gateway.py via agentsmith/provider_dispatch.py — this
         # used to independently re-derive "is this Anthropic" from the
         # base_url string and build/parse bodies inline, drifting from
         # llm_gateway.py's own copy of the same logic (docs/PRODUCT_ARCHIVE.md 4.3).
@@ -635,7 +635,7 @@ def call(
                 # provider that returns an HTML error page.
                 detail = getattr(resp, "text", "") or "(no response body)"
                 err = RuntimeError(f"HTTP {resp.status_code} from {url}: {detail[:600]}")
-                # Classify, but do NOT degrade. runtime/llm_gateway.py walks the
+                # Classify, but do NOT degrade. agentsmith/llm_gateway.py walks the
                 # models.yaml degrade_to chain on exhaustion; this path
                 # deliberately does not, because its caller is the eval judge
                 # and a substituted grader is not a grader — a weaker model
@@ -665,7 +665,7 @@ def call(
         # to the breaker raised TypeError straight into the blanket
         # `except Exception: pass` below, so the call was silently unmetered on
         # BOTH tiers: no tokens toward the 5-minute burst window, no dollars
-        # toward the monthly cap. runtime/llm_gateway.py's sibling path already
+        # toward the monthly cap. agentsmith/llm_gateway.py's sibling path already
         # warns and bills the reserved estimate for exactly this case; this
         # call site never got the same treatment because it lives in another
         # package (review-levers: grep-for-siblings).
