@@ -81,9 +81,9 @@ def test_existing_environment_still_wins(tmp_path: Path, monkeypatch) -> None:
     assert os.environ["SOME_TEST_VAR2"] == "from-env"
 
 
-# ── The loader must survive `runtime` being absent ───────────────────────────
+# ── The loader must survive `agentsmith` being absent ───────────────────────────
 #
-# `_load_dotenv` delegates to `runtime.config.load_env_file` when it can. For
+# `_load_dotenv` delegates to `agentsmith.config.load_env_file` when it can. For
 # five days (2026-08-25 → 08-29) it did so unconditionally, and every standalone
 # script invocation from a tenant directory died on `ModuleNotFoundError: No
 # module named 'runtime'` before doing any work. The whole local suite passed
@@ -124,7 +124,7 @@ def _clear_probes(monkeypatch) -> None:
 
 def test_shared_and_runtime_loaders_agree(tmp_path: Path, monkeypatch) -> None:
     """`_load_dotenv_standalone` is a DELIBERATE mirror of the os.environ half of
-    `runtime.config.load_env_file`, for processes where `runtime` cannot be
+    `agentsmith.config.load_env_file`, for processes where `agentsmith` cannot be
     imported at all. A deliberate duplicate needs a drift test, the same as
     `_dotenv_value` and the `_FALLBACK_*` maps.
 
@@ -135,7 +135,7 @@ def test_shared_and_runtime_loaders_agree(tmp_path: Path, monkeypatch) -> None:
     import sys as _sys
 
     _sys.path.insert(0, str(REPO))
-    from runtime.config import load_env_file
+    from agentsmith.config import load_env_file
 
     (tmp_path / ".env").write_text(ENV_SAMPLE + "\n", encoding="utf-8")
 
@@ -148,7 +148,7 @@ def test_shared_and_runtime_loaders_agree(tmp_path: Path, monkeypatch) -> None:
     from_runtime = _read_probes()
 
     assert from_shared == from_runtime, (
-        "scripts/_shared and runtime/config disagree on the same .env: "
+        "scripts/_shared and agentsmith/config disagree on the same .env: "
         f"{from_shared} vs {from_runtime}"
     )
     # Not vacuous — a mirror test that compares two empty dicts proves nothing.
@@ -157,7 +157,7 @@ def test_shared_and_runtime_loaders_agree(tmp_path: Path, monkeypatch) -> None:
 
 
 # The integration half — a real entrypoint started from a tenant directory with
-# `runtime` genuinely off the path — lives in
+# `agentsmith` genuinely off the path — lives in
 # `scripts/test/test_standalone_without_runtime.py`, with the rest of that
 # guarantee. It cannot be tested in-process: pytest puts the repo root on
 # sys.path, so the import always succeeds here.
@@ -176,7 +176,7 @@ def test_shared_and_runtime_loaders_agree(tmp_path: Path, monkeypatch) -> None:
     ],
 )
 def test_ollama_base_url_tolerates_both_conventions(env, expected, monkeypatch) -> None:
-    """runtime/llm_gateway.py reads this variable as `${OLLAMA_BASE_URL}/v1`,
+    """agentsmith/llm_gateway.py reads this variable as `${OLLAMA_BASE_URL}/v1`,
     appending the suffix itself. cost_router used it raw, so a tenant setting
     the bare host — what Ollama's own docs show — worked on the workload path
     and 404'd on the eval path. One variable must not mean two things."""

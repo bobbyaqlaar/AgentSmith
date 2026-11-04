@@ -10,7 +10,7 @@ disk as the exact OTLP/HTTP request body, and `ship()` — called only at
 session start, stop and sweep, never before an edit — POSTs those bytes with a
 short timeout and deletes only what the collector accepted.
 
-Identity and redaction come from runtime/tracing.py and runtime/tenancy.py; this
+Identity and redaction come from agentsmith/tracing.py and agentsmith/tenancy.py; this
 module adds no second tracer. Tracing never changes a gate's answer: when it
 cannot start, the span is a no-op and `status_line()` says why.
 """
@@ -52,12 +52,12 @@ def dropped_count() -> int:
 
 def _import_runtime() -> None:
     try:
-        import runtime.tracing
+        import agentsmith.tracing
     except ImportError:
         # A vendored tenant carries runtime/ beside scripts/; the framework
         # checkout does too. Installed mode gets it from the framework venv.
         sys.path.insert(0, str(_FRAMEWORK_ROOT))
-        import runtime.tracing  # noqa: F401
+        import agentsmith.tracing  # noqa: F401
 
 
 def _spool_exporter() -> Any:
@@ -100,7 +100,7 @@ def _prune(directory: Path) -> None:
 def _provider() -> Any:
     if _state["provider"] is None:
         _import_runtime()
-        from runtime.tracing import configure_tracing
+        from agentsmith.tracing import configure_tracing
 
         _state["provider"] = configure_tracing(exporter=_spool_exporter())
     return _state["provider"]
@@ -117,8 +117,8 @@ def gate_span(event: str, *, root: Path, ide: str, **attributes: Any) -> Iterato
     when it declares one, and the given attributes under `agent.*`."""
     try:
         _provider()
-        from runtime.tenancy import agent_context, tenant_id_from_config
-        from runtime.tracing import agent_span
+        from agentsmith.tenancy import agent_context, tenant_id_from_config
+        from agentsmith.tracing import agent_span
 
         tenant = tenant_id_from_config(root)
     except Exception as exc:  # fail-open: tracing never changes a gate's answer
@@ -151,7 +151,7 @@ def ship(timeout: float = 1.0) -> ShipResult:
     batches = sorted(spool_dir().glob("*.pb"))
     try:
         _import_runtime()
-        from runtime.otlp import resolve_otlp_endpoint
+        from agentsmith.otlp import resolve_otlp_endpoint
 
         endpoint = resolve_otlp_endpoint("traces")
     except Exception as exc:

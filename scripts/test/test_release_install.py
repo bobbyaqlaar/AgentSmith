@@ -40,7 +40,8 @@ def _install(tmp_path: Path, base: str) -> subprocess.CompletedProcess:
 
 def _installed_anything(tmp_path: Path) -> bool:
     framework = tmp_path / "home" / ".agent-framework"
-    return any((framework / d).exists() and any((framework / d).iterdir()) for d in ("scripts", ".githooks", "runtime"))
+    shipped = ("scripts", ".githooks", "agentsmith")
+    return any((framework / d).exists() and any((framework / d).iterdir()) for d in shipped)
 
 
 def test_a_failed_download_stops_the_install_and_writes_nothing(tmp_path):

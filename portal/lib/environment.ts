@@ -1,4 +1,4 @@
-// portal/lib/environment.ts — the portal's copy of runtime/environment.py.
+// portal/lib/environment.ts — the portal's copy of agentsmith/environment.py.
 //
 // A DELIBERATE mirror, not a second opinion. `environment` is a pillar-3 span
 // attribute, and the redaction profile the Python side applies is chosen from

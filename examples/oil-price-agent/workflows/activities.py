@@ -5,9 +5,9 @@ oil price prediction workflow.
 Pipeline: IngestionAgent -> PredictionAgent -> DecisionAgent (see
 examples/oil-price-agent/agents/README.md).
 
-All LLM calls route through runtime/llm_gateway.py — never cost_router.py
+All LLM calls route through agentsmith/llm_gateway.py — never cost_router.py
 (§25, §29). This file is a reference; tenant repos vendor or pip-install the
-framework's runtime/ package rather than reaching into a sibling checkout.
+framework's agentsmith/ package rather than reaching into a sibling checkout.
 """
 
 from __future__ import annotations
@@ -38,16 +38,16 @@ def _ensure_runtime_on_path() -> None:
     here = Path(__file__).resolve()
     candidates = []
     if agentsmith_dir:
-        candidates.append(Path(agentsmith_dir) / "runtime")
+        candidates.append(Path(agentsmith_dir) / "agentsmith")
     # Fallback 1: walk up from this file (works when inside framework tree:
     # examples/oil-price-agent/workflows/ → parents[3] = framework root).
     # Guarded — a container layout (/app/workflows/activities.py) has fewer
     # than 4 parents and would otherwise raise IndexError before ever
     # reaching the AGENTSMITH_DIR candidate above.
     if len(here.parents) > 3:
-        candidates.append(here.parents[3] / "runtime")
+        candidates.append(here.parents[3] / "agentsmith")
     # Fallback 2: vendored install location
-    candidates.append(Path.home() / ".agent-framework" / "runtime")
+    candidates.append(Path.home() / ".agent-framework" / "agentsmith")
     for candidate in candidates:
         if not candidate.is_dir():
             continue
@@ -58,7 +58,7 @@ def _ensure_runtime_on_path() -> None:
         if str(candidate.parent) not in sys.path:
             sys.path.insert(
                 0, str(candidate.parent)
-            )  # package imports, e.g. `import runtime.llm_gateway`
+            )  # package imports, e.g. `import agentsmith.llm_gateway`
         return
 
 

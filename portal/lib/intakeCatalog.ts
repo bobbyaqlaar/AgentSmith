@@ -4,7 +4,7 @@
 // constants lived there and moved here, and lib/intakes.ts re-exports them.
 //
 // Each is a mirror of a set something else owns, pinned by test/catalogs.test.ts:
-// the stacks to runtime/cli.py STACKS, the IDEs to scripts/gate_ides.py
+// the stacks to agentsmith/cli.py STACKS, the IDEs to scripts/gate_ides.py
 // GENERATED, the architectures to templates/architectures.yaml. The CLI
 // re-checks every value against its own copy.
 

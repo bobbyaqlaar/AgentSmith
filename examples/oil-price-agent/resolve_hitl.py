@@ -16,7 +16,7 @@ import os
 import sys
 
 try:
-    from runtime.temporal_client import connect as connect_temporal, tls_enabled
+    from agentsmith.temporal_client import connect as connect_temporal, tls_enabled
 except ImportError:
     print(
         "ERROR: temporalio not installed. Run: pip install temporalio", file=sys.stderr

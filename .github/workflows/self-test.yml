@@ -146,7 +146,7 @@ jobs:
       - name: "py_compile sweep"
         # agentsmith:gate
         run: |
-          find scripts runtime examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
+          find scripts agentsmith examples -name "*.py" -print0 | xargs -0 -n1 python3 -m py_compile
       - name: "docs/DESIGN.md repo-tree drift check (top level + key sub-trees)"
         # agentsmith:gate
         # docs/DESIGN.md › GitHub Repository holds the only copy of the repository tree (README links
@@ -197,7 +197,7 @@ jobs:
         # agentsmith:gate
         run: |
           pip install pytest pyyaml
-          PYTHONPATH=scripts:. pytest scripts/test/test_delivery_model.py scripts/test/test_fairness_evals.py runtime/test/test_input_guardrail.py -q
+          PYTHONPATH=scripts:. pytest scripts/test/test_delivery_model.py scripts/test/test_fairness_evals.py agentsmith/test/test_input_guardrail.py -q
       - name: "Every curated-mutation shard passed"
         # agentsmith:gate
         # Locally it has no shards to read, and is skipped by name; the
@@ -254,9 +254,9 @@ jobs:
         with:
           path: /tmp/temporal-sdk-python-*
           key: temporal-testsrv-${{ runner.os }}
-      - name: "pytest (runtime/test/)"
+      - name: "pytest (agentsmith/test/)"
         # agentsmith:gate
-        run: pytest runtime/test/ -v
+        run: pytest agentsmith/test/ -v
       - name: "pytest (scripts/test/ — shadow eval sampling)"
         # agentsmith:gate
         run: pytest scripts/test/ -v
@@ -278,7 +278,7 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq zsh > /dev/null
           bash -n install-ai-stack.sh
           zsh -n install-ai-stack.sh
-          for f in enterprise/*.sh runtime/k8s/dedicated-tenant/render.sh hooks/*; do
+          for f in enterprise/*.sh agentsmith/k8s/dedicated-tenant/render.sh hooks/*; do
             [ -f "$f" ] || continue
             bash -n "$f"
           done
@@ -372,7 +372,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         env:
           GOVERNANCE_OPS_TOKEN: "aso_ci-ops-token-not-a-real-secret"
-        run: python3 -m runtime.cli conformance --port ops --receiver http://localhost:3000/api/ops/ingest
+        run: python3 -m agentsmith.cli conformance --port ops --receiver http://localhost:3000/api/ops/ingest
 
   security:
     name: "Security harness"

@@ -32,7 +32,7 @@ MODES = ("off", "warn", "default", "strict")
 
 def _detection(control: ControlSpec, ctx: dict[str, Any]) -> tuple[int, ControlResult | None]:
     """The heuristics against the provider's own corpus: (cases, failure)."""
-    from runtime.prompt_guard import scan_prompt
+    from agentsmith.prompt_guard import scan_prompt
 
     cases, problem = security_fixture(control, ctx, "prompt_injection_cases_base.json")
     if problem is not None:
@@ -60,7 +60,7 @@ def _declared(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     """A contract run: the posture the repository DECLARES enforces. The
     environment of whoever runs the check is not a declaration; detection is the
     provider's own evidence, checked here only in the provider's repository."""
-    from runtime.prompt_guard import is_enforcing
+    from agentsmith.prompt_guard import is_enforcing
 
     checked = ""
     if provider_code_in_scope(ctx):
@@ -84,7 +84,7 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     if is_contract(ctx):
         return _declared(control, ctx)
 
-    from runtime.prompt_guard import is_enforcing, resolve_mode
+    from agentsmith.prompt_guard import is_enforcing, resolve_mode
 
     count, failure = _detection(control, ctx)
     if failure is not None:

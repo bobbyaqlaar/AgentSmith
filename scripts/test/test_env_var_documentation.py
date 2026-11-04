@@ -76,8 +76,8 @@ _EXEMPT = {
 def _source_files() -> list[Path]:
     """Every shipped Python file, recursively.
 
-    The globs used to be `runtime/*.py scripts/*.py runtime/workflows/*.py
-    portal/*.py` — one level deep, so `runtime/machine/`, `scripts/security/`,
+    The globs used to be `agentsmith/*.py scripts/*.py agentsmith/workflows/*.py
+    portal/*.py` — one level deep, so `agentsmith/machine/`, `scripts/security/`,
     `scripts/security/runners/` and `examples/` were outside every gate this repo
     has, and `portal/*.py` matched nothing by construction (the portal is
     TypeScript; `_portal_source_files` covers it). Same defect as the one this
@@ -85,7 +85,7 @@ def _source_files() -> list[Path]:
     """
     out = subprocess.run(
         ["git", "-C", str(REPO), "ls-files",
-         "runtime/**/*.py", "runtime/*.py", "scripts/**/*.py", "scripts/*.py",
+         "agentsmith/**/*.py", "agentsmith/*.py", "scripts/**/*.py", "scripts/*.py",
          "examples/**/*.py", "examples/*.py"],
         capture_output=True, text=True,
         check=False,
@@ -129,7 +129,7 @@ def _strip_shell_comments(text: str) -> str:
     command` — prose about the variable, which the assignment pattern read as an
     assignment and so classified the most important input in the file as a local.
     A `#` starts a comment at a word boundary, the same rule
-    `runtime/config._dotenv_value` uses.
+    `agentsmith/config._dotenv_value` uses.
     """
     return re.sub(r"(?<![\w$])#.*$", "", text, flags=re.M)
 
@@ -296,7 +296,7 @@ def test_every_shipped_command_is_in_the_canonical_reference() -> None:
     import argparse
 
     sys.path.insert(0, str(REPO))
-    from runtime.cli import build_parser
+    from agentsmith.cli import build_parser
 
     def leaves(parser: argparse.ArgumentParser, path: tuple[str, ...] = ()) -> list[str]:
         subs = [a for a in parser._actions if isinstance(a, argparse._SubParsersAction)]

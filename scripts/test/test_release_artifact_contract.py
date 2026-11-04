@@ -84,7 +84,7 @@ def test_the_source_archive_unpacks_as_a_checkout(built):
     assert {"install-ai-stack.sh", ".githooks/process-gate"} <= names
     # What the first commit and the ports read at run time: the installer's second
     # path once installed without these, and the gate refused the first commit.
-    assert {"docs/review-levers.md", "runtime/cli.py", "fixtures/security/control_registry.json"} <= names
+    assert {"docs/review-levers.md", "agentsmith/cli.py", "fixtures/security/control_registry.json"} <= names
 
 
 def test_the_source_archive_holds_only_tracked_files(built):

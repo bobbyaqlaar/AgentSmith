@@ -25,8 +25,8 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts"))
 
 from _shared import load_script  # bound now: `init_tenant` later puts an install's scripts/ first
-from runtime.adopt import SETUP_ACTION, is_machine_hook, retired_machine_hooks, stub_names
-from runtime.cli import init_tenant
+from agentsmith.adopt import SETUP_ACTION, is_machine_hook, retired_machine_hooks, stub_names
+from agentsmith.cli import init_tenant
 
 LAUNCHER = REPO / ".githooks" / "process-gate"
 PLACEHOLDER = re.compile(r"\{\{[A-Z_]+\}\}")
@@ -74,7 +74,7 @@ def test_init_declares_the_providers_its_workflows_ask(scaffolded: Path):
 
 def test_every_workflow_asks_the_provider_at_the_declared_release(scaffolded: Path):
     """No template placeholder survives, no step runs a tenant's scripts/ or
-    runtime/, and every AgentSmith action is referenced at the setup's release."""
+    agentsmith/, and every AgentSmith action is referenced at the setup's release."""
     for workflow in (scaffolded / ".github" / "workflows").glob("*.yml"):
         text = workflow.read_text()
         assert not PLACEHOLDER.search(text), f"{workflow.name} carries an unfilled placeholder"
@@ -85,7 +85,7 @@ def test_every_workflow_asks_the_provider_at_the_declared_release(scaffolded: Pa
 
 
 def test_init_copies_none_of_agentsmiths_code(scaffolded: Path):
-    for path in ("scripts", "runtime", "fixtures/security", ".github/actions"):
+    for path in ("scripts", "agentsmith", "fixtures/security", ".github/actions"):
         assert not (scaffolded / path).exists(), f"tenant init wrote {path}/"
 
 
@@ -136,7 +136,7 @@ def test_the_governed_check_finds_nothing_in_agentsmith_itself():
 
 
 def test_sync_names_a_copy_and_never_refreshes_it(tmp_path: Path):
-    from runtime.sync import plan_sync
+    from agentsmith.sync import plan_sync
 
     root = _tenant_with_copies(tmp_path)
     (root / ".agenticframework").mkdir()
@@ -159,7 +159,7 @@ def test_the_launcher_never_runs_a_tenants_copy_of_the_gate(tmp_path: Path):
 
 
 def test_the_machine_commands_never_take_a_tenants_script(tmp_path: Path, monkeypatch):
-    from runtime.machine.state import find_script
+    from agentsmith.machine.state import find_script
 
     root = _tenant_with_copies(tmp_path)
     monkeypatch.setenv("HOME", str(tmp_path / "no-home"))
@@ -302,7 +302,7 @@ def test_a_scaffold_without_an_installed_framework_still_completes(tmp_path: Pat
     so the workflow-writing half still runs and the run reaches the guard
     instead of returning early.
     """
-    monkeypatch.setattr("runtime.cli._framework_dir", lambda: None)
+    monkeypatch.setattr("agentsmith.cli._framework_dir", lambda: None)
     root = tmp_path / "tenant"
     root.mkdir()
     _git(root, "init", "-q", "--template=")

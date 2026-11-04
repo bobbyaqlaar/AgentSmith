@@ -55,7 +55,7 @@ def test_a_suite_runs_when_a_file_it_mutates_or_a_test_changed(changed):
 @pytest.mark.parametrize("shared", ["scripts/mutation_check.py", "scripts/test/conftest.py", "requirements.lock",
                                     "pytest.ini", ".github/workflows/self-test.yml"])
 def test_a_shared_file_runs_every_suite(shared):
-    run, skipped = mc.select_suites((_suite("a"), _suite("b", path="runtime/x.py")), changed={shared})
+    run, skipped = mc.select_suites((_suite("a"), _suite("b", path="agentsmith/x.py")), changed={shared})
     assert _names(run) == ["a", "b"] and skipped == []
 
 
@@ -74,7 +74,7 @@ def test_a_module_a_test_imports_is_a_trigger():
     """Read from the test's syntax tree: a sibling helper, a script, a package
     module, and a hyphenated script loaded by name."""
     imported = mc.imported_by("scripts/test/test_scaffold_review.py")
-    assert {"scripts/test/test_process_gate.py", "runtime/cli.py"} <= imported
+    assert {"scripts/test/test_process_gate.py", "agentsmith/cli.py"} <= imported
     assert "scripts/generate-ide-config.py" in mc.imported_by("scripts/test/test_ci_package_managers.py")
     assert "scripts/security/runners/delegating.py" in mc.imported_by("scripts/test/test_security_vendored_install.py")
 

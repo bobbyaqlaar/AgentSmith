@@ -45,7 +45,7 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
     """Refuses instead of following: urllib's redirect_request copies the
     Authorization header onto the next request, so following would hand the
     ingest token to wherever the redirect points. The same opener
-    runtime/intake.py uses (.agent-rfc/designs/send-dev-record-redirects.md)."""
+    agentsmith/intake.py uses (.agent-rfc/designs/send-dev-record-redirects.md)."""
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
         raise _Redirected(f"{code} to {newurl}")

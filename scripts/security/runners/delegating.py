@@ -48,12 +48,12 @@ from security.runners._shared import (
 
 
 def hitl_gate(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
-    """SEC-HITL-001 — `runtime/test/test_hitl_gate.py` already asserts that the
+    """SEC-HITL-001 — `agentsmith/test/test_hitl_gate.py` already asserts that the
     gate cannot be skipped, that a caller must supply exactly one of
     `gate_activity_name`/`gate_result`, and that a timeout dead-letters rather
     than approving. It runs without Temporal or Postgres, so it is a usable
     control check rather than an integration test."""
-    return pytest_suite(control, ctx, "runtime/test/test_hitl_gate.py")
+    return pytest_suite(control, ctx, "agentsmith/test/test_hitl_gate.py")
 
 
 def dlq_check(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
@@ -76,7 +76,7 @@ def dlq_check(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     generic activity rejects the legacy flattened shape by name. Whether a row
     lands in Postgres is an integration concern and stays out.
     """
-    return pytest_suite(control, ctx, "runtime/test/test_dead_letter.py")
+    return pytest_suite(control, ctx, "agentsmith/test/test_dead_letter.py")
 
 
 def self_correction(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
@@ -84,7 +84,7 @@ def self_correction(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
 
     Was bound to scripts/test/test_workflow_template_wiring.py — a check of
     workflow YAML consistency (callee references, the hooks/post-checkout
-    array matching runtime/cli.py's WORKFLOWS), unrelated to self-correction
+    array matching agentsmith/cli.py's WORKFLOWS), unrelated to self-correction
     and, being framework-provisioning-relative, unable to even resolve in a
     tenant (it reads workflow-templates/ and hooks/ off its own REPO,
     file-relative — those don't exist in a tenant either). Found while
@@ -94,7 +94,7 @@ def self_correction(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     is the real evidence — infra-free (fakes the gateway, no Temporal), same
     design as test_hitl_gate.py and test_dead_letter.py above.
     """
-    return pytest_suite(control, ctx, "runtime/test/test_self_correction.py")
+    return pytest_suite(control, ctx, "agentsmith/test/test_self_correction.py")
 
 
 def budget_caps(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
@@ -106,7 +106,7 @@ def budget_caps(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     running and reported a control failure for an unrelated reason.
     """
     return pytest_suite(
-        control, ctx, "runtime/test/test_llm_gateway_budget.py",
+        control, ctx, "agentsmith/test/test_llm_gateway_budget.py",
         env={"BUDGET_BACKEND": "memory", "IDEMPOTENCY_BACKEND": "memory"},
     )
 
@@ -165,7 +165,7 @@ def rag_poison(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     a document writes the instruction once and it arrives inside trusted
     context.
 
-    Scored by `runtime.prompt_guard.scan_documents` over
+    Scored by `agentsmith.prompt_guard.scan_documents` over
     `fixtures/rag_poison_base.json`, which pairs every poisoned document with a
     benign twin on the same subject. Both directions count toward one miss rate,
     because a guard that quarantines everything defeats the attack and destroys
@@ -312,7 +312,7 @@ def agency_manifest(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
 
 # ── Static: the gateway is the only provider path for workload calls ─────────
 
-# Provider SDKs and the eval-path router. runtime/llm_gateway.py's own
+# Provider SDKs and the eval-path router. agentsmith/llm_gateway.py's own
 # docstring states the rule this enforces: "Workers MUST NOT import
 # cost_router.py directly."
 _FORBIDDEN_IN_WORKLOAD = {
@@ -321,7 +321,7 @@ _FORBIDDEN_IN_WORKLOAD = {
 }
 # Where a tenant's workload code lives. Tests and scripts are exempt: the eval
 # harness legitimately uses cost_router, and test doubles import SDKs.
-_WORKLOAD_DIRS = ("agents", "workflows", "runtime/workflows")
+_WORKLOAD_DIRS = ("agents", "workflows", "agentsmith/workflows")
 
 
 def gateway_static(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:

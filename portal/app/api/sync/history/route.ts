@@ -21,7 +21,7 @@
 // (not just the first) so the portal's displayed cap stays current if the
 // tenant repo's tenant.yaml changes. This is a display value only — it
 // does not enforce anything; the real enforcement is
-// runtime/llm_gateway.py's own AGENT_MONTHLY_USD_CAP on the worker.
+// agentsmith/llm_gateway.py's own AGENT_MONTHLY_USD_CAP on the worker.
 //
 // replayWebhookUrl/replayWebhookSecret in a body are ignored: where a
 // person's fix is sent, and the key it is signed with, are the app's own Ops

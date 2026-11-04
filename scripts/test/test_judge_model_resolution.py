@@ -8,7 +8,7 @@ this file's module, which made it a SECOND independent setting alongside the
 runtime judge to one model and have its CI scorecard graded by another without
 anything reporting a conflict. These lock the precedence
 (env > registry > fallback) and the fail-open behaviour that keeps evals
-working in a scripts-only install with no runtime/ on the path.
+working in a scripts-only install with no agentsmith/ on the path.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ def _no_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_resolves_the_judge_role_from_the_framework_registry() -> None:
     """Run from the framework repo root, the `judge` role in
-    runtime/models.yaml is what grades evals."""
+    agentsmith/models.yaml is what grades evals."""
     assert _shared._registry_judge_model() == "falcon3:3b"
     assert _shared.judge_model() == "falcon3:3b"
 
@@ -39,9 +39,9 @@ def test_resolves_the_judge_role_from_the_framework_registry() -> None:
 def test_judge_is_not_the_architect_model() -> None:
     """Judge/actor separation at the registry level: the model grading a
     rationale must not be the one that wrote it
-    (runtime.judging.judge_independence_warning)."""
-    from runtime.llm_gateway import load_model_registry
-    from runtime.judging import judge_independence_warning
+    (agentsmith.judging.judge_independence_warning)."""
+    from agentsmith.llm_gateway import load_model_registry
+    from agentsmith.judging import judge_independence_warning
 
     reg = load_model_registry()
     assert (
@@ -60,7 +60,7 @@ def test_fallback_matches_the_registry_role() -> None:
 
 def test_registry_is_readable_from_a_directly_invoked_script(tmp_path: Path) -> None:
     """The invocation that actually matters: `python3 scripts/foo.py` puts
-    scripts/ on sys.path[0], NOT the repo root, so a bare `import runtime`
+    scripts/ on sys.path[0], NOT the repo root, so a bare `import agentsmith`
     fails there. Under pytest the root IS on the path, so this whole feature
     passed its tests while silently falling back to the constant in every real
     run — caught by running verify_system.py for real, not by the suite."""
@@ -124,7 +124,7 @@ def test_falls_back_when_the_registry_cannot_be_read(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """scripts/ installed to ~/.agent-framework and run in a tenant repo with
-    no runtime/ must still resolve a judge rather than crash."""
+    no agentsmith/ must still resolve a judge rather than crash."""
     monkeypatch.setattr(_shared, "_registry_judge_model", lambda: None)
     assert _shared.judge_model() == _shared.DEFAULT_JUDGE_MODEL
 
@@ -225,7 +225,7 @@ def test_credential_resolution_survives_an_older_runtime(
     monkeypatch.chdir(tmp_path)
     _shared._REGISTRY_CACHE.clear()
 
-    import runtime.provider_dispatch as pd
+    import agentsmith.provider_dispatch as pd
 
     monkeypatch.delattr(pd, "credential_env_for_model")
     assert _shared.role_credential_env("judge") == "ANTHROPIC_API_KEY_JUDGE"
@@ -233,6 +233,6 @@ def test_credential_resolution_survives_an_older_runtime(
 
 def test_fallback_map_matches_the_runtime_mapping() -> None:
     """The duplicate exists only as a version-skew shim; it must not drift."""
-    from runtime.provider_dispatch import _DEFAULT_API_KEY_ENV
+    from agentsmith.provider_dispatch import _DEFAULT_API_KEY_ENV
 
     assert _shared._FALLBACK_API_KEY_ENV == _DEFAULT_API_KEY_ENV

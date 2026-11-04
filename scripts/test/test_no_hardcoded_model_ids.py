@@ -3,7 +3,7 @@ scripts/test/test_no_hardcoded_model_ids.py — model ids live in models.yaml,
 not scattered through the code.
 
 Before this guard there were four independent copies of "which model is the
-architect tier", and all four disagreed: runtime/models.yaml said one thing,
+architect tier", and all four disagreed: agentsmith/models.yaml said one thing,
 scripts/cost_router.py another, scripts/multi_agent_system.py a third, and the
 CI templates pinned a fourth via `AGENT_JUDGE_MODEL || 'claude-sonnet-4-6'`.
 Each was individually plausible and none was checked against the registry, so
@@ -11,7 +11,7 @@ changing models.yaml changed almost nothing and nobody found out.
 
 The rule: an executable line may name a model only where it is resolving one
 from the registry — `role_model(...)`, `_tier(...)`, `provider_models(...)` —
-i.e. as the documented fallback for a scripts-only install with no runtime/ on
+i.e. as the documented fallback for a scripts-only install with no agentsmith/ on
 the path. Anything else needs `# model-literal-ok: <reason>`, following the
 repo's existing `# fail-open:` convention.
 
@@ -48,7 +48,7 @@ _MODEL_ID = re.compile(
 _RESOLVERS = ("role_model(", "_tier(", "provider_models(", "DEFAULT_JUDGE_MODEL")
 _ESCAPE_HATCH = "# model-literal-ok:"
 
-_SCANNED_DIRS = ("scripts", "runtime")
+_SCANNED_DIRS = ("scripts", "agentsmith")
 
 
 def _scannable_files() -> list[Path]:
@@ -67,7 +67,7 @@ def _docstring_lines(source: str) -> set[int]:
 
     Parsed rather than pattern-matched: a class docstring whose opening line
     also carries text defeats a naive triple-quote scanner, and
-    runtime/provider_dispatch.py has exactly that shape.
+    agentsmith/provider_dispatch.py has exactly that shape.
     """
     import ast
 

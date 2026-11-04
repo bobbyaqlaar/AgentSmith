@@ -5,7 +5,7 @@ is a feature that does not exist.
 Three of these in one session, which is why it is now a test rather than a
 habit:
 
-  * `runtime.metrics.configure_metrics()` — no caller in the framework, the
+  * `agentsmith.metrics.configure_metrics()` — no caller in the framework, the
     tenant, or the example. Every counter in that module wrote into a
     `_ProxyMeter` that was never resolved, so the error rate and cache hit ratio
     the observability audit asked for were computable in no deployment. The
@@ -53,7 +53,7 @@ def _tracked(pattern: str) -> list[Path]:
 def _public_defs() -> dict[str, list[Path]]:
     """Module-level public functions in the two shipped packages."""
     found: dict[str, list[Path]] = {}
-    for path in _tracked("runtime/*.py") + _tracked("scripts/*.py"):
+    for path in _tracked("agentsmith/*.py") + _tracked("scripts/*.py"):
         if "test" in path.name:
             continue
         try:
@@ -132,5 +132,5 @@ def test_configure_metrics_specifically_is_reachable() -> None:
     worker entrypoint has to install a MeterProvider, not merely import one."""
     refs = _referenced_names()
     assert "configure_metrics" in refs
-    worker = (ROOT / "runtime" / "worker.py").read_text(encoding="utf-8")
+    worker = (ROOT / "agentsmith" / "worker.py").read_text(encoding="utf-8")
     assert "configure_telemetry()" in worker

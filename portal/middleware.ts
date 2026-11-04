@@ -45,7 +45,7 @@ import {
 // reasoning as /api/sync/*, gated by AUDIT_LOG_WRITE_TOKEN instead. Reading
 // the audit log (GET /api/audit) still requires basic auth/SSO, unaffected.
 //
-// /api/runs/ingest is runtime/llm_gateway.py's best-effort run-status push
+// /api/runs/ingest is agentsmith/llm_gateway.py's best-effort run-status push
 // (docs/PRODUCT_ARCHIVE.md P2a) — same machine-to-machine reasoning as
 // /api/sync/*, gated by OPS_PORTAL_SYNC_TOKEN inside the route handler.
 //

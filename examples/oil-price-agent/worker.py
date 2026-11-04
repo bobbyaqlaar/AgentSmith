@@ -2,7 +2,7 @@
 examples/oil-price-agent/worker.py — Temporal worker entrypoint for this tenant.
 
 Tenant repos register their OWN workflows/activities here — this is what
-that registration looks like, copied out of runtime/worker.py's generic
+that registration looks like, copied out of agentsmith/worker.py's generic
 NotImplementedError stub and made concrete for one domain (§25).
 
 Usage:
@@ -25,12 +25,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "workflows"))
 # so this worker can run from any directory, not just from inside the framework tree.
 _agentsmith_dir = os.environ.get("AGENTSMITH_DIR")
 if _agentsmith_dir:
-    _runtime_root = Path(_agentsmith_dir) / "runtime"
+    _runtime_root = Path(_agentsmith_dir) / "agentsmith"
 else:
     # Fallback: assume worker.py is still inside examples/oil-price-agent/ (3 levels deep)
-    _runtime_root = Path(__file__).resolve().parent.parent.parent / "runtime"
+    _runtime_root = Path(__file__).resolve().parent.parent.parent / "agentsmith"
 
-# oil_price_workflow.py subclasses BaseAgentWorkflow (runtime/workflows/) —
+# oil_price_workflow.py subclasses BaseAgentWorkflow (agentsmith/workflows/) —
 # added here, not inside oil_price_workflow.py itself, because that file
 # defines the workflow class and gets re-imported by Temporal's sandbox
 # for determinism validation; a sys.path.insert(..., Path(...).resolve()...)
@@ -79,7 +79,7 @@ async def _run_worker_with_retry(tenant_id: str) -> None:
     the whole process (and take the health server down with it). The health
     server is a liveness probe for the process, not Temporal connectivity;
     this keeps that distinction real instead of accidental."""
-    from runtime.temporal_client import connect as connect_temporal
+    from agentsmith.temporal_client import connect as connect_temporal
     from temporalio.worker import Worker
 
     address = os.environ.get("TEMPORAL_ADDRESS", "localhost:7233")
@@ -120,10 +120,10 @@ async def main() -> None:
     # loads no config file of its own, so a worker started outside a shell that
     # had already exported everything runs silently on defaults.
     #
-    # runtime/worker.py and KYC Sentinel's worker both gained this line when
+    # agentsmith/worker.py and KYC Sentinel's worker both gained this line when
     # that was found; this reference — the file a tenant COPIES — did not, so
     # the omission was propagating by design.
-    from runtime.config import load_env_file
+    from agentsmith.config import load_env_file
 
     load_env_file()
 
@@ -148,8 +148,8 @@ async def main() -> None:
     # MeterProvider, resolving both exporters from the environment. Unset
     # endpoints are fine: the signals are still correctly formed, just not
     # shipped.
-    from runtime.tracing import configure_telemetry
-    from runtime.version import warn_if_declared_version_differs
+    from agentsmith.tracing import configure_telemetry
+    from agentsmith.version import warn_if_declared_version_differs
 
     configure_telemetry()
     warn_if_declared_version_differs()

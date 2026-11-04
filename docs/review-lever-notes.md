@@ -40,7 +40,7 @@ three times; the audit event catalog in a union plus two arrays.*
 
 *Caught: three TS catalogs against `db/schema.sql`'s CHECK constraints, one of
 them with a fourth copy in a route; `portal/lib/environment.ts` against
-`runtime/environment.py`'s alias table.*
+`agentsmith/environment.py`'s alias table.*
 
 ### `merge-the-right-copy` — When you merge N copies, find the one that is already right — and
   expect the merged version to face inputs none of them did
@@ -87,7 +87,7 @@ never looks at `##`.*
 **Why.** Does this behave the same on a developer machine, in CI, and in production? Name what differs — runtime, filesystem, clock, git state. **(++)** The second environment is often INSIDE the app: server component vs client component, worker vs request, build vs run. Same question, same clock.
 
 *Caught: `node:crypto` passing `tsc` and `npm test` and failing only `next build`;
-`runtime/` never loading `.env`; a sweep whose coverage depended on whether its
+`agentsmith/` never loading `.env`; a sweep whose coverage depended on whether its
 own file was committed yet; mtimes rewritten by `actions/checkout`.*
 *Caught: `toLocaleString()` in two server components and one client one —
 one instant, four strings across four timezones and two different dates, plus
@@ -194,7 +194,7 @@ prose being right while the wiring is absent is the exact case.*
 
 **Why.** For every interface, ask who ships each side and whether they can deploy independently. When the answer is yes — platform team and product team, IT and the business, framework and tenant — then a version lag is the DESIGN, not a defect, and three things must exist: a version on the wire, a written compatibility window, and consumers that read an unknown or absent field as "other version" rather than "fault". Pinning gives the downstream side a cadence of its own; it does not by itself tell the upstream side what it must keep accepting.
 
-*Caught: AgentSmith pinned and tracked its LIBRARY surface — `runtime/`
+*Caught: AgentSmith pinned and tracked its LIBRARY surface — `agentsmith/`
 imported into the tenant process — and left the WIRE surface (span
 attributes, the run-status POST, `agent_runs` columns) carrying no version
 at all, though that is the surface IT upgrades unilaterally and the one the
@@ -373,7 +373,7 @@ that two unscored members of a fairness pair are "equal" and score 1.0,
 citing run-evals' historical normalization. `pair_parity`'s own docstring
 said "pairs with fewer than two SCORED members are omitted". The test won,
 the bias control reported "no divergence" about pairs it had never measured,
-and the behaviour was carried into `runtime/` on promotion because a test
+and the behaviour was carried into `agentsmith/` on promotion because a test
 appeared to have decided it.*
 
 ### `fixture-truth` — Do not prove "not mock" by forbidding strings real fixtures also use

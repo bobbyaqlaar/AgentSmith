@@ -126,7 +126,7 @@ def audit_token_velocity_circuit(
     """
     if input_tokens is None or output_tokens is None:
         # A provider that reports no `usage` block gives None since
-        # runtime/provider_dispatch.py stopped defaulting it to 0. Reaching the
+        # agentsmith/provider_dispatch.py stopped defaulting it to 0. Reaching the
         # arithmetic below with None raises TypeError, which every caller here
         # wraps in a fail-open `except Exception: pass` — so the call would be
         # unmetered on BOTH tiers and nobody told. Refusing by name gives the

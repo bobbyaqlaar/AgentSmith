@@ -55,7 +55,7 @@ def _scaffold(home: Path, tmp_path: Path) -> tuple[Path, str]:
         [
             sys.executable,
             "-m",
-            "runtime.cli",
+            "agentsmith.cli",
             "tenant",
             "init",
             "demo-app",
@@ -84,7 +84,7 @@ def test_the_scaffold_commit_the_cli_prints_is_accepted(install, tmp_path):
     root, printed = _scaffold(install, tmp_path)
 
     # Nothing of AgentSmith's code is in it (3.0.0): the gate is the provider's.
-    assert not (root / "scripts").exists() and not (root / "runtime").exists()
+    assert not (root / "scripts").exists() and not (root / "agentsmith").exists()
     assert (root / ".agenticframework" / "providers.json").is_file()
 
     args = _printed_args(printed)

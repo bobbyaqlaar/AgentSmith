@@ -153,8 +153,8 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 
 | Control ID | OWASP LLM | NIST AI RMF | MITRE ATLAS | ISO 42001 | Status | Owner | AgentSmith mechanism | Harness check |
 |---|---|---|---|---|---|---|---|---|
-| `SEC-PII-001` | LLM06 | MAP 2.6 / MANAGE 2.4 | AML.T0043 | Theme 9 | **Partial→Met** | Shared | `runtime/input_guardrail.py` pre-call scrub | Inject Emirates ID/email/phone/card → assert redacted before `_invoke()` |
-| `SEC-PII-002` | LLM06 | MANAGE 2.4 | AML.T0043 | Theme 9 | **Met** | Framework | `runtime/trace_redactor.py` + CD `--check-redaction` | `verify_system.py --check-redaction` + unit tests |
+| `SEC-PII-001` | LLM06 | MAP 2.6 / MANAGE 2.4 | AML.T0043 | Theme 9 | **Partial→Met** | Shared | `agentsmith/input_guardrail.py` pre-call scrub | Inject Emirates ID/email/phone/card → assert redacted before `_invoke()` |
+| `SEC-PII-002` | LLM06 | MANAGE 2.4 | AML.T0043 | Theme 9 | **Met** | Framework | `agentsmith/trace_redactor.py` + CD `--check-redaction` | `verify_system.py --check-redaction` + unit tests |
 | `SEC-HITL-001` | LLM08 | GOVERN 1.5 / MANAGE 4.1 | AML.T0048 | Theme 5 | **Met** | Framework | `run_with_hitl_gate`, recoverable DLQ | Workflow fixture asserts pause signal + portal replay path |
 | `SEC-AUDIT-001` | — | GOVERN 1.2 | AML.T0025 | Theme 6 | **Met** | Framework | HMAC tamper-evidence over `audit_log` events (`portal/lib/auditSignature.ts`) | `portal/test/auditSignature.test.ts` — sign → mutate → reject; key order stable; malformed signature rejected; missing key refuses. No database. |
 | `SEC-AUDIT-002` | — | GOVERN 1.2 | AML.T0025 | Theme 6 | **Gap** | Framework | Append-only `audit_log` (UPDATE/DELETE triggers, `db/schema.sql`) | `portal/test/auditLog.test.ts` — needs a live Postgres; verified at deploy, not in CI |
@@ -164,13 +164,13 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | `SEC-EVAL-003` | LLM09 | MEASURE 2.6 | AML.T0024 | Theme 7 | **Met** | Shared | Hallucination rate gate | `--suite hallucination`; rate ≤ threshold |
 | `SEC-BUDGET-001` | LLM04 | MANAGE 2.4 | AML.T0034 | Theme 11 | **Met** | Framework | Budget caps, degrade ladder, circuit breaker | `test_llm_gateway_budget.py` + cap breach simulation |
 | `SEC-CHANGE-001` | — | GOVERN 1.6 | — | Theme 10 | **Met** | Shared | Eval gates, the process gate, RFC enforcement | a declared gate provider; in AgentSmith, commits through the gate's hooks in throwaway repos |
-| `SEC-DLQ-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Met** | Framework | Recoverable step + DLQ; one `dead_letter_envelope()` builder for both producers | `runtime/test/test_dead_letter.py` — envelope keys match `enqueue`, both producers use the builder (AST-checked), flattened shape rejected by name. No Postgres. |
+| `SEC-DLQ-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Met** | Framework | Recoverable step + DLQ; one `dead_letter_envelope()` builder for both producers | `agentsmith/test/test_dead_letter.py` — envelope keys match `enqueue`, both producers use the builder (AST-checked), flattened shape rejected by name. No Postgres. |
 | `SEC-SELF-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Partial** | Shared | Opt-in `run_with_self_correction` | Unit + workflow tests; not default path |
 | `SEC-GW-001` | LLM07 | MAP 2.3 | AML.T0040 | Theme 4 | **Partial** | Shared | `llm_gateway.py` choke point | Static: tenant activities import gateway, not raw provider |
-| `SEC-PROMPT-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Framework | `runtime/prompt_guard.py` heuristics + denylist; `PROMPT_GUARD=off\|warn\|default\|strict` (blocking by default) | Two-part: detection over the injection fixture corpus **and** enforcement — the runner reports `fail` on `off`, `warn` on the observe-first `warn` tier, `pass` only when the configured mode actually blocks |
-| `SEC-OUTPUT-001` | LLM02 | MEASURE 2.7 | — | Theme 7 | **Met** | Shared | `runtime/structured_output.py` `parse_llm_json` | Schema validation rejects malformed LLM JSON |
-| `SEC-TOOL-001` | LLM07 | GOVERN 1.3 | AML.T0040 | Theme 4 | **Met** | Shared | `runtime/tool_registry.py` + the TENANT's allowlist | Every registered tool resolves as the tenant allowlist says, and at least one is denied |
-| `SEC-MOD-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Tenant | `runtime/moderation.py` + `MODERATION_HOOK`; classifier declared via `moderation.hook` in `tenant.yaml` (or `MODERATION_HOOK_PATH`) | Harness runner `scripts/security/runners/moderation_hook.py` — API smoke, plus under `required` it imports the tenant's declared classifier and verifies it returns a `ModerationResult` and does not block benign text. Unset hook fails strict CI |
+| `SEC-PROMPT-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Framework | `agentsmith/prompt_guard.py` heuristics + denylist; `PROMPT_GUARD=off\|warn\|default\|strict` (blocking by default) | Two-part: detection over the injection fixture corpus **and** enforcement — the runner reports `fail` on `off`, `warn` on the observe-first `warn` tier, `pass` only when the configured mode actually blocks |
+| `SEC-OUTPUT-001` | LLM02 | MEASURE 2.7 | — | Theme 7 | **Met** | Shared | `agentsmith/structured_output.py` `parse_llm_json` | Schema validation rejects malformed LLM JSON |
+| `SEC-TOOL-001` | LLM07 | GOVERN 1.3 | AML.T0040 | Theme 4 | **Met** | Shared | `agentsmith/tool_registry.py` + the TENANT's allowlist | Every registered tool resolves as the tenant allowlist says, and at least one is denied |
+| `SEC-MOD-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Tenant | `agentsmith/moderation.py` + `MODERATION_HOOK`; classifier declared via `moderation.hook` in `tenant.yaml` (or `MODERATION_HOOK_PATH`) | Harness runner `scripts/security/runners/moderation_hook.py` — API smoke, plus under `required` it imports the tenant's declared classifier and verifies it returns a `ModerationResult` and does not block benign text. Unset hook fails strict CI |
 | `SEC-RISK-001` | — | MAP 1.5 | AML.T0000 | Theme 2 | **Org-owned** | Tenant | *Planned:* risk register template generator | Harness checks `.agent-rfc/security/risk_register.yaml` exists + schema |
 | `SEC-ADV-001` | LLM01 | MEASURE 2.7 | AML.T0024 | Theme 7 | **Met** | Shared | `run-evals.py --suite adversarial` + prompt_guard | Red-team fixtures in `--suite adversarial` |
 | `SEC-SSO-001` | — | GOVERN 1.3 | AML.T0048 | Theme 1 | **Met** | Framework | `jti` revocation + `SSO_REVOCATION_MODE=fail-open\|fail-closed`; `GET /api/auth/session-status` answers **503**, not a 2xx, when the revocation store is unreachable | `sso_revocation` — snippet-checks the mode switch in `middleware.ts`/`lib/ssoRevocationMode.ts`, then runs `portal/test/ssoRevocation.test.ts`: the mode default, both branches, and (since 2026-08-25) what the ROUTE answers rather than a stubbed transport. Until then the route returned `200 {revoked:false}` on a database error, so fail-closed allowed every session through the one outage it exists for — met, green, and a no-op |
@@ -259,7 +259,7 @@ it with tenant-specific fixtures. One orchestrator, four framework reports.
 | `python3 scripts/run-security-checks.py --framework owasp` | Filter report to one framework |
 | `python3 scripts/run-security-checks.py --evidence-pack ./out/` | JSON + Markdown auditor bundle |
 | `python3 scripts/verify_system.py --check-security` | Smoke subset wired into install health |
-| `pytest scripts/test/test_security_*.py runtime/test/test_security_*.py` | Unit/integration layer |
+| `pytest scripts/test/test_security_*.py agentsmith/test/test_security_*.py` | Unit/integration layer |
 
 ### Directory layout (framework + tenant)
 
@@ -362,9 +362,9 @@ These gaps **must** ship for full framework coverage. Status tracked in
 | Priority | Control ID | Deliverable |
 |---|---|---|
 | P0 | Harness core | ~~`run-security-checks.py`, registry, CI workflow, evidence pack~~ **done** |
-| P1 | `SEC-PROMPT-001` | ~~`runtime/prompt_guard.py` + injection fixtures + CI~~ **done** |
-| P1 | `SEC-OUTPUT-001` | ~~`runtime/structured_output.py`~~ **done** (reference app migration optional) |
-| P1 | `SEC-TOOL-001` | ~~`runtime/tool_registry.py` + allowlist enforcement~~ **done** |
+| P1 | `SEC-PROMPT-001` | ~~`agentsmith/prompt_guard.py` + injection fixtures + CI~~ **done** |
+| P1 | `SEC-OUTPUT-001` | ~~`agentsmith/structured_output.py`~~ **done** (reference app migration optional) |
+| P1 | `SEC-TOOL-001` | ~~`agentsmith/tool_registry.py` + allowlist enforcement~~ **done** |
 | P2 | `SEC-ADV-001` | ~~`--suite adversarial` in eval pipeline~~ **done** |
 | P2 | `SEC-MOD-001` | ~~Pluggable moderation hook + strict-mode CI~~ **done** |
 | P2 | `SEC-RISK-001` | ~~Template + schema validator~~ **done** |

@@ -106,7 +106,7 @@ CI stays the authority.
 | mutation_check.py (curated — the properties we chose to defend) | `.github/workflows/self-test.yml` · Curated mutations (shard ${{ matrix.shard }}/4) | (script) | yes |
 | ruff (lint config lives in pyproject.toml) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | mypy (shipped runtime only — see pyproject.toml for the scope) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
-| py_compile sweep | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `find scripts runtime examples -name "*.py" -print0 \| xargs -0 -n1 python3 -m py_compile` | yes |
+| py_compile sweep | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `find scripts agentsmith examples -name "*.py" -print0 \| xargs -0 -n1 python3 -m py_compile` | yes |
 | docs/DESIGN.md repo-tree drift check (top level + key sub-trees) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `pytest scripts/test/test_design_tree_drift.py -q` | yes |
 | Redaction compliance (staging + production profiles) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | Commit guardrails / enterprise RFC checks, through the gate | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-hooks` | yes |
@@ -116,7 +116,7 @@ CI stays the authority.
 | Delivery evidence pack script | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/delivery_evidence.py` | yes |
 | Unit tests — delivery model + fairness + input guardrail | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | Every curated-mutation shard passed | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
-| pytest (runtime/test/) | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `pytest runtime/test/ -v` | needs services |
+| pytest (agentsmith/test/) | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `pytest agentsmith/test/ -v` | needs services |
 | pytest (scripts/test/ — shadow eval sampling) | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `pytest scripts/test/ -v` | needs services |
 | verify_system.py --check-idempotency | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `python3 scripts/verify_system.py --check-idempotency` | needs services |
 | verify_system.py --check-dlq | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `python3 scripts/verify_system.py --check-dlq` | needs services |
@@ -125,7 +125,7 @@ CI stays the authority.
 | npm test — cross-tenant isolation (no DB required) | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npm test` | yes |
 | npm run test:db — audit log HMAC sign/verify + tamper detection | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npm run test:db` | needs services |
 | npm run build — the portal builds | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npm run build` | needs services |
-| The Ops contract, receiver side (against the live portal above) | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `python3 -m runtime.cli conformance --port ops --receiver http://localhost:3000/api/ops/ingest` | needs services |
+| The Ops contract, receiver side (against the live portal above) | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `python3 -m agentsmith.cli conformance --port ops --receiver http://localhost:3000/api/ops/ingest` | needs services |
 | npm test — the in-app widget | `.github/workflows/self-test.yml` · In-App Widget | `npm test` | needs npm |
 <!-- END agentsmith:gates -->
 

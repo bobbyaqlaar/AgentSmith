@@ -87,7 +87,7 @@ def test_the_hash_is_the_same_in_a_second_process() -> None:
     program = (
         "import json, sys; sys.path.insert(0, %r);"
         "import gate_kg; print(gate_kg.impact(json.loads(sys.argv[1]), "
-        "['scripts/tool.py', 'portal/app/api/runs/route.ts', 'runtime/x.py']).query)"
+        "['scripts/tool.py', 'portal/app/api/runs/route.ts', 'agentsmith/x.py']).query)"
         % str(REPO / "scripts")
     )
     seeds = []

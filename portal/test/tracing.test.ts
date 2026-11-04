@@ -2,7 +2,7 @@
 // spans rather than over the helpers that emit them.
 //
 // That distinction is the whole point, and it is borrowed from the finding
-// that produced runtime/test/test_pillar3_conformance.py: the old assertion
+// that produced agentsmith/test/test_pillar3_conformance.py: the old assertion
 // there checked `tenant.id == "acme"` on a call that had passed
 // `tenant_id="acme"`, so it could not fail. Everything below runs through a
 // real NodeTracerProvider into a real InMemorySpanExporter, and reads the
@@ -246,14 +246,14 @@ await test("the span name comes from a closed set of operations", () => {
 
 // ── the mirror ───────────────────────────────────────────────────────────────
 
-await test("lib/environment.ts has not drifted from runtime/environment.py", () => {
+await test("lib/environment.ts has not drifted from agentsmith/environment.py", () => {
   // A deliberate mirror needs a pin, or it is just a second opinion. Same
   // treatment scripts/_shared.py's _dotenv_value mirror gets on the Python
   // side. Reading the file rather than skipping when it is absent: a check
   // that quietly measures nothing is the failure mode this repo keeps finding.
-  const source = readFileSync(resolve(REPO_ROOT, "runtime", "environment.py"), "utf8");
+  const source = readFileSync(resolve(REPO_ROOT, "agentsmith", "environment.py"), "utf8");
   const block = source.match(/_ALIASES\s*=\s*\{([\s\S]*?)\}/);
-  assert.ok(block, "could not find _ALIASES in runtime/environment.py");
+  assert.ok(block, "could not find _ALIASES in agentsmith/environment.py");
   const python: Record<string, string> = {};
   for (const [, key, value] of block[1].matchAll(/"([^"]+)"\s*:\s*"([^"]+)"/g)) python[key] = value;
 

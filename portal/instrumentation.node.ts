@@ -1,6 +1,6 @@
 // portal/instrumentation.node.ts — the SDK, assembled once, in one place.
 //
-// This is `runtime/tracing.configure_tracing()` for the portal, and it exists
+// This is `agentsmith/tracing.configure_tracing()` for the portal, and it exists
 // for the same reason that function does: assembling a provider by hand is
 // several steps that must all be remembered, and the evidence across this
 // repo is that they are not.

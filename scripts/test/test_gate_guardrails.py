@@ -88,7 +88,7 @@ def test_a_vouched_file_stays_vouched_when_the_commit_is_amended(tmp_path):
 
 
 def test_enterprise_checks_apply_only_with_an_org_policy():
-    files = {"runtime/worker.py": "import cost_router\n"}
+    files = {"agentsmith/worker.py": "import cost_router\n"}
     assert _check(files) == []
     errors = _check(files, enterprise=True)
     assert len(errors) == 3

@@ -256,7 +256,7 @@ def test_gates_repair_lists_the_commits_and_what_each_lacks(gated_repo):
     sha = _bypassed_commit(gated_repo)
 
     result = subprocess.run(
-        [sys.executable, "-P", "-m", "runtime.cli", "gates", "repair"],
+        [sys.executable, "-P", "-m", "agentsmith.cli", "gates", "repair"],
         cwd=gated_repo, capture_output=True, text=True, check=False,
         env={"PATH": "/usr/bin:/bin", "HOME": str(gated_repo.parent / "home"),
              "PYTHONPATH": str(REPO), "AGENTSMITH_PYTHON": sys.executable},

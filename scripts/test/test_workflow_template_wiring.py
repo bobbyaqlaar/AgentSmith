@@ -7,15 +7,15 @@ than a cleanup: GitHub resolves `uses: ./.github/workflows/<name>` inside the
 CALLING repo, so a reusable workflow the framework calls in its own self-test
 must also exist as a file in every tenant that calls it. Nothing enforced the
 copies staying in step, and nothing enforced the copies shipping at all — a
-callee missing from runtime/cli.py's WORKFLOWS list makes GitHub reject
+callee missing from agentsmith/cli.py's WORKFLOWS list makes GitHub reject
 the whole tenant CI workflow as invalid, which is how eval-security.yml went
 out broken for every Python/FastAPI tenant.
 
 A THIRD list duplicates the same information: hooks/post-checkout's own
 `for wf in ...` bash array — the actual provisioning path for a `git checkout`
 after opt-in, entirely separate from `agentsmith tenant init` /
-runtime/cli.py's WORKFLOWS. The comment above used to say that loop was
-"gone" after the scaffold moved into runtime/cli.py — it wasn't; it is a
+agentsmith/cli.py's WORKFLOWS. The comment above used to say that loop was
+"gone" after the scaffold moved into agentsmith/cli.py — it wasn't; it is a
 second, independent implementation of the same copy step, and it went stale
 the same way WORKFLOWS almost did: eval-security.yml was added to WORKFLOWS
 and to ci-python-fastapi.yml's job list without being added to this bash
@@ -51,7 +51,7 @@ def _provisioned_workflows() -> set[str]:
     """The list `agentsmith tenant init` actually copies.
 
     This used to scrape the `for wf in ...` loop out of install-ai-stack.sh.
-    That loop is gone: the scaffold moved into runtime/cli.py, where it is a
+    That loop is gone: the scaffold moved into agentsmith/cli.py, where it is a
     value a test can import rather than shell text a test has to parse. Reading
     the real list also means this can no longer pass because a regex matched
     something that is no longer executed.
@@ -59,7 +59,7 @@ def _provisioned_workflows() -> set[str]:
     import sys as _sys
 
     _sys.path.insert(0, str(REPO))
-    from runtime.cli import WORKFLOWS, STACKS
+    from agentsmith.cli import WORKFLOWS, STACKS
 
     return set(WORKFLOWS) | {f"ci-{stack}.yml" for stack in STACKS}
 
@@ -76,7 +76,7 @@ def test_every_referenced_callee_is_provisioned_into_tenants() -> None:
     missing = {n for n in _referenced_callees() if n not in provisioned}
     assert not missing, (
         f"referenced by a ci-*.yml template but never copied into tenant repos "
-        f"by `agentsmith tenant init` (runtime/cli.py WORKFLOWS): {missing}"
+        f"by `agentsmith tenant init` (agentsmith/cli.py WORKFLOWS): {missing}"
     )
 
 
@@ -89,7 +89,7 @@ def test_no_template_runs_agentsmith_from_a_copy() -> None:
     offenders = []
     for path in sorted(TEMPLATES.glob("*.yml")):
         text = path.read_text(encoding="utf-8")
-        for pattern in (r"python3? (-m )?scripts/", r"python3? -m runtime\.", r"uses:\s*\./\.github/actions/"):
+        for pattern in (r"python3? (-m )?scripts/", r"python3? -m agentsmith\.", r"uses:\s*\./\.github/actions/"):
             if re.search(pattern, text):
                 offenders.append(f"{path.name}: {pattern}")
         if "process-gate" in text or "AgentSmith/.github/actions/" in text:

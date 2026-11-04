@@ -6,7 +6,7 @@ multi-line `except` clause (since the colon always ends the line) rather
 than verifying the body was actually empty.
 
 The case that exposed the bug: hooks/pre-commit flagged
-runtime/provider_dispatch.py's `except KeyError: raise ValueError(...) from
+agentsmith/provider_dispatch.py's `except KeyError: raise ValueError(...) from
 None` — a correctly-written, non-empty, re-raising handler — as a "bare
 except clause with no handler body."
 """

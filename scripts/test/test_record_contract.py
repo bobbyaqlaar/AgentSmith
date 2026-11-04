@@ -22,7 +22,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts"))
 
 V1 = REPO / "contract" / "record" / "v1"
-PROVIDER = f"{sys.executable} -m runtime.cli gate"
+PROVIDER = f"{sys.executable} -m agentsmith.cli gate"
 
 
 def test_the_record_schema_is_the_model():
@@ -39,7 +39,7 @@ def test_the_record_schema_is_the_model():
 def test_the_model_decides_every_parseable_case_as_the_contract_does():
     """The provider's side of the same cases the portal runs."""
     import gate_models as gm
-    from runtime import conformance as rc
+    from agentsmith import conformance as rc
 
     for case in rc.record_cases():
         if case.token != "valid" or case.expect == 413:
@@ -113,7 +113,7 @@ class _Stub:
 
 @pytest.mark.parametrize("strict", [True, False])
 def test_the_receiver_suite_passes_a_conformant_receiver_and_fails_one_that_stores_anything(strict):
-    from runtime import conformance as rc
+    from agentsmith import conformance as rc
 
     stub = _Stub(strict)
     try:
@@ -125,7 +125,7 @@ def test_the_receiver_suite_passes_a_conformant_receiver_and_fails_one_that_stor
 
 
 def test_agentsmith_passes_the_sender_suite(tmp_path, monkeypatch):
-    from runtime import conformance as rc
+    from agentsmith import conformance as rc
 
     monkeypatch.setenv("AGENTSMITH_DIR", str(REPO))
     monkeypatch.setenv("PYTHONPATH", str(REPO))
@@ -138,7 +138,7 @@ def test_agentsmith_passes_the_sender_suite(tmp_path, monkeypatch):
 def test_the_sender_suite_fails_a_sender_that_sends_nothing_and_always_allows(tmp_path):
     """Exactly the checks such a sender breaks fail — each check can fail on its
     own, so a check that always passed would change this set."""
-    from runtime import conformance as rc
+    from agentsmith import conformance as rc
 
     lazy = tmp_path / "lazy-provider"
     lazy.write_text('#!/usr/bin/env bash\ncat >/dev/null\necho \'{"decision": "allow", "text": ""}\'\n')
@@ -158,7 +158,7 @@ def test_a_range_named_by_ref_records_commit_hashes(tmp_path):
     import subprocess
 
     import gate_models as gm
-    from runtime.conformance import build_fixture
+    from agentsmith.conformance import build_fixture
 
     root = build_fixture(tmp_path / "repo", 2)
     out = tmp_path / "record.json"

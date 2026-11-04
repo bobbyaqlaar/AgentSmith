@@ -4,7 +4,7 @@
 // unsetting OPS_PORTAL_SYNC_TOKEN.
 //
 // Best-effort run-status updates from
-// runtime/llm_gateway.py (docs/PRODUCT_ARCHIVE.md P2a). Same auth shape as
+// agentsmith/llm_gateway.py (docs/PRODUCT_ARCHIVE.md P2a). Same auth shape as
 // /api/sync/history: a single shared bearer token
 // (OPS_PORTAL_SYNC_TOKEN — reused, not a second token, since both are
 // "a production worker pushing operational data to the shared portal").

@@ -12,7 +12,7 @@ judged here, in `process_gate.commit_verdict` — the one decision behind both
   - an empty handler: Python by its syntax tree (check_bare_except.py), an
     empty JS/TS `catch {}`, a Go assignment that discards both values;
   - with an org policy on the machine: no direct `cost_router` import under
-    runtime/, at least one RFC at .agent-rfc/*.md, an RFC-NNN in the message.
+    agentsmith/, at least one RFC at .agent-rfc/*.md, an RFC-NNN in the message.
 
 Over the files the commit stages and the tenant wrote: a file
 .agenticframework/scaffold.json vouches for, unchanged since, is skipped, as
@@ -78,10 +78,10 @@ def check(files: Iterable[str], read: Callable[[str], Optional[str]], message: s
         elif path.endswith(".go"):
             for n in _lines(text, GO_DISCARDS_BOTH):
                 errors.append(f"{path}:{n}: both return values discarded (`_, _ =`) — handle the error")
-        if enterprise and path.startswith("runtime/") and path.endswith(".py"):
+        if enterprise and path.startswith("agentsmith/") and path.endswith(".py"):
             for n in _lines(text, COST_ROUTER_IMPORT):
-                errors.append(f"{path}:{n}: a direct cost_router import in runtime/ — go through "
-                              "runtime/llm_gateway.py, or budget, degrade ladder and audit are bypassed")
+                errors.append(f"{path}:{n}: a direct cost_router import in agentsmith/ — go through "
+                              "agentsmith/llm_gateway.py, or budget, degrade ladder and audit are bypassed")
     if enterprise:
         if not any(True for _ in rfcs):
             errors.append("the org policy requires at least one RFC under .agent-rfc/ (.agent-rfc/NNN-name.md)")

@@ -148,7 +148,7 @@ def test_a_chain_that_points_at_itself_does_not_loop(repo, prior):
 
 def _chain(repo: Path, prior: Path) -> list[str]:
     sys.path.insert(0, str(REPO))
-    from runtime.adopt import chain_hooks
+    from agentsmith.adopt import chain_hooks
 
     return chain_hooks(repo, prior)
 
@@ -165,7 +165,7 @@ def test_chaining_writes_a_stub_for_each_hook_the_gate_does_not_own(repo, prior)
 
 def test_the_prior_directory_is_found(repo, prior):
     sys.path.insert(0, str(REPO))
-    from runtime.adopt import prior_hooks_dir
+    from agentsmith.adopt import prior_hooks_dir
 
     assert prior_hooks_dir(repo) is None, "armed at .githooks, with only samples in .git/hooks"
     _git(repo, "config", "core.hooksPath", ".nowhere")

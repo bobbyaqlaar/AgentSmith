@@ -1,6 +1,6 @@
-// portal/lib/cost.ts — reads runtime/llm_gateway.py's Postgres budget table
+// portal/lib/cost.ts — reads agentsmith/llm_gateway.py's Postgres budget table
 // directly (read-only). Schema is owned by llm_gateway.py's _PostgresBudgetBackend,
-// not by this app — see runtime/llm_gateway.py for the canonical definition.
+// not by this app — see agentsmith/llm_gateway.py for the canonical definition.
 //
 // `wired` is the same signal lib/dlq.ts carries, for the same reason and now in
 // the same vocabulary: llm_gateway_budget is created by the GATEWAY on first

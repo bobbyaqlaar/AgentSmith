@@ -114,7 +114,7 @@ def test_a_tenant_judge_does_not_inherit_the_framework_endpoint(tmp_path, monkey
     over the framework's (falcon3:3b / ollama) and inherited
     `endpoint: ${OLLAMA_BASE_URL}/v1`, so the gateway posted Claude requests at
     the Ollama host."""
-    from runtime.llm_gateway import load_model_registry
+    from agentsmith.llm_gateway import load_model_registry
 
     _tenant_registry(
         tmp_path, monkeypatch,
@@ -129,7 +129,7 @@ def test_a_tenant_judge_does_not_inherit_the_framework_endpoint(tmp_path, monkey
 def test_a_tenant_judge_does_not_inherit_free_tier_costs(tmp_path, monkeypatch) -> None:
     """Inheriting an Ollama tier's zeros makes a frontier model read as
     costless to budget reservation and the spend cap."""
-    from runtime.llm_gateway import load_model_registry
+    from agentsmith.llm_gateway import load_model_registry
 
     _tenant_registry(
         tmp_path, monkeypatch,
@@ -144,7 +144,7 @@ def test_omitting_degrade_to_actually_removes_it(tmp_path, monkeypatch) -> None:
     still showed through the merge, so the judge kept degrading — to the
     framework's target rather than the tenant's. A judge must be able to
     declare no fallback (a substituted grader is not a grader)."""
-    from runtime.llm_gateway import load_model_registry, LLMGateway
+    from agentsmith.llm_gateway import load_model_registry, LLMGateway
 
     _tenant_registry(
         tmp_path, monkeypatch,
@@ -161,7 +161,7 @@ def test_omitting_degrade_to_actually_removes_it(tmp_path, monkeypatch) -> None:
 def test_same_id_still_merges(tmp_path, monkeypatch) -> None:
     """Replacement is scoped to a CHANGED id. Tweaking one field on the
     framework's own route must still inherit the rest."""
-    from runtime.llm_gateway import load_model_registry
+    from agentsmith.llm_gateway import load_model_registry
 
     _tenant_registry(
         tmp_path, monkeypatch,

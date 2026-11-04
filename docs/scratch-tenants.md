@@ -75,7 +75,7 @@ without some tool, a cache key that fails).
 
 **Triggers:** Mondays 06:00 UTC; manual (`gh workflow run scratch-tenants.yml`);
 and any push to `main` touching `install-ai-stack.sh`,
-`workflow-templates/`, `.github/actions/`, non-test `scripts/` or `runtime/`,
+`workflow-templates/`, `.github/actions/`, non-test `scripts/` or `agentsmith/`,
 `fixtures/`, `templates/agent-rules.yaml`, or `.github/scratch-tenants/` (which
 includes the apps).
 
@@ -157,7 +157,7 @@ the next build.
   its base app with one thing changed, so each scratch repo stays a realistic
   standalone project. A fix to the base's source must land in the copy too —
   `test_scratch_tenants.py` fails on any other difference.
-- **A new app** — a new stack in `runtime/cli.py`'s `STACKS`, or another
+- **A new app** — a new stack in `agentsmith/cli.py`'s `STACKS`, or another
   scenario for an existing one (a yarn TS app, a Poetry Python app) — needs
   `apps/<app>/`, a matrix entry naming its `stack` and repo, an entry in
   `test_scratch_tenants.py`'s `SCENARIOS` saying what makes it that scenario,

@@ -39,7 +39,7 @@ def scaffold(tmp_path, monkeypatch):
     root.mkdir()
     subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)
     sys.path.insert(0, str(REPO))
-    from runtime.cli import init_tenant
+    from agentsmith.cli import init_tenant
 
     init_tenant("acme", root, stack="python-fastapi", architecture="clean", agentic=True)
     return root
@@ -103,7 +103,7 @@ def test_a_file_the_tenant_already_had_is_not_vouched_for(tmp_path, monkeypatch)
     (root / "app" / "main.py").write_text("print('already here')\n")
     subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)
     sys.path.insert(0, str(REPO))
-    from runtime.cli import init_tenant
+    from agentsmith.cli import init_tenant
 
     init_tenant("acme", root, stack="python-fastapi", architecture="layered")
     manifest = json.loads((root / ".agenticframework" / "scaffold.json").read_text())
@@ -183,7 +183,7 @@ def test_an_old_installs_hooks_are_neither_run_nor_chained(tmp_path, monkeypatch
                     "mkdir -p scripts && echo x > scripts/vendored.py\n")
     hook.chmod(0o755)
     sys.path.insert(0, str(REPO))
-    from runtime.cli import init_tenant
+    from agentsmith.cli import init_tenant
 
     written = init_tenant("acme", root, stack="python-fastapi", architecture="layered")
 
@@ -208,7 +208,7 @@ def test_init_runs_no_post_checkout(tmp_path, monkeypatch):
     hook.write_text("#!/usr/bin/env bash\nmkdir -p app && echo 'print(1)' > app/made.py\n")
     hook.chmod(0o755)
     sys.path.insert(0, str(REPO))
-    from runtime.cli import init_tenant
+    from agentsmith.cli import init_tenant
 
     written = init_tenant("acme", root, stack="python-fastapi")
 
@@ -220,7 +220,7 @@ def test_a_forced_rerun_still_vouches_for_what_the_first_run_wrote(scaffold):
     """`--force` re-runs skip files that exist and are not theirs to replace, so
     the manifest must keep vouching for them while they are unchanged, or the
     first commit is refused for its own scaffold."""
-    from runtime.cli import init_tenant
+    from agentsmith.cli import init_tenant
 
     init_tenant("acme", scaffold, stack="python-fastapi", architecture="clean", agentic=True, force=True)
 

@@ -157,7 +157,7 @@ def test_every_burst_tripped_call_is_still_on_the_ledger(monkeypatch):
 
 
 def test_none_token_counts_are_refused_by_name():
-    """runtime/provider_dispatch.parse_response returns Optional[int] since the
+    """agentsmith/provider_dispatch.parse_response returns Optional[int] since the
     usage-reporting fix — a provider that omits its `usage` block gives None.
 
     Reaching the arithmetic with None raised TypeError, and every caller wraps

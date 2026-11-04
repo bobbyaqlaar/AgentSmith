@@ -243,10 +243,10 @@ def _hooks_mode(repo_root: Path, check_only: bool) -> int:
     # deliberately did not write as "missing".
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     try:
-        from runtime.config import chosen_ides
+        from agentsmith.config import chosen_ides
 
         wanted = chosen_ides(repo_root, gi.GENERATED)
-    except Exception:  # fail-open: a checkout without runtime/ still generates
+    except Exception:  # fail-open: a checkout without agentsmith/ still generates
         wanted = tuple(gi.GENERATED)
 
     problems = 0

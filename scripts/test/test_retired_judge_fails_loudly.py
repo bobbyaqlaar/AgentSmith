@@ -74,7 +74,7 @@ def _run(monkeypatch, error: str):
 def test_classifier_separates_the_two(monkeypatch) -> None:
     """Guard the guard. If `is_model_gone` ever stops recognising a real
     provider message, both tests below pass by agreeing on the wrong answer."""
-    from runtime.provider_dispatch import is_model_gone, is_provider_exhausted
+    from agentsmith.provider_dispatch import is_model_gone, is_provider_exhausted
 
     assert is_model_gone(GONE) is True
     assert is_model_gone(QUOTA) is False

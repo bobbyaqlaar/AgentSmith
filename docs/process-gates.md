@@ -125,9 +125,9 @@ so a missing config means it was removed.
 
 ```json
 {
-  "gated":            ["scripts/**", "runtime/**", "…", ".agenticframework/process-gates.json"],
+  "gated":            ["scripts/**", "agentsmith/**", "…", ".agenticframework/process-gates.json"],
   "not_gated":        ["**.md", ".agent-rfc/**"],
-  "pillars":          { "mode": "enforce", "allow": [{"check": "P7-pydantic", "path": "runtime/x.py", "why": "…"}] },
+  "pillars":          { "mode": "enforce", "allow": [{"check": "P7-pydantic", "path": "agentsmith/x.py", "why": "…"}] },
   "levers_doc":       "docs/review-levers.md",
   "design_checklist": "provider",
   "changelog":        { "file": "CHANGELOG.md", "paths": ["hooks/**", "…"], "except": ["scripts/test/**"] }
@@ -156,7 +156,7 @@ so a missing config means it was removed.
   - an empty `except` (by syntax tree; `# fail-open: <reason>` marks a
     deliberate one), an empty JS/TS `catch {}`, or a Go `_, _ =`;
   - with an org policy on the machine: no direct `cost_router` import under
-    `runtime/`, an RFC at `.agent-rfc/*.md`, and `RFC-NNN` in the message.
+    `agentsmith/`, an RFC at `.agent-rfc/*.md`, and `RFC-NNN` in the message.
 
   A file `scaffold.json` vouches for, and that is unchanged since, is skipped.
   AgentSmith sets `"off"`: its tests carry these markers as fixtures, and its
@@ -168,7 +168,7 @@ so a missing config means it was removed.
 | Repo | Gated (summary) | Levers | CHANGELOG rule |
 |---|---|---|---|
 | AgentSmith | code, config, and everything a tenant receives | its own | yes — tenant-facing paths |
-| AqlaarTeleologyStudio | `apps/`, `services/`, `runtime/`, `scripts/`, `infra/`, `fixtures/`, `.github/`, config files | its own (inherited and extended) | none |
+| AqlaarTeleologyStudio | `apps/`, `services/`, `agentsmith/`, `scripts/`, `infra/`, `fixtures/`, `.github/`, config files | its own (inherited and extended) | none |
 | KYC Sentinel | `agents/`, `workflows/`, `test/`, `scripts/`, `corpus/`, `fixtures/`, `.github/`, root `*.py`, config files | `@framework/` | none |
 
 ## Keeping a tenant current — `agentsmith sync`
@@ -181,7 +181,7 @@ writes nothing.
 
 It refreshes the gate hooks, the provider declaration, the IDE hook configs, the rule files'
 managed block and the gates workflow. A repository that still holds a copy of AgentSmith's code
-(`scripts/`, `runtime/`, `fixtures/`) is told so; the copy is never refreshed, and
+(`scripts/`, `agentsmith/`, `fixtures/`) is told so; the copy is never refreshed, and
 `verify_system --governed` fails until it is gone. **It also adds
 the gate hooks a tenant lacks:** a repository that armed the gates before `pre-commit`, `pre-push` and
 `chain` existed gets them, listed as `add`, recorded in the manifest and carried by the commit — and is
@@ -662,7 +662,7 @@ to fix, or to seed an allowlist from at adoption):
 | `P7-async` | 7 | a route handler declared `def` — a synchronous handler holds the event loop for every other request |
 | `P7-ts-any` | 7 | `: any`, `as any`, `any[]` in TypeScript, outside comments |
 | `P7-use-client` | 7 | a `.tsx` using hooks or event handlers without `'use client'`, **only** where a `next.config.*` sits above it |
-| `P10-gateway` | 10 Cost-Optimization Routing | a provider SDK imported outside `runtime/llm_gateway.py`, `provider_dispatch.py` or `cost_router.py` |
+| `P10-gateway` | 10 Cost-Optimization Routing | a provider SDK imported outside `agentsmith/llm_gateway.py`, `provider_dispatch.py` or `cost_router.py` |
 | `P12-secrets` | 12 Secrets and Credentials | a credential-shaped string in any tracked file. A line that must hold one — a redaction test — carries `# not-a-secret: <why>` on it or on the line above |
 
 Test files are not first-party for the code-shape checks: a fixture is not a

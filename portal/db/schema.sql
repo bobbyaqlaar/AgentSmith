@@ -1,6 +1,6 @@
 -- AgentSmith Ops Portal — schema (docs/DESIGN.md › Universal Observability Platform, Federated Observability).
 --
--- Runs against the same Postgres instance used by runtime/llm_gateway.py's
+-- Runs against the same Postgres instance used by agentsmith/llm_gateway.py's
 -- Postgres budget backend (DATABASE_URL) — the portal reads `llm_gateway_budget`
 -- directly (read-only) and owns these additional tables itself.
 
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS tenants (
 -- worker (a `settings` message, contract/ops/v1) — NULL until it has
 -- reported once. This is a *display* cap for the Ops Portal's
 -- cost page; it does not enforce anything — the actual enforcement is
--- runtime/llm_gateway.py's own AGENT_MONTHLY_USD_CAP env var on the
+-- agentsmith/llm_gateway.py's own AGENT_MONTHLY_USD_CAP env var on the
 -- worker, which this is meant to mirror, not replace (deliberately not
 -- threading the worker's env var into the portal directly — that would be
 -- a second, harder-to-audit path for the same number to reach this table).
@@ -32,7 +32,7 @@ ALTER TABLE tenants ADD COLUMN IF NOT EXISTS budget_cap_usd DOUBLE PRECISION;
 -- Ops Portal's DLQ "Replay with edits" action sends an edited payload for
 -- THIS tenant — deliberately per-tenant, not a single shared endpoint, so a
 -- human-in-the-loop fix is routed to the specific team running that
--- tenant's worker (runtime/replay_webhook_server.py), never cross-tenant.
+-- tenant's worker (agentsmith/replay_webhook_server.py), never cross-tenant.
 -- Synced the same way budget_cap_usd is, from
 -- .agenticframework/tenant.yaml's hitl.replay_webhook_url /
 -- hitl.replay_webhook_secret. The secret is used to HMAC-sign the portal's
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS revoked_sessions (
 -- logout, forever.
 
 -- Agent run status (docs/PRODUCT_ARCHIVE.md P2a). Unlike dlq_entries/
--- llm_gateway_budget, this IS portal-owned state — runtime/llm_gateway.py
+-- llm_gateway_budget, this IS portal-owned state — agentsmith/llm_gateway.py
 -- only ever POSTs to it via the ingest API (best-effort, optional), it
 -- never connects to Postgres to create this table itself — so the
 -- migration owns the DDL. Backing portal/lib/runStatus.ts's "running"
@@ -296,10 +296,10 @@ CREATE INDEX IF NOT EXISTS idx_tenant_intakes_tenant ON tenant_intakes (tenant_i
 -- Deliberately NOT created here: dlq_entries, idempotency_keys.
 --
 -- Both are owned and created by the Python runtime side, not this
--- migration — runtime/dead_letter.py's DeadLetterQueue and
--- runtime/idempotency.py's _PostgresBackend each run `CREATE TABLE IF NOT
+-- migration — agentsmith/dead_letter.py's DeadLetterQueue and
+-- agentsmith/idempotency.py's _PostgresBackend each run `CREATE TABLE IF NOT
 -- EXISTS` against DATABASE_URL on first construction, the same pattern
--- runtime/llm_gateway.py's _PostgresBudgetBackend already uses for
+-- agentsmith/llm_gateway.py's _PostgresBudgetBackend already uses for
 -- `llm_gateway_budget` (also not in this file). portal/lib/dlq.ts checks
 -- whether `dlq_entries` exists and reports `wired: false` until a worker
 -- has actually constructed a DeadLetterQueue at least once against this

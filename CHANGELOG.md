@@ -84,6 +84,14 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — the package imports as `agentsmith`
+
+**Breaking.** The library imports as `agentsmith`, not `runtime`: change `from runtime.X import Y` to
+`from agentsmith.X import Y`. The distribution is still `agentsmith-runtime`. A top-level `runtime` could collide in any
+tenant, and going public fixes the name for everyone after. There is no shim: a stale import fails with
+`ModuleNotFoundError`. A repository pinned to a 3.x release keeps working until it moves. The OpenTelemetry scope
+`agentsmith.runtime` is a wire value and does not change.
+
 ### Fixed — a contract decision's test bounds the wait, not the gate's work
 
 `test_a_contract_decision_answers_when_nobody_closes_stdin` failed a PR at 7.05s against 7s: `ci --decision` reads the range after

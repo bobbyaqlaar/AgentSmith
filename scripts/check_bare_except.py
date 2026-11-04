@@ -16,7 +16,7 @@ true of essentially all idiomatically-formatted Python.
 A handler is flagged only when its body is exactly one statement and that
 statement is `pass` or a bare `...` (Ellipsis) expression — i.e. it does
 nothing at all. `except Exception: pass` is sometimes an intentional,
-documented fail-open pattern (e.g. runtime/llm_gateway.py's
+documented fail-open pattern (e.g. agentsmith/llm_gateway.py's
 _record_span_attributes, where a tracing failure must never break the
 actual LLM call) — append `# fail-open: <reason>` to the `except` line to
 opt that specific handler out, the same way the rest of this codebase

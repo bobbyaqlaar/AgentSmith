@@ -29,7 +29,7 @@ import gate_models as gm
 from _shared import load_script
 
 V1 = REPO / "contract" / "security" / "v1"
-PROVIDER = f"{sys.executable} -m runtime.cli security"
+PROVIDER = f"{sys.executable} -m agentsmith.cli security"
 LAUNCHER = REPO / ".githooks" / "process-gate"
 PORT = load_script("security_port")
 PROVIDER_ROWS = {"SEC-HITL-001", "SEC-AUDIT-001", "SEC-AUDIT-002", "SEC-RBAC-001", "SEC-BUDGET-001",
@@ -65,7 +65,7 @@ def _liar(tmp_path: Path) -> str:
 
 
 def test_a_provider_that_always_passes_is_not_conformant(tmp_path):
-    from runtime import conformance
+    from agentsmith import conformance
 
     report = conformance.run_security(_liar(tmp_path), tmp_path / "work")
 
@@ -80,7 +80,7 @@ def test_a_provider_that_always_passes_is_not_conformant(tmp_path):
 def test_a_provider_that_runs_its_own_code_for_a_tenant_is_not_conformant(tmp_path, provider_env):
     """The decoupling rule, checked on every answer: a provider row run in a
     tenant is evidence about the provider counted as the tenant's."""
-    from runtime import conformance
+    from agentsmith import conformance
 
     script = tmp_path / "ran_its_own.py"
     script.write_text(
@@ -156,7 +156,7 @@ def test_no_probe_looks_like_a_credential_to_the_secret_check():
 
 
 def test_agentsmiths_redactor_scrubs_every_probe(monkeypatch):
-    from runtime.trace_redactor import TraceRedactor
+    from agentsmith.trace_redactor import TraceRedactor
     from security.redaction import PROBES
 
     for environment in ("staging", "production"):
@@ -190,7 +190,7 @@ def test_a_tenants_own_rows_are_always_the_repositorys(tmp_path):
 def test_what_adopt_declares_names_the_security_provider_without_an_emitter():
     import jsonschema
 
-    from runtime.adopt import providers_declaration
+    from agentsmith.adopt import providers_declaration
 
     declared = json.loads(providers_declaration())
     jsonschema.validate(declared, json.loads((V1 / "providers.schema.json").read_text()))
@@ -202,7 +202,7 @@ def test_what_adopt_declares_names_the_security_provider_without_an_emitter():
 
 
 def _fixture(tmp_path: Path, **files: str | None) -> Path:
-    from runtime import conformance
+    from agentsmith import conformance
 
     case = conformance.SecurityCase(name="t", verb="check", expect={"verdict": "pass"}, files=files)
     return conformance.build_security_fixture(tmp_path / "repo", case)
@@ -333,7 +333,7 @@ def test_a_risk_register_is_validated_by_its_model(tmp_path):
 
 
 def test_a_leak_is_named_by_kind_never_by_its_text(tmp_path, provider_env):
-    from runtime import conformance
+    from agentsmith import conformance
     from security.redaction import PROBES
 
     case = next(c for c in conformance.security_cases() if c.name == "a leak fails, named by its kind")
@@ -525,7 +525,7 @@ def test_the_emitter_does_not_see_the_providers_source(tmp_path, monkeypatch):
 
 
 def test_agentsmith_passes_the_security_contract(tmp_path, provider_env):
-    from runtime import conformance
+    from agentsmith import conformance
 
     report = conformance.run_security(PROVIDER, tmp_path / "work")
 

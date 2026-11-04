@@ -1,7 +1,7 @@
 // portal/lib/runStatus.ts — "last agent run status" for the In-App Widget.
 //
 // Prefers the agent_runs table (docs/PRODUCT_ARCHIVE.md P2a) — populated by
-// runtime/llm_gateway.py's best-effort POST /api/runs/ingest at run
+// agentsmith/llm_gateway.py's best-effort POST /api/runs/ingest at run
 // start/end — when a row exists for the tenant; this is what makes
 // "running" a reachable status for the first time. Falls back to deriving
 // a status from the most recent synced .agent-history.log entry when no
@@ -16,7 +16,7 @@
 // The fallback path still can't derive "running" — that gap only closes
 // once a real agent_runs row exists.
 //
-// One agent_runs row = one runtime/llm_gateway.py `complete()` call, not
+// One agent_runs row = one agentsmith/llm_gateway.py `complete()` call, not
 // one workflow run — a tenant app with multiple agents/LLM calls per
 // workflow (the expected shape this framework builds toward, not just the
 // single-call oil-price example) reports one row per call, all sharing

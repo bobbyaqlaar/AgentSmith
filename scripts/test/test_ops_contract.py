@@ -27,11 +27,11 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from runtime import conformance as rc
-from runtime import ops_contract as oc
+from agentsmith import conformance as rc
+from agentsmith import ops_contract as oc
 
 V1 = REPO / "contract" / "ops" / "v1"
-CLI = f"{sys.executable} -m runtime.cli"
+CLI = f"{sys.executable} -m agentsmith.cli"
 
 
 @pytest.fixture
@@ -76,7 +76,7 @@ def test_every_case_is_decided_by_the_model_as_the_contract_says():
 def test_the_portal_creates_the_dead_letter_table_the_runtime_does():
     """Two copies of one DDL that cannot import each other — Python and
     TypeScript — held equal column by column."""
-    from runtime.dead_letter import _DLQ_DDL
+    from agentsmith.dead_letter import _DLQ_DDL
 
     def columns(ddl: str) -> list[str]:
         body = ddl[ddl.index("(") + 1: ddl.rindex(")")]
@@ -159,7 +159,7 @@ def test_settings_never_carry_a_secret_and_say_where_it_belongs(tmp_path):
 
 
 def test_the_gateway_reports_run_status_by_the_contract_when_it_holds_an_ops_token(monkeypatch):
-    from runtime.llm_gateway import LLMGateway
+    from agentsmith.llm_gateway import LLMGateway
 
     sent = []
     monkeypatch.setattr(oc, "send", lambda message, **_k: sent.append(message) or 200)
@@ -175,7 +175,7 @@ def test_the_gateway_reports_run_status_by_the_contract_when_it_holds_an_ops_tok
 def test_the_gateway_keeps_the_deprecated_route_without_an_ops_token(monkeypatch, caplog):
     import httpx
 
-    from runtime.llm_gateway import LLMGateway
+    from agentsmith.llm_gateway import LLMGateway
 
     posted = []
     monkeypatch.delenv(oc.TOKEN_ENV, raising=False)
@@ -192,7 +192,7 @@ def test_the_gateway_keeps_the_deprecated_route_without_an_ops_token(monkeypatch
 
 
 def test_a_dead_letter_is_reported_with_its_error_bounded(monkeypatch):
-    from runtime import dead_letter
+    from agentsmith import dead_letter
 
     sent = []
     monkeypatch.setattr(oc, "send", lambda message, **_k: sent.append(message) or 200)
@@ -206,7 +206,7 @@ def test_a_dead_letter_is_reported_with_its_error_bounded(monkeypatch):
 
 
 def test_the_worker_reports_its_settings_at_start_up(tmp_path, monkeypatch, capsys):
-    from runtime import worker
+    from agentsmith import worker
 
     (tmp_path / ".agenticframework").mkdir()
     (tmp_path / ".agenticframework" / "tenant.yaml").write_text("budget:\n  monthly_usd_cap: 4\n", encoding="utf-8")
@@ -233,7 +233,7 @@ def test_agentsmiths_replay_webhook_passes_the_contract(repo_env, monkeypatch):
     port = _free_port()
     env = {"REPLAY_WEBHOOK_SECRET": "conformance-replay-key", "PYTHONPATH": str(REPO),
            "PATH": "/usr/bin:/bin", "DATABASE_URL": "postgresql://nobody@127.0.0.1:9/none"}
-    server = subprocess.Popen([sys.executable, "-m", "runtime.replay_webhook_server", str(port)], cwd=REPO, env=env,
+    server = subprocess.Popen([sys.executable, "-m", "agentsmith.replay_webhook_server", str(port)], cwd=REPO, env=env,
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         for _ in range(50):
@@ -265,7 +265,7 @@ def test_the_ci_sender_fails_on_configuration_and_warns_on_an_outage(tmp_path, r
 def test_a_long_error_summary_is_bounded_not_dropped(monkeypatch):
     """A run report over the contract's text limit would fail validation and
     never be sent; the gateway bounds it instead."""
-    from runtime.llm_gateway import LLMGateway
+    from agentsmith.llm_gateway import LLMGateway
 
     sent = []
     monkeypatch.setattr(oc, "send", lambda message, **_k: sent.append(message) or 200)

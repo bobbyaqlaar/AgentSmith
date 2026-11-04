@@ -60,7 +60,7 @@ def _endpoint_is_declared(cfg: dict) -> bool:
 def _violations(roles: dict) -> list[str]:
     """Every way a role can serve traffic from outside the boundary."""
     problems: list[str] = []
-    from runtime.llm_gateway import degrade_chain
+    from agentsmith.llm_gateway import degrade_chain
 
     for role in sorted(roles):
         for step, target in enumerate(degrade_chain(roles, role)):
@@ -110,7 +110,7 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
-    from runtime.llm_gateway import _load_yaml, _roles_from_doc
+    from agentsmith.llm_gateway import _load_yaml, _roles_from_doc
 
     doc = _load_yaml(Path(template))
     if not doc:

@@ -32,7 +32,7 @@ npm run dev           # http://localhost:3000
 ```
 
 `DATABASE_URL` must point at the **same** Postgres instance used by
-`runtime/llm_gateway.py`'s Postgres backend and `runtime/dead_letter.py` —
+`agentsmith/llm_gateway.py`'s Postgres backend and `agentsmith/dead_letter.py` —
 the portal reads `llm_gateway_budget`/`dlq_entries` directly, read-only for
 cost, read-write for DLQ status transitions. It does not duplicate cost
 accounting or own the DLQ schema (`dead_letter.py` migrates `dlq_entries`
@@ -47,7 +47,7 @@ machine or a shared team server.
 In production, this runs as the `portal` service in the repo-root
 `docker-compose.yml` (built from `portal/Dockerfile`), not via `npm run
 dev` — see `docs/UserManual.md` Part B/E and `agentsmith dashboard start`
-(`runtime/machine/ops.py`).
+(`agentsmith/machine/ops.py`).
 
 ## Pages
 
@@ -126,10 +126,10 @@ the URL must agree with the token or the answer is 404. Creating an intake
 
 | Surface | Table/source | Owner |
 |---|---|---|
-| Cost | `llm_gateway_budget` | `runtime/llm_gateway.py` (read-only here) |
+| Cost | `llm_gateway_budget` | `agentsmith/llm_gateway.py` (read-only here) |
 | Unresolved issues | `agent_history_entries` | This portal, via `/api/sync/history` |
-| Run status | `agent_runs` | This portal, via `/api/ops/ingest` (`run` messages from `runtime/llm_gateway.py`), or the deprecated `/api/runs/ingest` |
-| DLQ | `dlq_entries` | Created by the first dead letter to arrive — by the Ops contract (`/api/ops/ingest`, with the runtime's DDL, `lib/dlq.ts` `DLQ_DDL`, held equal to it by a test) or by a worker that shares this database (`runtime/dead_letter.py`). `db/schema.sql` deliberately excludes it, so until a dead letter has arrived by either route `GET /api/dlq` reports `wired: false` — a genuine "nothing has reported here yet" signal, not a placeholder. |
+| Run status | `agent_runs` | This portal, via `/api/ops/ingest` (`run` messages from `agentsmith/llm_gateway.py`), or the deprecated `/api/runs/ingest` |
+| DLQ | `dlq_entries` | Created by the first dead letter to arrive — by the Ops contract (`/api/ops/ingest`, with the runtime's DDL, `lib/dlq.ts` `DLQ_DDL`, held equal to it by a test) or by a worker that shares this database (`agentsmith/dead_letter.py`). `db/schema.sql` deliberately excludes it, so until a dead letter has arrived by either route `GET /api/dlq` reports `wired: false` — a genuine "nothing has reported here yet" signal, not a placeholder. |
 | Phoenix trace stats | Phoenix's own REST (health check) + GraphQL (`traceCountByStatusTimeSeries`) | Read live from each tenant's `phoenixBaseUrl`, not cached |
 | Audit log | `audit_log` | This portal — HMAC-signed, DB-trigger-enforced append-only |
 | Dev workspace | `dev_commits`, `dev_ingest_runs` | This portal, via `/api/dev/ingest` — what each app's CI gate decided (`process_gate.py ci --json`). A cache of git: every row can be rebuilt from the app's history |
@@ -152,13 +152,13 @@ between the two.
 | `portal.runs.ingest`, `portal.sync.history` | The machine-to-machine write paths |
 | `portal.dlq.replay`, `portal.dlq.discard` | Operator actions, with the acting RBAC role |
 
-Identity follows `runtime/tracing.py`'s split: `service.name`, `project.name`,
+Identity follows `agentsmith/tracing.py`'s split: `service.name`, `project.name`,
 `environment` and `agent.role=ops-portal` on the Resource; `tenant.id` and
 `portal.actor.role` stamped per span from the active context, and **absent**
 rather than defaulted when a request has no tenant.
 
 Portal spans deliberately carry no request bodies, no bound query values and no
-replayed payloads. The worker's spans pass through `runtime/trace_redactor.py`;
+replayed payloads. The worker's spans pass through `agentsmith/trace_redactor.py`;
 nothing stands between a portal span and the collector, so nothing that could
 hold tenant data goes on one. Parameterised SQL is recorded because it is code.
 
@@ -192,7 +192,7 @@ hold tenant data goes on one. Parameterised SQL is recorded because it is code.
   different message for that case, but it doesn't disable the button.
 - **Non-Temporal workflow engines** get the DLQ/replay mechanism's *data
   model* (structured `reason`/`workflow_id`/`gate_id`) but not a
-  ready-made replay handler — `runtime/temporal_replay.py` is
+  ready-made replay handler — `agentsmith/temporal_replay.py` is
   Temporal-specific; a Celery-based tenant implements the equivalent
   themselves against the same `DeadLetterQueue.replay_handler` extension
   point.

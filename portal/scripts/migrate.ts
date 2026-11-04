@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 async function main(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    console.error("DATABASE_URL is required (same Postgres instance as runtime/llm_gateway.py).");
+    console.error("DATABASE_URL is required (same Postgres instance as agentsmith/llm_gateway.py).");
     process.exit(1);
   }
 

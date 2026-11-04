@@ -20,7 +20,7 @@ export default async function DLQPage() {
         <p className="text-sm text-black/60 dark:text-white/60 mt-1">
           Failed activities — including recoverable ones a human can fix and replay in place
           (e.g. a tool call that hallucinated a field name) — see{" "}
-          <code className="text-black/80 dark:text-white/80">runtime/dead_letter.py</code> and{" "}
+          <code className="text-black/80 dark:text-white/80">agentsmith/dead_letter.py</code> and{" "}
           <code className="text-black/80 dark:text-white/80">run_with_recoverable_step</code>.
           Click a tenant to view, edit, and replay or discard individual entries.
         </p>

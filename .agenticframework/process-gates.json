@@ -2,7 +2,7 @@
   "_about": "What the process gates cover in this repository \u2014 scripts/process_gate.py, docs/process-gates.md. This file is gated itself.",
   "gated": [
     "scripts/**",
-    "runtime/**",
+    "agentsmith/**",
     "hooks/**",
     "portal/**",
     "workflow-templates/**",
@@ -65,14 +65,14 @@
       "workflow-templates/**",
       ".github/actions/**",
       "scripts/**",
-      "runtime/**",
+      "agentsmith/**",
       "fixtures/**",
       "templates/agent-rules.yaml",
       "templates/governance.json"
     ],
     "except": [
       "scripts/test/**",
-      "runtime/test/**"
+      "agentsmith/test/**"
     ]
   },
   "extends": {

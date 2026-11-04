@@ -13,7 +13,7 @@ hooks:
   break_glass_approvers: ["it-sec@example.com"]
 
 delivery_model:
-  # Pre-approved runtime/deploy footprints — tenants set delivery.platform
+  # Pre-approved agentsmith/deploy footprints — tenants set delivery.platform
   # in .agenticframework/tenant.yaml to one of these ids.
   approved_platforms:
     - dev-local          # AI_STACK_MODE=local, laptop/dev server

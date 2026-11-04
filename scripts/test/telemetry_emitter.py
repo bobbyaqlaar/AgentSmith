@@ -31,10 +31,10 @@ def representative_run() -> None:
     """Emit the run through whatever providers are installed."""
     os.environ.setdefault("IDEMPOTENCY_BACKEND", "memory")
     os.environ.setdefault("BUDGET_BACKEND", "memory")
-    from runtime.llm_gateway import LLMGateway
-    from runtime.tenancy import agent_context
-    from runtime.tracing import agent_span, record_tool_call
-    from runtime.vector_store import MemoryVectorStore
+    from agentsmith.llm_gateway import LLMGateway
+    from agentsmith.tenancy import agent_context
+    from agentsmith.tracing import agent_span, record_tool_call
+    from agentsmith.vector_store import MemoryVectorStore
 
     gateway = LLMGateway(tenant_id=TENANT)
     store = MemoryVectorStore(embedder=_Embedder())
@@ -61,7 +61,7 @@ class _Embedder:
 
 
 def main() -> int:
-    from runtime.tracing import configure_telemetry
+    from agentsmith.tracing import configure_telemetry
 
     providers = configure_telemetry(project_name=TENANT, metrics_interval_ms=1_000)
     representative_run()

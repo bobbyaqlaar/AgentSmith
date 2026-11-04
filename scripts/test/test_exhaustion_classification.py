@@ -3,7 +3,7 @@ scripts/test/test_exhaustion_classification.py — both LLM call paths must agre
 on what "the provider is exhausted" means, and must disagree on what to DO
 about it.
 
-`runtime/llm_gateway.py` degrades to the next `degrade_to` tier.
+`agentsmith/llm_gateway.py` degrades to the next `degrade_to` tier.
 `scripts/cost_router.py` — the eval path — does not: its caller is the judge,
 and a substituted grader emits confident verdicts into the same `score` field,
 compared against the same threshold, gating the same merges, with nothing
@@ -24,7 +24,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO))
 
 import cost_router
-from runtime.provider_dispatch import (
+from agentsmith.provider_dispatch import (
     _EXHAUSTION_MARKERS,
     is_provider_exhausted,
 )
@@ -123,7 +123,7 @@ def test_classifier_survives_an_older_runtime(monkeypatch) -> None:
     importing it as a hard dependency would turn a version skew into 'every LLM
     call fails', which is exactly how the credential-lookup regression broke
     KYC Sentinel's CI."""
-    import runtime.provider_dispatch as pd
+    import agentsmith.provider_dispatch as pd
 
     monkeypatch.delattr(pd, "is_provider_exhausted")
     assert cost_router._exhausted(RuntimeError("credit balance is too low"))

@@ -27,7 +27,7 @@ cp "$root/templates/in-app-widget/widget.js" "$out/widget.js"
 # a release that installs and then fails its first commit.
 listing="$(tar -tzf "$out/agentsmith-source.tar.gz")"
 for needed in install-ai-stack.sh .githooks/process-gate docs/review-levers.md \
-              docs/design-review-checklist.md runtime/cli.py requirements.lock \
+              docs/design-review-checklist.md agentsmith/cli.py requirements.lock \
               fixtures/security/control_registry.json templates/governance.json; do
   # A here-string, not a pipe: `grep -q` leaves at its first match, and under
   # pipefail a writer left behind reads as "missing", as it did tagging v3.0.1.

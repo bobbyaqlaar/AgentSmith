@@ -20,12 +20,12 @@ from pathlib import Path
 
 # ── Runtime path setup ────────────────────────────────────────────────────────
 # Prefer AGENTSMITH_DIR (set in ~/.zshrc); fall back to relative path from
-# inside the framework tree (examples/oil-price-agent/ → ../../runtime).
+# inside the framework tree (examples/oil-price-agent/ → ../../agentsmith).
 _agentsmith_dir = os.environ.get("AGENTSMITH_DIR")
 if _agentsmith_dir:
-    _runtime_root = Path(_agentsmith_dir) / "runtime"
+    _runtime_root = Path(_agentsmith_dir) / "agentsmith"
 else:
-    _runtime_root = Path(__file__).resolve().parent.parent.parent / "runtime"
+    _runtime_root = Path(__file__).resolve().parent.parent.parent / "agentsmith"
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # tenant root
 sys.path.insert(
@@ -36,7 +36,7 @@ sys.path.insert(0, str(_runtime_root / "workflows"))  # base_workflow etc.
 # ─────────────────────────────────────────────────────────────────────────────
 
 try:
-    from runtime.temporal_client import connect as connect_temporal, tls_enabled
+    from agentsmith.temporal_client import connect as connect_temporal, tls_enabled
     from temporalio.service import RPCError
 except ImportError:
     print(

@@ -32,14 +32,14 @@ from typing import Any, Literal, Optional, TypedDict
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 try:
-    from runtime.environment import get_environment
+    from agentsmith.environment import get_environment
 except ImportError:
     # scripts/ is invoked as a file (python3 scripts/foo.py), so sys.path[0]
-    # is scripts/, not the repo root. Add the ROOT — not runtime/ — so the
+    # is scripts/, not the repo root. Add the ROOT — not agentsmith/ — so the
     # runtime imports as a package; its modules import each other that way
-    # (framework G6), which a flat runtime/ path can no longer satisfy.
+    # (framework G6), which a flat agentsmith/ path can no longer satisfy.
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from runtime.environment import get_environment
+    from agentsmith.environment import get_environment
 
 # Guard import
 try:
@@ -99,8 +99,8 @@ def _get_tracer(project: str, session_id: str) -> Any:
         # See local_agent_stack._setup_otel — one provider builder, two callers.
         # Assembling it here meant no AgentIdentityProcessor and no
         # TraceRedactor, in a file README.md offers as a shape to copy.
-        from runtime.otlp import span_exporter
-        from runtime.tracing import configure_tracing
+        from agentsmith.otlp import span_exporter
+        from agentsmith.tracing import configure_tracing
 
         from _shared import _tenant_id
 
@@ -116,7 +116,7 @@ def _get_tracer(project: str, session_id: str) -> Any:
         )
         return trace.get_tracer("agenticframework.langgraph")
     except Exception:
-        from runtime.tracing import NoopTracer
+        from agentsmith.tracing import NoopTracer
 
         return NoopTracer()
 
@@ -386,7 +386,7 @@ def route_after_hitl(state: AgentState) -> str:
 def _get_checkpointer() -> Any:
     """
     Select a LangGraph checkpointer based on $ENVIRONMENT (resolved via the
-    canonical, fail-closed runtime/environment.py:get_environment() — see
+    canonical, fail-closed agentsmith/environment.py:get_environment() — see
     docs/PRODUCT_ARCHIVE.md 2.8). NOTE: "unset" now resolves to "production",
     not "development" — local/IDE runs must set ENVIRONMENT=development
     explicitly to get MemorySaver; an unset var no longer defaults to it.
@@ -398,7 +398,7 @@ def _get_checkpointer() -> Any:
         lose HITL pause state on crash, so it is a hard error instead.
     """
     # Uses the same canonical, fail-closed resolver as trace_redactor.py
-    # (runtime/environment.py) so an unset/unrecognized $ENVIRONMENT is
+    # (agentsmith/environment.py) so an unset/unrecognized $ENVIRONMENT is
     # treated identically by both — previously this defaulted missing/
     # unrecognized values to "development" independently of trace_redactor's
     # own (different) default, which could silently diverge under the exact
@@ -413,7 +413,7 @@ def _get_checkpointer() -> Any:
                 "set DATABASE_URL. MemorySaver is prohibited outside development "
                 "(see docs/DESIGN.md › Production Runtime, Framework vs Application Release). "
                 "Note: production agent runs should use "
-                "runtime/worker.py + Temporal, not this LangGraph dev/hybrid path."
+                "agentsmith/worker.py + Temporal, not this LangGraph dev/hybrid path."
             )
         try:
             from langgraph.checkpoint.postgres import PostgresSaver

@@ -25,11 +25,11 @@ pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git require
 # In a real tenant this is the installed `agentsmith gate` on PATH. Here it is
 # this checkout's CLI, run the same way: from the fixture repository's
 # directory, so the provider must not depend on where it was started.
-PROVIDER = f"{sys.executable} -m runtime.cli gate"
+PROVIDER = f"{sys.executable} -m agentsmith.cli gate"
 
 
 def test_agentsmith_passes_its_own_conformance_suite(tmp_path, monkeypatch):
-    from runtime import conformance
+    from agentsmith import conformance
 
     monkeypatch.setenv("AGENTSMITH_DIR", str(REPO))
     monkeypatch.setenv("PYTHONPATH", str(REPO))  # what an installed `agentsmith` gets from PATH
@@ -87,7 +87,7 @@ def test_what_adopt_writes_validates_against_the_published_providers_schema():
     """
     import jsonschema
 
-    from runtime.adopt import providers_declaration
+    from agentsmith.adopt import providers_declaration
 
     # adopt writes gate contract 2 since .agent-rfc/designs/gate-contract-ci.md; a
     # contract-1 declaration still validates against v1's schema

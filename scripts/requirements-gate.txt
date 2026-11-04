@@ -6,7 +6,7 @@
 # environment, this is the list to install. It travels with scripts/, so a
 # vendored tenant installs exactly what its own copy of the gate imports.
 #
-# Ranges match requirements.txt / runtime/requirements-runtime.txt.
+# Ranges match requirements.txt / agentsmith/requirements-runtime.txt.
 pydantic>=2.0,<3.0
 opentelemetry-sdk>=1.20,<2.0
 opentelemetry-exporter-otlp-proto-http>=1.20,<2.0

@@ -191,7 +191,7 @@ def score_adversarial_case(case: dict) -> dict:
     root = Path(__file__).resolve().parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
-    from runtime.prompt_guard import scan_prompt
+    from agentsmith.prompt_guard import scan_prompt
 
     expect = str(case.get("expect", "block")).lower()
     text = str(case.get("input", ""))
@@ -247,7 +247,7 @@ def score_rag_poison_case(case: dict) -> dict:
     root = Path(__file__).resolve().parent.parent
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
-    from runtime.prompt_guard import scan_documents
+    from agentsmith.prompt_guard import scan_documents
 
     expect = str(case.get("expect", "quarantine")).lower()
     document = str(case.get("document", ""))
@@ -318,17 +318,17 @@ def _resolve_adversarial_fail_above(cli_value: float | None) -> float:
 
 
 def _pair_parity(results: list[dict]) -> dict[str, float]:
-    """Per-pair fairness parity — delegates to runtime.judging.pair_parity so
+    """Per-pair fairness parity — delegates to agentsmith.judging.pair_parity so
     the CI gate and any tenant's per-request parity check run the SAME logic
     (TestbedFeedback-2026-07-21 G7). scripts/ adds the repo root, not
-    runtime/, so the runtime imports as a package (framework G6)."""
+    agentsmith/, so the runtime imports as a package (framework G6)."""
     import sys as _sys
     from pathlib import Path as _Path
 
     root = str(_Path(__file__).resolve().parent.parent)
     if root not in _sys.path:
         _sys.path.insert(0, root)
-    from runtime.judging import pair_parity
+    from agentsmith.judging import pair_parity
 
     return pair_parity(results, outcome_key="fairness")
 
@@ -343,7 +343,7 @@ def _pair_score_spread(results: list[dict]) -> dict[str, float]:
     root = str(_Path(__file__).resolve().parent.parent)
     if root not in _sys.path:
         _sys.path.insert(0, root)
-    from runtime.judging import pair_score_spread
+    from agentsmith.judging import pair_score_spread
 
     return pair_score_spread(results, score_key="score")
 
@@ -1052,7 +1052,7 @@ def run_scorecard(
         if _root not in sys.path:
             sys.path.insert(0, _root)
         try:
-            from runtime.provider_dispatch import is_model_gone
+            from agentsmith.provider_dispatch import is_model_gone
         except Exception:  # fail-open: without runtime, fall back to the old
             def is_model_gone(_exc):  # type: ignore[misc]
                 return False
@@ -1355,7 +1355,7 @@ def _registry_fail_below(suite: str) -> Optional[float]:
         if isinstance(raw, dict):
             raw = raw.get(suite)
         return float(raw) if raw is not None else None
-    except Exception:  # fail-open: no runtime/, unreadable registry, bad value
+    except Exception:  # fail-open: no agentsmith/, unreadable registry, bad value
         return None
 
 
@@ -1372,7 +1372,7 @@ def _resolve_parity_fail_below() -> float:
     as a side effect.
 
     The default is 1.0 because any divergence is a violation — `pair_parity`
-    scores a matching pair 1.0 and a diverging one 0.0 (runtime/judging.py), so
+    scores a matching pair 1.0 and a diverging one 0.0 (agentsmith/judging.py), so
     with the shipped metric there is no honest value between "no pair diverged"
     and "one did". This said 0.50, which the metric has never produced. It is configurable only so a tenant whose
     parity metric is genuinely continuous can set something else, and lowering

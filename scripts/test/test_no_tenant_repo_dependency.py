@@ -32,7 +32,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-# `ROOT.parent / "X"` and `parents[3] / "X"` — from runtime/test/ and
+# `ROOT.parent / "X"` and `parents[3] / "X"` — from agentsmith/test/ and
 # scripts/test/ respectively, both land outside the repository.
 _ESCAPES = (
     re.compile(r"\bROOT\.parent\s*/"),
@@ -46,7 +46,7 @@ def _test_sources() -> list[Path]:
         # — there are no tests under examples/ — and `test_the_sweep_reads_the_test_suite`'s
         # floor was satisfied by the other two, so the dead member was invisible.
         # `test_every_ls_files_glob_in_a_test_matches_something` now guards the class.
-        ["git", "ls-files", "runtime/test/*.py", "scripts/test/*.py"],
+        ["git", "ls-files", "agentsmith/test/*.py", "scripts/test/*.py"],
         cwd=ROOT, capture_output=True, text=True, check=False,
     ).stdout.split()
     return [ROOT / p for p in out]
@@ -110,7 +110,7 @@ def test_every_ls_files_glob_in_a_test_matches_something() -> None:
     (.agent-rfc/designs/sibling-sweep.md).
     """
     sources = subprocess.run(
-        ["git", "ls-files", "scripts/test/*.py", "runtime/test/*.py"],
+        ["git", "ls-files", "scripts/test/*.py", "agentsmith/test/*.py"],
         cwd=ROOT, capture_output=True, text=True, check=False,
     ).stdout.split()
     assert len(sources) > 40, f"the sweep over tests found {len(sources)} files"

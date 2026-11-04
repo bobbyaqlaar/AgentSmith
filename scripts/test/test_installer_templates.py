@@ -41,7 +41,7 @@ def _framework_templates(line: str) -> set[str]:
 
 def _templates_the_code_reads() -> set[str]:
     names: set[str] = set()
-    for source in [*(REPO / "runtime").rglob("*.py"), *(REPO / "scripts").glob("*.py")]:
+    for source in [*(REPO / "agentsmith").rglob("*.py"), *(REPO / "scripts").glob("*.py")]:
         if "/test" in source.as_posix():
             continue
         for line in source.read_text(encoding="utf-8", errors="replace").splitlines():

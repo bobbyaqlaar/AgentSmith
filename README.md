@@ -334,7 +334,7 @@ Kubernetes, a live OIDC provider). Operator procedures: docs/UserManual.md.
 | Layer | What it adds |
 |---|---|
 | **Multi-Tenancy** | `agentsmith tenant init` / `agentsmith tenant promote` — independent tenant repos with their own CI/CD, eval gates, and staging → production promotion |
-| **Production Runtime** | `runtime/` — LLM gateway (atomic per-tenant budgets, degrade ladder), trace redaction, idempotency + DLQ, Temporal HITL workflows incl. edit-and-resume and opt-in self-correction; cloud adapters (Vertex AI live-verified; Azure OpenAI / Bedrock / Huawei ModelArts mock-tested) |
+| **Production Runtime** | `agentsmith/` — LLM gateway (atomic per-tenant budgets, degrade ladder), trace redaction, idempotency + DLQ, Temporal HITL workflows incl. edit-and-resume and opt-in self-correction; cloud adapters (Vertex AI live-verified; Azure OpenAI / Bedrock / Huawei ModelArts mock-tested) |
 | **Portal** | Dev workspace fed by each app's CI gate, cross-app cost/issues dashboard, per-app DLQ triage with replay, HMAC-signed tamper-evident audit log, seven per-app roles, SSO/OIDC with server-side revocation |
 | **On-Premise** | `templates/onprem-deploy/` — Docker Compose or Helm for air-gapped customers, canary + shadow routing (Traefik or Envoy) |
 | **In-App Widget** | `templates/in-app-widget/` — embeddable end-user status component, token-scoped, self-hosted |
@@ -354,7 +354,7 @@ ISO/IEC 42001). AgentSmith maps each mandate to shipped controls:
 | Sovereign / in-border models | `templates/uae-sovereign/` — Falcon 3 on Ollama (live-verified) or a sovereign OpenAI-compatible API; smoke `scripts/verify_sovereign_endpoint.py` |
 | Bias / Federal Decree-Law No. 34/2023 | `run-evals.py --suite fairness` + pair parity; CI via `eval-fairness.yml` |
 | HITL for high-impact actions | `run_with_hitl_gate`, `run_with_recoverable_step`, opt-in `run_with_self_correction` → DLQ |
-| PDPL / PII in the decision path | Pre-call `runtime/input_guardrail.py` (Emirates ID, etc.) + post-call `trace_redactor.py` |
+| PDPL / PII in the decision path | Pre-call `agentsmith/input_guardrail.py` (Emirates ID, etc.) + post-call `trace_redactor.py` |
 | Oversight / ISO/IEC 42001 themes | `docs/iso-42001-control-map.md` + HMAC audit log + eval gates (hallucination, fairness, TTFT) |
 | Multi-framework security (OWASP · NIST · ATLAS · ISO) | `docs/security-framework-map.md` — `SEC-*` controls + `run-security-checks.py` (P12 shipped) |
 | Delivery governance | `docs/delivery-model.md` + `verify_system.py --check-delivery-model` |

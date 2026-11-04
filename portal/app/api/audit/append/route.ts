@@ -2,7 +2,7 @@
 //
 // Called from CLI/CI contexts that can't carry the dashboard's basic-auth
 // credentials: agentsmith tenant init (tenant_created), agentsmith tenant promote
-// (hitl_promotion), the git hooks' bypass check (runtime/machine/policy.py)
+// (hitl_promotion), the git hooks' bypass check (agentsmith/machine/policy.py)
 // (hook_bypass), scripts/promote-learning.py (hitl_promotion), etc.
 // Authenticates via its own bearer token, like /api/sync/history.
 //

@@ -45,7 +45,7 @@ export interface ParsedVersion {
   major: number;
   minor: number;
   patch: number;
-  /** `+src` — a working copy, not a release artifact. See runtime/version.py. */
+  /** `+src` — a working copy, not a release artifact. See agentsmith/version.py. */
   fromSource: boolean;
 }
 

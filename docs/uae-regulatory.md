@@ -39,7 +39,7 @@ data-residency expectations.
 | Local / air-gapped inference | `AI_STACK_MODE=local` routes calls to Ollama (`OLLAMA_BASE_URL`, default `http://localhost:11434`) — prompts stay on the machine                 |
 | UAE sovereign starter pack   | [`templates/uae-sovereign/`](../templates/uae-sovereign/) — Falcon `models.yaml`, env example, residency checklist                               |
 | On-prem / air-gapped deploy  | `templates/onprem-deploy/` (Compose or Helm) for in-border clusters                                                                              |
-| Pluggable providers          | `runtime/llm_gateway.py` + `runtime/provider_dispatch.py` — point the gateway at **any** OpenAI-compatible or cloud-adapter endpoint you control |
+| Pluggable providers          | `agentsmith/llm_gateway.py` + `agentsmith/provider_dispatch.py` — point the gateway at **any** OpenAI-compatible or cloud-adapter endpoint you control |
 | Dedicated tenant isolation   | `tenant.isolation: dedicated` + K8s worker pools for stronger runtime separation                                                                 |
 
 
@@ -157,10 +157,10 @@ in logs after the fact.
 
 | Capability                                | Status                                                                                       |
 | ----------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Post-call trace redaction / anonymization | **Shipped** — `runtime/trace_redactor.py`, CD redaction compliance checks                    |
+| Post-call trace redaction / anonymization | **Shipped** — `agentsmith/trace_redactor.py`, CD redaction compliance checks                    |
 | Encrypted HITL blob storage               | **Shipped** — full payload for review without leaving cleartext in traces                    |
-| Pre-call PII scrub before model invoke    | **Shipped** — `runtime/input_guardrail.py` in `llm_gateway.complete()` (Emirates ID, email, phone, cards; pluggable) |
-| Prompt injection guard + adversarial eval | **Shipped** — `runtime/prompt_guard.py` + `run-evals.py --suite adversarial` (`SEC-PROMPT-001` / `SEC-ADV-001`) |
+| Pre-call PII scrub before model invoke    | **Shipped** — `agentsmith/input_guardrail.py` in `llm_gateway.complete()` (Emirates ID, email, phone, cards; pluggable) |
+| Prompt injection guard + adversarial eval | **Shipped** — `agentsmith/prompt_guard.py` + `run-evals.py --suite adversarial` (`SEC-PROMPT-001` / `SEC-ADV-001`) |
 | Security harness evidence pack            | **Shipped** — `run-security-checks.py --evidence-pack` ([`docs/security-framework-map.md`](./security-framework-map.md)) |
 
 

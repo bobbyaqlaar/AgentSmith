@@ -19,7 +19,7 @@ made by that gate. A signed bundle of the provider install and the policy is on 
 ## Bypass Policy Enforcement
 
 `agenticframework-org.yaml`'s `hooks.bypass_policy` decides whether `agentsmith mode off` may
-record the machine as disabled (`runtime/machine/policy.py`; `agentsmith hooks bypass-check`
+record the machine as disabled (`agentsmith/machine/policy.py`; `agentsmith hooks bypass-check`
 asks the same question). A repository's own gate has no bypass switch to ask about: the
 `DISABLE_AI_STACK=true` the machine-wide hooks honoured left with them in 3.0.0, and a commit
 that skips the gate (`--no-verify`) is caught by the sweep and by CI whatever the policy says.

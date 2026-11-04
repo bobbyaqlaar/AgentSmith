@@ -1,16 +1,16 @@
 """
 scripts/test/test_standalone_without_runtime.py — scripts/ must start when
-`runtime` is not importable.
+`agentsmith` is not importable.
 
-`scripts/` is machine-installed (~/.agent-framework/scripts) and `runtime/`
+`scripts/` is machine-installed (~/.agent-framework/scripts) and `agentsmith/`
 ships as a pip package. They are not guaranteed co-located, and the normal
 invocation — `python3 <install>/scripts/foo.py` from a tenant directory — puts
 `scripts/` on sys.path[0] and the framework root nowhere. Any module-reachable
-`from runtime...` that is neither guarded nor preceded by an explicit
+`from agentsmith...` that is neither guarded nor preceded by an explicit
 sys.path insert kills the process before it does any work.
 
 This has now shipped twice, and the second time it was expensive. `_load_dotenv`
-in `_shared` acquired an unconditional `from runtime.config import
+in `_shared` acquired an unconditional `from agentsmith.config import
 load_env_file` on 2026-08-24. It took out the KYC Sentinel judged-eval split run
 for five consecutive daily windows (08-25 → 08-29): the driver read the nonzero
 exit as "judge unreachable", logged `NO VERDICT — will retry in a later window`,
@@ -21,7 +21,7 @@ killed AgentLogger's constructor.
 
 The whole local suite passed throughout, both times. That is the point of this
 file: pytest puts the repo root on sys.path, so an in-process test imports
-`runtime` successfully no matter what, and is structurally incapable of failing
+`agentsmith` successfully no matter what, and is structurally incapable of failing
 on this. Only a subprocess with a clean path can catch it — which is why every
 test here shells out and clears PYTHONPATH explicitly rather than trusting the
 inherited one.
@@ -66,19 +66,19 @@ def _tenant(tmp_path: Path) -> Path:
 
 
 def test_runtime_really_is_absent(tmp_path: Path) -> None:
-    """Guard the guard. If a future change makes `runtime` importable from a
+    """Guard the guard. If a future change makes `agentsmith` importable from a
     bare subprocess — an editable install, a stray .pth, a conftest that
     reaches out — every other test in this file would pass without testing
     anything, exactly like the in-process suite did for five days."""
     proc = _run_standalone(
         "import importlib.util, sys;"
         f"sys.path.insert(0, {str(SCRIPTS)!r});"
-        "print(importlib.util.find_spec('runtime') is not None)",
+        "print(importlib.util.find_spec('agentsmith') is not None)",
         _tenant(tmp_path),
     )
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == "False", (
-        "`runtime` is importable in a clean subprocess, so the tests in this "
+        "`agentsmith` is importable in a clean subprocess, so the tests in this "
         "file no longer prove anything about the standalone path"
     )
 
@@ -125,7 +125,7 @@ def test_dotenv_still_loads_without_runtime(tmp_path: Path) -> None:
 
 def test_agent_logger_constructs(tmp_path: Path) -> None:
     """`AgentLogger.__init__` resolves two owner fields through
-    `runtime.config.resolve`. Unguarded, that made the logger unusable from any
+    `agentsmith.config.resolve`. Unguarded, that made the logger unusable from any
     standalone script — and the logger is what several of them log through."""
     proc = _run_standalone(
         "import sys;"

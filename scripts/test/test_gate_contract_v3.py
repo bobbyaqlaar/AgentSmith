@@ -29,7 +29,7 @@ pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git require
 
 V2 = REPO / "contract" / "gate" / "v2"
 V3 = REPO / "contract" / "gate" / "v3"
-PROVIDER = f"{sys.executable} -m runtime.cli gate"
+PROVIDER = f"{sys.executable} -m agentsmith.cli gate"
 HOOKS = ("process-gate", "commit-msg", "pre-commit", "pre-push")
 
 
@@ -37,7 +37,7 @@ HOOKS = ("process-gate", "commit-msg", "pre-commit", "pre-push")
 
 
 def test_agentsmith_passes_contract_3(tmp_path, monkeypatch):
-    from runtime import conformance
+    from agentsmith import conformance
 
     monkeypatch.setenv("AGENTSMITH_DIR", str(REPO))
     monkeypatch.setenv("PYTHONPATH", str(REPO))
@@ -86,7 +86,7 @@ def test_this_repositorys_graph_is_a_valid_graph():
 def test_what_adopt_declares_is_a_valid_contract_3_declaration():
     import jsonschema
 
-    from runtime.adopt import providers_declaration
+    from agentsmith.adopt import providers_declaration
 
     declared = json.loads(providers_declaration())
     jsonschema.validate(declared, json.loads((V3 / "providers.schema.json").read_text()))
@@ -116,7 +116,7 @@ def test_the_provider_never_answers_with_a_tenants_vendored_gate(tmp_path):
         'print(\'{"decision": "deny", "text": "THE TENANT\\\'S VENDORED COPY"}\')\n')
     subprocess.run(["git", "init", "-q", "--template=", str(tenant)], check=True)
 
-    done = subprocess.run([sys.executable, "-m", "runtime.cli", "gate", "pre-edit"], cwd=tenant,
+    done = subprocess.run([sys.executable, "-m", "agentsmith.cli", "gate", "pre-edit"], cwd=tenant,
                           input=json.dumps({"kind": "edit", "paths": ["docs/x.md"]}), capture_output=True, text=True,
                           env={**os.environ, "AGENTSMITH_DIR": str(REPO), "PYTHONPATH": str(REPO)}, check=False)
 
@@ -139,7 +139,7 @@ def _env(**extra: str) -> dict:
 def repo(tmp_path):
     """The contract's fixture at `clean`, the tags to the commit that skipped the
     gate dropped, and the tenant's own copies of the gate hooks, armed."""
-    from runtime.conformance import build_fixture
+    from agentsmith.conformance import build_fixture
 
     root = build_fixture(tmp_path / "repo", 3)
     subprocess.run(["git", "-C", str(root), "checkout", "-q", "--detach", "clean"], check=True)
@@ -172,7 +172,7 @@ def test_kg_impact_names_the_staged_scope_as_the_contract_shapes_it(repo):
     (repo / "src" / "covered.py").write_text("VALUE = 8\n")
     subprocess.run(["git", "-C", str(repo), "add", "src/covered.py"], check=True)
 
-    done = subprocess.run([sys.executable, "-m", "runtime.cli", "gate", "kg", "impact"], cwd=repo, env=_env(),
+    done = subprocess.run([sys.executable, "-m", "agentsmith.cli", "gate", "kg", "impact"], cwd=repo, env=_env(),
                           capture_output=True, text=True, check=False)
 
     found = gm.KgImpact.model_validate_json(done.stdout)
@@ -189,7 +189,7 @@ def test_kg_impact_scopes_the_commit_not_the_working_tree(repo):
     subprocess.run(["git", "-C", str(repo), "add", "src/covered.py"], check=True)
     (repo / "src" / "other.py").write_text("VALUE = 77\n")  # edited, not staged
 
-    done = subprocess.run([sys.executable, "-m", "runtime.cli", "gate", "kg", "impact"], cwd=repo, env=_env(),
+    done = subprocess.run([sys.executable, "-m", "agentsmith.cli", "gate", "kg", "impact"], cwd=repo, env=_env(),
                           capture_output=True, text=True, check=False)
 
     found = gm.KgImpact.model_validate_json(done.stdout)
@@ -199,7 +199,7 @@ def test_kg_impact_scopes_the_commit_not_the_working_tree(repo):
 def test_kg_build_writes_a_graph_the_contract_describes(repo):
     import gate_models as gm
 
-    done = subprocess.run([sys.executable, "-m", "runtime.cli", "gate", "kg", "build"], cwd=repo, env=_env(),
+    done = subprocess.run([sys.executable, "-m", "agentsmith.cli", "gate", "kg", "build"], cwd=repo, env=_env(),
                           capture_output=True, text=True, check=False)
 
     assert done.returncode == 0, done.stderr

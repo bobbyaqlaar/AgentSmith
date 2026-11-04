@@ -26,8 +26,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
-from runtime import conformance as rc
-from runtime import telemetry_contract as tc
+from agentsmith import conformance as rc
+from agentsmith import telemetry_contract as tc
 
 V1 = REPO / "contract" / "telemetry" / "v1"
 EMITTER = REPO / "scripts" / "test" / "telemetry_emitter.py"
@@ -78,7 +78,7 @@ def test_the_runtime_library_passes_over_otlp(tmp_path, monkeypatch):
 
 
 def test_the_runtime_library_states_the_contract_on_its_resource():
-    from runtime.tracing import resource_attributes
+    from agentsmith.tracing import resource_attributes
 
     attrs = resource_attributes("t")
     assert attrs[tc.CONTRACT_ATTRIBUTE] == tc.TELEMETRY_CONTRACT
@@ -188,7 +188,7 @@ def test_the_receiver_refuses_an_oversize_body(monkeypatch):
 # ── Every name the framework emits is catalogued ──────────────────────────────
 
 
-EMITTERS = sorted([*(REPO / "runtime").glob("*.py"),
+EMITTERS = sorted([*(REPO / "agentsmith").glob("*.py"),
                    *(REPO / "scripts" / name for name in ("gate_tracing.py", "process_gate.py", "rules_port.py",
                                                           "evals_port.py", "security_port.py",
                                                           "local_agent_stack.py",
@@ -197,7 +197,7 @@ EMITTERS = sorted([*(REPO / "runtime").glob("*.py"),
 # processor writes `current_identity()` (tenancy.py, inventoried below), the
 # gateway writes `prompt_attributes()` (prompt_identity.py, likewise), and the
 # portal's helpers are TypeScript. A new dynamic site fails here until reviewed.
-REVIEWED_DYNAMIC = {("runtime/tracing.py", "key"), ("runtime/llm_gateway.py", "key")}
+REVIEWED_DYNAMIC = {("agentsmith/tracing.py", "key"), ("agentsmith/llm_gateway.py", "key")}
 
 
 def _constants(tree: ast.Module) -> dict[str, str]:
@@ -268,12 +268,12 @@ def _dict_keys(path: Path, function: str) -> set[str]:
 def test_every_name_the_framework_emits_is_catalogued():
     catalogue = tc.load_catalogue()
     found, _dynamic = _inventory()
-    found |= {("span", k, False) for k in _dict_keys(REPO / "runtime" / "tenancy.py", "current_identity")}
-    found |= {("span", k, False) for k in _dict_keys(REPO / "runtime" / "prompt_identity.py", "prompt_attributes")}
-    found |= {("metric_attribute", k, False) for k in _dict_keys(REPO / "runtime" / "metrics.py", "record_llm_call")
-              | _dict_keys(REPO / "runtime" / "metrics.py", "record_cache")
-              | _dict_keys(REPO / "runtime" / "metrics.py", "record_retry")
-              | _dict_keys(REPO / "runtime" / "metrics.py", "record_retrieval")}
+    found |= {("span", k, False) for k in _dict_keys(REPO / "agentsmith" / "tenancy.py", "current_identity")}
+    found |= {("span", k, False) for k in _dict_keys(REPO / "agentsmith" / "prompt_identity.py", "prompt_attributes")}
+    found |= {("metric_attribute", k, False) for k in _dict_keys(REPO / "agentsmith" / "metrics.py", "record_llm_call")
+              | _dict_keys(REPO / "agentsmith" / "metrics.py", "record_cache")
+              | _dict_keys(REPO / "agentsmith" / "metrics.py", "record_retry")
+              | _dict_keys(REPO / "agentsmith" / "metrics.py", "record_retrieval")}
     missing = []
     for where, name, prefix in sorted(found):
         if prefix:
@@ -353,7 +353,7 @@ def test_the_catalogue_carries_the_runs_identity_as_the_table_says():
 def test_the_cli_answers_an_export(tmp_path):
     export = tmp_path / "export.json"
     export.write_text(json.dumps(json.loads((V1 / "fixture.json").read_text())["exports"][0]))
-    done = subprocess.run([sys.executable, "-m", "runtime.cli", "conformance", "--port", "telemetry", "--export",
+    done = subprocess.run([sys.executable, "-m", "agentsmith.cli", "conformance", "--port", "telemetry", "--export",
                            str(export)], cwd=REPO, capture_output=True, text=True, check=False)
     assert done.returncode == 0, done.stdout + done.stderr
     assert "telemetry contract v1" in done.stdout
@@ -363,12 +363,12 @@ def test_the_cli_answers_an_export(tmp_path):
 
 
 def _decoy_tenant(tmp_path: Path) -> Path:
-    """A vendored tenant's working directory: its own `runtime/`, older than the
+    """A tenant's working directory holding its own `agentsmith/`, older than the
     provider's (.agent-rfc/designs/telemetry-contract.md)."""
     tenant = tmp_path / "vendored-tenant"
-    (tenant / "runtime").mkdir(parents=True)
-    (tenant / "runtime" / "__init__.py").write_text("")
-    (tenant / "runtime" / "cli.py").write_text("print('DECOY: the tenant\\'s vendored cli')\n")
+    (tenant / "agentsmith").mkdir(parents=True)
+    (tenant / "agentsmith" / "__init__.py").write_text("")
+    (tenant / "agentsmith" / "cli.py").write_text("print('DECOY: the tenant\\'s vendored cli')\n")
     return tenant
 
 
@@ -408,13 +408,13 @@ def test_the_ci_setup_shim_answers_with_the_provider_inside_a_vendored_tenant(tm
 
 
 def test_no_shipped_shim_runs_the_cli_with_the_working_directory_first():
-    """Every place AgentSmith ships `python -m runtime.cli` to run inside a
+    """Every place AgentSmith ships `python -m agentsmith.cli` to run inside a
     tenant: the CI setup shim, the weekly sync workflow. `-P` on each — a new
     one without it is the vendored-CLI defect again (grep-for-siblings)."""
     shipped = [REPO / ".github" / "actions" / "setup-agentsmith" / "action.yml",
                *(REPO / "workflow-templates").glob("*.yml")]
     unsafe = [f"{path.relative_to(REPO)}: {line.strip()}" for path in shipped
               for line in path.read_text(encoding="utf-8").splitlines()
-              if re.search(r"(?<!-P )-m runtime\.cli", line)]
+              if re.search(r"(?<!-P )-m agentsmith\.cli", line)]
     assert not unsafe, unsafe
-    assert any("-P -m runtime.cli" in p.read_text() for p in shipped)
+    assert any("-P -m agentsmith.cli" in p.read_text() for p in shipped)

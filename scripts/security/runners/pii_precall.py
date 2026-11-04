@@ -19,7 +19,7 @@ def _declared(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     """A contract run: the repository DECLARES a scrubbing guardrail. The probe
     set exercises the provider's own scrubber — its evidence, checked here only
     in the provider's repository."""
-    from runtime.input_guardrail import MODES
+    from agentsmith.input_guardrail import MODES
 
     checked = ""
     if provider_code_in_scope(ctx):
@@ -39,9 +39,9 @@ def _declared(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
 
 def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     # framework_root inserts the repo ROOT only. The previous version also
-    # inserted root/runtime, which would let `import input_guardrail` resolve
+    # inserted root/agentsmith, which would let `import input_guardrail` resolve
     # flat — nothing does that (runtime modules import each other as
-    # `runtime.X`), and a bare runtime/ on sys.path can shadow same-named
+    # `agentsmith.X`), and a bare agentsmith/ on sys.path can shadow same-named
     # top-level modules. Vestigial from before the package rename.
     framework_root(ctx)   # sys.path side effect; return value unused
     if is_contract(ctx):
@@ -50,7 +50,7 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
 
 
 def _scrub_probes(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
-    from runtime.input_guardrail import scrub_text
+    from agentsmith.input_guardrail import scrub_text
 
     cases, problem = security_fixture(control, ctx, "pii_probe_cases_base.json")
     if problem is not None:

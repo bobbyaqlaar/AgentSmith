@@ -5,7 +5,7 @@ of the markers its own Guardrail 1 forbids.
 `hooks/pre-commit` Guardrail 1 refuses a commit whose staged files contain
 `ponytail:`, `TODO: agent` or `@agent-ignore`. Since
 .agent-rfc/designs/scaffold-rfc-and-vouched-skip.md that guardrail skips files the
-scaffold manifest vouches for, so a marker shipped inside `scripts/` or `runtime/`
+scaffold manifest vouches for, so a marker shipped inside `scripts/` or `agentsmith/`
 would no longer be caught in a tenant. This is where it is caught instead: in the
 repository that can fix it, over the whole tree rather than whatever a commit
 happened to stage.
@@ -14,7 +14,7 @@ The pair to scripts/test/test_bare_except_tree.py, which does the same for
 Guardrail 2. Between them, the skip moves where a defect surfaces without
 removing the check.
 
-`scripts/test/` and `runtime/test/` are excluded because they are NOT vendored —
+`scripts/test/` and `agentsmith/test/` are excluded because they are NOT vendored —
 verified in the design, and asserted below so the exclusion cannot quietly become
 a licence for shipped code.
 """
@@ -28,13 +28,13 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 # The same three the hook greps for (hooks/pre-commit, Guardrail 1).
 MARKERS = re.compile(r"ponytail:|TODO: agent|@agent-ignore")
-VENDORED = ("scripts/", "runtime/")
-NOT_VENDORED = ("scripts/test/", "runtime/test/")
+VENDORED = ("scripts/", "agentsmith/")
+NOT_VENDORED = ("scripts/test/", "agentsmith/test/")
 
 
 def _vendored_files() -> list[str]:
     out = subprocess.run(
-        ["git", "-C", str(REPO), "ls-files", "scripts/*", "runtime/*"],
+        ["git", "-C", str(REPO), "ls-files", "scripts/*", "agentsmith/*"],
         capture_output=True,
         text=True,
         check=True,

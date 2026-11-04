@@ -349,7 +349,7 @@ def collect_evidence(root: Path) -> dict[str, Any]:
             "input_guardrail",
             "Pre-call PII guardrail mode",
             NOTE,
-            "runtime/input_guardrail.py",
+            "agentsmith/input_guardrail.py",
             f"INPUT_GUARDRAIL={guardrail}",
         )
     )
