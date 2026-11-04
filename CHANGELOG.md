@@ -94,8 +94,8 @@ tenant, and going public fixes the name for everyone after. There is no shim: a 
 
 ### Fixed — a contract decision's test bounds the wait, not the gate's work
 
-`test_a_contract_decision_answers_when_nobody_closes_stdin` failed a PR at 7.05s against 7s: `ci --decision` reads the range after
-its wait, so the time grew with the repository and the runner. Its twenty-second `hold` still catches a gate waiting for an EOF.
+`test_a_contract_decision_answers_when_nobody_closes_stdin` failed a PR at 7.05s against 7s: after its wait the gate reads history, so
+the time grew with the branch and the runner. These tests now run in a scratch repository, where elapsed time measures the wait.
 
 ### Fixed — the release build reports a file missing only when it is
 

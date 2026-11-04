@@ -1017,7 +1017,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-11-04T05:02:01Z",
+      "last_modified": "2026-11-04T19:23:51Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -1771,7 +1771,7 @@
         "test_a_stream_with_no_file_descriptor_is_read_directly",
         "context"
       ],
-      "last_modified": "2026-11-04T19:10:43Z",
+      "last_modified": "2026-11-04T19:14:47Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {

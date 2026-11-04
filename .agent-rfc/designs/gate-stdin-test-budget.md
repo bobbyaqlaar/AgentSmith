@@ -20,6 +20,13 @@ the `hold` of `_gate_with_open_stdin`, which raises if the gate has not answered
 - **Keep it on `stop`:** that path does no range work, so its time measures the read.
 - **The curated mutation "the payload read waits for an EOF the caller may never send" must still be caught,** through `hold`.
 
+## Correction, 2026-11-04
+
+Removing the assertion treated the symptom, and two claims above were wrong. `stop` does read history, through its sweep, and `hold` is not
+safe from the same growth: on the rename's commit of about 400 files, one git call per file took `ci --decision` past twenty seconds under
+load, and `stop` to nineteen on its first sweep. The gate was answering correctly throughout. So the helper now runs each path in a repository
+of its own with one empty commit, where elapsed time measures the wait, and the assertion goes back in place.
+
 ## Pillars
 
 - P1 applies — `.agent-rfc/designs/gate-stdin-test-budget.md` records the failed check and what the test claims.
