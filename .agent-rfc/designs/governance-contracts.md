@@ -29,12 +29,12 @@ The code does not meet it yet. Measured, not estimated:
   (`README.md`), so a tenant's commit and CI are governed by a path, not a contract.
 - **Vendoring is still a supported transport** — decision 1 of `governance-providers.md`, made
   because the owner kept vendoring on 2026-09-13. The principle overrides that decision. Its cost is
-  visible in OTS: 46 `scripts/`, 51 `runtime/` and 9 `fixtures/security/` files committed, and an
+  visible in Tenant B: 46 `scripts/`, 51 `runtime/` and 9 `fixtures/security/` files committed, and an
   uncommitted gate 1,318 lines behind today's.
 - **A pin is missing where there is one at all.** KYC Sentinel's CI checks AgentSmith out at no ref —
   whatever `main` is that minute — and runs `scripts/process_gate.py` from it.
 
-**What a tenant uses, by port** (from OTS's and KYC's workflows and the templates):
+**What a tenant uses, by port** (from Tenant B's and KYC's workflows and the templates):
 
 | Need | Today | Port |
 |---|---|---|
@@ -42,7 +42,7 @@ The code does not meet it yet. Measured, not estimated:
 | the review's `KG query:` hash | `scripts/map_codebase.py`, `local_knowledge_graph.py` | **Gate** (evidence) |
 | what CI decided, sent to the portal | `scripts/send_dev_record.py` | **Records** |
 | rule files, IDE configs, drift check | `templates/governance.json`, `scripts/generate-ide-config.py` | **Rules** |
-| spans and resource attributes | vendored `runtime/` imported by tenant code (OTS `tracing.py`) | **Telemetry** |
+| spans and resource attributes | vendored `runtime/` imported by tenant code (Tenant B `tracing.py`) | **Telemetry** |
 | golden, fairness, hallucination, TTFT, shadow evals | `scripts/run-evals.py`, `verify_ttft.py`, `shadow-eval.py` | **Evals** |
 | security harness, redaction check | `scripts/run-security-checks.py`, `verify_system.py --check-redaction`, `fixtures/security/` | **Security** |
 | run history and UI feedback to and from the portal | `scripts/sync-portal-history.py`, `sync-ui-feedback.py` | **Ops records** |
@@ -86,20 +86,20 @@ implementation is scored by the same cases.
 
 ### The slices, each paired with the tenant that proves it
 
-OTS is the proving ground: its core function is frozen until its governance is aligned, so each
-slice ends with OTS deleting the coupling that slice replaced. A slice is not done until a real
-tenant runs on it — the scratch tenants for breadth, OTS for depth, KYC where it applies.
+Tenant B is the proving ground: its core function is frozen until its governance is aligned, so each
+slice ends with Tenant B deleting the coupling that slice replaced. A slice is not done until a real
+tenant runs on it — the scratch tenants for breadth, Tenant B for depth, KYC where it applies.
 
 | # | AgentSmith | The tenant step that proves it |
 |---|---|---|
-| **C1** | **Gate v2 — the CI event.** `<gate> ci --base --head` in the contract, with the dev record as its output; a provider setup step for CI; `agentsmith-gates.yml` calls the declared command | OTS declares `providers.json`, its CI calls the provider, its vendored `process_gate.py`, `gate_*.py` and `requirements-gate.txt` go. KYC pins a release and calls the command |
-| **C2** | **Gate v2 — commit-msg, sweep, pre-push**, and the knowledge graph as gate evidence (graph schema published; the provider computes the `KG query:` hash) | the hooks in OTS and KYC become stubs that call the declared command; `map_codebase.py` leaves OTS |
+| **C1** | **Gate v2 — the CI event.** `<gate> ci --base --head` in the contract, with the dev record as its output; a provider setup step for CI; `agentsmith-gates.yml` calls the declared command | Tenant B declares `providers.json`, its CI calls the provider, its vendored `process_gate.py`, `gate_*.py` and `requirements-gate.txt` go. KYC pins a release and calls the command |
+| **C2** | **Gate v2 — commit-msg, sweep, pre-push**, and the knowledge graph as gate evidence (graph schema published; the provider computes the `KG query:` hash) | the hooks in Tenant B and KYC become stubs that call the declared command; `map_codebase.py` leaves Tenant B |
 | **C3** | **Records** — `contract/record/v1`: the dev record schema (already `schema: 1`), the endpoint, auth, no-redirect, retry | the CI step sends by contract; `send_dev_record.py` is never a tenant's file |
-| **C4** | **Rules** — `contract/rules/v1`: the tenant's own rules (`extends`), the managed-block markers; `<rules> render` and `<rules> check`. The registry stays the gate provider's policy, not a published document a tenant may hold (`rules-contract.md`) | OTS's tenant rules move into its declaration and its CI calls the declared check; its vendored `templates/` and `generate-ide-config.py` are then read by nothing, and leave with vendoring at C9 |
-| **C5** | **Telemetry** — `contract/telemetry/v1`: resource and span attributes as a schema (from the Wire Contract table), OTLP, a conformance check over exported spans | OTS's template spans (its only span code, in the frozen template work — its committed code imports nothing from `runtime/`) move to plain OpenTelemetry against the catalogue; KYC stays on the pinned library and its export passes; vendored `runtime/` is then imported by none of OTS's code and leaves at C9 (`telemetry-contract.md`) |
-| **C6** | **Evals** — `contract/evals/v1`: dataset format the tenant owns, suites, the verdict and scorecard schema, threshold semantics; `<evals> run` | OTS's eval workflows call the declared command against its own datasets |
-| **C7** | **Security** — `contract/security/v1`: the `SEC-*` control registry, evidence packs, the harness verdict, the redaction check; `<security> check` | OTS's security and redaction steps call the command; vendored `fixtures/security/` goes |
-| **C8** | **Ops records** — `contract/ops/v1`: run history out, HITL and UI feedback in, over HTTP — the base the portal's Ops and HITL work builds on | OTS's CD workflows send and receive by contract; the two sync scripts go |
+| **C4** | **Rules** — `contract/rules/v1`: the tenant's own rules (`extends`), the managed-block markers; `<rules> render` and `<rules> check`. The registry stays the gate provider's policy, not a published document a tenant may hold (`rules-contract.md`) | Tenant B's tenant rules move into its declaration and its CI calls the declared check; its vendored `templates/` and `generate-ide-config.py` are then read by nothing, and leave with vendoring at C9 |
+| **C5** | **Telemetry** — `contract/telemetry/v1`: resource and span attributes as a schema (from the Wire Contract table), OTLP, a conformance check over exported spans | Tenant B's template spans (its only span code, in the frozen template work — its committed code imports nothing from `runtime/`) move to plain OpenTelemetry against the catalogue; KYC stays on the pinned library and its export passes; vendored `runtime/` is then imported by none of Tenant B's code and leaves at C9 (`telemetry-contract.md`) |
+| **C6** | **Evals** — `contract/evals/v1`: dataset format the tenant owns, suites, the verdict and scorecard schema, threshold semantics; `<evals> run` | Tenant B's eval workflows call the declared command against its own datasets |
+| **C7** | **Security** — `contract/security/v1`: the `SEC-*` control registry, evidence packs, the harness verdict, the redaction check; `<security> check` | Tenant B's security and redaction steps call the command; vendored `fixtures/security/` goes |
+| **C8** | **Ops records** — `contract/ops/v1`: run history out, HITL and UI feedback in, over HTTP — the base the portal's Ops and HITL work builds on | Tenant B's CD workflows send and receive by contract; the two sync scripts go |
 | **C9** | **Vendoring retired.** `sync` and `upgrade` stop vendoring; `upgrade` is removed; `install-ai-stack.sh` installs the provider, not a tenant's copy | no tenant holds a framework file: a check in `verify_system --governed` fails if one does |
 
 C1 goes first because every tenant's CI depends on it and it removes the largest copy. C2–C3 finish
@@ -128,14 +128,14 @@ CI checkout is not.
 
 **Deliberately not done here:** the portal's own administration and HITL screens (they consume C8,
 and are their own designs); a public contract repository (it moves out the day a second platform
-adopts one, as `governance-providers.md` decided); anything in OTS's core function.
+adopts one, as `governance-providers.md` decided); anything in Tenant B's core function.
 
 ## Pillars
 
 - P1 applies — `.agent-rfc/designs/governance-providers.md` is the architecture this finishes; the owner's principle and the measured coupling are in Problem, and every slice will have its own design before code.
 - P2 applies — `contract/gate/v1/protocol.md` is the shape every new contract copies — verb, JSON in, one result out, exit 3 — and the conformance runner `agentsmith conformance` is extended, not duplicated. No dependency is added by this document.
 - P3 applies — `CHANGELOG.md`'s Wire Contract table is what C5 publishes as a schema; each command port's slice states the span its provider emits per invocation.
-- P4 applies — `contract/gate/v1/cases.json` is the model: every contract ships golden cases and a conformance run, AgentSmith's own implementation is scored by them, and each slice ends with a real tenant (scratch tenants, OTS, KYC) running on it.
+- P4 applies — `contract/gate/v1/cases.json` is the model: every contract ships golden cases and a conformance run, AgentSmith's own implementation is scored by them, and each slice ends with a real tenant (scratch tenants, Tenant B, KYC) running on it.
 - P7 n/a — no code in this design; each slice answers it for its stack.
 - P8 applies — `CHANGELOG.md`'s Wire Contract table: telemetry stays OTLP with documented attributes; C5 turns the table into a schema rather than inventing a wire.
 - P9 n/a — no orchestration.

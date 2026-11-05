@@ -79,9 +79,9 @@ drops the mark the day it catches something. Cite one from code as
 - `early-exit-keeps-the-record` — **(+++)** A raise or return between recording and deciding skips the record.
 - `check-that-fires-on-everything` — **(2026-08-28)** A result too large to match the code is a broken query, not a discovery.
 - `test-that-pins-a-defect` — **(2026-08-28)** A docstring justifying behaviour by history rather than a requirement is a lock, not diligence.
-- `fixture-truth` — **(2026-09-12, from AqlaarTeleologyStudio)** Do not prove "not mock" by forbidding strings that real seed or shared fixtures also use — assert a unique created name, an auth header, or the signed-in chrome.
+- `fixture-truth` — **(2026-09-12, from Tenant B)** Do not prove "not mock" by forbidding strings that real seed or shared fixtures also use — assert a unique created name, an auth header, or the signed-in chrome.
 
-## 7 · Auth & session integrity **(+ new group, 2026-09-12, from AqlaarTeleologyStudio)**
+## 7 · Auth & session integrity **(+ new group, 2026-09-12, from Tenant B)**
 
 For any cookie, bearer, or dual client/server session. Skip if the slice has no auth.
 

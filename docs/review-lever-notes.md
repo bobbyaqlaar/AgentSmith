@@ -385,7 +385,7 @@ a correct page, because neither state contains the forbidden string. Assert a
 positive signal instead: a uniquely created name, an auth header, or the
 signed-in chrome.
 
-*Caught (AqlaarTeleologyStudio): `expect("Acme Corp").toHaveCount(0)` after
+*Caught (Tenant B): `expect("Acme Corp").toHaveCount(0)` after
 SSO sign-in, meant to prove the mock tenant was gone — but the API's own seed
 data IS "Acme Corp", and the same assertion passed on the loading skeleton
 before any card had rendered.*
@@ -400,7 +400,7 @@ header — and if precedence between them is never written down, whichever one
 happens to be checked first becomes the de facto rule, silently, and a weaker
 channel can end up impersonating a stronger one.
 
-*Caught (AqlaarTeleologyStudio): a server component read a Bearer token off a
+*Caught (Tenant B): a server component read a Bearer token off a
 header the browser could set directly; client-side `sessionStorage` expired
 about 30 seconds before the access cookie it was meant to mirror, so which one
 "won" depended on timing.*
@@ -412,7 +412,7 @@ even when it is only meant for same-request, server-to-server forwarding.
 Left unstripped past the point it was forwarded for, it becomes a channel a
 client can drive on its own.
 
-*Caught (AqlaarTeleologyStudio): `x-ots-refreshed-access` accepted from the
+*Caught (Tenant B): `x-refreshed-access` accepted from the
 client directly, until stripped on every continue path and set only after a
 successful server-side token exchange.*
 
@@ -424,7 +424,7 @@ cookie visible to `cookies()` or the app server within the SAME request/render
 request needs the new value, it has to be forwarded explicitly, not read back
 out of the cookie jar.
 
-*Caught (AqlaarTeleologyStudio): an idle SSO deep link 401'd until the new
+*Caught (Tenant B): an idle SSO deep link 401'd until the new
 access token was forwarded as an explicit request header instead of being
 re-read from `cookies()` in the same render that had just set it.*
 
@@ -435,7 +435,7 @@ a user signs out or navigates away can complete AFTER the sign-out and put the
 session back. Fire-and-forget logout and refresh calls need a keepalive,
 an await, or a generation/cancelled flag so a late response cannot win.
 
-*Caught (AqlaarTeleologyStudio): a `void fetch("/logout")` aborted mid-flight
+*Caught (Tenant B): a `void fetch("/logout")` aborted mid-flight
 by the Keycloak redirect it triggered; a token-refresh handler calling
 `setAuthSession` after sign-out had already cleared it, reviving the session
 it was told to end.*
@@ -447,6 +447,6 @@ an identity provider, and a failed refresh must clear the session outright —
 treating a failed refresh as `no-fake-offline-fallback`'s offline/mock state
 just hides an ended session behind a UI that looks like a network hiccup.
 
-*Caught (AqlaarTeleologyStudio): a failed middleware refresh left both the
+*Caught (Tenant B): a failed middleware refresh left both the
 access and refresh cookies in place until an explicit `clearTokenCookies`
 call was added to the failure path.*

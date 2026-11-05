@@ -16,7 +16,7 @@ tenant takes the provider from a tag, and the ports C9 added are only in a relea
 - `evals run --fail-below`;
 - composite actions referenced at the provider.
 
-OTS's and KYC Sentinel's moves wait on it. The owner chose a MAJOR on 2026-10-13 and asked for the
+Tenant B's and KYC Sentinel's moves wait on it. The owner chose a MAJOR on 2026-10-13 and asked for the
 release on 2026-10-14.
 
 ## Approach
@@ -33,7 +33,7 @@ release on 2026-10-14.
   The 3.0.x row names each, and the order a 2.x tenant moves in.
 - **Nothing a 2.x tenant runs stops at once, and the row says so.** A vendored copy keeps
   running by path until the tenant moves. `sync` names it and never deletes or refreshes it. The
-  row gives the order, because two replacements exist only from 3.0.0 (checked against OTS's and
+  row gives the order, because two replacements exist only from 3.0.0 (checked against Tenant B's and
   KYC's workflows on 2026-10-14):
   1. re-run the installer on each machine;
   2. pin the setup step and actions `@v3.0.0`, and `agentsmith sync` for the 3.0.0 launcher;
@@ -54,7 +54,7 @@ release on 2026-10-14.
   - `docs/PRODUCT_BACKLOG.md`: v3.0.0 is the latest release, and C9's tenants can move.
   - `docs/PRODUCT_ARCHIVE.md`: the release.
   - The C9 design is marked done.
-  - The governance-contracts design stays active until OTS and KYC have moved.
+  - The governance-contracts design stays active until Tenant B and KYC have moved.
 - **Merged by rebase.** Then an annotated tag `v3.0.0` on the merged commit, pushed;
   `release.yml` publishes it.
 

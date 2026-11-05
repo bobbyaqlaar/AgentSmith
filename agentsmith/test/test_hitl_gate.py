@@ -320,7 +320,7 @@ def _approval_wait_sources(root: Path) -> tuple[list[Path], int]:
     In a TENANT, where agentsmith/ is vendored and `examples/` never is: the
     tenant's own Python, which is where a pasted copy of the example actually
     lives. The sweep used to read `examples/` unconditionally, found only
-    agentsmith/workflows' 2 files in AqlaarTeleologyStudio, and failed SEC-HITL-001
+    agentsmith/workflows' 2 files in Tenant B, and failed SEC-HITL-001
     on its own sanity guard. The guard there is the vendored workflows
     themselves — always present, so an empty sweep still fails.
     """

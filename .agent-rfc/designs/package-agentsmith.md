@@ -46,7 +46,7 @@ launch.
   - History: `CHANGELOG.md`'s released sections, `docs/PRODUCT_ARCHIVE.md`, `docs/REVIEW_LOG.md` and `.agent-rfc/` records.
   - English: "at runtime", the portal's Edge runtime, "the production runtime".
   - The label of the required check `Python scripts/runtime/examples`: `main` requires it by name, so changing it is a branch-protection decision.
-- **KYC Sentinel moves in its own PR** after the release, the one tenant importing the library. OTS imports nothing of it.
+- **KYC Sentinel moves in its own PR** after the release, the one tenant importing the library. Tenant B imports nothing of it.
 
 ## Pillars
 

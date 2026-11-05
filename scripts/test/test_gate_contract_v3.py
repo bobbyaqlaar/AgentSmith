@@ -385,7 +385,7 @@ EVALS_WITH_MAPS = {"command": "agentsmith evals", "version": "^2", "contract": 1
 
 
 def test_a_port_with_maps_does_not_change_the_gate_contract(tmp_path):
-    """KYC Sentinel's and OTS's shape: an evals port carrying the maps its
+    """KYC Sentinel's and Tenant B's shape: an evals port carrying the maps its
     contract allows read as gate contract 1 — its own `"contract": 1` survived a
     one-level strip and was taken for the declaration's."""
     declaration = {"_about": "x", "contract": 3, "providers": {

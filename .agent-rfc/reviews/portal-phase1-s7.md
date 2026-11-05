@@ -40,7 +40,7 @@ Design: `.agent-rfc/designs/portal-phase1.md` (S7, corrected while building — 
 Every lever over the final diff, the manual's new section and the regenerated gates table.
 Considered and declined:
 
-- Sending from KYC Sentinel and OTS now. Each runs its own gate job and would need its own design
+- Sending from KYC Sentinel and Tenant B now. Each runs its own gate job and would need its own design
   and its secrets set by the owner; the manual's two lines are what they would add.
 - Retrying a failed send. The next push sends the range again, and the ingest is an upsert on
   (app, commit); a retry loop inside a CI step would add minutes for nothing the next run does

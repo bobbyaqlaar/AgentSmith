@@ -13,7 +13,7 @@ scope:
 `launcher-reads-declaration` (added after this design was first written, found the same day) makes
 the launcher read a declaration whose evals port carries warning maps as the gate contract it
 declares. A tenant's eval job pins the setup step to a release, so the fix reaches none until one is
-cut — and AqlaarTeleologyStudio's move onto the evals contract, the owner's request of 2026-10-09,
+cut — and Tenant B's move onto the evals contract, the owner's request of 2026-10-09,
 pins its eval jobs to it.
 
 ## Approach

@@ -373,11 +373,11 @@ def test_an_unclean_review_blocks_the_commit():
 
 
 def test_levers_come_from_the_repos_configured_doc():
-    """OTS validates against its OWN review-levers.md, which extends the
+    """Tenant B validates against its OWN review-levers.md, which extends the
     framework's: a lever that exists only there must count there."""
-    local = LEVERS + "\n- `ots-only-lever` — a repo-local addition.\n"
+    local = LEVERS + "\n- `tenant-only-lever` — a repo-local addition.\n"
     config = pg.Config({"gated": ["scripts/**", pg.CONFIG], "levers_doc": "docs/local-levers.md"})
-    design = DESIGN.replace("`gate-integrity`", "`ots-only-lever`")
+    design = DESIGN.replace("`gate-integrity`", "`tenant-only-lever`")
     store = {".agent-rfc/designs/change.md": design, ".agent-rfc/reviews/change.md": REVIEW_CLEAN,
              "docs/local-levers.md": local}
     assert _check(["scripts/lib/a.py", ".agent-rfc/reviews/change.md"], store=store, config=config) == ([], [])

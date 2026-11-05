@@ -10,7 +10,7 @@ scope:
 ## Problem
 
 The Ops contract (C8, `ops-contract`) is merged (#52), and a tenant moves onto it only through a
-release: its worker and CI take the provider from a tag. OTS's and KYC Sentinel's moves wait on it,
+release: its worker and CI take the provider from a tag. Tenant B's and KYC Sentinel's moves wait on it,
 and so does an operator issuing Ops tokens and replay keys from a portal built at a tag. The owner
 asked for the release on 2026-10-12.
 
@@ -21,7 +21,7 @@ asked for the release on 2026-10-12.
   - A vendored tenant keeps its own `scripts/sync-portal-history.py`, because a sync merges vendored
     files and never deletes one. The four `_shared.py` helpers it imports are all still there.
   - The route it posts to stays served while the portal keeps `OPS_PORTAL_SYNC_TOKEN`.
-  - No tenant workflow calls `verify_system.py --check-history-sync` (OTS, KYC Sentinel and
+  - No tenant workflow calls `verify_system.py --check-history-sync` (Tenant B, KYC Sentinel and
     oil-price-demo were searched).
 
   The row names what does change for a tenant or an operator:

@@ -11,7 +11,7 @@ scope:
 
 The security contract (C7, `security-contract`) is merged, and a tenant moves onto it only through a
 release: its CI installs the provider through the setup step pinned to a tag, and its launcher comes
-from a sync to that tag. KYC Sentinel's and AqlaarTeleologyStudio's moves wait on it. The owner asked
+from a sync to that tag. KYC Sentinel's and Tenant B's moves wait on it. The owner asked
 for the release on 2026-10-10.
 
 ## Approach

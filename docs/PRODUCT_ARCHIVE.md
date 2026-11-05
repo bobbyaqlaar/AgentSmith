@@ -43,10 +43,10 @@ non-negotiable: AgentSmith and its tenants are decoupled by contract.
   AgentSmith is one implementation of each, with conformance checks another can run.
 - **Released across v2.1.0 to v3.0.0.** 3.0.0 retired vendoring: no tenant holds a copy of AgentSmith,
   and no git hook is armed outside a repository.
-- **Both tenants moved through every slice they use.** OTS ended at #10 and KYC Sentinel at #6.
+- **Both tenants moved through every slice they use.** Tenant B ended at #10 and KYC Sentinel at #6.
   oil-price-demo, never moved, is archived.
 - **Left to the owner, as content:**
-  - OTS's ruff errors in its frozen core;
+  - Tenant B's ruff errors in its frozen core;
   - its risk register and agency manifest;
   - golden cases that carry its application's outputs.
 
@@ -54,7 +54,7 @@ non-negotiable: AgentSmith and its tenants are decoupled by contract.
 
 Design: `.agent-rfc/designs/release-3-0-0.md`; review: `.agent-rfc/reviews/release-3-0-0.md`.
 
-A MAJOR carrying C9: a tenant holds no copy of AgentSmith and asks the providers it declares. The 3.0.x row in `CHANGELOG.md` names what a 2.x tenant and machine lose, what keeps running stale until a tenant moves, and the order to move in, checked against OTS's and KYC Sentinel's workflows. The scratch tenants found two defects vendoring had hidden before the tag: `kg check` needed networkx in the provider's CI setup (#55), and the Python template's bare `pytest` could not import an app beside `tests/` (#56). Merged by rebase; tagged `v3.0.0` on the merged commit.
+A MAJOR carrying C9: a tenant holds no copy of AgentSmith and asks the providers it declares. The 3.0.x row in `CHANGELOG.md` names what a 2.x tenant and machine lose, what keeps running stale until a tenant moves, and the order to move in, checked against Tenant B's and KYC Sentinel's workflows. The scratch tenants found two defects vendoring had hidden before the tag: `kg check` needed networkx in the provider's CI setup (#55), and the Python template's bare `pytest` could not import an app beside `tests/` (#56). Merged by rebase; tagged `v3.0.0` on the merged commit.
 
 ## Completed — C9: vendoring retired (2026-10-13)
 
@@ -125,7 +125,7 @@ A PATCH carrying `setup-evals-provider` — `setup-agentsmith` installs `httpx`,
 job that installs the provider through it can call its judge; before, every judged suite answered no
 verdict — and `launcher-reads-declaration` — the launcher reads `providers.json` by its structure, so
 an evals port with warning maps no longer reads as gate contract 1 (KYC Sentinel had, since
-2026-10-07). Found moving AqlaarTeleologyStudio's evals onto the contract; its eval jobs pin this
+2026-10-07). Found moving Tenant B's evals onto the contract; its eval jobs pin this
 release. Tagged `v2.2.3`.
 
 ## Released — v2.2.2 (2026-10-08)
@@ -190,11 +190,11 @@ Slice C5 of `.agent-rfc/designs/governance-contracts.md`, the first Ops port.
 - **`contract/telemetry/v1/`**: OTLP and a catalogue of 84 names — Resource and span attributes,
   families, span names, instruments — with `governance.telemetry.contract` on the Resource.
 - **Judged by what is exported**, never by the emitter's code: a loopback OTLP receiver for
-  `--emitter`, OTLP/JSON for `--export`. The runtime library, a plain-OpenTelemetry stub and OTS's
+  `--emitter`, OTLP/JSON for `--export`. The runtime library, a plain-OpenTelemetry stub and Tenant B's
   template CLI pass; emitters that break it fail.
 - **Every emitted name catalogued**, checked by an inventory of the framework's emitters; the portal
   and the CHANGELOG's Wire Contract table pinned to the same file.
-- **OTS**: its only span code moved to plain OpenTelemetry, as a governance-only change to the frozen
+- **Tenant B**: its only span code moved to plain OpenTelemetry, as a governance-only change to the frozen
   template work at the owner's direction — uncommitted there, 9/9 against the contract. Its own code
   now imports nothing from its vendored `runtime/`.
 
@@ -212,7 +212,7 @@ Slice C4 of `.agent-rfc/designs/governance-contracts.md`.
 - **`"provider"`** names the gate provider's documents in a tenant's config. Dropping the keys, as
   designed, would have weakened the gate — an absent `registry` marks a config older than the pillar
   requirements — so the design was amended while building.
-- **Tenant steps wait for the release**: OTS declares the port and stops running its vendored
+- **Tenant steps wait for the release**: Tenant B declares the port and stops running its vendored
   renderer; KYC's `@framework/` values become `"provider"`.
 
 ## Completed — C3: the record contract (2026-10-04)
@@ -260,7 +260,7 @@ Slice C1 of `.agent-rfc/designs/governance-contracts.md`.
 - **A hole closed on the way**: an adopted tenant did not gate `providers.json`, and at contract 2 an
   unreviewed `"gate": "none"` would have switched CI off. Found by this slice's own test; the gate now
   governs the declaration and its config always, and contract 2 requires it of every provider.
-- **Proving it waits for the release**: the scratch tenants, KYC and OTS move once v2.1.0 carries the
+- **Proving it waits for the release**: the scratch tenants, KYC and Tenant B move once v2.1.0 carries the
   setup action.
 
 ## Completed — `sync` brings a tenant armed before the sweep current (2026-10-02)
@@ -268,7 +268,7 @@ Slice C1 of `.agent-rfc/designs/governance-contracts.md`.
 Design: `.agent-rfc/designs/sync-adds-missing-hooks.md`; review:
 `.agent-rfc/reviews/sync-adds-missing-hooks.md`.
 
-Closes the backlog row "`agentsmith sync` cannot bring KYC Sentinel or OTS current", opened the same
+Closes the backlog row "`agentsmith sync` cannot bring KYC Sentinel or Tenant B current", opened the same
 day when a sync in KYC armed three hooks it never committed and printed a commit KYC's gate refused.
 Owner decision recorded there: a sync gives a tenant the gate hooks it is missing.
 
@@ -527,7 +527,7 @@ Release notes: `CHANGELOG.md` [Unreleased]; still open: `docs/PRODUCT_BACKLOG.md
 | Pip cache failed every Go/TS eval job at `setup-python` | first scratch go/ts CI run | cache keyed on the workflow file |
 | `ci-ts-react.yml` assumed Jest and a `tsc` script | stock `create-vite` tenant red | runner-agnostic test, `tsc -b` fallback |
 | 36 framework-internal tests failed in a stock Python tenant | scratch python CI | vendor only the 5 harness-delegated tests |
-| Vendored code failed the tenant's ruff gates (609 of 746 findings in OTS) | AqlaarTeleologyStudio CI | nested `ruff.toml` excludes |
+| Vendored code failed the tenant's ruff gates (609 of 746 findings in Tenant B) | Tenant B CI | nested `ruff.toml` excludes |
 | CD could deploy commits whose CI failed (ran in parallel on `push`) | template reading | `workflow_run`, success only |
 | `.pyc` committed into a fresh Go tenant | scratch go first commit | `PYTHONDONTWRITEBYTECODE` in the hook |
 | Vendoring shadowed KYC Sentinel's pinned runtime | hook-free clone of KYC | installed mode |
@@ -1391,7 +1391,7 @@ they are not re-litigated.
 
 ### What was built
 
-Full end-to-end deploy of two repos to GCP Cloud Run (`agentsmith-500916`, us-central1)
+Full end-to-end deploy of two repos to GCP Cloud Run (`PROJECT_ID`, us-central1)
 via GitHub Actions with keyless Workload Identity Federation auth.
 
 | Item | Status |
@@ -1480,7 +1480,7 @@ applies only when cloning FROM WITHIN the AgentSmith directory.
 | `AGENT_JUDGE_MODEL` | ✅ `llama-3.3-70b-versatile` | ✅ set |
 | `ANTHROPIC_API_KEY` | ✅ present (zero balance — Groq is fallback) | ✅ set |
 
-**GCP resources provisioned (project: `agentsmith-500916`, us-central1):**
+**GCP resources provisioned (project: `PROJECT_ID`, us-central1):**
 - Cloud SQL Postgres: `temporal-pg` (db-f1-micro, public IP `35.255.14.25`, ssl-mode=ENCRYPTED_ONLY)
 - Cloud Run: `temporal-server` (min-instances=1, BIND_ON_IP=0.0.0.0, SQL_TLS_ENABLED=true)
 - Cloud Run: `oil-price-worker-staging` (deployed; /healthz 404 anomaly under investigation, not blocking)
@@ -1489,7 +1489,7 @@ applies only when cloning FROM WITHIN the AgentSmith directory.
 - WIF pool: `github-actions-pool` / provider `github-provider`
   - **Attribute condition:** `assertion.repository in ['bobbyaqlaar/oil-price-demo', 'bobbyaqlaar/AgentSmith']`
     (updated from single-repo `==` to multi-repo `in [...]` when second repo was added)
-- SA: `github-deployer@agentsmith-500916.iam.gserviceaccount.com`
+- SA: `github-deployer@PROJECT_ID.iam.gserviceaccount.com`
   - Also granted `roles/cloudsql.client` (for Cloud SQL Auth Proxy on the Compute SA — see P11c)
 - Secret Manager: `oil-price-demo-anthropic-key`, `ops-portal-user`, `ops-portal-password`,
   `ops-portal-db-url`, `ops-portal-audit-hmac-key`, `ops-portal-sync-token`
@@ -1508,7 +1508,7 @@ applies only when cloning FROM WITHIN the AgentSmith directory.
 | Secret | staging | production |
 |---|---|---|
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | ✅ set | ✅ set |
-| `GCP_SERVICE_ACCOUNT` | ✅ `github-deployer@agentsmith-500916.iam.gserviceaccount.com` | ✅ set |
+| `GCP_SERVICE_ACCOUNT` | ✅ `github-deployer@PROJECT_ID.iam.gserviceaccount.com` | ✅ set |
 | `GCP_PROJECT_ID` | ✅ set | ✅ set |
 | `DEPLOY_COMMAND` (staging) | ✅ see full command below | ✅ production equivalent |
 
@@ -1518,13 +1518,13 @@ applies only when cloning FROM WITHIN the AgentSmith directory.
 gcloud run deploy agentsmith-portal-staging \
   --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID \
   --platform managed --allow-unauthenticated \
-  --add-cloudsql-instances=agentsmith-500916:us-central1:temporal-pg \
+  --add-cloudsql-instances="$GCP_PROJECT_ID":us-central1:temporal-pg \
   --set-secrets=OPS_PORTAL_USER=ops-portal-user:latest,OPS_PORTAL_PASSWORD=ops-portal-password:latest,DATABASE_URL=ops-portal-db-url:latest,AUDIT_LOG_HMAC_KEY=ops-portal-audit-hmac-key:latest,OPS_PORTAL_SYNC_TOKEN=ops-portal-sync-token:latest
 ```
 
 **DATABASE_URL (stored in Secret Manager `ops-portal-db-url`):**
 ```
-postgresql://postgres:***@/agenticframework?host=/cloudsql/agentsmith-500916:us-central1:temporal-pg
+postgresql://postgres:***@/agenticframework?host=/cloudsql/PROJECT_ID:us-central1:temporal-pg
 ```
 Unix socket via Cloud SQL Auth Proxy — no TCP, no cert management, Google-managed mTLS.
 
@@ -1539,7 +1539,7 @@ Unix socket via Cloud SQL Auth Proxy — no TCP, no cert management, Google-mana
 3. GHCR image name preserved repo casing (`AgentSmith`) — added `| tr '[:upper:]' '[:lower:]'` to `build-push-ghcr/action.yml`.
 4. Cloud Run rejects GHCR images — added "Push to Artifact Registry" step in `cd-portal.yml` that retags and pushes before `gcloud run deploy`.
 5. `DEPLOY_COMMAND` referenced `$GCP_PROJECT_ID` but it wasn't exported — added `env: GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}` at the job level.
-6. `GCP_SERVICE_ACCOUNT` secret had wrong value — corrected to `github-deployer@agentsmith-500916.iam.gserviceaccount.com`.
+6. `GCP_SERVICE_ACCOUNT` secret had wrong value — corrected to `github-deployer@PROJECT_ID.iam.gserviceaccount.com`.
 7. Portal startup check requires `OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD` — created Secret Manager secrets and wired via `--set-secrets` in `DEPLOY_COMMAND`.
 8. `DATABASE_URL` not set — created `agenticframework` DB on Cloud SQL, ran schema migration, stored connection string in Secret Manager.
 9. SSL cert verification failure (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`) — **do not use `sslmode=no-verify`** (MITM-vulnerable). Fixed by switching to **Cloud SQL Auth Proxy** via `--add-cloudsql-instances`: Unix socket connection, IAM auth, Google-managed mTLS. Compute SA granted `roles/cloudsql.client`.
@@ -1547,13 +1547,13 @@ Unix socket via Cloud SQL Auth Proxy — no TCP, no cert management, Google-mana
 
 ---
 
-### GCP resources (project: `agentsmith-500916`, us-central1)
+### GCP resources (project: `PROJECT_ID`, us-central1)
 
 | Resource | Name / Detail |
 |---|---|
 | WIF pool | `github-actions-pool` / provider `github-provider` |
 | WIF attribute condition | `assertion.repository in ['bobbyaqlaar/oil-price-demo', 'bobbyaqlaar/AgentSmith']` |
-| Service Account | `github-deployer@agentsmith-500916.iam.gserviceaccount.com` |
+| Service Account | `github-deployer@PROJECT_ID.iam.gserviceaccount.com` |
 | Artifact Registry | `oil-price-demo` (worker images), `agentsmith-portal` (portal images) |
 | Cloud Run | `oil-price-worker-staging`, `agentsmith-portal-staging`, `agentsmith-portal-production` |
 | Secret Manager | `ops-portal-user`, `ops-portal-password`, `ops-portal-db-url`, `ops-portal-audit-hmac-key`, `ops-portal-sync-token` (mounted via `--set-secrets`) |
@@ -1571,7 +1571,7 @@ Unix socket via Cloud SQL Auth Proxy — no TCP, no cert management, Google-mana
 7. **`$GCP_PROJECT_ID` not available in `eval`** — must export as `env:` at the job level for the deploy shell to expand it.
 8. **Portal auth env vars missing** — portal refuses to serve without `OPS_PORTAL_USER`/`OPS_PORTAL_PASSWORD`; stored in Secret Manager, mounted via `--set-secrets` in `DEPLOY_COMMAND`.
 9. **`DATABASE_URL` not set** — `agenticframework` DB did not exist on Cloud SQL; had to create it, run schema migration via `psql`, and store the connection string as Secret Manager secret `ops-portal-db-url`. All remaining secrets (`AUDIT_LOG_HMAC_KEY`, `OPS_PORTAL_SYNC_TOKEN`) similarly created and wired.
-10. **SSL cert failure (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`)** — `node-postgres` with `sslmode=require` fails against Cloud SQL's Google-managed cert (not in Node's CA bundle). `sslmode=no-verify` is MITM-vulnerable and rejected. **Fixed via Cloud SQL Auth Proxy**: `--add-cloudsql-instances=agentsmith-500916:us-central1:temporal-pg` in `gcloud run deploy`; DATABASE_URL uses Unix socket `?host=/cloudsql/PROJECT:REGION:INSTANCE`. Compute SA granted `roles/cloudsql.client`.
+10. **SSL cert failure (`UNABLE_TO_VERIFY_LEAF_SIGNATURE`)** — `node-postgres` with `sslmode=require` fails against Cloud SQL's Google-managed cert (not in Node's CA bundle). `sslmode=no-verify` is MITM-vulnerable and rejected. **Fixed via Cloud SQL Auth Proxy**: `--add-cloudsql-instances="$GCP_PROJECT_ID":us-central1:temporal-pg` in `gcloud run deploy`; DATABASE_URL uses Unix socket `?host=/cloudsql/PROJECT:REGION:INSTANCE`. Compute SA granted `roles/cloudsql.client`.
 11. **Compute SA needs Secret Manager accessor** — `gcloud run deploy --set-secrets` resolves secrets using the Compute SA, not the deployer SA. Each new secret requires an explicit `gcloud secrets add-iam-policy-binding` for the Compute SA before deploy.
 
 ### New files

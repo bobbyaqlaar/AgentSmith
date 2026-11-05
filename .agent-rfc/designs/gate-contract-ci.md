@@ -31,7 +31,7 @@ Every governed tenant's CI runs the gate by path:
   `.agentsmith-framework/scripts/send_dev_record.py` — two framework paths in a tenant file;
 - KYC Sentinel's hand-written job does the same against a checkout of AgentSmith **at no ref** —
   whatever `main` is that minute;
-- OTS runs a **vendored** copy, `scripts/process_gate.py`, committed in OTS and 1,318 lines behind.
+- Tenant B runs a **vendored** copy, `scripts/process_gate.py`, committed in Tenant B and 1,318 lines behind.
 
 `contract/gate/v1` cannot carry this: it defines `session-start`, `pre-edit` and `stop`, and says a
 provider that does not answer an event lets the caller "try the next one". For a CI check that
@@ -114,10 +114,10 @@ between building C1 and proving it. CHANGELOG calls it out as a hook-interface c
    declaration; their CI must go green through the provider.
 2. **KYC Sentinel**, after its pending sync: its declaration moves to contract 2, its hand-written
    process-gates job is replaced by the shim, and the unpinned checkout of `main` is gone.
-3. **OTS** (its own design, in OTS): declares `providers.json`, takes the shim, removes the gate job
+3. **Tenant B** (its own design, in Tenant B): declares `providers.json`, takes the shim, removes the gate job
    from `ci-python-fastapi.yml`, and deletes its vendored `process_gate.py`, `gate_*.py` and
    `requirements-gate.txt` — unless another vendored script still imports them, in which case those
-   files leave with the slice that retires that script, and the OTS design names which.
+   files leave with the slice that retires that script, and the Tenant B design names which.
 
 **Deliberately not done:** `commit-msg`, `sweep`, `pre-push` and the knowledge graph (C2); the record
 as a published wire contract (C3); AgentSmith's own `self-test.yml`, which runs the gate it ships and

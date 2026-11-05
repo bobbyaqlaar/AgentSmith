@@ -231,7 +231,7 @@ def test_a_forced_rerun_still_vouches_for_what_the_first_run_wrote(scaffold):
 
 
 def test_the_manifest_is_not_asked_to_vouch_for_itself_and_nothing_else_escapes():
-    """Where a tenant gates `.agenticframework/**` (KYC Sentinel, OTS), the
+    """Where a tenant gates `.agenticframework/**` (KYC Sentinel, Tenant B), the
     manifest is a gated file in every commit that vouches by it, and no file can
     carry its own hash: every sync commit there was refused. It is the check's
     input, so it is skipped — and only it (.agent-rfc/designs/sync-adds-missing-hooks.md)."""

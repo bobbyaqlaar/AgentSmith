@@ -50,7 +50,7 @@ Measured on 2026-10-10:
   wherever it points.
 - **The CD history sync is hollow.** `.agent-history.log` is gitignored in AgentSmith and KYC, so a
   CD checkout has none; `sync-portal-history.py` sends only the budget cap and the replay webhook.
-  OTS's CD and the workflow templates run it, and `sync-ui-feedback.py` (Phoenix annotations into
+  Tenant B's CD and the workflow templates run it, and `sync-ui-feedback.py` (Phoenix annotations into
   the golden dataset), by path.
 - **No published shape**: the run-status body is documented in a route comment, the dead letter in a
   DDL, the replay request in a function.
@@ -164,7 +164,7 @@ live) and its `replay_webhook_server.py` are each scored by them.
 
 ### Tenant steps — after the release that carries it
 
-- **OTS**: its CD drops the history and the UI-feedback steps (both run its vendored scripts by path);
+- **Tenant B**: its CD drops the history and the UI-feedback steps (both run its vendored scripts by path);
   it has no worker, so it sends `settings` from CD with `agentsmith ops settings` through the setup
   step it already has — a step that says it sent nothing while no Ops address is configured.
 - **KYC Sentinel**: `tenant.yaml`'s HITL comment stops telling an operator to put the replay secret
@@ -173,7 +173,7 @@ live) and its `replay_webhook_server.py` are each scored by them.
 
 **Deliberately not done:** moving the portal's DLQ table out of a database a tenant may still share
 (the HTTP path makes sharing unnecessary; removing the option is C9's or later); the in-app widget's
-status feed (an end-user read, not an Ops record); OTS's own telemetry.
+status feed (an end-user read, not an Ops record); Tenant B's own telemetry.
 
 ## Pillars
 

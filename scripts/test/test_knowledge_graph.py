@@ -298,7 +298,7 @@ def test_walker_extracts_guardrails(repo):
 def test_walker_extracts_superpowers_guardrails_alongside_rfc(repo):
     """A repo using the superpowers skill's docs/superpowers/{specs,plans}
     instead of (or alongside) .agent-rfc/ must not go invisible to the graph
-    just because .agent-rfc/ is empty or absent — see AqlaarTeleologyStudio,
+    just because .agent-rfc/ is empty or absent — see Tenant B,
     the tenant this was found against."""
     _write_sample(repo)
     specs = repo / "docs" / "superpowers" / "specs"

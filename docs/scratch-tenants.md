@@ -28,7 +28,7 @@ committed into a fresh Go repo. The pnpm and uv apps were added for the next
 two: the TS template assumed npm and the Python template installed nothing but
 a `requirements.txt`, so a pnpm tenant failed before its first check and a uv
 tenant's tests failed at import. None showed up in `pytest`, and none in
-AqlaarTeleologyStudio, whose customised test step hid them.
+Tenant B, whose customised test step hid them.
 
 **Expected state: every tenant's CI fully green.** Every tenant gets the same
 filled-in security pack (a labelled fixture, `security-pack/`) precisely so

@@ -421,7 +421,7 @@ _BEFORE_G3 = (".githooks/pre-commit", ".githooks/pre-push", ".githooks/chain")
 
 @pytest.fixture()
 def armed_before_g3(tmp_path, monkeypatch):
-    """Shaped like KYC Sentinel and OTS on 2026-10-02: the gates armed with two of
+    """Shaped like KYC Sentinel and Tenant B on 2026-10-02: the gates armed with two of
     the five hooks — `pre-commit`, `pre-push` and `chain` did not exist yet — and
     `.agenticframework/**` gated, so the manifest is a gated file."""
     monkeypatch.setenv("HOME", str(tmp_path / "home"))

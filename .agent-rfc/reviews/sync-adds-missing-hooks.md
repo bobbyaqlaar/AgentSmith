@@ -7,7 +7,7 @@ Levers: `docs/review-levers.md`
 
 1. **The scope editor read scope lines differently from the gate.** `extend_design_scope`
    recognised a list item only as exactly `  - path`; the gate's `front_matter` reads any
-   indentation (`^\s+-\s+`). On a hand-written design indented otherwise — KYC and OTS armed
+   indentation (`^\s+-\s+`). On a hand-written design indented otherwise — KYC and Tenant B armed
    by hand — the editor would see an empty list, append every path again, and leave a
    scope with duplicates and mixed indentation. It now reads items with the gate's own
    pattern and appends at the indentation the list already uses.

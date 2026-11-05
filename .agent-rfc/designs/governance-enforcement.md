@@ -57,15 +57,15 @@ scope:
 ---
 # Governance enforcement: rules followed without exception, in any IDE
 
-Owner decisions: OTS `docs/PRODUCT_BACKLOG.md` § "PB-104 scope", 2026-09-15 (rounds 1–2).
-Tenant counterpart: OTS `.agent-rfc/designs/governance-enforcement-tenant.md`.
+Owner decisions: Tenant B `docs/PRODUCT_BACKLOG.md` § "PB-104 scope", 2026-09-15 (rounds 1–2).
+Tenant counterpart: Tenant B `.agent-rfc/designs/governance-enforcement-tenant.md`.
 **Status: approved 2026-09-15.** Deviations D3 and D4 were approved by the owner in chat. D1/D2 were withdrawn: the owner chose option B, so hooks run in the framework environment with Pydantic and OTel. Chat was the bootstrap channel because `agentsmith approve` doesn't exist yet. Once G1 lands, the owner re-records D3/D4 with `agentsmith approve` so the gate can resolve them.
 
 ## Problem
 
 AgentSmith exists so that governed repos get it right the first time. In practice only what a gate checks is followed; what the rule files say is followed from memory.
 
-Evidence from OTS template slices S1/S2, 2026-09-15:
+Evidence from Tenant B template slices S1/S2, 2026-09-15:
 - no OTel spans;
 - dataclasses instead of Pydantic;
 - the knowledge graph was not queried;
@@ -87,19 +87,19 @@ Root causes:
    - `git commit --no-verify`, an unarmed clone, or `-c core.hooksPath=` skip `commit-msg`.
    - CI reports only after the push, and without paid branch protection cannot refuse it.
    - The owner ruled out a GitHub dependency: enforcement must live in the IDE and on the machine.
-4. **CI steps that pass on failure.** Tenant workflows carry `continue-on-error` / `|| true` on governance steps (OTS `ci-python-fastapi.yml` lines 111, 128, 134).
+4. **CI steps that pass on failure.** Tenant workflows carry `continue-on-error` / `|| true` on governance steps (Tenant B `ci-python-fastapi.yml` lines 111, 128, 134).
 5. **The KG is optional.**
    - It isn't built at onboarding, isn't committed in tenants, and its freshness isn't blocking.
    - Reviews re-read files instead of querying impact, which is slow and token-heavy.
 6. **Too many overlapping documents.**
    - AgentSmith has `SPECS.md` + `OPERATIONS.md` + `FIXES_AND_CLEANUP.md` + `ReviewFindings-*` + `TestCoverageReview-*` + `TestbedFeedback-*` + `.agent-rfc/{designs,reviews}` + `docs/superpowers`.
-   - OTS has two READMEs, two `CRITICAL_REVIEW_*`, a TODO plan, 22 specs + 31 plans, and review sections inside the backlog.
+   - Tenant B has two READMEs, two `CRITICAL_REVIEW_*`, a TODO plan, 22 specs + 31 plans, and review sections inside the backlog.
    - Agents don't know which one governs.
-7. **One source of rules, missing downstream.** OTS has no `templates/agent-rules.yaml`, so its rule files were hand-edited and the drift check prints "skipped" (`ambiguous-signals`).
+7. **One source of rules, missing downstream.** Tenant B has no `templates/agent-rules.yaml`, so its rule files were hand-edited and the drift check prints "skipped" (`ambiguous-signals`).
 
 ## Approach
 
-Seven slices, each designed, built, reviewed (passes until 0) and signed off before the next. The tenant (OTS) side of each slice lands in the same session (owner: "implement both sides together").
+Seven slices, each designed, built, reviewed (passes until 0) and signed off before the next. The tenant (Tenant B) side of each slice lands in the same session (owner: "implement both sides together").
 
 ### Owner decisions — 2026-09-16 (sequencing)
 
@@ -118,10 +118,10 @@ scope-derived pillar subset trailing their prerequisites:
 2. **G5a — the artifact registry, the `artifacts` check, `records: single` and the
    cross-reference rule, as code.** Split from the migrations below: enforcement must not wait
    behind renaming references in three repos.
-3. **G6 — mechanical checks**, starting with the two pillars OTS actually violated (tracing,
+3. **G6 — mechanical checks**, starting with the two pillars Tenant B actually violated (tracing,
    Pydantic models) and the resolution of evidence tokens (below).
 4. **G2 — IDE adapters.** 5. **G4 — knowledge-graph impact.** 6. **G7 — onboarding.**
-   **G5b — migrations: OTS first** (its sprawl is what confuses agents today), **AgentSmith
+   **G5b — migrations: Tenant B first** (its sprawl is what confuses agents today), **AgentSmith
    second** (the framework must follow the rule it ships, or the `artifacts` check never runs
    against the repo that defines it).
 
@@ -342,11 +342,11 @@ files under this one, and the stop gate's findings changed between turns.
   | test_script | `docs/manual-test-script.md` | Tenant option |
   | changelog | `CHANGELOG.md` | Only where the repo releases to tenants (AgentSmith) |
 
-  `ignored` covers git-ignored personal files (e.g. OTS `docs/DemoScript.md`). `reference` globs cover shipped product docs that aren't project records (AgentSmith `docs/process-gates.md`, `review-levers.md`, checklists).
+  `ignored` covers git-ignored personal files (e.g. Tenant B `docs/DemoScript.md`). `reference` globs cover shipped product docs that aren't project records (AgentSmith `docs/process-gates.md`, `review-levers.md`, checklists).
 - **Mode, per repo (amended while building G5a, 2026-09-17).** `.agenticframework/process-gates.json`
   gains `artifacts: "off" | "report" | "enforce"`, default `off`. The check ships in G5a; the
   documents move in G5b, and a repo that has not migrated would otherwise block every commit on
-  files it is not allowed to delete yet. AgentSmith and OTS run `report` from G5a — the check says
+  files it is not allowed to delete yet. AgentSmith and Tenant B run `report` from G5a — the check says
   exactly what the migration has to fix — and G5b flips each to `enforce` in the same change that
   finishes its migration. `off` is for a repo that has not adopted the registry at all.
 - **Cross-references travel with it.** The same mode governs the cross-reference rule (no pointer
@@ -361,12 +361,12 @@ files under this one, and the stop gate's findings changed between turns.
   - Designs become `## Active change: <slug>` sections in `docs/DESIGN.md`. Front matter is replaced by a fenced `governance` block holding `status`, `scope`, Pillars, Deviations, Dependencies and Levers. A section is folded into the living text and removed when done.
   - Reviews become `## <slug> — Pass N — findings: K` and `## <slug> — Sign-off` entries in `docs/REVIEW_LOG.md`.
   - Trailers become `Design: docs/DESIGN.md#<slug>` and `Review: docs/REVIEW_LOG.md#<slug>`. "Changed in this commit" means the log gained lines for that slug.
-  - `process-gates.json → records: "single" | "legacy"`, default `legacy`: the mode a repo has not declared is the one every repo has today. The gate accepts only the configured mode, so a repo never has two conventions. AgentSmith and OTS switch to `single`; KYC Sentinel stays `legacy` until it migrates (a logged item in the AgentSmith backlog).
+  - `process-gates.json → records: "single" | "legacy"`, default `legacy`: the mode a repo has not declared is the one every repo has today. The gate accepts only the configured mode, so a repo never has two conventions. AgentSmith and Tenant B switch to `single`; KYC Sentinel stays `legacy` until it migrates (a logged item in the AgentSmith backlog).
 - **AgentSmith's own consolidation:**
   - `FIXES_AND_CLEANUP.md` → `docs/PRODUCT_BACKLOG.md`;
   - `Product_Archive.md` → `docs/PRODUCT_ARCHIVE.md`;
   - `SPECS.md` + `docs/superpowers` + `.agent-rfc/designs` → `docs/DESIGN.md`;
-  - `ReviewFindings-*`, `TestCoverageReview-*`, `TestbedFeedback-*`, `.agent-rfc/reviews`, `docs/review-lever-notes.md` (TBC) and OTS's `review-levers-history.md` (owner: "into the review log under AgentSmith") → `docs/REVIEW_LOG.md`;
+  - `ReviewFindings-*`, `TestCoverageReview-*`, `TestbedFeedback-*`, `.agent-rfc/reviews`, `docs/review-lever-notes.md` (TBC) and Tenant B's `review-levers-history.md` (owner: "into the review log under AgentSmith") → `docs/REVIEW_LOG.md`;
   - `OPERATIONS.md` splits: high level → README, operator procedures → UserManual Administrator section, deployment architecture and runbooks → DESIGN.
 
 ### G6 — Mechanical pillar checks
@@ -481,7 +481,7 @@ files under this one, and the stop gate's findings changed between turns.
   not reproduce the runner image, the `uses:` steps before it (checkout, setup-python, caches) or
   a service container. It answers "does this gate pass here", not "is this identical to CI" —
   which is why CI stays the authority and this is the thing you run before pushing.
-- **Tenant workflows carry the same tags**, so `agentsmith gates` works in OTS and KYC Sentinel
+- **Tenant workflows carry the same tags**, so `agentsmith gates` works in Tenant B and KYC Sentinel
   from the templates they already sync.
 
 ### G7 — Onboarding completeness

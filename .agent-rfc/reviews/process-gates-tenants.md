@@ -21,8 +21,8 @@ where not adopted, launcher order, launcher fail-open at commit, installer copy)
   checked the JSON, not the exit code. Now asserts both; the mutation is caught.
 - `provenance-and-precedence` — the launcher located the repo from
   `$CLAUDE_PROJECT_DIR` before git. That variable names the Claude Code session's
-  project, so a session in AgentSmith committing in OTS would run AgentSmith's
-  gate instead of OTS's vendored copy — the opposite of the stated lookup order.
+  project, so a session in AgentSmith committing in Tenant B would run AgentSmith's
+  gate instead of Tenant B's vendored copy — the opposite of the stated lookup order.
   Now git's toplevel first, `$CLAUDE_PROJECT_DIR` only as a fallback;
   `test_the_launcher_prefers_the_repos_own_copy` sets a decoy project dir and
   fails against the old order. Doc updated to say which repository is meant.

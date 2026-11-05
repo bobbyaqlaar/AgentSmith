@@ -71,7 +71,7 @@ Built evidence before review:
 Also added `scripts/test/conftest.py`: a run collecting only `scripts/test/`
 had no state isolation (646 passed with this Mac's mode file present).
 
-Not changed: KYC Sentinel's `models.yaml` and OTS's copied workflow still
+Not changed: KYC Sentinel's `models.yaml` and Tenant B's copied workflow still
 mention `ai-mode-*`/`ai-tenant-init` in comments — tenant-owned copies that move
 on their own cadence. `agentsmith dashboard start` records the endpoint when it
 launches a standalone Phoenix even if that process later dies — as the shell

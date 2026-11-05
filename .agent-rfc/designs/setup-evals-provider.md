@@ -8,7 +8,7 @@ scope:
 ---
 # The CI setup step serves the evals provider too
 
-Found 2026-10-09 moving AqlaarTeleologyStudio's evals onto `contract/evals/v1`.
+Found 2026-10-09 moving Tenant B's evals onto `contract/evals/v1`.
 
 ## Problem
 
@@ -21,7 +21,7 @@ Found 2026-10-09 moving AqlaarTeleologyStudio's evals onto `contract/evals/v1`.
 - **The failure hides behind the contract's own exception.** A suite that cannot reach its judge
   answers `no_verdict`, and a tenant may declare `no_verdict: warn` for a judge out of quota — so a
   provider that can never grade reads as weather, every run. KYC Sentinel escaped it only because its
-  job installs the whole framework from a checkout; OTS's eval jobs would use the setup step.
+  job installs the whole framework from a checkout; Tenant B's eval jobs would use the setup step.
 
 ## Approach
 

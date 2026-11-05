@@ -257,7 +257,7 @@ records:
 # ── One artifact per type ─────────────────────────────────────────────────────
 #
 # A repo accumulates a second backlog, a third review file and four READMEs, and
-# then no agent knows which one governs (OTS had two READMEs, two CRITICAL_REVIEW
+# then no agent knows which one governs (Tenant B had two READMEs, two CRITICAL_REVIEW
 # files, a TODO plan, 22 specs and 31 plans). One file per type, named here.
 #
 # `patterns` are what a SECOND file of that type tends to be called; the gate

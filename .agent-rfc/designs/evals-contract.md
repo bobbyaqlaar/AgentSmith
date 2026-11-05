@@ -28,7 +28,7 @@ Measured on 2026-10-06:
 - **Every tenant runs the judge by path.** The eval workflow templates (`eval-scorecard.yml`,
   `eval-fairness.yml`, `eval-hallucination.yml`) run `python3 scripts/run-evals.py` — the vendored
   copy; KYC Sentinel's CI runs `$AGENTSMITH_DIR/scripts/run-evals.py` from a checkout four times;
-  OTS's eval workflows run its vendored copy.
+  Tenant B's eval workflows run its vendored copy.
 - **What a tenant owns has no published shape.** Five suites read five dataset files
   (`.agent-rfc/fixtures/{golden,fairness,hallucination,rag_poison}_evals.json`,
   `.agent-rfc/security/adversarial_evals.json`) and their judge criteria; the fields are whatever
@@ -128,7 +128,7 @@ answered is shown to fail.
 - **KYC Sentinel**: its four `run-evals.py` steps become `process-gate evals run --suite …` through
   the gates job's setup step; it declares `no_verdict: warn` for the suites its judge's free-tier
   quota exhausts, so the exception it lives with is written down.
-- **OTS**: its eval workflows call the declared command against its own datasets (governance only).
+- **Tenant B**: its eval workflows call the declared command against its own datasets (governance only).
 
 **Deliberately not done:** the TTFT and shadow evals (`verify_ttft.py`, `shadow-eval.py`) — live
 measurements against a deployed service, closer to Ops records (C8); the security harness, whose

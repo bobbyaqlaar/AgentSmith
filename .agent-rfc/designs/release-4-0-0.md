@@ -21,7 +21,7 @@ fixes the name. The owner asked for the rename and the two-stage launch on 2026-
 - **The one break that is not an import, and the row says it.** `agentsmith-sync.yml` follows the latest release, not the
   pin. A 3.x copy runs `python3 -P -m runtime.cli`, so from 4.0.0 on it fails and cannot repair itself. Run by hand,
   `agentsmith sync` rewrites it and moves the pin, tried on a repository adopted with the v3.0.1 tree.
-- **Nobody known is exposed:** KYC Sentinel and OTS do not carry that workflow, the scratch tenants are on the new line, and
+- **Nobody known is exposed:** KYC Sentinel and Tenant B do not carry that workflow, the scratch tenants are on the new line, and
   the repository has no forks. So no shim for it: the row tells an unknown adopter what to run.
 - **The gap this exposed goes on the backlog:** the scratch tenants are rebuilt from HEAD, so nothing moves a tenant from an
   earlier release forward.

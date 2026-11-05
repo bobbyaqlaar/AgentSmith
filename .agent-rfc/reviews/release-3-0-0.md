@@ -13,7 +13,7 @@ fixes, then the CI optimisation.
 
 ## Pass 1 — findings: 4
 
-Each claim in the 3.0.x row was checked in code, and against what OTS and KYC Sentinel run, read
+Each claim in the 3.0.x row was checked in code, and against what Tenant B and KYC Sentinel run, read
 from GitHub on 2026-10-14:
 
 1. `docs-match-behaviour` — **the row said the installer "puts back the `init.templateDir` it
@@ -32,7 +32,7 @@ from GitHub on 2026-10-14:
 
    **Fix:** it says what is true now: the provider's release, `ruff` and `python -m pytest`, the
    rules renderer. The design's scope gains the file, a comment and description only.
-4. `failure-mode-visibility` — **OTS and KYC declare every provider `"version": "^2"`.** Nothing
+4. `failure-mode-visibility` — **Tenant B and KYC declare every provider `"version": "^2"`.** Nothing
    reads that range: the only readers of a `version` key in `runtime/`, `scripts/` and the
    launcher are unrelated. So a 3.0.0 provider still answers them. `agentsmith sync` rewrites a
    declaration to `^{major}` only while it is the one the framework wrote. Both tenants edited
@@ -40,7 +40,7 @@ from GitHub on 2026-10-14:
    (2) of the row says so.
 
 Confirmed and kept:
-- **Nothing a 2.x tenant runs stops at once.** OTS's CD runs `python3 scripts/run-evals.py
+- **Nothing a 2.x tenant runs stops at once.** Tenant B's CD runs `python3 scripts/run-evals.py
   --fail-below`, its CI `map_codebase.py` and `verify_system.py`, its TTFT workflow
   `verify_ttft.py`, and both CDs `uses: ./.github/actions/*`. Each is its own tracked copy, run by
   path. `sync` names a copy and never deletes or refreshes one (`test_vendoring_retired.py`).
@@ -59,7 +59,7 @@ Confirmed and kept:
   `verify_system.py --governed`, `process-gate kg check`, `evals run --fail-below`, the installer
   step.
 - The backlog, the archive and the C9 design's `done` status agree. The governance-contracts design
-  stays active until OTS and KYC have moved.
+  stays active until Tenant B and KYC have moved.
 - The declaration examples in the User Manual and `process-gates.md` show `^2` and `@v2.1.0`.
   They illustrate the shape, as they did through 2.2 to 2.4, and were left.
 

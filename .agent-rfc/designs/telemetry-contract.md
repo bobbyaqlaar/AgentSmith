@@ -39,7 +39,7 @@ Measured on 2026-10-04:
   payload the redactor must see.
 - **The only way to emit it is to import AgentSmith.** `resource_attributes()`, the
   `AgentIdentityProcessor` that puts `tenant.id`, `agent.role` and `run.id` on every span, and the
-  OTLP endpoint resolution live in the runtime library. OTS's span code (`services/templates/tracing.py`,
+  OTLP endpoint resolution live in the runtime library. Tenant B's span code (`services/templates/tracing.py`,
   in its uncommitted template work) imports `runtime.tracing`, `runtime.tenancy` and `runtime.otlp`
   **from its vendored copy** — the coupling this programme removes.
 - **A reader cannot tell an old emitter from a broken one by contract.** `agentsmith.framework.version`
@@ -48,9 +48,9 @@ Measured on 2026-10-04:
 - **Nobody checks an emitter.** No test holds the runtime's spans to the table, and nothing could
   score a tenant's.
 
-**Correcting the umbrella's premise.** Its C5 row says OTS's `tracing.py` is tenant code importing the
-vendored `runtime/`. OTS's **committed** code imports nothing from `runtime/` — verified; `runtime/tracing.py`
-there is the vendored file itself. The one importer is `services/templates/tracing.py`, part of OTS's
+**Correcting the umbrella's premise.** Its C5 row says Tenant B's `tracing.py` is tenant code importing the
+vendored `runtime/`. Tenant B's **committed** code imports nothing from `runtime/` — verified; `runtime/tracing.py`
+there is the vendored file itself. The one importer is `services/templates/tracing.py`, part of Tenant B's
 uncommitted template-model work, which is frozen. KYC Sentinel emits through the runtime **library**,
 pinned as a package dependency — which the umbrella already allows ("The runtime library is not a port").
 
@@ -112,15 +112,15 @@ the same slice that publishes would break every dashboard that reads the current
 the coupling this contract removes, written into the rules every tenant is held to. The question
 becomes whether the endpoint comes from the standard `OTEL_EXPORTER_OTLP_*` variables (the runtime
 library's `runtime/otlp.py` is one way to read them), and the rule names the contract; the registry
-is regenerated from it. OTS's design met exactly this when it stopped importing that module.
+is regenerated from it. Tenant B's design met exactly this when it stopped importing that module.
 
 ### Found while building: the provider ran a vendored tenant's CLI
 
-Verifying OTS's spans through `--emitter` from OTS's own directory ran OTS's vendored
+Verifying Tenant B's spans through `--emitter` from Tenant B's own directory ran Tenant B's vendored
 `runtime/cli.py`, not the provider's. `python -m` puts the working directory first on the module
 path, ahead of `PYTHONPATH` — so the `agentsmith` shim that `.github/actions/setup-agentsmith`
 writes in CI (C1), and the test suite's `scripts/test/provider_shim.py`, both answer with a vendored
-tenant's own copy when run inside one. In OTS's CI, `agentsmith gate ci` would have reached a
+tenant's own copy when run inside one. In Tenant B's CI, `agentsmith gate ci` would have reached a
 two-month-old CLI that has no `gate` command. Both shims run Python with `-P` (3.11+: no unsafe path
 first), and a test runs each shim from a directory holding a decoy `runtime/` and asserts the
 provider's module answered. Its sibling, the weekly sync workflow (`workflow-templates/agentsmith-sync.yml`),
@@ -143,14 +143,14 @@ it (no contract attribute, a span without `tenant.id`) are shown to fail.
 
 ### The tenant steps that prove it — after the release that carries it
 
-- **OTS — done ahead of the build, at the owner's direction (2026-10-04)**: a governance-only change
-  to `services/templates/tracing.py`, under OTS's own design and review
+- **Tenant B — done ahead of the build, at the owner's direction (2026-10-04)**: a governance-only change
+  to `services/templates/tracing.py`, under Tenant B's own design and review
   (`telemetry-contract-tenant.md` there). Plain OpenTelemetry, the catalogue's names,
   `governance.telemetry.contract` on the Resource and a per-process `run.id`; its public surface
   unchanged, so no caller or test changed; its 6 tracing tests pass, and removing the `tenant.id`
   stamp fails 4 of them. Not committed — the file is part of the frozen, uncommitted template work.
-  `agentsmith conformance --port telemetry --emitter "ots-templates …"` judges it once this ships.
-  OTS's own code now imports nothing from its vendored `runtime/`, which leaves at C9.
+  `agentsmith conformance --port telemetry --emitter "<tenant's emitter> …"` judges it once this ships.
+  Tenant B's own code now imports nothing from its vendored `runtime/`, which leaves at C9.
 - **KYC Sentinel**: stays on the library (allowed); its pin moves to the release carrying C5, and its
   smoke job's export passes `--export`. On v1.3.0 it emits no contract attribute and fails — which is
   the case the attribute exists to make visible.
@@ -163,7 +163,7 @@ tenant adds `--emitter` to its CI by choice, documented.
 
 ## Pillars
 
-- P1 applies — `.agent-rfc/designs/governance-contracts.md` defines C5 and is amended for the OTS premise; `CHANGELOG.md`'s Wire Contract table is what this publishes; this design precedes the code.
+- P1 applies — `.agent-rfc/designs/governance-contracts.md` defines C5 and is amended for the Tenant B premise; `CHANGELOG.md`'s Wire Contract table is what this publishes; this design precedes the code.
 - P2 applies — `runtime/conformance.py` gains the port rather than a second runner; `runtime/otlp.py` keeps endpoint resolution as the library's; the OTLP decoder is `opentelemetry-proto`, already installed with the exporter. KG impact over the scope is recorded in the review.
 - P3 applies — `runtime/tracing.py` `resource_attributes()` gains `governance.telemetry.contract`; no new span is emitted, and the catalogue is what P3's "every span carries tenant.id, agent.role, run.id" becomes in data.
 - P4 applies — `runtime/conformance.py`'s telemetry suite runs against the runtime library and two stub emitters that must fail; the inventory test fails on an uncatalogued attribute. Mutations: an inventory that skips a module, a judge that ignores identity, a receiver that passes on nothing received, a conditional never checked, the Resource attribute dropped.

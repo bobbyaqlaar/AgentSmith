@@ -1,6 +1,6 @@
 # Review — release 2.2.3
 
-Design: `.agent-rfc/designs/release-2-2-3.md`. Owner request, 2026-10-09: move AqlaarTeleologyStudio's
+Design: `.agent-rfc/designs/release-2-2-3.md`. Owner request, 2026-10-09: move Tenant B's
 evals onto the contract — which needs a release carrying `setup-evals-provider`.
 
 **Built evidence:** the version is `2.2.3` in `pyproject.toml`, `install-ai-stack.sh` and
@@ -10,7 +10,7 @@ new `CHANGELOG.md` section, whose one heading is the setup step's Fixed entry.
 ## Pass 1 — findings: 1
 
 - `docs-match-behaviour` — **finding:** the release grew a second fix after its first commit
-  (`launcher-reads-declaration`, found committing OTS's change). The design, the CHANGELOG section,
+  (`launcher-reads-declaration`, found committing Tenant B's change). The design, the CHANGELOG section,
   the 2.2.x row and DESIGN's mirror now name both, and the row says a tenant with evals warning maps
   needs the 2.2.3 launcher.
 

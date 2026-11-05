@@ -31,7 +31,7 @@ jobs:
       - uses: ./.github/actions/install-python-deps
       # httpx + tenacity are the runtime's own core dependencies (pyproject.toml
       # `dependencies`). Without them SEC-BUDGET-001 failed in every tenant
-      # with no requirements.txt — AqlaarTeleologyStudio: three of
+      # with no requirements.txt — Tenant B: three of
       # test_llm_gateway_budget.py's retry tests, `No module named 'httpx'`,
       # reported as a budget-control violation.
       - run: pip install pytest pytest-asyncio pyyaml pydantic jsonschema "httpx>=0.25,<1.0" "tenacity>=8.2,<10.0"
@@ -40,7 +40,7 @@ jobs:
       # fixtures/security/control_registry.json off the FRAMEWORK's own repo
       # root, one runs hooks/post-checkout directly, and the rest are unit
       # tests of the runners' own logic against synthetic fixtures rather
-      # than this tenant's actual repo — see AqlaarTeleologyStudio's
+      # than this tenant's actual repo — see Tenant B's
       # onboarding discussion. `--mode ci --strict` below is the real,
       # tenant-facing check: it reads THIS repo's own .agent-rfc/security/.
       - run: python3 scripts/run-security-checks.py --mode ci ${{ inputs.strict && '--strict' || '' }}

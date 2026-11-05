@@ -17,7 +17,7 @@ scope:
 On 2026-10-02 `agentsmith sync` ran in KYC Sentinel to bring it the gate fix for
 binary files. KYC armed the gates on 2026-09-14, before `pre-commit`, `pre-push`
 and `chain` existed: its `.githooks/` holds `commit-msg` and `process-gate`. It
-gates `.agenticframework/**`, as OTS does (both were adopted by hand, before
+gates `.agenticframework/**`, as Tenant B does (both were adopted by hand, before
 `tenant adopt` existed; a tenant `init` or `adopt` writes gates only
 `.agenticframework/process-gates.json`). Two failures:
 
@@ -33,7 +33,7 @@ gates `.agenticframework/**`, as OTS does (both were adopted by hand, before
    gated there; it cannot list its own hash; and the arming design's scope is the
    files the command wrote, which never include the manifest.
 
-OTS has the same two hooks and the same gating. Neither tenant can be synced.
+Tenant B has the same two hooks and the same gating. Neither tenant can be synced.
 
 **Owner decision (2026-10-02): a sync gives a tenant the gate hooks it is missing.**
 `sync`'s rule that it "adds nothing new to a repository that did not ask for it"
@@ -56,7 +56,7 @@ the bypass sweep.
 - **The manifest does not have to vouch for itself.** `manifest_problems` skips
   `.agenticframework/scaffold.json`: it is the check's own input — parsed, and its
   `generated_by` named in the note — and a file cannot carry its own hash. A tenant
-  `init` or `adopt` writes does not gate it at all, so this gives KYC and OTS the
+  `init` or `adopt` writes does not gate it at all, so this gives KYC and Tenant B the
   posture every other tenant already has, not a weaker one.
 - **The sync's design covers what the sync commits.** A sync keeps the arming
   design rather than rewriting it (so a sync never reads as a new design), but
@@ -72,7 +72,7 @@ other files a tenant may lack (IDE configs for IDEs it never chose); the
 ## Pillars
 
 - P1 applies — `docs/PRODUCT_BACKLOG.md` row "`agentsmith sync` cannot bring KYC
-  Sentinel or OTS current", opened with the owner's decision recorded in it.
+  Sentinel or Tenant B current", opened with the owner's decision recorded in it.
 - P2 applies — `runtime/cli.py`'s `install_gate_hooks` and `GATE_HOOKS` already write
   the hooks; the change is that `runtime/sync.py` plans and commits what they write.
   The scope edit lives in `runtime/architectures.py` beside `render_scaffold_design`,

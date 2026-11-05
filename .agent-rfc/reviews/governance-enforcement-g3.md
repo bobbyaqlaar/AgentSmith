@@ -102,7 +102,7 @@ Declared gaps:             (1) the Knowledge Graph CI step stays warn-only until
                           (2) the sweep's two blocking hooks are .githooks/; a repo on the
                               machine-wide template hooks gets it at session start and in CI
                               only — stated in docs/process-gates.md;
-                          (3) OTS and KYC Sentinel adopt the new hooks when they re-sync (T3);
+                          (3) Tenant B and KYC Sentinel adopt the new hooks when they re-sync (T3);
                           (4) merge commits are not swept, the same rule the CI gate has always
                               used for a pushed range.
 ```
