@@ -9,7 +9,7 @@
 > install and operate it is in [docs/UserManual.md](UserManual.md); how it came to be this way
 > is in [docs/PRODUCT_ARCHIVE.md](PRODUCT_ARCHIVE.md).
 
-**Version:** 3.0.1 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
+**Version:** 4.0.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
 `pyproject.toml` — pinned together by
 `scripts/test/test_version_consistency.py`)
 **Status:** Current.
@@ -2254,7 +2254,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 3.0.x | 3.11 | 0.2 | 4.0 | **MAJOR** — vendoring retired: a tenant holds no copy of AgentSmith and asks the providers it declares; no machine-wide git hooks, no `agentsmith upgrade`, no vendoring by `tenant init` or `sync`, and nothing runs a tenant's copy. A 2.x tenant's copies keep running by path, stale, until it moves: re-run the installer, pin `@v3.0.0` and `agentsmith sync`, swap each by-path step for its port (`evals run --fail-below`, `kg check`, actions at the provider), then delete what `verify_system.py --governed` names. The commit guardrails are on in every repository's gate. Full text in [`CHANGELOG.md`](../CHANGELOG.md) **3.0.1:** installing from a release works. The release now carries one `agentsmith-source.tar.gz` in place of the `scripts`, `githooks`, `workflow-templates`, `templates` and `requirements.lock` assets; only a saved 3.0.0 installer script notices, because it downloads from `latest`, and the documented one-liner fetches the current installer. |
+| 4.0.x | 3.11 | 0.2 | 4.0 | **MAJOR** — the library imports as `agentsmith`, not `runtime`, with no shim. The distribution stays `agentsmith-runtime` and the OpenTelemetry scope `agentsmith.runtime` is unchanged. A 3.x `agentsmith-sync.yml` follows the latest release and fails from 4.0.0 on: with 4.0.0 installed, run `agentsmith sync` once by hand, and change any imports in the same pull request. |
 
 ### Examples as Forks
 

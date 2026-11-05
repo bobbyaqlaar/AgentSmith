@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/build_release_assets.sh
   - scripts/test/test_release_artifact_contract.py

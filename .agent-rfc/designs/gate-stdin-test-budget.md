@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/test/test_process_gate.py
   - .agent-rfc/fixtures/knowledge_graph.json

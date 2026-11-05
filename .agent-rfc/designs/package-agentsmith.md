@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - agentsmith/**
   - runtime/**
@@ -81,3 +81,7 @@ none
 - `environment-parity` — the end-to-end release install runs on this tree, so a name missed in a packaged path fails there.
 - `when-the-fallback-fails` — detection of a pre-3.0.0 copy is the path nobody runs by hand, and the rename nearly silenced it.
 - `test-the-contract` — the required job's name and the wire scope are contracts a text substitution cannot see.
+
+## Correction, 2026-11-05
+
+"A tenant pinned to 3.x keeps working until it moves" was wrong for one file: a 3.x `agentsmith-sync.yml` follows the latest release, so it fails once 4.0.0 is out. Found cutting the release; `.agent-rfc/designs/release-4-0-0.md` handles it. No shim: nobody known holds that file, and `agentsmith sync` by hand repairs it.
