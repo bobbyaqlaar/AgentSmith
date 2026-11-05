@@ -3200,7 +3200,7 @@ credential, just a project identifier) so `DEPLOY_COMMAND` can reference
 live against a real GCP project (`gemini-2.5-flash` via
 `LLMGateway.complete(model_hint="vertex_gemini")` — docs/DESIGN.md › LLM Gateway (Production)). The
 `gcp-auth` composite action is **fully verified end-to-end** through
-real GitHub Actions runs against GCP project `agentsmith-500916` on
+real GitHub Actions runs against a GCP project on
 2026-07-01: both `bobbyaqlaar/oil-price-demo` and `bobbyaqlaar/AgentSmith`
 completed successful staging + production deploys to Cloud Run. The
 three worker-hosting options (Cloud Run, GKE, Compute Engine) have been
@@ -3233,9 +3233,9 @@ When deploying a Next.js portal (or any app) to Cloud Run that needs to connect 
 
 1. **Grant the Compute SA `roles/cloudsql.client`:**
    ```bash
-   PROJECT_NUMBER=$(gcloud projects describe agentsmith-500916 --format='value(projectNumber)')
+   PROJECT_NUMBER=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)')
    COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-   gcloud projects add-iam-policy-binding agentsmith-500916 \
+   gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
      --member="serviceAccount:${COMPUTE_SA}" \
      --role="roles/cloudsql.client"
    ```
@@ -3245,7 +3245,7 @@ When deploying a Next.js portal (or any app) to Cloud Run that needs to connect 
    gcloud run deploy agentsmith-portal-staging \
      --image $IMAGE_REF --region us-central1 --project $GCP_PROJECT_ID \
      --platform managed --allow-unauthenticated \
-     --add-cloudsql-instances=agentsmith-500916:us-central1:temporal-pg \
+     --add-cloudsql-instances="$GCP_PROJECT_ID":us-central1:temporal-pg \
      --set-secrets=DATABASE_URL=ops-portal-db-url:latest,...
    ```
 
@@ -3253,7 +3253,7 @@ When deploying a Next.js portal (or any app) to Cloud Run that needs to connect 
    ```
    postgresql://USER:PASSWORD@/DBNAME?host=/cloudsql/PROJECT:REGION:INSTANCE
    # e.g.:
-   postgresql://postgres:***@/agenticframework?host=/cloudsql/agentsmith-500916:us-central1:temporal-pg
+   postgresql://postgres:***@/agenticframework?host=/cloudsql/PROJECT_ID:us-central1:temporal-pg
    ```
    No `sslmode` param needed — the proxy socket is always mutually authenticated.
 

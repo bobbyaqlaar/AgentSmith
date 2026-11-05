@@ -30,7 +30,7 @@ runs by path, and much of what it reports is about AgentSmith rather than about 
 
 Measured on 2026-10-09:
 
-- **Every tenant runs the harness by path.** OTS's `eval-security.yml` runs its vendored
+- **Every tenant runs the harness by path.** Tenant B's `eval-security.yml` runs its vendored
   `scripts/run-security-checks.py --mode ci --strict`, then `--mode smoke --evidence-pack`; its
   `cd-staging.yml` and `cd-production.yml` run its vendored `scripts/verify_system.py
   --check-redaction`; it holds a vendored `fixtures/security/` identical to AgentSmith's. KYC's CI
@@ -40,17 +40,17 @@ Measured on 2026-10-09:
   repository: from CI's full checkout SEC-AUDIT-001, SEC-RBAC-001, SEC-SSO-001 (the portal's
   TypeScript tests) and SEC-CHANGE-001 (AgentSmith's `hooks/`) run and pass; from the installed
   package (`~/.agent-framework`, no `portal/` or `hooks/`) the same four **fail** — "missing portal
-  files"; in a vendored tenant (OTS) they are `not applicable`. Three answers, none about KYC.
+  files"; in a vendored tenant (Tenant B) they are `not applicable`. Three answers, none about KYC.
 - **Most "passes" are AgentSmith's own tests.** SEC-HITL-001, SEC-DLQ-001, SEC-SELF-001 and
   SEC-BUDGET-001 run `runtime/test/*.py` from the install; SEC-OUTPUT-001 smoke-tests
   `runtime/structured_output`; SEC-PII-001 and SEC-PROMPT-001 run AgentSmith's guard over AgentSmith's
   probe fixtures; SEC-SOV-001 checks AgentSmith's `templates/uae-sovereign/models.yaml`. Each is
   evidence about the provider's release, counted as the tenant's pass — whether or not the tenant
-  uses that code (OTS's committed code imports nothing from `runtime/`).
+  uses that code (Tenant B's committed code imports nothing from `runtime/`).
 - **One "tenant" control reads the provider instead.** SEC-GW-001 scans `agents/` and `workflows/`
   under the *install* root: in KYC it scans AgentSmith's checkout, never KYC's `agents/`.
 - **The posture graded is the CI step's environment, not the repository's declaration.** KYC's step
-  sets `PROMPT_GUARD=default`, `MODERATION_HOOK=required`, `TOOL_ALLOWLIST_STRICT=1`; OTS's sets
+  sets `PROMPT_GUARD=default`, `MODERATION_HOOK=required`, `TOOL_ALLOWLIST_STRICT=1`; Tenant B's sets
   `MODERATION_HOOK` from a repository variable; strictness is a flag or `SECURITY_STRICT`. The
   tenant's `tenant.yaml` declares a posture too (KYC's `security.prompt_guard: "default"`), and
   nothing checks that the two agree.
@@ -62,7 +62,7 @@ Measured on 2026-10-09:
   scrubs three fixed strings with `runtime.trace_redactor` under `$ENVIRONMENT`'s profile, and
   skips under `development`. The telemetry contract (`contract/telemetry/v1/protocol.md`) defers to
   this slice: "the security contract verifies the redaction".
-- **OTS's strict run is red on `main`, honestly**: SEC-RISK-001 (its risk register still holds the
+- **Tenant B's strict run is red on `main`, honestly**: SEC-RISK-001 (its risk register still holds the
   template's `RISK-EXAMPLE-001`) and SEC-AGENCY-001 (its agency manifest is the shipped placeholder).
   That is the tenant's own content; this slice does not change it.
 
@@ -159,7 +159,7 @@ SEC-PII-002 fails ("nothing verifies what this repository's telemetry carries").
 ### Amended while building (2026-10-09)
 
 - **A judged dataset the repository declared `not_gradable: warn` for is a `gap`, not a failure.**
-  OTS's golden dataset has no outputs, and its `providers.json` already says, in a reviewed file,
+  Tenant B's golden dataset has no outputs, and its `providers.json` already says, in a reviewed file,
   that the golden suite's `not_gradable` only warns. SEC-EVAL-001 reports that as a declared gap —
   visible in every result — rather than failing a second time for a decision already recorded.
 - **A tenant registry row claiming `met` or `partial` must name its `suite`**
@@ -217,7 +217,7 @@ fail.
   declares the security port with `python3 scripts/telemetry_smoke.py` as its emitter, which plants
   the probes when asked; `tenant.yaml` declares `moderation.mode: required`; the step's posture
   variables go.
-- **OTS**: `eval-security.yml` calls the declared command through the provider's setup step, with
+- **Tenant B**: `eval-security.yml` calls the declared command through the provider's setup step, with
   an evidence directory; its CD redaction steps call `security redaction`; it declares `"emitter":
   "none"` (its spans are in the frozen template work) and its moderation mode; vendored
   `fixtures/security/` goes. Its SEC-RISK-001 and SEC-AGENCY-001 stay red until the owner authors

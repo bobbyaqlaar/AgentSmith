@@ -9,7 +9,7 @@ no agent session in this repo ever had them in context, and nothing checked.
 Every gate below calls one script, `scripts/process_gate.py`, so the rules are
 defined once; what each repository gates is declared in its own
 `.agenticframework/process-gates.json`. The same script serves AgentSmith and
-the tenants that adopted it — AqlaarTeleologyStudio and KYC Sentinel. Designs:
+the tenants that adopted it — Tenant B and KYC Sentinel. Designs:
 `.agent-rfc/designs/process-gates.md`, `process-gates-tenants.md`.
 
 ## What is checked, where
@@ -139,7 +139,7 @@ so a missing config means it was removed.
   that does not is rejected, and a broken config blocks every commit and every
   edit except to itself.
 - **`registry` / `levers_doc` / `design_checklist`** — a repo path, read at the
-  commit being checked (OTS validates against its own, extended
+  commit being checked (Tenant B validates against its own, extended
   `docs/review-levers.md`), or **`"provider"`**: the gate provider's own copy,
   wherever it is installed — what `tenant adopt` writes, and what `agentsmith
   sync` turns the older `@framework/<path>` values into. `@framework/<path>` is
@@ -168,7 +168,7 @@ so a missing config means it was removed.
 | Repo | Gated (summary) | Levers | CHANGELOG rule |
 |---|---|---|---|
 | AgentSmith | code, config, and everything a tenant receives | its own | yes — tenant-facing paths |
-| AqlaarTeleologyStudio | `apps/`, `services/`, `agentsmith/`, `scripts/`, `infra/`, `fixtures/`, `.github/`, config files | its own (inherited and extended) | none |
+| Tenant B | `apps/`, `services/`, `agentsmith/`, `scripts/`, `infra/`, `fixtures/`, `.github/`, config files | its own (inherited and extended) | none |
 | KYC Sentinel | `agents/`, `workflows/`, `test/`, `scripts/`, `corpus/`, `fixtures/`, `.github/`, root `*.py`, config files | `@framework/` | none |
 
 ## Keeping a tenant current — `agentsmith sync`

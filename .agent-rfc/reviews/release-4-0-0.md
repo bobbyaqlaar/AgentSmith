@@ -15,7 +15,7 @@ Design: `.agent-rfc/designs/release-4-0-0.md`. Owner request, 2026-11-03: rename
 1. `two-owners-two-cadences` — **A 3.x `agentsmith-sync.yml` fails as soon as 4.0.0 is the latest release, and cannot repair
    itself,** because it checks out the latest tag and runs `-m runtime.cli`. The rename's review and its changelog said a
    pinned tenant "keeps working until it moves". **Fix:** the 4.0.x row and its mirror name the failure and the command, the
-   sentence is corrected, and `package-agentsmith` carries the correction. No shim: KYC Sentinel and OTS do not hold this
+   sentence is corrected, and `package-agentsmith` carries the correction. No shim: KYC Sentinel and Tenant B do not hold this
    file, the scratch tenants hold the new line, and the repository has no forks. The missing upgrade test goes on the backlog.
 2. `docs-match-behaviour` — **The rename's text rewrite left two wrong lines in live documents:** backlog step 5 read "Rename
    `agentsmith` to `agentsmith`", and `CHANGELOG.md`'s preamble named `runtime/version.py`. **Fix:** both corrected.
@@ -27,7 +27,7 @@ Design: `.agent-rfc/designs/release-4-0-0.md`. Owner request, 2026-11-03: rename
 - **The sweep over live text** finds `runtime/` only in the required job label `Python scripts/runtime/examples`, kept on
   purpose, and the README's sentence about what pre-3.0.0 installs did.
 - **The row's "changes nothing but its pin"** was read against what `sync` changed on the v3.0.1 repository: rule files, one
-  hook comment and the sync workflow. KYC's and OTS's workflows contain no `-m runtime` or `/runtime/` path.
+  hook comment and the sync workflow. KYC's and Tenant B's workflows contain no `-m runtime` or `/runtime/` path.
 - **A major is the right size:** a stale import has no shim. The backlog does not tick step 5, because the release and KYC's
   move have not happened in this commit.
 

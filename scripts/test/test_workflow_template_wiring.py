@@ -19,7 +19,7 @@ agentsmith/cli.py's WORKFLOWS. The comment above used to say that loop was
 second, independent implementation of the same copy step, and it went stale
 the same way WORKFLOWS almost did: eval-security.yml was added to WORKFLOWS
 and to ci-python-fastapi.yml's job list without being added to this bash
-array too, found onboarding AqlaarTeleologyStudio (its `ci-python-fastapi.yml`
+array too, found onboarding Tenant B (its `ci-python-fastapi.yml`
 was rejected by GitHub outright). test_hooks_workflow_array_matches_cli_
 workflows below pins the two lists against each other so neither can drift
 ahead of the other silently again.
@@ -129,7 +129,7 @@ def test_python_template_pins_ruff_to_the_frameworks_own_version() -> None:
 
 def test_cd_deploys_only_what_ci_passed() -> None:
     """cd-staging/cd-production ran `on: push` in parallel with CI and nothing
-    made them wait — AqlaarTeleologyStudio's production deploy went green on
+    made them wait — Tenant B's production deploy went green on
     commits whose CI was red. They must trigger on the stack CI completing,
     proceed only on success, deploy the commit CI ran against, and name every
     stack's CI workflow exactly (a renamed CI silently disconnects CD)."""

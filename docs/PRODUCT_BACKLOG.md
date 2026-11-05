@@ -14,8 +14,8 @@
 ## Current state (2026-11-05)
 
 **v4.0.0 is the latest release**, and `release.yml` runs the Quick Start on its published URL. The governance
-contracts C1–C9 are complete. **AgentSmith is public (AGPL-3.0)**; KYC Sentinel and AqlaarTeleologyStudio are
-private. KYC is on 3.0.0 with green CI, and OTS on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
+contracts C1–C9 are complete. **AgentSmith is public (AGPL-3.0)**; KYC Sentinel and Tenant B are
+private. KYC is on 3.0.0 with green CI, and Tenant B on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
 two security controls awaiting its own content: do not use it as a showcase.
 
 ---
@@ -44,8 +44,8 @@ labelled preview.
 | 8 | ✅ Small fixes with the release: `PROMPT_DENYLIST_PATH` in the evals port; DLQ **Discard** confirmation; pin `phoenix:latest`; delete `ai-compat.sh`; the widget's dead `cdn.agenticframework.io`; `oil-price-demo` in live docs (the manual's tutorial keeps it as a name the reader creates, from `examples/oil-price-agent`) | Claude | Thu 5 |
 | 9 | ✅ Secret scan over **full history**: 568 commits with merge diffs, by our own patterns, not gitleaks. Only placeholders and throwaway test tokens; no env, key or credential file was ever committed | Claude | Thu 5 |
 | 10 | ✅ README leads with the three audiences and states its limits: edit-time enforcement on Claude Code and Cursor only (rule files and CI elsewhere), Windows untested, yarn, bun and Poetry unsupported, Ops in preview | Claude | Thu 5 |
-| 11 | Confirm with counsel: copyright holder in `NOTICE` (Aqlaar Tech FZE LLC, assigned?), `TRADEMARK.md` (names Bobby Rajagopal), and what AGPL means for a tenant importing the runtime. Say whether OTS, KYC and GCP project `agentsmith-500916` may stay named in a public repository | Owner | Thu 5 |
-| 12 | Set the repository's description and topics (it still says "Universal agentic framework") | Owner, or say go | Thu 5 |
+| 11 | Confirm with counsel: copyright holder in `NOTICE` (Aqlaar Tech FZE LLC, assigned?), `TRADEMARK.md` (names Bobby Rajagopal), and what AGPL means for a tenant importing the runtime. Counsel's answer does not hold the launch (owner, 6 Nov). Naming answered 6 Nov: KYC stays named; the other private tenant and the GCP project are not named, and `scripts/test/test_private_names.py` keeps them out | Owner | Thu 5 |
+| 12 | ✅ Set the repository's description and topics to what it does; `eu-ai-act` and `iso-42001` left out, as coverage is partial | Owner, or say go | Thu 5 |
 | 13 | Rehearsal: `check_release_install.sh` on the final release, then the README followed by hand on a clean machine or account | Claude and owner | Fri 6 |
 | 14 | Publish the announcement. The honest story is the strongest: what building a real tenant found in the framework | Owner | Fri 6 |
 
@@ -57,7 +57,7 @@ week.** Stage 1 does not depend on it.
 
 | # | Step | Who |
 |---|---|---|
-| 15 | Provide for KYC staging: Cloud SQL and Temporal (reuse or tear down what is billing in `agentsmith-500916`), `GEMINI_API_KEY` and `OPENROUTER_API_KEY` set on its environment, a deployed portal and its Ops token | Owner |
+| 15 | Provide for KYC staging: Cloud SQL and Temporal (reuse or tear down what is billing in the GCP project), `GEMINI_API_KEY` and `OPENROUTER_API_KEY` set on its environment, a deployed portal and its Ops token | Owner |
 | 16 | KYC live on staging: the worker as a service, Phoenix and portal wired | Claude |
 | 17 | One real HITL round trip through the portal, and one production case promoted, with screenshots | Claude and owner |
 | 18 | **The accountability chain (gap 2):** a run carries its commit, so a production run links to its commit, design and approvals | Claude |
@@ -364,7 +364,7 @@ fired inside the provider — one verdict should speak once.
 
 **Open — evals-port suites for live latency and shadow comparison (found 2026-10-13, C9).**
 `eval-ttft-live.yml` and `shadow-eval.yml` left the templates in 3.0.0: they ran `verify_ttft.py` and
-`shadow-eval.py` by path and had no port. OTS ran the TTFT one (opt-in). Fix: `ttft` and `shadow` suites
+`shadow-eval.py` by path and had no port. Tenant B ran the TTFT one (opt-in). Fix: `ttft` and `shadow` suites
 in the evals contract, so a tenant asks for them like the others.
 
 **Open — human feedback into a tenant's own evaluation data (found 2026-10-11, C8).**

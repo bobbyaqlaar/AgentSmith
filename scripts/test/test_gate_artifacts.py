@@ -3,7 +3,7 @@ scripts/test/test_gate_artifacts.py — G5a: one artifact per type, and
 cross-references that do not rot.
 
 A repo grows a second backlog, a third review file and four READMEs, and then
-no agent knows which one governs: OTS had two READMEs, two `CRITICAL_REVIEW_*`,
+no agent knows which one governs: Tenant B had two READMEs, two `CRITICAL_REVIEW_*`,
 a TODO plan, 22 specs and 31 plans. The registry names one file per type; the
 check fails on a second one, and on a tracked Markdown file that is neither an
 artifact nor declared reference documentation.
@@ -134,7 +134,7 @@ def test_a_missing_required_artifact_fails_and_an_optional_one_does_not(repo_wit
 
 
 def test_report_mode_says_what_would_fail_without_failing(repo_with_artifacts):
-    """AgentSmith and OTS run in report until G5b moves their documents; a check
+    """AgentSmith and Tenant B run in report until G5b moves their documents; a check
     that blocked before the migration would block the migration."""
     _set_mode(repo_with_artifacts, "report", **LAYOUT)
     _write(repo_with_artifacts, "SPECS.md", "# a second design doc\n")

@@ -53,7 +53,7 @@ Measured on `main` at v2.4.0, 2026-10-13:
 
   | Tenant | Holds |
   |---|---|
-  | OTS | `scripts/` (46 files) and `runtime/` (51). CI and CD still run four of them: `run-evals.py` as the CD smoke, `map_codebase.py`, `verify_system.py` and `verify_ttft.py`. |
+  | Tenant B | `scripts/` (46 files) and `runtime/` (51). CI and CD still run four of them: `run-evals.py` as the CD smoke, `map_codebase.py`, `verify_system.py` and `verify_ttft.py`. |
   | oil-price-demo | `scripts/` and `runtime/`, on framework 1.0.0, untouched since 2026-07-01 and superseded as the demo by KYC. |
   | KYC Sentinel | only a copy of the `gcp-auth` action, kept equal to AgentSmith's by a CI diff. |
   | Scratch tenants | five of the six are built by the installed `post-checkout`. |
@@ -108,7 +108,7 @@ Measured on `main` at v2.4.0, 2026-10-13:
 
   Before C9, a fresh tenant's evals skipped silently (`run-evals` with fewer than 3 cases). The
   warning keeps that green step and says the suite proved nothing. This is the same declaration
-  OTS's reviewed move made. `adopt` and `sync` keep C7's rule that an existing repository decides
+  Tenant B's reviewed move made. `adopt` and `sync` keep C7's rule that an existing repository decides
   its emitter.
 - **The machine's provisioning hooks are never chained.** `install_gate_hooks` always leaves out a
   prior `post-checkout` or `post-commit` that is AgentSmith's (`is_machine_hook`), as `adopt` and
@@ -174,9 +174,9 @@ Measured on `main` at v2.4.0, 2026-10-13:
 3. **Release 3.0.0 (C9c).** A 3.0.x compatibility row lists the removals and the order for a 2.x
    tenant: move every port first (2.4.0 has them all), delete the copies, then pin 3.0.0.
 4. **Tenants (C9d), each in its own repository:**
-   - **OTS:** the CD smoke moves to the evals port with `--fail-below`. CI's knowledge-graph and
+   - **Tenant B:** the CD smoke moves to the evals port with `--fail-below`. CI's knowledge-graph and
      `verify_system` steps go, as does the opt-in TTFT workflow. Then the vendored `scripts/` and
-     `runtime/` are deleted, keeping only OTS's own files.
+     `runtime/` are deleted, keeping only Tenant B's own files.
    - **KYC:** `gcp-auth` is referenced at the provider, and the diff step goes.
 
 **What stays:**

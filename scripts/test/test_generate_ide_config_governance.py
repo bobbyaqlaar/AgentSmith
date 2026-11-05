@@ -89,7 +89,7 @@ def test_write_regenerates_a_tracked_rule_file_and_check_only_sees_the_drift(tmp
 
 
 def test_a_repos_own_notes_and_test_command_ride_in_every_generated_file(tmp_path):
-    """A tenant's repo-specific instructions (OTS's two test surfaces, its
+    """A tenant's repo-specific instructions (Tenant B's two test surfaces, its
     vendoring note) must come from its config, not from hand edits to generated
     files — a hand edit makes the drift check fail on every regeneration."""
     (tmp_path / "templates").mkdir()

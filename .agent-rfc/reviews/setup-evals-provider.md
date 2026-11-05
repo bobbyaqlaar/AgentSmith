@@ -37,7 +37,7 @@ Group 7 · Auth & session integrity — [x] n/a — no credential handling chang
 Tests added: `test_a_judged_suite_cannot_grade_without_httpx` (`scripts/test/test_evals_contract.py`); `test_the_gate_requirements_list_covers_what_the_gate_imports` names `httpx` and ignores comments.
 Mutation-checked: `evals_contract` 11/11.
 Fixtures re-pinned: `.agent-rfc/fixtures/knowledge_graph.json` rebuilt.
-Gates run: full `pytest` on the staged tree (2328 passed, 10 skipped); `ruff check .`; the self-test's knowledge-graph gate; the evals conformance suite against a provider in the setup step's environment (8/17 before, 17/17 after); AqlaarTeleologyStudio's three suites through its launcher in that environment.
+Gates run: full `pytest` on the staged tree (2328 passed, 10 skipped); `ruff check .`; the self-test's knowledge-graph gate; the evals conformance suite against a provider in the setup step's environment (8/17 before, 17/17 after); Tenant B's three suites through its launcher in that environment.
 
 Levers reviewed: `environment-parity`, `failure-is-not-a-result`, `test-the-contract`, `test-that-cannot-fail`, `grep-for-siblings`.
 

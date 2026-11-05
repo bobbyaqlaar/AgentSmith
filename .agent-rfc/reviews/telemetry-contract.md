@@ -8,12 +8,12 @@ Levers: `docs/review-levers.md`
 Found while building, each verified before it was changed.
 
 1. **The provider answered with a vendored tenant's CLI — a C1 defect, latent until now.** Verifying
-   OTS's spans with `--emitter` from OTS's own directory ran OTS's two-month-old `runtime/cli.py`,
+   Tenant B's spans with `--emitter` from Tenant B's own directory ran Tenant B's two-month-old `runtime/cli.py`,
    which has no `conformance` command. `python -m` puts the working directory first on the module
    path, ahead of `PYTHONPATH`; the `agentsmith` shim the CI setup action writes, the test suite's
-   shim and the weekly sync workflow all ran `python -m runtime.cli` inside the tenant. In OTS's CI,
+   shim and the weekly sync workflow all ran `python -m runtime.cli` inside the tenant. In Tenant B's CI,
    `agentsmith gate ci` would have reached a CLI with no `gate`, and the weekly sync would have run
-   OTS's own stale `sync`. All three run `python -P` (3.11+); two tests build each shim — the
+   Tenant B's own stale `sync`. All three run `python -P` (3.11+); two tests build each shim — the
    action's own shell lines, executed — and call it from a directory holding a decoy `runtime/`;
    a third fails on any shipped `-m runtime.cli` without `-P` (`grep-for-siblings`). The installed
    console script was never affected. Design amended, with both files added to its scope.
@@ -34,7 +34,7 @@ Found while building, each verified before it was changed.
    that ignored ancestry passed every case. A case drops `run.id` and `tenant.id` from the tool span
    under the step that keeps them; the mutation that stops walking parents is caught.
 
-6. **Pillar 8's own words named `runtime/otlp.py` as the way to emit**, which OTS's design met as
+6. **Pillar 8's own words named `runtime/otlp.py` as the way to emit**, which Tenant B's design met as
    soon as it stopped importing that module. The question and rule now name the contract and the
    standard variables; the registry is regenerated from them.
 
@@ -47,7 +47,7 @@ The portal is TypeScript, which `scripts/mutation_check.py` does not drive: muta
 contract attribute removed from its Resource (2 of 3 portal contract tests fail), and a read
 renamed in `promotions.ts` (1 fails) — each restored and compared.
 
-OTS, under its own design and review (`telemetry-contract-tenant.md` there): its template CLI passes
+Tenant B, under its own design and review (`telemetry-contract-tenant.md` there): its template CLI passes
 the contract 9/9 on plain OpenTelemetry, run from AgentSmith's directory.
 
 ## Pass 2 — findings: 3
@@ -88,7 +88,7 @@ the catalogue matches. ruff clean; mypy 1.14.1: no issues in 48 files; the porta
 Group 1 · DRY & shared code — [x] checked — one catalogue; its schema generated from the model; the emitter inventory, the portal's two pins and the Wire Contract table pin all read the same file; the judge is the one implementation the conformance runner, the cases and the tests use.
 Group 2 · Quality / safety — [x] checked — 38 tests in `test_telemetry_contract.py`, 3 portal tests; 15 contract cases decided as written, and each check failed by at least one; 10 mutations in `telemetry_contract`, all caught; two portal mutations by hand, caught.
 Group 3 · Architecture / hygiene — [x] checked — no dependency added (the OTLP decoder ships with the exporter); the receiver binds loopback, caps every body and the run; the shims run `-P`, so a vendored tenant's `runtime/` never answers for the provider.
-Group 4 · Process — [x] checked — design before code, amended for the shim defect and the instrument count; backlog C5 Built, C6 Next; archive entry; protocol declared as reference documentation; OTS's change under its own design and review there.
+Group 4 · Process — [x] checked — design before code, amended for the shim defect and the instrument count; backlog C5 Built, C6 Next; archive entry; protocol declared as reference documentation; Tenant B's change under its own design and review there.
 Group 5 · Intuitive UI — [x] checked — the report names each promise as a check, lists unknown names and payload attributes as notes, and says "nothing was judged" rather than passing an empty run.
 Group 6 · Signal integrity — [x] checked — pre-contract, another contract, nothing received, not OTLP and the judge disagreeing with its contract are distinct results; a missing optional attribute is "not emitted", never a fault.
 Group 7 · Auth & session integrity — [x] checked — no credential is read; `--emitter` removes the emitter's own destinations and headers, so nothing it emits leaves the machine during the run.
@@ -96,7 +96,7 @@ Group 7 · Auth & session integrity — [x] checked — no credential is read; `
 Tests added: `scripts/test/test_telemetry_contract.py` (38), `scripts/test/telemetry_emitter.py` (the reference emitter), `portal/test/telemetryContract.test.ts` (3); `test_cli_approve.py`'s fixture pinned to the checkout; `test_process_gate.py` unchanged.
 Mutation-checked: `telemetry_contract` 10/10; portal by hand — the contract attribute and a read, each caught.
 Fixtures re-pinned: `contract/telemetry/v1/fixture.json` generated new from the runtime library; `templates/governance.json` regenerated for P8; `.agent-rfc/fixtures/knowledge_graph.json` rebuilt.
-Gates run: full `pytest` on the staged tree (2215 passed, 10 skipped); `ruff check .` (0.15.20); `mypy` (1.14.1); portal `npm test` and `npx tsc --noEmit`; the self-test's tree check and every test reading `git ls-files` on the staged tree; `agentsmith conformance --port telemetry --emitter` against the library, a plain-OpenTelemetry stub and OTS's template CLI; `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
+Gates run: full `pytest` on the staged tree (2215 passed, 10 skipped); `ruff check .` (0.15.20); `mypy` (1.14.1); portal `npm test` and `npx tsc --noEmit`; the self-test's tree check and every test reading `git ls-files` on the staged tree; `agentsmith conformance --port telemetry --emitter` against the library, a plain-OpenTelemetry stub and Tenant B's template CLI; `python3 scripts/process_gate.py ci --base origin/main --head HEAD` before pushing.
 
 Levers reviewed: `single-source-of-truth`, `pin-unremovable-duplicates`, `declared-vs-enforced`, `denied-vs-missing`, `test-the-contract`, `guards-must-be-able-to-fail`, `validate-on-the-receiving-side`, `grep-for-siblings`, `one-verdict`, `test-that-cannot-fail`, `environment-parity`.
 

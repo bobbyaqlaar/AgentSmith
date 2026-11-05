@@ -13,7 +13,7 @@ Each claim in the row checked against the CHANGELOG entry it summarises.
 
 - `docs-match-behaviour` — **finding:** the first draft said "the bypass sweep refuses a push",
   as if new. The sweep shipped in 2.0.0; what 2.1.0 adds is that a sync gives it to a tenant armed
-  before it existed (KYC Sentinel, OTS). Reworded.
+  before it existed (KYC Sentinel, Tenant B). Reworded.
 - `docs-match-behaviour` — **finding:** it said the gates workflow's new rules check "fails once"
   after a sync. It does not: the sync rewrites the rule files in the same commit that adds the
   check. Reworded to what happens.

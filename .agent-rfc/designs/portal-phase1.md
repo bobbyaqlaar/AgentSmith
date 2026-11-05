@@ -128,7 +128,7 @@ log. Needs `admin.apps`.
 
 Corrected while building: the design assumed a process-gates job in `workflow-templates/`. There
 is none — tenants get the gate's local hooks from `tenant init`, and only repositories that
-adopted the gate by hand (AgentSmith, KYC Sentinel, OTS) run it in CI. Adding a gate job to every
+adopted the gate by hand (AgentSmith, KYC Sentinel, Tenant B) run it in CI. Adding a gate job to every
 tenant template changes every tenant's CI, the scratch tenants' included (their generated commits
 carry no design trailers); that is its own design, recorded in the backlog.
 

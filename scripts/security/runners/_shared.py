@@ -345,7 +345,7 @@ def framework_component_absent(
     owns. A tenant receives `scripts/`, `agentsmith/` and `fixtures/security/`
     vendored into its own tree, never those, so the install root there is the
     tenant's and the component is structurally absent. Reporting that as
-    `fail: missing portal files` told AqlaarTeleologyStudio its compliance was
+    `fail: missing portal files` told Tenant B its compliance was
     broken when its repo had nothing to do with it: three of its nine strict
     failures were this.
 

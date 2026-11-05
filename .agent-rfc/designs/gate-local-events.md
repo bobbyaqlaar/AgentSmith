@@ -35,14 +35,14 @@ What a tenant still holds or calls that is AgentSmith's, after C1:
 - **The local git gates resolve framework paths.** `.githooks/commit-msg` runs
   `.githooks/process-gate commit-msg`, `pre-commit` and `pre-push` run `process-gate sweep`; for those
   the launcher skips any declared provider and looks for `scripts/process_gate.py` in the repository
-  (OTS's vendored copy), `$AGENTSMITH_DIR`, or `~/.agent-framework`. A third-party provider can govern
+  (Tenant B's vendored copy), `$AGENTSMITH_DIR`, or `~/.agent-framework`. A third-party provider can govern
   a tenant's editing session and its CI, but not its commits.
 - **Framework policy lives in a tenant file.** `.githooks/commit-msg` — copied into every tenant —
   hard-codes the Conventional Commits subject rule in bash. A provider with another rule cannot apply
   it, and a change to the rule is a change to every tenant's hook.
 - **The knowledge graph is a framework script the tenant runs.** The gate's own messages tell a tenant
   to run `python3 scripts/map_codebase.py` and `python3 scripts/local_knowledge_graph.py --impact`;
-  OTS's CI runs `map_codebase.py` by path; the graph's format is whatever `map_codebase.py` writes, and
+  Tenant B's CI runs `map_codebase.py` by path; the graph's format is whatever `map_codebase.py` writes, and
   only `scripts/gate_kg.py` knows what the review's `KG query:` hash is computed from.
 
 ## Approach
@@ -94,13 +94,13 @@ so an unmigrated tenant loses nothing.
   coupling — and keep doing so.
 - **No freshness rebuild in CI.** `map_codebase.py` records file mtimes, so a rebuilt graph never
   equals a committed one byte for byte; what CI must know — that a review covered the right scope — the
-  `KG query:` check in `ci` already enforces. OTS's node-count step is replaced by that, not ported.
+  `KG query:` check in `ci` already enforces. Tenant B's node-count step is replaced by that, not ported.
 
 ### The provider runs its own gate
 
 `agentsmith gate` looked for `process_gate.py` in the repository it was asked about **first**
 (`./scripts/`), and in its own installation second. In a vendored tenant that means the provider
-answers with the tenant's copy — OTS's, 1,318 lines behind — so a tenant on contract 2 or 3 would
+answers with the tenant's copy — Tenant B's, 1,318 lines behind — so a tenant on contract 2 or 3 would
 still be judged by stale framework code it holds. The provider now runs its own installation's gate;
 a repository's `scripts/` is used only when that repository is the framework checkout itself
 (`looks_like_framework`), so AgentSmith's own development still runs the code being changed.
@@ -123,7 +123,7 @@ returning the three fields with a `kg:` hash. AgentSmith passes v1, v2 and v3.
 ### The tenants that prove it
 
 After the release that carries it: an adopted scratch tenant (the backlog item opened with this
-design), KYC — its hooks become stubs and its declaration moves to 3 — and OTS, whose vendored
+design), KYC — its hooks become stubs and its declaration moves to 3 — and Tenant B, whose vendored
 `process_gate.py`, `gate_*.py`, `map_codebase.py` and `local_knowledge_graph.py` can then go unless
 another vendored script still imports them; its alignment design names which.
 

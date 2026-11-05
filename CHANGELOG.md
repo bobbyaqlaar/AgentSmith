@@ -85,6 +85,11 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Changed — a private tenant and the GCP project are no longer named
+
+Comments, docs and records call the second private tenant "Tenant B", and commands take the project from `$GCP_PROJECT_ID`.
+`scripts/test/test_private_names.py` fails if either name comes back. The workflow templates change only in comments.
+
 ### Fixed — a piped install installs the release it announces
 
 `curl … | bash` run inside a checkout of AgentSmith installed that checkout and still printed `v4.0.0 installed successfully`:
@@ -937,7 +942,7 @@ Found moving KYC Sentinel onto `contract/evals/v1` the day 2.2.0 shipped.
 
 ### Fixed — `sync` brings a tenant armed before the sweep current
 
-- **A tenant armed before `pre-commit`, `pre-push` and `chain` existed** — KYC Sentinel and OTS —
+- **A tenant armed before `pre-commit`, `pre-push` and `chain` existed** — KYC Sentinel and Tenant B —
   got the three hooks written and armed by `agentsmith sync`, but left out of its manifest and of
   the commit it printed: live in that checkout, absent from every clone. `sync` now lists them as
   `add`, records them, commits them, and says the bypass sweep runs on commit and push from now on.
@@ -2103,7 +2108,7 @@ package, and the list had drifted from `requirements.txt` (it still installed
   have; it now runs `uvx --from arize-phoenix phoenix serve` in its own
   isolated environment.
 
-### Process gates configured per repository — rolled out to AqlaarTeleologyStudio and KYC Sentinel
+### Process gates configured per repository — rolled out to Tenant B and KYC Sentinel
 
 The gates' catalog of gated paths was AgentSmith's own layout, hard-coded, so a
 tenant would have gated the wrong directories. What a repository gates now lives
@@ -2123,7 +2128,7 @@ removed. The config must gate itself.
 - CI judges each commit by the config it carries: commits from before a repo
   adopted the gates are listed, not failed.
 
-Rolled out by hand to AqlaarTeleologyStudio (vendored: its own levers, its own
+Rolled out by hand to Tenant B (vendored: its own levers, its own
 copy of the script) and KYC Sentinel (installed mode: framework levers and
 script). New tenants are not provisioned automatically yet.
 
@@ -2269,7 +2274,7 @@ repo's tests:
 ### `runtime/.hitl_blobs/` excluded from vendoring — caught it landing in a real tenant
 
 Immediately after the `runtime/` vendoring below, applying it to
-`AqlaarTeleologyStudio` by hand copied `runtime/.hitl_blobs/` along with the
+Tenant B by hand copied `runtime/.hitl_blobs/` along with the
 real source — local HITL-gate test-run scratch data (encrypted blobs),
 gitignored in this framework's own checkout, but a plain `cp -r` from a live
 working tree doesn't consult `.gitignore`. Committed once into that tenant's
@@ -2330,7 +2335,7 @@ change (confirmed by reverting `hooks/post-checkout` alone and re-running).
 `PYTHONPATH=scripts:. pytest scripts/test/test_security_*.py -q` was a step
 in the reusable, tenant-facing `eval-security.yml` — but all 8 of those files
 turned out to be framework-internal, found and confirmed one by one while
-onboarding `AqlaarTeleologyStudio`: `test_security_registry.py` and
+onboarding Tenant B: `test_security_registry.py` and
 `test_security_evidence_pack.py` read `fixtures/security/control_registry.json`
 off the FRAMEWORK's own repo root (never vendored into a tenant, nor should
 it be); `test_security_pack_seeding.py` runs `hooks/post-checkout` directly;
@@ -2369,7 +2374,7 @@ reason instead of a bogus one — not fully green on its own.
 
 ### `eval-security.yml`'s `pip install -r requirements.txt` now guarded — and a reverted attempt to fix the real `runtime` import gap, left open
 
-`eval-scorecard.yml` and `cd-production.yml` failed on `AqlaarTeleologyStudio`
+`eval-scorecard.yml` and `cd-production.yml` failed on Tenant B
 with `ModuleNotFoundError: No module named 'runtime'` —
 `scripts/run-evals.py`'s `_pair_score_spread` imports `runtime.judging`,
 `scripts/verify_system.py --check-redaction` imports
@@ -2401,7 +2406,7 @@ another guess landing here.
 
 **Landed**: `eval-security.yml`'s `pip install -r requirements.txt` had no
 `[ -f requirements.txt ]` guard, unlike `ci-python-fastapi.yml`'s own
-install step — hard-failed outright for `AqlaarTeleologyStudio`, a
+install step — hard-failed outright for Tenant B, a
 uv/pyproject.toml tenant with no `requirements.txt` at all. Guarded to
 match; doesn't depend on the `runtime` question above. The framework's own
 `.github/workflows/eval-security.yml` copy re-synced to match
@@ -2410,7 +2415,7 @@ byte-for-byte parity between the two).
 
 ### `post-checkout`'s workflow-copy array now matches `runtime/cli.py`'s WORKFLOWS — `eval-security.yml` was silently missing
 
-Caught checking CI on `AqlaarTeleologyStudio` after pushing the `scripts/`
+Caught checking CI on Tenant B after pushing the `scripts/`
 vendoring fix above: its `ci-python-fastapi.yml` was rejected by GitHub
 outright ("workflow file issue", zero jobs) because it `uses:
 ./.github/workflows/eval-security.yml`, a file `hooks/post-checkout` never
@@ -2433,7 +2438,7 @@ and re-running).
 
 ### `post-checkout` vendors `scripts/` — every generated CI workflow was calling files that were never copied
 
-Also found onboarding `AqlaarTeleologyStudio`, and the more consequential of
+Also found onboarding Tenant B, and the more consequential of
 the two gaps that onboarding surfaced. `hooks/post-checkout` has always
 fallen back to `~/.agent-framework/scripts` for its OWN calls
 (`generate-ide-config.py`, `map_codebase.py`) when `$REPO_ROOT/scripts`
@@ -2464,7 +2469,7 @@ a scratch repo, mirroring `test_security_pack_seeding.py`'s approach.
 
 ### Knowledge Graph indexes `docs/superpowers/{specs,plans}/`, not only `.agent-rfc/`
 
-Found onboarding `AqlaarTeleologyStudio`: a repo that adopted Anthropic's
+Found onboarding Tenant B: a repo that adopted Anthropic's
 superpowers skill before AgentSmith has its spec-before-code history in
 `docs/superpowers/{specs,plans}/`, and `map_codebase.py` only ever wired
 `.agent-rfc/` into the graph — so a freshly provisioned `.agent-rfc/`
@@ -2480,14 +2485,14 @@ baked into a generated `CLAUDE.md`.
 
 ### Group 7 · Auth & session integrity, and `fixture-truth` — merged in from a tenant, not invented here
 
-While onboarding `AqlaarTeleologyStudio` (a pre-existing, already-tooled repo)
+While onboarding Tenant B (a pre-existing, already-tooled repo)
 onto the framework, its own independently-evolved `docs/review-levers.md`
 turned out to be more than a naming collision worth a redirect: six of its
 levers had no equivalent here at all, each carrying its own `Caught:` — the
 same evidence bar this framework already holds every non-legacy lever to.
 Rather than leave AgentSmith's canonical list worse than a tenant's local
 fork, they're merged upstream, slug-ified, and attributed in
-`review-lever-notes.md` as `(from AqlaarTeleologyStudio)`: a new **Group 7 ·
+`review-lever-notes.md` as `(from Tenant B)`: a new **Group 7 ·
 Auth & session integrity** (`channel-precedence`,
 `untrusted-headers-are-not-a-session`, `same-request-cookie-invisibility`,
 `in-flight-must-not-undo-logout`, `retry-bounds`) and one addition to Group 6,

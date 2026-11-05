@@ -20,7 +20,7 @@ Design: `.agent-rfc/designs/release-3-0-1.md`. Owner request, 2026-11-03: fix th
 ## Pass 2 — findings: 0
 
 - **A patch is the right size:** no `contract/` file or wire row changes. `remove_node` has no reference in `runtime/` or
-  `contract/`, and is absent from the imports read from KYC Sentinel; OTS imports nothing of AgentSmith.
+  `contract/`, and is absent from the imports read from KYC Sentinel; Tenant B imports nothing of AgentSmith.
 - **The assets named as removed** are the ones `scripts/build_release_assets.sh` no longer builds.
 
 ## Sign-off

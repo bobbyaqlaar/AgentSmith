@@ -10,28 +10,28 @@ scope:
   - scripts/test/test_design_and_validation_docs.py
   - scripts/test/test_hooks_behavior.py
 ---
-# Process gates for tenants — OTS and KYC Sentinel
+# Process gates for tenants — Tenant B and KYC Sentinel
 
 ## Problem
 
 The process gates (`.agent-rfc/designs/process-gates.md`, shipped 2026-09-14)
 enforce design-before-code and review-before-merge in AgentSmith only. Rolling
-them out to AqlaarTeleologyStudio (OTS) and KYC Sentinel is blocked by four
+them out to Tenant B (Tenant B) and KYC Sentinel is blocked by four
 facts about `scripts/process_gate.py` as shipped, each verified:
 
 1. **The catalog is AgentSmith's layout, in code.** `GATED` names `portal/`,
-   `workflow-templates/`, `enterprise/`… OTS's code is `apps/web`, `services/`;
+   `workflow-templates/`, `enterprise/`… Tenant B's code is `apps/web`, `services/`;
    KYC's is `agents/`, `workflows/` and root `*.py`. A tenant would gate the
    wrong paths — mostly none.
 2. **Levers and checklist are read from the repo** (`docs/review-levers.md` at
-   the commit). OTS has its own copy (54 levers, an inherited-and-extended
+   the commit). Tenant B has its own copy (54 levers, an inherited-and-extended
    list); KYC has none, and `~/.agent-framework/docs/` carries only the two
    checklists, not `review-levers.md`.
 3. **The script is found at `scripts/process_gate.py` in the repo.** True for
-   OTS (vendored). KYC is installed-mode: its `scripts/` is its own, and its CI
+   Tenant B (vendored). KYC is installed-mode: its `scripts/` is its own, and its CI
    runs framework tools from a checkout at `$AGENTSMITH_DIR`.
 4. **Neither clone has git hooks installed** (`.git/hooks` has no non-sample
-   hook), and neither has a CHANGELOG — OTS has none; KYC keeps `DEVLOG.md`.
+   hook), and neither has a CHANGELOG — Tenant B has none; KYC keeps `DEVLOG.md`.
 
 ## Approach
 
@@ -64,7 +64,7 @@ verbatim to each tenant. `install-ai-stack.sh` now also copies
 
 **Per tenant.**
 
-| | OTS (vendored) | KYC Sentinel (installed) |
+| | Tenant B (vendored) | KYC Sentinel (installed) |
 |---|---|---|
 | Script | `scripts/process_gate.py`, vendored (+ its `scripts/ruff.toml` exclude) | framework checkout / `~/.agent-framework` |
 | Levers | its own `docs/review-levers.md` | `@framework/docs/review-levers.md` |
@@ -100,7 +100,7 @@ stays open in `FIXES_AND_CLEANUP.md`.
 - `guards-must-be-able-to-fail` — `ci` fails on a missing config rather than passing a repo that silently dropped the gate; the script-finder denies when it finds nothing.
 - `provenance-and-precedence` — script lookup order (repo, `$AGENTSMITH_DIR`, `~/.agent-framework`) and `@framework/` resolution are written down here and in the docs.
 - `minimal-host-dependency` — KYC's local gates need a framework checkout or a current `~/.agent-framework`; stated, and the fail-closed message names the fix.
-- `two-owners-two-cadences` — tenants take the gate from the framework they run: OTS's vendored copy moves on `ai-stack-upgrade`, KYC's follows the framework checkout its CI uses.
+- `two-owners-two-cadences` — tenants take the gate from the framework they run: Tenant B's vendored copy moves on `ai-stack-upgrade`, KYC's follows the framework checkout its CI uses.
 - `implemented-not-invoked` — each tenant's CI job, hooks and settings are exercised by a real commit and a real CI run, not only by framework tests.
 - `environment-parity` — the pre-push gate list runs on macOS; each tenant's first CI run is the Linux check (the lesson of `3431634`).
 - `docs-match-behaviour` — `docs/process-gates.md`, CHANGELOG, backlog, and each tenant's own docs.

@@ -3,7 +3,7 @@ scripts/test/test_security_vendored_install.py — controls that verify the
 framework's OWN components are `not applicable` in a vendored tenant, and
 still fail in the framework checkout.
 
-Found auditing AqlaarTeleologyStudio (2026-09-13): its strict harness reported
+Found auditing Tenant B (2026-09-13): its strict harness reported
 fail=9, and three of those were `missing portal files` (SEC-AUDIT-001,
 SEC-RBAC-001, SEC-SSO-001) plus one `hooks/pre-commit: No such file`
 (SEC-CHANGE-001). A tenant gets scripts/, agentsmith/ and fixtures/security/

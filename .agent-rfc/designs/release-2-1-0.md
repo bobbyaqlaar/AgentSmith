@@ -12,7 +12,7 @@ scope:
 tenants cannot use the part they are waiting for. The governance contracts C1–C5 are built and
 merged, and every tenant step behind them needs a tag: the gates workflow's setup step is
 `bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith@<release>`, which does not exist at
-v2.0.0; KYC Sentinel's pin and OTS's move onto the contracts both name a release; and the
+v2.0.0; KYC Sentinel's pin and Tenant B's move onto the contracts both name a release; and the
 telemetry catalogue already dates `governance.telemetry.contract` to 2.1.0.
 
 The owner asked for the release on 2026-10-05; the programme has named it v2.1.0 since C1.
@@ -31,7 +31,7 @@ The owner asked for the release on 2026-10-05; the programme has named it v2.1.0
   - a sync rewrites a tenant's rule files (pillar 8's new wording; renders no longer read the
     environment) in the same commit that adds the gates workflow's new rules check, which from
     then on holds them to what the declared rules provider renders;
-  - a sync gives a tenant armed before the sweep existed (KYC Sentinel, OTS) the gate's `pre-commit`
+  - a sync gives a tenant armed before the sweep existed (KYC Sentinel, Tenant B) the gate's `pre-commit`
     and `pre-push`, so from then on a push is refused while a commit that skipped the gate is
     unrepaired — 2.0.0's sweep, newly reaching them.
   `docs/DESIGN.md` mirrors the current row.

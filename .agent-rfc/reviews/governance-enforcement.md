@@ -83,7 +83,7 @@ Every other lever re-checked over the final tree: OK.
 
 ## Pass 4 — findings: 2
 
-Found while vendoring G1 into OTS (the tenant review, `OTS/.agent-rfc/reviews/governance-enforcement-tenant.md`),
+Found while vendoring G1 into Tenant B (the tenant review, `Tenant B/.agent-rfc/reviews/governance-enforcement-tenant.md`),
 fixed here because the code is the framework's, then re-vendored.
 
 - `environment-parity` — **finding:** `generate-ide-config.py` defaulted the project name to a git-remote basename
@@ -106,8 +106,8 @@ and drift-checked rather than hand-edited into a generated file
   launcher and were documented nowhere; the repo's own documentation gate caught it
   (`test_every_env_var_the_code_reads_is_documented`). Both are now in UserManual.md's runtime-flags table — an
   undiscoverable knob is not configurable, and `AGENTSMITH_PYTHON` is the fix people will need when a hook cannot run.
-- Every other lever again over the final tree, including the two fixes above and the OTS vendoring.
-- The vendored copies in OTS are byte-identical to this checkout (diffed per file in the tenant review).
+- Every other lever again over the final tree, including the two fixes above and the Tenant B vendoring.
+- The vendored copies in Tenant B are byte-identical to this checkout (diffed per file in the tenant review).
 
 ## Pass 6 — findings: 0
 
@@ -126,7 +126,7 @@ Run after the handover, against the committed slice (`dde56b3`) rather than the 
   no fix available short of rewriting history. Declaring `registry` in
   `.agenticframework/process-gates.json` is now what adopts those rules: a commit whose own config
   omits it is judged by the pre-registry sections, exactly as a repo that had not adopted the gates
-  at all is (`PRE_REGISTRY_SECTIONS`). AgentSmith declares it, so G1 onward is held to it; OTS and
+  at all is (`PRE_REGISTRY_SECTIONS`). AgentSmith declares it, so G1 onward is held to it; Tenant B and
   KYC Sentinel adopt it with their own slices. Three tests pin it — history passes, an adopting
   config fails on all four requirements, and this repo is adopted — and three mutations (the flag
   ignored, the sign-off always required, adoption assumed) are each caught.
@@ -188,7 +188,7 @@ Declared gaps:             (1) mypy could not run in this local venv — its num
                           (3) closed 2026-09-16 — the owner recorded D3 (A-597cd675) and D4
                               (A-8ad5e81b) with `agentsmith approve` at a terminal; both ids are
                               in the design's `## Deviations`, and the gate resolves them;
-                          (4) the OTS side (T1) and the other IDEs' hooks (G2) are separate
+                          (4) the Tenant B side (T1) and the other IDEs' hooks (G2) are separate
                               slices, so today only Claude Code's hooks call the new checks.
 ```
 

@@ -7,7 +7,7 @@ scope:
 ---
 # The launcher reads `providers.json` by its structure
 
-Found 2026-10-09 committing AqlaarTeleologyStudio's move onto the evals contract.
+Found 2026-10-09 committing Tenant B's move onto the evals contract.
 
 ## Problem
 
@@ -19,7 +19,7 @@ Measured on 2026-10-09 with the launcher AgentSmith 2.2.2 ships:
   contract allows — survives that one pass with its own `"contract": 1` inside, so the launcher reads
   gate contract **1** for a repository that declares 3. KYC Sentinel's declaration (`no_verdict` for
   three suites) has read as contract 1 since 2026-10-07: its commit and push events and its CI `ci`
-  event fall back to AgentSmith's gate script by path instead of asking the declared provider. OTS's
+  event fall back to AgentSmith's gate script by path instead of asking the declared provider. Tenant B's
   commit was refused outright — its fallback is a vendored script too old to know `sweep`.
 - **A port whose `"command"` is not its first key reads as undeclared.** `declared_port` returns the
   first `"command"` before the first `}` after the port's name; an `evals` entry written with its
@@ -36,10 +36,10 @@ Measured on 2026-10-09 with the launcher AgentSmith 2.2.2 ships:
 - `declared_contract` is the gate entry's own `contract`, else the top-level one, else 1 — as
   documented; `declared_port` is `none` when the port's value is the string, else its `command`,
   wherever the key sits in the object.
-- **Tests** pin both readings on the declarations that broke them (KYC's and OTS's shapes), with keys
+- **Tests** pin both readings on the declarations that broke them (KYC's and Tenant B's shapes), with keys
   in any order, an `_about` that quotes `"gate": "none"`, escaped quotes, and a declaration with no
   `contract`; a mutation restores the one-pass read.
-- **Ships in 2.2.3** with `setup-evals-provider`; KYC and OTS take it with their next sync.
+- **Ships in 2.2.3** with `setup-evals-provider`; KYC and Tenant B take it with their next sync.
 
 ## Pillars
 

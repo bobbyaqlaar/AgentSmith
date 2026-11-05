@@ -9,7 +9,7 @@ name: "CD: Production Deploy"
 # fails the job and invokes the platform rollback hook.
 
 # GATED ON CI. This used to be `on: push`, running in PARALLEL with CI with
-# nothing making it wait: AqlaarTeleologyStudio's "CD: Production Deploy"
+# nothing making it wait: Tenant B's "CD: Production Deploy"
 # went green on commits whose CI failed (a no-op only because DEPLOY_COMMAND was
 # unset — set it, and a red commit ships). Now it runs when the stack's CI
 # workflow COMPLETES for a push to main, and the job proceeds only if that run

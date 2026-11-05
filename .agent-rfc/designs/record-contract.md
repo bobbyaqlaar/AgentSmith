@@ -40,7 +40,7 @@ The record works, and nothing defines it:
   the run, unreachable or failing (5xx) warns — and the portal's limits are in `DEV_LIMITS`. A
   second sender or receiver would have to read both programs to learn them.
 
-**What tenants hold here:** nothing, any more. Neither KYC Sentinel nor OTS sends a record, and since
+**What tenants hold here:** nothing, any more. Neither KYC Sentinel nor Tenant B sends a record, and since
 C1 the gates workflow has no record step — verified. So this slice's proof is the contract's own
 conformance on both ends, not a tenant deleting a file.
 

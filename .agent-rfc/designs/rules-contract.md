@@ -28,9 +28,9 @@ provider, never a framework file.
 
 ## Problem
 
-Measured in this repository, OTS and KYC Sentinel on 2026-10-04:
+Measured in this repository, Tenant B and KYC Sentinel on 2026-10-04:
 
-- **A tenant's CI runs the renderer by path.** OTS's `ci-python-fastapi.yml` runs
+- **A tenant's CI runs the renderer by path.** Tenant B's `ci-python-fastapi.yml` runs
   `python3 scripts/generate-ide-config.py --check-only` and `--registry --check-only` against its
   vendored copies of `templates/agent-rules.yaml`, `templates/governance.json` and the script. The
   `tenant init` templates (`workflow-templates/ci-*.yml`) ship the same step.
@@ -38,7 +38,7 @@ Measured in this repository, OTS and KYC Sentinel on 2026-10-04:
   `"registry": "@framework/templates/governance.json"`, `"levers_doc": "@framework/docs/review-levers.md"`
   and `"design_checklist": "@framework/docs/design-review-checklist.md"` into every adopted tenant's
   `process-gates.json` (`runtime/cli.py` `_process_gates_config`) — the provider's install layout,
-  in the tenant's committed config. KYC carries the last two. OTS goes further: `"registry":
+  in the tenant's committed config. KYC carries the last two. Tenant B goes further: `"registry":
   "templates/governance.json"`, its own vendored copy, so the pillars its designs are held to are
   whatever was vendored last, not what its provider enforces.
 - **Rendering is not callable by anyone else.** `adopt` and `sync` render by running
@@ -103,7 +103,7 @@ The gate's top-level `contract` stays the gate's.
 
 **Deliberately not in the contract: the registry.** The umbrella listed "the registry schema". The
 registry — the pillar catalogue a design is checked against — is the gate provider's policy, and
-publishing it as something a tenant may hold is exactly how OTS came to check its designs against a
+publishing it as something a tenant may hold is exactly how Tenant B came to check its designs against a
 stale vendored copy. A tenant adds to it through `extends.pillars`, which is published. The umbrella's
 C4 row is amended to say so.
 
@@ -168,7 +168,7 @@ environment, are each shown to fail it.
 
 ### The tenant steps that prove it — after the release that carries it
 
-- **OTS** (its own design, in OTS): declares `rules`; changes `"registry": "templates/governance.json"` to `"provider"`,
+- **Tenant B** (its own design, in Tenant B): declares `rules`; changes `"registry": "templates/governance.json"` to `"provider"`,
   so its designs are checked against its provider's pillars; its two `generate-ide-config.py` CI steps
   go, replaced by the gates workflow's step. Its vendored `templates/` and `generate-ide-config.py`
   are then read by nothing — they leave with the rest of vendoring at C9, because `upgrade` re-vendors

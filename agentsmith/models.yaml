@@ -48,7 +48,7 @@
 # agentsmith/provider_dispatch.py. Their extra fields (project/region/publisher,
 # resource/deployment/api_version, url_template, path_template) are documented
 # in that module's adapter docstrings. Mock-tested: all four. Live-verified
-# against a real account: vertex_ai only (project agentsmith-500916,
+# against a real account: vertex_ai only (a real GCP project,
 # 2026-06-29) — GCC regions me-central1 (Doha) / me-central2 (Dammam) were
 # tested and do NOT serve gemini-2.5-flash; us-central1, europe-west1,
 # europe-west4 and asia-south1 do. Verify before pinning a GCC region.

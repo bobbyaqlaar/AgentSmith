@@ -57,7 +57,7 @@ jobs:
       - name: Install CI tooling
         run: |
           # ruff PINNED, to the framework's own requirements-lint.txt. Unpinned,
-          # a ruff release changed this gate with no commit: AqlaarTeleologyStudio
+          # a ruff release changed this gate with no commit: Tenant B
           # resolved 0.16.7, whose defaults grade far more rules than 0.15.x.
           # Bump deliberately, in this line and your own lock together.
           pip install pytest pytest-asyncio pytest-cov httpx "ruff==0.15.20"

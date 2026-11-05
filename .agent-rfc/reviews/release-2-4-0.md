@@ -38,7 +38,7 @@ the contract and its mypy fix) and `9cb0646` (backlog only).
 The row's "nothing stops working" was checked in code, not assumed:
 - A vendored tenant keeps its `scripts/sync-portal-history.py`. The upgrade merges trees (`_copy_tree_merge`) and deletes none.
 - The four `_shared.py` helpers that script imports are all still defined.
-- OTS and oil-price-demo run it in CD, and the route it posts to stays served while the portal keeps
+- Tenant B and oil-price-demo run it in CD, and the route it posts to stays served while the portal keeps
   `OPS_PORTAL_SYNC_TOKEN`.
 - No tenant workflow calls `--check-history-sync`.
 - The migration only adds the `scope` column, so a replay URL and key already stored survive it.

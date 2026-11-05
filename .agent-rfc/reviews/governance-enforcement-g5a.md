@@ -1,7 +1,7 @@
 # Review — governance enforcement, G5a (one artifact per type, as code)
 
 Design: `.agent-rfc/designs/governance-enforcement.md` § G5, with the owner's 2026-09-16
-decision that G5a is the code and G5b the document migrations (OTS first, AgentSmith second).
+decision that G5a is the code and G5b the document migrations (Tenant B first, AgentSmith second).
 
 **Built evidence (2026-09-17):**
 
@@ -65,7 +65,7 @@ Fixtures re-pinned:        yes — templates/governance.json regenerated from ag
 Gates run locally:         ruff, both suites, SPECS drift, --check-hooks, --check-kg, the
                           registry drift check, bash -n and ShellCheck, and
                           `process_gate.py artifacts` against this checkout
-Declared gaps:             (1) AgentSmith and OTS run `report`; `enforce` comes with each
+Declared gaps:             (1) AgentSmith and Tenant B run `report`; `enforce` comes with each
                               repo's G5b migration, in the same change;
                           (2) `records: single` is implemented and tested but no repo uses it
                               until G5b — deliberate, since a migration needs the reader first;

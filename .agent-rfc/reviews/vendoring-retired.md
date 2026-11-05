@@ -125,7 +125,7 @@ before it was changed:
 3. **A second placeholder name for one thing:** `{{AGENTSMITH_SETUP}}` beside the gates templates'
    `{{PROVIDER_SETUP}}`. **Fix:** one name.
 4. **The provider's setup step placed after the CI job's `setup-python`** would have switched the
-   interpreter for the steps after it, as OTS's review found once before. **Fix:** first, right
+   interpreter for the steps after it, as Tenant B's review found once before. **Fix:** first, right
    after checkout.
 5. **The knowledge-graph step was dropped on a premise that was half wrong.**
    `verify_system --check-kg`'s staleness half checks a tenant's own graph; only its "AgentSmith's
