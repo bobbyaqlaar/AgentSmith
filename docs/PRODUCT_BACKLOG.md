@@ -11,9 +11,9 @@
 > install works for anyone", on the strength of a 200 and a checksum. Run from scratch, a stranger's first commit
 > was refused.
 
-## Current state (2026-11-04)
+## Current state (2026-11-05)
 
-**v3.0.1 is the latest release**, and `release.yml` runs the Quick Start on its published URL. The governance
+**v4.0.0 is the latest release**, and `release.yml` runs the Quick Start on its published URL. The governance
 contracts C1–C9 are complete. **AgentSmith is public (AGPL-3.0)**; KYC Sentinel and AqlaarTeleologyStudio are
 private. KYC is on 3.0.0 with green CI, and OTS on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
 two security controls awaiting its own content: do not use it as a showcase.
@@ -38,11 +38,11 @@ labelled preview.
 | 2 | ✅ AGPL notices and community files (`agpl-compliance`, merged) | Claude | Tue 3 |
 | 3 | ✅ Release 3.0.1; `release.yml`'s verify job green on the real URL | Claude | Tue 3 |
 | 4 | ✅ Private vulnerability reporting on, which `SECURITY.md` relies on | Owner | Tue 3 |
-| 5 | Rename `agentsmith` to `agentsmith`; release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Wed 4 |
-| 6 | First run: a new repository's red security job says it is expected, and what to write to get green (fires the onboarding item below) | Claude | Wed 4 |
-| 7 | Honest coverage: OWASP Agentic Top 10 and EU AI Act mapped in `docs/security-framework-map.md`, with gaps said (gaps 1 and 8) | Claude | Wed 4 |
+| 5 | Rename `runtime` to `agentsmith` (`package-agentsmith`, merged); release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Thu 5 |
+| 6 | First run: a new repository's red security job says it is expected, and what to write to get green (fires the onboarding item below) | Claude | Thu 5 |
+| 7 | Honest coverage: OWASP Agentic Top 10 and EU AI Act mapped in `docs/security-framework-map.md`, with gaps said (gaps 1 and 8) | Claude | Thu 5 |
 | 8 | Small fixes with the release: `PROMPT_DENYLIST_PATH` in the evals port; DLQ **Discard** confirmation; pin `phoenix:latest`; delete `ai-compat.sh`; the widget's dead `cdn.agenticframework.io`; `oil-price-demo` in live docs | Claude | Thu 5 |
-| 9 | Secret scan over **full history**, not only the tree (the pattern check so far covered the tree) | Claude | Thu 5 |
+| 9 | ✅ Secret scan over **full history**: 568 commits with merge diffs, by our own patterns, not gitleaks. Only placeholders and throwaway test tokens; no env, key or credential file was ever committed | Claude | Thu 5 |
 | 10 | README leads with the three audiences and states its limits: edit-time enforcement on Claude Code and Cursor only (rule files and CI elsewhere), Windows untested, yarn, bun and Poetry unsupported, Ops in preview | Claude | Thu 5 |
 | 11 | Confirm with counsel: copyright holder in `NOTICE` (Aqlaar Tech FZE LLC, assigned?), `TRADEMARK.md` (names Bobby Rajagopal), and what AGPL means for a tenant importing the runtime. Say whether OTS, KYC and GCP project `agentsmith-500916` may stay named in a public repository | Owner | Thu 5 |
 | 12 | Set the repository's description and topics (it still says "Universal agentic framework") | Owner, or say go | Thu 5 |
@@ -52,8 +52,8 @@ labelled preview.
 ### Stage 2: "the DevOps platform for AI-infused and agent apps"
 
 The claim needs evidence a preview does not: a real app, on real traffic, traced back to the design that shaped it.
-**6 November is possible only in the narrow form below, and only if the owner supplies step 15 by Wednesday noon.
-Otherwise Stage 1 ships on the 6th and Stage 2 the following week.** Stage 1 does not depend on it.
+**Step 15's cutoff, Wednesday 4 November at noon, passed, so Stage 1 ships on the 6th and Stage 2 the following
+week.** Stage 1 does not depend on it.
 
 | # | Step | Who |
 |---|---|---|
@@ -194,6 +194,10 @@ Sources: [Gartner AI governance platforms](https://www.gartner.com/reviews/marke
 ---
 
 ## After Stage 2, in order
+
+**Nothing moves a tenant from an earlier release forward.** The scratch tenants are rebuilt from HEAD, so they pass while
+what a real tenant already holds breaks: cutting 4.0.0 found a 3.x `agentsmith-sync.yml` failing against the latest release,
+by reading it. Adopt with the last release's tree, then run the sync workflow's own step against the candidate.
 
 **First-run friction.** All 14 pillars for a one-line change is the most likely reason a newcomer gives up. *Scope-derived
 pillar subset:* ask only the pillars a change's paths implicate, each still carrying evidence. Held until G4, which has

@@ -7,6 +7,10 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Release 4.0.0 (2026-11-05)
+
+The package imports as `agentsmith` (`package-agentsmith`), for the launch. See `CHANGELOG.md`, whose 4.0.x row names the one break that is not an import.
+
 ## Release 3.0.1 (2026-11-04)
 
 The install fix (`release-install-path`) and the AGPL notices (`agpl-compliance`), for the launch. See `CHANGELOG.md`.

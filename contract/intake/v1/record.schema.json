@@ -9,7 +9,7 @@
     "schema_version": {"const": 1},
     "intake_id": {"type": "string", "pattern": "^[0-9]{1,19}$"},
     "tenant_id": {
-      "description": "portal/lib/apps.ts APP_ID — narrower than runtime/cli.py TENANT_ID_PATTERN, so the tenant can register as a portal app.",
+      "description": "portal/lib/apps.ts APP_ID — narrower than agentsmith/cli.py TENANT_ID_PATTERN, so the tenant can register as a portal app.",
       "type": "string",
       "pattern": "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$"
     },
