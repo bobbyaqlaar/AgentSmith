@@ -431,11 +431,11 @@ def test_the_environment_sets_no_bar_on_the_scoring(monkeypatch, tmp_path):
     def spy(**kw):
         import os
 
-        seen.update(kw, env={k: os.environ.get(k) for k in _port().THRESHOLD_ENV})
+        seen.update(kw, env={k: os.environ.get(k) for k in (*_port().THRESHOLD_ENV, "PROMPT_DENYLIST_PATH")})
         return original(**kw)
 
     fake.run_scorecard = spy
-    for name in _port().THRESHOLD_ENV:
+    for name in (*_port().THRESHOLD_ENV, "PROMPT_DENYLIST_PATH"):
         monkeypatch.setenv(name, "0.99")
 
     _port().judge(root, gm.EvalsRequest(suite="golden"))

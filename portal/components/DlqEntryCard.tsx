@@ -59,6 +59,7 @@ export function DlqEntryCard({ entry }: { entry: DLQEntry }) {
   }
 
   async function discard() {
+    if (!window.confirm(`Discard ${entry.taskId}? It cannot be replayed afterwards.`)) return;
     setBusy(true);
     setMessage(null);
     try {

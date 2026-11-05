@@ -106,6 +106,17 @@ repository starts there, and lists the fields to write. `tenant init` says so la
 that checks it locally. Newly seeded templates carry the same guidance, and say the agency manifest is a declaration: the check
 reads that you wrote it, not that the approval happens.
 
+### Fixed — small things a first user could hit
+
+- The evals port clears `PROMPT_DENYLIST_PATH`, so whoever runs a suite cannot change its score that way.
+- The portal asks before discarding a dead-letter entry.
+- `docker-compose.yml` pins Phoenix to 17.10.0 by digest, not `latest`.
+- `AgentStatus` requires `widgetScriptUrl`: its default was a domain that never existed, so a caller omitting it got no widget.
+
+### Removed
+
+`templates/shell/ai-compat.sh` and its copy step. A copy already on a machine is left alone, so a profile that sources it keeps working; a new machine does not get one.
+
 ## [4.0.0] — 2026-11-05
 
 ### Changed — the package imports as `agentsmith`

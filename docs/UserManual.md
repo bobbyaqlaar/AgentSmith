@@ -71,8 +71,7 @@ The installer:
 
 Nothing to reload. `agentsmith` works in any new or existing terminal as long as
 `~/.local/bin` is on your `PATH`; the installer prints the one line to add if it
-is not. The old names are available as wrappers if you want them —
-`source ~/.agent-framework/shell/ai-compat.sh` — but nothing needs them.
+is not.
 
 Verify the install:
 
@@ -866,8 +865,6 @@ echo '{"config": {}, "monthly_accumulated_spend_usd": 0, "current_month_identifi
 
 The canonical `agentsmith` command table. Every command is a subcommand of one
 program (`agentsmith/cli.py`), so `agentsmith <command> --help` is always current.
-The older `ai-*` names map to these one for one
-(`~/.agent-framework/shell/ai-compat.sh`).
 
 ### Mode & Environment
 
@@ -1439,7 +1436,7 @@ none outside a repository.
 
 > **Starting a new tenant app — nothing to copy manually.**
 >
-> For any repo that is not based on the oil-price-demo example, the full
+> For any repo that is not based on `examples/oil-price-agent`, the full
 > scaffolding is handled automatically — no files need to be copied from
 > the AgenticFramework directory:
 >

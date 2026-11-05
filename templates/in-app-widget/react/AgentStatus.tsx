@@ -17,7 +17,7 @@ export interface AgentStatusProps {
   token: string;
   portalUrl: string;
   pollIntervalMs?: number;
-  widgetScriptUrl?: string; // defaults to the AgentSmith CDN build
+  widgetScriptUrl: string; // where you self-host widget.js; no CDN exists
 }
 
 let widgetScriptPromise: Promise<void> | null = null;
@@ -42,7 +42,7 @@ export function AgentStatus({
   token,
   portalUrl,
   pollIntervalMs,
-  widgetScriptUrl = "https://cdn.agenticframework.io/widget.js",
+  widgetScriptUrl,
 }: AgentStatusProps) {
   const ref = useRef<HTMLElement | null>(null);
 

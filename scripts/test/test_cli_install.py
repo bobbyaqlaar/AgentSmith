@@ -134,7 +134,6 @@ def test_step7_records_the_install_mode_and_removes_the_block_via_the_command(tm
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "fw" / "state" / "install-mode").read_text() == f"{mode}\n"
     assert (tmp_path / "calls").read_text() == "uninstall --legacy-profile-only\n"
-    assert (tmp_path / "fw" / "shell" / "ai-compat.sh").is_file()
     assert "--force is no longer needed" in result.stdout
 
 
@@ -179,24 +178,6 @@ def _leaf_paths(parser: argparse.ArgumentParser, path: tuple[str, ...] = ()) -> 
         for name, child in action.choices.items():
             found.update(_leaf_paths(child, (*path, name)))
     return found
-
-
-def test_every_compat_wrapper_names_a_real_command_and_real_options():
-    text = (REPO / "templates" / "shell" / "ai-compat.sh").read_text(encoding="utf-8")
-    wrappers = re.findall(r'^(ai-[a-z-]+)\(\)\s*\{\s*agentsmith ([^"]*)"\$@"; \}$', text, re.M)
-    # 17 removed shell functions, less `ai-stack-upgrade`: `agentsmith upgrade`
-    # itself was removed in 3.0.0 (vendoring-retired.md).
-    assert len(wrappers) == 16, f"expected one wrapper per removed shell function, found {len(wrappers)}"
-    leaves = _leaf_paths(build_parser())
-    for name, args in wrappers:
-        tokens = args.split()
-        path = next((tuple(tokens[:n]) for n in range(len(tokens), 0, -1) if tuple(tokens[:n]) in leaves), None)
-        assert path, f"{name} calls `agentsmith {args}`, which is not a command"
-        options = {s for action in leaves[path]._actions for s in action.option_strings}
-        positional_choices = {c for action in leaves[path]._actions if not action.option_strings
-                              for c in (action.choices or [])}
-        for token in tokens[len(path):]:
-            assert token in options or token in positional_choices, f"{name}: `{token}` is not valid for {path}"
 
 
 # ── The manual's Command Reference is a second copy of the CLI surface ────────

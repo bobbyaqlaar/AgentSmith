@@ -41,6 +41,9 @@ MIN_CASES = {"fairness": 2}  # every other suite: 3, as run-evals.py gates
 THRESHOLD_ENV = ("EVAL_FAIL_BELOW", "FAIRNESS_FAIL_BELOW", "HALLUCINATION_FAIL_ABOVE",
                  "ADVERSARIAL_FAIL_ABOVE", "RAG_POISON_FAIL_ABOVE",
                  "FAIRNESS_PARITY_FAIL_BELOW", "FAIRNESS_SCORE_SPREAD_FAIL_ABOVE")
+# What a score must not take from whoever runs it: the thresholds, and the extra
+# patterns prompt_guard reads before the repository's own denylist.
+AMBIENT_ENV = (*THRESHOLD_ENV, "PROMPT_DENYLIST_PATH")
 
 
 def _scorecard(suite: str, verdict: str, reason: str, *, extra: Optional[dict] = None,
@@ -153,7 +156,7 @@ def judge(root: Path, request: gm.EvalsRequest) -> gm.Scorecard:
     suite = request.suite
     os.chdir(root)  # run-evals.py resolves the repository from the working directory
     _shared._load_dotenv(root)  # the judge's credential, as run-evals.py loads it
-    for name in THRESHOLD_ENV:
+    for name in AMBIENT_ENV:
         os.environ.pop(name, None)
     run_evals = _shared.load_script("run-evals")
     below, above = thresholds(root, request, run_evals._registry_fail_below(suite)

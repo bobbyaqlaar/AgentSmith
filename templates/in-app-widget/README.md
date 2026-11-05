@@ -46,8 +46,7 @@ claim the portal cannot support.
 
 ## Integration
 
-**No CDN exists yet** (`cdn.agenticframework.io` is not a real, hosted
-domain) — self-host `widget.js` until one does. Each tagged release
+**No CDN exists,** so self-host `widget.js`. Each tagged release
 publishes `widget.js` as a downloadable asset
 (`.github/workflows/release.yml`) for exactly this purpose: download it,
 serve it from your own app's static assets, and point the `<script>` tag at
