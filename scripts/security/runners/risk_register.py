@@ -8,6 +8,7 @@ import yaml
 import gate_models as gm
 from security.registry import ControlSpec
 from security.report import ControlResult
+from security.runners._shared import shown_path
 
 
 def _resolve_path(ctx: dict[str, Any]) -> Path:
@@ -97,9 +98,9 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
                 control_id=control.id,
                 status="fail",
                 message=(
-                    f"risk register still contains un-edited template entries "
-                    f"({', '.join(placeholders[:3])}) — replace them with "
-                    f"organisation-owned risks"
+                    f"{shown_path(path, ctx)} still holds the template's {', '.join(placeholders[:3])}. A new "
+                    f"repository starts here, and this fails until you replace it with your own risks: id, "
+                    f"description, severity, mitigations, control_ids"
                 ),
                 evidence={"path": str(path), "placeholders": str(len(placeholders))},
             )

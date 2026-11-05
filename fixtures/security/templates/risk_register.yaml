@@ -1,6 +1,16 @@
-# Org-owned risk register (SEC-RISK-001).
-# Copy to .agent-rfc/security/risk_register.yaml and fill with real risks.
-# Harness validates schema only — not content truth.
+# Your repository's risk register (SEC-RISK-001).
+#
+# The Security job fails until RISK-EXAMPLE-001 is gone: a new repository starts
+# here. Replace it with the risks your software really carries, then run
+#   bash .githooks/process-gate security check
+#
+# id           anything but RISK-EXAMPLE-*, such as RISK-001
+# description  what could go wrong, in your own terms
+# severity     low, medium, high or critical
+# mitigations  what you do about it, and what risk you accept
+# control_ids  the SEC-* controls that bear on it; the check's report lists them
+#
+# The check reads the shape. Whether the entries are true is yours to answer.
 version: 1
 entries:
   - id: RISK-EXAMPLE-001

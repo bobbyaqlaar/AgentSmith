@@ -486,14 +486,21 @@ def seed_tenant_data(root: Path, framework: Optional[Path]) -> list[str]:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(src, target)
             written.append(dest)
+    return written
+
+
+def first_push_note(written: list[str]) -> str:
+    """What the first push will show, when this run seeded a graded placeholder.
+    The last thing `tenant init` prints: above the file list, nobody read it."""
     graded = {".agent-rfc/security/risk_register.yaml": "SEC-RISK-001",
               ".agent-rfc/security/agency_manifest.yaml": "SEC-AGENCY-001"}
-    placeholders = [path for path in written if path in graded]
-    if placeholders:
-        print(f"  ! {', '.join(placeholders)} {'are' if len(placeholders) > 1 else 'is a'} "
-              f"PLACEHOLDER{'S' if len(placeholders) > 1 else ''} — the security port fails "
-              f"{' and '.join(graded[p] for p in placeholders)} until it says what is yours")
-    return written
+    seeded = [f"  {path} ({graded[path]})" for path in graded if path in written]
+    if not seeded:
+        return ""
+    return ("\nYour first push will fail its Security job, and that is expected. These are placeholders until "
+            "they say what is yours:\n" + "\n".join(seeded) + "\n"
+            "Each file's comments say what to write. After the scaffold commit, edit them and check with:\n"
+            "  bash .githooks/process-gate security check")
 
 
 SCAFFOLD_DESIGN = ".agent-rfc/designs/scaffold.md"
@@ -930,6 +937,9 @@ def _scaffold_tenant(args: argparse.Namespace, root: Path, intake_rfc: Optional[
         )
     if args.isolation == "dedicated":
         print("Apply agentsmith/k8s/dedicated-tenant/ to provision its own worker pool.")
+    note = first_push_note(written)
+    if note:
+        print(note)
     return 0
 
 

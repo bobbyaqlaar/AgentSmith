@@ -177,8 +177,10 @@ agentsmith tenant init my-project --stack python-fastapi   # or ts-react, go
   `.github/copilot-instructions.md`, `.agents/skills/`) and the IDE hook configs;
 - the CI workflows for the stack, each asking the provider through its pinned setup step,
   plus the gates and weekly sync workflows;
-- `.agent-rfc/security/` placeholders, never overwritten (the security port fails SEC-RISK-001 and
-  SEC-AGENCY-001 until the risk register and agency manifest say what is yours);
+- `.agent-rfc/security/` placeholders, never overwritten. Your first push fails its Security job,
+  and that is expected: SEC-RISK-001 and SEC-AGENCY-001 fail until `risk_register.yaml` and
+  `agency_manifest.yaml` say what is yours. Each file's comments say what to write. After the
+  scaffold commit, edit them and run `bash .githooks/process-gate security check`; they need no design;
 - in `providers.json`, the truth about a new repository: no telemetry emitter yet (`"emitter":
   "none"`), and judged suites that warn — visibly, "this suite proves nothing" — until it has eval
   data of its own (`not_gradable` / `no_verdict`). Add `.agent-rfc/fixtures/golden_evals.json` with

@@ -39,6 +39,7 @@ from security.runners._shared import (
     provider_code_in_scope,
     pytest_suite,
     repository_python,
+    shown_path,
     tenant_security,
     verify_system,
 )
@@ -289,8 +290,9 @@ def agency_manifest(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     if placeholders:
         return failed(
             control,
-            f"agency manifest still contains the shipped placeholder "
-            f"({len(placeholders)} entry/entries) — nothing has been declared",
+            f"{shown_path(path, ctx)} is still the template's example. A new repository starts here, and this "
+            f"fails until you list the actions a person must approve: workflow, action, and needs_hitl: true "
+            f"on at least one",
             path=str(path),
         )
 

@@ -99,6 +99,13 @@ The Knowledge Graph's ignore list was checked against the absolute path. A repos
 edges, with nothing reporting it. The list now applies inside the repository only. An affected repository is repaired by its next
 `python3 scripts/map_codebase.py`.
 
+### Fixed — a new repository's red Security job says it is expected, and what to write
+
+The job still fails until the risk register and agency manifest are yours. Each failure now names the file, says a new
+repository starts there, and lists the fields to write. `tenant init` says so last, after the commit command, with the command
+that checks it locally. Newly seeded templates carry the same guidance, and say the agency manifest is a declaration: the check
+reads that you wrote it, not that the approval happens.
+
 ## [4.0.0] — 2026-11-05
 
 ### Changed — the package imports as `agentsmith`
