@@ -1395,8 +1395,38 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="security_contract",
-        tests=("scripts/test/test_security_contract.py",),
+        tests=("scripts/test/test_security_contract.py", "scripts/test/test_security_first_run.py"),
         mutations=(
+            Mutation(
+                "a placeholder risk register does not say which file",
+                "scripts/security/runners/risk_register.py",
+                'f"{shown_path(path, ctx)} still holds the template\'s',
+                'f"The risk register still holds the template\'s',
+            ),
+            Mutation(
+                "a placeholder agency manifest does not say which file",
+                "scripts/security/runners/delegating.py",
+                'f"{shown_path(path, ctx)} is still the template\'s example.',
+                'f"The agency manifest is still the template\'s example.',
+            ),
+            Mutation(
+                "the file is shown by its path on the machine",
+                "scripts/security/runners/_shared.py",
+                'return path.relative_to(ctx.get("tenant_root", "")).as_posix()',
+                "return str(path)",
+            ),
+            Mutation(
+                "tenant init does not say the first push fails",
+                "agentsmith/cli.py",
+                "    note = first_push_note(written)\n    if note:\n",
+                '    note = ""\n    if note:\n',
+            ),
+            Mutation(
+                "the first-push note names files this run did not seed",
+                "agentsmith/cli.py",
+                "for path in graded if path in written]",
+                "for path in graded]",
+            ),
             Mutation(
                 "a row about the provider's own code is run for a tenant",
                 "scripts/security_port.py",

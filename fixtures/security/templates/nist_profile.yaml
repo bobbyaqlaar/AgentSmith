@@ -1,5 +1,4 @@
 # NIST AI RMF profile mapping (optional).
-# Copy to .agent-rfc/security/nist_profile.yaml
 version: 1
 organization: "REPLACE_ME"
 functions:

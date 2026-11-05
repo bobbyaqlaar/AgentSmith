@@ -39,7 +39,7 @@ labelled preview.
 | 3 | ✅ Release 3.0.1; `release.yml`'s verify job green on the real URL | Claude | Tue 3 |
 | 4 | ✅ Private vulnerability reporting on, which `SECURITY.md` relies on | Owner | Tue 3 |
 | 5 | Rename `runtime` to `agentsmith` (`package-agentsmith`, merged); release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Thu 5 |
-| 6 | First run: a new repository's red security job says it is expected, and what to write to get green (fires the onboarding item below) | Claude | Thu 5 |
+| 6 | ✅ First run: a new repository's red security job says it is expected, and what to write to get green (`first-run-security-message`; fires the onboarding item below) | Claude | Thu 5 |
 | 7 | Honest coverage: OWASP Agentic Top 10 and EU AI Act mapped in `docs/security-framework-map.md`, with gaps said (gaps 1 and 8) | Claude | Thu 5 |
 | 8 | Small fixes with the release: `PROMPT_DENYLIST_PATH` in the evals port; DLQ **Discard** confirmation; pin `phoenix:latest`; delete `ai-compat.sh`; the widget's dead `cdn.agenticframework.io`; `oil-price-demo` in live docs | Claude | Thu 5 |
 | 9 | ✅ Secret scan over **full history**: 568 commits with merge diffs, by our own patterns, not gitleaks. Only placeholders and throwaway test tokens; no env, key or credential file was ever committed | Claude | Thu 5 |

@@ -1,5 +1,16 @@
-# High-impact actions requiring HITL (SEC-AGENCY-001).
-# Copy to .agent-rfc/security/agency_manifest.yaml
+# The actions a person must approve (SEC-AGENCY-001).
+#
+# The Security job fails until the example below is gone: a new repository starts
+# here. List what your software or its agents do that a person must approve, with
+# at least one `needs_hitl: true`. A production deploy counts:
+#   - workflow: cd-production
+#     action: deploy_to_production
+#     needs_hitl: true
+# Then run
+#   bash .githooks/process-gate security check
+#
+# This is a declaration. The check reads that you wrote it, not that the approval
+# happens; enforcing it is your workflow's job.
 version: 1
 actions:
   - workflow: example_workflow

@@ -285,6 +285,14 @@ def tenant_security(ctx: dict[str, Any]) -> Path:
     return Path(ctx["tenant_security"])
 
 
+def shown_path(path: Path, ctx: dict[str, Any]) -> str:
+    """`path` as its reader knows it: relative to the repository, whole if outside."""
+    try:
+        return path.relative_to(ctx.get("tenant_root", "")).as_posix()
+    except ValueError:
+        return str(path)
+
+
 def passed(control: ControlSpec, message: str, **evidence: str) -> ControlResult:
     return ControlResult(
         control_id=control.id, status="pass", message=message, evidence=evidence
