@@ -85,6 +85,13 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Fixed — a piped install installs the release it announces
+
+`curl … | bash` run inside a checkout of AgentSmith installed that checkout and still printed `v4.0.0 installed successfully`:
+piped, the installer took the working directory for its own. A pipe now always installs from the release. The installer also
+fails if the command reports a version other than its own, and a failed verification now exits 1 instead of 0. If `agentsmith
+version` disagrees with what you installed, re-run from outside the checkout.
+
 ## [4.0.0] — 2026-11-05
 
 ### Changed — the package imports as `agentsmith`
