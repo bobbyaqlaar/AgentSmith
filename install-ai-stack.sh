@@ -196,12 +196,12 @@ success "$HOME/.agent-framework/ structure created"
 # Where the installer runs from: a checkout (copy from it) or a piped download
 # (fetch release assets). Steps 3-6 all branch on it.
 #
-# Piped (`curl … | bash`), BASH_SOURCE is empty and $0 is "bash", so the
-# dirname is "." — the CURRENT directory. Run from inside a tenant repo, every
-# `[ -d "$INSTALLER_DIR/scripts" ]` below matched the tenant's own scripts/ and
-# copied them over the framework's. A checkout is recognised by its own
-# installer and gate launcher, not by whatever directory the user happened to be in.
-INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "")"
+# Piped (`curl … | bash`), BASH_SOURCE is empty and there is no script path, so
+# there is no checkout, whatever the current directory holds. Falling back to $0
+# ("bash", dirname ".") once copied a tenant's scripts/ over the framework's, and
+# later installed a stale AgentSmith checkout under the banner of a newer release.
+# Run as a file, a checkout is recognised by its own installer and gate launcher.
+INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-/nonexistent/piped}")" 2>/dev/null && pwd || echo "")"
 if { [ ! -f "$INSTALLER_DIR/install-ai-stack.sh" ] || [ ! -f "$INSTALLER_DIR/.githooks/process-gate" ]; }; then
   INSTALLER_DIR=""
 fi
@@ -660,7 +660,15 @@ fi
 
 # The command runs, through the link a user's PATH resolves.
 if AGENTSMITH_VERSION="$("$AGENTSMITH_BIN_DIR/agentsmith" version 2>/dev/null)"; then
-  success "agentsmith $AGENTSMITH_VERSION ($AGENTSMITH_BIN_DIR/agentsmith)"
+  case "$AGENTSMITH_VERSION" in
+    "$FRAMEWORK_VERSION"|"$FRAMEWORK_VERSION"+*)
+      success "agentsmith $AGENTSMITH_VERSION ($AGENTSMITH_BIN_DIR/agentsmith)"
+      ;;
+    *)
+      error "agentsmith reports $AGENTSMITH_VERSION, and this installer is $FRAMEWORK_VERSION — re-run the installer from outside any AgentSmith checkout"
+      VERIFY_PASSED=0
+      ;;
+  esac
 else
   error "agentsmith did not run from $AGENTSMITH_BIN_DIR/agentsmith — re-run the installer"
   VERIFY_PASSED=0
@@ -717,3 +725,6 @@ echo "     User guide: $DOCS_AT/docs/UserManual.md"
 echo "     Design:     $DOCS_AT/docs/DESIGN.md"
 echo "════════════════════════════════════════════════════════════════════"
 echo ""
+
+# A failed check above is a failed install: whoever scripted this must be able to tell.
+[ "$VERIFY_PASSED" -eq 1 ] || exit 1

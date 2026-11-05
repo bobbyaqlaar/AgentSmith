@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # scripts/check_release_install.sh <release-url> — a stranger's first ten minutes,
 # run for real against a release: <release-url> is a directory of published assets,
-# https://… or file://… . Nothing of this checkout is used: an empty HOME, an empty
-# working directory, and only what the release serves
+# https://… or file://… . Nothing of this checkout is used: an empty HOME, a working
+# directory holding only a decoy checkout's two marker files, and what the release serves
 # (.agent-rfc/designs/release-install-path.md).
 #
 # Passes only if the README's Quick Start works: the checksum verifies, the install
@@ -31,8 +31,10 @@ git config --global user.name "release check"
 git config --global user.email "release-check@example.com"
 git config --global init.defaultBranch main
 
-step "install, from an unrelated directory"
-(cd "$work/elsewhere" && AI_STACK_RELEASE_BASE="$base" bash "$work/dl/install-ai-stack.sh" </dev/null) \
+step "install, piped as the README says, from a directory that looks like another checkout"
+mkdir -p "$work/elsewhere/.githooks"
+touch "$work/elsewhere/install-ai-stack.sh" "$work/elsewhere/.githooks/process-gate"
+(cd "$work/elsewhere" && AI_STACK_RELEASE_BASE="$base" bash < "$work/dl/install-ai-stack.sh") \
   > "$work/install.log" 2>&1 || { tail -30 "$work/install.log" >&2; fail "the installer failed"; }
 agentsmith version >/dev/null || fail "no agentsmith command after the install"
 if grep -q "Not running from a local checkout" "$work/install.log"; then

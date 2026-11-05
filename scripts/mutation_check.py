@@ -956,6 +956,24 @@ CATALOGUE: tuple[Suite, ...] = (
                 "    missing_gate_hooks(framework)",
             ),
             Mutation(
+                "a piped install takes the working directory for its own checkout",
+                "install-ai-stack.sh",
+                '${BASH_SOURCE[0]:-/nonexistent/piped}',
+                '${BASH_SOURCE[0]:-$0}',
+            ),
+            Mutation(
+                "the install passes whichever version the command reports",
+                "install-ai-stack.sh",
+                '''    "$FRAMEWORK_VERSION"|"$FRAMEWORK_VERSION"+*)''',
+                '''    *)''',
+            ),
+            Mutation(
+                "a failed verification still exits 0",
+                "install-ai-stack.sh",
+                '''[ "$VERIFY_PASSED" -eq 1 ] || exit 1''',
+                '''true''',
+            ),
+            Mutation(
                 "a failed release download carries on to a half-install",
                 "install-ai-stack.sh",
                 '''    exit 1
