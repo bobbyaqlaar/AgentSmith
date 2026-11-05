@@ -124,6 +124,11 @@ covered. For the Act, it gives the dates from Regulation (EU) 2026/1744 and says
 in force since 2 August 2026, is not covered. It also corrects the map: `SEC-AGENCY-001` reads a declaration and never verified
 the gate was wired, and 23 of 24 controls run a runner, not 19 of 23.
 
+### Changed — the README says who it is for and what it does not do yet
+
+It leads with the three kinds of team, and states its limits: edit-time enforcement on Claude Code and Cursor only, Windows
+untested, yarn, bun and Poetry unsupported, Ops in preview, and no compliance certification.
+
 ## [4.0.0] — 2026-11-05
 
 ### Changed — the package imports as `agentsmith`

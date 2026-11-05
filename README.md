@@ -6,6 +6,15 @@
 
 **The governance layer across the lifecycle of an app or agent — from design to operate.**
 
+It is for three kinds of team, and each takes only the part it needs:
+
+- **Building any app with AI coding agents.** The gates hold the agent to a written design and a
+  recorded review. The app itself need not use AI.
+- **Building an app that calls models.** Adds budgets, prompt and PII guardrails, eval gates and
+  tracing.
+- **Building an app that is made of agents.** Adds a tool allowlist, human approval of high-impact
+  actions and recoverable failures.
+
 AgentSmith makes development with AI coding agents secure, reliable and
 explainable, and carries the same rules into production:
 
@@ -34,6 +43,21 @@ history, dead-letter replay and a tamper-evident audit log. **Administration**
 registers apps and issues their CI tokens. Next: passkey sign-in and approving
 deviations in the portal, then the HITL queue, production approvals and log
 monitoring.
+
+**What it does not do yet:**
+
+- **Edit-time enforcement is on Claude Code and Cursor only.** Copilot, Codex, Gemini CLI and
+  Antigravity get the rule files and the CI gates, so a violation is caught at commit and in CI, not
+  while the agent edits.
+- **Windows is untested.** There is no Windows runner; CI runs on Linux, and development is on macOS.
+- **Some package managers are unsupported.** yarn and bun fail CI by name. Poetry installs only CI
+  tooling, with a warning. Use npm or pnpm, and `requirements.txt` or `uv.lock`.
+- **Ops is in preview.** Its portal, guardrails and contracts are tested, but a real application has
+  not yet run through all of it in a deployed environment.
+- **It does not certify compliance.** It gives evidence, and
+  [docs/security-framework-map.md](docs/security-framework-map.md) says where that stops: of the OWASP
+  Top 10 for Agentic Applications, five are partly covered and five are not, and nothing yet helps
+  with EU AI Act Article 50.
 
 > **What this is:** an introduction to AgentSmith — what it is for, how it is built, and what
 > sets it apart. The Quick Start below is the only procedure here; the rest is in the documents
@@ -247,6 +271,10 @@ agentsmith tenant init my-project --stack python-fastapi   # or ts-react, go
 # → the same declarations, armed gates and rules, plus CI/CD workflows for the
 #   stack that ask the provider through its pinned setup step. It prints the commit.
 ```
+
+The first push fails its Security job, and that is expected: the risk register and agency manifest
+are placeholders until they say what is yours. `tenant init` names both files, and their comments say
+what to write.
 
 ### Nothing is installed machine-wide in your repositories
 
