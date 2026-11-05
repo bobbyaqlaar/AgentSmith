@@ -76,7 +76,8 @@ services:
 
   # ── Arize Phoenix ────────────────────────────────────────────────────────────
   phoenix:
-    image: arizephoenix/phoenix:latest
+    # The image the framework has been run against. Move it on purpose.
+    image: arizephoenix/phoenix:version-17.10.0@sha256:a858a771bf79f6733d80cc9eb6cec2aa582d8d83b5070acd4f3375314039ddc5
     container_name: agenticframework-phoenix
     restart: unless-stopped
     ports:

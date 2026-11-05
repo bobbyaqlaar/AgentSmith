@@ -1322,8 +1322,26 @@ CATALOGUE: tuple[Suite, ...] = (
     ),
     Suite(
         name="evals_contract",
-        tests=("scripts/test/test_evals_contract.py",),
+        tests=("scripts/test/test_evals_contract.py", "scripts/test/test_launch_small_fixes.py"),
         mutations=(
+            Mutation(
+                "whoever runs a suite can add to its denylist",
+                "scripts/evals_port.py",
+                'AMBIENT_ENV = (*THRESHOLD_ENV, "PROMPT_DENYLIST_PATH")',
+                "AMBIENT_ENV = THRESHOLD_ENV",
+            ),
+            Mutation(
+                "discard acts on one click",
+                "portal/components/DlqEntryCard.tsx",
+                "    if (!window.confirm(`Discard ${entry.taskId}? It cannot be replayed afterwards.`)) return;\n",
+                "",
+            ),
+            Mutation(
+                "phoenix floats again",
+                "docker-compose.yml",
+                "arizephoenix/phoenix:version-17.10.0@sha256:a858a771bf79f6733d80cc9eb6cec2aa582d8d83b5070acd4f3375314039ddc5",
+                "arizephoenix/phoenix:latest",
+            ),
             Mutation(
                 "a judge that never answered is reported as a pass",
                 "scripts/evals_port.py",
@@ -1339,7 +1357,7 @@ CATALOGUE: tuple[Suite, ...] = (
             Mutation(
                 "the runner's environment reaches the scoring's bars",
                 "scripts/evals_port.py",
-                "    for name in THRESHOLD_ENV:\n        os.environ.pop(name, None)",
+                "    for name in AMBIENT_ENV:\n        os.environ.pop(name, None)",
                 "    for name in ():\n        os.environ.pop(name, None)",
             ),
             Mutation(

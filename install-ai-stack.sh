@@ -603,13 +603,6 @@ if [ "$FORCE_FLAG_GIVEN" -eq 1 ]; then
   info "--force is no longer needed: nothing is written to a shell profile."
 fi
 
-# Optional muscle memory: ai-* names as one-line wrappers. Never sourced here.
-mkdir -p "$FRAMEWORK_DIR/shell"
-if [ -f "$INSTALLER_DIR/templates/shell/ai-compat.sh" ]; then
-  cp "$INSTALLER_DIR/templates/shell/ai-compat.sh" "$FRAMEWORK_DIR/shell/ai-compat.sh"
-  info "Old ai-* names, if you want them: source ~/.agent-framework/shell/ai-compat.sh"
-fi
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 8 — IDENTITY PROMPTS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -708,7 +701,7 @@ echo "     agentsmith mode local        # offline (Ollama)"
 echo "     agentsmith mode hybrid       # cloud (set ANTHROPIC_API_KEY / OPENAI_API_KEY first)"
 echo "     agentsmith dashboard start   # http://localhost:6006"
 echo ""
-echo "  3. Apply to a project (no hook runs on its own — 3.0.0 arms none machine-wide):"
+echo "  3. Apply to a project (no hook runs on its own — none is armed machine-wide):"
 echo "     cd /path/to/your-project"
 echo "     agentsmith tenant init <id> --stack <stack>   # a new repository"
 echo "     agentsmith tenant adopt <id>                  # an existing one: prints a plan; --yes to write it"
