@@ -1,8 +1,9 @@
-# Security Framework Map — OWASP · NIST AI RMF · MITRE ATLAS · ISO/IEC 42001
+# Security Framework Map — OWASP · NIST AI RMF · MITRE ATLAS · ISO/IEC 42001 · EU AI Act
 
 Auditor- and engineer-facing pack: how AgentSmith maps **existing and planned**
-controls to four security/compliance frameworks, and how every tenant app
-**proves** coverage via a **reusable security test harness**.
+controls to security and compliance frameworks, and how every tenant app
+**proves** coverage via a **reusable security test harness**. The OWASP Agentic and EU AI Act
+sections are a reading of the code, stated with their gaps; the harness does not grade them.
 
 > **Disclaimer:** Not legal advice. Not certification. Not a licensed
 > reproduction of OWASP, NIST, MITRE, or ISO standards. The organisation owns
@@ -41,8 +42,8 @@ controls to four security/compliance frameworks, and how every tenant app
 
 ## Verification coverage
 
-**19 of 23** controls execute a runner. The remaining four are
-declared `gap`, so the map states what it verifies and nothing more.
+**23 of 24** controls execute a runner. The remaining one is declared `gap`,
+so the map states what it verifies and nothing more.
 
 `--strict` now fails on an **undeclared gap** — a control claiming `met` or
 `partial` that no runner checks. Previously that produced `skip`, and skip
@@ -176,7 +177,7 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | `SEC-SSO-001` | — | GOVERN 1.3 | AML.T0048 | Theme 1 | **Met** | Framework | `jti` revocation + `SSO_REVOCATION_MODE=fail-open\|fail-closed`; `GET /api/auth/session-status` answers **503**, not a 2xx, when the revocation store is unreachable | `sso_revocation` — snippet-checks the mode switch in `middleware.ts`/`lib/ssoRevocationMode.ts`, then runs `portal/test/ssoRevocation.test.ts`: the mode default, both branches, and (since 2026-08-25) what the ROUTE answers rather than a stubbed transport. Until then the route returned `200 {revoked:false}` on a database error, so fail-closed allowed every session through the one outage it exists for — met, green, and a no-op |
 | `SEC-SOV-001` | LLM05 | MAP 2.3 | — | Theme 4 | **Met** | Tenant | `templates/uae-sovereign/` residency, checked as a declaration | `sovereign_residency` — resolves the template through `_roles_from_doc` and walks every role's ladder with `llm_gateway.degrade_chain`; fails a hosted provider, a self-hostable one with no declared endpoint, or a dangling degrade target. No credentials. |
 | `SEC-RAG-001` | LLM03 | MAP 2.6 | AML.T0010 | Theme 3 | **Met** | Tenant | `prompt_guard.scan_documents` quarantines poisoned retrieved context per-document | `run-evals.py --suite rag_poison` over `fixtures/rag_poison_base.json` — poisoned/benign twins, miss ceiling `RAG_POISON_FAIL_ABOVE` (0.10). Detects poisoned context before prompt assembly; does not claim model resistance. |
-| `SEC-AGENCY-001` | LLM08 | GOVERN 1.5 | AML.T0048 | Theme 5 | **Partial** | Tenant | HITL + workflow `needs_hitl` flags | Tenant declares high-impact actions; harness verifies gate wired |
+| `SEC-AGENCY-001` | LLM08 | GOVERN 1.5 | AML.T0048 | Theme 5 | **Partial** | Tenant | HITL + workflow `needs_hitl` flags | Tenant declares high-impact actions; the harness checks the declaration is present, edited and gates at least one action, not that the gate is wired |
 
 ---
 
@@ -193,9 +194,61 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | LLM05 Supply chain | `SEC-SOV-001`, `SEC-CHANGE-001` | Partial | Model registry attestation + the gate a repository declares, pinned to a release |
 | LLM06 Sensitive disclosure | `SEC-PII-001`, `SEC-PII-002` | Partial→Met | Pre + post PII tests mandatory in `--mode ci` |
 | LLM07 Insecure plugin/tool design | `SEC-TOOL-001`, `SEC-GW-001` | Met | Tenant allowlist enforced against registered tools; gateway-only static check now runs |
-| LLM08 Excessive agency | `SEC-HITL-001`, `SEC-AGENCY-001` | Partial | Tenant manifest of gated actions; harness verifies wiring |
+| LLM08 Excessive agency | `SEC-HITL-001`, `SEC-AGENCY-001` | Partial | Tenant manifest of gated actions, read as a declaration; verifying the wiring is not built |
 | LLM09 Overreliance | `SEC-EVAL-001`, `SEC-EVAL-003` | Met | Golden + hallucination gates |
 | LLM10 Model theft | `SEC-GW-001`, `SEC-AUDIT-001` | Weak | Gateway key isolation; audit on config export (future) |
+
+### OWASP Top 10 for Agentic Applications (2026 edition, December 2025)
+
+**None of the ten is fully covered: five are partial and five are not covered.** The list is about agents at run time. AgentSmith's
+strongest controls act earlier, on the change before it merges, and this list has no entry for those. These rows are a reading
+of the code on 2026-11-05. The harness does not grade them: control tags and evidence packs carry the LLM Top 10, not this list.
+
+| Risk | Control IDs | Current | What it does | What it does not do |
+|---|---|---|---|---|
+| ASI01 Agent Goal Hijack | `SEC-PROMPT-001`, `SEC-RAG-001`, `SEC-ADV-001`, `SEC-MOD-001` | **Partial** | Heuristics and a denylist scan prompts; poisoned retrieved documents are quarantined; a red-team suite tests both | Heuristics can be evaded. Nothing notices a hijack from what the agent then does, because evals judge the answer, not the path. Text in a pull request reaching a coding agent in CI is unchecked |
+| ASI02 Tool Misuse | `SEC-TOOL-001`, `SEC-AGENCY-001`, `SEC-HITL-001`, `SEC-GW-001` | **Partial** | An unlisted tool is refused in strict mode; a human gate pauses a workflow | The allowlist says which tools, not with what arguments or in what order. `SEC-AGENCY-001` reads the declaration; it does not prove the gate is wired |
+| ASI03 Identity & Privilege Abuse | `SEC-RBAC-001`, `SEC-SSO-001` | **Not covered** for agents | Human operators have OIDC, role and tenant scope, and revocation | An agent has no credential of its own. Tenant and role on a span are labels for tracing, not identity. No per-agent scope and no delegation chain |
+| ASI04 Agentic Supply Chain Vulnerabilities | `SEC-CHANGE-001` | **Not covered** at run time | The framework's own dependencies are hash-locked and a repository pins the gate to a release | A repository's MCP servers and tool definitions are not checked: no declaration, no drift detection, no signing |
+| ASI05 Unexpected Code Execution | `SEC-OUTPUT-001` | **Not covered** | Structured model output is validated against a schema | Nothing sandboxes code an agent generates or runs. The edit-time gate governs what a coding agent commits; it contains nothing |
+| ASI06 Memory & Context Poisoning | `SEC-RAG-001` | **Partial** | Retrieved context is scanned document by document | Memory that persists between sessions is not a governed artefact: no provenance, no versioning, no test |
+| ASI07 Insecure Inter-Agent Communication | none | **Not covered** | Spans record the orchestrator and each role | Messages between agents are not authenticated or integrity-checked. Agents in one graph share state, and nothing governs agents across a boundary |
+| ASI08 Cascading Failures | `SEC-BUDGET-001`, `SEC-DLQ-001`, `SEC-SELF-001`, `SEC-EVAL-003` | **Partial** | Budget caps and a degrade ladder bound spend; a failed step goes to a recoverable dead-letter queue; a citation check blocks auto-approval | No per-turn budget and no mid-run pause. Self-correction is opt-in. No way to stop a running app |
+| ASI09 Human-Agent Trust Exploitation | `SEC-HITL-001`, `SEC-EVAL-001`, `SEC-EVAL-003` | **Partial** | Golden and hallucination suites gate releases; replay of a dead-lettered step is signed with a portal-issued key | Nothing tests what an approver is shown, or whether it misleads them. No explanation keyed by run |
+| ASI10 Rogue Agents | `SEC-AUDIT-001`, `SEC-BUDGET-001` | **Not covered** | The audit log is tamper-evident and spend is capped | No kill switch, no behavioural baseline or drift detection, and no retirement of an agent |
+
+### EU AI Act (Regulation (EU) 2024/1689, as amended)
+
+Whether the Act applies, and in which role, depends on the application and is the organisation's call: AgentSmith classifies
+nothing. Dates are from the [Digital Omnibus on AI, Regulation (EU) 2026/1744](https://eur-lex.europa.eu/eli/reg/2026/1744/oj/eng),
+published 24 July 2026 and in force 27 July 2026, read on 2026-11-05.
+
+| Duty | Applies |
+|---|---|
+| Article 50 transparency | 2 August 2026, the general date, which the Omnibus left in place |
+| Article 50(2) marking, for systems on the market before 2 August 2026 | Comply by 2 December 2026 |
+| New Article 5 prohibitions, in points (ba) and (bb) of Article 5(1) and in Article 5(1a) and (1b) | 2 December 2026 |
+| High-risk, Article 6(2) and Annex III | 2 December 2027 |
+| High-risk, Article 6(1) and Annex I | 2 August 2028 |
+
+**These rows say what AgentSmith gives you evidence for, not that a duty is met.** A control passing here is not a conformity
+assessment. Article 50 is already in force and AgentSmith provides nothing for it.
+
+| Article | Duty | Current | What AgentSmith gives you | What is yours, or missing |
+|---|---|---|---|---|
+| 9 | Risk management | **Partial** | A risk register checked for shape (`SEC-RISK-001`); the entries are yours | The system across the lifecycle, and whether the entries are true |
+| 10 | Data governance | **Not covered** | Fairness suites test outputs (`SEC-EVAL-002`) | Training, validation and test data are the application's |
+| 11, Annex IV | Technical documentation | **Partial** | Designs, reviews and evidence packs, tied to commits | Written by hand, not generated; nothing produces Annex IV as such |
+| 12 | Record-keeping | **Partial** | The telemetry contract and a tamper-evident audit log (`SEC-AUDIT-001`). Append-only is a declared gap in the harness (`SEC-AUDIT-002`) | A new repository starts with no emitter, so nothing is recorded until you declare one. A run does not record its commit |
+| 13 | Information for deployers | **Partial** | The widget shows run status and a trace link | Instructions for use are yours. No explanation keyed by run |
+| 14 | Human oversight | **Partial** | A durable human gate (`SEC-HITL-001`); a declared list of actions needing one (`SEC-AGENCY-001`) | No stop control, which Article 14(4)(e) names. The manifest is not checked against the workflow |
+| 15 | Accuracy, robustness, cybersecurity | **Partial** | Eval gates, the red-team suite and prompt guard | Declaring accuracy levels, and resilience testing beyond these suites |
+| 17 | Quality management | **Partial** | The process gate records design, review and sign-off for each change | The organisation's system, of which this is one input |
+| 19 | Keeping logs at least six months | **Not covered** | Nothing | Nothing sets or checks a retention period |
+| 50(1) | Telling people they are dealing with AI | **Not covered** | Nothing | The application's interface, and no gate checks it |
+| 50(2) | Machine-readable marking of generated content | **Not covered** | Nothing | The gateway does not mark output |
+| 72 | Post-market monitoring | **Partial** | The Ops portal shows runs, failures and traces | No plan, no production drift measurement |
+| 73 | Serious incident reporting | **Not covered** | The audit log and dead-letter queue are inputs | No incident workflow or report |
 
 ### NIST AI RMF 1.0
 
@@ -324,7 +377,7 @@ template ship with `strict: true` (P12 complete).
 
 ### Per-app onboarding checklist
 
-1. Copy templates from `fixtures/security/templates/` (via `agentsmith tenant init`) into `.agent-rfc/security/`:
+1. `agentsmith tenant init` seeds `.agent-rfc/security/` from `fixtures/security/templates/`:
    - `risk_register.yaml` — required in strict mode (`SEC-RISK-001`; schema: `contract/security/v1/risk_register.schema.json`)
    - `nist_profile.yaml` — optional NIST AI RMF profile
    - `agency_manifest.yaml` — high-impact actions → `needs_hitl`
@@ -333,7 +386,7 @@ template ship with `strict: true` (P12 complete).
 3. Fill `risk_register.yaml` — org risk entries (harness validates schema only; missing → warn non-strict / fail strict)
 4. Extend `adversarial_evals.json` with domain-specific injection cases
 5. Register moderation hook if `SEC-MOD-001` required (regulated content)
-6. Enable `eval-security.yml` in tenant CI with `strict: true` when ready
+6. `eval-security.yml` runs on every push, and there is no non-strict mode
 
 ### Evidence pack output
 

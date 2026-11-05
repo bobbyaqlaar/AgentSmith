@@ -117,6 +117,13 @@ reads that you wrote it, not that the approval happens.
 
 `templates/shell/ai-compat.sh` and its copy step. A copy already on a machine is left alone, so a profile that sources it keeps working; a new machine does not get one.
 
+### Added — OWASP Agentic Top 10 and EU AI Act coverage, with the gaps said
+
+`docs/security-framework-map.md` maps both. None of the ten OWASP risks is fully covered: five are partial and five are not
+covered. For the Act, it gives the dates from Regulation (EU) 2026/1744 and says what AgentSmith gives evidence for; Article 50,
+in force since 2 August 2026, is not covered. It also corrects the map: `SEC-AGENCY-001` reads a declaration and never verified
+the gate was wired, and 23 of 24 controls run a runner, not 19 of 23.
+
 ## [4.0.0] — 2026-11-05
 
 ### Changed — the package imports as `agentsmith`

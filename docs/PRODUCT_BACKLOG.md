@@ -40,7 +40,7 @@ labelled preview.
 | 4 | ✅ Private vulnerability reporting on, which `SECURITY.md` relies on | Owner | Tue 3 |
 | 5 | Rename `runtime` to `agentsmith` (`package-agentsmith`, merged); release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Thu 5 |
 | 6 | ✅ First run: a new repository's red security job says it is expected, and what to write to get green (`first-run-security-message`; fires the onboarding item below) | Claude | Thu 5 |
-| 7 | Honest coverage: OWASP Agentic Top 10 and EU AI Act mapped in `docs/security-framework-map.md`, with gaps said (gaps 1 and 8) | Claude | Thu 5 |
+| 7 | ✅ Honest coverage: OWASP Agentic Top 10 and EU AI Act mapped in `docs/security-framework-map.md`, with gaps said (gaps 1 and 8) | Claude | Thu 5 |
 | 8 | ✅ Small fixes with the release: `PROMPT_DENYLIST_PATH` in the evals port; DLQ **Discard** confirmation; pin `phoenix:latest`; delete `ai-compat.sh`; the widget's dead `cdn.agenticframework.io`; `oil-price-demo` in live docs (the manual's tutorial keeps it as a name the reader creates, from `examples/oil-price-agent`) | Claude | Thu 5 |
 | 9 | ✅ Secret scan over **full history**: 568 commits with merge diffs, by our own patterns, not gitleaks. Only placeholders and throwaway test tokens; no env, key or credential file was ever committed | Claude | Thu 5 |
 | 10 | README leads with the three audiences and states its limits: edit-time enforcement on Claude Code and Cursor only (rule files and CI elsewhere), Windows untested, yarn, bun and Poetry unsupported, Ops in preview | Claude | Thu 5 |
@@ -146,9 +146,9 @@ is reported as such; CI re-checks what the IDE hook checked; self-hosted, with s
 
 Each was checked absent from the code on 2026-11-03.
 
-1. **No OWASP Top 10 for Agentic Applications mapping** (published December 2025). `docs/security-framework-map.md`
-   maps the LLM Top 10 only, and the first thing a buyer of agent governance asks is now this list. Microsoft's open-source
-   toolkit claims all ten. **Fix:** map the `SEC-*` controls, and name what is uncovered. *Stage 1.*
+1. **The OWASP Agentic Top 10 is mapped by reading, not graded.** `docs/security-framework-map.md` now states it: none of the
+   ten fully covered, five partial, five not covered. Microsoft's open-source toolkit claims all ten. **Fix:** tag the `SEC-*`
+   controls with `ASI*`, so evidence packs report it. *After launch.*
 2. **The accountability chain stops at the commit.** A production run carries no commit (`app_commit` appears nowhere;
    portal phase 4), so "why does this agent do that?" cannot be answered from a trace. This is the differentiator no
    camp above has. *Stage 2.*
@@ -168,9 +168,10 @@ Each was checked absent from the code on 2026-11-03.
 7. **No `gen_ai.*` telemetry.** `contract/telemetry/v1` defines its own attributes. OpenTelemetry's GenAI conventions, with
    agent and MCP spans, are still in Development but are what every observability tool reads. **Fix:** emit both, and
    pin the conventions' version. *After launch.*
-8. **No EU AI Act mapping.** The coverage docs lead with UAE and ISO themes. The Digital Omnibus (in force 27 July 2026, per
-   law-firm summaries; confirm against the Official Journal) moved Annex III high-risk duties to 2 December 2027 and Annex I
-   to 2 August 2028; Article 50 transparency applied from 2 August 2026. **Fix:** map it, with those dates. *Stage 1.*
+8. **Nothing helps with EU AI Act Article 50, in force since 2 August 2026, or Article 19's log retention.** Mapped in
+   `docs/security-framework-map.md`, dates confirmed in Regulation (EU) 2026/1744. Article 50(2) marking is due by 2 December
+   2026 for systems already on the market, and the gateway marks nothing. **Fix:** a gateway marking hook, and a declared
+   retention period the gate reads. *After launch.*
 9. **Agent evals stop at the answer.** Suites judge an output. Agents fail in the path: wrong tool, wrong order, a skipped
    approval. **Fix:** a `trajectory` suite in the evals contract, graded from traces, plus the rubric digest below.
    *After launch.*
@@ -179,6 +180,12 @@ Each was checked absent from the code on 2026-11-03.
     event text to an agent. Small, and a strong demonstration. *After launch.*
 11. **Edit-time enforcement on two of six IDEs.** Copilot, Codex and Gemini CLI now have hook and managed-policy surfaces.
     Confirm each schema from a real session, then generate its config; Copilot first, for reach. *After launch.*
+12. **Agents have no identity of their own (ASI03).** Tenant and role on a span are labels. No per-agent credential, scope or
+    delegation chain. *After launch.*
+13. **Nothing contains code an agent runs (ASI05), and nothing secures messages between agents (ASI07).** Name the boundary
+    first: which of these AgentSmith enforces, and which it requires a tenant to declare. *After launch.*
+14. **`SEC-AGENCY-001` reads a declaration.** Its row claimed the harness verified the gate was wired; it never did, and the
+    row now says so. **Fix:** check each `needs_hitl` action against a real `run_with_hitl_gate` call. *After launch.*
 
 Sources: [Gartner AI governance platforms](https://www.gartner.com/reviews/market/ai-governance-platforms) ·
 [Gartner agent management platforms](https://www.gartner.com/reviews/market/ai-agent-management-platforms) ·
