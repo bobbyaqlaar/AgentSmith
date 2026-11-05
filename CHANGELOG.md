@@ -92,6 +92,13 @@ piped, the installer took the working directory for its own. A pipe now always i
 fails if the command reports a version other than its own, and a failed verification now exits 1 instead of 0. If `agentsmith
 version` disagrees with what you installed, re-run from outside the checkout.
 
+### Fixed — a repository under a directory called `build` no longer gets an empty graph
+
+The Knowledge Graph's ignore list was checked against the absolute path. A repository anywhere under a directory named `build`,
+`dist`, `coverage`, `out`, `venv` or the like mapped no source file, and every impact query answered from a graph with no
+edges, with nothing reporting it. The list now applies inside the repository only. An affected repository is repaired by its next
+`python3 scripts/map_codebase.py`.
+
 ## [4.0.0] — 2026-11-05
 
 ### Changed — the package imports as `agentsmith`

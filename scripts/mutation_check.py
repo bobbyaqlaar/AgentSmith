@@ -1524,6 +1524,12 @@ CATALOGUE: tuple[Suite, ...] = (
         tests=("scripts/test/test_knowledge_graph.py",),
         mutations=(
             Mutation(
+                "a repository under a directory with an ignored name maps nothing",
+                "scripts/map_codebase.py",
+                "for part in path.relative_to(root).parts):",
+                "for part in path.parts):",
+            ),
+            Mutation(
                 "the graph maps files git ignores again",
                 "scripts/map_codebase.py",
                 "    return mapped is None or path.relative_to(root).as_posix() in mapped",

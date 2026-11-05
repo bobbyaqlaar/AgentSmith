@@ -359,6 +359,26 @@ def test_an_ignored_document_or_source_file_makes_no_node(checkout):
     assert "rfc:designs/a.md" in graph and "app.py" in graph
 
 
+def test_the_ignore_list_applies_inside_the_repository_only(monkeypatch, tmp_path):
+    """A worktree named `coverage` emptied the graph: every source file's absolute
+    path held an ignored name, and the run reported nothing wrong."""
+    import subprocess
+
+    root = tmp_path / "build" / "coverage" / "app"
+    (root / "build").mkdir(parents=True)
+    (root / "app.py").write_text("def main():\n    return 1\n")
+    (root / "build" / "made.py").write_text("def made():\n    return 0\n")
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+    monkeypatch.chdir(root)
+
+    map_codebase.run_map()
+
+    graph = AgentKnowledgeGraph()._g
+    assert "app.py" in graph, "the path leading to the repository is not the repository"
+    assert "build/made.py" not in graph, "inside the repository, an ignored name is still ignored"
+
+
 def test_a_node_for_a_file_that_became_ignored_is_purged(checkout):
     (checkout / ".agent-rfc" / "fixtures" / "delivery_evidence.md").write_text("# Delivery Model — evidence\n")
     (checkout / ".gitignore").write_text("")

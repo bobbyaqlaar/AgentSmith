@@ -122,7 +122,7 @@ def _held(path: Path, root: Path, mapped: Optional[set[str]]) -> bool:
 def _iter_source_files(root: Path, mapped: Optional[set[str]] = None):
     nested = _nested_checkouts(root)
     for path in root.rglob("*"):
-        if any(part in IGNORED_DIRS for part in path.parts):
+        if any(part in IGNORED_DIRS for part in path.relative_to(root).parts):
             continue
         if any(checkout in path.parents for checkout in nested):
             continue
