@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - pyproject.toml
   - install-ai-stack.sh

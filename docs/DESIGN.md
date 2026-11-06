@@ -9,7 +9,7 @@
 > install and operate it is in [docs/UserManual.md](UserManual.md); how it came to be this way
 > is in [docs/PRODUCT_ARCHIVE.md](PRODUCT_ARCHIVE.md).
 
-**Version:** 4.0.0 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
+**Version:** 4.0.1 (matches `install-ai-stack.sh`'s `FRAMEWORK_VERSION` and
 `pyproject.toml` — pinned together by
 `scripts/test/test_version_consistency.py`)
 **Status:** Current.
@@ -2254,7 +2254,7 @@ and gains a row per release. Current:
 
 | Framework version | Min Python | Min LangGraph | Min Phoenix | Breaking changes |
 |---|---|---|---|---|
-| 4.0.x | 3.11 | 0.2 | 4.0 | **MAJOR** — the library imports as `agentsmith`, not `runtime`, with no shim. The distribution stays `agentsmith-runtime` and the OpenTelemetry scope `agentsmith.runtime` is unchanged. A 3.x `agentsmith-sync.yml` follows the latest release and fails from 4.0.0 on: with 4.0.0 installed, run `agentsmith sync` once by hand, and change any imports in the same pull request. |
+| 4.0.x | 3.11 | 0.2 | 4.0 | **MAJOR** — the library imports as `agentsmith`, not `runtime`, with no shim. The distribution stays `agentsmith-runtime` and the OpenTelemetry scope `agentsmith.runtime` is unchanged. A 3.x `agentsmith-sync.yml` follows the latest release and fails from 4.0.0 on: with 4.0.0 installed, run `agentsmith sync` once by hand, and change any imports in the same pull request. **4.0.1** changes no import or wire value. `AgentStatus` in the in-app widget template now requires `widgetScriptUrl`; a copy made earlier is unaffected, and a caller that omitted it was already loading no widget. |
 
 ### Examples as Forks
 

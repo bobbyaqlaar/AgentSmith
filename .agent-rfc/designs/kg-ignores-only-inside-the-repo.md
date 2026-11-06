@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/map_codebase.py
   - scripts/mutation_check.py

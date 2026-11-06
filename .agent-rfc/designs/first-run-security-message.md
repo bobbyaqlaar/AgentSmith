@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - agentsmith/cli.py
   - fixtures/security/templates/risk_register.yaml

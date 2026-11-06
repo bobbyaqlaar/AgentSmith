@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - docker-compose.yml
   - install-ai-stack.sh
