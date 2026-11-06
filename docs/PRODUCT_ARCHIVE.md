@@ -7,6 +7,10 @@ has been identified. Active work lives in `docs/PRODUCT_BACKLOG.md`.
 
 ---
 
+## Release 4.0.1 (2026-11-07)
+
+The launch fixes: a piped install installs the release it announces (`piped-install-source`), the graph ignores only inside the repository (`kg-ignores-only-inside-the-repo`), a new repository's red security job says why (`first-run-security-message`), small first-user fixes (`launch-small-fixes`), OWASP Agentic and EU AI Act coverage stated, the README's audiences and limits, and no private tenant or cloud project named (`name-no-private-tenant`). See `CHANGELOG.md`.
+
 ## Release 4.0.0 (2026-11-05)
 
 The package imports as `agentsmith` (`package-agentsmith`), for the launch. See `CHANGELOG.md`, whose 4.0.x row names the one break that is not an import.

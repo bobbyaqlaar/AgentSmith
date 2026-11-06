@@ -11,18 +11,18 @@
 > install works for anyone", on the strength of a 200 and a checksum. Run from scratch, a stranger's first commit
 > was refused.
 
-## Current state (2026-11-05)
+## Current state (2026-11-07)
 
-**v4.0.0 is the latest release**, and `release.yml` runs the Quick Start on its published URL. The governance
+**v4.0.1 is the latest release**, and `release.yml` runs the Quick Start on its published URL. The governance
 contracts C1–C9 are complete. **AgentSmith is public (AGPL-3.0)**; KYC Sentinel and Tenant B are
-private. KYC is on 3.0.0 with green CI, and Tenant B on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
+private. KYC is on 4.0.0 with green CI, and Tenant B on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
 two security controls awaiting its own content: do not use it as a showcase.
 
 ---
 
 ## The launch: two stages (owner, 2026-11-03)
 
-**Target: Friday 6 November, end of day.** The owner's decisions: AGPL-3.0 stays; the package becomes `agentsmith`;
+**Target: Saturday 7 November, end of day** (moved from Friday 6 by the owner). The owner's decisions: AGPL-3.0 stays; the package becomes `agentsmith`;
 the repository stays `bobbyaqlaar/AgentSmith`, because `uses: Aqlaar/AgentSmith` would have to be a real repository
 under that owner, and `aqlaar` on GitHub is an existing user account; launch in two stages.
 
@@ -38,7 +38,7 @@ labelled preview.
 | 2 | ✅ AGPL notices and community files (`agpl-compliance`, merged) | Claude | Tue 3 |
 | 3 | ✅ Release 3.0.1; `release.yml`'s verify job green on the real URL | Claude | Tue 3 |
 | 4 | ✅ Private vulnerability reporting on, which `SECURITY.md` relies on | Owner | Tue 3 |
-| 5 | Rename `runtime` to `agentsmith` (`package-agentsmith`, merged); release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Thu 5 |
+| 5 | ✅ Rename `runtime` to `agentsmith` (`package-agentsmith`, merged); release 4.0.0; move KYC. Distribution stays `agentsmith-runtime`: `agentsmith` on PyPI is an unrelated Neo4j tool, last released 2019 | Claude | Thu 5 |
 | 6 | ✅ First run: a new repository's red security job says it is expected, and what to write to get green (`first-run-security-message`; fires the onboarding item below) | Claude | Thu 5 |
 | 7 | ✅ Honest coverage: OWASP Agentic Top 10 and EU AI Act mapped in `docs/security-framework-map.md`, with gaps said (gaps 1 and 8) | Claude | Thu 5 |
 | 8 | ✅ Small fixes with the release: `PROMPT_DENYLIST_PATH` in the evals port; DLQ **Discard** confirmation; pin `phoenix:latest`; delete `ai-compat.sh`; the widget's dead `cdn.agenticframework.io`; `oil-price-demo` in live docs (the manual's tutorial keeps it as a name the reader creates, from `examples/oil-price-agent`) | Claude | Thu 5 |
@@ -52,7 +52,7 @@ labelled preview.
 ### Stage 2: "the DevOps platform for AI-infused and agent apps"
 
 The claim needs evidence a preview does not: a real app, on real traffic, traced back to the design that shaped it.
-**Step 15's cutoff, Wednesday 4 November at noon, passed, so Stage 1 ships on the 6th and Stage 2 the following
+**Step 15's cutoff, Wednesday 4 November at noon, passed, so Stage 1 ships on the 7th and Stage 2 the following
 week.** Stage 1 does not depend on it.
 
 | # | Step | Who |
