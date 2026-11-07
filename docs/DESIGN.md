@@ -236,8 +236,8 @@ count is not in the heading on purpose — it was "Ten" for four pillars longer 
 - An `.agent-rfc/` directory must exist in every repository.
 - Agents are forbidden from modifying source files unless a markdown spec exists in `.agent-rfc/`.
 - Before any code change, the agent must produce a step-by-step implementation blueprint mapped to a spec file.
-- Spec files follow: `NNN-<slug>.md` (e.g., `001-auth-fix.md`).
-- **Enterprise mode (hook enforcement):** Staged source changes must map to an open RFC file in `.agent-rfc/`, or the commit message must include an `RFC-NNN` reference resolvable to a spec. Violation blocks the commit. This rule is enforced at the hook level — IDE instructions alone cannot guarantee compliance.
+- A change's design is `.agent-rfc/designs/<slug>.md` (`agentsmith design new <slug>`). The process gate refuses an edit to a gated path without one, and a commit without its `Design:` and `Review:` trailers (docs/process-gates.md).
+- **Enterprise mode (org policy):** the commit gate also requires at least one RFC at `.agent-rfc/NNN-<slug>.md` and an `RFC-NNN` reference in the commit message (`scripts/gate_guardrails.py`). Both are checked at commit, so IDE instructions alone are not what holds them.
 
 ### Pillar 2 — Build Architecture (Ponytail)
 
@@ -1450,6 +1450,7 @@ AgentSmith/
 ├── caddy/
 │   └── Caddyfile                # Phoenix auth sidecar (the Universal Observability Platform section) — used by docker-compose.auth.yml
 ├── assets/                      # Logo + static images used by the docs
+├── archive/                     # Files nothing uses, kept with their history until an end-to-end run without them; then deleted
 ├── .agent-rfc/                  # The framework repo's own RFC dir + Knowledge Graph fixture
 │   ├── designs/                 # Design notes the edit and commit gates require (docs/process-gates.md)
 │   ├── reviews/                 # Review records, one pass per heading, clean when the last finds 0
@@ -2051,7 +2052,7 @@ The Ops Portal aggregates data from:
 1. Phoenix API — traces, experiments, annotations
 2. Workflow engine metrics — queue depth, active workflows, DLQ depth
 3. LLM Gateway — per-tenant spend, per-model cost breakdown
-4. `.agent-history.log` sync — unresolved MAJOR/CRITICAL entries per tenant
+4. `.agent-history.log` sync — unresolved MAJOR/CRITICAL entries per tenant, from a sender already deployed (the route is deprecated, and nothing AgentSmith ships sends to it)
 5. The Dev ingest (`POST /api/dev/ingest`) — each app's gate record, authenticated by that
    app's own token, so a token writes only its own app. The record carries a schema number and
    the portal refuses one it does not know; the verdict list is pinned across the gate, the

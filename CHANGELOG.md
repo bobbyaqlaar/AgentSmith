@@ -1,9 +1,9 @@
 # Changelog
 
 All notable AgentSmith framework changes. The framework releases on its own
-semver (docs/DESIGN.md › Framework vs Application Release); tenant apps pin `framework.version` in
-`.agenticframework/tenant.yaml` and upgrade on their own schedule via
-`ai-stack-upgrade --to <version>`.
+semver (docs/DESIGN.md › Framework vs Application Release). A tenant pins a release in the setup step
+`.agenticframework/providers.json` declares and its CI runs, and moves on its own schedule with
+`agentsmith sync`, which the weekly `agentsmith-sync.yml` opens as a pull request.
 
 Release notes must call out span-attribute or hook-interface changes
 explicitly — those are the two contracts tenant repos depend on.
@@ -84,6 +84,15 @@ version table being consulted.
 
 
 ## [Unreleased]
+
+### Changed — the documents match what ships; two unused files archived
+
+A review of the live documents against the code. The manual no longer tells a tenant to post to the deprecated
+`/api/sync/history` or configure the shared `OPS_PORTAL_SYNC_TOKEN`: a worker reports with its own Ops token, and its
+GitHub secrets table names the Dev-ingest pair `agentsmith-gates.yml` reads. Two tutorial snippets import from the
+`agentsmith` package instead of a file a tenant no longer holds. `docs/DESIGN.md` describes the design gate as it
+works, and the enterprise RFC rule as both conditions. `examples/oil-price-agent/check_model_ids.py` and
+`assets/LogoAqlaar-Transparent.png`, which nothing uses, moved to `archive/` until an end-to-end run without them.
 
 ## [4.0.1] — 2026-11-07
 

@@ -1189,12 +1189,11 @@ DATABASE_URL=postgresql://phoenix:phoenix@localhost:5433/agenticframework
 OPS_PORTAL_USER=ops
 OPS_PORTAL_PASSWORD=<strong-password>    # generate: openssl rand -base64 24
 
-# Bearer token for CD pipelines and local scripts → portal ingest
-# This is the server-side value the portal expects on POST /api/sync/history and
-# POST /api/runs/ingest. The same value must be exported as OPS_PORTAL_SYNC_TOKEN
-# in ~/.zshrc (for local scripts) and set as a GitHub Actions secret (for CD).
-# Generate: openssl rand -hex 32
-OPS_PORTAL_SYNC_TOKEN=<random-secret>    # generate: openssl rand -hex 32
+# DEPRECATED: the one bearer token every tenant shared for POST /api/sync/history and
+# POST /api/runs/ingest. A worker with its own Ops token (OPS_PORTAL_TOKEN, issued in
+# Administration › Apps) does not use it. Set it only for a sender already deployed;
+# leaving it unset turns both routes off.
+# OPS_PORTAL_SYNC_TOKEN=<random-secret>    # generate: openssl rand -hex 32
 
 # Audit log — two separate secrets serve two different roles (docs/DESIGN.md › Enterprise Install and Compliance Pack):
 # AUDIT_LOG_WRITE_TOKEN — bearer token gating POST /api/audit/append.
@@ -1258,7 +1257,7 @@ OPENAI_API_KEY=sk-...
 # Observability — point at the shared AgentSmith Phoenix/Ops Portal
 AGENT_PHOENIX_ENDPOINT=http://localhost:6006
 OPS_PORTAL_URL=http://localhost:3000
-OPS_PORTAL_SYNC_TOKEN=<same value as AgenticFramework/.env OPS_PORTAL_SYNC_TOKEN>
+OPS_PORTAL_TOKEN=<this app's Ops token: Administration › Apps › the app › Ops token>
 
 # Production runtime backends
 DATABASE_URL=postgresql://user:pass@localhost:5433/my-tenant-db
@@ -1284,8 +1283,7 @@ Set these in **Settings → Secrets and variables → Actions** for each tenant 
 | whichever key the `judge` role declares | CI eval judge | **Not a fixed name.** It follows the `judge` role in the merged registry — `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, a role-level `api_key_env`, whatever that role points at. Run `--skip-without-judge-credentials` and the skip message names the exact variable. YAML cannot look up a secret by a name computed at runtime, so pass every plausible provider key through to the step and let the code decide — and **update that list when you repoint the judge**. A tenant that moved its judge to Gemini and left the list naming Anthropic/Groq/OpenAI had all three judged gates skip silently, reporting success, for every run. |
 | `ANTHROPIC_API_KEY` · `OPENAI_API_KEY` | Hybrid-mode tests | Required only if a hybrid profile routes an actor role to them |
 | `AGENT_PHOENIX_ENDPOINT` | Trace export from CI | Optional — CI passes without it |
-| `OPS_PORTAL_URL` | CD → portal history sync | Optional — sync skipped if absent |
-| `OPS_PORTAL_SYNC_TOKEN` | CD → portal history sync | Required if `OPS_PORTAL_URL` is set |
+| `AGENTSMITH_PORTAL_URL` · `AGENTSMITH_PORTAL_INGEST_TOKEN` | The gate record sent to the portal's Dev workspace (`agentsmith-gates.yml`) | Optional — nothing is sent without both; see *Connect an app to the Dev workspace* |
 | `DEPLOY_COMMAND` | Production deploy step | Platform-specific (Fly, Railway, ECS, etc.) |
 | `ROLLBACK_COMMAND` | Rollback on smoke failure | Optional — prints guidance if absent |
 
@@ -1671,7 +1669,7 @@ TENANT_ID=oil-price-demo
 ANTHROPIC_API_KEY=sk-ant-...          # or OPENAI_API_KEY
 AGENT_PHOENIX_ENDPOINT=http://localhost:6006
 OPS_PORTAL_URL=http://localhost:3000
-OPS_PORTAL_SYNC_TOKEN=<same value as AgenticFramework/.env OPS_PORTAL_SYNC_TOKEN>
+OPS_PORTAL_TOKEN=<this app's Ops token: Administration › Apps › the app › Ops token>
 DATABASE_URL=postgresql://phoenix:phoenix@localhost:5433/agenticframework
 REDIS_URL=redis://localhost:6379/0
 TEMPORAL_ADDRESS=localhost:7233
@@ -1701,9 +1699,8 @@ source $AGENTSMITH_DIR/.venv/bin/activate
 set -a && source .env && set +a   # load tenant .env into current shell
 
 python3 -c "
-import sys, asyncio
-sys.path.insert(0, '$AGENTSMITH_DIR/agentsmith')
-from llm_gateway import LLMGateway
+import asyncio
+from agentsmith.llm_gateway import LLMGateway
 async def main():
     gw = LLMGateway(tenant_id='oil-price-demo')
     result = await gw.complete(
@@ -2209,8 +2206,7 @@ real recoverable-step failure goes through:
 set -a; source .env; set +a
 DATABASE_URL="postgresql://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD:-phoenix}@localhost:5433/agenticframework" \
   python3 -c "
-import sys; sys.path.insert(0, '.')
-from dead_letter import DeadLetterQueue, REASON_VALIDATION_ERROR
+from agentsmith.dead_letter import DeadLetterQueue, REASON_VALIDATION_ERROR
 dlq = DeadLetterQueue()
 entry = dlq.enqueue(
     payload={'customer_id': 102, 'account_status': 'active'},
@@ -2269,15 +2265,13 @@ reload the widget before reporting a terminal one:
 
 ```bash
 set -a; source .env; set +a
-OPS_PORTAL_URL=http://localhost:3000 OPS_PORTAL_SYNC_TOKEN="$OPS_PORTAL_SYNC_TOKEN" python3 -c "
-import sys; sys.path.insert(0, '.')
-from llm_gateway import LLMGateway
+OPS_PORTAL_URL=http://localhost:3000 OPS_PORTAL_TOKEN="$OPS_PORTAL_TOKEN" python3 -c "
+from agentsmith.llm_gateway import LLMGateway
 LLMGateway(tenant_id='oil-price-demo')._report_run_status('manual-demo-run', 'running')
 "
 # Reload the widget HTML now — it shows Working. Then:
-OPS_PORTAL_URL=http://localhost:3000 OPS_PORTAL_SYNC_TOKEN="$OPS_PORTAL_SYNC_TOKEN" python3 -c "
-import sys; sys.path.insert(0, '.')
-from llm_gateway import LLMGateway
+OPS_PORTAL_URL=http://localhost:3000 OPS_PORTAL_TOKEN="$OPS_PORTAL_TOKEN" python3 -c "
+from agentsmith.llm_gateway import LLMGateway
 LLMGateway(tenant_id='oil-price-demo')._report_run_status('manual-demo-run', 'success')
 "
 # Reload again — back to Operational.
@@ -3525,8 +3519,8 @@ OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:6006/v1/traces"   # or a base URL 
 ```
 
 Unset, nothing is registered and the portal behaves exactly as it did before it
-was instrumented. Set, the `traceparent` the worker already sends on
-`POST /api/runs/ingest` makes the portal's spans **children** of the LLM call
+was instrumented. Set, the `traceparent` the worker already sends with its run
+status (`POST /api/ops/ingest`) makes the portal's spans **children** of the LLM call
 that triggered them — so "the run took 9s" can be read down to which query or
 which Phoenix timeout. Set `ENVIRONMENT` and `AGENT_PROJECT_NAME` the same way
 you set them on the worker, or the two sides will label the same deployment
@@ -3565,9 +3559,11 @@ An authenticated SSO identity not listed gets no access at all. Entries in the e
 `{"role":"viewer|operator|admin","tenants":…}` form keep working with exactly the access they
 had.
 
-#### Wire tenant history sync
+#### Tenant history sync (deprecated)
 
-In each tenant's CD workflow (or a local `agentsmith check` run):
+Nothing AgentSmith ships calls this route any more: a worker reports its settings, run status and dead letters by the
+Ops contract (`/api/ops/ingest`, `contract/ops/v1`) with its own Ops token. The route stays for senders already
+deployed, under the shared `OPS_PORTAL_SYNC_TOKEN`, and unsetting that token turns it off. A sender looks like this:
 
 ```bash
 curl -X POST https://ops.example.com/api/sync/history \
@@ -3575,7 +3571,7 @@ curl -X POST https://ops.example.com/api/sync/history \
   -d '{"tenantId":"acme","entries":[{"entryId":"...","level":"CRITICAL","event":"...","timestamp":"...","raw":{}}]}'
 ```
 
-A tenant auto-registers on its first sync — no separate provisioning step.
+A tenant named in the body is registered on its first sync.
 
 #### Connect an app to the Dev workspace
 
@@ -3740,7 +3736,8 @@ The token is the **only** access-control boundary — `tenant-id` is a
 display label. A forged `tenant-id` cannot read another tenant's data.
 
 Status prefers the `agent_runs` table (populated by `agentsmith/llm_gateway.py`'s
-best-effort `POST /api/runs/ingest` on call start/end) when an open or recent
+best-effort run status on call start and end, sent to `/api/ops/ingest`, or to the deprecated
+`/api/runs/ingest` when the worker has no Ops token) when an open or recent
 run exists for the tenant, so `running` is a real, reachable status — not
 just `success` / `degraded` / `failed`. Falls back to the most recent synced
 `.agent-history.log` entry when no `agent_runs` row exists (e.g. a tenant
