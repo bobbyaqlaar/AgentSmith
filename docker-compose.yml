@@ -70,7 +70,7 @@
 #   OPS_PORTAL_USER=admin
 #   OPS_PORTAL_PASSWORD=<set a real one>
 #   AUDIT_LOG_HMAC_KEY=<random 32+ byte string>
-#   OPS_PORTAL_SYNC_TOKEN=<random string, used by CD's history-sync step>
+#   OPS_PORTAL_SYNC_TOKEN=<deprecated shared token; only for a sender already deployed>
 
 services:
 

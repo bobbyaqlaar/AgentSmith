@@ -455,8 +455,24 @@ Live status for the two compliance tracks is maintained in one place each — do
 - **Enterprise Delivery Model:**
   [`docs/delivery-model.md`](delivery-model.md). v1 soft pack shipped.
   Still open: hard-fail enterprise mode; auto-inject `delivery.*` defaults from
-  `ai-tenant-init`; a CD step uploading the evidence pack as a release artifact.
+  `agentsmith tenant init`; a CD step uploading the evidence pack as a release artifact.
   **Trigger:** an org wants promote blocked when a platform isn't approved.
+
+### The portal's unresolved-issues view has no sender
+
+`.agent-history.log` MAJOR/CRITICAL entries reach the portal only through `/api/sync/history`, which is deprecated and
+which nothing AgentSmith ships calls since `scripts/sync-portal-history.py` was retired. A new app's unresolved-issues
+view stays empty. **Fix:** a `history` message on the Ops contract, sent with the app's Ops token. **Trigger:** the first
+app that wants its agents' MAJOR/CRITICAL entries in the portal, or Stage 2's HITL round trip. Found by
+`repo-review-and-archive`.
+
+### The reference example imports the runtime from a checkout
+
+`examples/oil-price-agent` puts `$AGENTSMITH_DIR/agentsmith` on `sys.path` and imports `llm_gateway` and `idempotency`
+as top-level modules, while the manual tells a tenant to `from agentsmith.llm_gateway import LLMGateway` from the
+installed package. It works, but a reader copying it learns the old shape. **Fix:** package imports, run once against
+Temporal. **Trigger:** the next change to the example, or KYC's live run, whichever is first. Found by
+`repo-review-and-archive`.
 
 ### Tool Orchestration — provider function-calling wire-up
 
