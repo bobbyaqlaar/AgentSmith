@@ -132,7 +132,7 @@ test("ROLES has no SQL counterpart to drift from", () => {
   // test is where the fourth copy should be caught.
   assert.ok(!/CHECK\s*\(\s*role\s+IN/i.test(SCHEMA), "a role CHECK now exists — pin it above");
   assert.deepEqual([...ROLES], [
-    "developer", "design_approver", "operator", "hitl_reviewer", "release_approver", "administrator", "super_user",
+    "developer", "design_approver", "operator", "hitl_reviewer", "release_approver", "administrator", "super_user", "compliance_officer",
   ]);
 });
 

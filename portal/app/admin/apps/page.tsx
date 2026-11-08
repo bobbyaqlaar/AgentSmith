@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminAppsPage() {
   const all = await listTenants();
-  const visible = new Set(appsWith(currentAccess(), "admin.apps", all.map((t) => t.tenantId)));
+  const visible = new Set(appsWith(await currentAccess(), "admin.apps", all.map((t) => t.tenantId)));
   const apps = all.filter((t) => visible.has(t.tenantId));
   const tokens = new Map((await ingestTokenStatus(apps.map((a) => a.tenantId))).map((s) => [s.tenantId, s]));
 

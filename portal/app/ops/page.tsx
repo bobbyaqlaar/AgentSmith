@@ -13,7 +13,7 @@ import { Badge, toneForRunStatus } from "@/components/ui/Badge";
 export const dynamic = "force-dynamic";
 
 export default async function OpsAppsPage() {
-  const access = currentAccess();
+  const access = await currentAccess();
 
   const [allTenants, spend, issues, dlq, frameworkVersions] = await Promise.all([
     listTenants(),

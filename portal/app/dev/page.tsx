@@ -14,7 +14,7 @@ import { listTenants } from "@/lib/tenants";
 export const dynamic = "force-dynamic";
 
 export default async function DevAppsPage() {
-  const access = currentAccess();
+  const access = await currentAccess();
   const allIds = (await listTenants()).map((t) => t.tenantId);
   const apps = await listDevApps(appsWith(access, "dev.read", allIds));
 

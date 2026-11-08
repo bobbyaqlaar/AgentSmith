@@ -1,0 +1,201 @@
+{
+  "$defs": {
+    "Agent": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "accountable_owner": {
+          "minLength": 1,
+          "title": "Accountable Owner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "accountable_owner"
+      ],
+      "title": "Agent",
+      "type": "object"
+    },
+    "Boundary": {
+      "additionalProperties": false,
+      "properties": {
+        "hosts": {
+          "description": "Hosts data may reach. `*.example.ae` matches subdomains.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Hosts",
+          "type": "array"
+        },
+        "sinks": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Each data store, by name, and the host it runs on.",
+          "title": "Sinks",
+          "type": "object"
+        }
+      },
+      "required": [
+        "hosts"
+      ],
+      "title": "Boundary",
+      "type": "object"
+    },
+    "Continuity": {
+      "additionalProperties": false,
+      "properties": {
+        "rpo_minutes": {
+          "exclusiveMinimum": 0,
+          "title": "Rpo Minutes",
+          "type": "integer"
+        },
+        "rto_minutes": {
+          "exclusiveMinimum": 0,
+          "title": "Rto Minutes",
+          "type": "integer"
+        },
+        "drill_every_days": {
+          "exclusiveMinimum": 0,
+          "title": "Drill Every Days",
+          "type": "integer"
+        },
+        "backup_host": {
+          "title": "Backup Host",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rpo_minutes",
+        "rto_minutes",
+        "drill_every_days",
+        "backup_host"
+      ],
+      "title": "Continuity",
+      "type": "object"
+    },
+    "Session": {
+      "additionalProperties": false,
+      "properties": {
+        "idle_minutes": {
+          "exclusiveMinimum": 0,
+          "title": "Idle Minutes",
+          "type": "integer"
+        },
+        "absolute_hours": {
+          "exclusiveMinimum": 0,
+          "title": "Absolute Hours",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "idle_minutes",
+        "absolute_hours"
+      ],
+      "title": "Session",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "`.agenticframework/compliance.json`.",
+  "properties": {
+    "profile": {
+      "const": "dubai-gov",
+      "title": "Profile",
+      "type": "string"
+    },
+    "app_owner": {
+      "minLength": 1,
+      "title": "App Owner",
+      "type": "string"
+    },
+    "data_classes": {
+      "description": "From least to most sensitive.",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Data Classes",
+      "type": "array"
+    },
+    "classified_from": {
+      "description": "The first class treated as classified.",
+      "title": "Classified From",
+      "type": "string"
+    },
+    "boundary": {
+      "$ref": "#/$defs/Boundary"
+    },
+    "session": {
+      "$ref": "#/$defs/Session"
+    },
+    "retention_days": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "description": "Days kept, per store: audit, runs, traces.",
+      "title": "Retention Days",
+      "type": "object"
+    },
+    "continuity": {
+      "$ref": "#/$defs/Continuity"
+    },
+    "languages": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Languages",
+      "type": "array"
+    },
+    "agents": {
+      "items": {
+        "$ref": "#/$defs/Agent"
+      },
+      "title": "Agents",
+      "type": "array"
+    },
+    "user_calls_per_minute": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "User Calls Per Minute"
+    },
+    "runtime": {
+      "default": "python",
+      "description": "How the app reaches the guards.",
+      "enum": [
+        "python",
+        "sidecar"
+      ],
+      "title": "Runtime",
+      "type": "string"
+    }
+  },
+  "required": [
+    "profile",
+    "app_owner",
+    "data_classes",
+    "classified_from",
+    "boundary",
+    "session",
+    "retention_days",
+    "continuity",
+    "languages"
+  ],
+  "title": "Declaration",
+  "type": "object"
+}

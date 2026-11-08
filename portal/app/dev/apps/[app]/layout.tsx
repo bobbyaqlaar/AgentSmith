@@ -15,11 +15,12 @@ export const dynamic = "force-dynamic";
 
 export default async function DevAppLayout({
   children,
-  params,
+  params: paramsPromise,
 }: {
   children: React.ReactNode;
-  params: { app: string };
+  params: Promise<{ app: string }>;
 }) {
+  const params = await paramsPromise;
   const tenant = await getTenant(params.app);
   if (!tenant) {
     return (
@@ -30,7 +31,7 @@ export default async function DevAppLayout({
       </div>
     );
   }
-  if (!can(currentAccess(), "dev.read", tenant.tenantId)) {
+  if (!can(await currentAccess(), "dev.read", tenant.tenantId)) {
     return (
       <div className="space-y-2">
         <Crumbs items={[{ href: "/dev", text: "Apps" }, { text: params.app }]} />

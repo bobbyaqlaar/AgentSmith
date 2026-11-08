@@ -32,8 +32,8 @@ V1 = REPO / "contract" / "security" / "v1"
 PROVIDER = f"{sys.executable} -m agentsmith.cli security"
 LAUNCHER = REPO / ".githooks" / "process-gate"
 PORT = load_script("security_port")
-PROVIDER_ROWS = {"SEC-HITL-001", "SEC-AUDIT-001", "SEC-AUDIT-002", "SEC-RBAC-001", "SEC-BUDGET-001",
-                 "SEC-DLQ-001", "SEC-SELF-001", "SEC-OUTPUT-001", "SEC-SSO-001", "SEC-SOV-001"}
+PROVIDER_ROWS = {"SEC-HITL-001", "SEC-HITL-002", "SEC-AUDIT-001", "SEC-AUDIT-002", "SEC-RBAC-001", "SEC-BUDGET-001",
+                 "SEC-DLQ-001", "SEC-SELF-001", "SEC-OUTPUT-001", "SEC-SSO-001", "SEC-SOV-001", "SEC-SOV-002"}
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git required")
 

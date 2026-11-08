@@ -118,8 +118,17 @@ def _send_webhook(title: str, message: str) -> None:
     def _post() -> None:
         try:
             import json
+            import sys
             import urllib.request
+            from pathlib import Path
 
+            repo = str(Path(__file__).resolve().parent.parent)
+            if repo not in sys.path:
+                sys.path.insert(0, repo)
+            from agentsmith import compliance
+
+            if not compliance.outbound_allowed(WEBHOOK_URL):
+                return
             payload = json.dumps(
                 {"text": f"*{APP_NAME}* — *{title}*\n{message}"}
             ).encode()
@@ -128,7 +137,7 @@ def _send_webhook(title: str, message: str) -> None:
                 data=payload,
                 headers={"Content-Type": "application/json"},
             )
-            urllib.request.urlopen(req, timeout=5)
+            urllib.request.urlopen(req, timeout=5)  # nosec B310 - the operator's configured webhook
         except Exception:  # fail-open: fire-and-forget webhook on a daemon thread; nothing waits on or checks this
             pass
 

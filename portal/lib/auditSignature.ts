@@ -29,6 +29,16 @@ export const AUDIT_EVENT_TYPES = [
   "hitl_promotion",
   "config_change",
   "tenant_created",
+  "compliance_attestation",
+  "session_signin",
+  "session_signout",
+  "session_denied",
+  "dlq_replay",
+  "dlq_discard",
+  "hitl_decision",
+  "stop_control",
+  "access_export",
+  "incident",
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];
@@ -108,4 +118,10 @@ export function verifySignature(e: AuditEvent): boolean {
   const b = Buffer.from(e.signature, "hex");
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
+}
+
+/** The events this reader may see: their own apps, and app-less events only when
+ *  they hold the permission for every app. */
+export function scopeAuditEvents<T extends { tenantId: string | null }>(events: T[], apps: Set<string>, everywhere: boolean): T[] {
+  return events.filter((e) => (e.tenantId ? apps.has(e.tenantId) : everywhere));
 }

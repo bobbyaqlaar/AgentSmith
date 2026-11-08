@@ -1,7 +1,7 @@
 // POST /api/dev/ingest — an app's CI sends what the process gate decided about
 // each commit (`process_gate.py ci --json`; portal phase 1). Machine to
 // machine: authenticated by the app's own ingest token, not the dashboard's
-// login, so it is excluded from middleware.ts like /api/sync and
+// login, so it is excluded from proxy.ts like /api/sync and
 // /api/runs/ingest. The work is lib/devIngestHandler.ts; this adapts it.
 
 import { NextResponse } from "next/server";

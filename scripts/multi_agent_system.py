@@ -148,6 +148,11 @@ def _get_model(role: Literal["architect", "developer", "validator"]) -> Any:
         "fast", "smollm2"
     )
 
+    # A compliance profile: the vendors' own APIs are outside any boundary.
+    from agentsmith import compliance
+
+    if compliance.profile_active():
+        anthropic_key = openai_key = ""
     if role == "architect" and anthropic_key:
         from langchain_anthropic import ChatAnthropic
 
@@ -162,9 +167,11 @@ def _get_model(role: Literal["architect", "developer", "validator"]) -> Any:
         # Local Ollama via OpenAI-compatible API
         from langchain_openai import ChatOpenAI
 
+        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        compliance.require_inside_boundary(base_url)
         return ChatOpenAI(
             model=local_model,
-            base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
+            base_url=base_url,
             api_key="ollama",
             temperature=0.1,
         )

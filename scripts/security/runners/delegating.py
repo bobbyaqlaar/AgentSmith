@@ -21,6 +21,7 @@ the same thing.
 from __future__ import annotations
 
 import ast
+import os
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,7 @@ from security.runners._shared import (
     guard_suite,
     is_contract,
     node_suite,
+    not_applicable,
     passed,
     provider_code_in_scope,
     pytest_suite,
@@ -55,6 +57,16 @@ def hitl_gate(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     than approving. It runs without Temporal or Postgres, so it is a usable
     control check rather than an integration test."""
     return pytest_suite(control, ctx, "agentsmith/test/test_hitl_gate.py")
+
+
+def hitl_named_decision(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
+    """SEC-HITL-002 — a gate on a compliance profile needs a named decision."""
+    return pytest_suite(control, ctx, "agentsmith/test/test_compliance_runtime.py")
+
+
+def app_residency(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
+    """SEC-SOV-002 — the application's own routes and stores against its boundary."""
+    return pytest_suite(control, ctx, "scripts/test/test_compliance_checks.py")
 
 
 def dlq_check(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
@@ -198,6 +210,27 @@ def audit_hmac(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     """
     return node_suite(
         control, ctx, "test/auditSignature.test.ts", requires=("lib/auditSignature.ts",)
+    )
+
+
+def audit_append_only(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
+    """SEC-AUDIT-002 — the database refuses UPDATE and DELETE on audit_log.
+
+    A property only a live database can show, so it runs where one is named:
+    Self-Test's Ops Portal job sets AUDIT_APPEND_ONLY_DSN. Elsewhere this says
+    so, rather than reporting a pass nobody earned.
+    """
+    dsn = os.environ.get("AUDIT_APPEND_ONLY_DSN", "").strip()
+    if not dsn:
+        return not_applicable(
+            control, "needs a live database: AUDIT_APPEND_ONLY_DSN is unset; Self-Test's Ops Portal job sets it"
+        )
+    return node_suite(
+        control,
+        ctx,
+        "test/auditLog.test.ts",
+        requires=("lib/auditLog.ts",),
+        env={"DATABASE_URL": dsn, "AUDIT_LOG_HMAC_KEY": "harness"},
     )
 
 

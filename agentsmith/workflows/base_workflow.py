@@ -55,7 +55,42 @@ HITL_SIGNAL_TIMEOUT = timedelta(hours=24)
 RECOVERABLE_STEP_MAX_ATTEMPTS = 5
 
 
+def _compliance_failure(message: str) -> Exception:
+    """An error that fails the workflow instead of retrying its task forever."""
+    if _HAS_TEMPORAL:
+        from temporalio.exceptions import ApplicationError
+
+        return ApplicationError(message, type="ComplianceRefused", non_retryable=True)
+    return RuntimeError(message)
+
+
 if _HAS_TEMPORAL:
+
+    @activity.defn
+    async def compliance_record_activity(input: dict) -> dict:
+        """Write one compliance record; on a profile, refuse if it cannot be written.
+        A refusal is not retried: the worker's database decides, and a retry that
+        later succeeded would act long after the person who asked stopped waiting."""
+        from temporalio.exceptions import ApplicationError
+
+        from agentsmith import compliance
+
+        try:
+            compliance.require_running(input["tenant_id"], input.get("workflow_id"))
+            payload = dict(input["payload"])
+            if input["kind"] == "hitl_pending":
+                # What the reviewer is shown, so the decision can prove it was about this.
+                payload["input_sha256"] = compliance.payload_digest(payload.get("input"))
+            record_id = compliance.record(input["tenant_id"], input["kind"], payload)
+        except compliance.ComplianceRefused as exc:
+            raise ApplicationError(str(exc), type="ComplianceRefused", non_retryable=True) from exc
+        # So a reviewer sees it now. Best effort: the record is safe, and a portal
+        # that is down only means `agentsmith ops forward` delivers it later.
+        try:
+            compliance.forward(input["tenant_id"])
+        except Exception:  # fail-open: the record is already written
+            activity.logger.warning("compliance record not forwarded yet")
+        return {"record_id": record_id}
 
     @activity.defn
     async def dlq_enqueue_activity(input: dict) -> dict:
@@ -160,6 +195,7 @@ class BaseAgentWorkflow:
     for the oil-price example) while keeping the HITL/DLQ control flow here.
     """
 
+    # Named decisions, by gate (`hitl_decide`).
     # The key a legacy `hitl_approved` signal (which carries no gate id) is
     # filed under. Any waiting gate will accept it; see hitl_approved below.
     _ANY_GATE = "*"
@@ -178,6 +214,7 @@ class BaseAgentWorkflow:
         # high-impact action, which is precisely what run_with_hitl_gate's own
         # docstring warns about for a different reason two paragraphs down.
         self._gate_approvals: Dict[str, bool] = {}
+        self._gate_decisions: dict[str, dict] = {}
         self._gate_fixes: Dict[str, Any] = {}
 
     @property
@@ -209,7 +246,7 @@ class BaseAgentWorkflow:
 
         @workflow.signal
         def hitl_approved(self, approved: bool) -> None:
-            """External signal fired by the Phoenix annotation -> Ops Portal bridge on HITL review.
+            """External signal a tenant's own reviewer or script sends on HITL review.
 
             Carries no gate id — it predates multi-gate workflows — so it is
             filed under `_ANY_GATE` and the next waiting gate consumes it. That
@@ -218,7 +255,8 @@ class BaseAgentWorkflow:
             approval satisfied every later gate in the workflow.
 
             Prefer `hitl_approved_for(gate_id, approved)` when the sender knows
-            which gate it is answering, which the Ops Portal does.
+            which gate it is answering. Neither form records who decided; on a
+            compliance profile a gate takes only `hitl_decide` (SEC-HITL-002).
             """
             self._gate_approvals[self._ANY_GATE] = approved
 
@@ -232,6 +270,13 @@ class BaseAgentWorkflow:
             means; this can.
             """
             self._gate_approvals[gate_id] = approved
+
+        @workflow.signal
+        def hitl_decide(self, decision: dict) -> None:
+            """A named person's decision on one gate, verified by the receiver that
+            sent this signal (agentsmith/replay_webhook_server.py). The only
+            answer a gate with `compliance=True` accepts."""
+            self._gate_decisions[decision["gate_id"]] = decision
 
         @workflow.signal
         def human_fix_payload(self, gate_id: str, fix: Any) -> None:
@@ -297,6 +342,7 @@ class BaseAgentWorkflow:
         gate_result: Optional[dict] = None,
         tenant_id: Optional[str] = None,
         gate_id: str = "hitl-gate",
+        compliance: bool = False,
     ) -> AgentWorkflowResult:
         """
         Decide whether a step needs human review; if it does, wait on the
@@ -329,7 +375,16 @@ class BaseAgentWorkflow:
         `tenant_id` raises a ValueError inside that activity naming the
         expected envelope keys, since the flattened shape carries none of
         them.
+
+        `compliance=True` is what a compliance profile requires (`tenant_id`
+        too): a record is written before the review is asked for and again
+        after it, only a named decision (`hitl_decide`) answers the gate, and
+        a record that cannot be written stops this function
+        (contract/compliance/v1). An explicit argument, not something read here,
+        because workflow code must replay the same way forever.
         """
+        if compliance and tenant_id is None:
+            raise ValueError("run_with_hitl_gate(compliance=True) needs tenant_id")
         if (gate_activity_name is None) == (gate_result is None):
             raise ValueError(
                 "run_with_hitl_gate needs exactly one of gate_activity_name "
@@ -371,7 +426,42 @@ class BaseAgentWorkflow:
                 start_to_close_timeout=timedelta(minutes=10),
             )
 
-        approved = await self.await_hitl_approval(gate_id)
+        decision: Optional[dict] = None
+        if compliance:
+            if not gate_result.get("requested_by"):
+                # Without it, nothing can stop a person approving their own request.
+                raise _compliance_failure("the gate result must say who asked: set requested_by")
+            workflow_id = workflow.info().workflow_id
+            await workflow.execute_activity(
+                compliance_record_activity,
+                {"tenant_id": tenant_id, "workflow_id": workflow_id, "kind": "hitl_pending",
+                 "payload": {"gate_id": gate_id, "workflow_id": workflow_id, "action": resume_activity_name,
+                             "input": resume_input, "requested_by": gate_result.get("requested_by")}},
+                start_to_close_timeout=timedelta(minutes=5),
+            )
+            try:
+                await workflow.wait_condition(lambda: gate_id in self._gate_decisions, timeout=HITL_SIGNAL_TIMEOUT)
+            except TimeoutError:
+                approved = None
+                # Takes it off the reviewers' queue: nobody can decide it any more.
+                await workflow.execute_activity(
+                    compliance_record_activity,
+                    {"tenant_id": tenant_id, "workflow_id": workflow_id, "kind": "hitl_timeout",
+                     "payload": {"gate_id": gate_id, "workflow_id": workflow_id}},
+                    start_to_close_timeout=timedelta(minutes=5),
+                )
+            else:
+                decision = self._gate_decisions.pop(gate_id)
+                approved = bool(decision["approved"])
+        else:
+            approved = await self.await_hitl_approval(gate_id)
+        if decision is not None:
+            await workflow.execute_activity(
+                compliance_record_activity,
+                {"tenant_id": tenant_id, "workflow_id": workflow.info().workflow_id, "kind": "hitl_decision",
+                 "payload": decision},
+                start_to_close_timeout=timedelta(minutes=5),
+            )
         if approved is None:
             if tenant_id is None:
                 dead_letter_input: Any = {**gate_input, "error": "hitl_timeout"}

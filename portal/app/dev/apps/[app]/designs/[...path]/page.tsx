@@ -24,7 +24,8 @@ function safeDecode(segment: string): string {
 
 const KIND_TONE = { applies: "success", "n/a": "neutral", gap: "warning", deviation: "warning", unrecognised: "danger" } as const;
 
-export default async function DevDesignPage({ params }: { params: { app: string; path: string[] } }) {
+export default async function DevDesignPage(props: { params: Promise<{ app: string; path: string[] }> }) {
+  const params = await props.params;
   const tenant = await getTenant(params.app);
   if (!tenant) return null;
   const path = params.path.map(safeDecode).join("/");

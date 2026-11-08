@@ -31,7 +31,10 @@ ORG_POLICY_FILE = "agenticframework-org.yaml"
 
 # What portal/app/api/audit/append accepts (portal/lib/auditSignature.ts —
 # test_machine_policy.py parses it). Anything else is rejected with a 400.
-AUDIT_EVENT_TYPES = ("hook_bypass", "hitl_promotion", "config_change", "tenant_created")
+AUDIT_EVENT_TYPES = ("hook_bypass", "hitl_promotion", "config_change", "tenant_created", "compliance_attestation",
+                     "session_signin", "session_signout", "session_denied", "dlq_replay", "dlq_discard",
+                     "hitl_decision",
+                     "stop_control", "access_export", "incident")
 
 
 def org_policy_path() -> Path:
@@ -116,7 +119,9 @@ def audit_log_event(
     body = {"eventType": event_type, "actorId": actor_id, "tenantId": tenant_id, "details": dict(details)}
 
     reason = "ops_portal_not_configured"
-    if url and token:
+    from agentsmith import compliance
+
+    if url and token and compliance.outbound_allowed(url):
         request = urllib.request.Request(
             f"{url}/api/audit/append",
             data=json.dumps(body).encode(),
@@ -124,7 +129,7 @@ def audit_log_event(
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=5) as response:
+            with urllib.request.urlopen(request, timeout=5) as response:  # nosec B310 - the operator's portal URL
                 if 200 <= response.status < 300:
                     return
         except Exception:  # fail-open: the event is kept locally below instead

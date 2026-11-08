@@ -190,7 +190,16 @@ class ReplayWebhookHandler(BaseHTTPRequestHandler):
             )
 
         try:
-            data = json.loads(body)
+            parsed = json.loads(body)
+        except json.JSONDecodeError as exc:
+            self._json(400, {"error": f"bad request: {exc}"})
+            return
+        if isinstance(parsed, dict) and ("decision" in parsed or "stop" in parsed):
+            self._compliance(parsed)
+            return
+
+        try:
+            data = parsed
             task_id = data["taskId"]
             payload = data["payload"]
         except (json.JSONDecodeError, KeyError) as exc:
@@ -232,6 +241,51 @@ class ReplayWebhookHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(encoded)
 
+    def _compliance(self, data: dict) -> None:
+        """A named human decision, or the stop control, signed by the portal."""
+        from agentsmith import compliance
+
+        try:
+            if "stop" in data:
+                stop = data["stop"]
+                if stop["action"] == "stop":
+                    compliance.set_stop(data["tenant_id"], stop["scope"], stop["reason"], stop["actor"])
+                else:
+                    compliance.clear_stop(data["tenant_id"], stop["scope"], stop["actor"])
+                self._json(200, {"ok": True})
+                return
+            decision = compliance.HumanDecision.model_validate(data["decision"])
+        except (KeyError, TypeError, ValueError) as exc:
+            self._json(400, {"error": f"bad request: {type(exc).__name__}"})
+            return
+        except compliance.ComplianceRefused as exc:
+            self._json(503, {"error": str(exc)})
+            return
+
+        if os.environ.get("HITL_DECISION_BACKEND") == "store":
+            # An application with no Temporal workflow reads it through the sidecar.
+            try:
+                compliance.record(data["tenant_id"], "hitl_decision", decision.model_dump())
+            except compliance.ComplianceRefused as exc:
+                self._json(503, {"error": str(exc)})
+                return
+            self._json(200, {"ok": True})
+            return
+
+        async def _signal() -> None:
+            from agentsmith.temporal_client import connect
+
+            client = await connect()
+            await client.get_workflow_handle(decision.workflow_id).signal("hitl_decide", decision.model_dump())
+
+        try:
+            asyncio.run(_signal())
+        except Exception as exc:  # the portal rolls the decision back on anything but a 200
+            logger.exception("hitl_decide could not reach the workflow")
+            self._json(502, {"error": f"could not reach the workflow ({type(exc).__name__})"})
+            return
+        self._json(200, {"ok": True})
+
     def _replay(self, task_id: str, payload: dict) -> None:
         from agentsmith.dead_letter import DeadLetterQueue
         from agentsmith.temporal_replay import make_temporal_replay_handler
@@ -258,7 +312,7 @@ class ReplayWebhookHandler(BaseHTTPRequestHandler):
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8090
-    server = ThreadingHTTPServer(("0.0.0.0", port), ReplayWebhookHandler)
+    server = ThreadingHTTPServer(("0.0.0.0", port), ReplayWebhookHandler)  # nosec B104 - a reference receiver, for a container; every request is signed
     logger.info("replay_webhook_server listening on :%d (POST /replay)", port)
     server.serve_forever()
 

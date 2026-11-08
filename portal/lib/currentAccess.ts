@@ -17,11 +17,11 @@ import { headers } from "next/headers";
 import { ACTOR_HEADER, GRANTS_HEADER, getAccessFromHeaderValue, type Access } from "./authz";
 
 /**
- * Server-side only, and only behind middleware.ts: this header is trusted
+ * Server-side only, and only behind proxy.ts: this header is trusted
  * precisely because middleware sets them after authenticating. Never call this
  * from client code, and never let a client-supplied header reach it.
  */
-export function currentAccess(): Access {
-  const h = headers();
+export async function currentAccess(): Promise<Access> {
+  const h = await headers();
   return getAccessFromHeaderValue(h.get(GRANTS_HEADER), h.get(ACTOR_HEADER));
 }

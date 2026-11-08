@@ -9,8 +9,9 @@ import { AppMissingError, issueReplayKey } from "@/lib/apps";
 import { can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
-export async function POST(_request: Request, { params }: { params: { id: string } }) {
-  const access = currentAccess();
+export async function POST(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const access = await currentAccess();
   if (!can(access, "admin.apps")) {
     return NextResponse.json({ error: "Administrator role required to issue replay keys" }, { status: 403 });
   }

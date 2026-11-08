@@ -1,0 +1,21 @@
+{
+  "profile": "dubai-gov",
+  "app_owner": "REPLACE_ME",
+  "data_classes": ["open", "internal", "confidential", "secret"],
+  "classified_from": "confidential",
+  "boundary": {
+    "hosts": ["REPLACE_ME"],
+    "sinks": {
+      "database": "REPLACE_ME",
+      "traces": "REPLACE_ME",
+      "blobs": "REPLACE_ME",
+      "embeddings": "REPLACE_ME",
+      "portal": "REPLACE_ME"
+    }
+  },
+  "session": {"idle_minutes": 15, "absolute_hours": 8},
+  "retention_days": {"audit": 1095, "runs": 365, "traces": 180},
+  "continuity": {"rpo_minutes": 60, "rto_minutes": 240, "drill_every_days": 365, "backup_host": "REPLACE_ME"},
+  "languages": ["ar", "en"],
+  "agents": [{"name": "REPLACE_ME", "accountable_owner": "REPLACE_ME"}]
+}

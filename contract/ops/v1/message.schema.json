@@ -4,6 +4,66 @@
   "title": "An Ops message",
   "description": "One message an app sends its portal's Ops ingest (contract/ops/v1/protocol.md). No message names a tenant: the Ops token decides.",
   "$defs": {
+    "ComplianceRecordMessage": {
+      "additionalProperties": true,
+      "description": "One record from a worker's compliance outbox (contract/compliance/v1).",
+      "properties": {
+        "schema": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema",
+          "type": "integer"
+        },
+        "kind": {
+          "const": "compliance_record",
+          "default": "compliance_record",
+          "title": "Kind",
+          "type": "string"
+        },
+        "record_id": {
+          "minimum": 1,
+          "title": "Record Id",
+          "type": "integer"
+        },
+        "record_kind": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Record Kind",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        },
+        "created_at": {
+          "title": "Created At",
+          "type": "string"
+        },
+        "prev_hash": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Prev Hash",
+          "type": "string"
+        },
+        "record_hash": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Record Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "record_id",
+        "record_kind",
+        "payload",
+        "created_at",
+        "prev_hash",
+        "record_hash"
+      ],
+      "title": "ComplianceRecordMessage",
+      "type": "object"
+    },
     "DeadLetterMessage": {
       "additionalProperties": true,
       "description": "A task that needs a human, or an engineer, before it can go on.",
@@ -273,6 +333,7 @@
   },
   "discriminator": {
     "mapping": {
+      "compliance_record": "#/$defs/ComplianceRecordMessage",
       "dead_letter": "#/$defs/DeadLetterMessage",
       "run": "#/$defs/RunMessage",
       "settings": "#/$defs/SettingsMessage"
@@ -288,6 +349,9 @@
     },
     {
       "$ref": "#/$defs/SettingsMessage"
+    },
+    {
+      "$ref": "#/$defs/ComplianceRecordMessage"
     }
   ]
 }

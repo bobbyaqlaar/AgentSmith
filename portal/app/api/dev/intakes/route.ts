@@ -1,6 +1,6 @@
 // POST /api/dev/intakes — an author's answers for a new tenant, stored for
 // `agentsmith tenant init --from <id>` to pull (.agent-rfc/designs/portal-intake-pull.md).
-// Human, behind middleware.ts. Needs dev.create — held by Developers and up —
+// Human, behind proxy.ts. Needs dev.create — held by Developers and up —
 // asked app-less, because the tenant is not an app yet; an id that is already a
 // registered app, or that an open intake names, is refused with 409
 // (.agent-rfc/designs/intake-dev-create.md). The token is in this response and
@@ -13,7 +13,7 @@ import { currentAccess } from "@/lib/currentAccess";
 import { createIntake, IntakeTakenError, parseIntakeInput } from "@/lib/intakes";
 
 export async function POST(request: Request) {
-  const access = currentAccess();
+  const access = await currentAccess();
   const role = roleFor(access, "dev.create");
   if (!role) {
     return NextResponse.json({ error: "creating a tenant intake needs the Developer role or above" }, { status: 403 });

@@ -11,6 +11,10 @@ advice, and not a claim of conformance with ISO/IEC 42001 or any other standard.
 identifiers here are the briefing's; the ISO *themes* used elsewhere in this repository
 (`docs/iso-42001-control-map.md`) are thematic and deliberately not clause numbers.
 
+**Unconfirmed identifiers.** `A.6.1.9`, `A.6.1.10` and `A.6.4` are the briefing's. They could not be
+found in published summaries of Annex A and have not been checked against a licensed copy of the
+standard, so do not quote them to an auditor.
+
 **How to read the status column.** `Met` — a runner or a gate enforces it and something fails when
 it does not hold. `Partial` — the mechanism exists, its scope is narrower than the briefing asks.
 `Tenant` — the framework provides the shape, the application owns the content.
@@ -33,7 +37,7 @@ it does not hold. `Partial` — the mechanism exists, its scope is narrower than
 | **F9** | Continuous bias & performance monitoring, versioned thresholds, owner alerts | A.6.1.10 | Fairness suite with pair parity; Phoenix traces; Ops shows cost against cap, run status, unresolved incidents; budget caps with a degrade ladder and circuit breaker | **Partial** — measurement is **batch at CI/promotion**, not continuous in production; no per-segment refusal rate, no drift threshold, no alert to a named owner |
 | **F10** | Full agent trace log: every input, model call, tool call, memory write, HITL checkpoint; immutable, retained | A.7.3, A.6.1.10 | `contract/telemetry/v1` — a published attribute catalogue, judged by `agentsmith conformance --port telemetry`; spans per step including guardrail, prompt-guard and redaction; JSON agent logs; HMAC-signed audit log (`SEC-AUDIT-001`) that the **database refuses to delete from** (`audit_log_immutable()`, `SEC-AUDIT-002`, a declared gap because its test needs a live Postgres) | **Met** — ⚠️ retention is a deployment decision; traces live in Phoenix, which is not immutable storage |
 | **F11** | User disclosure + explainability API keyed by run id | A.8.2 | `templates/in-app-widget/` — read-only: last agent run status, tenant-scoped trace link, error summary; run status and history through the Ops contract | **Partial** — no structured disclosure (that this is an agent, its identity and version, the tool categories, what it retains), and **no post-hoc explanation API keyed by run id** |
-| **F12** | HITL checkpoints, runtime guardrails, kill switch | A.5.5, A.6.2 | **Checkpoints:** `run_with_hitl_gate`, durable pause, DLQ replay signed with a portal-issued key (`SEC-HITL-001`, Met). **Guardrails:** prompt guard, tool allowlist (unlisted = denied), budget caps with degrade ladder, circuit breaker, pre-call scrub and post-call redaction sharing one validator. **Kill switch:** — | **Partial** — two of three tiers are Met; **no kill switch** that halts in-flight runs, blocks new ones and alerts |
+| **F12** | HITL checkpoints, runtime guardrails, kill switch | A.5.5, A.6.2 | **Checkpoints:** `run_with_hitl_gate`, durable pause, DLQ replay signed with a portal-issued key (`SEC-HITL-001`, Met). **Guardrails:** prompt guard, tool allowlist (unlisted = denied), budget caps with degrade ladder, circuit breaker, pre-call scrub and post-call redaction sharing one validator. **Kill switch:** on the compliance profile, `agentsmith ops stop` or the portal's Stop blocks new actions | **Partial** — no alert, and in-flight activities finish |
 
 **Summary:** 2 Met (F5, F10), 7 Partial, 3 Not covered (F3 system card, F6 retirement, F12's kill
 switch — plus F11's explanation API, counted inside its Partial).

@@ -9,8 +9,9 @@ import { withIdentity } from "@/lib/tracing";
 // same interval. Identity IS bound, so the query spans underneath carry the
 // tenant they read.
 
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
-  const access = currentAccess();
+export async function GET(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const access = await currentAccess();
   if (!can(access, "ops.read", params.id)) {
     return NextResponse.json({ error: `forbidden: no access to tenant ${params.id}` }, { status: 403 });
   }

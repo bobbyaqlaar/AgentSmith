@@ -133,6 +133,11 @@ def _exporter(signal: str, module: str, attr: str, env) -> Any:
     endpoint = resolve_otlp_endpoint(signal, env)
     if not endpoint:
         return None
+    from agentsmith import compliance
+
+    if not compliance.outbound_allowed(endpoint):
+        logger.error("%s is outside the declared boundary — %s will not be exported", endpoint, signal)
+        return None
     try:
         exporter_cls = getattr(__import__(module, fromlist=[attr]), attr)
     except ImportError:

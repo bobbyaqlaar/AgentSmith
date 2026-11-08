@@ -22,6 +22,8 @@ jobs:
       - uses: "{{PROVIDER_SETUP}}"
       - name: "Security: the declared provider (contract/security/v1)"
         run: bash .githooks/process-gate security check --evidence-dir security-evidence
+      - name: "Compliance profile (a repository with none reports that and passes)"
+        run: bash .githooks/process-gate compliance check --stage ci
       - name: "Upload security evidence"
         if: always()
         uses: actions/upload-artifact@v4

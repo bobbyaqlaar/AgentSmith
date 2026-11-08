@@ -91,6 +91,9 @@ export function getPool(): Pool {
     if (!databaseUrl) {
       throw new Error("DATABASE_URL is not set. The Ops Portal requires the same Postgres instance used by agentsmith/llm_gateway.py.");
     }
+    if (process.env.COMPLIANCE_PROFILE && !/[?&]sslmode=(require|verify-ca|verify-full)\b/.test(databaseUrl)) {
+      throw new Error("A compliance profile requires DATABASE_URL with sslmode=require or stricter.");
+    }
     pool = new TracedPool({ connectionString: databaseUrl, max: 10 });
   }
   return pool;

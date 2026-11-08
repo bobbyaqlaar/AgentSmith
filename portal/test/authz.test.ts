@@ -24,6 +24,8 @@ import {
   AREAS,
   GRANTS_HEADER,
   LEGACY_ROLES,
+  configuredGrants,
+  holdsEverywhere,
   PERMISSIONS,
   RETIRED_HEADERS,
   ROLES,
@@ -43,6 +45,7 @@ import {
   verifyBasicAuthCredentials,
   type Access,
 } from "../lib/authz.ts";
+import { scopeAuditEvents } from "../lib/auditSignature.ts";
 
 import { WORKSPACES, workspacesFor } from "../lib/workspaces.ts";
 
@@ -118,9 +121,36 @@ test("SECURITY: wrong password is rejected even for a real username", () => {
 
 // ── Roles and permissions ────────────────────────────────────────────────────
 
-test("the seven roles, and one legacy role accepted only from the old form", () => {
+test("the access review lists Basic and SSO users, and never a password", () => {
+  const saved = { basic: process.env.OPS_PORTAL_USERS, sso: process.env.OPS_PORTAL_SSO_USERS };
+  process.env.OPS_PORTAL_USERS = JSON.stringify([{ username: "bob", password: "s3cret", grants: [{ role: "operator", apps: ["a"] }] }]);
+  process.env.OPS_PORTAL_SSO_USERS = JSON.stringify([{ email: "Rita@X", grants: [{ role: "hitl_reviewer", apps: ["a"] }] }]);
+  try {
+    const listed = configuredGrants();
+    assert.deepEqual(listed.map((g) => g.user), ["bob", "rita@x"]);
+    assert.ok(!JSON.stringify(listed).includes("s3cret"));
+  } finally {
+    process.env.OPS_PORTAL_USERS = saved.basic;
+    process.env.OPS_PORTAL_SSO_USERS = saved.sso;
+    if (saved.basic === undefined) delete process.env.OPS_PORTAL_USERS;
+    if (saved.sso === undefined) delete process.env.OPS_PORTAL_SSO_USERS;
+  }
+});
+
+test("audit events: a reader sees their own apps, and app-less events only with the permission everywhere", () => {
+  const events = [{ tenantId: "a" }, { tenantId: "b" }, { tenantId: null }];
+  const visible = new Set(["a"]);
+  assert.deepEqual(scopeAuditEvents(events, visible, false), [{ tenantId: "a" }]);
+  assert.deepEqual(scopeAuditEvents(events, visible, true), [{ tenantId: "a" }, { tenantId: null }]);
+  const one = { grants: [{ role: "administrator", apps: ["a"] }] };
+  const all = { grants: [{ role: "administrator", apps: "*" }] };
+  assert.equal(holdsEverywhere(one as never, "admin.audit"), false);
+  assert.equal(holdsEverywhere(all as never, "admin.audit"), true);
+});
+
+test("the eight roles, and one legacy role accepted only from the old form", () => {
   assert.deepEqual([...ROLES], [
-    "developer", "design_approver", "operator", "hitl_reviewer", "release_approver", "administrator", "super_user",
+    "developer", "design_approver", "operator", "hitl_reviewer", "release_approver", "administrator", "super_user", "compliance_officer",
   ]);
   assert.deepEqual([...LEGACY_ROLES], ["viewer"]);
   for (const role of [...ROLES, ...LEGACY_ROLES]) {
@@ -251,9 +281,9 @@ test("the switcher offers only areas that exist", () => {
 
 // ── The trusted header ───────────────────────────────────────────────────────
 
-test("SECURITY: a forged grants header decodes, but middleware.ts strips client copies before this is trusted", () => {
+test("SECURITY: a forged grants header decodes, but proxy.ts strips client copies before this is trusted", () => {
   // Asserting the decode shape here so a change to the header format cannot
-  // silently widen access. See middleware.ts for the half that strips.
+  // silently widen access. See proxy.ts for the half that strips.
   const grants = [{ role: "operator", apps: ["acme", "a,b;c"] }] as const;
   assert.deepEqual(decodeGrantsHeader(encodeGrantsHeader([...grants].map((g) => ({ ...g, apps: [...g.apps] })))),
     [{ role: "operator", apps: ["acme", "a,b;c"] }]);
@@ -368,6 +398,10 @@ function handlers(source: string): Array<{ name: string; body: string }> {
  * Every entry is a place the rule below is deliberately not applied.
  */
 const APP_LESS: Record<string, { permission: string; because: string }> = {
+  "app/api/admin/access-export/route.ts:GET": {
+    permission: "admin.org",
+    because: "an access review covers the whole organisation, so the permission is the organisation-wide one only a Super user holds",
+  },
   "app/api/dev/intakes/route.ts:POST": {
     permission: "dev.create",
     because:
@@ -412,7 +446,7 @@ test("every HANDLER that reads an operator's Access also scopes it to tenants", 
 // ── No secret is compared with === ──────────────────────────────────────────
 //
 // The multi-user path was made constant-time and the single-user fallback in
-// middleware.ts — the DEFAULT configuration — kept `reqPass === pass` for
+// proxy.ts — the DEFAULT configuration — kept `reqPass === pass` for
 // three more months. This is that fix, made permanent: a grep, run every time,
 // over the files where a credential comparison can appear.
 
@@ -420,7 +454,7 @@ const CREDENTIAL_COMPARE = /(?:pass|password|secret|token)\w*\s*[!=]==(?!=)\s*(?
 
 test("no credential is compared with === or !==", () => {
   const files = [
-    "middleware.ts",
+    "proxy.ts",
     "lib/authz.ts",
     "lib/bearerAuth.ts",
     "lib/sessionToken.ts",

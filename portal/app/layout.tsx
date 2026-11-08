@@ -35,8 +35,8 @@ const NO_FLASH_THEME_SCRIPT = `
 })();
 `;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const workspaces = workspacesFor(currentAccess()).map((area) => ({
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const workspaces = workspacesFor(await currentAccess()).map((area) => ({
     label: WORKSPACES[area].label,
     home: WORKSPACES[area].home,
   }));

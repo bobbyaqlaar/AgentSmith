@@ -1,14 +1,14 @@
-// GET /api/auth/session-status?jti=... — internal endpoint middleware.ts
+// GET /api/auth/session-status?jti=... — internal endpoint proxy.ts
 // calls (via fetch) to check the server-side revocation denylist
-// (docs/PRODUCT_ARCHIVE.md 4.14). Exists only because middleware.ts runs on
+// (docs/PRODUCT_ARCHIVE.md 4.14). Exists only because proxy.ts runs on
 // the Edge runtime and can't use the `pg` driver directly — see
-// lib/sessionRevocation.ts. Not itself gated by middleware.ts's auth check
+// lib/sessionRevocation.ts. Not itself gated by proxy.ts's auth check
 // (this route only answers "is this opaque jti revoked", which reveals
 // nothing about a tenant or identity on its own).
 //
 // WHERE THE FAIL-OPEN / FAIL-CLOSED DECISION LIVES: not here. This route
 // reports what it knows, and `SSO_REVOCATION_MODE` decides what to do about
-// not knowing (lib/ssoRevocationMode.ts, applied in middleware.ts).
+// not knowing (lib/ssoRevocationMode.ts, applied in proxy.ts).
 //
 // It used to catch a database error and answer `200 {revoked: false}` — "the
 // session is fine" — which is a different fact from "I could not check".

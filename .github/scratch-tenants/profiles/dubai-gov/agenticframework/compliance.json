@@ -1,0 +1,48 @@
+{
+  "profile": "dubai-gov",
+  "app_owner": "owner@scratch.example.ae",
+  "data_classes": [
+    "open",
+    "internal",
+    "confidential",
+    "secret"
+  ],
+  "classified_from": "confidential",
+  "boundary": {
+    "hosts": [
+      "*.scratch.example.ae",
+      "scratch.example.ae"
+    ],
+    "sinks": {
+      "database": "scratch.example.ae",
+      "traces": "scratch.example.ae",
+      "blobs": "scratch.example.ae",
+      "embeddings": "scratch.example.ae",
+      "portal": "scratch.example.ae"
+    }
+  },
+  "session": {
+    "idle_minutes": 15,
+    "absolute_hours": 8
+  },
+  "retention_days": {
+    "audit": 1095,
+    "runs": 365,
+    "traces": 180
+  },
+  "continuity": {
+    "rpo_minutes": 60,
+    "rto_minutes": 240,
+    "drill_every_days": 365,
+    "backup_host": "scratch.example.ae"
+  },
+  "languages": [
+    "en"
+  ],
+  "agents": [
+    {
+      "name": "permit-agent",
+      "accountable_owner": "owner@scratch.example.ae"
+    }
+  ]
+}

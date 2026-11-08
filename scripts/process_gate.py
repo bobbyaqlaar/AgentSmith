@@ -203,6 +203,7 @@ class Config:
         self.guardrails_mode: str = str(data.get("commit_guardrails") or "on")
         self.pillars_declared: bool = "pillars" in data
         self.pillar_policy, self.pillar_problems = gp.parse_policy(data.get("pillars"))
+        self.compliance = data.get("compliance")
         self.extends_data = data.get("extends")
 
     def problems(self) -> List[str]:
@@ -220,6 +221,7 @@ class Config:
         if self.changelog_file and not self.changelog_paths:
             errors.append(f"{CONFIG} names a changelog file but no paths that require it")
         errors.extend(f"{CONFIG} {problem}" for problem in self.pillar_problems)
+        errors.extend(f"{CONFIG} {problem}" for problem in gp.compliance_problems(self.compliance))
         if self.extends_data is not None:
             try:
                 gm.Extends.model_validate(self.extends_data)
@@ -624,6 +626,8 @@ def check_change(
     inherited = previous_config.pillar_policy if previous_config is not None \
         and previous_config.pillars_declared else None
     errors.extend(gp.transition_problems(inherited, policy, approvals))
+    errors.extend(gp.compliance_transition_problems(previous_config.compliance if previous_config is not None else None,
+                                                    config.compliance, approvals))
     design_body = ""
 
     def na(name: str, value: str) -> bool:
@@ -870,6 +874,11 @@ def cmd_pre_edit(payload: dict) -> int:
         if rel != CONFIG:
             # It cannot say what is gated, so nothing but the config itself may change.
             _deny(f"the process-gate config is broken — {'; '.join(problems)}. Fix {CONFIG} first.")
+        return 0
+    if rel == gm.ATTESTATIONS_FILE:
+        _deny(f"{rel} holds people's signatures and is never edited directly — "
+              "ask the person who owns the obligation to run `agentsmith attest` in a terminal, "
+              "or to sign in the portal.")
         return 0
     if rel == gm.APPROVALS_FILE:
         # No design scope can unlock this one: the record of the owner's

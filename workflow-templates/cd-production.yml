@@ -60,6 +60,28 @@ jobs:
       # this repository pins. First, before anything else sets up Python.
       - uses: "{{PROVIDER_SETUP}}"
 
+      # ── Compliance profile: before anything is built or deployed. A repository with none passes ──
+      - name: "Compliance: every obligation for production"
+        env:
+          OPS_PORTAL_URL: ${{ vars.OPS_PORTAL_URL }}
+          OPS_PORTAL_TOKEN: ${{ secrets.OPS_PORTAL_TOKEN }}
+        run: bash .githooks/process-gate compliance check --stage production
+
+      - name: "Compliance: MCP servers still match what was pinned"
+        run: bash .githooks/process-gate compliance mcp-verify
+
+      - name: "Compliance: evidence by clause"
+        if: always()
+        run: bash .githooks/process-gate compliance export --evidence-dir compliance-evidence
+
+      - name: "Upload compliance evidence"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-evidence
+          path: compliance-evidence/
+          if-no-files-found: ignore
+
       # ── GCP auth (optional — skips when neither WIF nor SA key is configured) ─
       # Must run before build-push-ghcr when pushing to Artifact Registry, and
       # before the deploy step when using gcloud/kubectl. Sets ADC on the runner

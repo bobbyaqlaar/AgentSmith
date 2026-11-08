@@ -147,7 +147,7 @@ is reported as such; CI re-checks what the IDE hook checked; self-hosted, with s
 Each was checked absent from the code on 2026-11-03.
 
 1. **The OWASP Agentic Top 10 is mapped by reading, not graded.** `docs/security-framework-map.md` now states it: none of the
-   ten fully covered, five partial, five not covered. Microsoft's open-source toolkit claims all ten. **Fix:** tag the `SEC-*`
+   ten fully covered, six partial, four not covered. Microsoft's open-source toolkit claims all ten. **Fix:** tag the `SEC-*`
    controls with `ASI*`, so evidence packs report it. *After launch.*
 2. **The accountability chain stops at the commit.** A production run carries no commit (`app_commit` appears nowhere;
    portal phase 4), so "why does this agent do that?" cannot be answered from a trace. This is the differentiator no
@@ -452,6 +452,11 @@ Live status for the two compliance tracks is maintained in one place each — do
   framework-owned).
   **Trigger:** a bid requires live sovereign-endpoint verification, or an
   auditor demands a licensed clause-ID matrix beyond the thematic pack.
+- **Government readiness (DESC ISR, OWASP LLM 2025, NIST, ISO/IEC 42001, UAE instruments):**
+  the programme is `.agent-rfc/designs/compliance-readiness.md`. The opt-in `dubai-gov` profile is built (`.agent-rfc/designs/compliance-build.md`).
+  Backlog gaps 3, 4, 5 and 14 below are closed on the profile only, and only in part for 3 and 5.
+  **Owner's to close:** the scratch repository `bobbyaqlaar/agentsmith-scratch-dubai-gov`, AgentSmith's own declaration and signatures, the Dubai AI Security Policy, a licensed ISO/IEC 42001, counsel and a penetration test.
+  **Trigger:** the owner directs each phase.
 - **Enterprise Delivery Model:**
   [`docs/delivery-model.md`](delivery-model.md). v1 soft pack shipped.
   Still open: hard-fail enterprise mode; auto-inject `delivery.*` defaults from
@@ -586,7 +591,7 @@ Operational lessons distilled from past phases; full incident context in
   Guards added rather than resolutions: `scripts/test/test_ts_runner_invocations.py`
   fails when any invocation of `node --experimental-strip-types` omits the
   loader, and `portal/test/edgeSafety.test.ts` fails when anything reachable
-  from `middleware.ts` imports a Node-only builtin — that one is only visible to
+  from `proxy.ts` imports a Node-only builtin — that one is only visible to
   `next build`, since `tsc --noEmit` and `npm test` both pass on it.
 
 - **A verification step must not regenerate the thing it verifies.**

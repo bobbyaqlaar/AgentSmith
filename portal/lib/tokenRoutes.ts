@@ -21,8 +21,9 @@ const NOUN: Record<TokenScope, string> = { dev: "ingest tokens", ops: "Ops token
 const HOLDER: Record<TokenScope, string> = { dev: "this app's CI", ops: "this app's workers" };
 
 export function tokenRoutes(scope: TokenScope) {
-  async function POST(_request: Request, { params }: { params: { id: string } }) {
-    const access = currentAccess();
+  async function POST(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+    const access = await currentAccess();
     if (!can(access, "admin.apps")) {
       return NextResponse.json({ error: `Administrator role required to issue ${NOUN[scope]}` }, { status: 403 });
     }
@@ -41,8 +42,9 @@ export function tokenRoutes(scope: TokenScope) {
     }
   }
 
-  async function DELETE(_request: Request, { params }: { params: { id: string } }) {
-    const access = currentAccess();
+  async function DELETE(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+    const access = await currentAccess();
     if (!can(access, "admin.apps")) {
       return NextResponse.json({ error: `Administrator role required to revoke ${NOUN[scope]}` }, { status: 403 });
     }

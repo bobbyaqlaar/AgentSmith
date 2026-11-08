@@ -1,0 +1,28 @@
+{
+  "cases": [
+    {
+      "name": "no-profile",
+      "stage": "production",
+      "files": {
+        "README.md": "no declaration\n"
+      },
+      "expect": "no_profile"
+    },
+    {
+      "name": "unsigned-at-production",
+      "stage": "production",
+      "files": {
+        ".agenticframework/compliance.json": "{\n  \"profile\": \"dubai-gov\",\n  \"app_owner\": \"x.example.ae\",\n  \"data_classes\": [\"open\", \"internal\", \"confidential\", \"secret\"],\n  \"classified_from\": \"confidential\",\n  \"boundary\": {\n    \"hosts\": [\"x.example.ae\"],\n    \"sinks\": {\n      \"database\": \"x.example.ae\",\n      \"traces\": \"x.example.ae\",\n      \"blobs\": \"x.example.ae\",\n      \"embeddings\": \"x.example.ae\",\n      \"portal\": \"x.example.ae\"\n    }\n  },\n  \"session\": {\"idle_minutes\": 15, \"absolute_hours\": 8},\n  \"retention_days\": {\"audit\": 1095, \"runs\": 365, \"traces\": 180},\n  \"continuity\": {\"rpo_minutes\": 60, \"rto_minutes\": 240, \"drill_every_days\": 365, \"backup_host\": \"x.example.ae\"},\n  \"languages\": [\"ar\", \"en\"],\n  \"agents\": [{\"name\": \"x.example.ae\", \"accountable_owner\": \"x.example.ae\"}]\n}\n"
+      },
+      "expect": "fail"
+    },
+    {
+      "name": "unfinished-at-ci",
+      "stage": "ci",
+      "files": {
+        ".agenticframework/compliance.json": "{\n  \"profile\": \"dubai-gov\",\n  \"app_owner\": \"x.example.ae\",\n  \"data_classes\": [\"open\", \"internal\", \"confidential\", \"secret\"],\n  \"classified_from\": \"confidential\",\n  \"boundary\": {\n    \"hosts\": [\"x.example.ae\"],\n    \"sinks\": {\n      \"database\": \"x.example.ae\",\n      \"traces\": \"x.example.ae\",\n      \"blobs\": \"x.example.ae\",\n      \"embeddings\": \"x.example.ae\",\n      \"portal\": \"x.example.ae\"\n    }\n  },\n  \"session\": {\"idle_minutes\": 15, \"absolute_hours\": 8},\n  \"retention_days\": {\"audit\": 1095, \"runs\": 365, \"traces\": 180},\n  \"continuity\": {\"rpo_minutes\": 60, \"rto_minutes\": 240, \"drill_every_days\": 365, \"backup_host\": \"x.example.ae\"},\n  \"languages\": [\"ar\", \"en\"],\n  \"agents\": [{\"name\": \"x.example.ae\", \"accountable_owner\": \"x.example.ae\"}]\n}\n"
+      },
+      "expect": "fail"
+    }
+  ]
+}

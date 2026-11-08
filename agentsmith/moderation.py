@@ -176,8 +176,12 @@ def _ensure_declared_moderator() -> None:
 
 
 def resolve_mode() -> str:
+    from agentsmith import compliance
     from agentsmith.config import resolve_choice
 
+    # A compliance profile cannot be talked out of it from the environment.
+    if compliance.profile_active():
+        return "required"
     return resolve_choice(
         "moderation.mode",
         env_var="MODERATION_HOOK",

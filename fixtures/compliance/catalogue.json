@@ -1,0 +1,1878 @@
+[
+  {
+    "id": "OB-ISR-VERSION",
+    "title": "Confirm the ISR version and entity policies",
+    "refs": {
+      "desc_isr": [
+        "11.1"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "design"
+    ],
+    "mechanism": null,
+    "owner_role": "compliance_officer",
+    "recurrence_days": 365,
+    "instructions": "Confirm with DESC or the entity which ISR version applies and which entity policies sit on top of it.",
+    "evidence": "The confirmation, dated.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-AI-SECURITY-POLICY",
+    "title": "Map the Dubai AI Security Policy",
+    "refs": {
+      "desc_isr": [
+        "2.7.5"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "design"
+    ],
+    "mechanism": null,
+    "owner_role": "compliance_officer",
+    "recurrence_days": 365,
+    "instructions": "Obtain DESC's Dubai AI Security Policy and record how this app meets it.",
+    "evidence": "The mapping.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-COUNSEL",
+    "title": "Counsel opinion on the applicable laws",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": [
+        "45/2021",
+        "34/2021",
+        "Dubai Law 26/2015"
+      ]
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "design"
+    ],
+    "mechanism": null,
+    "owner_role": "legal",
+    "recurrence_days": null,
+    "instructions": "Get counsel's opinion on whether PDPL or the Dubai Data Law applies, and on exposure under Decree-Law 34/2021.",
+    "evidence": "The opinion.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-LICENCE",
+    "title": "Decide on a temporary licence",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": [
+        "25/2018"
+      ]
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "design"
+    ],
+    "mechanism": null,
+    "owner_role": "legal",
+    "recurrence_days": null,
+    "instructions": "Decide whether this project needs a temporary licence under Decree-Law 25/2018. If so, record its conditions and expiry.",
+    "evidence": "The decision, and the licence if one is needed.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-CLASSIFY",
+    "title": "Classify the data and approve the boundary",
+    "refs": {
+      "desc_isr": [
+        "2.3",
+        "2.7.2"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "design"
+    ],
+    "mechanism": null,
+    "owner_role": "data_owner",
+    "recurrence_days": 365,
+    "instructions": "Classify the data this app handles and approve the boundary in compliance.json.",
+    "evidence": "The classification record.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-ETHICS",
+    "title": "Complete the Digital Dubai self-assessment",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [
+        "fairness",
+        "accountability",
+        "transparency",
+        "explainability"
+      ],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "design",
+      "operate"
+    ],
+    "mechanism": null,
+    "owner_role": "ai_owner",
+    "recurrence_days": 365,
+    "instructions": "Complete the Digital Dubai AI ethics self-assessment for this system.",
+    "evidence": "The completed assessment.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-CHARTER",
+    "title": "Map the app to the UAE Charter",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [
+        "1-12"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "design"
+    ],
+    "mechanism": null,
+    "owner_role": "ai_owner",
+    "recurrence_days": 365,
+    "instructions": "Record how this app addresses each of the 12 priorities of the UAE Charter.",
+    "evidence": "The mapping.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-RISK",
+    "title": "Fill the risk register and accept residual risk",
+    "refs": {
+      "desc_isr": [
+        "3.3",
+        "3.4"
+      ],
+      "nist_ai_rmf": [
+        "MAP 1.5"
+      ],
+      "iso42001_theme": [
+        2
+      ],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "design"
+    ],
+    "mechanism": null,
+    "owner_role": "risk_owner",
+    "recurrence_days": 182,
+    "instructions": "Make the entries in risk_register.yaml true, and accept what remains.",
+    "evidence": "The signed-off register.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-BRANCH",
+    "title": "Require the gates through branch protection",
+    "refs": {
+      "desc_isr": [
+        "8.5.1"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "build"
+    ],
+    "mechanism": null,
+    "owner_role": "repo_admin",
+    "recurrence_days": 90,
+    "instructions": "Make the gate, security and compliance jobs required checks on the default branch.",
+    "evidence": "A screenshot or API output.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-CI-BOUNDARY",
+    "title": "Build inside the boundary",
+    "refs": {
+      "desc_isr": [
+        "2.7.2",
+        "13.2.1"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "build"
+    ],
+    "mechanism": null,
+    "owner_role": "security",
+    "recurrence_days": 365,
+    "instructions": "If source code or test data is classified, run CI on self-hosted runners inside the boundary and keep the repository where the classification allows. The templates default to GitHub-hosted runners.",
+    "evidence": "The runner configuration and the data classification.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-PENTEST",
+    "title": "Independent code review and penetration test",
+    "refs": {
+      "desc_isr": [
+        "8.6.1",
+        "8.6.2"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "build",
+      "operate"
+    ],
+    "mechanism": null,
+    "owner_role": "security",
+    "recurrence_days": 365,
+    "instructions": "Commission an independent code review and penetration test and close the findings.",
+    "evidence": "The report and closure record.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-SIGNOFF",
+    "title": "Security sign-off before production",
+    "refs": {
+      "desc_isr": [
+        "8.7.2"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "deploy"
+    ],
+    "mechanism": null,
+    "owner_role": "security",
+    "recurrence_days": 90,
+    "instructions": "Sign off the release as secure to deploy.",
+    "evidence": "The sign-off.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-CSP",
+    "title": "Cloud provider contract",
+    "refs": {
+      "desc_isr": [
+        "13.2.4"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "deploy"
+    ],
+    "mechanism": null,
+    "owner_role": "procurement",
+    "recurrence_days": 365,
+    "instructions": "Use a DESC-approved provider; the contract covers residency, encryption, incidents, recovery, and no ownership of your data.",
+    "evidence": "The contract clauses and the provider's certificate.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-KEYS",
+    "title": "Encryption at rest and key custody",
+    "refs": {
+      "desc_isr": [
+        "8.8"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "deploy"
+    ],
+    "mechanism": null,
+    "owner_role": "infrastructure",
+    "recurrence_days": 365,
+    "instructions": "Encrypt every data store at rest and record who holds the keys.",
+    "evidence": "The configuration and key-custody record.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-CLOCK",
+    "title": "Clock synchronisation",
+    "refs": {
+      "desc_isr": [
+        "6.9.8"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "deploy"
+    ],
+    "mechanism": null,
+    "owner_role": "infrastructure",
+    "recurrence_days": 365,
+    "instructions": "Synchronise every system to one time source.",
+    "evidence": "The configuration.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-ACCESS-REVIEW",
+    "title": "Review privileged and user access",
+    "refs": {
+      "desc_isr": [
+        "5.2.1.12",
+        "5.6"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": null,
+    "owner_role": "administrator",
+    "recurrence_days": 90,
+    "instructions": "Export the grants from the portal and re-authorise each one.",
+    "evidence": "The reviewed export.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-LOG-REVIEW",
+    "title": "Review logs and feed the SOC",
+    "refs": {
+      "desc_isr": [
+        "6.9.1",
+        "6.9.5"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": null,
+    "owner_role": "soc",
+    "recurrence_days": 30,
+    "instructions": "Review the audit export and confirm it reaches the SOC.",
+    "evidence": "The review note.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-BCP",
+    "title": "Business impact analysis and continuity plan",
+    "refs": {
+      "desc_isr": [
+        "7.1",
+        "7.2"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": null,
+    "owner_role": "bcm_owner",
+    "recurrence_days": 365,
+    "instructions": "Complete the business impact analysis and the continuity plan.",
+    "evidence": "The plan.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-INCIDENT-PLAN",
+    "title": "Incident plan, including withdrawing AI content",
+    "refs": {
+      "desc_isr": [
+        "4.1"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": [
+        "34/2021"
+      ]
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": null,
+    "owner_role": "security",
+    "recurrence_days": 365,
+    "instructions": "Keep an incident plan that covers withdrawing AI-generated content.",
+    "evidence": "The plan.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-TRAINING",
+    "title": "Train the reviewers",
+    "refs": {
+      "desc_isr": [
+        "10.2"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [
+        "11"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": null,
+    "owner_role": "ai_owner",
+    "recurrence_days": 365,
+    "instructions": "Train everyone who decides a human gate on what the decision means.",
+    "evidence": "The attendance record.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-ENTITY-DOMAINS",
+    "title": "Remaining ISR domains",
+    "refs": {
+      "desc_isr": [
+        "9",
+        "10",
+        "11",
+        "12"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": null,
+    "owner_role": "compliance_officer",
+    "recurrence_days": 365,
+    "instructions": "Confirm the entity covers physical, personnel, compliance and assurance controls.",
+    "evidence": "The entity's confirmation.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-DECLARATION",
+    "title": "Declare the app in full",
+    "refs": {
+      "desc_isr": [
+        "2.1"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "design"
+    ],
+    "mechanism": "declaration:complete",
+    "owner_role": "ai_owner",
+    "recurrence_days": null,
+    "instructions": "Replace every REPLACE_ME in .agenticframework/compliance.json.",
+    "evidence": "The file.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-PROFILE",
+    "title": "Keep the profile enforced",
+    "refs": {
+      "desc_isr": [
+        "1.3"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "design"
+    ],
+    "mechanism": "config:enforce",
+    "owner_role": "repo_admin",
+    "recurrence_days": null,
+    "instructions": "process-gates.json must enforce the profile.",
+    "evidence": "The file.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-AGENT-OWNERS",
+    "title": "Name an accountable person for each agent",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [
+        "GOVERN 2.1"
+      ],
+      "iso42001_theme": [
+        5
+      ],
+      "uae_charter": [
+        "6",
+        "7"
+      ],
+      "dubai_ethics": [
+        "accountability"
+      ],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "design"
+    ],
+    "mechanism": "check:agent_owners",
+    "owner_role": "ai_owner",
+    "recurrence_days": null,
+    "instructions": "List each agent and its accountable owner in compliance.json.",
+    "evidence": "The file.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-RISK-REGISTER",
+    "title": "Keep a real risk register",
+    "refs": {
+      "desc_isr": [
+        "3.2"
+      ],
+      "nist_ai_rmf": [
+        "MAP 1.5"
+      ],
+      "iso42001_theme": [
+        2
+      ],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "design"
+    ],
+    "mechanism": "SEC-RISK-001",
+    "owner_role": "risk_owner",
+    "recurrence_days": null,
+    "instructions": "Replace the template entries in risk_register.yaml.",
+    "evidence": "The register.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-AGENCY",
+    "title": "List the actions a person must approve",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [
+        "GOVERN 1.5"
+      ],
+      "iso42001_theme": [
+        5
+      ],
+      "uae_charter": [
+        "6"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "design"
+    ],
+    "mechanism": "SEC-AGENCY-001",
+    "owner_role": "ai_owner",
+    "recurrence_days": null,
+    "instructions": "List each high-impact action in agency_manifest.yaml.",
+    "evidence": "The manifest.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-HITL-WIRING",
+    "title": "Every listed action reaches a named human gate",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [
+        "MANAGE 4.1",
+        "AI 600-1 Human-AI Configuration"
+      ],
+      "iso42001_theme": [
+        5
+      ],
+      "uae_charter": [
+        "6",
+        "7"
+      ],
+      "dubai_ethics": [
+        "accountability"
+      ],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "check:hitl_wiring",
+    "owner_role": "ai_owner",
+    "recurrence_days": null,
+    "instructions": "Call run_with_hitl_gate(..., compliance=True) for each action in the manifest.",
+    "evidence": "The check.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-DATA-CLASS",
+    "title": "State the data class of every model call",
+    "refs": {
+      "desc_isr": [
+        "2.3",
+        "2.7.5"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [
+        "4"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "check:data_class_usage",
+    "owner_role": "ai_owner",
+    "recurrence_days": null,
+    "instructions": "Pass data_class= on every gateway call.",
+    "evidence": "The check.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-RESIDENCY",
+    "title": "Stay inside the declared boundary",
+    "refs": {
+      "desc_isr": [
+        "2.7.2",
+        "13.2.1"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [
+        "4"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM03"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "check:residency",
+    "owner_role": "data_owner",
+    "recurrence_days": null,
+    "instructions": "Keep every route, fallback and data store inside the boundary in compliance.json.",
+    "evidence": "The check, and refusals at run time.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-PROMPT",
+    "title": "Guard against prompt injection",
+    "refs": {
+      "desc_isr": [
+        "8.3"
+      ],
+      "nist_ai_rmf": [
+        "AI 600-1 Information Security"
+      ],
+      "iso42001_theme": [],
+      "uae_charter": [
+        "2"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM01"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "SEC-PROMPT-001",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "Keep security.prompt_guard enforcing.",
+    "evidence": "The control.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-PII",
+    "title": "Scrub personal data before the model",
+    "refs": {
+      "desc_isr": [
+        "2.7.3",
+        "2.7.5"
+      ],
+      "nist_ai_rmf": [
+        "AI 600-1 Data Privacy"
+      ],
+      "iso42001_theme": [],
+      "uae_charter": [
+        "4"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM02"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "SEC-PII-001",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "Keep the input guardrail on.",
+    "evidence": "The control.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-NAME-SCRUB",
+    "title": "Scrub names too",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [
+        "4"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM02"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "check:name_scrubber",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "The default scrubbers do not catch names. Declare and register a custom guardrail.",
+    "evidence": "The check.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-TOOLS",
+    "title": "Allow only listed tools",
+    "refs": {
+      "desc_isr": [
+        "5.2.4.1"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "SEC-TOOL-001",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "Keep tool_allowlist.yaml current and strict.",
+    "evidence": "The control.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-GATEWAY",
+    "title": "Send every model call through the gateway",
+    "refs": {
+      "desc_isr": [
+        "8.3"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "SEC-GW-001",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "Import the gateway, never a provider SDK.",
+    "evidence": "The control.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-SIDECAR",
+    "title": "Reach models only through the sidecar",
+    "refs": {
+      "desc_isr": [
+        "8.3"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "check:sidecar_only",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "An app not written in Python calls `agentsmith runtime serve` and holds no model vendor SDK.",
+    "evidence": "The check.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-MODERATION",
+    "title": "Moderate output",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [
+        "AI 600-1 Dangerous, Violent, or Hateful Content"
+      ],
+      "iso42001_theme": [],
+      "uae_charter": [
+        "2",
+        "10"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM05"
+      ],
+      "uae_law": [
+        "34/2021",
+        "34/2023"
+      ]
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "check:moderation_required",
+    "owner_role": "ai_owner",
+    "recurrence_days": null,
+    "instructions": "Declare moderation.mode: required and a moderation.hook in tenant.yaml.",
+    "evidence": "The check.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-EVALS",
+    "title": "Grade the app's answers",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [
+        "MEASURE 2.6",
+        "AI 600-1 Confabulation"
+      ],
+      "iso42001_theme": [
+        7
+      ],
+      "uae_charter": [
+        "2",
+        "8"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM09"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "SEC-EVAL-001",
+    "owner_role": "ai_owner",
+    "recurrence_days": null,
+    "instructions": "Keep a golden set the CI grades.",
+    "evidence": "The scorecard.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-FAIRNESS",
+    "title": "Fail the build on unfair results",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [
+        "MEASURE 2.11",
+        "AI 600-1 Harmful Bias and Homogenization"
+      ],
+      "iso42001_theme": [
+        8
+      ],
+      "uae_charter": [
+        "3"
+      ],
+      "dubai_ethics": [
+        "fairness"
+      ],
+      "owasp_llm": [],
+      "uae_law": [
+        "34/2023"
+      ]
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "check:fairness_gate",
+    "owner_role": "ai_owner",
+    "recurrence_days": null,
+    "instructions": "Do not let a fairness result merely warn in providers.json.",
+    "evidence": "The check.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-ARABIC",
+    "title": "Test in Arabic where Arabic is used",
+    "refs": {
+      "desc_isr": [
+        "8.3.1"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [
+        "11"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM01"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "check:arabic_cases",
+    "owner_role": "ai_owner",
+    "recurrence_days": null,
+    "instructions": "Add Arabic cases to the app's suites when Arabic is a declared language.",
+    "evidence": "The check.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-SUPPLY-CHAIN",
+    "title": "Scan dependencies and declare MCP servers",
+    "refs": {
+      "desc_isr": [
+        "8.6.1"
+      ],
+      "nist_ai_rmf": [
+        "AI 600-1 Value Chain and Component Integration"
+      ],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM03"
+      ],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "build"
+    ],
+    "mechanism": "check:supply_chain",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "Keep the supply-chain job. Run `agentsmith compliance mcp-pin` to pin MCP servers and their tool definitions, and `mcp-verify` when deploying.",
+    "evidence": "The check.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-DEPLOYED",
+    "title": "Ship the declaration in the image",
+    "refs": {
+      "desc_isr": [
+        "2.7.5"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "deploy"
+    ],
+    "mechanism": "check:declaration_deployed",
+    "owner_role": "infrastructure",
+    "recurrence_days": null,
+    "instructions": "Copy .agenticframework/compliance.json into every image and set COMPLIANCE_PROFILE.",
+    "evidence": "The check.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-TRACES-PRIVATE",
+    "title": "Keep the trace store from reporting out",
+    "refs": {
+      "desc_isr": [
+        "2.7.2"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "deploy"
+    ],
+    "mechanism": "check:traces_private",
+    "owner_role": "infrastructure",
+    "recurrence_days": null,
+    "instructions": "Set PHOENIX_TELEMETRY_ENABLED and PHOENIX_ALLOW_EXTERNAL_RESOURCES to false wherever Phoenix runs.",
+    "evidence": "The check.",
+    "blocks": [
+      "ci",
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-RESTORE-DRILL",
+    "title": "Prove a restore works",
+    "refs": {
+      "desc_isr": [
+        "7.3.4",
+        "7.4"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "app",
+    "class": "verified",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": "check:restore_drill",
+    "owner_role": "bcm_owner",
+    "recurrence_days": null,
+    "instructions": "Restore a backup and run `agentsmith ops restore-drill`.",
+    "evidence": "The drill record.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-RECORD",
+    "title": "No record, no action",
+    "refs": {
+      "desc_isr": [
+        "6.9.1",
+        "6.9.6"
+      ],
+      "nist_ai_rmf": [
+        "GOVERN 1.2"
+      ],
+      "iso42001_theme": [
+        6
+      ],
+      "uae_charter": [
+        "7"
+      ],
+      "dubai_ethics": [
+        "accountability"
+      ],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "provider",
+    "class": "enforced",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": "release:agentsmith/test/test_compliance_runtime.py",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "Set COMPLIANCE_RECORD_KEY and DATABASE_URL in the worker. Run `agentsmith ops forward`.",
+    "evidence": "The chained record.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-STOP",
+    "title": "A person can stop the app",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [
+        5
+      ],
+      "uae_charter": [
+        "2",
+        "6"
+      ],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM06"
+      ],
+      "uae_law": []
+    },
+    "layer": "provider",
+    "class": "enforced",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": "release:agentsmith/test/test_compliance_runtime.py",
+    "owner_role": "administrator",
+    "recurrence_days": null,
+    "instructions": "Use Stop in the portal, or `agentsmith ops stop` when it is down.",
+    "evidence": "The stop record.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-USER-LIMIT",
+    "title": "Limit calls per user",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM10"
+      ],
+      "uae_law": []
+    },
+    "layer": "provider",
+    "class": "enforced",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": "release:agentsmith/test/test_compliance_runtime.py",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "Set user_calls_per_minute and pass user_id to the gateway.",
+    "evidence": "The refusal.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-PROMPT-LEAK",
+    "title": "Withhold answers that repeat the system prompt",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM07"
+      ],
+      "uae_law": []
+    },
+    "layer": "provider",
+    "class": "enforced",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": "release:agentsmith/test/test_compliance_runtime.py",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "Nothing to do: the gateway does this on the profile.",
+    "evidence": "The refusal.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-VECTOR-TENANT",
+    "title": "Keep each tenant's documents apart",
+    "refs": {
+      "desc_isr": [
+        "5.2.4.2"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM08"
+      ],
+      "uae_law": []
+    },
+    "layer": "provider",
+    "class": "enforced",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": "release:agentsmith/test/test_compliance_runtime.py",
+    "owner_role": "security",
+    "recurrence_days": null,
+    "instructions": "Nothing to do: the vector store filters by tenant on the profile.",
+    "evidence": "The refusal.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-SESSION",
+    "title": "End idle sessions",
+    "refs": {
+      "desc_isr": [
+        "5.2.3.6"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "provider",
+    "class": "enforced",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": "release:portal/test/signInPolicy.test.ts",
+    "owner_role": "administrator",
+    "recurrence_days": null,
+    "instructions": "Set SESSION_IDLE_MINUTES and SESSION_ABSOLUTE_HOURS on the portal.",
+    "evidence": "The settings.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-SIGNIN",
+    "title": "SSO with multi-factor; lock out repeated failures",
+    "refs": {
+      "desc_isr": [
+        "5.2.1.4",
+        "5.2.3.7"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "provider",
+    "class": "enforced",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": "release:portal/test/signInPolicy.test.ts",
+    "owner_role": "administrator",
+    "recurrence_days": null,
+    "instructions": "Set COMPLIANCE_PROFILE, SSO_ENABLED and SSO_REQUIRED_AMR on the portal.",
+    "evidence": "The settings.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-AUDIT-COVERAGE",
+    "title": "Audit every sign-in and human action",
+    "refs": {
+      "desc_isr": [
+        "6.9.1",
+        "6.9.3",
+        "5.2.3.9"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [
+        6
+      ],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "provider",
+    "class": "enforced",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": "release:portal/app/api/audit/export/route.ts",
+    "owner_role": "soc",
+    "recurrence_days": null,
+    "instructions": "Export the audit log to your SIEM from /api/audit/export.",
+    "evidence": "The export.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-AI-DISCLOSURE",
+    "title": "Tell people they are reading AI output",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [
+        "5"
+      ],
+      "dubai_ethics": [
+        "transparency"
+      ],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "build"
+    ],
+    "mechanism": null,
+    "owner_role": "ai_owner",
+    "recurrence_days": 365,
+    "instructions": "Show users when an answer is AI-generated, and pass on its machine-readable mark. CompletionResult.provenance carries the mark, and marking_headers() renders it for HTTP.",
+    "evidence": "A screenshot.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-GROUNDING",
+    "title": "Ground answers on official matters",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [
+        "AI 600-1 Information Integrity"
+      ],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [
+        "LLM09"
+      ],
+      "uae_law": [
+        "34/2021"
+      ]
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "build"
+    ],
+    "mechanism": null,
+    "owner_role": "ai_owner",
+    "recurrence_days": 365,
+    "instructions": "On any route that publishes statements about official matters, require citations_grounded before release.",
+    "evidence": "The routes and the code.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-EXPLAIN",
+    "title": "Explain a decision to the person affected",
+    "refs": {
+      "desc_isr": [],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [
+        6
+      ],
+      "uae_charter": [
+        "5"
+      ],
+      "dubai_ethics": [
+        "explainability"
+      ],
+      "owasp_llm": [],
+      "uae_law": []
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": null,
+    "owner_role": "ai_owner",
+    "recurrence_days": 365,
+    "instructions": "Use the decision trail in the portal to answer why an outcome was reached.",
+    "evidence": "The procedure.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  },
+  {
+    "id": "OB-SUBJECT",
+    "title": "Handle data-subject and retention duties",
+    "refs": {
+      "desc_isr": [
+        "2.5",
+        "6.6.4"
+      ],
+      "nist_ai_rmf": [],
+      "iso42001_theme": [],
+      "uae_charter": [],
+      "dubai_ethics": [],
+      "owasp_llm": [],
+      "uae_law": [
+        "45/2021",
+        "Dubai Law 26/2015"
+      ]
+    },
+    "layer": "org",
+    "class": "attested",
+    "phases": [
+      "operate"
+    ],
+    "mechanism": null,
+    "owner_role": "data_owner",
+    "recurrence_days": 365,
+    "instructions": "Set retention_days. Run `agentsmith ops purge`, and answer subject requests by your entity's procedure.",
+    "evidence": "The procedure and the last purge.",
+    "blocks": [
+      "production"
+    ],
+    "profiles": [
+      "dubai-gov"
+    ]
+  }
+]

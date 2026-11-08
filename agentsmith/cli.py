@@ -303,6 +303,7 @@ def init_tenant(
     ides: Optional[Sequence[str]] = None,
     rfc: Optional[dict] = None,
     framework_ref: Optional[str] = None,
+    profile: Optional[str] = None,
 ) -> list[str]:
     """Scaffold a tenant. Returns the paths written, relative to `root`.
 
@@ -433,6 +434,13 @@ def init_tenant(
         prior=prior,
     )
     written += seed_tenant_data(root, framework)
+    if profile:
+        from agentsmith.machine import governance
+
+        if governance.compliance_enable(profile, root) != 0:
+            raise ValueError(f"could not put this repository on the {profile} profile")
+        # Before the manifest, so the scaffold's own commit vouches for these.
+        written += [p for p in governance.PROFILE_FILES if p not in written]
     written += write_scaffold_records(root, tenant_id, stack, style, agentic, written, force, rfc=rfc)
     # LAST, deliberately: the graph maps what the scaffold wrote, and
     # write_scaffold_records above is the step that writes the rfc documents.
@@ -524,6 +532,14 @@ def _scaffold_files(root: Path, written: list[str]) -> list[str]:
     return sorted(files)
 
 
+def _extended_pillars(root: Path) -> list[dict]:
+    """Pillars this repository adds in `extends`, such as a compliance profile's."""
+    config = root / ".agenticframework" / "process-gates.json"
+    if not config.is_file():
+        return []
+    return json.loads(config.read_text(encoding="utf-8")).get("extends", {}).get("pillars", [])
+
+
 def write_scaffold_records(root: Path, tenant_id: str, stack: str, style: Optional[str], agentic: bool,
                            written: list[str], force: bool, design: str = SCAFFOLD_DESIGN,
                            adopted: bool = False, generated_by: Optional[str] = None,
@@ -610,7 +626,8 @@ def write_scaffold_records(root: Path, tenant_id: str, stack: str, style: Option
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
         # The manifest is in the commit this design covers, and a tenant may gate it.
         design_path.write_text(architectures.render_scaffold_design(
-            tenant_id, stack, style, agentic, [*files, SCAFFOLD_MANIFEST], registry.get("pillars", []),
+            tenant_id, stack, style, agentic, [*files, SCAFFOLD_MANIFEST],
+            [*registry.get("pillars", []), *_extended_pillars(root)],
             adopted=adopted), encoding="utf-8")
         records.append(design)
     command = generated_by or ("agentsmith tenant adopt" if adopted else "agentsmith tenant init")
@@ -894,6 +911,7 @@ def _scaffold_tenant(args: argparse.Namespace, root: Path, intake_rfc: Optional[
             ides=args.ide,
             rfc=intake_rfc,
             framework_ref=args.framework_ref,
+            profile=getattr(args, "profile", None),
         )
     except FrameworkRootError as exc:
         print(f"agentsmith: refusing to scaffold here.\n{exc}", file=sys.stderr)
@@ -989,6 +1007,24 @@ def _cmd_tenant_adopt(args: argparse.Namespace) -> int:
     return 0
 
 
+def _stdin_request(wait_seconds: float = 1.0) -> str:
+    """A request piped to this command, or "" when there is none. A parent that
+    leaves a pipe open and writes nothing must not hang it: stop at end of input,
+    or when nothing has arrived for `wait_seconds`."""
+    import select
+
+    if sys.stdin.isatty():
+        return ""
+    chunks: list[bytes] = []
+    descriptor = sys.stdin.fileno()
+    while select.select([descriptor], [], [], wait_seconds)[0]:
+        chunk = os.read(descriptor, 65536)
+        if not chunk:
+            break
+        chunks.append(chunk)
+    return b"".join(chunks).decode("utf-8", errors="replace")
+
+
 def _provider_scripts() -> Optional[Path]:
     """The scripts this provider answers with: its own installation's. The
     repository being asked about is used only when it IS the framework checkout
@@ -1032,7 +1068,7 @@ def _cmd_gate(args: argparse.Namespace) -> int:
         "push": ["sweep", "--decision"],
     }.get(args.event, [args.event, "--ide", args.ide or "neutral"])
     done = sp.run([sys.executable, str(gate), *command],
-                  input=sys.stdin.read() if not sys.stdin.isatty() else "{}",
+                  input=_stdin_request() or "{}",
                   capture_output=True, text=True, check=False)
     sys.stderr.write(done.stderr)
     if done.returncode == 3:
@@ -1082,7 +1118,7 @@ def _cmd_rules(args: argparse.Namespace) -> int:
         print("agentsmith rules: --write goes with render", file=sys.stderr)
         return 2
     done = sp.run([sys.executable, str(scripts / "rules_port.py"), args.verb, *(["--write"] if args.write else [])],
-                  input=sys.stdin.read() if not sys.stdin.isatty() else "{}", capture_output=True, text=True,
+                  input=_stdin_request() or "{}", capture_output=True, text=True,
                   check=False)
     sys.stderr.write(done.stderr)
     sys.stdout.write(done.stdout)
@@ -1101,7 +1137,7 @@ def _cmd_evals_run(args: argparse.Namespace) -> int:
         print("agentsmith evals: no evals_port.py in $AGENTSMITH_DIR or ~/.agent-framework — "
               "run install-ai-stack.sh", file=sys.stderr)
         return 3
-    request = sys.stdin.read() if not sys.stdin.isatty() else ""
+    request = _stdin_request()
     if args.suite:
         try:
             body = json.loads(request) if request.strip() else {}
@@ -1116,6 +1152,70 @@ def _cmd_evals_run(args: argparse.Namespace) -> int:
                   stdout=sp.PIPE, text=True, check=False)
     sys.stdout.write(done.stdout)
     return done.returncode
+
+
+def _cmd_ops_compliance(args: argparse.Namespace) -> int:
+    """`agentsmith ops stop|resume|forward|verify` — the compliance outbox and the
+    stop flag, without the portal. Stopping is open to anyone at the keyboard:
+    it is the safe direction. Resuming asks at a terminal."""
+    import getpass
+
+    import yaml
+
+    from agentsmith import compliance
+
+    tenant = args.tenant
+    if tenant is None and Path(".agenticframework/tenant.yaml").is_file():
+        declared = yaml.safe_load(Path(".agenticframework/tenant.yaml").read_text(encoding="utf-8")) or {}
+        tenant = declared.get("tenant", {}).get("id")
+    if not tenant:
+        print("agentsmith ops: give --tenant, or run from a repository with tenant.yaml", file=sys.stderr)
+        return 2
+    actor = os.environ.get("AGENT_OWNER_ID") or getpass.getuser()
+    try:
+        if args.verb == "stop":
+            if not args.reason:
+                print("agentsmith ops stop: --reason is required", file=sys.stderr)
+                return 2
+            compliance.set_stop(tenant, args.scope, args.reason, actor)
+            print(f"Stopped {tenant} ({args.scope}).")
+            return 0
+        if args.verb == "resume":
+            try:
+                reader, writer = open("/dev/tty", "r"), open("/dev/tty", "w")
+            except OSError:
+                print("agentsmith ops resume: a person resumes at a terminal; this process has none", file=sys.stderr)
+                return 2
+            with reader, writer:
+                writer.write(f"Resume {tenant} ({args.scope})? Type the app id to confirm: ")
+                writer.flush()
+                if reader.readline().strip() != tenant:
+                    writer.write("not resumed.\n")
+                    return 1
+            compliance.clear_stop(tenant, args.scope, actor)
+            print(f"Resumed {tenant} ({args.scope}).")
+            return 0
+        if args.verb == "purge":
+            count = compliance.purge_runs(tenant, apply=args.apply)
+            print(f"{'Deleted' if args.apply else 'Would delete'} {count} run(s) past the declared retention.")
+            return 0
+        if args.verb == "restore-drill":
+            if not args.restored_url:
+                print("agentsmith ops restore-drill: --restored-url is required", file=sys.stderr)
+                return 2
+            problems = compliance.restore_drill(tenant, args.restored_url, Path.cwd())
+            print("\n".join(problems) or "Restore drill passed; recorded under .agenticframework/drills/.")
+            return 1 if problems else 0
+        if args.verb == "forward":
+            sent, why = compliance.forward(tenant)
+            print(f"Forwarded {sent} record(s).{' Stopped: ' + why if why else ''}")
+            return 1 if why else 0
+        problems = compliance.verify_chain(tenant)
+        print("\n".join(problems) if problems else "The record is intact.")
+        return 1 if problems else 0
+    except compliance.ComplianceRefused as exc:
+        print(f"agentsmith ops: {exc}", file=sys.stderr)
+        return 1
 
 
 def _cmd_ops_settings(args: argparse.Namespace) -> int:
@@ -1161,7 +1261,7 @@ def _cmd_security(args: argparse.Namespace) -> int:
         print("agentsmith security: no security_port.py in $AGENTSMITH_DIR or ~/.agent-framework — "
               "run install-ai-stack.sh", file=sys.stderr)
         return 3
-    request = sys.stdin.read() if not sys.stdin.isatty() else ""
+    request = _stdin_request()
     flags = {"environment": args.environment, "emitter": args.emitter, "evidence_dir": args.evidence_dir,
              "controls": args.control or None}
     given = {key: value for key, value in flags.items() if value}
@@ -1179,6 +1279,52 @@ def _cmd_security(args: argparse.Namespace) -> int:
                   stdout=sp.PIPE, text=True, check=False)
     sys.stdout.write(done.stdout)
     return done.returncode
+
+
+def _runtime_conformance(args: argparse.Namespace) -> int:
+    """`agentsmith conformance --port runtime --receiver URL` (contract/runtime/v1/protocol.md).
+    The token comes from AGENTSMITH_RUNTIME_TOKEN."""
+    from agentsmith import conformance as rc
+
+    if not args.receiver:
+        print("agentsmith conformance --port runtime: --receiver URL is required", file=sys.stderr)
+        return 2
+    checks = rc.run_runtime(args.receiver, os.environ.get("AGENTSMITH_RUNTIME_TOKEN", ""))
+    for name, ok, detail in checks:
+        print(f"{'✅' if ok else '❌'} {name}{'' if ok else ': ' + detail}")
+    return 0 if all(ok for _, ok, _ in checks) else 1
+
+
+def _cmd_runtime(args: argparse.Namespace) -> int:
+    """`agentsmith runtime serve` — the guards over localhost, for other stacks."""
+    import yaml
+
+    from agentsmith import runtime_server
+
+    tenant = args.tenant
+    if tenant is None and Path(".agenticframework/tenant.yaml").is_file():
+        declared = yaml.safe_load(Path(".agenticframework/tenant.yaml").read_text(encoding="utf-8")) or {}
+        tenant = declared.get("tenant", {}).get("id")
+    if not tenant:
+        print("agentsmith runtime: give --tenant, or run from a repository with tenant.yaml", file=sys.stderr)
+        return 2
+    return runtime_server.serve(tenant, args.port)
+
+
+def _compliance_conformance(args: argparse.Namespace) -> int:
+    """`agentsmith conformance --port compliance --provider CMD` (contract/compliance/v1/protocol.md)."""
+    import tempfile
+
+    from agentsmith import conformance as rc
+
+    if not args.provider:
+        print("agentsmith conformance --port compliance: --provider COMMAND is required", file=sys.stderr)
+        return 2
+    with tempfile.TemporaryDirectory() as tmp:
+        checks = rc.run_compliance(args.provider, Path(tmp))
+    for name, ok, detail in checks:
+        print(f"{'✅' if ok else '❌'} {name}{'' if ok else ': ' + detail}")
+    return 0 if all(ok for _, ok, _ in checks) else 1
 
 
 def _security_conformance(args: argparse.Namespace) -> int:
@@ -1330,6 +1476,10 @@ def _cmd_conformance(args: argparse.Namespace) -> int:
         return _record_conformance(args)
     if args.port == "evals":
         return _evals_conformance(args)
+    if args.port == "compliance":
+        return _compliance_conformance(args)
+    if args.port == "runtime":
+        return _runtime_conformance(args)
     if args.port == "security":
         return _security_conformance(args)
     if args.port == "ops":
@@ -1561,6 +1711,40 @@ def _cmd_approve(args: argparse.Namespace) -> int:
     return governance.approve(args.design, args.deviation, args.statement)
 
 
+def _cmd_attest(args: argparse.Namespace) -> int:
+    from agentsmith.machine import governance
+
+    return governance.attest(args.obligation, args.evidence, args.role, args.days, args.note)
+
+
+def _cmd_compliance(args: argparse.Namespace) -> int:
+    """`agentsmith compliance` — AgentSmith as a compliance provider
+    (contract/compliance/v1/protocol.md)."""
+    import subprocess as sp
+
+    if args.verb == "enable":
+        from agentsmith.machine import governance
+
+        return governance.compliance_enable(args.profile)
+    if args.verb in ("mcp-pin", "mcp-verify"):
+        from agentsmith import mcp_pin
+
+        return mcp_pin.pin(Path.cwd()) if args.verb == "mcp-pin" else mcp_pin.verify(Path.cwd())
+    scripts = _provider_scripts()
+    if scripts is None or not (scripts / "compliance_port.py").is_file():
+        print("agentsmith compliance: no compliance_port.py in $AGENTSMITH_DIR or ~/.agent-framework — "
+              "run install-ai-stack.sh", file=sys.stderr)
+        return 3
+    argv = [sys.executable, str(scripts / "compliance_port.py"), args.verb]
+    if args.verb in ("check", "status", "export"):
+        argv += ["--stage", args.stage or ("ci" if args.verb == "check" else "production")]
+    if args.verb == "export" and args.out:
+        argv += ["--out", args.out]
+    if args.verb == "export" and args.evidence_dir:
+        argv += ["--evidence-dir", args.evidence_dir]
+    return sp.run(argv, stdin=sp.DEVNULL, check=False).returncode
+
+
 def _cmd_design_new(args: argparse.Namespace) -> int:
     from agentsmith.machine import governance
 
@@ -1604,6 +1788,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="add the agent layer: agents, allowlisted tools, the model gateway, durable workflows, evals",
     )
+    init.add_argument("--profile", default=None, metavar="NAME",
+                      help="put the new repository on a compliance profile (dubai-gov)")
     init.add_argument("--root", default=None, help="target repo (default: cwd)")
     init.add_argument("--framework-ref", default=None,
                       help="the AgentSmith release or commit CI takes the provider from (default: this install's)")
@@ -1660,7 +1846,9 @@ def build_parser() -> argparse.ArgumentParser:
     rules.set_defaults(func=_cmd_rules)
 
     conformance = sub.add_parser("conformance", help="does a command or a portal satisfy a contract?")
-    conformance.add_argument("--port", choices=("gate", "record", "rules", "telemetry", "evals", "security", "ops"),
+    conformance.add_argument("--port",
+                             choices=("gate", "record", "rules", "telemetry", "evals", "compliance", "runtime",
+                                      "security", "ops"),
                              default="gate",
                              help="the contract: the gate, the rules, the evals or security (a provider command), the "
                                   "record (a sender or a receiver), or telemetry (an emitter or an export)")
@@ -1725,8 +1913,13 @@ def build_parser() -> argparse.ArgumentParser:
     evals.set_defaults(func=_cmd_evals)
 
     ops = sub.add_parser("ops", help="send this repository's declared settings to its portal (contract/ops/v1)")
-    ops.add_argument("verb", choices=("settings",))
-    ops.set_defaults(func=_cmd_ops_settings)
+    ops.add_argument("verb", choices=("settings", "stop", "resume", "forward", "verify", "purge", "restore-drill"))
+    ops.add_argument("--apply", action="store_true", help="purge: delete; without it, only count")
+    ops.add_argument("--restored-url", default=None, help="restore-drill: the database restored from a backup")
+    ops.add_argument("--tenant", default=None, help="stop|resume|forward|verify: the app (default: tenant.yaml)")
+    ops.add_argument("--scope", default="*", help="stop|resume: a workflow id, or * for the whole app (default)")
+    ops.add_argument("--reason", default=None, help="stop: why (required)")
+    ops.set_defaults(func=lambda a: _cmd_ops_settings(a) if a.verb == "settings" else _cmd_ops_compliance(a))
 
     security = sub.add_parser("security", help="check this repository's security pack and posture, or what its "
                                                "telemetry carries on the wire (contract/security/v1)")
@@ -1804,6 +1997,28 @@ def build_parser() -> argparse.ArgumentParser:
     approve.add_argument("deviation", help="the id in the design's '## Deviations' section, e.g. D1")
     approve.add_argument("--statement", default=None, help="one line on why (asked for if omitted)")
     approve.set_defaults(func=_cmd_approve)
+
+    runtime = sub.add_parser("runtime", help="the compliance guards over localhost, for other stacks")
+    runtime.add_argument("verb", choices=("serve",))
+    runtime.add_argument("--port", type=int, default=8765)
+    runtime.add_argument("--tenant", default=None, help="the app (default: tenant.yaml)")
+    runtime.set_defaults(func=_cmd_runtime)
+
+    attest = sub.add_parser("attest", help="sign one attested obligation (asks at the terminal)")
+    attest.add_argument("obligation", help="the id, e.g. OB-RISK")
+    attest.add_argument("--evidence", required=True, help="where the proof is: a path or a URL")
+    attest.add_argument("--role", required=True, help="the role you sign as, e.g. compliance_officer")
+    attest.add_argument("--days", type=int, default=None, help="days until it expires (default: its period)")
+    attest.add_argument("--note", default="", help="one line kept with the signature")
+    attest.set_defaults(func=_cmd_attest)
+
+    compliance = sub.add_parser("compliance", help="this repository's compliance profile (contract/compliance/v1)")
+    compliance.add_argument("verb", choices=("enable", "check", "status", "export", "sync", "mcp-pin", "mcp-verify"))
+    compliance.add_argument("--profile", default="dubai-gov", help="enable: the profile (default dubai-gov)")
+    compliance.add_argument("--stage", choices=("ci", "production"), default=None)
+    compliance.add_argument("--out", default=None, help="export: where to write the checklist")
+    compliance.add_argument("--evidence-dir", default=None, help="export: also write the report by clause here")
+    compliance.set_defaults(func=_cmd_compliance)
 
     design = sub.add_parser("design", help="design records").add_subparsers(dest="design_command", required=True)
     design_new = design.add_parser("new", help="write the design skeleton the process gate asks for")

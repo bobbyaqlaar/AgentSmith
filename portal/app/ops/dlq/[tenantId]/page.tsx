@@ -8,8 +8,9 @@ import { isTruncated } from "@/lib/cappedList";
 
 export const dynamic = "force-dynamic";
 
-export default async function TenantDlqPage({ params }: { params: { tenantId: string } }) {
-  const access = currentAccess();
+export default async function TenantDlqPage(props: { params: Promise<{ tenantId: string }> }) {
+  const params = await props.params;
+  const access = await currentAccess();
   if (!can(access, "ops.read", params.tenantId)) notFound();
 
   const entries = await listDLQEntries(params.tenantId, "pending");

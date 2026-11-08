@@ -3879,3 +3879,11 @@ they carried moved here. Each entry is what the text said, and where it said it.
 - **Manual, Test.** The fairness and hallucination suites shipped with reliability pack v1 (CHANGELOG 1.0.0); the rationale for their thresholds and the pair-parity design is in its design note, above.
 - **Manual, HITL & DLQ Operations.** The manual once referred to `scripts/resolve_hitl.py`, which never existed.
 - **Manual, Monitor in Production.** The Ops Portal once reported `success` for a tenant that had never run anything.
+
+## Compliance readiness — 2026-11-08
+
+The opt-in `dubai-gov` profile: designs `compliance-readiness`, `compliance-phase-0` and `compliance-build`, reviews under `.agent-rfc/reviews/`. Claims corrected (OWASP LLM 2025, two controls split);
+obligation catalogue, terminal and portal attestation; named human decisions, the outbox and stop flag; portal session, sign-in and audit hardening; residency checks and refusal on every route;
+supply-chain scanning, backup and restore drill; evidence by clause. Evidence: tests in `scripts/test/test_compliance_*.py`, `agentsmith/test/test_compliance_runtime.py` and `portal/test/`, with hand mutants of each guard, and a live run against a throwaway database.
+
+Close-out, same day: portal seen in a browser; pytest 9; LangGraph and LangChain 1.x; `requested_by` required; `portal/proxy.ts`; audit views scoped by app; `SEC-AUDIT-002` bound in CI; `contract/` and the compliance files installed; a scratch tenant on the profile; MCP tool-definition pinning; Article 50(2) marking; the `agentsmith runtime serve` sidecar for other stacks.

@@ -1,5 +1,6 @@
-import { listAuditEvents } from "@/lib/auditLog";
-import { can } from "@/lib/authz";
+import { listAuditEvents, scopeAuditEvents } from "@/lib/auditLog";
+import { listTenants } from "@/lib/tenants";
+import { appsWith, can, holdsEverywhere } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { Badge } from "@/components/ui/Badge";
 import { Timestamp } from "@/components/ui/Timestamp";
@@ -7,7 +8,7 @@ import { Timestamp } from "@/components/ui/Timestamp";
 export const dynamic = "force-dynamic";
 
 export default async function AuditLogPage() {
-  const access = currentAccess();
+  const access = await currentAccess();
 
   if (!can(access, "admin.audit")) {
     return (
@@ -20,7 +21,11 @@ export default async function AuditLogPage() {
     );
   }
 
-  const events = await listAuditEvents({ limit: 200 });
+  const events = scopeAuditEvents(
+    await listAuditEvents({ limit: 200 }),
+    new Set(appsWith(access, "admin.audit", (await listTenants()).map((t) => t.tenantId))),
+    holdsEverywhere(access, "admin.audit"),
+  );
 
   return (
     <div className="space-y-4">

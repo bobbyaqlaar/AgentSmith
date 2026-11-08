@@ -86,6 +86,17 @@ class CompletionResult:
     # result they return. Use it to measure a guard rollout against real
     # traffic before switching that tenant to enforcing.
     prompt_guard_reasons: list[str] = field(default_factory=list)
+    # So an application can tell people they are reading AI output
+    # (OB-AI-DISCLOSURE; EU AI Act Article 50). Always true of a completion.
+    ai_generated: bool = True
+    # Machine-readable provenance for this answer (EU AI Act Article 50(2)).
+    provenance: Optional[dict] = field(default=None, compare=False)
+
+    def __post_init__(self) -> None:
+        if self.provenance is None:
+            from agentsmith.compliance import ai_marking
+
+            self.provenance = ai_marking(self.text or "", self.model_used)
 
 
 # ── The idempotency row ──────────────────────────────────────────────────────
@@ -122,6 +133,8 @@ class _CachedCompletion(BaseModel):
     ttft_ms: Optional[float] = None
     guardrail_counts: dict[str, int] = PydanticField(default_factory=dict)
     prompt_guard_reasons: list[str] = PydanticField(default_factory=list)
+    ai_generated: bool = True
+    provenance: Optional[dict] = None
 
     @field_validator("v")
     @classmethod
@@ -844,9 +857,12 @@ class LLMGateway:
             # starting its own. Without it the worker and the portal were two
             # unconnected traces and "follow the request across services"
             # stopped at the process boundary.
+            from agentsmith import compliance
             from agentsmith.tracing import current_trace_id, inject_context
             from agentsmith.version import framework_version
 
+            if not compliance.outbound_allowed(ops_portal_url):
+                return
             httpx.post(
                 f"{ops_portal_url.rstrip('/')}/api/runs/ingest",
                 json={
@@ -1126,6 +1142,7 @@ class LLMGateway:
         NotImplementedError for exactly the frontier providers a tenant
         puts on its latency-critical path).
         """
+        data_class, user_id = kwargs.pop("data_class", None), kwargs.pop("user_id", None)
         del kwargs
 
         budget = self.get_budget_status()
@@ -1237,6 +1254,8 @@ class LLMGateway:
         # absolute epoch timestamp, not a monotonic reading.
         started_ns = time.time_ns()
         self._report_run_status(run_id, "running", workflow_id=workflow_id)
+
+        self._compliance_guard(cfg, workflow_id, data_class, user_id)
 
         # Shared with _invoke() — this used to be a near-copy that omitted
         # the anthropic branch entirely (TestbedFeedback G1).
@@ -1350,6 +1369,7 @@ class LLMGateway:
         # defect and would have kept it.
         blocked: Optional[Exception] = None
         try:
+            self._compliance_output(messages, text, workflow_id, cfg)
             apply_output_moderation(text, raise_on_block=True)
         except (ModerationBlockedError, ModerationHookRequiredError) as exc:
             blocked = exc
@@ -1475,6 +1495,12 @@ class LLMGateway:
 
         model_hint options: "architect" | "developer" | "validator" | "fast"
         """
+        data_class = kwargs.pop("data_class", None)
+        user_id = kwargs.pop("user_id", None)
+        # Before the cache: a stopped app does not answer, even from memory.
+        from agentsmith import compliance
+
+        compliance.require_running(self.tenant_id, workflow_id)
         if idempotency_key and self._idempotency is not None:
             served = self._cached_completion(idempotency_key)
             if served is not None:
@@ -1617,6 +1643,10 @@ class LLMGateway:
             if not attempt_cfg:
                 continue
             try:
+                # Every attempt: a fallback is exactly where data leaves the
+                # boundary. Inside the try so the reservation is released; a
+                # refusal is not provider exhaustion, so it ends the ladder.
+                self._compliance_guard(attempt_cfg, workflow_id, data_class, user_id)
                 text, in_tok, out_tok = await self._invoke(
                     attempt_cfg, messages, max_tokens, temperature
                 )
@@ -1660,6 +1690,10 @@ class LLMGateway:
                 workflow_id=workflow_id,
                 error_summary=str(last_exc)[:500],
             )
+            from agentsmith.compliance import ComplianceRefused
+
+            if isinstance(last_exc, ComplianceRefused):
+                raise last_exc
             if tried:
                 # Name the unset credentials when there are any. "All model
                 # tiers exhausted" sends an operator to their provider's
@@ -1750,6 +1784,7 @@ class LLMGateway:
         # comment has always been about.
         blocked: Optional[Exception] = None
         try:
+            self._compliance_output(messages, text, workflow_id, cfg)
             apply_output_moderation(text, raise_on_block=True)
         except (ModerationBlockedError, ModerationHookRequiredError) as exc:
             blocked = exc
@@ -1923,6 +1958,29 @@ class LLMGateway:
                 if env not in missing:
                     missing.append(env)
         return missing
+
+    def _compliance_output(self, messages: list, text: str, workflow_id: Optional[str], cfg: dict) -> None:
+        """On a profile: refuse an answer that leaks the system prompt, and put
+        what was asked and answered on the record. No-op without one."""
+        from agentsmith import compliance
+
+        if compliance.profile_active():
+            compliance.guard_output(self.tenant_id, workflow_id, messages, text, cfg["id"])
+
+    def _compliance_guard(
+        self, cfg: dict, workflow_id: Optional[str], data_class: Optional[str], user_id: Optional[str] = None
+    ) -> None:
+        """Refuse this model call if the compliance profile forbids it. No-op
+        without a profile (agentsmith/compliance.py)."""
+        from agentsmith import compliance
+
+        if not compliance.profile_active():
+            return
+        try:
+            base_url, _ = self._resolve_endpoint(cfg)
+        except Exception:  # an endpoint nobody can name is outside any boundary
+            base_url = ""
+        compliance.guard_model_call(self.tenant_id, workflow_id, data_class, base_url, cfg["id"], user_id)
 
     @staticmethod
     def _resolve_endpoint(cfg: dict) -> tuple[str, str]:

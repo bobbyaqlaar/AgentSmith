@@ -5,13 +5,14 @@
 // re-signing history — rotate carefully).
 
 import { NextResponse } from "next/server";
-import { listAuditEvents, isValidAuditEventType } from "@/lib/auditLog";
-import { can } from "@/lib/authz";
+import { listAuditEvents, isValidAuditEventType, scopeAuditEvents } from "@/lib/auditLog";
+import { appsWith, can, holdsEverywhere } from "@/lib/authz";
+import { listTenants } from "@/lib/tenants";
 import { currentAccess } from "@/lib/currentAccess";
 
 
 export async function GET(request: Request) {
-  const access = currentAccess();
+  const access = await currentAccess();
   // Audit events span hook-bypass/config-change actions that aren't always
   // tenant-scoped (tenant_id is nullable) — only admins get to see the feed.
   if (!can(access, "admin.audit")) {
@@ -31,7 +32,8 @@ export async function GET(request: Request) {
   const limit = Number(url.searchParams.get("limit")) || undefined;
 
   try {
-    const events = await listAuditEvents({ tenantId, eventType, limit });
+    const visible = new Set(appsWith(access, "admin.audit", (await listTenants()).map((t) => t.tenantId)));
+    const events = scopeAuditEvents(await listAuditEvents({ tenantId, eventType, limit }), visible, holdsEverywhere(access, "admin.audit"));
     return NextResponse.json({ events });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

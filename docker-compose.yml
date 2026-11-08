@@ -56,7 +56,7 @@
 #     export AGENT_PHOENIX_ENDPOINT="http://<server-ip>:${PHOENIX_AUTH_PORT:-6007}"
 #
 #   The Ops Portal has its own auth (basic auth or SSO, enforced by
-#   portal/middleware.ts) — it does not need the Caddy overlay.
+#   portal/proxy.ts) — it does not need the Caddy overlay.
 #
 #   For TLS termination in front of Caddy's basic auth, see docs/team-observability.md › TLS / HTTPS (Recommended for team servers).
 #
@@ -88,6 +88,9 @@ services:
       - "127.0.0.1:${PHOENIX_PORT:-6006}:6006"
       - "${PHOENIX_GRPC_PORT:-4317}:4317"   # OTLP gRPC ingestion (write-only; agents push traces here)
     environment:
+      # Self-hosted Phoenix keeps traces local; these also stop its web UI calling out.
+      PHOENIX_TELEMETRY_ENABLED: "false"
+      PHOENIX_ALLOW_EXTERNAL_RESOURCES: "false"
       PHOENIX_SQL_DATABASE_URL: "postgresql://${POSTGRES_USER:-phoenix}:${POSTGRES_PASSWORD:-phoenix}@db:5432/${POSTGRES_DB:-phoenix}"
       PHOENIX_WORKING_DIR: "/phoenix-data"
     volumes:
@@ -182,7 +185,7 @@ services:
       db:
         condition: service_healthy
     healthcheck:
-      # Every route is auth-gated (basic auth or SSO via middleware.ts), so
+      # Every route is auth-gated (basic auth or SSO via proxy.ts), so
       # a 401 is the EXPECTED response from a healthy portal — checking for
       # an open TCP port (not a 200 status) is the right bar here, same
       # reasoning as Phoenix's healthcheck above using python3 instead of

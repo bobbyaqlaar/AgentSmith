@@ -1,0 +1,10 @@
+{
+  "cases": [
+    {"name": "health needs no token", "method": "GET", "path": "/healthz", "auth": false, "status": 200},
+    {"name": "no token is refused", "method": "POST", "path": "/v1/running", "auth": false, "status": 401},
+    {"name": "an unknown path is 404", "method": "POST", "path": "/v1/none", "status": 404},
+    {"name": "a call with no data class is refused", "method": "POST", "path": "/v1/complete", "body": {"prompt": "x"}, "status": 400},
+    {"name": "a gate must say who asked", "method": "POST", "path": "/v1/gate/request", "body": {"gate_id": "g", "workflow_id": "w", "action": "a"}, "status": 400},
+    {"name": "an app cannot forge a decision", "method": "POST", "path": "/v1/record", "body": {"kind": "hitl_decision", "payload": {}}, "status": 400}
+  ]
+}

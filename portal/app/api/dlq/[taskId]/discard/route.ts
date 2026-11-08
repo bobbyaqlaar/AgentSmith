@@ -7,9 +7,11 @@ import { getDlqEntry, discardDlqEntry } from "@/lib/dlq";
 import { can, roleFor } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { portalSpan, withIdentity } from "@/lib/tracing";
+import { appendAuditEvent } from "@/lib/auditLog";
 
-export async function POST(_request: Request, { params }: { params: { taskId: string } }) {
-  const access = currentAccess();
+export async function POST(_request: Request, props: { params: Promise<{ taskId: string }> }) {
+  const params = await props.params;
+  const access = await currentAccess();
   if (!can(access, "ops.dlq")) {
     return NextResponse.json({ error: "operator or admin role required to discard DLQ entries" }, { status: 403 });
   }
@@ -29,5 +31,6 @@ export async function POST(_request: Request, { params }: { params: { taskId: st
   if (!discarded) {
     return NextResponse.json({ error: `Entry ${params.taskId} is already ${entry.status}` }, { status: 409 });
   }
+  await appendAuditEvent({ eventType: "dlq_discard", actorId: access.actor ?? "unknown", tenantId: entry.tenantId, details: { taskId: entry.taskId } });
   return NextResponse.json({ ok: true });
 }

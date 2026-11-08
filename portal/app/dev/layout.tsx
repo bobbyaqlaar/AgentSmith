@@ -2,8 +2,8 @@ import { AreaDenied, AreaNav } from "@/components/AreaNav";
 import { areas, can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
-export default function DevLayout({ children }: { children: React.ReactNode }) {
-  const access = currentAccess();
+export default async function DevLayout({ children }: { children: React.ReactNode }) {
+  const access = await currentAccess();
   if (!areas(access).includes("dev")) return <AreaDenied area="Dev" />;
   return (
     <>

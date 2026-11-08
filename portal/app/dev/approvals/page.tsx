@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DevApprovalsPage() {
   const tenants = await listTenants();
-  const visible = appsWith(currentAccess(), "dev.read", tenants.map((t) => t.tenantId));
+  const visible = appsWith(await currentAccess(), "dev.read", tenants.map((t) => t.tenantId));
   const byId = new Map(tenants.map((t) => [t.tenantId, t]));
   const awaiting = await listAwaitingApprovals(visible);
 

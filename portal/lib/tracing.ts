@@ -13,7 +13,7 @@
 // a no-op without a provider, and nothing from the SDK. The SDK lives in
 // instrumentation.node.ts alone, so it is loaded once, in the Node runtime,
 // and can never be dragged into the Edge bundle by a route that wanted a span.
-// (middleware.ts runs on Edge — see test/edgeSafety.test.ts for what that
+// (proxy.ts ran on Edge until Next 16 — for what that
 // costs when it is got wrong.)
 //
 // WHAT PORTAL SPANS DELIBERATELY DO NOT CARRY: request bodies, query

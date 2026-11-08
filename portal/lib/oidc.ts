@@ -2,7 +2,7 @@
 //
 // "When enterprise pack is enabled: Ops Portal requires SSO login (OIDC)."
 // This replaces (not augments) HTTP basic auth for the dashboard when
-// SSO_ENABLED=true — see middleware.ts. The machine-to-machine endpoints
+// SSO_ENABLED=true — see proxy.ts. The machine-to-machine endpoints
 // (/api/sync/*, /api/widget/*, /api/audit/append) are unaffected either way;
 // they were never gated by basic auth and aren't gated by SSO either.
 //
@@ -10,11 +10,13 @@
 // server-side session store — consistent with the rest of this app's
 // signed-token pattern (widget tokens, sync tokens). No new infra dependency.
 
+import { mfaRefusal } from "./signInPolicy";
 import * as client from "openid-client";
 import {
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
   createSessionToken,
+  secureCookies,
   verifySessionToken,
   type OidcIdentity as SessionIdentity,
 } from "./sessionToken";
@@ -22,7 +24,7 @@ import {
 // Re-exported for existing callers of this module (app/api/auth/* routes,
 // which run on the Node runtime and can safely import oidc.ts in full) —
 // see lib/sessionToken.ts for why the implementation itself lives there now.
-export { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS, createSessionToken, verifySessionToken };
+export { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS, createSessionToken, secureCookies, verifySessionToken };
 
 // Cookie Secure flag, tied to the SAME explicit opt-in as the OIDC insecure-
 // HTTP allowance — NOT to NODE_ENV. `next start` sets NODE_ENV=production
@@ -31,9 +33,6 @@ export { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS, createSessionToken, verifySes
 // local-HTTP dev/test runs, and browsers/HTTP clients then correctly refuse
 // to send them back over plain HTTP — silently breaking the entire login
 // flow with no helpful error. One explicit flag governs both behaviors.
-export function secureCookies(): boolean {
-  return process.env.SSO_ALLOW_INSECURE_HTTP !== "true";
-}
 
 export interface OidcSettings {
   issuer: string;
@@ -112,6 +111,8 @@ export async function handleCallback(
   if (!claims?.sub) {
     throw new Error("OIDC provider did not return a subject (sub) claim in the ID token.");
   }
+  const refused = mfaRefusal(claims as Record<string, unknown>);
+  if (refused) throw new Error(refused);
   return {
     sub: claims.sub,
     email: typeof claims.email === "string" ? claims.email : undefined,

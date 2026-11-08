@@ -5,9 +5,9 @@
 // is decided here, in one table, and nowhere else. One person may hold several
 // grants: on a small project, every development role.
 //
-// middleware.ts resolves the authenticated identity (basic-auth user or SSO
+// proxy.ts resolves the authenticated identity (basic-auth user or SSO
 // session) into grants and forwards them as ONE trusted request header
-// (x-af-grants). The header is only meaningful because middleware.ts strips any
+// (x-af-grants). The header is only meaningful because proxy.ts strips any
 // client-supplied copy before setting its own; route handlers and pages must
 // never read it from anywhere except currentAccess().
 //
@@ -26,14 +26,18 @@ export const PERMISSIONS = [
   "ops.app_settings", // edit an app's operational settings (POST /api/tenants)
   "ops.hitl", // decide a HITL gate (phase 3)
   "ops.release", // approve a production promotion (phase 4)
+  "ops.stop", // stop a run or an app
+  "ops.incident", // open or close an incident
   "admin.apps", // register apps, issue ingest tokens, revoke widget tokens
   "admin.audit", // read the audit log
   "admin.users", // manage users (phase 2)
   "admin.org", // organisation settings, Administrators, passkey recovery (phase 2)
+  "compliance.read", // the compliance checklist of an app
+  "compliance.attest", // sign an obligation (compliance_officer only: separate from every delivery role)
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
-// The seven roles the specification names. `viewer` is not one of them: it is
+// The eight roles the specification names. `viewer` is not one of them: it is
 // the pre-phase-1 read-only role, kept so an existing configuration grants
 // exactly what it granted before (the compatibility obligation within a major
 // version). It is accepted from the old `role` field only — never offered, and
@@ -46,26 +50,28 @@ export const ROLES = [
   "release_approver",
   "administrator",
   "super_user",
+  "compliance_officer",
 ] as const;
 export type Role = (typeof ROLES)[number];
 export const LEGACY_ROLES = ["viewer"] as const;
 export type AnyRole = Role | (typeof LEGACY_ROLES)[number];
 
-const ADMINISTRATOR: readonly Permission[] = PERMISSIONS.filter((p) => p !== "admin.org");
+const ADMINISTRATOR: readonly Permission[] = PERMISSIONS.filter((p) => p !== "admin.org" && p !== "compliance.attest");
 // docs/DESIGN.md's role table says a Design approver has "Developer's, and" more.
 // Derived rather than copied, so adding to the Developer cannot leave that
 // sentence false (.agent-rfc/designs/intake-dev-create.md).
-const DEVELOPER: readonly Permission[] = ["dev.read", "dev.approve", "dev.create"];
+const DEVELOPER: readonly Permission[] = ["dev.read", "dev.approve", "dev.create", "compliance.read"];
 
 export const ROLE_PERMISSIONS: Readonly<Record<AnyRole, readonly Permission[]>> = {
   developer: DEVELOPER,
   design_approver: [...DEVELOPER, "dev.allowlist"],
   // Exactly what the pre-phase-1 `operator` could do, so an old config maps onto it unchanged.
-  operator: ["ops.read", "ops.dlq", "ops.widget", "ops.app_settings"],
+  operator: ["ops.read", "ops.dlq", "ops.widget", "ops.app_settings", "ops.stop", "ops.incident", "compliance.read"],
   hitl_reviewer: ["ops.hitl"],
   release_approver: ["ops.read", "ops.release"],
   administrator: ADMINISTRATOR,
-  super_user: PERMISSIONS,
+  super_user: PERMISSIONS.filter((p) => p !== "compliance.attest"),
+  compliance_officer: ["ops.read", "ops.incident", "compliance.read", "compliance.attest"],
   viewer: ["ops.read"],
 };
 
@@ -135,6 +141,11 @@ export function roleFor(access: Access, permission: Permission, app?: string): A
 }
 
 /** The apps among `candidates` on which this access holds `permission`. */
+/** Holds this permission for every app. Only that sees events that belong to no app. */
+export function holdsEverywhere(access: Access, permission: Permission): boolean {
+  return access.grants.some((g) => g.apps === "*" && ROLE_PERMISSIONS[g.role].includes(permission));
+}
+
 export function appsWith(access: Access, permission: Permission, candidates: string[]): string[] {
   return candidates.filter((app) => can(access, permission, app));
 }
@@ -208,6 +219,14 @@ interface SsoUserRecord {
 // OPS_PORTAL_USERS: JSON array of {username, password, grants} (or the old
 // {role, tenants}). Falls back to the single OPS_PORTAL_USER/OPS_PORTAL_PASSWORD
 // pair, which is Administrator on every app — as it always was.
+/** Who holds which grant, for an access review. Never a password. */
+export function configuredGrants(): Array<{ user: string; grants: Grant[] }> {
+  return [
+    ...getBasicAuthUsers().map((u) => ({ user: u.username, grants: u.grants })),
+    ...getSsoUsers().map((u) => ({ user: u.email, grants: u.grants })),
+  ];
+}
+
 function getBasicAuthUsers(): BasicAuthUserRecord[] {
   const raw = process.env.OPS_PORTAL_USERS;
   if (raw) {
@@ -301,7 +320,7 @@ export function stripAccessHeaders(headers: Headers): Headers {
 
 // Reads the trusted header middleware attaches to every request after
 // successful authentication. Only call this from server-side route handlers
-// and pages running behind middleware.ts — never expose the header name to
+// and pages running behind proxy.ts — never expose the header name to
 // client code.
 export function getAccessFromHeaderValue(grantsHeader: string | null, actorHeader: string | null = null): Access {
   return { grants: decodeGrantsHeader(grantsHeader), actor: decodeActorHeader(actorHeader) };

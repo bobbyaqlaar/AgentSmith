@@ -17,7 +17,7 @@
 //   Module build failed: UnhandledSchemeError: Reading from "node:crypto"
 //   is not handled by plugins (Unhandled scheme).
 //
-// middleware.ts runs on the EDGE runtime and imports lib/authz, which imports
+// proxy.ts runs on the EDGE runtime and imports lib/authz, which imports
 // this module — so a Node-only builtin here is not a lint preference, it is a
 // production build failure. `authz.ts` had no crypto import until the password
 // comparison was made constant-time; the security fix and the Edge constraint

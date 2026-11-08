@@ -4,7 +4,7 @@ import { appsWith } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
 export async function GET() {
-  const access = currentAccess();
+  const access = await currentAccess();
 
   try {
     const status = await getDLQStatus();

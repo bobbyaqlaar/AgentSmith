@@ -8,8 +8,8 @@ import { WORKSPACES, workspacesFor } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const [first] = workspacesFor(currentAccess());
+export default async function Home() {
+  const [first] = workspacesFor(await currentAccess());
   if (first) redirect(WORKSPACES[first].home);
   return (
     <div className="space-y-2">

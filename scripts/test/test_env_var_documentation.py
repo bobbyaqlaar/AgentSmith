@@ -196,7 +196,7 @@ def test_the_portal_sweep_actually_finds_portal_files() -> None:
     files = _portal_source_files()
     assert len(files) >= 20, f"expected the portal's TypeScript sources, found {len(files)}"
     names = {p.name for p in files}
-    assert "middleware.ts" in names, "middleware.ts missing — the glob is wrong, not the repo"
+    assert "proxy.ts" in names, "proxy.ts missing — the glob is wrong, not the repo"
 
 
 def test_every_portal_env_var_is_documented() -> None:

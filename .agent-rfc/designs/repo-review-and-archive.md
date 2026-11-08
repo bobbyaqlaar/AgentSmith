@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - docker-compose.yml
   - portal/.env.example

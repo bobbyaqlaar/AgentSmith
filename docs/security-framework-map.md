@@ -42,7 +42,7 @@ sections are a reading of the code, stated with their gaps; the harness does not
 
 ## Verification coverage
 
-**23 of 24** controls execute a runner. The remaining one is declared `gap`,
+**All 26** controls execute a runner,
 so the map states what it verifies and nothing more.
 
 `--strict` now fails on an **undeclared gap** — a control claiming `met` or
@@ -77,8 +77,9 @@ builder; its keys are what `enqueue` accepts) and says nothing about a row
 reaching Postgres. `SEC-AUDIT-001` proves HMAC tamper-evidence and hands
 append-only enforcement — a database trigger — to `SEC-AUDIT-002`, which stays
 a declared gap because only a live database can demonstrate it. `SEC-SOV-001`
-proves residency is *declared* correctly across the whole degrade ladder, which
-a live probe of one endpoint could never show.
+proves residency is *declared* correctly across the whole degrade ladder of the
+template AgentSmith ships, which a live probe of one endpoint could never show.
+Whether an application stays in-border is `SEC-SOV-002`, on a compliance profile.
 
 ### Tenant-declared controls
 
@@ -122,17 +123,8 @@ Only the second should ever fail a strict run.
 
 ### Still unverified
 
-One control has no runner. It is declared **`gap`** rather than `met`/`partial`,
-so the map does not claim something nothing checks.
-
-Four controls sat here previously. Three were closed not by finding a way to run
-the infrastructure they needed, but by noticing each was making two claims at
-once — one provable offline, one not — and separating them. `SEC-AUDIT-002` is
-what is left of that split, and it is genuinely a database property.
-
-| Control | Runner | Why not bound |
-|---|---|---|
-| `SEC-AUDIT-002` | `audit_append_only` | UPDATE/DELETE refusal is enforced by a database trigger (`db/schema.sql`); `portal/test/auditLog.test.ts` needs a live Postgres (`npm run test:db`). Split from `SEC-AUDIT-001` so the offline half could be proven without the online half being claimed. Verify at deploy. |
+No control is without a runner. `SEC-AUDIT-002` is the last to be bound: only a live database can show it, so it reads *not applicable*
+everywhere except Self-Test's Ops Portal job, which sets `AUDIT_APPEND_ONLY_DSN` and runs it.
 
 A declared gap **warns** — visible in every report and evidence pack — but does
 not fail a strict run. A repo honest about its gaps must be able to pass, or
@@ -154,53 +146,58 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 
 | Control ID | OWASP LLM | NIST AI RMF | MITRE ATLAS | ISO 42001 | Status | Owner | AgentSmith mechanism | Harness check |
 |---|---|---|---|---|---|---|---|---|
-| `SEC-PII-001` | LLM06 | MAP 2.6 / MANAGE 2.4 | AML.T0043 | Theme 9 | **Partial→Met** | Shared | `agentsmith/input_guardrail.py` pre-call scrub | Inject Emirates ID/email/phone/card → assert redacted before `_invoke()` |
-| `SEC-PII-002` | LLM06 | MANAGE 2.4 | AML.T0043 | Theme 9 | **Met** | Framework | `agentsmith/trace_redactor.py` + CD `--check-redaction` | `verify_system.py --check-redaction` + unit tests |
-| `SEC-HITL-001` | LLM08 | GOVERN 1.5 / MANAGE 4.1 | AML.T0048 | Theme 5 | **Met** | Framework | `run_with_hitl_gate`, recoverable DLQ | Workflow fixture asserts pause signal + portal replay path |
+| `SEC-PII-001` | LLM02 | MAP 2.6 / MANAGE 2.4 | AML.T0043 | Theme 9 | **Partial** | Shared | `agentsmith/input_guardrail.py` pre-call scrub | Inject Emirates ID/email/phone/card → assert redacted before `_invoke()` |
+| `SEC-PII-002` | LLM02 | MANAGE 2.4 | AML.T0043 | Theme 9 | **Met** | Framework | `agentsmith/trace_redactor.py` + CD `--check-redaction` | `verify_system.py --check-redaction` + unit tests |
+| `SEC-HITL-001` | LLM06 | GOVERN 1.5 / MANAGE 4.1 | AML.T0048 | Theme 5 | **Met** | Framework | `run_with_hitl_gate`, recoverable DLQ: the workflow pauses | Workflow fixture asserts pause signal + portal replay path |
+| `SEC-HITL-002` | LLM06 | GOVERN 1.5 / MANAGE 4.1 | AML.T0048 | Theme 5 | **Met** | Framework | On a compliance profile, a gate takes only a named, signed decision, recorded in the worker's database | `agentsmith/test/test_compliance_runtime.py` |
 | `SEC-AUDIT-001` | — | GOVERN 1.2 | AML.T0025 | Theme 6 | **Met** | Framework | HMAC tamper-evidence over `audit_log` events (`portal/lib/auditSignature.ts`) | `portal/test/auditSignature.test.ts` — sign → mutate → reject; key order stable; malformed signature rejected; missing key refuses. No database. |
 | `SEC-AUDIT-002` | — | GOVERN 1.2 | AML.T0025 | Theme 6 | **Gap** | Framework | Append-only `audit_log` (UPDATE/DELETE triggers, `db/schema.sql`) | `portal/test/auditLog.test.ts` — needs a live Postgres; verified at deploy, not in CI |
 | `SEC-RBAC-001` | — | GOVERN 1.3 | AML.T0048 | Theme 1 | **Partial** | Shared | Portal OIDC + `authz.ts` RBAC; role AND tenant scope, checked in every handler that resolves an operator's Access | `portal/test/authz.test.ts` — the role matrix (viewer cannot replay DLQ), plus two sweeps: every API handler reading `currentAccess()` must also call `canAccessTenant`/`filterTenantIds`, and no credential in the auth path may be compared with `===`. Both were added after finding a live instance of each. Still **partial**: the sweeps read source, they do not exercise a request |
 | `SEC-EVAL-001` | LLM09 | MEASURE 2.6 | — | Theme 7 | **Met** | Shared | `run-evals.py` golden suite | Scorecard `--fail-below` in CI |
-| `SEC-EVAL-002` | LLM09 | MEASURE 2.11 | — | Theme 8 | **Partial** | Shared | Fairness suite + pair parity | `--suite fairness`; extend tenant pairs |
+| `SEC-EVAL-002` | — | MEASURE 2.11 | — | Theme 8 | **Partial** | Shared | Fairness suite + pair parity | `--suite fairness`; extend tenant pairs |
 | `SEC-EVAL-003` | LLM09 | MEASURE 2.6 | AML.T0024 | Theme 7 | **Met** | Shared | Hallucination rate gate | `--suite hallucination`; rate ≤ threshold |
-| `SEC-BUDGET-001` | LLM04 | MANAGE 2.4 | AML.T0034 | Theme 11 | **Met** | Framework | Budget caps, degrade ladder, circuit breaker | `test_llm_gateway_budget.py` + cap breach simulation |
-| `SEC-CHANGE-001` | — | GOVERN 1.6 | — | Theme 10 | **Met** | Shared | Eval gates, the process gate, RFC enforcement | a declared gate provider; in AgentSmith, commits through the gate's hooks in throwaway repos |
-| `SEC-DLQ-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Met** | Framework | Recoverable step + DLQ; one `dead_letter_envelope()` builder for both producers | `agentsmith/test/test_dead_letter.py` — envelope keys match `enqueue`, both producers use the builder (AST-checked), flattened shape rejected by name. No Postgres. |
-| `SEC-SELF-001` | LLM02 | MANAGE 4.4 | — | Theme 11 | **Partial** | Shared | Opt-in `run_with_self_correction` | Unit + workflow tests; not default path |
-| `SEC-GW-001` | LLM07 | MAP 2.3 | AML.T0040 | Theme 4 | **Partial** | Shared | `llm_gateway.py` choke point | Static: tenant activities import gateway, not raw provider |
+| `SEC-BUDGET-001` | LLM10 | MANAGE 2.4 | AML.T0034 | Theme 11 | **Met** | Framework | Budget caps, degrade ladder, circuit breaker | `test_llm_gateway_budget.py` + cap breach simulation |
+| `SEC-CHANGE-001` | LLM03, LLM04 | GOVERN 1.6 | — | Theme 10 | **Met** | Shared | Eval gates, the process gate, RFC enforcement | a declared gate provider; in AgentSmith, commits through the gate's hooks in throwaway repos |
+| `SEC-DLQ-001` | LLM05 | MANAGE 4.4 | — | Theme 11 | **Met** | Framework | Recoverable step + DLQ; one `dead_letter_envelope()` builder for both producers | `agentsmith/test/test_dead_letter.py` — envelope keys match `enqueue`, both producers use the builder (AST-checked), flattened shape rejected by name. No Postgres. |
+| `SEC-SELF-001` | LLM05 | MANAGE 4.4 | — | Theme 11 | **Partial** | Shared | Opt-in `run_with_self_correction` | Unit + workflow tests; not default path |
+| `SEC-GW-001` | LLM06 | MAP 2.3 | AML.T0040 | Theme 4 | **Partial** | Shared | `llm_gateway.py` choke point | Static: tenant activities import gateway, not raw provider |
 | `SEC-PROMPT-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Framework | `agentsmith/prompt_guard.py` heuristics + denylist; `PROMPT_GUARD=off\|warn\|default\|strict` (blocking by default) | Two-part: detection over the injection fixture corpus **and** enforcement — the runner reports `fail` on `off`, `warn` on the observe-first `warn` tier, `pass` only when the configured mode actually blocks |
-| `SEC-OUTPUT-001` | LLM02 | MEASURE 2.7 | — | Theme 7 | **Met** | Shared | `agentsmith/structured_output.py` `parse_llm_json` | Schema validation rejects malformed LLM JSON |
-| `SEC-TOOL-001` | LLM07 | GOVERN 1.3 | AML.T0040 | Theme 4 | **Met** | Shared | `agentsmith/tool_registry.py` + the TENANT's allowlist | Every registered tool resolves as the tenant allowlist says, and at least one is denied |
+| `SEC-OUTPUT-001` | LLM05 | MEASURE 2.7 | — | Theme 7 | **Met** | Shared | `agentsmith/structured_output.py` `parse_llm_json` | Schema validation rejects malformed LLM JSON |
+| `SEC-TOOL-001` | LLM06 | GOVERN 1.3 | AML.T0040 | Theme 4 | **Met** | Shared | `agentsmith/tool_registry.py` + the TENANT's allowlist | Every registered tool resolves as the tenant allowlist says, and at least one is denied |
 | `SEC-MOD-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Met** | Tenant | `agentsmith/moderation.py` + `MODERATION_HOOK`; classifier declared via `moderation.hook` in `tenant.yaml` (or `MODERATION_HOOK_PATH`) | Harness runner `scripts/security/runners/moderation_hook.py` — API smoke, plus under `required` it imports the tenant's declared classifier and verifies it returns a `ModerationResult` and does not block benign text. Unset hook fails strict CI |
 | `SEC-RISK-001` | — | MAP 1.5 | AML.T0000 | Theme 2 | **Org-owned** | Tenant | *Planned:* risk register template generator | Harness checks `.agent-rfc/security/risk_register.yaml` exists + schema |
 | `SEC-ADV-001` | LLM01 | MEASURE 2.7 | AML.T0024 | Theme 7 | **Met** | Shared | `run-evals.py --suite adversarial` + prompt_guard | Red-team fixtures in `--suite adversarial` |
-| `SEC-SSO-001` | — | GOVERN 1.3 | AML.T0048 | Theme 1 | **Met** | Framework | `jti` revocation + `SSO_REVOCATION_MODE=fail-open\|fail-closed`; `GET /api/auth/session-status` answers **503**, not a 2xx, when the revocation store is unreachable | `sso_revocation` — snippet-checks the mode switch in `middleware.ts`/`lib/ssoRevocationMode.ts`, then runs `portal/test/ssoRevocation.test.ts`: the mode default, both branches, and (since 2026-08-25) what the ROUTE answers rather than a stubbed transport. Until then the route returned `200 {revoked:false}` on a database error, so fail-closed allowed every session through the one outage it exists for — met, green, and a no-op |
-| `SEC-SOV-001` | LLM05 | MAP 2.3 | — | Theme 4 | **Met** | Tenant | `templates/uae-sovereign/` residency, checked as a declaration | `sovereign_residency` — resolves the template through `_roles_from_doc` and walks every role's ladder with `llm_gateway.degrade_chain`; fails a hosted provider, a self-hostable one with no declared endpoint, or a dangling degrade target. No credentials. |
-| `SEC-RAG-001` | LLM03 | MAP 2.6 | AML.T0010 | Theme 3 | **Met** | Tenant | `prompt_guard.scan_documents` quarantines poisoned retrieved context per-document | `run-evals.py --suite rag_poison` over `fixtures/rag_poison_base.json` — poisoned/benign twins, miss ceiling `RAG_POISON_FAIL_ABOVE` (0.10). Detects poisoned context before prompt assembly; does not claim model resistance. |
-| `SEC-AGENCY-001` | LLM08 | GOVERN 1.5 | AML.T0048 | Theme 5 | **Partial** | Tenant | HITL + workflow `needs_hitl` flags | Tenant declares high-impact actions; the harness checks the declaration is present, edited and gates at least one action, not that the gate is wired |
+| `SEC-SSO-001` | — | GOVERN 1.3 | AML.T0048 | Theme 1 | **Met** | Framework | `jti` revocation + `SSO_REVOCATION_MODE=fail-open\|fail-closed`; `GET /api/auth/session-status` answers **503**, not a 2xx, when the revocation store is unreachable | `sso_revocation` — snippet-checks the mode switch in `proxy.ts`/`lib/ssoRevocationMode.ts`, then runs `portal/test/ssoRevocation.test.ts`: the mode default, both branches, and (since 2026-08-25) what the ROUTE answers rather than a stubbed transport. Until then the route returned `200 {revoked:false}` on a database error, so fail-closed allowed every session through the one outage it exists for — met, green, and a no-op |
+| `SEC-SOV-001` | LLM03 | MAP 2.3 | — | Theme 4 | **Met** | Framework | The template AgentSmith ships stays in-border, checked as a declaration. No application's registry is read | `sovereign_residency` — resolves the template through `_roles_from_doc` and walks every role's ladder with `llm_gateway.degrade_chain`; fails a hosted provider, a self-hostable one with no declared endpoint, or a dangling degrade target. No credentials. |
+| `SEC-SOV-002` | LLM03 | MAP 2.3 | — | Theme 4 | **Met** | Shared | On a compliance profile, the application's registry and stores are checked against its boundary and the gateway refuses outside it | `scripts/test/test_compliance_checks.py` |
+| `SEC-RAG-001` | LLM04, LLM08 | MAP 2.6 | AML.T0010 | Theme 3 | **Met** | Tenant | `prompt_guard.scan_documents` quarantines poisoned retrieved context per-document | `run-evals.py --suite rag_poison` over `fixtures/rag_poison_base.json` — poisoned/benign twins, miss ceiling `RAG_POISON_FAIL_ABOVE` (0.10). Detects poisoned context before prompt assembly; does not claim model resistance. |
+| `SEC-AGENCY-001` | LLM06 | GOVERN 1.5 | AML.T0048 | Theme 5 | **Partial** | Tenant | HITL + workflow `needs_hitl` flags | Tenant declares high-impact actions; the harness checks the declaration is present, edited and gates at least one action, not that the gate is wired |
 
 ---
 
 ## Framework sections
 
-### OWASP LLM Top 10 (2025-oriented mapping)
+### OWASP Top 10 for LLM Applications (2025 edition)
 
-| Risk | Control IDs | Current | Target (harness) |
+The numbering is OWASP's 2025 list, in this table, in the registry and in every evidence pack. A test holds this table to
+the registry.
+
+| Risk | Control IDs | Current | What is missing |
 |---|---|---|---|
-| LLM01 Prompt injection | `SEC-PROMPT-001`, `SEC-MOD-001`, `SEC-ADV-001` | Met | Prompt guard + adversarial suite + moderation hook API |
-| LLM02 Insecure output handling | `SEC-OUTPUT-001`, `SEC-DLQ-001`, `SEC-SELF-001` | Partial | Pydantic schema gate on all structured LLM outputs in reference apps |
-| LLM03 Training data poisoning | `SEC-RAG-001`, `SEC-CHANGE-001` | Partial | Fixture PR review + poison-doc retrieval test |
-| LLM04 Model DoS | `SEC-BUDGET-001` | Met | Budget + rate tests in CI |
-| LLM05 Supply chain | `SEC-SOV-001`, `SEC-CHANGE-001` | Partial | Model registry attestation + the gate a repository declares, pinned to a release |
-| LLM06 Sensitive disclosure | `SEC-PII-001`, `SEC-PII-002` | Partial→Met | Pre + post PII tests mandatory in `--mode ci` |
-| LLM07 Insecure plugin/tool design | `SEC-TOOL-001`, `SEC-GW-001` | Met | Tenant allowlist enforced against registered tools; gateway-only static check now runs |
-| LLM08 Excessive agency | `SEC-HITL-001`, `SEC-AGENCY-001` | Partial | Tenant manifest of gated actions, read as a declaration; verifying the wiring is not built |
-| LLM09 Overreliance | `SEC-EVAL-001`, `SEC-EVAL-003` | Met | Golden + hallucination gates |
-| LLM10 Model theft | `SEC-GW-001`, `SEC-AUDIT-001` | Weak | Gateway key isolation; audit on config export (future) |
+| LLM01 Prompt Injection | `SEC-PROMPT-001`, `SEC-MOD-001`, `SEC-ADV-001` | Partial | Heuristics can be evaded, in Arabic as in English |
+| LLM02 Sensitive Information Disclosure | `SEC-PII-001`, `SEC-PII-002` | Partial | Names are not scrubbed: the default covers Emirates ID, email, phone and cards |
+| LLM03 Supply Chain | `SEC-SOV-001`, `SEC-SOV-002`, `SEC-CHANGE-001` | Partial | Dependency scan, SBOM and signed release provenance run in CI. MCP servers and tool definitions are pinned on a compliance profile. Model provenance is not checked |
+| LLM04 Data and Model Poisoning | `SEC-RAG-001`, `SEC-CHANGE-001` | Partial | Covers retrieved documents and fixture review. Training data is the application's |
+| LLM05 Improper Output Handling | `SEC-OUTPUT-001`, `SEC-DLQ-001`, `SEC-SELF-001` | Partial | Schema validation of structured output only. Nothing checks how an application uses free text |
+| LLM06 Excessive Agency | `SEC-HITL-001`, `SEC-HITL-002`, `SEC-AGENCY-001`, `SEC-TOOL-001`, `SEC-GW-001` | Partial | Named decisions and manifest wiring on a compliance profile only. The allowlist says which tools, not with what arguments |
+| LLM07 System Prompt Leakage | none | Partial | On a compliance profile the gateway withholds an answer that repeats a run of the system prompt. Paraphrase is not caught, and no control has a runner for it |
+| LLM08 Vector and Embedding Weaknesses | `SEC-RAG-001` | Partial | Poisoned documents are quarantined. Tenant filtering applies on a compliance profile only |
+| LLM09 Misinformation | `SEC-EVAL-001`, `SEC-EVAL-003` | Partial | Suites run at release. `citations_grounded` is opt-in per request and nothing requires it |
+| LLM10 Unbounded Consumption | `SEC-BUDGET-001` | Partial | Tenant budget caps, and per-user limits on a compliance profile. Model extraction is not addressed |
 
 ### OWASP Top 10 for Agentic Applications (2026 edition, December 2025)
 
-**None of the ten is fully covered: five are partial and five are not covered.** The list is about agents at run time. AgentSmith's
+**None of the ten is fully covered: six are partial and four are not covered.** The list is about agents at run time. AgentSmith's
 strongest controls act earlier, on the change before it merges, and this list has no entry for those. These rows are a reading
 of the code on 2026-11-05. The harness does not grade them: control tags and evidence packs carry the LLM Top 10, not this list.
 
@@ -215,7 +212,7 @@ of the code on 2026-11-05. The harness does not grade them: control tags and evi
 | ASI07 Insecure Inter-Agent Communication | none | **Not covered** | Spans record the orchestrator and each role | Messages between agents are not authenticated or integrity-checked. Agents in one graph share state, and nothing governs agents across a boundary |
 | ASI08 Cascading Failures | `SEC-BUDGET-001`, `SEC-DLQ-001`, `SEC-SELF-001`, `SEC-EVAL-003` | **Partial** | Budget caps and a degrade ladder bound spend; a failed step goes to a recoverable dead-letter queue; a citation check blocks auto-approval | No per-turn budget and no mid-run pause. Self-correction is opt-in. No way to stop a running app |
 | ASI09 Human-Agent Trust Exploitation | `SEC-HITL-001`, `SEC-EVAL-001`, `SEC-EVAL-003` | **Partial** | Golden and hallucination suites gate releases; replay of a dead-lettered step is signed with a portal-issued key | Nothing tests what an approver is shown, or whether it misleads them. No explanation keyed by run |
-| ASI10 Rogue Agents | `SEC-AUDIT-001`, `SEC-BUDGET-001` | **Not covered** | The audit log is tamper-evident and spend is capped | No kill switch, no behavioural baseline or drift detection, and no retirement of an agent |
+| ASI10 Rogue Agents | `SEC-AUDIT-001`, `SEC-BUDGET-001` | **Partial** | The audit log is tamper-evident, spend is capped, and a person can stop an app on a compliance profile | Off the profile, no kill switch, no behavioural baseline or drift detection, and no retirement of an agent |
 
 ### EU AI Act (Regulation (EU) 2024/1689, as amended)
 
@@ -241,12 +238,12 @@ assessment. Article 50 is already in force and AgentSmith provides nothing for i
 | 11, Annex IV | Technical documentation | **Partial** | Designs, reviews and evidence packs, tied to commits | Written by hand, not generated; nothing produces Annex IV as such |
 | 12 | Record-keeping | **Partial** | The telemetry contract and a tamper-evident audit log (`SEC-AUDIT-001`). Append-only is a declared gap in the harness (`SEC-AUDIT-002`) | A new repository starts with no emitter, so nothing is recorded until you declare one. A run does not record its commit |
 | 13 | Information for deployers | **Partial** | The widget shows run status and a trace link | Instructions for use are yours. No explanation keyed by run |
-| 14 | Human oversight | **Partial** | A durable human gate (`SEC-HITL-001`); a declared list of actions needing one (`SEC-AGENCY-001`) | No stop control, which Article 14(4)(e) names. The manifest is not checked against the workflow |
+| 14 | Human oversight | **Partial** | A durable human gate (`SEC-HITL-001`); a declared list of actions needing one (`SEC-AGENCY-001`). Who decided is recorded on a compliance profile only (`SEC-HITL-002`) | A stop control, which Article 14(4)(e) names, exists on a compliance profile only. The manifest is not checked against the workflow |
 | 15 | Accuracy, robustness, cybersecurity | **Partial** | Eval gates, the red-team suite and prompt guard | Declaring accuracy levels, and resilience testing beyond these suites |
 | 17 | Quality management | **Partial** | The process gate records design, review and sign-off for each change | The organisation's system, of which this is one input |
 | 19 | Keeping logs at least six months | **Not covered** | Nothing | Nothing sets or checks a retention period |
-| 50(1) | Telling people they are dealing with AI | **Not covered** | Nothing | The application's interface, and no gate checks it |
-| 50(2) | Machine-readable marking of generated content | **Not covered** | Nothing | The gateway does not mark output |
+| 50(1) | Telling people they are dealing with AI | **Partial** | `CompletionResult.ai_generated`, and a signed obligation on a compliance profile (`OB-AI-DISCLOSURE`) | The application's interface; no gate reads it |
+| 50(2) | Machine-readable marking of generated content | **Partial** | Every completion carries a signed machine-readable mark (`CompletionResult.provenance`) | Passing it on with the content is the application's, and marks inside images or audio are not covered |
 | 72 | Post-market monitoring | **Partial** | The Ops portal shows runs, failures and traces | No plan, no production drift measurement |
 | 73 | Serious incident reporting | **Not covered** | The audit log and dead-letter queue are inputs | No incident workflow or report |
 
@@ -286,8 +283,8 @@ proof for themes 5–11.
 | 1 AI policy & roles | `SEC-RBAC-001`, `SEC-RISK-001` |
 | 2 Risk assessment | `SEC-RISK-001` (org-owned content) |
 | 3 Data for AI | `SEC-RAG-001`, `SEC-CHANGE-001` |
-| 4 Third-party & models | `SEC-SOV-001`, `SEC-GW-001` |
-| 5 Human oversight | `SEC-HITL-001`, `SEC-AGENCY-001` |
+| 4 Third-party & models | `SEC-SOV-001`, `SEC-SOV-002`, `SEC-GW-001` |
+| 5 Human oversight | `SEC-HITL-001`, `SEC-HITL-002`, `SEC-AGENCY-001` |
 | 6 Transparency & logging | `SEC-AUDIT-001`, `SEC-PII-002` |
 | 7 Performance evaluation | `SEC-EVAL-*`, `SEC-OUTPUT-001` |
 | 8 Fairness & bias | `SEC-EVAL-002` |
@@ -423,6 +420,8 @@ These gaps **must** ship for full framework coverage. Status tracked in
 | P2 | `SEC-RISK-001` | ~~Template + schema validator~~ **done** |
 | P3 | `SEC-SSO-001` | ~~`SSO_REVOCATION_MODE=fail-closed` option + tests~~ **done** |
 | P3 | `SEC-RAG-001` | Poison-doc harness fixture + docs |
+| P1 | `SEC-HITL-002` | ~~A named, signed human decision on each gate~~ **done**, on a compliance profile |
+| P1 | `SEC-SOV-002` | ~~An application's own registry and data stores checked against a declared boundary~~ **done**, on a compliance profile |
 
 ---
 
@@ -440,7 +439,7 @@ Use with ISO pack. Automated items marked **auto**.
 - [x] Framework risk register scaffold on file (`SEC-RISK-001` template)
 - [ ] Tenant agency manifest filled (`SEC-AGENCY-001`)
 - [ ] NIST profile filled (`nist_profile.yaml`) if claiming RMF alignment
-- [ ] Sovereign residency checklist if UAE (`SEC-SOV-001`)
+- [ ] Sovereign residency checklist if UAE (`SEC-SOV-001` covers the shipped template; `SEC-SOV-002` the application, on a compliance profile)
 - [ ] Gap disclosure: any remaining Partial/Gap row above with target date / waiver
 
 ---

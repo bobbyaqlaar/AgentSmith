@@ -13,7 +13,8 @@ import { getTenant, replayStatus } from "@/lib/tenants";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminAppPage({ params }: { params: { id: string } }) {
+export default async function AdminAppPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const app = await getTenant(params.id);
   if (!app) {
     return (
@@ -23,7 +24,7 @@ export default async function AdminAppPage({ params }: { params: { id: string } 
       </div>
     );
   }
-  if (!can(currentAccess(), "admin.apps", app.tenantId)) {
+  if (!can(await currentAccess(), "admin.apps", app.tenantId)) {
     return (
       <div className="space-y-2">
         <Crumbs items={[{ href: "/admin/apps", text: "Apps" }, { text: params.id }]} />
