@@ -16,8 +16,9 @@ import { getTenant } from "@/lib/tenants";
 import { can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
-export async function POST(_request: Request, { params }: { params: { id: string } }) {
-  const access = currentAccess();
+export async function POST(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const access = await currentAccess();
   if (!can(access, "ops.widget")) {
     return NextResponse.json({ error: "Operator or Administrator role required to mint widget tokens" }, { status: 403 });
   }
@@ -39,8 +40,9 @@ export async function POST(_request: Request, { params }: { params: { id: string
 // Revokes every still-active widget token for this tenant (see
 // lib/widgetTokens.ts revokeWidgetTokensForTenant for why this is tenant-
 // scoped rather than taking a specific token).
-export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
-  const access = currentAccess();
+export async function DELETE(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const access = await currentAccess();
   if (!can(access, "admin.apps")) {
     return NextResponse.json({ error: "Administrator role required to revoke widget tokens" }, { status: 403 });
   }

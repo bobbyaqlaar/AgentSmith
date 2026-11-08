@@ -53,8 +53,9 @@ def test_owasp_rollup_includes_sec_pii_001(tmp_path: Path) -> None:
     write_evidence_pack(out, controls, _sample_results(controls))
 
     text = (out / "owasp_llm_top10.md").read_text(encoding="utf-8")
+    assert "OWASP LLM Top 10 (2025)" in text, "a tag means nothing without its edition"
     assert "SEC-PII-001" in text
-    assert "LLM06" in text
+    assert "LLM02" in text
 
 
 def test_framework_filter_limits_markdown(tmp_path: Path) -> None:

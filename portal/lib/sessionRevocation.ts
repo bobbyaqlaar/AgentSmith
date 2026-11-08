@@ -1,7 +1,7 @@
 // portal/lib/sessionRevocation.ts — server-side denylist for SSO session
 // JWTs (docs/PRODUCT_ARCHIVE.md 4.14). Node-runtime only (uses `pg` via
 // lib/db.ts) — see lib/sessionToken.ts's header comment for why this can't
-// be imported directly from middleware.ts (Edge runtime). middleware.ts
+// be imported directly from proxy.ts (Edge runtime until Next 16). proxy.ts
 // instead calls GET /api/auth/session-status (Node runtime) over fetch,
 // which itself calls isSessionRevoked() below.
 

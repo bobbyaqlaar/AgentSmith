@@ -36,6 +36,9 @@ RUNNERS: dict[str, Runner] = {
     "sovereign_residency": sovereign_residency.run,
     # Bindings to verification that already exists — see delegating.py.
     "hitl_gate": delegating.hitl_gate,
+    "audit_append_only": delegating.audit_append_only,
+    "hitl_named_decision": delegating.hitl_named_decision,
+    "app_residency": delegating.app_residency,
     "dlq_check": delegating.dlq_check,
     "self_correction": delegating.self_correction,
     "budget_caps": delegating.budget_caps,

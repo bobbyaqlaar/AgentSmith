@@ -173,7 +173,7 @@ def write_evidence_pack(
         owasp_controls = scoped
     (out_dir / "owasp_llm_top10.md").write_text(
         _render_table(
-            "OWASP LLM Top 10",
+            "OWASP LLM Top 10 (2025)",
             owasp_controls,
             by_id,
             "OWASP",

@@ -198,6 +198,23 @@ class MemoryVectorStore:
             return hits
 
 
+def _profile() -> bool:
+    from agentsmith import compliance
+
+    return compliance.profile_active()
+
+
+def _scoped_tenant() -> Optional[str]:
+    """The tenant for this call. On a compliance profile, it must be known (OWASP LLM08)."""
+    from agentsmith import compliance
+    from agentsmith.tenancy import current_tenant_id
+
+    tenant = current_tenant_id()
+    if tenant is None and compliance.profile_active():
+        raise compliance.ComplianceRefused("OB-VECTOR-TENANT", "a vector read or write with no tenant identity")
+    return tenant
+
+
 class PgVectorStore:
     """
     Postgres + pgvector backend.
@@ -262,6 +279,7 @@ class PgVectorStore:
                         )
                         """
                     )
+                    cur.execute("ALTER TABLE agentsmith_embeddings ADD COLUMN IF NOT EXISTS tenant_id TEXT")
                 conn.commit()
         except psycopg2.Error as exc:
             raise RuntimeError(
@@ -281,6 +299,7 @@ class PgVectorStore:
         if len(ids) != len(texts):
             raise ValueError("ids and texts must be the same length")
         metas = metadatas or [{} for _ in ids]
+        tenant = _scoped_tenant()
         vectors = self.embedder.embed(texts)
         conn = self._connect()
         try:
@@ -288,14 +307,15 @@ class PgVectorStore:
                 for vid, text, meta, vec in zip(ids, texts, metas, vectors, strict=True):
                     cur.execute(
                         """
-                        INSERT INTO agentsmith_embeddings (id, text, metadata, embedding)
-                        VALUES (%s, %s, %s::jsonb, %s::vector)
+                        INSERT INTO agentsmith_embeddings (id, text, metadata, embedding, tenant_id)
+                        VALUES (%s, %s, %s::jsonb, %s::vector, %s)
                         ON CONFLICT (id) DO UPDATE SET
                           text = EXCLUDED.text,
+                          tenant_id = EXCLUDED.tenant_id,
                           metadata = EXCLUDED.metadata,
                           embedding = EXCLUDED.embedding
                         """,
-                        (vid, text, json.dumps(meta), "[" + ",".join(str(x) for x in vec) + "]"),
+                        (vid, text, json.dumps(meta), "[" + ",".join(str(x) for x in vec) + "]", tenant),
                     )
             conn.commit()
         finally:
@@ -316,15 +336,21 @@ class PgVectorStore:
         conn = self._connect()
         try:
             with conn.cursor() as cur:
+                # On a compliance profile a query sees one tenant's documents only.
+                # Without one, behaviour is unchanged.
+                tenant = _scoped_tenant()
+                where = "WHERE tenant_id = %s" if _profile() else ""
+                # nosec B608 below: `where` is one of two constants, and every value is a parameter.
                 cur.execute(
-                    """
+                    f"""
                     SELECT id, text, metadata,
                            1 - (embedding <=> %s::vector) AS score
                     FROM agentsmith_embeddings
+                    {where}
                     ORDER BY embedding <=> %s::vector
                     LIMIT %s
-                    """,
-                    (q_literal, q_literal, k),
+                    """,  # nosec B608
+                    (q_literal, *([tenant] if _profile() else []), q_literal, k),
                 )
                 rows = cur.fetchall()
         finally:

@@ -1,0 +1,197 @@
+"""agentsmith/mcp_pin.py — pin a repository's MCP servers and their tool definitions.
+
+A changed tool description is how a poisoned MCP server reaches an agent, so what a
+repository trusted is written down and checked:
+
+    agentsmith compliance mcp-pin      ask each server for its tools and record hashes
+    agentsmith compliance mcp-verify   ask again, and fail on any difference
+
+`static_problems` needs no server, so the compliance check can run it anywhere.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import select
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+SERVERS_FILE = ".mcp.json"
+ALLOWLIST_FILE = ".agenticframework/mcp-allowlist.json"
+TIMEOUT_SECONDS = 30
+_INITIALIZE = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+        "protocolVersion": "2025-06-18",
+        "capabilities": {},
+        "clientInfo": {"name": "agentsmith-mcp-pin", "version": "1"},
+    },
+}
+_INITIALIZED = {"jsonrpc": "2.0", "method": "notifications/initialized"}
+_LIST = {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
+
+
+def _digest(value: Any) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def _servers(root: Path) -> dict[str, dict[str, Any]]:
+    path = root / SERVERS_FILE
+    return json.loads(path.read_text(encoding="utf-8")).get("mcpServers", {}) if path.is_file() else {}
+
+
+def _allowlist(root: Path) -> dict[str, Any]:
+    path = root / ALLOWLIST_FILE
+    return json.loads(path.read_text(encoding="utf-8")).get("servers", {}) if path.is_file() else {}
+
+
+def config_hash(server: dict[str, Any]) -> str:
+    """The server's identity. Environment names only: their values may be secrets."""
+    return _digest(
+        {
+            "command": server.get("command"),
+            "args": server.get("args", []),
+            "url": server.get("url"),
+            "env": sorted(server.get("env", {})),
+        }
+    )
+
+
+def tool_hashes(tools: list[dict[str, Any]]) -> dict[str, str]:
+    return {t["name"]: _digest({k: t.get(k) for k in ("name", "description", "inputSchema")}) for t in tools}
+
+
+def _read_reply(process: subprocess.Popen[bytes], wanted: int, deadline: float) -> dict[str, Any]:
+    assert process.stdout is not None
+    buffer = b""
+    descriptor = process.stdout.fileno()
+    while True:
+        while b"\n" not in buffer:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not select.select([descriptor], [], [], remaining)[0]:
+                raise TimeoutError("the server did not answer")
+            chunk = os.read(descriptor, 65536)
+            if not chunk:
+                raise ConnectionError("the server closed its output")
+            buffer += chunk
+        line, buffer = buffer.split(b"\n", 1)
+        if line.strip():
+            message = json.loads(line)
+            if message.get("id") == wanted:
+                return message
+
+
+def _fetch_stdio(server: dict[str, Any]) -> list[dict[str, Any]]:
+    env = {**os.environ, **{k: os.path.expandvars(str(v)) for k, v in server.get("env", {}).items()}}
+    process = subprocess.Popen(
+        [server["command"], *server.get("args", [])],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        env=env,
+    )
+    assert process.stdin is not None
+    deadline = time.monotonic() + TIMEOUT_SECONDS
+    try:
+        process.stdin.write((json.dumps(_INITIALIZE) + "\n").encode())
+        process.stdin.flush()
+        _read_reply(process, 1, deadline)
+        process.stdin.write((json.dumps(_INITIALIZED) + "\n" + json.dumps(_LIST) + "\n").encode())
+        process.stdin.flush()
+        return _read_reply(process, 2, deadline)["result"]["tools"]
+    finally:
+        process.kill()
+        process.wait()
+
+
+def _http_reply(response: Any) -> dict[str, Any]:
+    if "text/event-stream" in response.headers.get("content-type", ""):
+        for line in response.text.splitlines():
+            if line.startswith("data:"):
+                return json.loads(line[5:])
+        raise ValueError("no event in the server's reply")
+    return response.json()
+
+
+def _fetch_http(server: dict[str, Any]) -> list[dict[str, Any]]:
+    import httpx
+
+    headers = {"Accept": "application/json, text/event-stream", **server.get("headers", {})}
+    with httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=False) as client:
+        first = client.post(server["url"], json=_INITIALIZE, headers=headers)
+        first.raise_for_status()
+        session = first.headers.get("mcp-session-id")
+        if session:
+            headers["Mcp-Session-Id"] = session
+        client.post(server["url"], json=_INITIALIZED, headers=headers)
+        reply = client.post(server["url"], json=_LIST, headers=headers)
+        reply.raise_for_status()
+        return _http_reply(reply)["result"]["tools"]
+
+
+def fetch_tools(server: dict[str, Any]) -> list[dict[str, Any]]:
+    return _fetch_http(server) if server.get("url") else _fetch_stdio(server)
+
+
+def static_problems(root: Path) -> list[str]:
+    """What can be judged without running anything."""
+    servers, pinned = _servers(root), _allowlist(root)
+    problems: list[str] = []
+    for name, server in sorted(servers.items()):
+        entry = pinned.get(name)
+        if not isinstance(entry, dict):
+            problems.append(f"MCP server {name} is not pinned: run `agentsmith compliance mcp-pin`")
+        elif entry.get("config_sha256") != config_hash(server):
+            problems.append(f"MCP server {name} changed since it was pinned")
+        elif not entry.get("tools"):
+            problems.append(f"MCP server {name} has no pinned tool definitions")
+    return problems
+
+
+def pin(root: Path) -> int:
+    servers = _servers(root)
+    if not servers:
+        print(f"mcp-pin: no {SERVERS_FILE} servers here — nothing to pin.")
+        return 0
+    entries: dict[str, Any] = {}
+    for name, server in sorted(servers.items()):
+        try:
+            tools = tool_hashes(fetch_tools(server))
+        except Exception as exc:  # named: a server that cannot be asked is not pinned
+            print(f"mcp-pin: could not ask {name}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
+        entries[name] = {"config_sha256": config_hash(server), "tools": tools}
+        print(f"mcp-pin: {name}: {len(tools)} tool(s)")
+    target = root / ALLOWLIST_FILE
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps({"servers": entries}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"mcp-pin: wrote {ALLOWLIST_FILE}. Review it before committing.")
+    return 0
+
+
+def verify(root: Path) -> int:
+    problems = static_problems(root)
+    pinned = _allowlist(root)
+    for name, server in sorted(_servers(root).items()):
+        if not isinstance(pinned.get(name), dict):
+            continue
+        try:
+            current = tool_hashes(fetch_tools(server))
+        except Exception as exc:  # a server that cannot be asked has not been verified
+            problems.append(f"could not ask {name}: {type(exc).__name__}")
+            continue
+        expected = pinned[name].get("tools", {})
+        for tool in sorted(set(current) | set(expected)):
+            if current.get(tool) != expected.get(tool):
+                problems.append(f"{name}.{tool} differs from what was pinned")
+    for problem in problems:
+        print(f"mcp-verify: {problem}", file=sys.stderr)
+    print("mcp-verify: every server matches what was pinned." if not problems else "mcp-verify: failed.")
+    return 1 if problems else 0

@@ -6,7 +6,9 @@ import { getUnresolvedIssues } from "@/lib/issues";
 import { tenantTraceUrl, checkPhoenixHealth, getRecentTraceStats } from "@/lib/phoenix";
 import { getSuggestedPromotions } from "@/lib/promotions";
 import { CostChart } from "@/components/CostChart";
+import { StopControl } from "@/components/StopControl";
 import { can } from "@/lib/authz";
+import { lastStopAction } from "@/lib/hitl";
 import { isSafeHttpUrl } from "@/lib/safeUrl";
 import { isTruncated } from "@/lib/cappedList";
 import { currentAccess } from "@/lib/currentAccess";
@@ -16,14 +18,16 @@ import { Timestamp } from "@/components/ui/Timestamp";
 
 export const dynamic = "force-dynamic";
 
-export default async function TenantDetailPage({ params }: { params: { id: string } }) {
-  const access = currentAccess();
+export default async function TenantDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const access = await currentAccess();
   // Treat out-of-scope tenants identically to nonexistent ones — a 403 page
   // would itself leak "this tenant id exists" to a viewer who shouldn't see it.
   if (!can(access, "ops.read", params.id)) notFound();
 
   const tenant = await getTenant(params.id);
   if (!tenant) notFound();
+  const lastStop = await lastStopAction(tenant.tenantId);
 
   const [cost, issues, phoenixUp, traceStats, suggestedPromotions] = await Promise.all([
     getTenantCost(tenant.tenantId),
@@ -42,7 +46,18 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
         <Link href="/ops" className="hover:text-black dark:hover:text-white">Apps</Link>
         <span className="mx-1.5">/</span>
         <span className="text-black/80 dark:text-white/80">{tenant.name}</span>
+        {can(access, "compliance.read", tenant.tenantId) && (
+          <Link href={`/ops/apps/${encodeURIComponent(tenant.tenantId)}/compliance`} className="ml-4 text-blue-700 dark:text-blue-400 hover:underline">Compliance checklist</Link>
+        )}
+        {can(access, "compliance.read", tenant.tenantId) && (
+          <Link href={`/ops/apps/${encodeURIComponent(tenant.tenantId)}/decisions`} className="ml-4 text-blue-700 dark:text-blue-400 hover:underline">Decision trail</Link>
+        )}
       </nav>
+
+      {lastStop?.action === "stop" && (
+        <p role="status" className="text-sm"><Badge tone="danger">Stopped</Badge> by {lastStop.actor}: {lastStop.reason}</p>
+      )}
+      {can(access, "ops.stop", tenant.tenantId) && <StopControl tenantId={tenant.tenantId} />}
 
       <div>
         <h2 className="text-xl font-medium">

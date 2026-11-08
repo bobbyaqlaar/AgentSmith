@@ -1,0 +1,39 @@
+name: Supply chain
+
+# Dependency scan, static analysis and an SBOM for AgentSmith itself (DESC ISR
+# 8.6.1, OWASP LLM03). The tools install here, pinned, and never enter the lock.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: "Python dependencies"
+        run: |
+          pipx run pip-audit==2.9.0 -r requirements.lock --no-deps --disable-pip
+          pipx run pip-audit==2.9.0 -r requirements-pipeline.lock --no-deps --disable-pip
+      - name: "Portal dependencies"
+        working-directory: portal
+        run: npm audit --omit=dev --audit-level=high
+      - name: "Static analysis"
+        run: pipx run bandit==1.8.6 -q -r agentsmith scripts -ll -x agentsmith/test,scripts/test
+      - name: "SBOM"
+        run: pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py requirements requirements.lock -o sbom.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cdx.json

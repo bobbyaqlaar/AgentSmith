@@ -7,7 +7,7 @@ import { MetricCard } from "@/components/ui/Card";
 export const dynamic = "force-dynamic";
 
 export default async function DLQPage() {
-  const access = currentAccess();
+  const access = await currentAccess();
 
   const dlq = await getDLQStatus();
   const visibleTenantIds = appsWith(access, "ops.read", Object.keys(dlq.pendingByTenant));

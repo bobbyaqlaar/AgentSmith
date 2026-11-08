@@ -526,7 +526,8 @@ def repository_python() -> str:
 
 
 def node_suite(
-    control: ControlSpec, ctx: dict[str, Any], rel_path: str, requires: tuple[str, ...] = ()
+    control: ControlSpec, ctx: dict[str, Any], rel_path: str, requires: tuple[str, ...] = (),
+    env: Optional[dict[str, str]] = None,
 ) -> ControlResult:
     """Delegate to a portal test written in TypeScript.
 
@@ -570,6 +571,7 @@ def node_suite(
         capture_output=True,
         text=True,
         check=False,
+        env={**os.environ, **(env or {})},
     )
     return _subprocess_result(
         control, proc, f"{rel_path} passed", f"{rel_path} failed"

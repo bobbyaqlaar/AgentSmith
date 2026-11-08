@@ -14,7 +14,8 @@ import { getTenant } from "@/lib/tenants";
 
 export const dynamic = "force-dynamic";
 
-export default async function DevGatesPage({ params }: { params: { app: string } }) {
+export default async function DevGatesPage(props: { params: Promise<{ app: string }> }) {
+  const params = await props.params;
   const tenant = await getTenant(params.app);
   if (!tenant) return null;
   const [failures, runs] = await Promise.all([listGateFailures(tenant.tenantId), listIngestRuns(tenant.tenantId)]);

@@ -1,0 +1,76 @@
+{
+  "additionalProperties": false,
+  "description": "One signature: appended to attestations.jsonl, or stored by the portal.",
+  "properties": {
+    "id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "obligation": {
+      "pattern": "^OB-[A-Z0-9-]+$",
+      "title": "Obligation",
+      "type": "string"
+    },
+    "actor": {
+      "maxLength": 320,
+      "minLength": 1,
+      "title": "Actor",
+      "type": "string"
+    },
+    "role": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Role",
+      "type": "string"
+    },
+    "evidence": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Evidence",
+      "type": "string"
+    },
+    "attested_at": {
+      "title": "Attested At",
+      "type": "string"
+    },
+    "expires_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expires At"
+    },
+    "note": {
+      "default": "",
+      "maxLength": 2000,
+      "title": "Note",
+      "type": "string"
+    },
+    "channel": {
+      "enum": [
+        "tty",
+        "portal"
+      ],
+      "title": "Channel",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "obligation",
+    "actor",
+    "role",
+    "evidence",
+    "attested_at",
+    "channel"
+  ],
+  "title": "Attestation",
+  "type": "object"
+}

@@ -21,7 +21,7 @@ def run(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
         return absent
     portal = framework_root(ctx) / "portal"
     mode_file = portal / "lib" / "ssoRevocationMode.ts"
-    middleware = portal / "middleware.ts"
+    middleware = portal / "proxy.ts"
 
     missing = [p.name for p in (mode_file, middleware) if not p.exists()]
     if missing:

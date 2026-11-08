@@ -9,7 +9,7 @@ import { ISOLATION_VALUES, isValidIsolation } from "@/lib/isolation";
 import { isSafeHttpUrl } from "@/lib/safeUrl";
 
 export async function GET() {
-  const access = currentAccess();
+  const access = await currentAccess();
 
   try {
     const [tenants, spend, issues, dlq] = await Promise.all([
@@ -39,7 +39,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const access = currentAccess();
+  const access = await currentAccess();
   if (!can(access, "ops.app_settings")) {
     return NextResponse.json({ error: "Operator or Administrator role required" }, { status: 403 });
   }

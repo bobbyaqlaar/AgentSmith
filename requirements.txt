@@ -14,16 +14,16 @@ opentelemetry-sdk>=1.20,<2.0
 opentelemetry-exporter-otlp-proto-http>=1.20,<2.0
 opentelemetry-api>=1.20,<2.0
 
+# LangGraph and LangChain moved to requirements-pipeline.txt: only the developer pipeline
+# (scripts/multi_agent_system.py) uses them, and AgentSmith's runtime never does.
 # ── Agent frameworks ──────────────────────────────────────────────────────────
-langgraph>=0.2,<1.0
-langchain-core>=0.2,<1.0
-langchain-openai>=0.1,<1.0
-langchain-anthropic>=0.1,<1.0
 
 # ── Knowledge Graph ───────────────────────────────────────────────────────────
 networkx>=3.0,<4.0
 
 # ── Token counting and cost routing ──────────────────────────────────────────
+# Direct: it used to arrive only through LangChain.
+pydantic>=2.0,<3.0
 tiktoken>=0.5,<1.0
 
 # ── HTTP client ───────────────────────────────────────────────────────────────
@@ -63,9 +63,8 @@ temporalio>=1.5,<2.0
 # Budget store backend for agentsmith/llm_gateway.py and agentsmith/idempotency.py (BUDGET_BACKEND/IDEMPOTENCY_BACKEND=redis)
 redis>=5.0,<6.0
 # Postgres-backed LangGraph checkpointer for staging/production (§25, §28)
-langgraph-checkpoint-postgres>=2.0,<3.0
 # Encrypted HITL blob storage for production trace redaction (§27)
-cryptography>=42.0,<44.0
+cryptography>=50.0,<51.0
 # Cloud-native LLM providers for agentsmith/provider_dispatch.py's CloudProviderAdapters —
 # google-auth for Vertex AI OAuth2, boto3/botocore for Bedrock SigV4 signing.
 # Huawei ModelArts uses stdlib hmac/hashlib (no official Python SDK dependency).
@@ -78,5 +77,5 @@ boto3>=1.34,<2.0
 aiohttp>=3.9,<4.0
 
 # ── Testing ───────────────────────────────────────────────────────────────────
-pytest>=8.0,<9.0
-pytest-asyncio>=0.23,<1.0
+pytest>=9.0,<10.0
+pytest-asyncio>=1.3,<2.0

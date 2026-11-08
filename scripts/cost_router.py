@@ -276,7 +276,8 @@ def route(
     try:
         from network_watchdog import is_online
 
-        online = is_online() and not force_local
+        # A compliance profile never takes a cloud tier, whatever keys are set.
+        online = is_online() and not force_local and not _compliance().profile_active()
     except Exception:
         online = False
 
@@ -528,6 +529,16 @@ def _route_for_model(model: str) -> ModelRoute:
 # ── Convenience: call via OpenAI-compatible API ───────────────────────────────
 
 
+def _compliance():
+    """agentsmith.compliance, wherever this script is run from."""
+    repo = str(Path(__file__).resolve().parent.parent)
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
+    from agentsmith import compliance
+
+    return compliance
+
+
 def call(
     prompt: str,
     system: str = "",
@@ -550,6 +561,8 @@ def call(
         if force_model
         else route(prompt, task_type=task_type)
     )
+    # This path does not go through the gateway, and the judge model is named here.
+    _compliance().require_inside_boundary(route_result.base_url)
 
     # Build messages
     messages = []

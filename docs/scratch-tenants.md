@@ -1,6 +1,6 @@
 # Scratch tenants
 
-Six small repositories whose only purpose is to be onboarded by
+Seven small repositories whose only purpose is to be onboarded by
 AgentSmith, over and over, so that tenant CI runs for real on GitHub. Their app
 source lives **here**, in `.github/scratch-tenants/apps/<app>/`; the scratch
 repositories are pure build outputs. Every stack has at least one app; a stack
@@ -14,6 +14,8 @@ can have several, one per scenario the templates must handle.
 | [agentsmith-scratch-python](https://github.com/bobbyaqlaar/agentsmith-scratch-python) | `python-fastapi` | `apps/python-fastapi/` — FastAPI `/healthz` + one test, `requirements.txt` | the template's bare `pytest` over the app's own tests, ruff over the app alone, **the security port** with the authored pack |
 | [agentsmith-scratch-python-uv](https://github.com/bobbyaqlaar/agentsmith-scratch-python-uv) | `python-fastapi` | `apps/python-uv/` — the same app as a **uv** project (`pyproject.toml` + `uv.lock`, dev dependency group, `[tool.ruff]`), no `requirements.txt` | the template installs the exported lock; ruff reads the project's own `[tool.ruff]` |
 | [agentsmith-scratch-adopted](https://github.com/bobbyaqlaar/agentsmith-scratch-adopted) | `python-fastapi` | `adopted/` — a small library with **its own CI**, built by **`tenant adopt`** (`adopt.sh`), not `tenant init` | **the governance contracts at this commit**: the adoption commit passes the tenant's contract-3 commit gate; its "AgentSmith gates" run installs the provider through `setup-agentsmith@<this commit>`, asks the gate's `ci` event and runs the rules check; adopt leaves its own CI alone. Rebuilt from an orphan commit and force-pushed every run |
+
+`agentsmith-scratch-dubai-gov` (private; `python-fastapi`, `apps/python-dubai-gov/`) is the `dubai-gov` compliance profile: its build also proves that the app passes and that it fails once its human gate is removed. Its signatures in `profiles/dubai-gov/` are synthetic.
 
 ## Why they exist
 

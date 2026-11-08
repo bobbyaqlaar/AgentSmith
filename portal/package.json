@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AgentSmith Ops Portal \u2014 cross-tenant operations dashboard (docs/DESIGN.md › Universal Observability Platform, Federated Observability)",
+  "description": "AgentSmith Ops Portal — cross-tenant operations dashboard (docs/DESIGN.md › Universal Observability Platform, Federated Observability)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "node --experimental-strip-types scripts/migrate.ts",
-    "test": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/authz.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/phoenix.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/ssoRevocation.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/edgeSafety.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/tracing.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/safeUrl.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/catalogs.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/timestamp.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/auditSignature.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/wireContract.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/replaySignature.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/devIngest.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/recordContract.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/telemetryContract.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/devView.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/apps.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/intakes.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/middleware.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/brand.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/runtimeImageScripts.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/legal.test.ts",
+    "test": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/authz.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/phoenix.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/ssoRevocation.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/tracing.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/safeUrl.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/catalogs.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/timestamp.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/auditSignature.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/wireContract.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/replaySignature.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/devIngest.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/recordContract.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/telemetryContract.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/devView.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/apps.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/intakes.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/proxy.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/brand.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/runtimeImageScripts.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/legal.test.ts",
     "test:db": "node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/auditLog.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/dlqCostWidget.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/agentRuns.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/devIngestDb.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/opsIngestDb.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/recordContractDb.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/devReadDb.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/appsDb.test.ts && node --experimental-strip-types --experimental-loader=./test/ts-extension-loader.mjs test/intakesDb.test.ts"
   },
   "dependencies": {
@@ -19,17 +19,17 @@
     "@opentelemetry/resources": "^2.10.0",
     "@opentelemetry/sdk-trace-node": "^2.10.0",
     "jose": "^6.2.3",
-    "next": "^14.2.5",
+    "next": "^16.4.5",
     "openid-client": "^6.8.4",
     "pg": "^8.12.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "recharts": "^2.12.7"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
     "@types/pg": "^8.11.6",
-    "@types/react": "^18.3.3",
+    "@types/react": "^19.3.0",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.4",

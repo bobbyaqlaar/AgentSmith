@@ -514,7 +514,8 @@ Note: `.claudecode.json` is deprecated. All Claude Code configuration uses `CLAU
 | `local_knowledge_graph.py` | NetworkX DiGraph. Loads/saves `.agent-rfc/fixtures/knowledge_graph.json`. API: `inject_production_learning()`, `fetch_subgraph_context_window()` |
 | `map_codebase.py` | AST-walks `.py`, `.ts`, `.tsx`, `.go` files. Registers `CodebaseFile` nodes. Purges stale nodes. Extracts guardrails from `.cursorrules` and `.agent-rfc/`. `--quiet` suppresses the summary line for CI usage. |
 | `local_agent_stack.py` | Pure-Python multi-agent loop (offline mode). Architect→Developer→Validator via Ollama HTTP. Full OTel span nesting. |
-| `multi_agent_system.py` | LangGraph stateful graph (hybrid mode). `MemorySaver` checkpointer — **dev use only**. HITL pause loop. Falls back to `local_agent_stack.py` if LangGraph unavailable. |
+| `compliance_port.py` | The compliance provider (`contract/compliance/v1`). `compliance_checks.py` holds what it reads in a repository. |
+| `multi_agent_system.py` | Optional: needs `requirements-pipeline.lock`. LangGraph stateful graph (hybrid mode). `MemorySaver` checkpointer — **dev use only**. HITL pause loop. Falls back to `local_agent_stack.py` if LangGraph unavailable. |
 | `cost_router.py` | Dev-mode routing: token count + keyword analysis → model selection. Not suitable for production. See the LLM Gateway (Production) section for production LLM Gateway. |
 | `network_watchdog.py` | Socket ping to `1.1.1.1:53`. Auto-switches active LLM endpoint. Background keepalive thread. |
 | `notifier.py` | Cross-platform desktop notifications via `plyer` + `osascript` (macOS). Background webhook thread (Slack / Teams / custom). |
@@ -584,7 +585,7 @@ See Section 25 for full specification (the Trace Redaction section redaction, th
 | Path | Purpose |
 |---|---|
 | `portal/` | Ops dashboard (Next.js or equivalent). Multi-tenant pipeline view, cost, queue depth, unresolved issues, HITL promotion queue. SSO/OIDC when enterprise pack enabled. |
-| `portal/instrumentation.ts` → `instrumentation.node.ts` | Registers the portal's OTel provider before the first request. The SDK is behind a dynamic import guarded on `NEXT_RUNTIME` — it cannot load on the Edge runtime `middleware.ts` uses. No OTLP endpoint configured → nothing is registered and the portal behaves as it did before it was instrumented. |
+| `portal/instrumentation.ts` → `instrumentation.node.ts` | Registers the portal's OTel provider before the first request. The SDK is behind a dynamic import guarded on `NEXT_RUNTIME` — it cannot load on the Edge runtime `proxy.ts` uses. No OTLP endpoint configured → nothing is registered and the portal behaves as it did before it was instrumented. |
 | `portal/lib/tracing.ts` | `portalSpan()`, `withIdentity()` (the OTel-context analogue of `agentsmith/tenancy.agent_context`), `currentTraceId()`, and `resolveTracesEndpoint()` — which detects an `OTEL_EXPORTER_OTLP_ENDPOINT` that already names `/v1/traces`, because this repo's own convention puts one there and the JS exporter appends its own. API-only, so it is safe to import from Edge code. |
 | `portal/lib/wireContract.ts` | Which fields a given framework version can emit, so an absent value can say WHY. IT runs the portal and the business runs the tenants on independent cadences, so the portal always reads a fleet spanning several versions; `emits()` answers yes/no/**unknown** and `explainAbsent()` distinguishes "this version never reported it" from "this version should have and did not". |
 | `portal/lib/spanIdentity.ts` | Pillar 3 for the portal, split as `agentsmith/tracing.py` splits it: per-process facts on the Resource (`service.name`, `project.name`, `environment`, `agent.role: ops-portal`), per-request facts (`tenant.id`, `portal.actor.role`) stamped at span start by `PortalIdentityProcessor`. |
@@ -1336,10 +1337,15 @@ AgentSmith/
 │   ├── test/                    # Framework self-tests for scripts/
 │   ├── rules_port.py            # The rules contract's `render` / `check` — AgentSmith as a rules provider (contract/rules/v1/)
 │   ├── evals_port.py            # The evals contract's `run` — AgentSmith as an evals provider, over run-evals.py's scoring (contract/evals/v1/)
+│   ├── compliance_port.py       # The compliance contract: check, status, export, sync (contract/compliance/v1)
+│   ├── compliance_checks.py     # What that port reads in a repository on a profile
 │   ├── security_port.py         # The security contract's `check` and `redaction` — AgentSmith as a security provider, over the harness's runners (contract/security/v1/)
 │   └── generate-ide-config.py  # Reads templates/agent-rules.yaml, writes target-repo IDE config
 ├── agentsmith/                     # Production runtime components
 │   ├── worker.py
+│   ├── compliance.py            # A compliance profile at run time: declaration, refusal, record, stop flag
+│   ├── runtime_server.py        # The guards over localhost, for apps not written in Python (contract/runtime/v1)
+│   ├── mcp_pin.py               # Pins MCP servers and their tool definitions
 │   ├── llm_gateway.py           # complete() + complete_stream() (ttft_ms)
 │   ├── models.yaml              # Framework default model registry (the LLM Gateway (Production) section)
 │   ├── provider_dispatch.py     # Shared provider request building/parsing (gateway + cost_router)
@@ -1402,6 +1408,7 @@ AgentSmith/
 ├── contract/                    # Versioned apart from this implementation: gate, record, rules, telemetry and evals — each with its protocol, schemas and cases — and the tenant intake record (contract/intake/v1/)
 ├── workflow-templates/          # What a tenant's CI becomes — the CI/CD via GitHub Actions section
 │   ├── agentsmith-gates.yml     # The process gate over every pushed commit (pinned to a release)
+│   ├── agentsmith-supply-chain.yml  # Dependency scan and SBOM, written by `agentsmith compliance enable`
 │   ├── agentsmith-sync.yml       # Weekly: brings the tenant up to the latest release, as a pull request
 │   ├── ci-*.yml                 # Per stack: lint, test, and the eval + security gates
 │   ├── cd-*.yml                 # Staging and production promotion
@@ -1410,6 +1417,7 @@ AgentSmith/
 │   ├── oil-price-agent/         # Reference tenant app (fork per customer)
 │   └── README.md                # "Copy and rename — do not deploy from framework repo"
 ├── fixtures/                    # Bootstrap eval seeds
+│   ├── compliance/              # The compliance catalogue: every obligation of a profile
 │   ├── golden_evals_base.json
 │   ├── fairness_evals_base.json
 │   ├── hallucination_evals_base.json
@@ -1467,6 +1475,8 @@ AgentSmith/
 ├── pyproject.toml               # Packages agentsmith/ as `agentsmith-runtime` (the Production Runtime section) — pip-installable by tenants
 ├── .python-version              # The Python version: the framework environment, requirements.lock and Self-Test all use it
 ├── requirements.txt             # The one dependency catalog — never installed directly
+├── requirements-pipeline.txt    # The optional developer pipeline: LangGraph and LangChain, locked in requirements-pipeline.lock
+├── requirements-pipeline.lock   # Compiled against requirements.lock (uv, hashed)
 ├── requirements.lock            # Compiled from requirements.txt (uv, hashed); CI and install-ai-stack.sh install it into ~/.agent-framework/.venv
 ├── requirements-lint.txt        # ruff + mypy + stubs, pinned exactly so the gate is reproducible
 ├── pytest.ini
@@ -2123,7 +2133,7 @@ grants — never an implicit default.
 `admin` → Administrator — each over the tenants it lists. The portal logs one line naming the
 new form when it reads an old entry.
 
-`middleware.ts` resolves access once per request and forwards it to handlers as two trusted
+`proxy.ts` resolves access once per request and forwards it to handlers as two trusted
 headers: the grants (`x-af-grants`) and who signed in (`x-af-actor` — the basic-auth username or
 the SSO email, which every audit entry names). It strips any client-supplied copy of either
 first, and the retired header names too. A header grant naming an unknown role or malformed apps is dropped, never widened.
@@ -2654,7 +2664,7 @@ harness for every tenant app:
 
 | Theme | Status | Primary AgentSmith evidence |
 |---|---|---|
-| Human oversight | Met | HITL gates, DLQ Replay/Discard, opt-in `run_with_self_correction`, `hitl_promotion` audit events |
+| Human oversight | Partial | HITL gates, DLQ Replay/Discard, opt-in `run_with_self_correction`, `hitl_promotion` audit events. A gate decision names its approver on a compliance profile only (`SEC-HITL-002`) |
 | Transparency & logging | Met | Phoenix OTel traces (`ttft_ms` on stream); HMAC audit log (`GET /api/audit`) |
 | Performance evaluation | Met | `run-evals.py` golden / fairness / hallucination / adversarial / rag_poison; CD `--fail-below`; shadow-eval |
 | Change management | Met | Eval gates; enterprise RFC hooks; fixture PRs; security harness CI |
@@ -2664,8 +2674,14 @@ harness for every tenant app:
 | Third-party & models | Partial | `models.yaml`; UAE sovereign Falcon 3 template + `verify_sovereign_endpoint.py` |
 | Fairness & bias | Partial | `run-evals.py --suite fairness`; pair parity; Decree-Law 34/2023 map in `docs/uae-regulatory.md` |
 | Data for AI / privacy | Partial | Golden fixtures; pre-call `input_guardrail` + `prompt_guard`; post-call redaction |
-| Security & privacy (AI) | Partial→Met | `SEC-PROMPT-001` / `SEC-MOD-001` / `SEC-PII-*` via harness |
+| Security & privacy (AI) | Partial | `SEC-PROMPT-001` / `SEC-MOD-001` / `SEC-PII-*` via harness |
 | Risk assessment | Org-owned | `.agent-rfc/security/risk_register.yaml` schema gate (`SEC-RISK-001`) |
+
+**Compliance profile.** Opt-in per repository (`.agenticframework/compliance.json`, `compliance` in `process-gates.json`). One catalogue,
+`fixtures/compliance/catalogue.json`, generates the manual's table, the portal's copy and the evidence by clause; each obligation is enforced, verified or
+signed by a named person. At run time `agentsmith/compliance.py` writes each record to the worker's own database first, chained and keyed, and forwards it when the
+portal is up, so the portal may be down. A function whose record cannot be written raises `ComplianceRefused`; only that function stops. `llm_gateway.py` checks every degrade step against the
+declared boundary. The developer pipeline, the eval router, trace export, webhooks and the Ops report apply the same rule, because none of them goes through the gateway.
 
 **UAE regulatory map (differentiator):** [`docs/uae-regulatory.md`](uae-regulatory.md) —
 sovereign Falcon 3 / PDPL / HITL / fairness / ISO themes. Not legal advice.

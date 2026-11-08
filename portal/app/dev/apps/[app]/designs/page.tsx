@@ -10,7 +10,8 @@ import { getTenant } from "@/lib/tenants";
 
 export const dynamic = "force-dynamic";
 
-export default async function DevDesignsPage({ params }: { params: { app: string } }) {
+export default async function DevDesignsPage(props: { params: Promise<{ app: string }> }) {
+  const params = await props.params;
   const tenant = await getTenant(params.app);
   if (!tenant) return null;
   const designs = await listDevDesigns(tenant.tenantId);

@@ -141,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
             # The message says "no runner here", not "not yet implemented",
             # because the second is a claim this harness is not in a position
             # to make. It knows only that nothing in THIS run verified the
-            # control. SEC-AUDIT-002 — currently the registry's only gap — is
+            # control. SEC-AUDIT-002 is the case in point: it is
             # implemented (append-only triggers in portal/db/schema.sql) and
             # verified on every push by self-test.yml's Ops Portal job against
             # a live Postgres. It is a gap *here* because this harness runs

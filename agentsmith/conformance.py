@@ -1505,3 +1505,54 @@ def run_ops_replay(url: str, key: str) -> OpsReport:
         status = _post_status(url, body, "", headers)
         checks.append(Check(name, ok(status), "" if ok(status) else f"answered {status or 'nothing'}"))
     return OpsReport(f"replay webhook: {url}", checks)
+
+
+# ── The compliance contract (contract/compliance/v1/) ────────────────────────
+
+
+def run_compliance(provider: str, workdir: Path) -> list[tuple[str, bool, str]]:
+    """Every case of contract/compliance/v1/cases.json against `provider`."""
+    source = _contract_dir().parents[1] / "compliance" / "v1" / "cases.json"
+    cases = json.loads(source.read_text(encoding="utf-8"))["cases"]
+    checks: list[tuple[str, bool, str]] = []
+    for case in cases:
+        repo = workdir / case["name"]
+        for rel, body in case["files"].items():
+            target = repo / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(body, encoding="utf-8")
+        done = subprocess.run([*shlex.split(provider), "check", "--stage", case["stage"]], cwd=repo,
+                              stdin=subprocess.DEVNULL,
+                              capture_output=True, text=True, check=False)
+        try:
+            verdict = json.loads(done.stdout).get("verdict")
+        except ValueError:
+            verdict = None
+        checks.append((case["name"], verdict == case["expect"], f"expected {case['expect']}, got {verdict}"))
+    return checks
+
+
+# ── The runtime contract (contract/runtime/v1/) ──────────────────────────────
+
+
+def run_runtime(url: str, token: str) -> list[tuple[str, bool, str]]:
+    """Every case of contract/runtime/v1/cases.json against a running sidecar."""
+    import httpx
+
+    source = _contract_dir().parents[1] / "runtime" / "v1" / "cases.json"
+    checks: list[tuple[str, bool, str]] = []
+    for case in json.loads(source.read_text(encoding="utf-8"))["cases"]:
+        headers = {"Authorization": f"Bearer {token}"} if case.get("auth", True) else {}
+        target = url.rstrip("/") + case["path"]
+        try:
+            if case["method"] == "GET":
+                response = httpx.get(target, headers=headers, timeout=10.0)
+            else:
+                response = httpx.post(target, headers=headers, json=case.get("body", {}), timeout=10.0)
+        except httpx.HTTPError as exc:
+            checks.append((case["name"], False, type(exc).__name__))
+            continue
+        detail = f"expected {case['status']}, got {response.status_code}"
+        checks.append((case["name"], response.status_code == case["status"], detail))
+    return checks
+

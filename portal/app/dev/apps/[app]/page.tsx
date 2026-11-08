@@ -17,13 +17,11 @@ function isVerdict(value: string | undefined): value is DevVerdict {
   return value !== undefined && (DEV_VERDICTS as readonly string[]).includes(value);
 }
 
-export default async function DevChangesPage({
-  params,
-  searchParams,
-}: {
-  params: { app: string };
-  searchParams: { verdict?: string; author?: string };
+export default async function DevChangesPage(props: {
+  params: Promise<{ app: string }>;
+  searchParams: Promise<{ verdict?: string; author?: string }>;
 }) {
+  const [params, searchParams] = await Promise.all([props.params, props.searchParams]);
   // The layout has already refused a missing app or one the user may not see.
   const tenant = await getTenant(params.app);
   if (!tenant) return null;

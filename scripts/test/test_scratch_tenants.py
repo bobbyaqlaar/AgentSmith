@@ -68,6 +68,7 @@ SCENARIOS = {
     "go": {"has": ["go.mod"], "lacks": [".gitignore"]},
     "python-fastapi": {"has": ["requirements.txt"], "lacks": ["pyproject.toml", "uv.lock"]},
     "python-uv": {"has": ["pyproject.toml", "uv.lock"], "lacks": ["requirements.txt"]},
+    "python-dubai-gov": {"has": ["app/workflows.py", "models.yaml"], "lacks": []},
 }
 
 
@@ -233,7 +234,7 @@ def _commit(target: Path, author: str) -> None:
 # decides the tool).
 TEST_CMD = {
     "ts-react": "CI=true npm test", "ts-react-pnpm": "CI=true pnpm test", "go": "go test -race ./...",
-    "python-fastapi": "pytest", "python-uv": "uv run pytest",
+    "python-fastapi": "pytest", "python-uv": "uv run pytest", "python-dubai-gov": "pytest",
 }
 
 

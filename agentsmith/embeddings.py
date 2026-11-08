@@ -139,7 +139,11 @@ class SentenceTransformerEmbedder:
                 "pip install 'sentence-transformers>=3.0,<4.0' "
                 "or set EMBEDDER=hash for tests."
             ) from exc
-        self._model = SentenceTransformer(self.model_name)
+        # On a compliance profile the model is provisioned inside the boundary;
+        # a first-use download from a public hub is a route out.
+        from agentsmith import compliance
+
+        self._model = SentenceTransformer(self.model_name, local_files_only=compliance.profile_active())
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         # The embedding hop emitted nothing, and it is the one most likely to

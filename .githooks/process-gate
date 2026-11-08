@@ -461,6 +461,52 @@ fail(verdict + " — " + reason + ". A suite that was not judged is not a pass; 
 '
     exit $?
     ;;
+  compliance)
+    # The compliance port (contract/compliance/v1/protocol.md). A repository with
+    # no profile passes and says so. One with a profile is held to it: no
+    # provider, no answer or a failing verdict all fail.
+    stage="ci"
+    case "${2:-}:${3:-}:${4:-}" in
+      check::) ;;
+      check:--stage:ci|check:--stage:production) stage="$4" ;;
+      export:--evidence-dir:?*|mcp-verify::) ;;
+      *) echo "usage: process-gate compliance check [--stage ci|production] | export --evidence-dir DIR | mcp-verify" >&2; exit 2 ;;
+    esac
+    if [ ! -f "$root/.agenticframework/compliance.json" ]; then
+      echo "Compliance: this repository has no profile — nothing checked."
+      exit 0
+    fi
+    where=local
+    [ -n "${GITHUB_ACTIONS:-}" ] && where=ci
+    provider="$(declared_port compliance)"
+    if [ -z "$provider" ] || [ "$provider" = "none" ]; then
+      echo "Compliance: this repository declares a profile and no compliance provider (providers.json)." >&2
+      exit 1
+    fi
+    need_python "$where" || exit 1
+    if [ "${2:-}" = "mcp-verify" ]; then
+      (cd "$root" && $provider mcp-verify </dev/null)
+      exit $?
+    fi
+    if [ "${2:-}" = "export" ]; then
+      (cd "$root" && $provider export --evidence-dir "$4" </dev/null)
+      exit $?
+    fi
+    answer="$(cd "$root" && $provider check --stage "$stage" </dev/null)"
+    printf '%s' "$answer" | python3 -c '
+import json, sys
+try:
+    result = json.loads(sys.stdin.read())
+except ValueError:
+    print("Compliance: the provider gave no answer — refusing."); sys.exit(1)
+for row in result.get("rows", []):
+    if row["result"] in ("fail", "pending"):
+        print(" ".join(": ".join((row["result"], row["id"], row["message"])).split()))
+print("Compliance:", result.get("verdict"), result.get("reason") or result.get("counts"))
+sys.exit(0 if result.get("verdict") == "pass" else 1)
+'
+    exit $?
+    ;;
   security)
     # The security port (contract/security/v1/protocol.md): `check` asks the
     # declared provider about the repository's pack and posture; `redaction

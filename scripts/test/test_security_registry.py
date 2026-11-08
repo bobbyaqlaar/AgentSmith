@@ -200,3 +200,59 @@ def test_scripts_has_exactly_one_script_loader() -> None:
         f"{[f for f in offenders if f != 'scripts/_shared.py']}. "
         f"Use `from _shared import load_script`."
     )
+
+
+OWASP_LLM_2025 = {
+    "LLM01": "Prompt Injection",
+    "LLM02": "Sensitive Information Disclosure",
+    "LLM03": "Supply Chain",
+    "LLM04": "Data and Model Poisoning",
+    "LLM05": "Improper Output Handling",
+    "LLM06": "Excessive Agency",
+    "LLM07": "System Prompt Leakage",
+    "LLM08": "Vector and Embedding Weaknesses",
+    "LLM09": "Misinformation",
+    "LLM10": "Unbounded Consumption",
+}
+
+
+def _map_section(start: str, stop: str) -> str:
+    doc = (REGISTRY.parents[2] / "docs" / "security-framework-map.md").read_text()
+    return doc.split(start, 1)[1].split(stop, 1)[0]
+
+
+def test_owasp_tags_use_the_2025_numbering() -> None:
+    """The map once said 2025 and used the 2023 numbers, so a PII row tagged
+    LLM06 read as Excessive Agency. Anchors, one per renumbered meaning."""
+    controls = {c.id: c.frameworks.owasp for c in load_control_registry(REGISTRY)}
+    assert not {tag for tags in controls.values() for tag in tags} - set(OWASP_LLM_2025)
+    assert controls["SEC-PII-001"] == ["LLM02"], "sensitive information is LLM02"
+    assert controls["SEC-OUTPUT-001"] == ["LLM05"], "improper output handling is LLM05"
+    assert controls["SEC-HITL-001"] == ["LLM06"], "excessive agency is LLM06"
+    assert controls["SEC-BUDGET-001"] == ["LLM10"], "unbounded consumption is LLM10"
+    assert controls["SEC-RAG-001"] == ["LLM04", "LLM08"]
+
+
+def test_the_owasp_table_matches_the_registry() -> None:
+    """The table and the registry are the two places a reader finds this."""
+    import re
+
+    section = _map_section("### OWASP Top 10 for LLM Applications (2025 edition)", "### ")
+    rows = re.findall(r"^\| (LLM\d\d) ([^|]+?) \| ([^|]+?) \|", section, re.M)
+    assert {tag: name for tag, name, _ in rows} == OWASP_LLM_2025
+    controls = load_control_registry(REGISTRY)
+    for tag, _, listed in rows:
+        expected = {c.id for c in controls if tag in c.frameworks.owasp}
+        assert set(re.findall(r"`(SEC-[A-Z0-9-]+)`", listed)) == expected, tag
+
+
+def test_the_unified_table_matches_the_registry() -> None:
+    """Every control appears, under the OWASP tags the registry gives it."""
+    import re
+
+    section = _map_section("## Unified control registry", "## Framework sections")
+    documented = {
+        cid: [] if cell == "—" else cell.split(", ")
+        for cid, cell in re.findall(r"^\| `(SEC-[A-Z0-9-]+)` \| ([^|]+?) \|", section, re.M)
+    }
+    assert documented == {c.id: c.frameworks.owasp for c in load_control_registry(REGISTRY)}

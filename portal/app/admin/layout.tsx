@@ -1,12 +1,17 @@
 import { AreaDenied, AreaNav } from "@/components/AreaNav";
-import { areas } from "@/lib/authz";
+import { areas, can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  if (!areas(currentAccess()).includes("admin")) return <AreaDenied area="Administration" />;
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const access = await currentAccess();
+  if (!areas(access).includes("admin")) return <AreaDenied area="Administration" />;
+  const links = [
+    { href: "/admin/apps", text: "Apps" },
+    ...(can(access, "admin.org") ? [{ href: "/api/admin/access-export", text: "Access review export" }] : []),
+  ];
   return (
     <>
-      <AreaNav label="Administration" links={[{ href: "/admin/apps", text: "Apps" }]} />
+      <AreaNav label="Administration" links={links} />
       {children}
     </>
   );

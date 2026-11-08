@@ -120,7 +120,7 @@ request writes to is the token's. `/api/dev/scaffold/:id` takes a per-intake tok
 one intake and marks it consumed, once, within 24 hours of issue, and the id in
 the URL must agree with the token or the answer is 404. Creating an intake
 (`POST /api/dev/intakes`) is a signed-in person's act and needs `dev.create` — Developers and up — and refuses, with 409, an id that is already a registered app or that an open intake names.
-`test/middleware.test.ts` pins which paths skip sign-in.
+`test/proxy.test.ts` pins which paths skip sign-in.
 
 ## Data sources
 
@@ -199,10 +199,10 @@ hold tenant data goes on one. Parameterised SQL is recorded because it is code.
 
 ## Tech stack
 
-- Next.js 14 (App Router) + TypeScript, standalone output (`next.config.mjs`)
+- Next.js 16 and React 19 (App Router) + TypeScript, standalone output (`next.config.mjs`)
 - Tailwind CSS, `darkMode: "class"` with a light/dark toggle, no other UI framework
 - Recharts (cost chart)
 - `pg` (node-postgres) against the shared framework Postgres instance
 - `jose` (signed session JWTs), `openid-client` (SSO/OIDC)
 - OpenTelemetry (`sdk-trace-node` + OTLP/HTTP exporter), loaded only in the Node
-  runtime — `middleware.ts` compiles to the Edge runtime, which cannot load it
+  runtime — `proxy.ts` compiles to the Edge runtime, which cannot load it

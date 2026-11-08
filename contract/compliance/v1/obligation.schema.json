@@ -1,0 +1,182 @@
+{
+  "$defs": {
+    "Refs": {
+      "additionalProperties": false,
+      "properties": {
+        "desc_isr": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Desc Isr",
+          "type": "array"
+        },
+        "nist_ai_rmf": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Nist Ai Rmf",
+          "type": "array"
+        },
+        "iso42001_theme": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Iso42001 Theme",
+          "type": "array"
+        },
+        "uae_charter": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Uae Charter",
+          "type": "array"
+        },
+        "dubai_ethics": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dubai Ethics",
+          "type": "array"
+        },
+        "owasp_llm": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Owasp Llm",
+          "type": "array"
+        },
+        "uae_law": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Uae Law",
+          "type": "array"
+        }
+      },
+      "title": "Refs",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One row of fixtures/compliance/catalogue.json.",
+  "properties": {
+    "id": {
+      "pattern": "^OB-[A-Z0-9-]+$",
+      "title": "Id",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "refs": {
+      "$ref": "#/$defs/Refs"
+    },
+    "layer": {
+      "enum": [
+        "provider",
+        "app",
+        "org"
+      ],
+      "title": "Layer",
+      "type": "string"
+    },
+    "class": {
+      "enum": [
+        "enforced",
+        "verified",
+        "attested"
+      ],
+      "title": "Class",
+      "type": "string"
+    },
+    "phases": {
+      "items": {
+        "enum": [
+          "design",
+          "build",
+          "deploy",
+          "operate"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Phases",
+      "type": "array"
+    },
+    "mechanism": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Mechanism"
+    },
+    "owner_role": {
+      "minLength": 1,
+      "title": "Owner Role",
+      "type": "string"
+    },
+    "recurrence_days": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Recurrence Days"
+    },
+    "instructions": {
+      "minLength": 1,
+      "title": "Instructions",
+      "type": "string"
+    },
+    "evidence": {
+      "minLength": 1,
+      "title": "Evidence",
+      "type": "string"
+    },
+    "blocks": {
+      "items": {
+        "enum": [
+          "ci",
+          "production"
+        ],
+        "type": "string"
+      },
+      "title": "Blocks",
+      "type": "array"
+    },
+    "profiles": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Profiles",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "title",
+    "refs",
+    "layer",
+    "class",
+    "phases",
+    "owner_role",
+    "instructions",
+    "evidence",
+    "profiles"
+  ],
+  "title": "Obligation",
+  "type": "object"
+}

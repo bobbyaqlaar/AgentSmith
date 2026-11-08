@@ -165,7 +165,7 @@ def ship(timeout: float = 1.0) -> ShipResult:
             headers={"Content-Type": "application/x-protobuf"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+            with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310 - the configured collector
                 accepted = 200 <= response.status < 300
         except (urllib.error.URLError, OSError) as exc:
             result.kept += len(batches) - result.sent - result.kept

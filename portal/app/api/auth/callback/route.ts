@@ -4,7 +4,9 @@
 
 import { NextResponse } from "next/server";
 import { cookies as nextCookies } from "next/headers";
-import { getOidcSettings, handleCallback, createSessionToken, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS, secureCookies } from "@/lib/oidc";
+import { getOidcSettings, handleCallback, createSessionToken, SESSION_COOKIE_NAME, secureCookies } from "@/lib/oidc";
+import { sessionLimits } from "@/lib/sessionToken";
+import { appendAuditEvent } from "@/lib/auditLog";
 import { safeRedirectPath } from "@/lib/safeUrl";
 
 export const dynamic = "force-dynamic"; // depends on query params (code/state) and request cookies — never cache
@@ -37,13 +39,14 @@ export async function GET(request: Request) {
   try {
     const identity = await handleCallback(settings, url, expectedState, codeVerifier);
     const sessionToken = await createSessionToken(identity);
+    await appendAuditEvent({ eventType: "session_signin", actorId: identity.email ?? identity.sub, tenantId: null, details: {} });
 
     const res = NextResponse.redirect(new URL(redirectTo, url.origin));
     res.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
       httpOnly: true,
       secure: secureCookies(),
       sameSite: "lax",
-      maxAge: SESSION_TTL_SECONDS, // must match sessionToken.ts's JWT expiration — a hardcoded duplicate here would silently drift if that constant ever changes
+      maxAge: sessionLimits().absoluteSeconds, // must match sessionToken.ts's JWT expiration — a hardcoded duplicate here would silently drift if that constant ever changes
       path: "/",
     });
     res.cookies.delete("oidc_state");
@@ -51,6 +54,8 @@ export async function GET(request: Request) {
     res.cookies.delete("oidc_redirect_to");
     return res;
   } catch (err) {
+    await appendAuditEvent({ eventType: "session_denied", actorId: "unknown", tenantId: null, details: { reason: String(err).slice(0, 300) } })
+      .catch(() => undefined); // the refusal stands whether or not it could be logged
     return NextResponse.json({ error: `OIDC callback failed: ${String(err)}` }, { status: 401 });
   }
 }

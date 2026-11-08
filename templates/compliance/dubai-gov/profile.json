@@ -1,0 +1,18 @@
+{
+  "_about": "What `agentsmith compliance enable --profile dubai-gov` adds to a repository's process-gates.json under `extends`.",
+  "session_start": [
+    "This repository is on the dubai-gov compliance profile. Run `bash .githooks/process-gate compliance check --stage ci` before saying a change is done.",
+    "Never edit .agenticframework/attestations.jsonl: a person signs it at a terminal or in the portal."
+  ],
+  "pillars": [
+    {"id": 17, "name": "Data Classification and Boundary", "check": ["design"],
+     "design_question": "What class of data does this change touch, and does every endpoint and store it reaches sit inside the declared boundary?",
+     "rule": "Classified data stays inside the boundary in .agenticframework/compliance.json. Pass data_class to the gateway."},
+    {"id": 18, "name": "Human Accountability", "check": ["design"],
+     "design_question": "Which actions here need a named person to decide, and is each one in the agency manifest and behind a gate?",
+     "rule": "Every high-impact action is in agency_manifest.yaml and reaches a human gate. Every agent has an accountable owner."},
+    {"id": 19, "name": "Regulatory Touchpoint", "check": ["design"],
+     "design_question": "Does this change publish content, process personal data, or need a licence or a new obligation in the catalogue?",
+     "rule": "Name the instrument this change touches, or say none does and why."}
+  ]
+}

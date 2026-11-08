@@ -12,124 +12,121 @@ restricts offering it as a hosted or managed service) and PostgreSQL (PostgreSQL
 | Package | Version | Licence |
 |---|---|---|
 | aiohappyeyeballs | 2.7.1 | Python Software Foundation License |
-| aiohttp | 3.14.3 | Apache-2.0 AND MIT |
+| aiohttp | 3.14.5 | Apache-2.0 AND MIT |
 | aiosignal | 1.4.0 | Apache Software License |
 | annotated-types | 0.8.0 | MIT |
-| anthropic | 0.125.0 | MIT License |
 | anyio | 4.15.1 | MIT |
 | async-timeout | 5.0.1 | Apache-2.0 |
 | attrs | 26.1.0 | MIT |
 | boto3 | 1.43.93 | Apache-2.0 |
 | botocore | 1.43.93 | Apache-2.0 |
-| certifi | 2026.7.22 | Mozilla Public License 2.0 (MPL 2.0) |
+| certifi | 2026.10.23 | Mozilla Public License 2.0 (MPL 2.0) |
 | cffi | 2.1.1 | MIT-0 |
 | charset-normalizer | 3.5.1 | MIT |
 | colorama | 0.4.6 | BSD-3-Clause |
-| cryptography | 43.0.3 | Apache Software License / BSD License |
-| distro | 1.9.0 | Apache Software License |
-| docstring-parser | 0.18.0 | MIT License |
+| cryptography | 50.0.2 | Apache-2.0 OR BSD-3-Clause |
 | frozenlist | 1.8.0 | Apache-2.0 |
 | google-auth | 2.58.0 | Apache Software License |
 | googleapis-common-protos | 1.75.3 | Apache-2.0 |
 | h11 | 0.16.0 | MIT License |
 | httpcore | 1.0.9 | BSD-3-Clause |
-| httpcore2 | 2.13.0 | BSD-3-Clause |
 | httpx | 0.28.1 | BSD License |
-| httpx2 | 2.13.0 | BSD-3-Clause |
-| httpx2-jsfetch | 1.0 | BSD-3-Clause |
 | idna | 3.19 | BSD-3-Clause |
 | iniconfig | 2.3.0 | MIT |
-| jiter | 0.17.0 | MIT |
 | jmespath | 1.1.0 | MIT License |
-| jsonpatch | 1.33 | BSD License |
-| jsonpointer | 3.1.1 | BSD License |
 | jsonschema | 4.26.0 | MIT |
 | jsonschema-specifications | 2025.9.1 | MIT |
-| langchain-anthropic | 0.3.22 | MIT |
-| langchain-core | 0.3.86 | MIT |
-| langchain-openai | 0.3.35 | MIT |
-| langgraph | 0.6.11 | MIT |
-| langgraph-checkpoint | 2.1.2 | MIT |
-| langgraph-checkpoint-postgres | 2.0.25 | MIT |
-| langgraph-prebuilt | 0.6.5 | MIT |
-| langgraph-sdk | 0.2.15 | MIT |
-| langsmith | 0.12.4 | MIT |
-| multidict | 6.8.0 | Apache License 2.0 |
+| multidict | 7.2.1 | Apache-2.0 |
 | networkx | 3.6.1 | BSD-3-Clause |
 | nexus-rpc | 1.4.0 | MIT |
-| openai | 2.54.0 | Apache Software License |
-| opentelemetry-api | 1.44.0 | Apache-2.0 |
-| opentelemetry-exporter-otlp-proto-common | 1.44.0 | Apache-2.0 |
-| opentelemetry-exporter-otlp-proto-http | 1.44.0 | Apache-2.0 |
-| opentelemetry-proto | 1.44.0 | Apache-2.0 |
-| opentelemetry-sdk | 1.44.0 | Apache-2.0 |
-| opentelemetry-semantic-conventions | 0.65b0 | Apache-2.0 |
-| orjson | 3.12.0 | MPL-2.0 AND (Apache-2.0 OR MIT) |
-| ormsgpack | 1.12.2 | Apache-2.0 OR MIT |
+| opentelemetry-api | 1.45.2 | Apache-2.0 |
+| opentelemetry-exporter-http-transport | 0.66b2 | Apache-2.0 |
+| opentelemetry-exporter-otlp-common | 0.66b2 | Apache-2.0 |
+| opentelemetry-exporter-otlp-proto-common | 1.45.2 | Apache-2.0 |
+| opentelemetry-exporter-otlp-proto-http | 1.45.2 | Apache-2.0 |
+| opentelemetry-proto | 1.45.2 | Apache-2.0 |
+| opentelemetry-sdk | 1.45.2 | Apache-2.0 |
+| opentelemetry-semantic-conventions | 0.66b2 | Apache-2.0 |
 | packaging | 25.0 | Apache Software License / BSD License |
 | pluggy | 1.6.0 | MIT License |
 | plyer | 2.1.0 | MIT License |
 | propcache | 0.5.2 | Apache Software License |
 | protobuf | 7.36.1 | 3-Clause BSD License |
-| psycopg | 3.3.5 | LGPL-3.0-only |
-| psycopg-pool | 3.3.1 | LGPL-3.0-only |
 | psycopg2-binary | 2.9.13 | GNU Library or Lesser General Public License (LGPL) |
-| pyasn1 | 0.6.4 | BSD-2-Clause |
+| pyasn1 | 0.6.5 | BSD-2-Clause |
 | pyasn1-modules | 0.4.2 | BSD License |
 | pycparser | 3.0 | BSD-3-Clause |
-| pydantic | 2.13.5 | MIT |
-| pydantic-core | 2.46.5 | MIT |
+| pydantic | 2.14.3 | MIT |
+| pydantic-core | 2.50.4 | MIT |
 | pygments | 2.21.0 | BSD-2-Clause |
-| pyjwt | 2.14.0 | MIT |
-| pytest | 8.4.2 | MIT License |
-| pytest-asyncio | 0.26.0 | Apache-2.0 |
+| pyjwt | 2.15.1 | MIT |
+| pytest | 9.2.0 | MIT |
+| pytest-asyncio | 1.4.1.post1 | Apache-2.0 |
 | python-dateutil | 2.9.0.post0 | BSD License / Apache Software License |
 | pyyaml | 6.0.3 | MIT License |
 | redis | 5.3.1 | MIT License |
 | referencing | 0.37.0 | MIT |
 | regex | 2026.9.10 | Apache-2.0 AND CNRI-Python |
 | requests | 2.34.2 | Apache Software License |
-| requests-toolbelt | 1.0.0 | Apache Software License |
 | rpds-py | 2026.6.3 | MIT |
 | s3transfer | 0.19.2 | Apache Software License |
 | six | 1.17.0 | MIT License |
-| sniffio | 1.3.1 | MIT License / Apache Software License |
 | temporalio | 1.32.0 | MIT |
 | tenacity | 9.1.4 | Apache Software License |
 | tiktoken | 0.14.0 | MIT License |
-| tqdm | 4.70.1 | MPL-2.0 AND MIT |
-| truststore | 0.10.4 | MIT |
 | types-protobuf | 7.35.1.20260906 | Apache-2.0 |
 | typing-extensions | 4.16.0 | PSF-2.0 |
-| typing-inspection | 0.4.4 | MIT |
-| tzdata | 2026.4 | Apache-2.0 |
-| urllib3 | 2.7.0 | MIT |
-| uuid-utils | 0.17.1 | BSD-3-Clause |
-| websockets | 17.1 | BSD-3-Clause |
-| xxhash | 4.0.1 | BSD-2-Clause |
-| yarl | 1.24.5 | Apache-2.0 |
-| zstandard | 0.25.0 | BSD-3-Clause |
+| typing-inspection | 0.4.5 | MIT |
+| urllib3 | 2.8.0 | MIT |
+| yarl | 1.25.1 | Apache-2.0 |
 
 ## Ops Portal (portal/)
 
 | Package | Version | Licence |
 |---|---|---|
 | @alloc/quick-lru | 5.2.0 | MIT |
-| @babel/runtime | 7.29.7 | MIT |
+| @babel/runtime | 7.29.13 | MIT |
+| @emnapi/runtime | 1.11.3 | MIT |
+| @img/colour | 1.1.0 | MIT |
+| @img/sharp-darwin-arm64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-darwin-x64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-freebsd-wasm32 | 0.35.5 | Apache-2.0 |
+| @img/sharp-libvips-darwin-arm64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-darwin-x64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-arm | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-arm64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-ppc64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-riscv64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-s390x | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linux-x64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linuxmusl-arm64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-libvips-linuxmusl-x64 | 1.3.4 | LGPL-3.0-or-later |
+| @img/sharp-linux-arm | 0.35.5 | Apache-2.0 |
+| @img/sharp-linux-arm64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-linux-ppc64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-linux-riscv64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-linux-s390x | 0.35.5 | Apache-2.0 |
+| @img/sharp-linux-x64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-linuxmusl-arm64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-linuxmusl-x64 | 0.35.5 | Apache-2.0 |
+| @img/sharp-wasm32 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later AND MIT |
+| @img/sharp-webcontainers-wasm32 | 0.35.5 | Apache-2.0 |
+| @img/sharp-win32-arm64 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later |
+| @img/sharp-win32-ia32 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later |
+| @img/sharp-win32-x64 | 0.35.5 | Apache-2.0 AND LGPL-3.0-or-later |
 | @jridgewell/gen-mapping | 0.3.13 | MIT |
 | @jridgewell/resolve-uri | 3.1.2 | MIT |
 | @jridgewell/sourcemap-codec | 1.5.5 | MIT |
 | @jridgewell/trace-mapping | 0.3.31 | MIT |
-| @next/env | 14.2.35 | MIT |
-| @next/swc-darwin-arm64 | 14.2.33 | MIT |
-| @next/swc-darwin-x64 | 14.2.33 | MIT |
-| @next/swc-linux-arm64-gnu | 14.2.33 | MIT |
-| @next/swc-linux-arm64-musl | 14.2.33 | MIT |
-| @next/swc-linux-x64-gnu | 14.2.33 | MIT |
-| @next/swc-linux-x64-musl | 14.2.33 | MIT |
-| @next/swc-win32-arm64-msvc | 14.2.33 | MIT |
-| @next/swc-win32-ia32-msvc | 14.2.33 | MIT |
-| @next/swc-win32-x64-msvc | 14.2.33 | MIT |
+| @next/env | 16.4.5 | MIT |
+| @next/swc-darwin-arm64 | 16.4.5 | MIT |
+| @next/swc-darwin-x64 | 16.4.5 | MIT |
+| @next/swc-linux-arm64-gnu | 16.4.5 | MIT |
+| @next/swc-linux-arm64-musl | 16.4.5 | MIT |
+| @next/swc-linux-x64-gnu | 16.4.5 | MIT |
+| @next/swc-linux-x64-musl | 16.4.5 | MIT |
+| @next/swc-win32-arm64-msvc | 16.4.5 | MIT |
+| @next/swc-win32-x64-msvc | 16.4.5 | MIT |
 | @nodelib/fs.scandir | 2.1.5 | MIT |
 | @nodelib/fs.stat | 2.0.5 | MIT |
 | @nodelib/fs.walk | 1.2.8 | MIT |
@@ -147,8 +144,7 @@ restricts offering it as a hosted or managed service) and PostgreSQL (PostgreSQL
 | @opentelemetry/sdk-trace-base | 2.10.0 | Apache-2.0 |
 | @opentelemetry/sdk-trace-node | 2.10.0 | Apache-2.0 |
 | @opentelemetry/semantic-conventions | 1.43.0 | Apache-2.0 |
-| @swc/counter | 0.1.3 | Apache-2.0 |
-| @swc/helpers | 0.5.5 | Apache-2.0 |
+| @swc/helpers | 0.5.23 | Apache-2.0 |
 | @types/d3-array | 3.2.2 | MIT |
 | @types/d3-color | 3.1.3 | MIT |
 | @types/d3-ease | 3.0.2 | MIT |
@@ -160,19 +156,17 @@ restricts offering it as a hosted or managed service) and PostgreSQL (PostgreSQL
 | @types/d3-timer | 3.0.2 | MIT |
 | @types/node | 20.19.43 | MIT |
 | @types/pg | 8.20.0 | MIT |
-| @types/prop-types | 15.7.15 | MIT |
-| @types/react | 18.3.31 | MIT |
+| @types/react | 19.3.0 | MIT |
 | any-promise | 1.3.0 | MIT |
 | anymatch | 3.1.3 | ISC |
 | arg | 5.0.2 | MIT |
 | autoprefixer | 10.5.0 | MIT |
-| baseline-browser-mapping | 2.10.38 | Apache-2.0 |
+| baseline-browser-mapping | 2.11.35 | Apache-2.0 |
 | binary-extensions | 2.3.0 | MIT |
 | braces | 3.0.3 | MIT |
-| browserslist | 4.28.4 | MIT |
-| busboy | 1.6.0 | MIT |
+| browserslist | 4.29.5 | MIT |
 | camelcase-css | 2.0.1 | MIT |
-| caniuse-lite | 1.0.30001799 | CC-BY-4.0 |
+| caniuse-lite | 1.0.30001823 | CC-BY-4.0 |
 | chokidar | 3.6.0 | MIT |
 | client-only | 0.0.1 | MIT |
 | clsx | 2.1.1 | MIT |
@@ -191,14 +185,15 @@ restricts offering it as a hosted or managed service) and PostgreSQL (PostgreSQL
 | d3-time-format | 4.1.0 | ISC |
 | d3-timer | 3.0.1 | ISC |
 | decimal.js-light | 2.5.1 | MIT |
+| detect-libc | 2.1.2 | Apache-2.0 |
 | didyoumean | 1.2.2 | Apache-2.0 |
 | dlv | 1.1.3 | MIT |
 | dom-helpers | 5.2.1 | MIT |
-| electron-to-chromium | 1.5.376 | ISC |
+| electron-to-chromium | 1.5.478 | ISC |
 | es-errors | 1.3.0 | MIT |
 | escalade | 3.2.0 | MIT |
 | eventemitter3 | 4.0.7 | MIT |
-| fast-equals | 5.4.0 | MIT |
+| fast-equals | 5.4.5 | MIT |
 | fast-glob | 3.3.3 | MIT |
 | fastq | 1.20.1 | ISC |
 | fdir | 6.5.0 | MIT |
@@ -207,7 +202,6 @@ restricts offering it as a hosted or managed service) and PostgreSQL (PostgreSQL
 | fsevents | 2.3.3 | MIT |
 | function-bind | 1.1.2 | MIT |
 | glob-parent | 6.0.2 | ISC |
-| graceful-fs | 4.2.11 | ISC |
 | hasown | 2.0.4 | MIT |
 | internmap | 2.0.3 | ISC |
 | is-binary-path | 2.1.0 | MIT |
@@ -225,9 +219,9 @@ restricts offering it as a hosted or managed service) and PostgreSQL (PostgreSQL
 | merge2 | 1.4.1 | MIT |
 | micromatch | 4.0.8 | MIT |
 | mz | 2.7.0 | MIT |
-| nanoid | 3.3.15 | MIT |
-| next | 14.2.35 | MIT |
-| node-releases | 2.0.48 | MIT |
+| nanoid | 3.3.20 | MIT |
+| next | 16.4.5 | MIT |
+| node-releases | 2.0.63 | MIT |
 | normalize-path | 3.0.0 | MIT |
 | oauth4webapi | 3.8.6 | MIT |
 | object-assign | 4.1.1 | MIT |
@@ -246,12 +240,12 @@ restricts offering it as a hosted or managed service) and PostgreSQL (PostgreSQL
 | picomatch | 4.0.4 | MIT |
 | pify | 2.3.0 | MIT |
 | pirates | 4.0.7 | MIT |
-| postcss | 8.5.15 | MIT |
+| postcss | 8.5.32 | MIT |
 | postcss-import | 15.1.0 | MIT |
 | postcss-js | 4.1.0 | MIT |
 | postcss-load-config | 6.0.1 | MIT |
 | postcss-nested | 6.2.0 | MIT |
-| postcss-selector-parser | 6.1.4 | MIT |
+| postcss-selector-parser | 6.1.5 | MIT |
 | postcss-value-parser | 4.2.0 | MIT |
 | postgres-array | 2.0.0 | MIT |
 | postgres-bytea | 1.0.1 | MIT |
@@ -259,8 +253,8 @@ restricts offering it as a hosted or managed service) and PostgreSQL (PostgreSQL
 | postgres-interval | 1.2.0 | MIT |
 | prop-types | 15.8.1 | MIT |
 | queue-microtask | 1.2.3 | MIT |
-| react | 18.3.1 | MIT |
-| react-dom | 18.3.1 | MIT |
+| react | 19.3.1 | MIT |
+| react-dom | 19.3.1 | MIT |
 | react-is | 18.3.1 | MIT |
 | react-smooth | 4.0.4 | MIT |
 | react-transition-group | 4.4.5 | BSD-3-Clause |
@@ -271,11 +265,12 @@ restricts offering it as a hosted or managed service) and PostgreSQL (PostgreSQL
 | resolve | 1.22.12 | MIT |
 | reusify | 1.1.0 | MIT |
 | run-parallel | 1.2.0 | MIT |
-| scheduler | 0.23.2 | MIT |
-| source-map-js | 1.2.1 | BSD-3-Clause |
+| scheduler | 0.28.0 | MIT |
+| semver | 7.8.6 | ISC |
+| sharp | 0.35.5 | Apache-2.0 |
+| source-map-js | 1.2.2 | BSD-3-Clause |
 | split2 | 4.2.0 | ISC |
-| streamsearch | 1.1.0 | MIT |
-| styled-jsx | 5.1.1 | MIT |
+| styled-jsx | 5.1.6 | MIT |
 | sucrase | 3.35.1 | MIT |
 | supports-preserve-symlinks-flag | 1.0.0 | MIT |
 | tailwindcss | 3.4.19 | MIT |
@@ -285,10 +280,10 @@ restricts offering it as a hosted or managed service) and PostgreSQL (PostgreSQL
 | tinyglobby | 0.2.17 | MIT |
 | to-regex-range | 5.0.1 | MIT |
 | ts-interface-checker | 0.1.13 | Apache-2.0 |
-| tslib | 2.8.1 | 0BSD |
+| tslib | 2.9.1 | 0BSD |
 | typescript | 5.9.3 | Apache-2.0 |
 | undici-types | 6.21.0 | MIT |
-| update-browserslist-db | 1.2.3 | MIT |
+| update-browserslist-db | 1.3.4 | MIT |
 | util-deprecate | 1.0.2 | MIT |
 | victory-vendor | 36.9.2 | MIT AND ISC |
 | xtend | 4.0.2 | MIT |

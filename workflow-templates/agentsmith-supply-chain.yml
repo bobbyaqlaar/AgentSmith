@@ -1,0 +1,36 @@
+name: Supply chain
+
+# Written by `agentsmith compliance enable`. Dependency scan and an SBOM for this
+# application (OB-SUPPLY-CHAIN). Add static analysis for your own stack here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: "Python dependencies"
+        run: |
+          for lock in requirements.lock requirements.txt; do
+            if [ -f "$lock" ]; then pipx run pip-audit==2.9.0 -r "$lock" --disable-pip --no-deps; exit $?; fi
+          done
+          echo "no Python requirements file"
+      - name: "SBOM"
+        run: |
+          if [ -f requirements.lock ]; then pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py requirements requirements.lock -o sbom.cdx.json; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cdx.json
+          if-no-files-found: ignore

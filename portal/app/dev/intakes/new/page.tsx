@@ -7,8 +7,8 @@ import { IntakeForm } from "@/components/IntakeForm";
 import { can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
-export default function NewIntakePage() {
-  if (!can(currentAccess(), "dev.create")) {
+export default async function NewIntakePage() {
+  if (!can(await currentAccess(), "dev.create")) {
     // Denied, not missing: a different screen from "no such page", because it
     // points at a different next step.
     return (

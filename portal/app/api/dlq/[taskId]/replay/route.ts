@@ -6,6 +6,7 @@
 // a different tenant's webhook than the one the entry actually belongs to.
 
 import { NextResponse } from "next/server";
+import { appendAuditEvent } from "@/lib/auditLog";
 import {
   getDlqEntry,
   replayDlqEntry,
@@ -17,8 +18,9 @@ import { can, roleFor } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 import { portalSpan, withIdentity } from "@/lib/tracing";
 
-export async function POST(request: Request, { params }: { params: { taskId: string } }) {
-  const access = currentAccess();
+export async function POST(request: Request, props: { params: Promise<{ taskId: string }> }) {
+  const params = await props.params;
+  const access = await currentAccess();
   if (!can(access, "ops.dlq")) {
     return NextResponse.json({ error: "operator or admin role required to replay DLQ entries" }, { status: 403 });
   }
@@ -68,6 +70,8 @@ export async function POST(request: Request, { params }: { params: { taskId: str
     }
     return NextResponse.json({ error: err instanceof Error ? err.message : "replay failed" }, { status: 500 });
   }
+
+  await appendAuditEvent({ eventType: "dlq_replay", actorId: access.actor ?? "unknown", tenantId: entry.tenantId, details: { taskId: entry.taskId } });
 
   // resumable: false flags an entry with no workflow_id/gate_id — e.g.
   // one from the older run_with_hitl_gate's terminal dead-letter, not

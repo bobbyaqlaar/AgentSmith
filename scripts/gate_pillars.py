@@ -22,7 +22,7 @@ import ast
 import re
 import subprocess
 from pathlib import Path
-from typing import Callable, Dict, List, NamedTuple, Optional, Sequence, Set, Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, Set, Tuple
 
 import gate_models as gm
 
@@ -51,6 +51,31 @@ def parse_policy(value: object) -> Tuple[gm.PillarPolicy, List[str]]:
         # should be 'off', 'report' or 'enforce'" does not say what is there.
         given = repr(error.get("input"))
         return gm.PillarPolicy(), [f"`pillars` is invalid: {where}: {error['msg']} (got {given})"]
+
+
+def compliance_problems(value: Any) -> List[str]:
+    """`compliance` in .agenticframework/process-gates.json, as declared."""
+    if value is None:
+        return []
+    if not isinstance(value, dict) or value.get("mode") not in ("report", "enforce") or not value.get("profile"):
+        return ["`compliance` must be {\"profile\": <name>, \"mode\": \"report\"|\"enforce\"}"]
+    return []
+
+
+def compliance_transition_problems(old: Any, new: Any, approvals: List["gm.Approval"]) -> List[str]:
+    """A compliance profile only strengthens. Dropping it, turning it down or
+    changing it needs an approval the owner recorded at a terminal, cited as
+    `"approval": "A-xxxxxxxx"` — a repository leaves a profile on the record."""
+    if not isinstance(old, dict) or old.get("mode") != "enforce":
+        return []
+    same = isinstance(new, dict) and new.get("mode") == "enforce" and new.get("profile") == old.get("profile")
+    if same:
+        return []
+    cited = new.get("approval") if isinstance(new, dict) else None
+    if cited and cited in {approval.id for approval in approvals}:
+        return []
+    return ["`compliance` would weaken a profile that is enforced — the owner records that in a terminal "
+            "(`agentsmith approve`) and the entry carries `\"approval\": \"A-xxxxxxxx\"`"]
 
 
 def transition_problems(

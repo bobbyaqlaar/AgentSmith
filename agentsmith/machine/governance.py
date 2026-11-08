@@ -21,7 +21,7 @@ import os
 import secrets
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -164,11 +164,145 @@ def approve(design: str, deviation: str, statement: Optional[str], root: Optiona
     return 0
 
 
+def _compliance_framework() -> Path:
+    """This installation's framework directory."""
+    from agentsmith.cli import _framework_dir
+
+    framework = _framework_dir()
+    if framework is None:
+        raise SystemExit("❌ no AgentSmith installation found: run install-ai-stack.sh")
+    return framework
+
+
+def attest(
+    obligation: str, evidence: str, role: str, days: Optional[int], note: str, root: Optional[Path] = None
+) -> int:
+    """Sign one attested obligation. Terminal only, exactly as `approve`: an agent
+    that could sign would be attesting its own work."""
+    import json
+
+    from agentsmith import compliance as c
+
+    root = Path(root or Path.cwd())
+    framework = _compliance_framework()
+    rows = json.loads((framework / "fixtures" / "compliance" / "catalogue.json").read_text(encoding="utf-8"))
+    row = next((r for r in rows if r["id"] == obligation), None)
+    if row is None or row["class"] != "attested":
+        print(f"❌ {obligation} is not an attested obligation in the catalogue", file=sys.stderr)
+        return 2
+    try:
+        reader = open("/dev/tty", "r")
+        writer = open("/dev/tty", "w")
+    except (OSError, ValueError, io.UnsupportedOperation):
+        print("❌ an attestation is signed at a terminal, and this process has none. "
+              "Run `agentsmith attest` yourself in a shell — an agent must ask you, not sign for you.", file=sys.stderr)
+        return 2
+    with reader, writer:
+        writer.write(f"\n{obligation}: {row['title']}\n  {row['instructions']}\n  Evidence: {evidence}\n\n"
+                     f"You are signing that this is true. Type {obligation} to sign, anything else to refuse: ")
+        writer.flush()
+        if reader.readline().strip() != obligation:
+            writer.write("not signed — nothing was recorded.\n")
+            return 1
+        now = datetime.now(timezone.utc)
+        period = days if days is not None else row["recurrence_days"]
+        record = c.Attestation(
+            id=f"T-{secrets.token_hex(4)}", obligation=obligation, actor=_git_identity(root), role=role,
+            evidence=evidence,
+            attested_at=now.isoformat(), expires_at=(now + timedelta(days=period)).isoformat() if period else None,
+            note=note, channel="tty",
+        )
+        target = root / c.ATTESTATIONS_FILE
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with target.open("a", encoding="utf-8") as handle:
+            handle.write(record.model_dump_json() + "\n")
+        writer.write(f"\n✅ recorded {record.id} in {c.ATTESTATIONS_FILE}\n")
+    return 0
+
+
+# What enabling a profile writes, so a scaffold's first commit can vouch for them.
+PROFILE_FILES = (
+    ".agenticframework/compliance.json",
+    ".agenticframework/process-gates.json",
+    ".agenticframework/providers.json",
+    ".github/workflows/agentsmith-supply-chain.yml",
+)
+
+
+def with_profile_ports(text: str) -> str:
+    """A providers.json as a repository on a compliance profile needs it."""
+    import json
+
+    declared = json.loads(text)
+    ports = declared.setdefault("providers", {})
+    security = ports.get("security")
+    if isinstance(security, dict):
+        ports.setdefault("compliance", {**security, "command": "agentsmith compliance"})
+    evals = ports.get("evals")
+    if isinstance(evals, dict):
+        # A suite with nothing to grade may not pass by declaration on a profile.
+        evals.pop("not_gradable", None)
+        evals.pop("no_verdict", None)
+    return json.dumps(declared, indent=2) + "\n"
+
+
+def compliance_enable(profile: str, root: Optional[Path] = None) -> int:
+    """Put a governed repository on a compliance profile."""
+    import json
+
+    from agentsmith import compliance as c
+
+    root = Path(root or Path.cwd())
+    if profile not in c.PROFILES:
+        print(f"❌ unknown profile {profile!r}; known: {', '.join(c.PROFILES)}", file=sys.stderr)
+        return 2
+    gates = root / ".agenticframework" / "process-gates.json"
+    if not gates.is_file():
+        print("❌ this repository is not governed yet: run `agentsmith tenant init` or `tenant adopt` first",
+              file=sys.stderr)
+        return 2
+    # No Python runtime in the app: it reaches the same guards through `agentsmith runtime serve`.
+    sidecar = any((root / ".github" / "workflows" / f"ci-{s}.yml").is_file() for s in ("ts-react", "go"))
+    templates = _compliance_framework() / "templates" / "compliance" / profile
+    target = root / c.DECLARATION_FILE
+    if not target.exists():
+        declared = json.loads((templates / "compliance.json").read_text(encoding="utf-8"))
+        declared["runtime"] = "sidecar" if sidecar else "python"
+        target.write_text(json.dumps(declared, indent=2) + "\n", encoding="utf-8")
+    additions = json.loads((templates / "profile.json").read_text(encoding="utf-8"))
+    config = json.loads(gates.read_text(encoding="utf-8"))
+    config["compliance"] = {"profile": profile, "mode": "enforce"}
+    extends = config.setdefault("extends", {})
+    have = {p["id"] for p in extends.get("pillars", [])}
+    extends["pillars"] = [*extends.get("pillars", []), *[p for p in additions["pillars"] if p["id"] not in have]]
+    extends["session_start"] = [*extends.get("session_start", []),
+                                *[s for s in additions["session_start"] if s not in extends.get("session_start", [])]]
+    gates.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    providers = root / ".agenticframework" / "providers.json"
+    if providers.is_file():
+        providers.write_text(with_profile_ports(providers.read_text(encoding="utf-8")), encoding="utf-8")
+    job = root / ".github" / "workflows" / "agentsmith-supply-chain.yml"
+    if not job.exists():
+        job.parent.mkdir(parents=True, exist_ok=True)
+        source = _compliance_framework() / "workflow-templates" / "agentsmith-supply-chain.yml"
+        job.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"✅ {profile} profile on. Next: fill in {c.DECLARATION_FILE}, then `agentsmith compliance status`.")
+    return 0
+
+
 def design_new(slug: str, scope: Sequence[str], root: Optional[Path] = None) -> int:
     """Write the design skeleton the gate asks for — every pillar, already asked."""
+    import json
+
     gm = _gate_models()
     registry = _registry(gm)
     root = Path(root or Path.cwd())
+    config = root / ".agenticframework" / "process-gates.json"
+    if config.is_file():
+        # A repository's own pillars, such as a compliance profile's.
+        extends = json.loads(config.read_text(encoding="utf-8")).get("extends")
+        if extends:
+            registry = registry.merged(gm.Extends.model_validate(extends))
     target = root / DESIGNS_DIR / f"{slug}.md"
     if target.exists():
         print(f"❌ {target.relative_to(root)} already exists — edit it, or choose another slug", file=sys.stderr)

@@ -64,3 +64,12 @@ podAnnotations: {}
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# Scheduled database backup (scripts/backup.sh does the same outside Kubernetes).
+# Point existingClaim at encrypted storage inside your residency boundary.
+backup:
+  enabled: false
+  schedule: "0 2 * * *"
+  image: "postgres:16"
+  existingClaim: ""
+  databaseUrlSecret: ""

@@ -79,6 +79,7 @@ __all__ = [
 ]
 
 APPROVALS_FILE = ".agenticframework/approvals.jsonl"
+ATTESTATIONS_FILE = ".agenticframework/attestations.jsonl"
 CheckKind = Literal["design", "review", "mechanical"]
 # The two ids the records cite each other by: a deviation in a design, and the
 # approval the owner recorded at a terminal.

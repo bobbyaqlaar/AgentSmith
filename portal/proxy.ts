@@ -1,4 +1,4 @@
-// portal/middleware.ts — dashboard auth gate.
+// portal/proxy.ts — dashboard auth gate.
 //
 // Default: HTTP basic auth (docs/DESIGN.md › Universal Observability Platform: "team deployment: basic auth
 // minimum"). Set OPS_PORTAL_USER / OPS_PORTAL_PASSWORD. If unset, the portal
@@ -10,6 +10,7 @@
 // HTML page are redirected to /api/auth/login; API requests get a plain 401.
 
 import { NextResponse } from "next/server";
+import { appendAuditEvent } from "./lib/auditLog";
 import type { NextRequest } from "next/server";
 import {
   ACTOR_HEADER,
@@ -23,7 +24,8 @@ import {
   type Grant,
 } from "./lib/authz";
 import { constantTimeEquals } from "./lib/constantTime";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "./lib/sessionToken";
+import { SESSION_COOKIE_NAME, refreshedSessionToken, secureCookies, sessionLimits, verifySessionToken, type VerifiedSession } from "./lib/sessionToken";
+import { clearFailures, isLockedOut, LOCKOUT_SECONDS, recordFailure } from "./lib/signInPolicy";
 import {
   checkSessionRevocation,
   interpretStatusResponse,
@@ -56,6 +58,10 @@ import {
 // (contract/ops/v1) — authenticated inside the handler by that app's own Ops
 // token, which alone decides the app.
 //
+// /api/compliance/sync is an app's CD exchanging compliance attestations
+// (contract/compliance/v1) — authenticated inside the handler by that app's own
+// Ops token, which alone decides the app.
+//
 // /api/dev/scaffold/* is `agentsmith tenant init --from <id>` pulling an intake
 // and marking it consumed — authenticated inside the handler by that intake's
 // own single-use token. Creating an intake (/api/dev/intakes) is NOT excluded:
@@ -70,7 +76,7 @@ import {
 // a latent auth-bypass footgun (see docs/PRODUCT_ARCHIVE.md 2.6).
 export const config = {
   matcher:
-    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/runs/ingest(?:/|$)|api/dev/ingest(?:/|$)|api/ops/ingest(?:/|$)|api/dev/scaffold(?:/|$)|api/auth(?:/|$)).*)",
+    "/((?!_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$|api/sync(?:/|$)|api/widget(?:/|$)|api/audit/append(?:/|$)|api/runs/ingest(?:/|$)|api/dev/ingest(?:/|$)|api/ops/ingest(?:/|$)|api/compliance/sync(?:/|$)|api/dev/scaffold(?:/|$)|api/auth(?:/|$)).*)",
 };
 
 // Strip any client-supplied copy of the trusted access header before it can
@@ -105,7 +111,7 @@ async function probeSessionStatus(
 /** SSO session check. `unavailable` means session-status probe failed under fail-closed. */
 async function checkSsoSession(
   request: NextRequest
-): Promise<{ email?: string } | null | "unavailable"> {
+): Promise<{ email?: string; session: VerifiedSession } | null | "unavailable"> {
   if (!process.env.SSO_SESSION_SECRET) return null; // misconfigured — fail closed, see middleware() below
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
@@ -117,7 +123,7 @@ async function checkSsoSession(
   if (!session) return null;
   // Server-side revocation check (docs/PRODUCT_ARCHIVE.md 4.14 / SEC-SSO-001) —
   // see lib/sessionRevocation.ts for why this is a fetch to a Node-runtime
-  // route rather than a direct DB call from this Edge-runtime middleware.
+  // route rather than a direct DB call from here.
   // SSO_REVOCATION_MODE=fail-closed → 503 when session-status unreachable;
   // default remains fail-open (legacy).
   const decision = await checkSessionRevocation({
@@ -127,14 +133,19 @@ async function checkSsoSession(
   });
   if (decision === "unavailable") return "unavailable";
   if (decision === "deny") return null;
-  return { email: session.email };
+  return { email: session.email, session };
 }
 
 function wantsHtml(request: NextRequest): boolean {
   return (request.headers.get("accept") ?? "").includes("text/html");
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  // A browser sends Basic credentials on a cross-site POST by itself. No page of
+  // this portal makes one, and machine routes never reach this function.
+  if (!["GET", "HEAD", "OPTIONS"].includes(request.method) && request.headers.get("sec-fetch-site") === "cross-site") {
+    return NextResponse.json({ error: "cross-site requests are refused" }, { status: 403 });
+  }
   if (process.env.SSO_ENABLED === "true") {
     if (!process.env.SSO_SESSION_SECRET) {
       return new NextResponse(
@@ -157,7 +168,13 @@ export async function middleware(request: NextRequest) {
     if (session) {
       const access = getAccessForSsoEmail(session.email);
       const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.grants, access.actor);
-      return NextResponse.next({ request: { headers } });
+      const response = NextResponse.next({ request: { headers } });
+      // Activity extends the idle window, never the absolute limit.
+      const refreshed = await refreshedSessionToken(session.session);
+      if (refreshed) {
+        response.cookies.set(SESSION_COOKIE_NAME, refreshed, { httpOnly: true, secure: secureCookies(), sameSite: "lax", maxAge: sessionLimits().absoluteSeconds, path: "/" });
+      }
+      return response;
     }
 
     if (wantsHtml(request)) {
@@ -166,6 +183,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
     return NextResponse.json({ error: "authentication required (SSO)" }, { status: 401 });
+  }
+
+  // A compliance profile refuses shared-password sign-in outright: it cannot be
+  // tied to multi-factor, a session or a named person.
+  if (process.env.COMPLIANCE_PROFILE) {
+    return new NextResponse("Ops Portal misconfigured: a compliance profile requires SSO_ENABLED=true; HTTP Basic is refused.", { status: 500 });
   }
 
   // ── Default: HTTP basic auth ──────────────────────────────────────────────
@@ -188,6 +211,11 @@ export async function middleware(request: NextRequest) {
     const sepIdx = decoded.indexOf(":");
     const reqUser = sepIdx === -1 ? decoded : decoded.slice(0, sepIdx);
     const reqPass = sepIdx === -1 ? "" : decoded.slice(sepIdx + 1);
+    // By account alone: a forwarded address is whatever the caller says it is.
+    const throttleKey = reqUser;
+    if (isLockedOut(throttleKey)) {
+      return new NextResponse("Too many failed sign-ins. Try again later.", { status: 429, headers: { "Retry-After": String(LOCKOUT_SECONDS) } });
+    }
     // Legacy single-user fallback (OPS_PORTAL_USER/PASSWORD) is always an
     // Administrator on every app — same behavior as before RBAC existed. OPS_PORTAL_USERS
     // (multi-user, per-user role + tenant scope) takes precedence when set.
@@ -202,15 +230,23 @@ export async function middleware(request: NextRequest) {
       const userOk = constantTimeEquals(user ?? "", reqUser);
       const passOk = constantTimeEquals(pass ?? "", reqPass);
       if (userOk && passOk) {
+        clearFailures(throttleKey);
         const headers = withAccessHeaders(stripForgedAccessHeaders(request), SINGLE_USER_GRANTS, reqUser);
         return NextResponse.next({ request: { headers } });
       }
     } else {
       const access = verifyBasicAuthCredentials(reqUser, reqPass);
       if (access) {
+        clearFailures(throttleKey);
         const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.grants, access.actor);
         return NextResponse.next({ request: { headers } });
       }
+    }
+    recordFailure(throttleKey);
+    // Once per lockout: every failure would let anyone fill the audit log.
+    if (isLockedOut(throttleKey)) {
+      await appendAuditEvent({ eventType: "session_denied", actorId: reqUser, tenantId: null, details: { reason: "locked out after repeated failed sign-ins" } })
+        .catch(() => undefined); // the refusal stands whether or not it could be logged
     }
   }
 

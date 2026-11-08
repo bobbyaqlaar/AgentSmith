@@ -34,6 +34,7 @@ SEE = "See AgentSmith's docs/process-gates.md."
 PROTECTED = (
     ".githooks/",
     ".agenticframework/approvals.jsonl",
+    ".agenticframework/attestations.jsonl",
     ".agenticframework/process-gates.json",
     ".claude/settings.json",
     ".cursor/hooks.json",
@@ -248,6 +249,11 @@ def refusal(command: str, hooks_path: str = ".githooks") -> Optional[str]:
             found = _git_refusal(words, hooks_path)
             if found:
                 return found
+
+        if program == "agentsmith" and len(words) > 1 and words[1] == "attest":
+            return ("`agentsmith attest` is a person's signature and asks for it at a terminal — "
+                    "an agent's shell has none, so this cannot complete here. "
+                    "Ask the person who owns the obligation. " + SEE)
 
         if program == "agentsmith" and len(words) > 1 and words[1] == "approve":
             return ("`agentsmith approve` records the owner's permission and asks for it at a terminal — "

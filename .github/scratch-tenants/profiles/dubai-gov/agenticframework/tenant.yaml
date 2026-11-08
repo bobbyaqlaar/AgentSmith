@@ -1,0 +1,10 @@
+tenant:
+  id: scratch-python-dubai-gov
+  isolation: shared
+
+security:
+  input_guardrail: custom
+
+moderation:
+  mode: required
+  hook: "app.guards:classify_output"

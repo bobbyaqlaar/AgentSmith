@@ -384,6 +384,20 @@ if [ -d "$INSTALLER_DIR/fixtures/security" ]; then
   success "fixtures/security/ installed"
 fi
 
+# The compliance catalogue, its profile templates and the published contracts,
+# all read file-relative by `agentsmith compliance` and `agentsmith conformance`.
+if [ -d "$INSTALLER_DIR/fixtures/compliance" ]; then
+  mkdir -p "$FRAMEWORK_DIR/fixtures/compliance" "$FRAMEWORK_DIR/templates/compliance"
+  cp -r "$INSTALLER_DIR/fixtures/compliance/." "$FRAMEWORK_DIR/fixtures/compliance/"
+  cp -r "$INSTALLER_DIR/templates/compliance/." "$FRAMEWORK_DIR/templates/compliance/"
+  success "compliance catalogue installed"
+fi
+if [ -d "$INSTALLER_DIR/contract" ]; then
+  mkdir -p "$FRAMEWORK_DIR/contract"
+  cp -r "$INSTALLER_DIR/contract/." "$FRAMEWORK_DIR/contract/"
+  success "contract/ installed"
+fi
+
 # The gate's own hooks. `agentsmith tenant init` / `tenant adopt` copy these
 # into a tenant and arm core.hooksPath at them; a machine without them provisions
 # a tenant with NO hooks at all, since a hooks path overrides .git/hooks

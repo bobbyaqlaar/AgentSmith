@@ -1977,8 +1977,8 @@ CATALOGUE: tuple[Suite, ...] = (
             Mutation(
                 "a scaffold design leaves out the manifest committed beside it",
                 "agentsmith/cli.py",
-                "            tenant_id, stack, style, agentic, [*files, SCAFFOLD_MANIFEST], registry.get(",
-                "            tenant_id, stack, style, agentic, files, registry.get(",
+                "            tenant_id, stack, style, agentic, [*files, SCAFFOLD_MANIFEST],\n",
+                "            tenant_id, stack, style, agentic, files,\n",
             ),
         ),
     ),

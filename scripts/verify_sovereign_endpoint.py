@@ -109,7 +109,7 @@ def _chat(
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(url, data=body, method="POST", headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 - the endpoint the operator is probing
         data = json.loads(resp.read().decode("utf-8"))
     choices = data.get("choices") or []
     if not choices:
@@ -127,8 +127,9 @@ def _generate_local_hf(token: str, model: str, prompt: str) -> str:
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    tok = AutoTokenizer.from_pretrained(model, token=token)
-    mdl = AutoModelForCausalLM.from_pretrained(model, dtype=torch.float32, token=token)
+    # nosec B615 below: a manual probe of the model the operator names, never part of a deployment.
+    tok = AutoTokenizer.from_pretrained(model, token=token)  # nosec B615
+    mdl = AutoModelForCausalLM.from_pretrained(model, dtype=torch.float32, token=token)  # nosec B615
     mdl.eval()
     text = prompt
     if getattr(tok, "chat_template", None):

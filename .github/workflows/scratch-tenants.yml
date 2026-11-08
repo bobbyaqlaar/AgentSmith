@@ -81,6 +81,11 @@ jobs:
             stack: python-fastapi
             repo: bobbyaqlaar/agentsmith-scratch-python-uv
             ci: "CI: Python/FastAPI Guardrails"
+          - app: python-dubai-gov
+            stack: python-fastapi
+            profile: dubai-gov
+            repo: bobbyaqlaar/agentsmith-scratch-dubai-gov
+            ci: "CI: Python/FastAPI Guardrails"
     # One run per tenant at a time: two runs pushing the same scratch repo
     # would race, and the second's CI result would be read against the first's.
     concurrency:
@@ -126,7 +131,7 @@ jobs:
       - name: Build the tenant from apps/${{ matrix.app }} with tenant init
         run: >-
           bash agentsmith/.github/scratch-tenants/build.sh "${{ matrix.app }}" "$GITHUB_WORKSPACE/tenant"
-          "${{ matrix.stack }}" "$GITHUB_SHA"
+          "${{ matrix.stack }}" "$GITHUB_SHA" "${{ matrix.profile }}"
 
       - name: Push
         id: push

@@ -85,6 +85,47 @@ version table being consulted.
 
 ## [Unreleased]
 
+### Added — an opt-in compliance profile, `dubai-gov`
+
+For an application built for a UAE government entity. **Nothing changes for a repository without the profile**: every new branch in the runtime sits
+behind it. No span attribute changes. The hook interface gains one subcommand, `process-gate compliance`; a tenant without a profile gets "nothing checked".
+
+`agentsmith compliance enable` (or `tenant init --profile dubai-gov`) adds three pillars, a catalogue of obligations mapped to the
+DESC ISR, OWASP LLM 2025, NIST AI RMF, ISO/IEC 42001 themes, the UAE Charter, Digital Dubai and UAE law, and a production gate. Each obligation is enforced, verified,
+or signed by a named person at a terminal (`agentsmith attest`) or in the portal. On the profile a tenant app raises `ComplianceRefused` and stops the affected
+function when its record cannot be written, the app is stopped, or classified data would leave the declared boundary.
+
+**Portal** (schema additive; run `npm run db:migrate`): checklist, human-decision queue, decision trail, incidents, stop control, role `compliance_officer`. For
+every deployment: separate idle and absolute session limits, sign-in lockout for HTTP Basic, security headers, sign-ins and dead-letter actions in the audit log, signed
+audit and access exports. An Administrator and a Super user no longer hold the new attest permission. **`/ops` and the portal now send a
+Content-Security-Policy; anything framing the portal needs an exception.** Cross-site POSTs to signed-in routes are refused.
+
+**Runtime:** `CompletionResult.ai_generated`; Arabic prompt-guard patterns and test cases; `agentsmith_embeddings.tenant_id` (additive). On the profile, the developer pipeline, eval router, trace export,
+Slack and Teams notices and Ops reports stay inside the declared boundary, and an embedding model must already be on disk.
+
+**Other stacks.** `agentsmith runtime serve` exposes the guards over localhost (`contract/runtime/v1`), so a TypeScript or Go app can go on the profile. **MCP:** `agentsmith compliance mcp-pin` and `mcp-verify` pin servers and tool definitions. **Article 50(2):** every completion carries `provenance`, a machine-readable mark. On the profile a gate result must set `requested_by`.
+
+### Changed — dependencies
+
+- **Portal: Next.js 14 to 16 and React 18 to 19**, for a critical advisory. Self-hosters rebuild the image; Node 20.9 or later. The auth entry point is now `portal/proxy.ts` and runs on Node.
+- **`pytest` 9** and `pytest-asyncio` 1.x.
+- **`cryptography` 43 to 50**, and fixed releases of aiohttp, certifi, multidict, yarl, pyasn1, pyjwt, urllib3 and the OpenTelemetry set.
+- **LangGraph and LangChain moved out of `requirements.lock`** into `requirements-pipeline.lock`, and to 1.x. Only `scripts/multi_agent_system.py` uses them; install that lock to run it. `pydantic` is now a direct dependency.
+- Phoenix runs with its web analytics off in `docker-compose.yml`. New workflow `.github/workflows/supply-chain.yml`; signed provenance on releases.
+
+### Changed — the security claims say what the code does
+
+**Evidence packs change.** `frameworks.owasp` tags now use the OWASP LLM Top 10 **2025** numbering; they carried 2023 numbers
+under a 2025 heading, and the report now names the edition. For example, PII controls move from `LLM06` to `LLM02`, and `SEC-EVAL-002` (fairness) no longer carries a
+tag. Two controls are split: `SEC-HITL-001` proves the workflow pauses, and new `SEC-HITL-002` covers who decided;
+`SEC-SOV-001` covers the shipped template, and new `SEC-SOV-002` the application's own residency, both on the compliance profile below. Both new
+rows are `subject: provider`, so a tenant's `security check` shows two more `not_applicable` rows and the same verdict. No span
+attribute, hook interface or schema changes.
+
+The README, the UAE page, the ISO map and the design doc no longer call human oversight Met or describe compliance. The UAE page
+now covers the DESC Information Security Regulation, the other federal instruments and PDPL's government exclusion. Annex A
+identifiers that could not be confirmed are flagged.
+
 ### Changed — the documents match what ships; two unused files archived
 
 A review of the live documents against the code. The manual no longer tells a tenant to post to the deprecated

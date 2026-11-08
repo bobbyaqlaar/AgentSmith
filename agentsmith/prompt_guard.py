@@ -98,6 +98,18 @@ def _normalise(text: str) -> str:
 
 
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    # Arabic: a UAE application is attacked in Arabic too (OWASP LLM01).
+    (
+        "ignore_previous_ar",
+        re.compile(r"(تجاهل|تجاهلي|انس|انسي|تخط|تخطي)\s+(جميع\s+|كل\s+)?(ال)?(تعليمات|أوامر|إرشادات)"),
+    ),
+    (
+        "reveal_system_ar",
+        re.compile(
+            r"(اكشف|اكشفي|أظهر|اظهر|اعرض|اطبع)\s+(لي\s+)?"
+            r"(موجه\s+النظام|تعليمات\s+النظام|التعليمات\s+(المخفية|السرية))"
+        ),
+    ),
     (
         "instruction_override",
         re.compile(

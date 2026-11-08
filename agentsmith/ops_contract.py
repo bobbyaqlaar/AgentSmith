@@ -85,6 +85,18 @@ class DeadLetterMessage(_Message):
     gate_id: Optional[str] = Field(default=None, max_length=ID_LIMIT)
 
 
+class ComplianceRecordMessage(_Message):
+    """One record from a worker's compliance outbox (contract/compliance/v1)."""
+
+    kind: Literal["compliance_record"] = "compliance_record"
+    record_id: int = Field(ge=1)
+    record_kind: str = Field(min_length=1, max_length=64)
+    payload: dict[str, Any]
+    created_at: str
+    prev_hash: str = Field(min_length=1, max_length=128)
+    record_hash: str = Field(min_length=1, max_length=128)
+
+
 class SettingsMessage(_Message):
     """What the tenant declares the portal should know. Never a secret: the
     replay key is the portal's to issue."""
@@ -104,7 +116,9 @@ class SettingsMessage(_Message):
         return self
 
 
-Message = Annotated[Union[RunMessage, DeadLetterMessage, SettingsMessage], Field(discriminator="kind")]
+Message = Annotated[
+    Union[RunMessage, DeadLetterMessage, SettingsMessage, ComplianceRecordMessage], Field(discriminator="kind")
+]
 MESSAGE: TypeAdapter[Message] = TypeAdapter(Message)
 
 
@@ -144,6 +158,11 @@ def send(message: BaseModel, *, headers: Optional[dict[str, str]] = None) -> Opt
     the redirect points."""
     url, token = os.environ.get(URL_ENV, "").strip(), os.environ.get(TOKEN_ENV, "").strip()
     if not url or not token:
+        return None
+    from agentsmith import compliance
+
+    if not compliance.outbound_allowed(url):
+        _say_once(f"boundary:{url}", f"Ops ingest at {url} is outside the declared boundary — nothing was sent")
         return None
     try:
         import httpx

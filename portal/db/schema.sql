@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS widget_tokens (
 CREATE TABLE IF NOT EXISTS audit_log (
     event_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "timestamp" TIMESTAMPTZ NOT NULL DEFAULT now(),
-    event_type  TEXT NOT NULL CHECK (event_type IN ('hook_bypass', 'hitl_promotion', 'config_change', 'tenant_created')),
+    event_type  TEXT NOT NULL CHECK (event_type IN ('hook_bypass', 'hitl_promotion', 'config_change', 'tenant_created', 'compliance_attestation', 'session_signin', 'session_signout', 'session_denied', 'dlq_replay', 'dlq_discard', 'hitl_decision', 'stop_control', 'access_export', 'incident')),
     actor_id    TEXT NOT NULL,
     -- Deliberately no ON DELETE CASCADE (unlike agent_history_entries) and no
     -- ON DELETE SET NULL either — the latter would itself be an UPDATE on
@@ -90,6 +90,10 @@ CREATE TABLE IF NOT EXISTS audit_log (
     details     JSONB NOT NULL DEFAULT '{}'::jsonb,
     signature   TEXT NOT NULL    -- hex HMAC-SHA256 of (event_id, timestamp, event_type, actor_id, tenant_id, details)
 );
+
+-- Databases created before these event types existed: widen the CHECK in place.
+ALTER TABLE audit_log DROP CONSTRAINT IF EXISTS audit_log_event_type_check;
+ALTER TABLE audit_log ADD CONSTRAINT audit_log_event_type_check CHECK (event_type IN ('hook_bypass', 'hitl_promotion', 'config_change', 'tenant_created', 'compliance_attestation', 'session_signin', 'session_signout', 'session_denied', 'dlq_replay', 'dlq_discard', 'hitl_decision', 'stop_control', 'access_export', 'incident'));
 
 CREATE INDEX IF NOT EXISTS idx_audit_log_tenant ON audit_log (tenant_id, "timestamp" DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_log_type ON audit_log (event_type, "timestamp" DESC);
@@ -292,6 +296,90 @@ CREATE TABLE IF NOT EXISTS tenant_intakes (
     consumed_at   TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_tenant_intakes_tenant ON tenant_intakes (tenant_id);
+
+-- One signature on one obligation in the compliance catalogue
+-- (contract/compliance/v1/protocol.md). Append-only: a new signature supersedes
+-- an old one, so the history of who signed what is never lost.
+CREATE TABLE IF NOT EXISTS compliance_attestations (
+    attestation_id TEXT NOT NULL,
+    tenant_id      TEXT NOT NULL,
+    obligation_id  TEXT NOT NULL,
+    actor          TEXT NOT NULL,
+    role           TEXT NOT NULL,
+    evidence       TEXT NOT NULL,
+    note           TEXT NOT NULL DEFAULT '',
+    channel        TEXT NOT NULL CHECK (channel IN ('tty', 'portal')),
+    attested_at    TIMESTAMPTZ NOT NULL,
+    expires_at     TIMESTAMPTZ,
+    recorded_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, attestation_id)
+);
+CREATE INDEX IF NOT EXISTS idx_compliance_attestations_tenant ON compliance_attestations (tenant_id, obligation_id, attested_at DESC);
+
+CREATE OR REPLACE FUNCTION compliance_attestations_immutable() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'compliance_attestations is append-only — % is not permitted', TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS compliance_attestations_no_update ON compliance_attestations;
+CREATE TRIGGER compliance_attestations_no_update BEFORE UPDATE ON compliance_attestations
+    FOR EACH ROW EXECUTE FUNCTION compliance_attestations_immutable();
+DROP TRIGGER IF EXISTS compliance_attestations_no_delete ON compliance_attestations;
+CREATE TRIGGER compliance_attestations_no_delete BEFORE DELETE ON compliance_attestations
+    FOR EACH ROW EXECUTE FUNCTION compliance_attestations_immutable();
+
+-- The record a worker keeps, forwarded when the portal is up
+-- (agentsmith/compliance.py). Append-only, like the worker's own copy.
+CREATE TABLE IF NOT EXISTS compliance_records (
+    tenant_id    TEXT NOT NULL,
+    record_id    BIGINT NOT NULL,
+    record_kind  TEXT NOT NULL,
+    payload      JSONB NOT NULL,
+    created_at   TIMESTAMPTZ NOT NULL,
+    prev_hash    TEXT NOT NULL,
+    record_hash  TEXT NOT NULL,
+    received_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, record_id)
+);
+CREATE INDEX IF NOT EXISTS idx_compliance_records_kind ON compliance_records (tenant_id, record_kind, record_id DESC);
+
+-- One decision per pending gate: the primary key is what stops a second one.
+CREATE TABLE IF NOT EXISTS hitl_decisions (
+    tenant_id   TEXT NOT NULL,
+    record_id   BIGINT NOT NULL,
+    approved    BOOLEAN NOT NULL,
+    actor       TEXT NOT NULL,
+    rationale   TEXT NOT NULL,
+    decided_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, record_id)
+);
+
+CREATE OR REPLACE FUNCTION compliance_records_immutable() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION '% is append-only — % is not permitted', TG_TABLE_NAME, TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS compliance_records_no_change ON compliance_records;
+CREATE TRIGGER compliance_records_no_change BEFORE UPDATE OR DELETE ON compliance_records
+    FOR EACH ROW EXECUTE FUNCTION compliance_records_immutable();
+DROP TRIGGER IF EXISTS hitl_decisions_no_change ON hitl_decisions;
+CREATE TRIGGER hitl_decisions_no_change BEFORE UPDATE OR DELETE ON hitl_decisions
+    FOR EACH ROW EXECUTE FUNCTION compliance_records_immutable();
+
+CREATE TABLE IF NOT EXISTS incidents (
+    incident_id BIGSERIAL PRIMARY KEY,
+    tenant_id   TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    severity    TEXT NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+    details     TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+    opened_by   TEXT NOT NULL,
+    opened_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    closed_by   TEXT,
+    closed_at   TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_incidents_tenant ON incidents (tenant_id, opened_at DESC);
 
 -- Deliberately NOT created here: dlq_entries, idempotency_keys.
 --

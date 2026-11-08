@@ -335,6 +335,19 @@ jobs:
       - name: "npm run test:db — audit log HMAC sign/verify + tamper detection"
         # agentsmith:gate needs=npm
         run: npm run test:db
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+      - name: "SEC-AUDIT-002 — the database refuses changes to the audit log"
+        working-directory: .
+        env:
+          AUDIT_APPEND_ONLY_DSN: ${{ env.DATABASE_URL }}
+          PYTHONPATH: .
+          AGENTSMITH_DIR: .
+        run: |
+          pip install --require-hashes -r requirements.lock
+          echo '{"controls": ["SEC-AUDIT-002"]}' | python3 scripts/security_port.py check \
+            | python3 -c 'import json,sys; rows=json.load(sys.stdin)["controls"]; print(rows); sys.exit(0 if rows[0]["result"]=="pass" else 1)'
       - name: "npm run build — the portal builds"
         # agentsmith:gate needs=npm
         run: npm run build

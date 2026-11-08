@@ -4,7 +4,7 @@
 # INSTALLED on this machine (install-ai-stack.sh), its CI taking the provider
 # from <framework-ref> — the commit under test.
 #
-#   usage: build.sh <app> <target-dir> <stack> <framework-ref>
+#   usage: build.sh <app> <target-dir> <stack> <framework-ref> [profile]
 #          app   = a directory under apps/ (ts-react, ts-react-pnpm, go,
 #                  python-fastapi, python-uv). One stack can have several apps,
 #                  one per scenario.
@@ -40,6 +40,7 @@ APP_NAME="${1:?$USAGE}"
 TARGET="${2:?$USAGE}"
 STACK="${3:?$USAGE}"
 REF="${4:?$USAGE}"
+PROFILE="${5:-}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$HERE/apps/$APP_NAME"
 WORKFLOW_AUTHOR="AgentSmith scratch-tenants"
@@ -83,6 +84,11 @@ cp "$HERE/SCRATCH_TENANT.md" SCRATCH_TENANT.md
 # scaffold, so `tenant init`'s never-overwrite rule for the pack stays exercised.
 mkdir -p .agent-rfc/security
 cp "$HERE/security-pack/"*.yaml .agent-rfc/security/
+# A profile's declaration, what a tenant writes when it goes on the profile.
+if [ -n "$PROFILE" ]; then
+  mkdir -p .agenticframework
+  cp -R "$HERE/profiles/$PROFILE/agenticframework/." .agenticframework/
+fi
 find . -name __pycache__ -type d -not -path './node_modules/*' -prune -exec rm -rf {} +
 git add -A
 git commit -q -m "feat: the $APP_NAME app, before AgentSmith"
@@ -90,7 +96,7 @@ git branch -M main
 
 # ── 3. Scaffold it ───────────────────────────────────────────────────────────
 LOG="$(mktemp)"
-if ! agentsmith tenant init "scratch-$APP_NAME" --stack "$STACK" --framework-ref "$REF" --root . >"$LOG" 2>&1; then
+if ! agentsmith tenant init "scratch-$APP_NAME" --stack "$STACK" --framework-ref "$REF" --root . ${PROFILE:+--profile "$PROFILE"} >"$LOG" 2>&1; then
   cat "$LOG"
   echo "::error::agentsmith tenant init failed for the $APP_NAME tenant"
   exit 1
@@ -124,4 +130,21 @@ if [ -z "$commit" ]; then
   exit 1
 fi
 eval "$commit"
+# ── 6. On a compliance profile: a conforming app passes, a broken one does not ──
+if [ -n "$PROFILE" ]; then
+  verdict() { agentsmith compliance check --stage production </dev/null | python3 -c 'import json,sys; r=json.load(sys.stdin); print(r["verdict"]); [print(x["id"], x["message"], file=sys.stderr) for x in r["rows"] if x["result"]=="fail"]'; }
+  if [ "$(verdict)" != "pass" ]; then
+    echo "::error::the $APP_NAME tenant does not meet the $PROFILE profile (see above)"
+    exit 1
+  fi
+  BROKEN="$(mktemp -d)"
+  cp -R . "$BROKEN/tenant"
+  sed -i.bak 's/compliance=True/compliance=False/' "$BROKEN/tenant/app/workflows.py"
+  if [ "$(cd "$BROKEN/tenant" && verdict 2>/dev/null)" != "fail" ]; then
+    echo "::error::a tenant with its human gate removed still passes the $PROFILE profile"
+    exit 1
+  fi
+  rm -rf "$BROKEN"
+  echo "profile $PROFILE: the app passes, and passes no longer with its gate removed"
+fi
 echo "built $APP_NAME tenant at $TARGET: $(git log --oneline | wc -l | tr -d ' ') commits, head $(git log -1 --format=%s)"

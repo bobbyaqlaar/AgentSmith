@@ -1,6 +1,6 @@
-// portal/test/middleware.test.ts — which paths skip human authentication.
+// portal/test/proxy.test.ts — which paths skip human authentication.
 //
-// middleware.ts excludes a handful of machine-to-machine paths from basic auth
+// proxy.ts excludes a handful of machine-to-machine paths from basic auth
 // and SSO; each authenticates inside its own handler instead. Until
 // 2026-10-01 nothing tested that list, though it is the portal's widest door:
 // plain prefix matching here was once an auth bypass (docs/PRODUCT_ARCHIVE.md
@@ -8,7 +8,7 @@
 // /api/dev/scaffold (.agent-rfc/designs/portal-intake-pull.md), and it pins the
 // exclusions that were already there.
 //
-// Reads the matcher from the source rather than importing middleware.ts, which
+// Reads the matcher from the source rather than importing proxy.ts, which
 // pulls in Next: the matcher is a literal, and a literal is what is tested.
 
 import assert from "node:assert/strict";
@@ -16,9 +16,9 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SOURCE = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "..", "middleware.ts"), "utf8");
+const SOURCE = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "..", "proxy.ts"), "utf8");
 const literal = SOURCE.match(/matcher:\s*("(?:[^"\\]|\\.)*")/);
-assert.ok(literal, "could not find config.matcher in middleware.ts — this test would check nothing");
+assert.ok(literal, "could not find config.matcher in proxy.ts — this test would check nothing");
 const PATTERN: string = JSON.parse(literal[1]);
 const MATCHER = new RegExp(`^${PATTERN}$`);
 

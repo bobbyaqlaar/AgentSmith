@@ -56,7 +56,7 @@ monitoring.
   not yet run through all of it in a deployed environment.
 - **It does not certify compliance.** It gives evidence, and
   [docs/security-framework-map.md](docs/security-framework-map.md) says where that stops: of the OWASP
-  Top 10 for Agentic Applications, five are partly covered and five are not, and nothing yet helps
+  Top 10 for Agentic Applications, six are partly covered and four are not, and little yet helps
   with EU AI Act Article 50.
 
 > **What this is:** an introduction to AgentSmith — what it is for, how it is built, and what
@@ -84,10 +84,11 @@ monitoring.
    unified `SEC-*` harness: prompt injection guard, tool allowlist,
    structured-output gate, PII scrub, moderation hook, tamper-evident
    audit, and strict CI evidence packs.
-8. **Stay compliant to evolving regulations** — UAE **PDPL** decision-path
-   PII handling, **Federal Decree-Law No. 34/2023** fairness gates,
-   sovereign / in-border model profiles, and mandatory HITL for high-impact
-   actions — built into the rails, not bolted on after launch.
+8. **Get ready for evolving regulations** — PII scrubbing before the first
+   model call, **Federal Decree-Law No. 34/2023** fairness suites, sovereign /
+   in-border model profiles, and durable human gates for high-impact actions.
+   Controls and evidence, not a compliance certificate: [the UAE map](./docs/uae-regulatory.md)
+   says what is partial.
 9. **Stay reliable** — three-tier recovery (Temporal retries → opt-in
    self-correction → human DLQ), hallucination-rate hard gates, and
    streaming TTFT budgets so failures are recovered, not lost.
@@ -111,7 +112,7 @@ monitoring.
 | **LLM Gateway** | Single choke point for **workload** provider calls — budget reservation, degrade ladder, circuit breaker, redaction, prompt guard, moderation hook. Workers and activities must not bypass it. The eval harness (`scripts/cost_router.py`) is the one path that does not go through it, by design — see docs/UserManual.md |
 | **Vector / RAG Memory** | Short-term conversation memory + vector store substrate (`embeddings.py` / `vector_store.py`; hash or sentence-transformers; optional pgvector) |
 | **Security Framework** | `run-security-checks.py` + `SEC-*` registry — OWASP LLM · NIST AI RMF · MITRE ATLAS · ISO/IEC 42001 evidence packs in CI (`strict: true`) |
-| **Regulations Compliance** | UAE / sovereign starter (`templates/uae-sovereign/`), PDPL pre-call scrub, fairness + adversarial eval suites, ISO thematic control map |
+| **Regulatory Readiness** | UAE / sovereign starter (`templates/uae-sovereign/`), pre-call PII scrub, fairness + adversarial eval suites, ISO thematic control map |
 | **Evaluations** | Golden dataset + LLM-as-judge scorecard gating every PR; fairness, hallucination, adversarial, RAG-poisoning, and TTFT suites |
 | **Multi-Agent Orchestration** | Architect → Developer → Validator pipeline — local Ollama or cloud frontier models |
 | **Knowledge Graph** | AST-driven codebase graph, auto-updated on every commit and checkout — zero context drift |
@@ -370,25 +371,30 @@ Kubernetes, a live OIDC provider). Operator procedures: docs/UserManual.md.
 
 ---
 
-## Differentiator: UAE / Sovereign Compliance
+## Differentiator: UAE / Sovereign Readiness
 
 UAE deployments need more than a global SaaS chatbot: **in-border
-inference**, **bias accountability**, **HITL stop-gates**, **PDPL-aligned
-PII handling**, and governance embedded in the architecture (aligned toward
-ISO/IEC 42001). AgentSmith maps each mandate to shipped controls:
+inference**, **bias accountability**, **human stop-gates**, **PII handling in
+the decision path**, and governance embedded in the architecture (aligned
+toward ISO/IEC 42001). AgentSmith maps each mandate to shipped controls, and
+says where they stop:
 
 | Mandate (illustrative) | AgentSmith control (shipped) |
 |---|---|
 | Sovereign / in-border models | `templates/uae-sovereign/` — Falcon 3 on Ollama (live-verified) or a sovereign OpenAI-compatible API; smoke `scripts/verify_sovereign_endpoint.py` |
 | Bias / Federal Decree-Law No. 34/2023 | `run-evals.py --suite fairness` + pair parity; CI via `eval-fairness.yml` |
 | HITL for high-impact actions | `run_with_hitl_gate`, `run_with_recoverable_step`, opt-in `run_with_self_correction` → DLQ |
-| PDPL / PII in the decision path | Pre-call `agentsmith/input_guardrail.py` (Emirates ID, etc.) + post-call `trace_redactor.py` |
+| PII in the decision path (PDPL where it applies) | Pre-call `agentsmith/input_guardrail.py` (Emirates ID, etc.) + post-call `trace_redactor.py` |
 | Oversight / ISO/IEC 42001 themes | `docs/iso-42001-control-map.md` + HMAC audit log + eval gates (hallucination, fairness, TTFT) |
 | Multi-framework security (OWASP · NIST · ATLAS · ISO) | `docs/security-framework-map.md` — `SEC-*` controls + `run-security-checks.py` (P12 shipped) |
 | Delivery governance | `docs/delivery-model.md` + `verify_system.py --check-delivery-model` |
 
 Canonical map: **[docs/uae-regulatory.md](./docs/uae-regulatory.md)**
-(not legal advice / not certification).
+(not legal advice / not certification), including the DESC Information Security
+Regulation. An opt-in `dubai-gov` compliance profile holds an application to it: named
+human decisions, residency checked and refused at run time, an error and a stop when an
+action cannot be recorded, and a signed checklist in the portal for what only a person
+can do. Python apps use the runtime directly, and TypeScript and Go apps a local sidecar. It helps an enterprise prepare for an assessment; it is not one.
 Starter pack: **[templates/uae-sovereign/](./templates/uae-sovereign/)**.
 
 ---

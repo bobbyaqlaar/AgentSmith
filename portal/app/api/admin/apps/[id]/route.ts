@@ -7,8 +7,9 @@ import { AppMissingError, parseAppInput, updateApp } from "@/lib/apps";
 import { can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const access = currentAccess();
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const access = await currentAccess();
   if (!can(access, "admin.apps")) {
     return NextResponse.json({ error: "Administrator role required to edit apps" }, { status: 403 });
   }

@@ -1,0 +1,10 @@
+# The optional developer pipeline (scripts/multi_agent_system.py). Install with:
+#   pip install --require-hashes -r requirements-pipeline.lock
+# Not part of the framework's lock; AgentSmith's runtime never imports it.
+# Locked against requirements.lock with:
+#   uv pip compile requirements-pipeline.txt -c requirements.lock --universal --python-version 3.11 --generate-hashes -o requirements-pipeline.lock
+langgraph>=1.2,<2.0
+langchain-core>=1.7,<2.0
+langchain-openai>=1.7,<2.0
+langchain-anthropic>=1.7,<2.0
+langgraph-checkpoint-postgres>=3.2,<4.0

@@ -1,0 +1,8 @@
+models:
+  developer:
+    id: falcon3:3b
+    provider: ollama
+    endpoint: "https://models.scratch.example.ae/v1"
+    cost_per_input_token: 0
+    cost_per_output_token: 0
+    degrade_to: null

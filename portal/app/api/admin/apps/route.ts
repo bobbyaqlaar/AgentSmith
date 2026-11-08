@@ -8,7 +8,7 @@ import { can } from "@/lib/authz";
 import { currentAccess } from "@/lib/currentAccess";
 
 export async function POST(request: Request) {
-  const access = currentAccess();
+  const access = await currentAccess();
   if (!can(access, "admin.apps")) {
     return NextResponse.json({ error: "Administrator role required to register apps" }, { status: 403 });
   }

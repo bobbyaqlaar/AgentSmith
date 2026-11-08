@@ -1,7 +1,7 @@
 // POST /api/ops/ingest — an app's running workers report by the Ops contract
 // (contract/ops/v1): a run's status, a dead letter for the HITL queue, the
 // settings they declare. Machine to machine: authenticated by the app's own Ops
-// token, not the dashboard's login, so it is excluded from middleware.ts. The
+// token, not the dashboard's login, so it is excluded from proxy.ts. The
 // work is lib/opsIngest.ts; this adapts it.
 
 import { NextResponse } from "next/server";

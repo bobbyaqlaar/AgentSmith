@@ -247,6 +247,11 @@ def _shared_files(plan: Plan) -> tuple[dict[str, str], set[str]]:
     # it, and `ownership` leaves it alone and says so.
     if (root / PROVIDERS).is_file():
         shared[PROVIDERS] = providers_declaration(setup=workflow_setup(root, f"v{plan.version}"))
+        if (root / ".agenticframework" / "compliance.json").is_file():
+            # A re-render would otherwise drop the profile's provider.
+            from agentsmith.machine import governance
+
+            shared[PROVIDERS] = governance.with_profile_ports(shared[PROVIDERS])
     return shared, regions
 
 

@@ -6,6 +6,7 @@
 // way in and refused whole on the first field that fails; keys this receiver
 // does not read are dropped. The route adapts this; tests drive it directly.
 
+import { getPool } from "./db";
 import { insertDeadLetter, type DeadLetterInput } from "./dlq";
 import { bearerToken, resolveIngestToken } from "./ingestTokens";
 import { AGENT_RUN_STATUSES, type AgentRunStatus, upsertAgentRun } from "./runStatus";
@@ -34,7 +35,16 @@ export interface SettingsInput {
   replayWebhookUrl: string | null;
 }
 
-export type OpsMessage = RunInput | (DeadLetterInput & { kind: "dead_letter" }) | SettingsInput;
+export interface ComplianceRecordInput {
+  kind: "compliance_record";
+  recordId: number;
+  recordKind: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  prevHash: string;
+  recordHash: string;
+}
+export type OpsMessage = RunInput | (DeadLetterInput & { kind: "dead_letter" }) | SettingsInput | ComplianceRecordInput;
 type Parsed = { ok: true; value: OpsMessage } | { ok: false; error: string };
 
 class Refused extends Error {}
@@ -117,8 +127,27 @@ export function parseOpsMessage(raw: unknown): Parsed {
         }
         return { ok: true, value: { kind: "settings", budgetCapUsd: count(body, "budget_cap_usd", false), replayWebhookUrl: url } };
       }
+      case "compliance_record": {
+        const id = body.record_id;
+        if (!Number.isSafeInteger(id) || (id as number) < 1) throw new Refused("record_id must be a positive integer");
+        if (typeof body.payload !== "object" || body.payload === null || Array.isArray(body.payload)) throw new Refused("payload must be an object");
+        const createdAt = text(body, "created_at", 64, true) as string;
+        if (Number.isNaN(Date.parse(createdAt))) throw new Refused("created_at must be a date");
+        return {
+          ok: true,
+          value: {
+            kind: "compliance_record",
+            recordId: id as number,
+            recordKind: text(body, "record_kind", 64, true) as string,
+            payload: body.payload as Record<string, unknown>,
+            createdAt,
+            prevHash: text(body, "prev_hash", 128, true) as string,
+            recordHash: text(body, "record_hash", 128, true) as string,
+          },
+        };
+      }
       default:
-        throw new Refused("kind must be one of: run, dead_letter, settings");
+        throw new Refused("kind must be one of: run, dead_letter, settings, compliance_record");
     }
   } catch (err) {
     if (err instanceof Refused) return { ok: false, error: err.message };
@@ -146,6 +175,13 @@ async function store(tenantId: string, message: OpsMessage): Promise<OpsResult> 
       if (outcome === "foreign") return { status: 409, body: { error: "task_id is another application's" } };
       return { status: 200, body: { stored: outcome === "stored" ? 1 : 0 } };
     }
+    case "compliance_record":
+      await getPool().query(
+        `INSERT INTO compliance_records (tenant_id, record_id, record_kind, payload, created_at, prev_hash, record_hash)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING`,
+        [tenantId, message.recordId, message.recordKind, JSON.stringify(message.payload), message.createdAt, message.prevHash, message.recordHash],
+      );
+      return { status: 200, body: { stored: 1 } };
     case "settings":
       await updateTenantSettings(tenantId, { budgetCapUsd: message.budgetCapUsd, replayWebhookUrl: message.replayWebhookUrl });
       return { status: 200, body: { stored: 1 } };

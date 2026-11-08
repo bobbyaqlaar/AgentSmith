@@ -57,7 +57,7 @@ def effective_mode(env: Optional[Mapping[str, str]] = None) -> Optional[str]:
 
 def _http_ok(url: str, timeout: float = 3.0) -> bool:
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with urllib.request.urlopen(url, timeout=timeout) as response:  # nosec B310 - a local health URL from this module
             return 200 <= response.status < 400
     except urllib.error.HTTPError as exc:
         return 300 <= exc.code < 400
@@ -202,7 +202,7 @@ def check(out: Out = print, env: Optional[Mapping[str, str]] = None) -> int:
         failed = True
     elif current in (None, "local"):
         try:
-            with urllib.request.urlopen(OLLAMA_TAGS, timeout=3) as response:
+            with urllib.request.urlopen(OLLAMA_TAGS, timeout=3) as response:  # nosec B310 - a constant local URL
                 names = {m.get("name", "") for m in json.load(response).get("models", [])}
             out("   ✅ [ENGINE]  Ollama daemon responding")
             required = required_ollama_models()

@@ -30,6 +30,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build-and-release:
@@ -62,6 +64,13 @@ jobs:
             gpg --batch --yes --local-user "$ORG_GPG_KEY_ID" --detach-sign --output "$f.sig" "$f"
           done
           ls -la dist/
+
+      # Signed provenance for what is published (OB-SUPPLY-CHAIN, keyless through the
+      # workflow's own identity): `gh attestation verify` checks a download.
+      - name: "Attest build provenance"
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/*"
 
       - name: "Create GitHub Release"
         uses: softprops/action-gh-release@v2

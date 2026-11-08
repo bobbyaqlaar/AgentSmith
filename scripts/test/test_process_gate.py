@@ -668,7 +668,9 @@ def test_the_launcher_moves_past_an_interpreter_that_cannot_run_the_gate(gated_r
     monkeypatch.setenv("AGENTSMITH_PYTHON", str(_fake_interpreter(tmp_path)))
     framework_python = Path(os.environ["HOME"]) / ".agent-framework/.venv/bin/python"
     framework_python.parent.mkdir(parents=True)
-    framework_python.symlink_to(sys.executable)
+    # A wrapper, not a symlink: a symlinked virtual-environment interpreter loses its packages.
+    framework_python.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n')
+    framework_python.chmod(0o755)
     launcher = gated_repo / ".githooks/process-gate"
 
     denied = subprocess.run(
