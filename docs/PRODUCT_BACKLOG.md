@@ -1,6 +1,6 @@
 # AgentSmith — Remaining To-Do Items
 
-**Last reviewed:** 2026-11-03: every entry checked against the code and CI. What that closed is in
+**Last reviewed:** 2026-11-09, for the entries the `dubai-gov` profile changed; 2026-11-03 for the rest, when every entry was checked against the code and CI. What that closed is in
 `docs/PRODUCT_ARCHIVE.md`.
 
 > **Scope:** this document owns only *not-yet-done* work. Completed build history lives in
@@ -17,6 +17,8 @@
 contracts C1–C9 are complete. **AgentSmith is public (AGPL-3.0)**; KYC Sentinel and Tenant B are
 private. KYC is on 4.0.0 with green CI, and Tenant B on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
 two security controls awaiting its own content: do not use it as a showcase.
+
+**Unreleased on `main` (2026-11-09):** the opt-in `dubai-gov` compliance profile. A tenant cannot pin it until a release is cut.
 
 ---
 
@@ -154,12 +156,12 @@ Each was checked absent from the code on 2026-11-03.
    camp above has. *Stage 2.*
 3. **MCP and tool supply chain ungoverned.** Tool poisoning, rug-pulled definitions and shadow MCP are the concerns of
    2026. Pinning a tool definition and blocking on drift is reported missing from at least one gateway, and signing is not
-   required by the protocol. AgentSmith checks nothing about a repository's `.mcp.json`. **Fix, without shipping a client:** the
+   required by the protocol. **On the `dubai-gov` profile this is built:** `agentsmith/mcp_pin.py` pins servers and tool definitions and the compliance check fails on drift, not yet tested over HTTP. Off the profile AgentSmith checks nothing about a repository's `.mcp.json`. **Fix, without shipping a client:** the
    repository declares its MCP servers and tool-definition hashes, and the gate fails on an undeclared server or a drifted
    definition. Small, and ahead of most. *First after launch.*
-4. **No kill switch**, listed "not covered" in `docs/agentic-42001-coverage.md` (F12, S10). `agentsmith mode off` meanwhile
+4. **No kill switch off the profile.** On `dubai-gov` an app or run can be stopped from the portal or `agentsmith ops stop`, and the gateway refuses it; `compliance.require_running` does nothing for any other tenant. Listed "not covered" in `docs/agentic-42001-coverage.md` (F12, S10) for that case. `agentsmith mode off` meanwhile
    records a state nothing reads (below): give it this meaning. *Stage 2.*
-5. **Evidence is not signed.** A gate record is a JSON file and a commit, which an auditor must take on trust. Microsoft's
+5. **Gate verdicts are not signed.** Release builds are attested (`release.yml`), and the profile's run records are chained and keyed, but a gate record is still a JSON file and a commit, which an auditor must take on trust. Microsoft's
    toolkit signs an attestation per deployment; no AI-provenance predicate is settled in SLSA or in-toto, so there is room to
    lead. **Fix:** an in-toto attestation of each gate verdict, signed keylessly in CI. *After launch.*
 6. **A record does not say who wrote the change, or who judged it.** `contract/record/v1` has no agent or model, and no gate
@@ -168,10 +170,12 @@ Each was checked absent from the code on 2026-11-03.
 7. **No `gen_ai.*` telemetry.** `contract/telemetry/v1` defines its own attributes. OpenTelemetry's GenAI conventions, with
    agent and MCP spans, are still in Development but are what every observability tool reads. **Fix:** emit both, and
    pin the conventions' version. *After launch.*
-8. **Nothing helps with EU AI Act Article 50, in force since 2 August 2026, or Article 19's log retention.** Mapped in
-   `docs/security-framework-map.md`, dates confirmed in Regulation (EU) 2026/1744. Article 50(2) marking is due by 2 December
-   2026 for systems already on the market, and the gateway marks nothing. **Fix:** a gateway marking hook, and a declared
-   retention period the gate reads. *After launch.*
+8. **EU AI Act Article 50 and Article 19: part done.** Mapped in `docs/security-framework-map.md`, dates confirmed in
+   Regulation (EU) 2026/1744. Every gateway completion now carries an Article 50(2) mark (`provenance`, `agentsmith/compliance.py`),
+   on or off the profile. Still open: a tenant has it only from the next release, and each application must pass the mark to its
+   users (`marking_headers`). Marking is due by 2 December 2026 for systems already on the market. For Article 19, the profile
+   declares `retention_days` and `agentsmith ops purge` applies it to run history, but that obligation is attested and no gate
+   reads the period. **Fix:** a declared retention period the gate reads. *After launch.*
 9. **Agent evals stop at the answer.** Suites judge an output. Agents fail in the path: wrong tool, wrong order, a skipped
    approval. **Fix:** a `trajectory` suite in the evals contract, graded from traces, plus the rubric digest below.
    *After launch.*
@@ -184,7 +188,8 @@ Each was checked absent from the code on 2026-11-03.
     delegation chain. *After launch.*
 13. **Nothing contains code an agent runs (ASI05), and nothing secures messages between agents (ASI07).** Name the boundary
     first: which of these AgentSmith enforces, and which it requires a tenant to declare. *After launch.*
-14. **`SEC-AGENCY-001` reads a declaration.** Its row claimed the harness verified the gate was wired; it never did, and the
+14. **`SEC-AGENCY-001` reads a declaration off the profile.** On `dubai-gov`, `scripts/compliance_checks.py` checks each `needs_hitl` action reaches a real
+    `run_with_hitl_gate(..., compliance=True)`. Elsewhere the row claimed the harness verified the gate was wired; it never did, and the
     row now says so. **Fix:** check each `needs_hitl` action against a real `run_with_hitl_gate` call. *After launch.*
 
 Sources: [Gartner AI governance platforms](https://www.gartner.com/reviews/market/ai-governance-platforms) ·
@@ -248,35 +253,33 @@ there as held rather than unreviewed, naming it as such in the output rather tha
 staying silent. Both halves matter: a gate that silently ignores a path is worse
 than one that blocks on it.
 
-### Nine more unbounded `sys.stdin.read()` calls, same defect as the gate's
+### Seven more unbounded `sys.stdin.read()` calls, same defect as the gate's
 
 Raised 2026-11-01 in Pass 2 of `hook-answers-without-its-payload`, by sweeping the
-data rather than the directory. The gate's three reads are fixed; these nine are
-the same line, unfixed:
+data rather than the directory. Recounted 2026-11-09: the four in `agentsmith/cli.py`
+are gone, and two more arrived in the hook.
 
 | file | lines |
 |---|---|
 | `scripts/rules_port.py` | 211 |
 | `scripts/security_port.py` | 234 |
-| `scripts/evals_port.py` | 235 |
-| `agentsmith/cli.py` | 1025, 1075, 1094, 1154 |
-| `.githooks/process-gate` | 221, 409 (inline `python3 -`) |
+| `scripts/evals_port.py` | 238 |
+| `.githooks/process-gate` | 221, 409, 499, 548 (inline `python3 -`) |
 
 Each waits for an EOF its caller may never send. The three ports are contract
-endpoints the launcher invokes with a pipe it closes, and the `agentsmith/cli.py`
-paths are `conformance` and the CLI's own stdin readers — so none is known to hang
+endpoints the launcher invokes with a pipe it closes, so none is known to hang
 today. That is a statement about the callers in this repository, not about the
 code, which is exactly the reasoning this slice had to retract for the gate's two
 `--decision` paths.
 
 **Why it is not fixed here:** `_payload_text` lives in `scripts/process_gate.py`,
 and the gate deliberately does not import its own modules. Sharing it means
-putting it in `scripts/_shared.py` (or beside it) and having four modules plus two
+putting it in `scripts/_shared.py` (or beside it) and having three modules plus four
 inline hook scripts take it from there — a different change from bounding the
 gate's own read, with its own tests per caller. Doing it inside this slice would
 have meant five more gated files under a design written for one.
 
-**Fix:** move the helper to a shared module, point all nine at it, and give each
+**Fix:** move the helper to a shared module, point all seven at it, and give each
 caller the held-open-pipe test the gate now has.
 
 ### "caught" does not say which test caught it
@@ -318,29 +321,9 @@ patching single rows, and note the run id beside it as the current comment does.
 
 **Evals credibility:**
 
-### A score records its judge but not its rubric version
+### Rubric versions: shipped
 
-Raised 2026-09-03 by an outside critique of LLM-judge practice, and it lands.
-
-`scripts/run-evals.py` stores `"criteria": criteria.get("name", "default")` — a
-static NAME. Meanwhile `scripts/promote-learning.py` appends to
-`historical_learnings`, and `scripts/eval_judge.py` injects those into every
-judge prompt. **The rubric mutates and the score does not record which version
-graded it.** Two runs both stamped `criteria: "default"` may have been graded
-under materially different criteria, and nothing downstream can tell.
-
-What makes this worth fixing rather than noting is that **this codebase already
-makes the argument, for the judge**. `eval_judge.run_judge` records `judged_by`
-AND `judged_by_route` on every row, with the reasoning written out: a score is
-not portable across graders, so "who graded this belongs with the score, not in
-a single run-level field a substitution would silently falsify." That is exactly
-the rubric's situation. The principle was established and applied to one of the
-two inputs.
-
-**Fix:** hash the resolved criteria (instructions + historical_learnings, after
-merge) and store the digest per row beside `judged_by`; surface it in the
-scorecard; refuse to compare scores across differing digests. Small, additive,
-and it closes the half of the argument that is already written down.
+A score records the rubric that produced it (`criteria_digest`, `f9b7e20`, `docs/DESIGN.md`), and a scorecard mixing digests fails.
 
 **Related gaps from the same critique, deliberately NOT scheduled** — recorded so
 the boundary is explicit rather than accidental: no confidence interval per score
@@ -455,8 +438,9 @@ Live status for the two compliance tracks is maintained in one place each — do
 - **Government readiness (DESC ISR, OWASP LLM 2025, NIST, ISO/IEC 42001, UAE instruments):**
   the programme is `.agent-rfc/designs/compliance-readiness.md`. The opt-in `dubai-gov` profile is built (`.agent-rfc/designs/compliance-build.md`).
   Backlog gaps 3, 4, 5 and 14 below are closed on the profile only, and only in part for 3 and 5.
-  **Owner's to close:** the scratch repository `bobbyaqlaar/agentsmith-scratch-dubai-gov`, AgentSmith's own declaration and signatures, the Dubai AI Security Policy, a licensed ISO/IEC 42001, counsel and a penetration test.
-  **Trigger:** the owner directs each phase.
+  **Owner's to close:** AgentSmith's own declaration and signatures, the Dubai AI Security Policy, a licensed ISO/IEC 42001, counsel and a penetration test.
+  **In-border judge model.** Eval suites on the profile fail until they are judged, so a passing eval run needs datasets and a judge model inside the boundary. The scratch tenant asserts the refusal instead (`.github/scratch-tenants/expect-ungraded.sh`); a passing run is unproven.
+  **Trigger:** the owner directs each phase, or provides an in-border judge endpoint.
 - **Enterprise Delivery Model:**
   [`docs/delivery-model.md`](delivery-model.md). v1 soft pack shipped.
   Still open: hard-fail enterprise mode; auto-inject `delivery.*` defaults from
