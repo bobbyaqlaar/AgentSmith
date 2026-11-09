@@ -1304,6 +1304,7 @@ AgentSmith/
 │   ├── run-security-checks.py   # SEC-* harness (P12): smoke|ci|full, --strict, --evidence-pack
 │   ├── build_release_assets.sh  # What a release publishes: the source archive, the installer, their checksums
 │   ├── check_release_install.sh # A stranger's path against a release URL: install, tenant init, adopt, first commits
+│   ├── check_tenant_upgrade.sh # moves a tenant on the last release to this commit
 │   ├── third_party_notices.py   # Writes THIRD_PARTY_LICENSES.md from the locks
 │   ├── mutation_check.py        # Curated mutation testing — the guards, and proof their tests bite
 │   ├── security/                # Harness internals: registry.py, report.py, runners/, schemas/

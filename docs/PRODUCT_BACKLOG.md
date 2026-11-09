@@ -207,10 +207,6 @@ Sources: [Gartner AI governance platforms](https://www.gartner.com/reviews/marke
 
 ## After Stage 2, in order
 
-**Nothing moves a tenant from an earlier release forward.** The scratch tenants are rebuilt from HEAD, so they pass while
-what a real tenant already holds breaks: cutting 4.0.0 found a 3.x `agentsmith-sync.yml` failing against the latest release,
-by reading it. Adopt with the last release's tree, then run the sync workflow's own step against the candidate.
-
 **First-run friction.** All 14 pillars for a one-line change is the most likely reason a newcomer gives up. *Scope-derived
 pillar subset:* ask only the pillars a change's paths implicate, each still carrying evidence. Held until G4, which has
 shipped, and its impact query is trusted.

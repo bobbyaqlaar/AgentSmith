@@ -586,8 +586,15 @@ def adopt(plan: Plan) -> list[str]:
         written.append(graph)
 
     written = list(dict.fromkeys(written))
-    written += write_scaffold_records(root, plan.tenant_id, plan.stack, plan.style, plan.agentic, written,
+    files = list(written)
+    written += write_scaffold_records(root, plan.tenant_id, plan.stack, plan.style, plan.agentic, files,
                                       force=True, design=ADOPTION_DESIGN, adopted=True)
+    if mapper.is_file():
+        # The records are nodes of the graph, so it is drawn again after them, and the
+        # manifest written again for the graph's final hash.
+        subprocess.run([sys.executable, str(mapper), "--quiet"], cwd=root, capture_output=True, check=False)
+        write_scaffold_records(root, plan.tenant_id, plan.stack, plan.style, plan.agentic, files,
+                               force=True, design=ADOPTION_DESIGN, adopted=True)
     if SCAFFOLD_MANIFEST not in written:
         raise AdoptError("the adoption manifest was not written — see the messages above")
     return written

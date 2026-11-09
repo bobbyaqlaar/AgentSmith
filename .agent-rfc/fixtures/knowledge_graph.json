@@ -2406,9 +2406,22 @@
         "test_an_untouched_contract_1_declaration_moves_to_the_current_contract_with_its_workflow",
         "test_a_declaration_naming_another_provider_is_theirs_and_its_setup_is_what_ci_runs",
         "test_an_adopted_config_naming_this_installs_paths_is_moved_to_provider_and_still_passes",
-        "legacy"
+        "_declare",
+        "_pin",
+        "test_a_sync_refuses_to_move_a_tenant_to_an_older_release",
+        "test_a_sync_moves_forward_and_leaves_a_ref_that_is_not_a_release",
+        "test_another_providers_setup_is_never_compared",
+        "_what_a_new_repository_declared",
+        "test_a_sync_keeps_what_tenant_init_declared",
+        "test_a_profile_still_loses_the_warnings_on_a_sync",
+        "_graph_nodes",
+        "test_an_adopted_graph_already_holds_the_records_adopt_wrote",
+        "test_adopt_leaves_the_manifest_holding_the_graphs_final_hash",
+        "test_a_sync_redraws_the_graph_when_it_wrote_anything",
+        "legacy",
+        "change"
       ],
-      "last_modified": "2026-11-07T12:46:40Z",
+      "last_modified": "2026-11-09T20:07:24Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -6819,15 +6832,19 @@
         "_digest",
         "ownership",
         "plan_sync",
+        "_release",
+        "_refuse_a_downgrade",
         "provider_documents",
         "_shared_files",
+        "_keeping_declared",
         "_workflow_template",
         "describe",
         "sync",
+        "_redraw_graph",
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-11-08T21:30:44Z",
+      "last_modified": "2026-11-09T20:11:46Z",
       "id": "agentsmith/sync.py"
     },
     {
@@ -7208,7 +7225,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-11-08T21:32:37Z",
+      "last_modified": "2026-11-09T20:12:48Z",
       "id": "agentsmith/adopt.py"
     },
     {
@@ -10104,6 +10121,22 @@
       "pillar": null,
       "created_at": "2026-11-09T08:38:38Z",
       "id": "rfc:reviews/scratch-wait-survives-red-run.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A tenant on the last release upgrades to this commit",
+      "source_file": ".agent-rfc/designs/tenant-upgrade-test.md",
+      "pillar": null,
+      "created_at": "2026-11-09T20:14:21Z",
+      "id": "rfc:designs/tenant-upgrade-test.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: tenant-upgrade-test",
+      "source_file": ".agent-rfc/reviews/tenant-upgrade-test.md",
+      "pillar": null,
+      "created_at": "2026-11-09T20:14:22Z",
+      "id": "rfc:reviews/tenant-upgrade-test.md"
     }
   ],
   "edges": [
