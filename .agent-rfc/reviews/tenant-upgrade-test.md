@@ -20,7 +20,13 @@ Found by CI on the first push.
 
 1. **The checklist's generated gate table did not list the new gate** (`test_gate_steps.py`). Fixed with `scripts/generate-ide-config.py --gates`.
 
-## Pass 3 — findings: 0
+## Pass 3 — findings: 1
+
+Found by CI on the second push.
+
+1. **The check borrowed the machine's `agentsmith`.** A tenant's commit hook calls that command; locally the one installed on this machine answered, and on a CI runner nothing did, so the first commit was refused there. Fixed: each release answers through its own wrapper, as the setup action provides in CI, and `PATH` holds only the system's tools, git and the check's environment. With the wrapper removed, the check now fails locally the way CI did.
+
+## Pass 4 — findings: 0
 
 - `scripts/check_tenant_upgrade.sh v4.0.1` passes on the staged tree, by `tenant init` and by `tenant adopt`, using only what the sync workflow installs.
 - Six hand mutants, one per fix and direction, each fail a named test. With the declarations dropped, or the graph not redrawn, the upgrade check itself fails.
@@ -46,4 +52,4 @@ Gates run: `test_framework_sync.py`, `test_tenant_adopt.py`, `test_sync_workflow
 
 Levers reviewed: `implemented-not-invoked`, `failure-is-not-a-result`, `grep-for-siblings`, `test-that-cannot-fail`.
 
-KG query: kg:8b5f1634ec34
+KG query: kg:9b8001d994d0
