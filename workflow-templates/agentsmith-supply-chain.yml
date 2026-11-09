@@ -22,10 +22,14 @@ jobs:
           python-version: "3.11"
       - name: "Python dependencies"
         run: |
-          for lock in requirements.lock requirements.txt; do
-            if [ -f "$lock" ]; then pipx run pip-audit==2.9.0 -r "$lock" --disable-pip --no-deps; exit $?; fi
-          done
-          echo "no Python requirements file"
+          if [ -f requirements.lock ]; then
+            pipx run pip-audit==2.9.0 -r requirements.lock --disable-pip --no-deps
+          elif [ -f requirements.txt ]; then
+            # Without a lock: pip-audit resolves the ranges and audits the result.
+            pipx run pip-audit==2.9.0 -r requirements.txt
+          else
+            echo "no Python requirements file"
+          fi
       - name: "SBOM"
         run: |
           if [ -f requirements.lock ]; then pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py requirements requirements.lock -o sbom.cdx.json; fi
