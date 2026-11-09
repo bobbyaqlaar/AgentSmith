@@ -14,7 +14,13 @@ Against `docs/review-levers.md`, driven by a prototype run of the upgrade in the
 
 Two results looked like defects and are not. Going on the profile is refused under `Review: n/a: framework sync`, because it needs a real design with the profile's extra pillars; the gate is right. An adopted tenant's evals are red after a sync, because it never declared the warnings a new repository gets.
 
-## Pass 2 — findings: 0
+## Pass 2 — findings: 1
+
+Found by CI on the first push.
+
+1. **The checklist's generated gate table did not list the new gate** (`test_gate_steps.py`). Fixed with `scripts/generate-ide-config.py --gates`.
+
+## Pass 3 — findings: 0
 
 - `scripts/check_tenant_upgrade.sh v4.0.1` passes on the staged tree, by `tenant init` and by `tenant adopt`, using only what the sync workflow installs.
 - Six hand mutants, one per fix and direction, each fail a named test. With the declarations dropped, or the graph not redrawn, the upgrade check itself fails.

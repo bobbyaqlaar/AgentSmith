@@ -113,6 +113,7 @@ CI stays the authority.
 | verify_system.py --check-kg (Knowledge Graph, docs/PRODUCT_ARCHIVE.md P10a) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-kg` | yes |
 | On-prem deploy template (Compose + Helm syntax) | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/verify_system.py --check-onprem-deploy` | needs helm |
 | The release installs, and its first commits pass | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
+| A tenant on the last release upgrades to this commit | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `bash scripts/check_tenant_upgrade.sh` | yes |
 | Delivery evidence pack script | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | `python3 scripts/delivery_evidence.py` | yes |
 | Unit tests — delivery model + fairness + input guardrail | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
 | Every curated-mutation shard passed | `.github/workflows/self-test.yml` · Python scripts/runtime/examples | (script) | yes |
