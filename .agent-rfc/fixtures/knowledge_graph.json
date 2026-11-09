@@ -254,7 +254,7 @@
         "_resolve_exit",
         "main"
       ],
-      "last_modified": "2026-11-08T12:51:23Z",
+      "last_modified": "2026-11-09T21:48:36Z",
       "id": "scripts/run-security-checks.py"
     },
     {
@@ -670,7 +670,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-11-08T21:14:27Z",
+      "last_modified": "2026-11-09T21:48:36Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -1591,9 +1591,12 @@
         "_map_section",
         "test_owasp_tags_use_the_2025_numbering",
         "test_the_owasp_table_matches_the_registry",
-        "test_the_unified_table_matches_the_registry"
+        "test_the_unified_table_matches_the_registry",
+        "_agentic_rows",
+        "test_the_map_lists_all_ten_agentic_entries",
+        "test_the_agentic_tags_are_the_maps_and_only_where_it_claims_coverage"
       ],
-      "last_modified": "2026-11-08T12:53:10Z",
+      "last_modified": "2026-11-09T21:48:54Z",
       "id": "scripts/test/test_security_registry.py"
     },
     {
@@ -2139,13 +2142,15 @@
       "symbols": [
         "_registry_controls",
         "_sample_results",
-        "test_write_evidence_pack_creates_five_markdown_reports",
+        "test_write_evidence_pack_creates_six_markdown_reports",
         "test_owasp_rollup_includes_sec_pii_001",
         "test_framework_filter_limits_markdown",
         "test_pack_records_the_mode_it_was_produced_in",
-        "test_a_control_with_no_result_reads_as_not_run_not_skip"
+        "test_a_control_with_no_result_reads_as_not_run_not_skip",
+        "test_the_agentic_page_lists_all_ten_and_says_which_no_control_covers",
+        "test_the_agentic_filter_scopes_the_page_and_still_lists_all_ten"
       ],
-      "last_modified": "2026-11-08T12:56:04Z",
+      "last_modified": "2026-11-09T21:49:14Z",
       "id": "scripts/test/test_security_evidence_pack.py"
     },
     {
@@ -3502,7 +3507,7 @@
         "ControlSpec",
         "load_control_registry"
       ],
-      "last_modified": "2026-10-10T13:36:41Z",
+      "last_modified": "2026-11-09T22:00:38Z",
       "id": "scripts/security/registry.py"
     },
     {
@@ -3522,10 +3527,11 @@
         "_status_for",
         "_message_for",
         "_render_table",
+        "_render_agentic",
         "_render_security_report_md",
         "write_evidence_pack"
       ],
-      "last_modified": "2026-11-08T12:55:55Z",
+      "last_modified": "2026-11-09T21:59:38Z",
       "id": "scripts/security/report.py"
     },
     {
@@ -10272,6 +10278,22 @@
       "pillar": null,
       "created_at": "2026-11-09T21:47:21Z",
       "id": "rfc:reviews/gen-ai-telemetry.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Evidence packs grade the OWASP Agentic Top 10",
+      "source_file": ".agent-rfc/designs/owasp-agentic-tags.md",
+      "pillar": null,
+      "created_at": "2026-11-09T22:01:04Z",
+      "id": "rfc:designs/owasp-agentic-tags.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: owasp-agentic-tags",
+      "source_file": ".agent-rfc/reviews/owasp-agentic-tags.md",
+      "pillar": null,
+      "created_at": "2026-11-09T22:01:05Z",
+      "id": "rfc:reviews/owasp-agentic-tags.md"
     }
   ],
   "edges": [

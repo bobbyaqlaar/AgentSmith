@@ -13,6 +13,7 @@ EXPECTED_MD = [
     "nist_ai_rmf.md",
     "mitre_atlas.md",
     "iso_42001.md",
+    "owasp_agentic_top10.md",
 ]
 
 
@@ -32,7 +33,7 @@ def _sample_results(controls: list[ControlSpec]) -> list[ControlResult]:
     ]
 
 
-def test_write_evidence_pack_creates_five_markdown_reports(tmp_path: Path) -> None:
+def test_write_evidence_pack_creates_six_markdown_reports(tmp_path: Path) -> None:
     registry = REPO / "fixtures" / "security" / "control_registry.json"
     controls = load_control_registry(registry)
     out = tmp_path / "evidence"
@@ -43,7 +44,7 @@ def test_write_evidence_pack_creates_five_markdown_reports(tmp_path: Path) -> No
         path = out / name
         assert path.exists(), f"missing {name}"
         assert path.stat().st_size > 0
-    assert len(EXPECTED_MD) == 5
+    assert len(EXPECTED_MD) == 6
 
 
 def test_owasp_rollup_includes_sec_pii_001(tmp_path: Path) -> None:
@@ -131,3 +132,24 @@ def test_a_control_with_no_result_reads_as_not_run_not_skip(tmp_path: Path) -> N
 
     controls = _registry_controls()
     assert _status_for(controls[0], {}) == "not run"
+
+
+def test_the_agentic_page_lists_all_ten_and_says_which_no_control_covers(tmp_path: Path) -> None:
+    controls = _registry_controls()
+    out = tmp_path / "evidence"
+    write_evidence_pack(out, controls, _sample_results(controls))
+    text = (out / "owasp_agentic_top10.md").read_text(encoding="utf-8")
+    for n in range(1, 11):
+        assert f"| ASI{n:02d} " in text
+    uncovered = [line for line in text.splitlines() if "not covered by any control" in line]
+    assert sorted(line.split()[1] for line in uncovered) == ["ASI03", "ASI04", "ASI05", "ASI07"]
+    assert "| ASI01 Agent Goal Hijack | `SEC-PROMPT-001` |" in text
+
+
+def test_the_agentic_filter_scopes_the_page_and_still_lists_all_ten(tmp_path: Path) -> None:
+    controls = _registry_controls()
+    out = tmp_path / "evidence"
+    write_evidence_pack(out, controls, _sample_results(controls), framework="owasp_agentic")
+    report = (out / "security_report.md").read_text(encoding="utf-8")
+    assert "SEC-PROMPT-001" in report and "SEC-PII-001" not in report
+    assert (out / "owasp_agentic_top10.md").read_text(encoding="utf-8").count("| ASI") >= 10

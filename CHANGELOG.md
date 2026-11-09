@@ -88,6 +88,8 @@ version table being consulted.
 
 ## [Unreleased]
 
+- Evidence packs grade the OWASP Top 10 for Agentic Applications: controls carry an `owasp_agentic` tag where `docs/security-framework-map.md` says they cover an entry at least in part, and `owasp_agentic_top10.md` lists all ten, including the four no control covers. Additive in the registry schema.
+
 - Traces carry OpenTelemetry's GenAI names beside AgentSmith's own: `gen_ai.operation.name`, `gen_ai.request.model`, `gen_ai.provider.name`, `gen_ai.usage.*` and `gen_ai.tool.name`. Optional and additive; `llm.*` stays the telemetry contract. Pinned to `open-telemetry/semantic-conventions-genai@e6658f14c9d9`, since the names are still in development upstream.
 
 - A run reports the commit it was built from (`APP_COMMIT`, set by the deploy templates; pass it to your app). `RunMessage` gains an optional `app_commit` and traces an `app.commit` resource attribute, both additive. The portal's new Recent runs list links each run to its commit, design and approvals, and the commit page says which runs came from it. Migration: `agent_runs.app_commit`, added by `ADD COLUMN IF NOT EXISTS`.

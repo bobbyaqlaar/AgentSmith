@@ -37,6 +37,13 @@
           },
           "title": "Iso42001",
           "type": "array"
+        },
+        "owasp_agentic": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Owasp Agentic",
+          "type": "array"
         }
       },
       "title": "ControlFrameworks",

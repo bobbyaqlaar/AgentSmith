@@ -148,9 +148,7 @@ is reported as such; CI re-checks what the IDE hook checked; self-hosted, with s
 
 Each was checked absent from the code on 2026-11-03.
 
-1. **The OWASP Agentic Top 10 is mapped by reading, not graded.** `docs/security-framework-map.md` now states it: none of the
-   ten fully covered, six partial, four not covered. Microsoft's open-source toolkit claims all ten. **Fix:** tag the `SEC-*`
-   controls with `ASI*`, so evidence packs report it. *After launch.*
+1. **Four of the OWASP Agentic Top 10 have no control** (ASI03, ASI04, ASI05, ASI07). Evidence packs grade the list and say so; gaps 12 and 13 are what would close them.
 2. **The accountability chain needs a real deployment to prove it.** A run reports `APP_COMMIT`, and the portal links it to its commit, design and approvals. It has not yet carried a real production run. *Stage 2, with KYC staging.*
 3. **MCP and tool supply chain ungoverned.** Tool poisoning, rug-pulled definitions and shadow MCP are the concerns of
    2026. Pinning a tool definition and blocking on drift is reported missing from at least one gateway, and signing is not
