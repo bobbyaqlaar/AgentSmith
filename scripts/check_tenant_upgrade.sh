@@ -33,15 +33,25 @@ step "the environment agentsmith-sync.yml builds"
 python3 -m venv "$work/env" || fail "could not make a virtual environment"
 "$work/env/bin/pip" install -q -r "$work/new/scripts/requirements-gate.txt" pyyaml > "$work/pip.log" 2>&1 \
   || { cat "$work/pip.log" >&2; fail "could not install the gate's requirements"; }
-export PATH="$work/env/bin:$PATH"
+# Only the system's tools, git and this environment: an `agentsmith` already installed on the
+# machine running the check must not answer for either release.
+git_dir="$(dirname "$(command -v git)")"
+export PATH="$work/env/bin:$git_dir:/usr/bin:/bin:/usr/sbin:/sbin"
 export HOME="$work/home"
 unset AGENTSMITH_DIR PYTHONPATH CLAUDE_PROJECT_DIR GITHUB_STEP_SUMMARY AGENTSMITH_PYTHON
 git config --global user.name "upgrade check"
 git config --global user.email "upgrade-check@example.com"
 git config --global init.defaultBranch main
 
-with_old() { AGENTSMITH_DIR="$work/old" PYTHONPATH="$work/old" "$@"; }
-with_new() { AGENTSMITH_DIR="$work/new" PYTHONPATH="$work/new" "$@"; }
+# Each release answers as `agentsmith`, which is what a tenant's hooks call, as the
+# setup action installs it in CI.
+for tree in old new; do
+  mkdir -p "$work/bin-$tree"
+  printf '#!/bin/sh\nexec python3 -P -m agentsmith.cli "$@"\n' > "$work/bin-$tree/agentsmith"
+  chmod +x "$work/bin-$tree/agentsmith"
+done
+with_old() { PATH="$work/bin-old:$PATH" AGENTSMITH_DIR="$work/old" PYTHONPATH="$work/old" "$@"; }
+with_new() { PATH="$work/bin-new:$PATH" AGENTSMITH_DIR="$work/new" PYTHONPATH="$work/new" "$@"; }
 printed_commit() { grep -E '^ *git add ' "$1" | tail -1; }
 released="$(sed -n 's/^version = "\(.*\)"$/\1/p' "$work/new/pyproject.toml" | head -n 1)"
 
