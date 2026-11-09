@@ -10,7 +10,11 @@ Against `docs/review-levers.md`.
 2. **`contract/rules/v1/extends.schema.json` also lists the suites,** for `extends.evals`. Regenerated, and added to the design's scope.
 3. **The first trace reader guessed between one object and one per line from the text's shape.** Replaced by trying one object, then one per line, as the telemetry contract's own reader does.
 
-## Pass 2 — findings: 0
+## Pass 2 — findings: 1
+
+1. **The commit went in with three lint findings:** a long CLI line, two unused `noqa` markers and a `zip()` without `strict=`. CI's ruff would have failed it. Fixed in a follow-up commit, and ruff is now run before each commit, not after.
+
+## Pass 3 — findings: 0
 
 - `scripts/test/test_trajectory_evals.py` covers each rule, repeated tools in `in_order`, both sources, start order over file order, both trace layouts, and four ways a trace cannot be read.
 - `contract/evals/v1/cases.json` gains a passing and a failing case, and AgentSmith passes its own contract with them: 19 cases.
@@ -36,4 +40,4 @@ Gates run: the suites above; ruff; mypy; the process gate against the commit.
 
 Levers reviewed: `failure-is-not-a-result`, `test-that-cannot-fail`, `implemented-not-invoked`.
 
-KG query: kg:9be3811d32fa
+KG query: kg:5e20ddfa6eb0
