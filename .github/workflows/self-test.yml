@@ -314,7 +314,7 @@ jobs:
       AUDIT_LOG_HMAC_KEY: "ci-test-key-not-a-real-secret"
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # Portal scripts run TypeScript via `node --experimental-strip-types`,
           # which needs Node >=22.6 (Node 20 rejects the flag with "bad option").
@@ -401,7 +401,7 @@ jobs:
         working-directory: templates/in-app-widget
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "npm"
