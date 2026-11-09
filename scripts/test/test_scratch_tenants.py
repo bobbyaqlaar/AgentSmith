@@ -427,3 +427,97 @@ def test_the_adopted_job_waits_on_both_of_the_tenants_workflows():
     assert f'"{own}"' in wait and f'"{gates}"' in wait
     assert any("adopt.sh" in s.get("run", "") and "$GITHUB_SHA" in s.get("run", "") for s in job["steps"]), \
         "the tenant must be pinned to the commit under test"
+
+
+# ── A tenant on a compliance profile: its evals must be refused ───────────────
+EXPECT_UNGRADED = SCRATCH / "expect-ungraded.sh"
+_REFUSED = "2026 Judge\t##[error]not_gradable — no {suite} dataset at .agent-rfc/fixtures/{suite}_evals.json. A suite\n"
+
+
+def _expect_ungraded(tmp_path: Path, jobs: dict[str, str], *suites: str) -> subprocess.CompletedProcess:
+    """Run the script against a fake `gh`: `jobs` maps a job name to its failure log."""
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    gh = fake / "gh"
+    gh.write_text(
+        "#!/bin/sh\n"
+        'case "$*" in\n'
+        '  *--log-failed*) job=$(echo "$*" | sed "s/.*--job \\([0-9]*\\).*/\\1/"); cat "$FAKE_RUN/$job.log" ;;\n'
+        '  *) cat "$FAKE_RUN/jobs.txt" ;;\n'
+        "esac\n",
+        encoding="utf-8",
+    )
+    gh.chmod(0o755)
+    listing = ""
+    for number, (name, log) in enumerate(jobs.items(), start=1):
+        (tmp_path / f"{number}.log").write_text(log, encoding="utf-8")
+        listing += f"{number}\t{name}\n"
+    (tmp_path / "jobs.txt").write_text(listing, encoding="utf-8")
+    env = {**os.environ, "PATH": f"{fake}:{os.environ['PATH']}", "FAKE_RUN": str(tmp_path)}
+    return subprocess.run(["bash", str(EXPECT_UNGRADED), "o/r", "7", *suites],
+                          capture_output=True, text=True, check=False, env=env)
+
+
+def test_exactly_the_expected_suites_refused_passes(tmp_path):
+    done = _expect_ungraded(tmp_path, {"Golden": _REFUSED.format(suite="golden"),
+                                       "Hallucination": _REFUSED.format(suite="hallucination")},
+                            "golden", "hallucination")
+    assert done.returncode == 0, done.stdout
+
+
+def test_an_expected_suite_no_longer_refused_fails(tmp_path):
+    done = _expect_ungraded(tmp_path, {"Golden": _REFUSED.format(suite="golden")}, "golden", "fairness")
+    assert done.returncode == 1
+    assert "expected the profile to refuse" in done.stdout
+
+
+def test_a_suite_refused_that_was_not_expected_fails(tmp_path):
+    done = _expect_ungraded(tmp_path, {"Golden": _REFUSED.format(suite="golden"),
+                                       "Adversarial": _REFUSED.format(suite="adversarial")}, "golden")
+    assert done.returncode == 1
+
+
+def test_a_failure_for_any_other_reason_fails_even_with_every_suite_refused(tmp_path):
+    done = _expect_ungraded(tmp_path, {"Golden": _REFUSED.format(suite="golden"),
+                                       "Guardrails": "pytest\t##[error]Process completed with exit code 1.\n"},
+                            "golden")
+    assert done.returncode == 1
+    assert '"Guardrails" failed for a reason other than' in done.stdout
+
+
+def test_a_run_with_nothing_refused_fails(tmp_path):
+    assert _expect_ungraded(tmp_path, {}, "golden").returncode == 1
+
+
+def test_a_job_log_that_cannot_be_read_fails(tmp_path):
+    jobs = {"Golden": _REFUSED.format(suite="golden")}
+    first = _expect_ungraded(tmp_path, jobs, "golden")
+    assert first.returncode == 0, first.stdout
+    (tmp_path / "1.log").unlink()
+    (tmp_path / "bin" / "gh").write_text(
+        '#!/bin/sh\ncase "$*" in *--log-failed*) exit 1 ;; *) cat "$FAKE_RUN/jobs.txt" ;; esac\n', encoding="utf-8")
+    env = {**os.environ, "PATH": f"{tmp_path / 'bin'}:{os.environ['PATH']}", "FAKE_RUN": str(tmp_path)}
+    done = subprocess.run(["bash", str(EXPECT_UNGRADED), "o/r", "7", "golden"],
+                          capture_output=True, text=True, check=False, env=env)
+    assert done.returncode == 1
+    assert "could not read the log" in done.stdout
+
+
+def test_a_run_that_cannot_be_read_fails(tmp_path):
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (fake / "gh").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+    (fake / "gh").chmod(0o755)
+    done = subprocess.run(["bash", str(EXPECT_UNGRADED), "o/r", "7", "golden"], capture_output=True, text=True,
+                          check=False, env={**os.environ, "PATH": f"{fake}:{os.environ['PATH']}"})
+    assert done.returncode == 1
+    assert "could not read the jobs" in done.stdout
+
+
+def test_only_the_profile_tenant_expects_refusals_and_the_workflow_asks_the_script():
+    expecting = {entry["app"]: entry["expect_ungraded"] for entry in _matrix() if "expect_ungraded" in entry}
+    assert expecting == {"python-dubai-gov": "golden hallucination fairness"}
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert "expect-ungraded.sh" in text
+    # Only the tenant's stack CI: its gates workflow is still held to green.
+    assert '[ "$workflow" = "${{ matrix.ci }}" ]' in text

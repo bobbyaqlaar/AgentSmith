@@ -86,6 +86,8 @@ jobs:
             profile: dubai-gov
             repo: bobbyaqlaar/agentsmith-scratch-dubai-gov
             ci: "CI: Python/FastAPI Guardrails"
+            # No eval data and no in-border judge: the profile must refuse these.
+            expect_ungraded: "golden hallucination fairness"
     # One run per tenant at a time: two runs pushing the same scratch repo
     # would race, and the second's CI result would be read against the first's.
     concurrency:
@@ -186,6 +188,16 @@ jobs:
             rc=$?
             conclusion=$(gh run view "$id" -R "${{ matrix.repo }}" --json conclusion --jq .conclusion)
             printf '| %s | %s | %s | [%s](%s) |\n' "${{ matrix.app }}" "$workflow" "$conclusion" "$id" "$url" >> "$GITHUB_STEP_SUMMARY"
+            if [ -n "${{ matrix.expect_ungraded }}" ] && [ "$workflow" = "${{ matrix.ci }}" ]; then
+              if bash agentsmith/.github/scratch-tenants/expect-ungraded.sh \
+                   "${{ matrix.repo }}" "$id" ${{ matrix.expect_ungraded }}; then
+                printf '| %s | %s | expected: the profile refused %s | |\n' \
+                  "${{ matrix.app }}" "$workflow" "${{ matrix.expect_ungraded }}" >> "$GITHUB_STEP_SUMMARY"
+              else
+                failed=1
+              fi
+              continue
+            fi
             if [ "$rc" -ne 0 ]; then
               gh run view "$id" -R "${{ matrix.repo }}" --json jobs \
                 --jq '.jobs[] | select(.conclusion=="failure") | "::error::\(.name): " + ([.steps[] | select(.conclusion=="failure") | .name] | join(", "))'
