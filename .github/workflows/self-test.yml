@@ -250,7 +250,7 @@ jobs:
         # locally — not documented, so checked rather than assumed). /tmp
         # doesn't persist across separate Actions runs on its own; this
         # cache step is what makes it actually stick between CI runs.
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /tmp/temporal-sdk-python-*
           key: temporal-testsrv-${{ runner.os }}
