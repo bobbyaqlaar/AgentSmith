@@ -599,5 +599,29 @@
     "runner": "agency_manifest",
     "check_type": "artifact",
     "mechanism": "HITL + workflow needs_hitl flags"
+  },
+  {
+    "id": "SEC-CIAGENT-001",
+    "title": "Untrusted event text kept from coding agents",
+    "status": "partial",
+    "owner": "tenant",
+    "subject": "repository",
+    "frameworks": {
+      "owasp": [
+        "LLM01"
+      ],
+      "nist": [
+        "MAP 2.6"
+      ],
+      "atlas": [
+        "AML.T0051"
+      ],
+      "iso42001": [
+        9
+      ]
+    },
+    "runner": "agent_workflow",
+    "check_type": "static",
+    "mechanism": "Reads .github/workflows for attacker-controlled event fields reaching a coding agent"
   }
 ]

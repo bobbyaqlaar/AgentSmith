@@ -179,9 +179,7 @@ Each was checked absent from the code on 2026-11-03.
 9. **Agent evals stop at the answer.** Suites judge an output. Agents fail in the path: wrong tool, wrong order, a skipped
    approval. **Fix:** a `trajectory` suite in the evals contract, graded from traces, plus the rubric digest below.
    *After launch.*
-10. **Prompt injection into the coding agent itself is unchecked in CI.** In April 2026 researchers hijacked Claude Code,
-    Gemini CLI and Copilot through malicious pull-request titles. **Fix:** a gate check that fails a workflow passing untrusted
-    event text to an agent. Small, and a strong demonstration. *After launch.*
+10. **Text laundered past `SEC-CIAGENT-001`.** The control reads workflows for attacker-controlled event text reaching a coding agent. It does not follow step outputs, files or scripts a workflow calls. **Trigger:** a report of one of those routes in use.
 11. **Edit-time enforcement on two of six IDEs.** Copilot, Codex and Gemini CLI now have hook and managed-policy surfaces.
     Confirm each schema from a real session, then generate its config; Copilot first, for reach. *After launch.*
 12. **Agents have no identity of their own (ASI03).** Tenant and role on a span are labels. No per-agent credential, scope or

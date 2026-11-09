@@ -366,7 +366,7 @@
         "main",
         "run"
       ],
-      "last_modified": "2026-11-08T20:12:17Z",
+      "last_modified": "2026-11-09T20:28:09Z",
       "id": "scripts/rules_port.py"
     },
     {
@@ -428,7 +428,7 @@
         "vouched",
         "main"
       ],
-      "last_modified": "2026-11-08T20:50:58Z",
+      "last_modified": "2026-11-09T20:26:54Z",
       "id": "scripts/vouched_files.py"
     },
     {
@@ -1016,7 +1016,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-11-08T21:41:11Z",
+      "last_modified": "2026-11-09T20:56:47Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -1061,7 +1061,7 @@
         "_repo",
         "_commit"
       ],
-      "last_modified": "2026-11-08T21:12:40Z",
+      "last_modified": "2026-11-09T20:35:18Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -2421,7 +2421,7 @@
         "legacy",
         "change"
       ],
-      "last_modified": "2026-11-09T20:07:24Z",
+      "last_modified": "2026-11-09T21:09:20Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -2794,7 +2794,7 @@
         "test_agentsmith_passes_the_security_contract",
         "broken"
       ],
-      "last_modified": "2026-11-08T12:53:10Z",
+      "last_modified": "2026-11-09T21:16:27Z",
       "id": "scripts/test/test_security_contract.py"
     },
     {
@@ -3570,7 +3570,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-11-08T16:07:34Z",
+      "last_modified": "2026-11-09T21:11:18Z",
       "id": "scripts/security/runners/__init__.py"
     },
     {
@@ -6844,7 +6844,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-11-09T20:11:46Z",
+      "last_modified": "2026-11-09T21:09:20Z",
       "id": "agentsmith/sync.py"
     },
     {
@@ -7225,7 +7225,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-11-09T20:12:48Z",
+      "last_modified": "2026-11-09T21:09:20Z",
       "id": "agentsmith/adopt.py"
     },
     {
@@ -7444,7 +7444,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-11-08T21:33:30Z",
+      "last_modified": "2026-11-09T21:08:37Z",
       "id": "agentsmith/cli.py"
     },
     {
@@ -9258,7 +9258,7 @@
         "clear_phoenix_endpoint",
         "find_script"
       ],
-      "last_modified": "2026-11-08T20:50:21Z",
+      "last_modified": "2026-11-09T20:35:10Z",
       "id": "agentsmith/machine/state.py"
     },
     {
@@ -10137,6 +10137,70 @@
       "pillar": null,
       "created_at": "2026-11-09T20:14:22Z",
       "id": "rfc:reviews/tenant-upgrade-test.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_control",
+        "_check",
+        "_job",
+        "_action",
+        "_failed",
+        "test_the_runner_is_registered",
+        "test_a_repository_with_no_workflows_passes",
+        "test_an_untrusted_field_in_an_agents_prompt_fails",
+        "test_a_field_an_outsider_cannot_write_passes",
+        "test_each_agent_action_is_recognised",
+        "test_an_agent_started_from_a_shell_step_is_recognised",
+        "test_a_step_that_is_not_an_agent_is_not_this_controls_business",
+        "test_untrusted_text_through_the_environment_fails",
+        "test_an_environment_variable_the_agent_does_not_use_passes",
+        "test_a_trusted_value_replacing_an_untrusted_one_passes",
+        "test_reading_the_event_file_in_an_agent_step_fails",
+        "test_a_comment_restricted_to_collaborators_passes",
+        "test_the_restriction_also_counts_on_the_step",
+        "test_a_restriction_that_does_not_hold_does_not_count",
+        "test_a_restriction_never_excuses_a_branch_name",
+        "test_a_workflow_that_does_not_parse_fails",
+        "test_the_failure_says_what_to_do"
+      ],
+      "last_modified": "2026-11-09T21:16:27Z",
+      "id": "scripts/test/test_agent_workflow_injection.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_normalised",
+        "_untrusted_fields",
+        "_strings",
+        "_is_agent",
+        "_tainted",
+        "_uses_variable",
+        "_guarded",
+        "_step_problems",
+        "_workflow_problems",
+        "run"
+      ],
+      "last_modified": "2026-11-09T21:16:30Z",
+      "id": "scripts/security/runners/agent_workflow.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A workflow may not hand untrusted event text to a coding agent",
+      "source_file": ".agent-rfc/designs/agent-workflow-injection.md",
+      "pillar": null,
+      "created_at": "2026-11-09T21:17:36Z",
+      "id": "rfc:designs/agent-workflow-injection.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: agent-workflow-injection",
+      "source_file": ".agent-rfc/reviews/agent-workflow-injection.md",
+      "pillar": null,
+      "created_at": "2026-11-09T21:17:36Z",
+      "id": "rfc:reviews/agent-workflow-injection.md"
     }
   ],
   "edges": [

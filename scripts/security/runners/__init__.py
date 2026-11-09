@@ -7,6 +7,7 @@ from security.registry import ControlSpec
 from security.report import ControlResult
 from security.runners import (
     adversarial_eval,
+    agent_workflow,
     delegating,
     moderation_hook,
     noop,
@@ -52,4 +53,5 @@ RUNNERS: dict[str, Runner] = {
     "audit_hmac": delegating.audit_hmac,
     "rag_poison": delegating.rag_poison,
     "agency_manifest": delegating.agency_manifest,
+    "agent_workflow": agent_workflow.run,
 }

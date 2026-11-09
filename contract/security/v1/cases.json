@@ -12,6 +12,7 @@
         "rows": {
           "SEC-RISK-001": "pass",
           "SEC-AGENCY-001": "pass",
+          "SEC-CIAGENT-001": "pass",
           "SEC-TOOL-001": "pass",
           "SEC-PROMPT-001": "pass",
           "SEC-PII-001": "pass",
@@ -24,6 +25,22 @@
         }
       },
       "why": "every repository control holds; no dataset is not applicable"
+    },
+    {
+      "name": "a workflow handing a pull-request title to a coding agent fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".github/workflows/review.yml": "on: pull_request\njobs:\n  review:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: anthropics/claude-code-action@v1\n        with:\n          prompt: \"${{ github.event.pull_request.title }}\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CIAGENT-001": "fail"
+        }
+      },
+      "why": "an outsider writes the title, and so the agent's instructions"
     },
     {
       "name": "a template risk entry fails",
