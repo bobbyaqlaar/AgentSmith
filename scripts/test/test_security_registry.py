@@ -256,3 +256,34 @@ def test_the_unified_table_matches_the_registry() -> None:
         for cid, cell in re.findall(r"^\| `(SEC-[A-Z0-9-]+)` \| ([^|]+?) \|", section, re.M)
     }
     assert documented == {c.id: c.frameworks.owasp for c in load_control_registry(REGISTRY)}
+
+
+# ── The OWASP Agentic Top 10, graded (.agent-rfc/designs/owasp-agentic-tags.md) ──
+def _agentic_rows() -> dict[str, tuple[set[str], bool]]:
+    import re
+
+    doc = (REGISTRY.parents[2] / "docs" / "security-framework-map.md").read_text(encoding="utf-8")
+    rows: dict[str, tuple[set[str], bool]] = {}
+    for line in doc.splitlines():
+        found = re.match(r"^\| (ASI\d\d) [^|]*\| ([^|]*)\| ([^|]*)\|", line)
+        if found:
+            entry, controls, status = found.groups()
+            rows[entry] = (set(re.findall(r"`(SEC-[A-Z0-9-]+)`", controls)),
+                           not status.strip().startswith("**Not covered"))
+    return rows
+
+
+def test_the_map_lists_all_ten_agentic_entries():
+    assert sorted(_agentic_rows()) == [f"ASI{n:02d}" for n in range(1, 11)]
+
+
+def test_the_agentic_tags_are_the_maps_and_only_where_it_claims_coverage():
+    tagged: dict[str, set[str]] = {}
+    for control in load_control_registry(REGISTRY):
+        for entry in control.frameworks.owasp_agentic:
+            tagged.setdefault(entry, set()).add(control.id)
+    for entry, (controls, covered) in _agentic_rows().items():
+        expected = controls if covered else set()
+        assert tagged.get(entry, set()) == expected, (
+            f"{entry}: the registry tags {sorted(tagged.get(entry, set()))}, "
+            f"the map says {sorted(expected)} ({'covered in part' if covered else 'not covered'})")

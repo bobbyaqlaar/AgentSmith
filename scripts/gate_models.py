@@ -547,6 +547,9 @@ class ControlFrameworks(_Frozen):
     nist: list[str] = Field(default_factory=list)
     atlas: list[str] = Field(default_factory=list)
     iso42001: list[int] = Field(default_factory=list)
+    # The OWASP Top 10 for Agentic Applications, tagged where docs/security-framework-map.md
+    # says a control covers an entry at least in part (.agent-rfc/designs/owasp-agentic-tags.md).
+    owasp_agentic: list[str] = Field(default_factory=list)
 
 
 class TenantControl(BaseModel):

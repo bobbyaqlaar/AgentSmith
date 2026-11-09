@@ -200,7 +200,9 @@ the registry.
 
 **None of the ten is fully covered: six are partial and four are not covered.** The list is about agents at run time. AgentSmith's
 strongest controls act earlier, on the change before it merges, and this list has no entry for those. These rows are a reading
-of the code on 2026-11-05. The harness does not grade them: control tags and evidence packs carry the LLM Top 10, not this list.
+of the code on 2026-11-05. From 4.1.0 the harness grades them: each control carries an `owasp_agentic` tag for the rows below
+that are at least partial, a test holds the registry to this table, and every evidence pack has an `owasp_agentic_top10.md`
+listing all ten, with "not covered by any control" where that is the truth.
 
 | Risk | Control IDs | Current | What it does | What it does not do |
 |---|---|---|---|---|

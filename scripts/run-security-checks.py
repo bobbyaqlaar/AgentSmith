@@ -96,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--mode", choices=["smoke", "ci", "full"], default="full")
     p.add_argument("--strict", action="store_true")
-    p.add_argument("--framework", choices=["owasp", "nist", "atlas", "iso42001"])
+    p.add_argument("--framework", choices=["owasp", "nist", "atlas", "iso42001", "owasp_agentic"])
     p.add_argument("--evidence-pack", type=Path)
     args = p.parse_args(argv)
 

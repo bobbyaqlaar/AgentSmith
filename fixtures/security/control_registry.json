@@ -67,6 +67,10 @@
       ],
       "iso42001": [
         5
+      ],
+      "owasp_agentic": [
+        "ASI02",
+        "ASI09"
       ]
     },
     "runner": "hitl_gate",
@@ -114,6 +118,9 @@
       ],
       "iso42001": [
         6
+      ],
+      "owasp_agentic": [
+        "ASI10"
       ]
     },
     "runner": "audit_hmac",
@@ -180,6 +187,9 @@
       "atlas": [],
       "iso42001": [
         7
+      ],
+      "owasp_agentic": [
+        "ASI09"
       ]
     },
     "runner": "eval_golden",
@@ -224,6 +234,10 @@
       ],
       "iso42001": [
         7
+      ],
+      "owasp_agentic": [
+        "ASI08",
+        "ASI09"
       ]
     },
     "runner": "eval_hallucination",
@@ -248,6 +262,10 @@
       ],
       "iso42001": [
         11
+      ],
+      "owasp_agentic": [
+        "ASI08",
+        "ASI10"
       ]
     },
     "runner": "budget_caps",
@@ -293,6 +311,9 @@
       "atlas": [],
       "iso42001": [
         11
+      ],
+      "owasp_agentic": [
+        "ASI08"
       ]
     },
     "runner": "dlq_check",
@@ -315,6 +336,9 @@
       "atlas": [],
       "iso42001": [
         11
+      ],
+      "owasp_agentic": [
+        "ASI08"
       ]
     },
     "runner": "self_correction",
@@ -339,6 +363,9 @@
       ],
       "iso42001": [
         4
+      ],
+      "owasp_agentic": [
+        "ASI02"
       ]
     },
     "runner": "gateway_static",
@@ -363,6 +390,9 @@
       ],
       "iso42001": [
         9
+      ],
+      "owasp_agentic": [
+        "ASI01"
       ]
     },
     "runner": "prompt_guard",
@@ -409,6 +439,9 @@
       ],
       "iso42001": [
         4
+      ],
+      "owasp_agentic": [
+        "ASI02"
       ]
     },
     "runner": "tool_allowlist",
@@ -433,6 +466,9 @@
       ],
       "iso42001": [
         9
+      ],
+      "owasp_agentic": [
+        "ASI01"
       ]
     },
     "runner": "moderation_hook",
@@ -479,6 +515,9 @@
       ],
       "iso42001": [
         7
+      ],
+      "owasp_agentic": [
+        "ASI01"
       ]
     },
     "runner": "adversarial_eval",
@@ -570,6 +609,10 @@
       ],
       "iso42001": [
         3
+      ],
+      "owasp_agentic": [
+        "ASI01",
+        "ASI06"
       ]
     },
     "runner": "rag_poison",
@@ -594,6 +637,9 @@
       ],
       "iso42001": [
         5
+      ],
+      "owasp_agentic": [
+        "ASI02"
       ]
     },
     "runner": "agency_manifest",
@@ -618,6 +664,9 @@
       ],
       "iso42001": [
         9
+      ],
+      "owasp_agentic": [
+        "ASI01"
       ]
     },
     "runner": "agent_workflow",

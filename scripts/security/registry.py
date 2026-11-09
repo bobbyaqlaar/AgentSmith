@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -20,6 +20,7 @@ class FrameworkTags:
     nist: list[str]
     atlas: list[str]
     iso42001: list[int]
+    owasp_agentic: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -87,6 +88,7 @@ def load_control_registry(
                     nist=list(fw.get("nist", [])),
                     atlas=list(fw.get("atlas", [])),
                     iso42001=[int(x) for x in fw.get("iso42001", [])],
+                    owasp_agentic=list(fw.get("owasp_agentic", [])),
                 ),
                 runner=row["runner"],
                 check_type=row["check_type"],

@@ -76,6 +76,32 @@ def _render_table(
     return "\n".join(lines)
 
 
+# The OWASP Top 10 for Agentic Applications (2026). Listed whole, so an entry no
+# control covers is printed as that rather than left out.
+OWASP_AGENTIC = {
+    "ASI01": "Agent Goal Hijack", "ASI02": "Tool Misuse", "ASI03": "Identity & Privilege Abuse",
+    "ASI04": "Agentic Supply Chain Vulnerabilities", "ASI05": "Unexpected Code Execution",
+    "ASI06": "Memory & Context Poisoning", "ASI07": "Insecure Inter-Agent Communication",
+    "ASI08": "Cascading Failures", "ASI09": "Human-Agent Trust Exploitation", "ASI10": "Rogue Agents",
+}
+
+
+def _render_agentic(controls: list[ControlSpec], by_id: dict[str, ControlResult]) -> str:
+    lines = ["# OWASP Top 10 for Agentic Applications", "",
+             "Tagged from docs/security-framework-map.md: a control counts only where the map says it covers the "
+             "entry at least in part.", "",
+             "| Entry | Control ID | Registry | Result | Message |", "|---|---|---|---|---|"]
+    for entry, title in OWASP_AGENTIC.items():
+        tagged = [c for c in controls if entry in c.frameworks.owasp_agentic]
+        if not tagged:
+            lines.append(f"| {entry} {title} | — | — | not covered by any control | |")
+        for c in tagged:
+            lines.append(f"| {entry} {title} | `{c.id}` | {c.status} | {_status_for(c, by_id)} | "
+                         f"{_message_for(c, by_id)} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def _render_security_report_md(
     controls: list[ControlSpec],
     by_id: dict[str, ControlResult],
@@ -153,6 +179,7 @@ def write_evidence_pack(
                     "nist": c.frameworks.nist,
                     "atlas": c.frameworks.atlas,
                     "iso42001": c.frameworks.iso42001,
+                    "owasp_agentic": c.frameworks.owasp_agentic,
                 },
             }
             for c in controls
@@ -209,6 +236,9 @@ def write_evidence_pack(
         ),
         encoding="utf-8",
     )
+
+    # All ten, whatever the filter: a filtered pack still shows which entries no control covers.
+    (out_dir / "owasp_agentic_top10.md").write_text(_render_agentic(controls, by_id), encoding="utf-8")
 
     iso_controls = [c for c in controls if c.frameworks.iso42001]
     if framework == "iso42001":
