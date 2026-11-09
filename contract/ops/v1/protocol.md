@@ -16,7 +16,7 @@ dropped like any other key the receiver does not read.
 
 | `kind` | Carries | Receiver keeps |
 |---|---|---|
-| `run` | `run_id`, `status` (`running` \| `success` \| `degraded` \| `failed`); optional `workflow_id`, `trace_id` (W3C, 32 hex, not all zero), `error_summary`, `input_tokens`, `output_tokens`, `cost_usd`, `framework_version` | one row per run, the newest status winning — except that a late `running` never un-finishes a finished run. Usage is absent, never zero, when it was not reported |
+| `run` | `run_id`, `status` (`running` \| `success` \| `degraded` \| `failed`); optional `workflow_id`, `trace_id` (W3C, 32 hex, not all zero), `error_summary`, `app_commit` (7 to 40 lowercase hex), `input_tokens`, `output_tokens`, `cost_usd`, `framework_version` | one row per run, the newest status winning — except that a late `running` never un-finishes a finished run. Usage is absent, never zero, when it was not reported |
 | `dead_letter` | `task_id`, `error`, `payload` (any JSON, `null` included); optional `reason` (a category: `validation_error`, `tool_call_error`, `hitl_timeout`, `hitl_rejected` and `infra_error` are named; a receiver shows one it does not know as it is), `workflow_id`, `gate_id` | one entry per `task_id`, the first winning |
 | `settings` | optional `budget_cap_usd`, `replay_webhook_url` (`https`) | the newest of each field a message carries; a field it leaves out keeps what is stored |
 

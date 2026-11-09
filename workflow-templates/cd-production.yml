@@ -47,6 +47,9 @@ jobs:
 
     env:
       ENVIRONMENT: production
+      # The commit being deployed. Pass it to the running app (`--set-env-vars APP_COMMIT=$APP_COMMIT`),
+      # so a production run links to its commit, design and approvals in the portal.
+      APP_COMMIT: ${{ github.event.workflow_run.head_sha }}
 
     steps:
       - name: Checkout

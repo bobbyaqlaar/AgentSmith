@@ -62,6 +62,8 @@ class RunMessage(_Message):
     output_tokens: Optional[int] = Field(default=None, ge=0)
     cost_usd: Optional[float] = Field(default=None, ge=0)
     framework_version: Optional[str] = Field(default=None, max_length=64)
+    # The commit this deployment was built from, so a run links to its design and approvals.
+    app_commit: Optional[str] = Field(default=None, pattern=r"^[0-9a-f]{7,40}$")
 
     @field_validator("trace_id")
     @classmethod

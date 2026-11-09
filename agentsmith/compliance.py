@@ -24,6 +24,8 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from agentsmith.version import app_commit
+
 DECLARATION_FILE = ".agenticframework/compliance.json"
 ATTESTATIONS_FILE = ".agenticframework/attestations.jsonl"
 PATH_ENV = "AGENTSMITH_COMPLIANCE_FILE"
@@ -627,7 +629,7 @@ def guard_output(tenant_id: str, workflow_id: Optional[str], messages: list, tex
             "model": model,
             "prompt_sha256": payload_digest(messages),
             "output_sha256": payload_digest(text),
-            "commit": os.environ.get("APP_COMMIT", "unknown"),
+            "commit": app_commit() or "unknown",
         },
     )
 

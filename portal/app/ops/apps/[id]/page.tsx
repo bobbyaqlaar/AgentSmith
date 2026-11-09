@@ -9,10 +9,11 @@ import { CostChart } from "@/components/CostChart";
 import { StopControl } from "@/components/StopControl";
 import { can } from "@/lib/authz";
 import { lastStopAction } from "@/lib/hitl";
+import { listRecentRuns } from "@/lib/runStatus";
 import { isSafeHttpUrl } from "@/lib/safeUrl";
 import { isTruncated } from "@/lib/cappedList";
 import { currentAccess } from "@/lib/currentAccess";
-import { Badge, toneForLevel } from "@/components/ui/Badge";
+import { Badge, toneForLevel, toneForRunStatus } from "@/components/ui/Badge";
 import { MetricCard } from "@/components/ui/Card";
 import { Timestamp } from "@/components/ui/Timestamp";
 
@@ -28,6 +29,7 @@ export default async function TenantDetailPage(props: { params: Promise<{ id: st
   const tenant = await getTenant(params.id);
   if (!tenant) notFound();
   const lastStop = await lastStopAction(tenant.tenantId);
+  const recentRuns = await listRecentRuns(tenant.tenantId);
 
   const [cost, issues, phoenixUp, traceStats, suggestedPromotions] = await Promise.all([
     getTenantCost(tenant.tenantId),
@@ -126,6 +128,50 @@ export default async function TenantDetailPage(props: { params: Promise<{ id: st
           tone={issues.total > 0 ? "danger" : "success"}
         />
       </div>
+
+      <section>
+        <h3 className="text-lg font-medium mb-1">Recent runs</h3>
+        <p className="text-sm text-black/60 dark:text-white/60 mb-3">
+          Each links to the commit it was built from, and through it to the design and approvals.
+        </p>
+        {recentRuns.length === 0 ? (
+          <p className="text-black/60 dark:text-white/60">No runs reported yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="text-black/60 dark:text-white/60">
+                  <th className="py-1 pr-4 font-medium">Status</th>
+                  <th className="py-1 pr-4 font-medium">Started</th>
+                  <th className="py-1 pr-4 font-medium">Workflow</th>
+                  <th className="py-1 pr-4 font-medium">Commit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentRuns.map((run) => (
+                  <tr key={run.runId} className="border-t border-black/10 dark:border-white/10">
+                    <td className="py-1 pr-4"><Badge tone={toneForRunStatus(run.status)}>{run.status}</Badge></td>
+                    <td className="py-1 pr-4"><Timestamp value={run.startedAt} /></td>
+                    <td className="py-1 pr-4 font-mono text-xs break-all">{run.workflowId ?? "—"}</td>
+                    <td className="py-1 pr-4">
+                      {run.appCommit ? (
+                        <Link
+                          className="font-mono text-xs text-blue-700 dark:text-blue-400 hover:underline"
+                          href={`/dev/apps/${tenant.tenantId}/commits/${run.appCommit}`}
+                        >
+                          {run.appCommit.slice(0, 10)}
+                        </Link>
+                      ) : (
+                        <span className="text-black/50 dark:text-white/50">not reported</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <section>
         <h3 className="text-lg font-medium mb-3">

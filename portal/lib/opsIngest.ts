@@ -27,6 +27,7 @@ export interface RunInput {
   outputTokens: number | null;
   costUsd: number | null;
   frameworkVersion: string | null;
+  appCommit: string | null;
 }
 
 export interface SettingsInput {
@@ -85,6 +86,10 @@ export function parseOpsMessage(raw: unknown): Parsed {
         if (traceId !== null && (!/^[0-9a-f]{32}$/.test(traceId) || /^0+$/.test(traceId))) {
           throw new Refused("trace_id must be 32 lowercase hex characters, not all zero");
         }
+        const appCommit = text(body, "app_commit", 40);
+        if (appCommit !== null && !/^[0-9a-f]{7,40}$/.test(appCommit)) {
+          throw new Refused("app_commit must be 7 to 40 lowercase hex characters");
+        }
         return {
           ok: true,
           value: {
@@ -98,6 +103,7 @@ export function parseOpsMessage(raw: unknown): Parsed {
             outputTokens: count(body, "output_tokens", true),
             costUsd: count(body, "cost_usd", false),
             frameworkVersion: text(body, "framework_version", OPS_LIMITS.version),
+            appCommit,
           },
         };
       }

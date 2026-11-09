@@ -85,6 +85,8 @@ version table being consulted.
 
 ## [Unreleased]
 
+- A run reports the commit it was built from (`APP_COMMIT`, set by the deploy templates; pass it to your app). `RunMessage` gains an optional `app_commit` and traces an `app.commit` resource attribute, both additive. The portal's new Recent runs list links each run to its commit, design and approvals, and the commit page says which runs came from it. Migration: `agent_runs.app_commit`, added by `ADD COLUMN IF NOT EXISTS`.
+
 - New security control `SEC-CIAGENT-001`: a workflow that hands attacker-controlled event text, such as a pull-request title, to a coding agent fails the Security job. To go green, pass the number and let the agent fetch the text as data, or restrict the field's author with `author_association`.
 
 - `agentsmith sync` keeps a new tenant's declared eval warnings and telemetry `emitter`, redraws the knowledge graph, and refuses to move a tenant to an older release. Before this, a tenant's first sync could turn its evals and `kg check` red.

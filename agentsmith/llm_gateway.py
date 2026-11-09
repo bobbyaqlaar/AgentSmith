@@ -828,7 +828,7 @@ class LLMGateway:
             # whose run it is; the message names no tenant.
             try:
                 from agentsmith.tracing import current_trace_id, inject_context
-                from agentsmith.version import framework_version
+                from agentsmith.version import app_commit, framework_version
 
                 ops_contract.send(
                     ops_contract.RunMessage(
@@ -836,7 +836,7 @@ class LLMGateway:
                         trace_id=trace_id or current_trace_id(),
                         error_summary=error_summary[: ops_contract.TEXT_LIMIT] if error_summary else None,
                         input_tokens=input_tokens, output_tokens=output_tokens, cost_usd=cost_usd,
-                        framework_version=framework_version()),
+                        framework_version=framework_version(), app_commit=app_commit()),
                     headers=inject_context({}),
                 )
             except Exception as exc:  # fail-open: a malformed report never fails the call it reports on

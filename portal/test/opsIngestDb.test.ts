@@ -18,7 +18,9 @@ import { issueReplayKey } from "../lib/apps.ts";
 import { getPool } from "../lib/db.ts";
 import { handleDevIngest } from "../lib/devIngestHandler.ts";
 import { createIngestToken } from "../lib/ingestTokens.ts";
+import { runsOfCommit } from "../lib/devRead.ts";
 import { handleOpsIngest } from "../lib/opsIngest.ts";
+import { listRecentRuns } from "../lib/runStatus.ts";
 import { replayStatus, upsertTenant } from "../lib/tenants.ts";
 
 if (!process.env.DATABASE_URL) {
@@ -157,6 +159,47 @@ await test("no token, an unknown token and an oversize body are refused", async 
   assert.equal((await handleOpsIngest(null, run("x"))).status, 401);
   assert.equal((await handleOpsIngest(bearer("aso_unknown"), run("x"))).status, 401);
   assert.equal((await handleOpsIngest(bearer(opsA), "x".repeat(1_000_001))).status, 413);
+});
+
+const COMMIT = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
+
+await test("a run names its commit, and a report without one does not blank it", async () => {
+  const id = `run-commit-${RUN}`;
+  assert.equal((await handleOpsIngest(bearer(opsA), run(id, { status: "running", app_commit: COMMIT }))).status, 200);
+  assert.equal((await handleOpsIngest(bearer(opsA), run(id, { status: "success" }))).status, 200);
+  const recent = await listRecentRuns(APP_A);
+  assert.equal(recent.find((r) => r.runId === id)?.appCommit, COMMIT);
+});
+
+await test("a run with no commit is stored as none, not as a commit", async () => {
+  const id = `run-nocommit-${RUN}`;
+  assert.equal((await handleOpsIngest(bearer(opsA), run(id))).status, 200);
+  assert.equal((await listRecentRuns(APP_A)).find((r) => r.runId === id)?.appCommit, null);
+});
+
+await test("a commit that is not a hash is refused and stores nothing", async () => {
+  const id = `run-badcommit-${RUN}`;
+  assert.equal((await handleOpsIngest(bearer(opsA), run(id, { app_commit: "main" }))).status, 400);
+  const { rows } = await getPool().query(`SELECT 1 FROM agent_runs WHERE run_id = $1`, [id]);
+  assert.equal(rows.length, 0);
+});
+
+await test("a commit's runs are counted, by the full hash or a short one", async () => {
+  assert.equal((await handleOpsIngest(bearer(opsA), run(`run-short-${RUN}`, { app_commit: COMMIT.slice(0, 7) }))).status, 200);
+  const runs = await runsOfCommit(APP_A, COMMIT);
+  assert.equal(runs.count, 2);
+  assert.ok(runs.lastStartedAt);
+});
+
+await test("another app's runs of the same commit are not counted", async () => {
+  assert.equal((await handleOpsIngest(bearer(opsB), run(`run-other-${RUN}`, { app_commit: COMMIT }))).status, 200);
+  assert.equal((await runsOfCommit(APP_A, COMMIT)).count, 2);
+  assert.equal((await runsOfCommit(APP_B, COMMIT)).count, 1);
+});
+
+await test("a commit no run reported has no runs", async () => {
+  const runs = await runsOfCommit(APP_A, "f".repeat(40));
+  assert.deepEqual(runs, { count: 0, lastStartedAt: null });
 });
 
 // The apps stay, as in the other database tests: their audit rows are

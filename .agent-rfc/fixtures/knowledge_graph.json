@@ -2794,7 +2794,7 @@
         "test_agentsmith_passes_the_security_contract",
         "broken"
       ],
-      "last_modified": "2026-11-09T21:16:27Z",
+      "last_modified": "2026-11-09T21:19:06Z",
       "id": "scripts/test/test_security_contract.py"
     },
     {
@@ -3570,7 +3570,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-11-09T21:11:18Z",
+      "last_modified": "2026-11-09T21:19:06Z",
       "id": "scripts/security/runners/__init__.py"
     },
     {
@@ -3863,7 +3863,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-10-11T06:25:27Z",
+      "last_modified": "2026-11-09T21:22:24Z",
       "id": "portal/test/opsIngestDb.test.ts"
     },
     {
@@ -4203,13 +4203,14 @@
         "listDevCommits",
         "commitsStartingWith",
         "getDevCommit",
+        "runsOfCommit",
         "DesignListing",
         "listDevDesigns",
         "getDevDesign",
         "listIngestRuns",
         "listGateFailures"
       ],
-      "last_modified": "2026-09-24T19:14:07Z",
+      "last_modified": "2026-11-09T21:25:47Z",
       "id": "portal/lib/devRead.ts"
     },
     {
@@ -4462,10 +4463,12 @@
         "WidgetStatus",
         "UpsertAgentRunInput",
         "upsertAgentRun",
+        "RecentRun",
+        "listRecentRuns",
         "getFrameworkVersionByTenant",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-11-07T12:46:40Z",
+      "last_modified": "2026-11-09T21:25:46Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -4528,7 +4531,7 @@
         "OpsResult",
         "handleOpsIngest"
       ],
-      "last_modified": "2026-11-08T14:02:38Z",
+      "last_modified": "2026-11-09T21:25:46Z",
       "id": "portal/lib/opsIngest.ts"
     },
     {
@@ -4677,7 +4680,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-11-08T18:24:43Z",
+      "last_modified": "2026-11-09T21:21:52Z",
       "id": "portal/app/ops/apps/[id]/page.tsx"
     },
     {
@@ -4757,7 +4760,7 @@
         "dynamic",
         "DevCommitPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-09T21:21:52Z",
       "id": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx"
     },
     {
@@ -6946,7 +6949,7 @@
         "start_as_current_span",
         "on_start"
       ],
-      "last_modified": "2026-11-08T20:11:38Z",
+      "last_modified": "2026-11-09T21:25:44Z",
       "id": "agentsmith/tracing.py"
     },
     {
@@ -7007,12 +7010,13 @@
         "_installed_version",
         "_checkout_version",
         "framework_version",
+        "app_commit",
         "is_source_checkout",
         "_series",
         "warn_if_declared_version_differs",
         "_reset_cache"
       ],
-      "last_modified": "2026-11-07T12:46:40Z",
+      "last_modified": "2026-11-09T21:25:43Z",
       "id": "agentsmith/version.py"
     },
     {
@@ -7245,7 +7249,7 @@
         "_not_the_invalid_trace",
         "_no_secret"
       ],
-      "last_modified": "2026-11-08T20:48:15Z",
+      "last_modified": "2026-11-09T21:25:43Z",
       "id": "agentsmith/ops_contract.py"
     },
     {
@@ -7324,7 +7328,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-11-08T20:48:21Z",
+      "last_modified": "2026-11-09T21:25:44Z",
       "id": "agentsmith/llm_gateway.py"
     },
     {
@@ -9628,7 +9632,7 @@
         "__init__",
         "is_classified"
       ],
-      "last_modified": "2026-11-08T18:28:09Z",
+      "last_modified": "2026-11-09T21:21:52Z",
       "id": "agentsmith/compliance.py"
     },
     {
@@ -10165,7 +10169,7 @@
         "test_a_workflow_that_does_not_parse_fails",
         "test_the_failure_says_what_to_do"
       ],
-      "last_modified": "2026-11-09T21:16:27Z",
+      "last_modified": "2026-11-09T21:19:06Z",
       "id": "scripts/test/test_agent_workflow_injection.py"
     },
     {
@@ -10183,7 +10187,7 @@
         "_workflow_problems",
         "run"
       ],
-      "last_modified": "2026-11-09T21:16:30Z",
+      "last_modified": "2026-11-09T21:19:06Z",
       "id": "scripts/security/runners/agent_workflow.py"
     },
     {
@@ -10201,6 +10205,40 @@
       "pillar": null,
       "created_at": "2026-11-09T21:17:36Z",
       "id": "rfc:reviews/agent-workflow-injection.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_a_hash_is_read",
+        "test_anything_else_is_not_a_commit",
+        "test_unset_is_not_a_commit",
+        "test_a_run_may_carry_a_commit_and_need_not",
+        "test_a_run_refuses_what_is_not_a_lowercase_hash",
+        "_resource",
+        "test_the_trace_resource_names_the_commit",
+        "test_the_trace_resource_says_nothing_without_one",
+        "test_the_deploy_templates_set_it_from_the_commit_ci_validated",
+        "test_the_gateway_sends_the_commit_with_each_run"
+      ],
+      "last_modified": "2026-11-09T21:26:37Z",
+      "id": "scripts/test/test_app_commit.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A production run links to the commit behind it",
+      "source_file": ".agent-rfc/designs/accountability-chain.md",
+      "pillar": null,
+      "created_at": "2026-11-09T21:26:44Z",
+      "id": "rfc:designs/accountability-chain.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: accountability-chain",
+      "source_file": ".agent-rfc/reviews/accountability-chain.md",
+      "pillar": null,
+      "created_at": "2026-11-09T21:26:44Z",
+      "id": "rfc:reviews/accountability-chain.md"
     }
   ],
   "edges": [
@@ -11402,6 +11440,11 @@
     {
       "edge_type": "IMPORTS",
       "source": "agentsmith/runtime_server.py",
+      "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_app_commit.py",
       "target": "agentsmith/__init__.py"
     }
   ]
