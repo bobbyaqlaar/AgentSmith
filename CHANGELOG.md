@@ -85,6 +85,8 @@ version table being consulted.
 
 ## [Unreleased]
 
+- The `python-dubai-gov` scratch tenant asserts that the profile refuses its ungraded eval suites, instead of staying red. The manual says what a tenant needs before its CI can go green on the profile.
+
 ### Added — an opt-in compliance profile, `dubai-gov`
 
 For an application built for a UAE government entity. **Nothing changes for a repository without the profile**: every new branch in the runtime sits

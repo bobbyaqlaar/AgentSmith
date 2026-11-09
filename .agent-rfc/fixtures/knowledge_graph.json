@@ -2896,9 +2896,18 @@
         "test_the_build_copies_what_git_would_publish_not_local_junk",
         "test_adopt_sh_builds_a_tenant_whose_adoption_passed_its_own_gate",
         "test_adopt_sh_rebuilds_from_a_clean_history",
-        "test_the_adopted_job_waits_on_both_of_the_tenants_workflows"
+        "test_the_adopted_job_waits_on_both_of_the_tenants_workflows",
+        "_expect_ungraded",
+        "test_exactly_the_expected_suites_refused_passes",
+        "test_an_expected_suite_no_longer_refused_fails",
+        "test_a_suite_refused_that_was_not_expected_fails",
+        "test_a_failure_for_any_other_reason_fails_even_with_every_suite_refused",
+        "test_a_run_with_nothing_refused_fails",
+        "test_a_job_log_that_cannot_be_read_fails",
+        "test_a_run_that_cannot_be_read_fails",
+        "test_only_the_profile_tenant_expects_refusals_and_the_workflow_asks_the_script"
       ],
-      "last_modified": "2026-11-08T16:31:32Z",
+      "last_modified": "2026-11-09T05:51:45Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -10037,6 +10046,22 @@
       "symbols": [],
       "last_modified": "2026-11-08T16:08:17Z",
       "id": "portal/test/proxy.test.ts"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The scratch tenant on the profile expects its evals to be refused",
+      "source_file": ".agent-rfc/designs/scratch-profile-expects-ungraded.md",
+      "pillar": null,
+      "created_at": "2026-11-09T05:54:31Z",
+      "id": "rfc:designs/scratch-profile-expects-ungraded.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: scratch-profile-expects-ungraded",
+      "source_file": ".agent-rfc/reviews/scratch-profile-expects-ungraded.md",
+      "pillar": null,
+      "created_at": "2026-11-09T05:54:31Z",
+      "id": "rfc:reviews/scratch-profile-expects-ungraded.md"
     }
   ],
   "edges": [

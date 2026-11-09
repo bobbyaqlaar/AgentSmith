@@ -167,6 +167,14 @@ the next build.
   `test_scratch_tenants.py` fails until the directory, matrix entry and
   scenario agree, and until every stack has an app. Create the repo and update
   the token *before* pushing the matrix entry, or that job fails at checkout.
+  The repo also needs one commit, because `actions/checkout` cannot check out
+  an empty repository. Author it as `AgentSmith scratch-tenants`, or the build
+  refuses it as a hand edit; the first build replaces it.
+- **A tenant on a compliance profile** has no eval data and no in-border judge,
+  so the profile must refuse its suites. `expect_ungraded` in its matrix entry
+  names them, and `expect-ungraded.sh` passes only when exactly those were
+  refused and nothing failed for another reason. This proves the refusal, not a
+  passing eval run.
 
 ## Cost
 

@@ -469,6 +469,8 @@ stopped, or classified data would leave the boundary. The rest of the app keeps 
 
 **Marking AI output.** Every completion carries `provenance`: a machine-readable mark with the model, time and a digest, signed when `COMPLIANCE_RECORD_KEY` is set. `compliance.marking_headers()` renders it for HTTP. Passing it on to the end user is the application's job.
 
+**Evals need data and a judge before CI can go green.** On the profile a suite that was not judged fails, and the option to make it warn is removed. Add `golden_evals.json`, `hallucination_evals.json` and `fairness_evals.json` under `.agent-rfc/fixtures/`, and declare a `judge` role on a model inside your boundary. Datasets without a reachable judge end as `no_verdict`, which fails too.
+
 **Other routes out.** On the profile the developer pipeline and the eval router take no cloud route whatever keys are set, traces, Slack or Teams notices and Ops reports are not
 sent outside the boundary, and an embedding model must already be on disk. CI is the one route AgentSmith cannot close: the workflow templates use GitHub-hosted runners, so if code or test data is
 classified, run them on self-hosted runners inside the boundary (`OB-CI-BOUNDARY`).
