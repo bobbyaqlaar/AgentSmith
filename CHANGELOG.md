@@ -85,6 +85,8 @@ version table being consulted.
 
 ## [Unreleased]
 
+- New security control `SEC-CIAGENT-001`: a workflow that hands attacker-controlled event text, such as a pull-request title, to a coding agent fails the Security job. To go green, pass the number and let the agent fetch the text as data, or restrict the field's author with `author_association`.
+
 - `agentsmith sync` keeps a new tenant's declared eval warnings and telemetry `emitter`, redraws the knowledge graph, and refuses to move a tenant to an older release. Before this, a tenant's first sync could turn its evals and `kg check` red.
 - `tenant adopt` draws the knowledge graph after its records, so an adopted repository's graph is current from its first commit.
 - Self-Test moves a tenant from the last release to each commit (`scripts/check_tenant_upgrade.sh`).

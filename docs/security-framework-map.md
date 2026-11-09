@@ -158,6 +158,7 @@ Every row is one **harness control**. Multiple frameworks may reference the same
 | `SEC-EVAL-003` | LLM09 | MEASURE 2.6 | AML.T0024 | Theme 7 | **Met** | Shared | Hallucination rate gate | `--suite hallucination`; rate ≤ threshold |
 | `SEC-BUDGET-001` | LLM10 | MANAGE 2.4 | AML.T0034 | Theme 11 | **Met** | Framework | Budget caps, degrade ladder, circuit breaker | `test_llm_gateway_budget.py` + cap breach simulation |
 | `SEC-CHANGE-001` | LLM03, LLM04 | GOVERN 1.6 | — | Theme 10 | **Met** | Shared | Eval gates, the process gate, RFC enforcement | a declared gate provider; in AgentSmith, commits through the gate's hooks in throwaway repos |
+| `SEC-CIAGENT-001` | LLM01 | MAP 2.6 | AML.T0051 | Theme 9 | **Partial** | Tenant | Reads `.github/workflows` for attacker-controlled event fields reaching a coding agent | Static: fails on a direct expression, an `env:` it uses, or `$GITHUB_EVENT_PATH`; does not follow step outputs or scripts |
 | `SEC-DLQ-001` | LLM05 | MANAGE 4.4 | — | Theme 11 | **Met** | Framework | Recoverable step + DLQ; one `dead_letter_envelope()` builder for both producers | `agentsmith/test/test_dead_letter.py` — envelope keys match `enqueue`, both producers use the builder (AST-checked), flattened shape rejected by name. No Postgres. |
 | `SEC-SELF-001` | LLM05 | MANAGE 4.4 | — | Theme 11 | **Partial** | Shared | Opt-in `run_with_self_correction` | Unit + workflow tests; not default path |
 | `SEC-GW-001` | LLM06 | MAP 2.3 | AML.T0040 | Theme 4 | **Partial** | Shared | `llm_gateway.py` choke point | Static: tenant activities import gateway, not raw provider |
@@ -184,7 +185,7 @@ the registry.
 
 | Risk | Control IDs | Current | What is missing |
 |---|---|---|---|
-| LLM01 Prompt Injection | `SEC-PROMPT-001`, `SEC-MOD-001`, `SEC-ADV-001` | Partial | Heuristics can be evaded, in Arabic as in English |
+| LLM01 Prompt Injection | `SEC-PROMPT-001`, `SEC-MOD-001`, `SEC-ADV-001`, `SEC-CIAGENT-001` | Partial | Heuristics can be evaded, in Arabic as in English |
 | LLM02 Sensitive Information Disclosure | `SEC-PII-001`, `SEC-PII-002` | Partial | Names are not scrubbed: the default covers Emirates ID, email, phone and cards |
 | LLM03 Supply Chain | `SEC-SOV-001`, `SEC-SOV-002`, `SEC-CHANGE-001` | Partial | Dependency scan, SBOM and signed release provenance run in CI. MCP servers and tool definitions are pinned on a compliance profile. Model provenance is not checked |
 | LLM04 Data and Model Poisoning | `SEC-RAG-001`, `SEC-CHANGE-001` | Partial | Covers retrieved documents and fixture review. Training data is the application's |
@@ -203,7 +204,7 @@ of the code on 2026-11-05. The harness does not grade them: control tags and evi
 
 | Risk | Control IDs | Current | What it does | What it does not do |
 |---|---|---|---|---|
-| ASI01 Agent Goal Hijack | `SEC-PROMPT-001`, `SEC-RAG-001`, `SEC-ADV-001`, `SEC-MOD-001` | **Partial** | Heuristics and a denylist scan prompts; poisoned retrieved documents are quarantined; a red-team suite tests both | Heuristics can be evaded. Nothing notices a hijack from what the agent then does, because evals judge the answer, not the path. Text in a pull request reaching a coding agent in CI is unchecked |
+| ASI01 Agent Goal Hijack | `SEC-PROMPT-001`, `SEC-RAG-001`, `SEC-ADV-001`, `SEC-MOD-001`, `SEC-CIAGENT-001` | **Partial** | Heuristics and a denylist scan prompts; poisoned retrieved documents are quarantined; a red-team suite tests both | Heuristics can be evaded. Nothing notices a hijack from what the agent then does, because evals judge the answer, not the path. Text in a pull request reaching a coding agent in CI is unchecked |
 | ASI02 Tool Misuse | `SEC-TOOL-001`, `SEC-AGENCY-001`, `SEC-HITL-001`, `SEC-GW-001` | **Partial** | An unlisted tool is refused in strict mode; a human gate pauses a workflow | The allowlist says which tools, not with what arguments or in what order. `SEC-AGENCY-001` reads the declaration; it does not prove the gate is wired |
 | ASI03 Identity & Privilege Abuse | `SEC-RBAC-001`, `SEC-SSO-001` | **Not covered** for agents | Human operators have OIDC, role and tenant scope, and revocation | An agent has no credential of its own. Tenant and role on a span are labels for tracing, not identity. No per-agent scope and no delegation chain |
 | ASI04 Agentic Supply Chain Vulnerabilities | `SEC-CHANGE-001` | **Not covered** at run time | The framework's own dependencies are hash-locked and a repository pins the gate to a release | A repository's MCP servers and tool definitions are not checked: no declaration, no drift detection, no signing |
