@@ -85,6 +85,10 @@ version table being consulted.
 
 ## [Unreleased]
 
+- `agentsmith sync` keeps a new tenant's declared eval warnings and telemetry `emitter`, redraws the knowledge graph, and refuses to move a tenant to an older release. Before this, a tenant's first sync could turn its evals and `kg check` red.
+- `tenant adopt` draws the knowledge graph after its records, so an adopted repository's graph is current from its first commit.
+- Self-Test moves a tenant from the last release to each commit (`scripts/check_tenant_upgrade.sh`).
+
 - `agentsmith-supply-chain.yml` scans an app that has a `requirements.txt` with version ranges and no lock file, instead of stopping with "not pinned". Tenants take it with `agentsmith sync`.
 
 - The `python-dubai-gov` scratch tenant asserts that the profile refuses its ungraded eval suites, instead of staying red. The manual says what a tenant needs before its CI can go green on the profile.

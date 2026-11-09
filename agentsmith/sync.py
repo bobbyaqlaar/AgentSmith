@@ -24,6 +24,7 @@ import json
 import re
 import shlex
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -114,6 +115,7 @@ def plan_sync(root: Path, *, tenant_id: Optional[str] = None, framework: Optiona
     plan = Plan(root=root, tenant_id=tenant_id or str(manifest.get("tenant") or root.name),
                 stack=str(manifest.get("stack") or "python-fastapi"), vendored=vendored_dirs(root),
                 framework=framework, version=_default_framework_version())
+    _refuse_a_downgrade(root, plan.version)
     # Stale: a file this framework owns whose copy here differs from the
     # framework's. A sync adds nothing new to a repository that did not ask for
     # it — except the gate's own hooks, which a repository that armed the gates
@@ -155,6 +157,33 @@ def plan_sync(root: Path, *, tenant_id: Optional[str] = None, framework: Optiona
     return plan
 
 
+_RELEASE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
+
+
+def _release(text: str) -> Optional[tuple[int, ...]]:
+    found = _RELEASE.match(text)
+    return tuple(int(part) for part in found.groups()) if found else None
+
+
+def _refuse_a_downgrade(root: Path, version: str) -> None:
+    """A sync moves a tenant forward. Only released versions of AgentSmith's own
+    setup step compare: a branch ref or another provider's step is the tenant's
+    (.agent-rfc/designs/tenant-upgrade-test.md)."""
+    from agentsmith.adopt import PROVIDERS, SETUP_ACTION
+
+    try:
+        setup = json.loads((root / PROVIDERS).read_text(encoding="utf-8"))["providers"]["gate"]["setup"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return
+    if not isinstance(setup, str) or not setup.startswith(SETUP_ACTION + "@"):
+        return
+    declared = setup.split("@", 1)[1]
+    have, running = _release(declared), _release(version)
+    if have is not None and running is not None and running < have:
+        raise SyncError(f"{root} is on AgentSmith {declared} and this install is {version}: a sync would move it "
+                        "backwards. Update the install, and check for a stale package record beside it")
+
+
 # Files where the framework owns a REGION and the tenant owns the rest, so the
 # file's own hash is not the question: Claude's settings, where `render_config`
 # replaces the hooks and keeps permissions and everything else. Judging it by the
@@ -166,6 +195,7 @@ def plan_sync(root: Path, *, tenant_id: Optional[str] = None, framework: Optiona
 _MERGED = (".claude/settings.json",)
 
 CONFIG = ".agenticframework/process-gates.json"
+GRAPH = ".agent-rfc/fixtures/knowledge_graph.json"
 # What `tenant adopt` used to write for each document: this install's layout, in
 # the tenant's declaration. Exactly these values become `"provider"`; any other
 # value is the tenant's choice (.agent-rfc/designs/rules-contract.md).
@@ -246,13 +276,29 @@ def _shared_files(plan: Plan) -> tuple[dict[str, str], set[str]]:
     # framework wrote; a tenant that edited it — another provider, `none` — owns
     # it, and `ownership` leaves it alone and says so.
     if (root / PROVIDERS).is_file():
-        shared[PROVIDERS] = providers_declaration(setup=workflow_setup(root, f"v{plan.version}"))
+        shared[PROVIDERS] = _keeping_declared(
+            root / PROVIDERS, providers_declaration(setup=workflow_setup(root, f"v{plan.version}")))
         if (root / ".agenticframework" / "compliance.json").is_file():
             # A re-render would otherwise drop the profile's provider.
             from agentsmith.machine import governance
 
             shared[PROVIDERS] = governance.with_profile_ports(shared[PROVIDERS])
     return shared, regions
+
+
+def _keeping_declared(path: Path, text: str) -> str:
+    """The re-rendered declaration, with what `tenant init` declared for this
+    repository: a sync is not the moment a new tenant's evals turn red."""
+    try:
+        before = json.loads(path.read_text(encoding="utf-8"))["providers"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return text
+    after = json.loads(text)
+    for port, keys in (("evals", ("not_gradable", "no_verdict")), ("security", ("emitter",))):
+        declared = before.get(port) if isinstance(before, dict) else None
+        if isinstance(declared, dict):
+            after["providers"][port].update({key: declared[key] for key in keys if key in declared})
+    return json.dumps(after, indent=2) + "\n"
 
 
 def _workflow_template(framework: Path, name: str) -> Optional[Path]:
@@ -304,7 +350,22 @@ def sync(plan: Plan) -> list[str]:
     written += write_scaffold_records(root, plan.tenant_id, plan.stack, None, False, written,
                                       force=True, design=SYNC_DESIGN, adopted=True,
                                       generated_by=GENERATED_BY)
-    return written
+    return written + _redraw_graph(plan)
+
+
+def _redraw_graph(plan: Plan) -> list[str]:
+    """What a sync writes can be a node of the graph, and the tenant's CI compares
+    the two. Only a tenant that has a graph; a mapper that fails is said."""
+    mapper = plan.framework / "scripts" / "map_codebase.py"
+    if not (plan.root / GRAPH).is_file() or not mapper.is_file():
+        return []
+    done = subprocess.run([sys.executable, str(mapper), "--quiet"], cwd=plan.root,
+                          capture_output=True, text=True, check=False)
+    if done.returncode != 0:
+        print(f"  ! the knowledge graph was not redrawn, so `kg check` may fail: {done.stderr.strip()[-200:]}",
+              file=sys.stderr)
+        return []
+    return [GRAPH] if _changed(plan.root, GRAPH) else []
 
 
 def _changed(root: Path, rel: str) -> bool:

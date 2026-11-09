@@ -600,3 +600,110 @@ def test_an_adopted_config_naming_this_installs_paths_is_moved_to_provider_and_s
     _git(root, "add", "--", *written)
     result = _git(root, "commit", *SYNC_COMMIT)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+# ── What moving a tenant forward must not do (.agent-rfc/designs/tenant-upgrade-test.md) ──
+_PROVIDERS = ".agenticframework/providers.json"
+_GRAPH = ".agent-rfc/fixtures/knowledge_graph.json"
+_ACTION = "bobbyaqlaar/AgentSmith/.github/actions/setup-agentsmith"
+
+
+def _declare(root: Path, change) -> None:
+    path = root / _PROVIDERS
+    declared = json.loads(path.read_text(encoding="utf-8"))
+    change(declared["providers"])
+    path.write_text(json.dumps(declared, indent=2) + "\n", encoding="utf-8")
+
+
+def _pin(root: Path, ref: str) -> None:
+    def change(ports: dict) -> None:
+        ports["gate"]["setup"] = f"{_ACTION}@{ref}"
+    _declare(root, change)
+
+
+def test_a_sync_refuses_to_move_a_tenant_to_an_older_release(tenant, monkeypatch):
+    from agentsmith import cli
+    from agentsmith.sync import SyncError, plan_sync
+
+    monkeypatch.setattr(cli, "_default_framework_version", lambda: "4.0.1")
+    _pin(tenant, "v4.1.0")
+    with pytest.raises(SyncError, match="backwards"):
+        plan_sync(tenant, framework=REPO)
+
+
+@pytest.mark.parametrize("ref", ["v4.0.1", "v3.9.9", "main", "a1b2c3d"])
+def test_a_sync_moves_forward_and_leaves_a_ref_that_is_not_a_release(tenant, monkeypatch, ref):
+    from agentsmith import cli
+    from agentsmith.sync import plan_sync
+
+    monkeypatch.setattr(cli, "_default_framework_version", lambda: "4.0.1")
+    _pin(tenant, ref)
+    assert plan_sync(tenant, framework=REPO).version == "4.0.1"
+
+
+def test_another_providers_setup_is_never_compared(tenant, monkeypatch):
+    from agentsmith import cli
+    from agentsmith.sync import plan_sync
+
+    monkeypatch.setattr(cli, "_default_framework_version", lambda: "4.0.1")
+
+    def change(ports: dict) -> None:
+        ports["gate"]["setup"] = "someone/else/.github/actions/setup@v99.0.0"
+    _declare(tenant, change)
+    assert plan_sync(tenant, framework=REPO).version == "4.0.1"
+
+
+def _what_a_new_repository_declared(ports: dict) -> None:
+    ports["evals"]["not_gradable"] = {"golden": "warn"}
+    ports["evals"]["no_verdict"] = {"golden": "warn"}
+    ports["security"]["emitter"] = "none"
+
+
+def test_a_sync_keeps_what_tenant_init_declared(tenant):
+    from agentsmith.sync import _shared_files, plan_sync
+
+    _declare(tenant, _what_a_new_repository_declared)
+    ports = json.loads(_shared_files(plan_sync(tenant, framework=REPO))[0][_PROVIDERS])["providers"]
+    assert ports["evals"]["not_gradable"] == {"golden": "warn"}
+    assert ports["evals"]["no_verdict"] == {"golden": "warn"}
+    assert ports["security"]["emitter"] == "none"
+
+
+def test_a_profile_still_loses_the_warnings_on_a_sync(tenant):
+    from agentsmith.sync import _shared_files, plan_sync
+
+    _declare(tenant, _what_a_new_repository_declared)
+    (tenant / ".agenticframework" / "compliance.json").write_text("{}\n", encoding="utf-8")
+    ports = json.loads(_shared_files(plan_sync(tenant, framework=REPO))[0][_PROVIDERS])["providers"]
+    assert "not_gradable" not in ports["evals"] and "no_verdict" not in ports["evals"]
+
+
+def _graph_nodes(root: Path) -> set[str]:
+    return {node["id"] for node in json.loads((root / _GRAPH).read_text(encoding="utf-8"))["nodes"]}
+
+
+def test_an_adopted_graph_already_holds_the_records_adopt_wrote(tenant):
+    assert any("adoption" in node for node in _graph_nodes(tenant))
+    assert any("001-scaffold" in node for node in _graph_nodes(tenant))
+
+
+def test_adopt_leaves_the_manifest_holding_the_graphs_final_hash(tenant):
+    from agentsmith.sync import _digest
+
+    manifest = json.loads((tenant / ".agenticframework" / "scaffold.json").read_text(encoding="utf-8"))
+    assert manifest["files"][_GRAPH] == _digest(tenant / _GRAPH)
+
+
+def test_a_sync_redraws_the_graph_when_it_wrote_anything(tenant):
+    from agentsmith.sync import plan_sync, sync
+
+    # A hook behind the framework's, so this sync has something to write.
+    hook = tenant / ".githooks" / "chain"
+    hook.write_text(hook.read_text(encoding="utf-8") + "# an older hook\n", encoding="utf-8")
+    graph = json.loads((tenant / _GRAPH).read_text(encoding="utf-8"))
+    graph["nodes"] = [node for node in graph["nodes"] if "adoption" not in node["id"]]
+    (tenant / _GRAPH).write_text(json.dumps(graph, indent=2) + "\n", encoding="utf-8")
+    assert _git(tenant, "commit", "-qam", "chore: an older graph", "--no-verify").returncode == 0
+    written = sync(plan_sync(tenant, framework=REPO))
+    assert _GRAPH in written
+    assert any("adoption" in node for node in _graph_nodes(tenant))

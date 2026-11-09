@@ -190,6 +190,11 @@ jobs:
           dist="$(mktemp -d)"
           bash scripts/build_release_assets.sh "$dist"
           bash scripts/check_release_install.sh "file://$dist"
+      - name: "A tenant on the last release upgrades to this commit"
+        # agentsmith:gate
+        # Scratch tenants are rebuilt from HEAD, so they cannot see what breaks a
+        # tenant that already exists (.agent-rfc/designs/tenant-upgrade-test.md).
+        run: bash scripts/check_tenant_upgrade.sh
       - name: "Delivery evidence pack script"
         # agentsmith:gate
         run: python3 scripts/delivery_evidence.py
