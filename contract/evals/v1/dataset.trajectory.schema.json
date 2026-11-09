@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsmith.dev/contract/evals/v1/dataset.trajectory.schema.json",
+  "description": "The trajectory suite's dataset: each case is one run's tool calls and the rules they must keep (contract/evals/v1/protocol.md).",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/TrajectoryCase"
+  },
+  "$defs": {
+    "TrajectoryExpect": {
+      "additionalProperties": false,
+      "description": "The rules one run's tool calls must keep (.agent-rfc/designs/trajectory-evals.md).",
+      "properties": {
+        "in_order": {
+          "items": {
+            "type": "string"
+          },
+          "title": "In Order",
+          "type": "array"
+        },
+        "must_call": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Must Call",
+          "type": "array"
+        },
+        "never": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Never",
+          "type": "array"
+        },
+        "max_calls": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Calls"
+        }
+      },
+      "title": "TrajectoryExpect",
+      "type": "object"
+    },
+    "TrajectoryCase": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "tools": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tools"
+        },
+        "trace": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace"
+        },
+        "expect": {
+          "$ref": "#/$defs/TrajectoryExpect"
+        }
+      },
+      "required": [
+        "id",
+        "expect"
+      ],
+      "title": "TrajectoryCase",
+      "type": "object"
+    }
+  }
+}

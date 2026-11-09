@@ -186,6 +186,26 @@
         "answer": "none"
       },
       "why": "a verb this contract does not name is refused"
+    },
+    {
+      "name": "runs that keep their tool rules pass",
+      "verb": "run",
+      "suite": "trajectory",
+      "dataset": "trajectory_kept",
+      "expect": {
+        "verdict": "pass"
+      },
+      "why": "every case keeps its order and never touches a forbidden tool"
+    },
+    {
+      "name": "a run that breaks its tool rules fails",
+      "verb": "run",
+      "suite": "trajectory",
+      "dataset": "trajectory_broken",
+      "expect": {
+        "verdict": "fail"
+      },
+      "why": "graded from the calls: the wrong order and a forbidden tool"
     }
   ]
 }

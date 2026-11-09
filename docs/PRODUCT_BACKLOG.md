@@ -170,9 +170,7 @@ Each was checked absent from the code on 2026-11-03.
    users (`marking_headers`). Marking is due by 2 December 2026 for systems already on the market. For Article 19, the profile
    declares `retention_days` and `agentsmith ops purge` applies it to run history, but that obligation is attested and no gate
    reads the period. **Fix:** a declared retention period the gate reads. *After launch.*
-9. **Agent evals stop at the answer.** Suites judge an output. Agents fail in the path: wrong tool, wrong order, a skipped
-   approval. **Fix:** a `trajectory` suite in the evals contract, graded from traces, plus the rubric digest below.
-   *After launch.*
+9. **Trajectory evals stop short of approvals and CI.** The `trajectory` suite grades a run's tool calls (order, required, forbidden, count). Still open: "approved before", which needs human decisions on spans, and a template CI job that runs the suite. **Trigger:** a tenant with a trajectory dataset.
 10. **Text laundered past `SEC-CIAGENT-001`.** The control reads workflows for attacker-controlled event text reaching a coding agent. It does not follow step outputs, files or scripts a workflow calls. **Trigger:** a report of one of those routes in use.
 11. **Edit-time enforcement on two of six IDEs.** Copilot, Codex and Gemini CLI now have hook and managed-policy surfaces.
     Confirm each schema from a real session, then generate its config; Copilot first, for reach. *After launch.*

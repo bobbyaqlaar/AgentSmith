@@ -372,9 +372,9 @@ case "$subcommand" in
       suite=""
     fi
     case "$suite" in
-      golden|fairness|hallucination|adversarial|rag_poison) ;;
+      golden|fairness|hallucination|adversarial|rag_poison|trajectory) ;;
       *)
-        echo "usage: process-gate evals run --suite golden|fairness|hallucination|adversarial|rag_poison [--fail-below 0..1]" >&2
+        echo "usage: process-gate evals run --suite golden|fairness|hallucination|adversarial|rag_poison|trajectory [--fail-below 0..1]" >&2
         exit 2 ;;
     esac
     # `--fail-below X`: the request's own floor (contract/evals/v1, `fail_below`),

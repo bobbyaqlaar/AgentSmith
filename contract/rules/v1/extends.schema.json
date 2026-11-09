@@ -253,7 +253,8 @@
           "fairness",
           "hallucination",
           "adversarial",
-          "rag_poison"
+          "rag_poison",
+          "trajectory"
         ]
       },
       "title": "Evals",
