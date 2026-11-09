@@ -105,12 +105,12 @@ jobs:
           fi
 
       - name: Checkout AgentSmith
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: agentsmith
 
       - name: Checkout ${{ matrix.repo }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ matrix.repo }}
           token: ${{ secrets.SCRATCH_TENANTS_TOKEN }}
@@ -221,12 +221,12 @@ jobs:
           fi
 
       - name: Checkout AgentSmith
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: agentsmith
 
       - name: Checkout the adopted scratch repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: bobbyaqlaar/agentsmith-scratch-adopted
           token: ${{ secrets.SCRATCH_TENANTS_TOKEN }}

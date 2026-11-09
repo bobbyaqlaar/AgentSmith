@@ -28,7 +28,7 @@ jobs:
     name: "Process gates (design + review)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       # The gate runs in the framework environment (pydantic + OTel), the same
@@ -65,7 +65,7 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # A pull request's suites are chosen against its base, which a
           # one-commit checkout does not have (it would then run every suite).
@@ -101,7 +101,7 @@ jobs:
     needs: mutations
     if: ${{ !cancelled() }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v5
@@ -233,7 +233,7 @@ jobs:
       DATABASE_URL: "postgresql://test:test@localhost:5432/test"
       IDEMPOTENCY_BACKEND: postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           # One version, in .python-version — the one uv builds
@@ -271,7 +271,7 @@ jobs:
     name: "Shell scripts"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: "bash -n / zsh -n syntax check"
         # agentsmith:gate
         run: |
@@ -313,7 +313,7 @@ jobs:
       DATABASE_URL: "postgresql://test:test@localhost:5432/test"
       AUDIT_LOG_HMAC_KEY: "ci-test-key-not-a-real-secret"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           # Portal scripts run TypeScript via `node --experimental-strip-types`,
@@ -400,7 +400,7 @@ jobs:
       run:
         working-directory: templates/in-app-widget
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
