@@ -11,8 +11,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts"))
 
-import evals_port  # noqa: E402
-import gate_models as gm  # noqa: E402
+import evals_port
+import gate_models as gm
 
 
 def _expect(**rules) -> gm.TrajectoryExpect:
@@ -33,7 +33,7 @@ def _expect(**rules) -> gm.TrajectoryExpect:
 def test_each_rule(tools, rules, broken):
     problems = evals_port.trajectory_problems(tools, _expect(**rules))
     assert len(problems) == len(broken)
-    for got, want in zip(problems, broken):
+    for got, want in zip(problems, broken, strict=True):
         assert got.startswith(want)
 
 
