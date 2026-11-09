@@ -521,3 +521,58 @@ def test_only_the_profile_tenant_expects_refusals_and_the_workflow_asks_the_scri
     assert "expect-ungraded.sh" in text
     # Only the tenant's stack CI: its gates workflow is still held to green.
     assert '[ "$workflow" = "${{ matrix.ci }}" ]' in text
+
+
+# ── The wait step itself, under the `bash -e` the runner gives it ─────────────
+def _wait_step(tmp_path: Path, watch_red: bool, expect: str, log: str) -> subprocess.CompletedProcess:
+    steps = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["build"]["steps"]
+    script = next(step["run"] for step in steps if step.get("name") == "Wait for the tenant's CI")
+    for expression, value in (("matrix.ci", "CI"), ("matrix.repo", "o/r"), ("matrix.app", "a"),
+                              ("steps.push.outputs.sha", "abc"), ("matrix.expect_ungraded", expect)):
+        script = script.replace("${{ " + expression + " }}", value)
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (tmp_path / "1.log").write_text(log, encoding="utf-8")
+    (fake / "gh").write_text(
+        "#!/bin/sh\n"
+        'case "$*" in\n'
+        '  *"run list"*"--workflow CI"*) echo 7 ;;\n'
+        '  *"run list"*) echo 8 ;;\n'
+        f'  *"run watch 7"*) exit {1 if watch_red else 0} ;;\n'
+        '  *"run watch"*) exit 0 ;;\n'
+        f'  *--log-failed*) cat "{tmp_path}/1.log" ;;\n'
+        f'  *"--json jobs"*) printf "1\\tEvals\\n" ;;\n'
+        f'  *"--json conclusion"*) echo {"failure" if watch_red else "success"} ;;\n'
+        "esac\n",
+        encoding="utf-8",
+    )
+    (fake / "gh").chmod(0o755)
+    work = tmp_path / "work"
+    (work / "agentsmith").mkdir(parents=True)
+    (work / "agentsmith" / ".github").symlink_to(REPO / ".github")
+    env = {**os.environ, "PATH": f"{fake}:{os.environ['PATH']}", "GITHUB_STEP_SUMMARY": str(tmp_path / "summary")}
+    return subprocess.run(["bash", "-e", "-c", script], cwd=work, capture_output=True, text=True, check=False, env=env)
+
+
+def test_a_red_tenant_run_reaches_the_wait_steps_report(tmp_path):
+    done = _wait_step(tmp_path, watch_red=True, expect="", log="")
+    assert done.returncode == 1
+    assert "failure" in (tmp_path / "summary").read_text(encoding="utf-8")
+
+
+def test_the_wait_step_reaches_the_refusal_check_on_a_red_run(tmp_path):
+    done = _wait_step(tmp_path, watch_red=True, expect="golden", log=_REFUSED.format(suite="golden"))
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "expected: the profile refused golden" in (tmp_path / "summary").read_text(encoding="utf-8")
+
+
+def test_the_wait_step_stays_red_when_the_refusal_is_not_the_reason(tmp_path):
+    done = _wait_step(tmp_path, watch_red=True, expect="golden", log="pytest\t##[error]exit code 1\n")
+    assert done.returncode == 1
+    assert "for a reason other than" in done.stdout
+
+
+def test_every_job_that_waits_survives_a_red_run():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    watches = [line for line in text.splitlines() if "gh run watch" in line and not line.strip().startswith("#")]
+    assert watches and all(line.rstrip().endswith("|| rc=$?") for line in watches), watches

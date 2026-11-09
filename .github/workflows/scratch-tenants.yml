@@ -184,8 +184,9 @@ jobs:
               continue
             fi
             url="https://github.com/${{ matrix.repo }}/actions/runs/$id"
-            gh run watch "$id" -R "${{ matrix.repo }}" --exit-status > /dev/null
-            rc=$?
+            # `|| rc=$?`: the runner uses `bash -e`, and a red run must reach the report below.
+            rc=0
+            gh run watch "$id" -R "${{ matrix.repo }}" --exit-status > /dev/null || rc=$?
             conclusion=$(gh run view "$id" -R "${{ matrix.repo }}" --json conclusion --jq .conclusion)
             printf '| %s | %s | %s | [%s](%s) |\n' "${{ matrix.app }}" "$workflow" "$conclusion" "$id" "$url" >> "$GITHUB_STEP_SUMMARY"
             if [ -n "${{ matrix.expect_ungraded }}" ] && [ "$workflow" = "${{ matrix.ci }}" ]; then
@@ -291,8 +292,9 @@ jobs:
               failed=1
               continue
             fi
-            gh run watch "$id" -R "$REPO" --exit-status > /dev/null
-            rc=$?
+            # `|| rc=$?`: the runner uses `bash -e`, and a red run must reach the report below.
+            rc=0
+            gh run watch "$id" -R "$REPO" --exit-status > /dev/null || rc=$?
             conclusion=$(gh run view "$id" -R "$REPO" --json conclusion --jq .conclusion)
             printf '| adopted | %s | %s | [%s](https://github.com/%s/actions/runs/%s) |\n' \
               "$workflow" "$conclusion" "$id" "$REPO" "$id" >> "$GITHUB_STEP_SUMMARY"
