@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - .github/scratch-tenants/expect-ungraded.sh
   - .github/scratch-tenants/apps/python-dubai-gov/app/guards.py

@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - workflow-templates/agentsmith-supply-chain.yml
   - scripts/test/test_compliance_checks.py

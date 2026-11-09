@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - agentsmith/version.py
   - agentsmith/ops_contract.py

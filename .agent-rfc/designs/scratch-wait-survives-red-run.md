@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - .github/workflows/scratch-tenants.yml
   - scripts/test/test_scratch_tenants.py

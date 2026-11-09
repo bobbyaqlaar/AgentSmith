@@ -56,6 +56,9 @@ version is itself on both wires from 1.3.0.
 
 | Emitted since | Field | Wire |
 |---|---|---|
+| 4.1.0 | `gen_ai.operation.name`, `gen_ai.request.model`, `gen_ai.provider.name`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.tool.name` — OpenTelemetry's GenAI names beside the contract's own, optional | span |
+| 4.1.0 | `app.commit` — the commit the deployment was built from (`APP_COMMIT`) | OTel Resource |
+| 4.1.0 | `app_commit` on a run (`contract/ops/v1`) | Ops ingest POST |
 | 2.4.0 | run status, dead letters and settings by the Ops contract (`contract/ops/v1`), with the app's own Ops token | Ops ingest POST |
 | 2.1.0 | `governance.telemetry.contract` — which telemetry contract the emitter speaks (`contract/telemetry/v1`) | OTel Resource |
 | 2.0.0 | the Dev record — each commit's gate verdict, design, pillars, review passes (`process_gate.py ci --json`, `schema` 1) | Dev ingest POST |
@@ -84,6 +87,8 @@ version table being consulted.
 
 
 ## [Unreleased]
+
+- Traces carry OpenTelemetry's GenAI names beside AgentSmith's own: `gen_ai.operation.name`, `gen_ai.request.model`, `gen_ai.provider.name`, `gen_ai.usage.*` and `gen_ai.tool.name`. Optional and additive; `llm.*` stays the telemetry contract. Pinned to `open-telemetry/semantic-conventions-genai@e6658f14c9d9`, since the names are still in development upstream.
 
 - A run reports the commit it was built from (`APP_COMMIT`, set by the deploy templates; pass it to your app). `RunMessage` gains an optional `app_commit` and traces an `app.commit` resource attribute, both additive. The portal's new Recent runs list links each run to its commit, design and approvals, and the commit page says which runs came from it. Migration: `agent_runs.app_commit`, added by `ADD COLUMN IF NOT EXISTS`.
 

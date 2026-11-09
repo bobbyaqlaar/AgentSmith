@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - scripts/security/runners/agent_workflow.py
   - scripts/security/runners/__init__.py

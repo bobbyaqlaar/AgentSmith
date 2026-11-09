@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - fixtures/**
   - contract/compliance/**
