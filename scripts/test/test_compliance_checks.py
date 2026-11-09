@@ -447,3 +447,53 @@ def test_a_go_tenant_goes_on_the_sidecar(tmp_path, monkeypatch):
     write(tmp_path, ".github/workflows/ci-go.yml", "x")
     assert governance.compliance_enable("dubai-gov", tmp_path) == 0
     assert json.loads((tmp_path / ".agenticframework/compliance.json").read_text())["runtime"] == "sidecar"
+
+
+# ── The supply-chain template's dependency scan ───────────────────────────────
+def _run_dependency_scan(tmp_path, files, scanner_exit=0):
+    """Run the shipped step under `bash -e`, with a fake `pipx` that records its arguments."""
+    import yaml
+
+    template = Path(__file__).resolve().parents[2] / "workflow-templates" / "agentsmith-supply-chain.yml"
+    steps = yaml.safe_load(template.read_text(encoding="utf-8"))["jobs"]["scan"]["steps"]
+    script = next(step["run"] for step in steps if step.get("name") == "Python dependencies")
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    pipx = fake / "pipx"
+    pipx.write_text(f'#!/bin/sh\necho "$*" >> "{tmp_path}/called"\nexit {scanner_exit}\n', encoding="utf-8")
+    pipx.chmod(0o755)
+    work = tmp_path / "repo"
+    work.mkdir()
+    for name in files:
+        (work / name).write_text("x==1\n", encoding="utf-8")
+    done = subprocess.run(["bash", "-e", "-c", script], cwd=work, capture_output=True, text=True, check=False,
+                          env={**os.environ, "PATH": f"{fake}:{os.environ['PATH']}"})
+    called = tmp_path / "called"
+    return done, (called.read_text(encoding="utf-8") if called.is_file() else "")
+
+
+def test_a_lock_is_audited_exactly_as_pinned(tmp_path):
+    done, called = _run_dependency_scan(tmp_path, ["requirements.lock", "requirements.txt"])
+    assert done.returncode == 0
+    assert "-r requirements.lock --disable-pip --no-deps" in called
+    assert "requirements.txt" not in called
+
+
+def test_requirements_without_a_lock_are_resolved_not_refused(tmp_path):
+    done, called = _run_dependency_scan(tmp_path, ["requirements.txt"])
+    assert done.returncode == 0
+    assert "-r requirements.txt" in called
+    assert "--no-deps" not in called and "--disable-pip" not in called
+
+
+def test_no_requirements_file_is_a_message_and_no_scan(tmp_path):
+    done, called = _run_dependency_scan(tmp_path, [])
+    assert done.returncode == 0
+    assert called == ""
+    assert "no Python requirements file" in done.stdout
+
+
+@pytest.mark.parametrize("files", [["requirements.lock"], ["requirements.txt"]])
+def test_a_failing_scan_fails_the_step(tmp_path, files):
+    done, _ = _run_dependency_scan(tmp_path, files, scanner_exit=1)
+    assert done.returncode != 0

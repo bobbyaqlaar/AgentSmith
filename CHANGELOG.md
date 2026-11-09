@@ -85,6 +85,8 @@ version table being consulted.
 
 ## [Unreleased]
 
+- `agentsmith-supply-chain.yml` scans an app that has a `requirements.txt` with version ranges and no lock file, instead of stopping with "not pinned". Tenants take it with `agentsmith sync`.
+
 - The `python-dubai-gov` scratch tenant asserts that the profile refuses its ungraded eval suites, instead of staying red. The manual says what a tenant needs before its CI can go green on the profile.
 
 ### Added — an opt-in compliance profile, `dubai-gov`
