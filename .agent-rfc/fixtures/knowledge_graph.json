@@ -2905,9 +2905,14 @@
         "test_a_run_with_nothing_refused_fails",
         "test_a_job_log_that_cannot_be_read_fails",
         "test_a_run_that_cannot_be_read_fails",
-        "test_only_the_profile_tenant_expects_refusals_and_the_workflow_asks_the_script"
+        "test_only_the_profile_tenant_expects_refusals_and_the_workflow_asks_the_script",
+        "_wait_step",
+        "test_a_red_tenant_run_reaches_the_wait_steps_report",
+        "test_the_wait_step_reaches_the_refusal_check_on_a_red_run",
+        "test_the_wait_step_stays_red_when_the_refusal_is_not_the_reason",
+        "test_every_job_that_waits_survives_a_red_run"
       ],
-      "last_modified": "2026-11-09T07:21:03Z",
+      "last_modified": "2026-11-09T08:37:07Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -10083,6 +10088,22 @@
       "pillar": null,
       "created_at": "2026-11-09T07:21:17Z",
       "id": "rfc:reviews/supply-chain-audits-unpinned.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The scratch wait step survives a red tenant run",
+      "source_file": ".agent-rfc/designs/scratch-wait-survives-red-run.md",
+      "pillar": null,
+      "created_at": "2026-11-09T08:38:37Z",
+      "id": "rfc:designs/scratch-wait-survives-red-run.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: scratch-wait-survives-red-run",
+      "source_file": ".agent-rfc/reviews/scratch-wait-survives-red-run.md",
+      "pillar": null,
+      "created_at": "2026-11-09T08:38:38Z",
+      "id": "rfc:reviews/scratch-wait-survives-red-run.md"
     }
   ],
   "edges": [
