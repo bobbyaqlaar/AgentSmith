@@ -33,7 +33,7 @@ jobs:
         run: pipx run bandit==1.8.6 -q -r agentsmith scripts -ll -x agentsmith/test,scripts/test
       - name: "SBOM"
         run: pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py requirements requirements.lock -o sbom.cdx.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: sbom.cdx.json

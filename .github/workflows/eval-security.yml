@@ -45,7 +45,7 @@ jobs:
       # tenant-facing check: it reads THIS repo's own .agent-rfc/security/.
       - run: python3 scripts/run-security-checks.py --mode ci ${{ inputs.strict && '--strict' || '' }}
       - run: python3 scripts/run-security-checks.py --mode smoke --evidence-pack ./security-evidence
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: security-evidence
           path: security-evidence/
