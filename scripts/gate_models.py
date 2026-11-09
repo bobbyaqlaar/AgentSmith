@@ -425,10 +425,13 @@ class RulesPort(_Frozen):
 # may carry more (`extra="allow"`): a tenant's own annotations break nothing
 # (.agent-rfc/designs/evals-contract.md).
 
-EVAL_SUITES = ("golden", "fairness", "hallucination", "adversarial", "rag_poison")
+EVAL_SUITES = ("golden", "fairness", "hallucination", "adversarial", "rag_poison", "trajectory")
 # Suites a model judges: each case must carry the output the tenant's app produced.
 JUDGED_SUITES = ("golden", "fairness", "hallucination")
 EVAL_VERDICTS = ("pass", "fail", "no_verdict", "not_gradable")
+
+
+EvalSuite = Literal["golden", "fairness", "hallucination", "adversarial", "rag_poison", "trajectory"]
 
 
 class _Case(BaseModel):
@@ -481,8 +484,39 @@ class RagPoisonCase(_Case):
     pair_id: str | None = None
 
 
+class TrajectoryExpect(BaseModel):
+    """The rules one run's tool calls must keep (.agent-rfc/designs/trajectory-evals.md)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    in_order: list[str] = Field(default_factory=list)
+    must_call: list[str] = Field(default_factory=list)
+    never: list[str] = Field(default_factory=list)
+    max_calls: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _a_rule(self) -> "TrajectoryExpect":
+        if not (self.in_order or self.must_call or self.never or self.max_calls is not None):
+            raise ValueError("expect states no rule: give in_order, must_call, never or max_calls")
+        return self
+
+
+class TrajectoryCase(_Case):
+    """One run's tool calls, named in order or read from an OTLP/JSON export."""
+
+    tools: list[str] | None = None
+    trace: str | None = Field(default=None, min_length=1)
+    expect: TrajectoryExpect
+
+    @model_validator(mode="after")
+    def _one_source(self) -> "TrajectoryCase":
+        if (self.tools is None) == (self.trace is None):
+            raise ValueError("a case gives its calls one way: tools or trace")
+        return self
+
+
 EVAL_CASES = {"golden": GoldenCase, "fairness": FairnessCase, "hallucination": HallucinationCase,
-              "adversarial": AdversarialCase, "rag_poison": RagPoisonCase}
+              "adversarial": AdversarialCase, "rag_poison": RagPoisonCase, "trajectory": TrajectoryCase}
 
 
 class EvalsRequest(BaseModel):
@@ -490,7 +524,7 @@ class EvalsRequest(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    suite: Literal["golden", "fairness", "hallucination", "adversarial", "rag_poison"]
+    suite: EvalSuite
     fail_below: float | None = Field(default=None, ge=0.0, le=1.0)
     fail_above: float | None = Field(default=None, ge=0.0, le=1.0)
     cwd: str | None = None
@@ -504,7 +538,7 @@ class Scorecard(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     schema_version: Literal[1] = Field(default=1, alias="schema")
-    suite: Literal["golden", "fairness", "hallucination", "adversarial", "rag_poison"]
+    suite: EvalSuite
     verdict: Literal["pass", "fail", "no_verdict", "not_gradable"]
     reason: str = ""
     threshold: float | None = None
@@ -521,9 +555,9 @@ class EvalsPort(_Frozen):
     command: str = Field(min_length=1)
     version: str | None = None
     contract: Literal[1] | None = None
-    no_verdict: dict[Literal["golden", "fairness", "hallucination", "adversarial", "rag_poison"],
+    no_verdict: dict[EvalSuite,
                      Literal["warn"]] = Field(default_factory=dict)
-    not_gradable: dict[Literal["golden", "fairness", "hallucination", "adversarial", "rag_poison"],
+    not_gradable: dict[EvalSuite,
                        Literal["warn"]] = Field(default_factory=dict)
 
 
@@ -742,7 +776,7 @@ class Extends(_Frozen):
     test_command: str | None = None
     otel_endpoint: str | None = Field(default=None, pattern=r"^https?://[^\s]+$")
     artifacts: "Artifacts | None" = None
-    evals: dict[Literal["golden", "fairness", "hallucination", "adversarial", "rag_poison"],
+    evals: dict[EvalSuite,
                 "EvalsThresholds"] = Field(default_factory=dict)
 
 

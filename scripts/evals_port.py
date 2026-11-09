@@ -148,6 +148,91 @@ def missed(written: dict, below: Optional[float], above: Optional[float], parity
     return found
 
 
+# The trajectory suite (.agent-rfc/designs/trajectory-evals.md): graded from the calls, no model.
+TRAJECTORY_PATH = ".agent-rfc/fixtures/trajectory_evals.json"
+
+
+def trajectory_problems(tools: list[str], expect: gm.TrajectoryExpect) -> list[str]:
+    """The rules this run broke; empty when it kept them all."""
+    problems = [f"called {name}, which it must never call" for name in expect.never if name in tools]
+    problems += [f"never called {name}" for name in expect.must_call if name not in tools]
+    position = 0
+    for name in expect.in_order:
+        try:
+            position = tools.index(name, position) + 1
+        except ValueError:
+            problems.append(f"did not call {name} where the order requires it ({' → '.join(expect.in_order)})")
+            break
+    if expect.max_calls is not None and len(tools) > expect.max_calls:
+        problems.append(f"made {len(tools)} tool calls, more than {expect.max_calls}")
+    return problems
+
+
+def _trace_tools(root: Path, trace: str) -> tuple[Optional[list[str]], str]:
+    """The tool calls an OTLP/JSON export recorded, in start order; or why it cannot be read."""
+    path = (root / trace).resolve()
+    if not path.is_relative_to(root.resolve()):
+        return None, f"{trace} is outside the repository"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return None, f"{trace} cannot be read ({exc.__class__.__name__})"
+    try:  # one object, or one per line as a collector's file exporter writes them
+        documents = [json.loads(text)]
+    except ValueError:
+        try:
+            documents = [json.loads(line) for line in text.splitlines() if line.strip()]
+        except ValueError:
+            return None, f"{trace} is not OTLP/JSON"
+    calls: list[tuple[int, str]] = []
+    spans = 0
+    for document in documents:
+        if not isinstance(document, dict):
+            return None, f"{trace} is not OTLP/JSON"
+        for resource in document.get("resourceSpans") or []:
+            for scope in resource.get("scopeSpans") or []:
+                for span in scope.get("spans") or []:
+                    spans += 1
+                    attributes = {a.get("key"): (a.get("value") or {}).get("stringValue")
+                                  for a in span.get("attributes") or [] if isinstance(a, dict)}
+                    name = attributes.get("gen_ai.tool.name") or attributes.get("agent.tool.name")
+                    if name:
+                        calls.append((int(span.get("startTimeUnixNano") or 0), name))
+    if spans == 0:
+        return None, f"{trace} holds no spans"
+    return [name for _start, name in sorted(calls, key=lambda call: call[0])], ""
+
+
+def judge_trajectory(root: Path, request: gm.EvalsRequest) -> gm.Scorecard:
+    declared = _declared_thresholds(root, "trajectory")
+    below = next((v for v in (request.fail_below, declared.fail_below) if v is not None), 1.0)
+    cases, why, count = dataset(root / TRAJECTORY_PATH, "trajectory")
+    if cases is None:
+        return _scorecard("trajectory", "not_gradable", why, threshold=below, total=count)
+    unreadable, broken = [], []
+    for raw in cases:
+        case = gm.TrajectoryCase.model_validate(raw)
+        tools, problem = (case.tools, "") if case.tools is not None else _trace_tools(root, str(case.trace))
+        if tools is None:
+            unreadable.append(f"{case.id}: {problem}")
+            continue
+        problems = trajectory_problems(tools, case.expect)
+        if problems:
+            broken.append(f"{case.id}: {problems[0]}")
+    if unreadable:
+        return _scorecard("trajectory", "not_gradable",
+                          f"{len(unreadable)} trace(s) could not be read, so nothing was graded: "
+                          + "; ".join(unreadable[:5]), threshold=below, total=len(cases))
+    kept = len(cases) - len(broken)
+    score = kept / len(cases)
+    verdict = "pass" if score >= below else "fail"
+    reason = f"{kept} of {len(cases)} run(s) kept their rules (floor {below:g})"
+    if broken:
+        reason += ": " + "; ".join(broken[:5])
+    return _scorecard("trajectory", verdict, reason, extra={"score": score, "broken": broken},
+                      threshold=below, total=len(cases), graded=len(cases))
+
+
 def judge(root: Path, request: gm.EvalsRequest) -> gm.Scorecard:
     """One suite judged under the contract's terms. Prints `run-evals.py`'s
     report to stderr; returns the scorecard."""
@@ -155,6 +240,8 @@ def judge(root: Path, request: gm.EvalsRequest) -> gm.Scorecard:
 
     suite = request.suite
     os.chdir(root)  # run-evals.py resolves the repository from the working directory
+    if suite == "trajectory":
+        return judge_trajectory(root, request)
     _shared._load_dotenv(root)  # the judge's credential, as run-evals.py loads it
     for name in AMBIENT_ENV:
         os.environ.pop(name, None)

@@ -59,7 +59,7 @@ def test_agentsmith_passes_the_evals_contract(tmp_path, provider_env):
     report = conformance.run_evals(PROVIDER, tmp_path / "work")
 
     assert report.passed, report.render()
-    assert len(report.checks) == len(conformance.evals_cases()) == 17
+    assert len(report.checks) == len(conformance.evals_cases()) == 19
 
 
 def _liar(tmp_path: Path) -> str:

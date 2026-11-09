@@ -88,6 +88,8 @@ version table being consulted.
 
 ## [Unreleased]
 
+- A sixth evals suite, `trajectory`: each case gives one run's tool calls, named or read from an OTLP/JSON trace, and the rules they must keep (`in_order`, `must_call`, `never`, `max_calls`). Graded from the calls without a model, so it gives a verdict even with no judge. Run it with `process-gate evals run --suite trajectory`.
+
 - Evidence packs grade the OWASP Top 10 for Agentic Applications: controls carry an `owasp_agentic` tag where `docs/security-framework-map.md` says they cover an entry at least in part, and `owasp_agentic_top10.md` lists all ten, including the four no control covers. Additive in the registry schema.
 
 - Traces carry OpenTelemetry's GenAI names beside AgentSmith's own: `gen_ai.operation.name`, `gen_ai.request.model`, `gen_ai.provider.name`, `gen_ai.usage.*` and `gen_ai.tool.name`. Optional and additive; `llm.*` stays the telemetry contract. Pinned to `open-telemetry/semantic-conventions-genai@e6658f14c9d9`, since the names are still in development upstream.

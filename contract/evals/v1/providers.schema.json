@@ -20,8 +20,9 @@
               "const": "none"
             },
             {
-              "additionalProperties": false,
+              "title": "EvalsPort",
               "description": "The evals provider: the command a caller runs with `run` appended, and the request on stdin. `no_verdict` and `not_gradable` name the suites where that verdict only warns.",
+              "additionalProperties": false,
               "properties": {
                 "command": {
                   "minLength": 1,
@@ -64,7 +65,8 @@
                       "fairness",
                       "hallucination",
                       "adversarial",
-                      "rag_poison"
+                      "rag_poison",
+                      "trajectory"
                     ]
                   },
                   "title": "No Verdict",
@@ -81,7 +83,8 @@
                       "fairness",
                       "hallucination",
                       "adversarial",
-                      "rag_poison"
+                      "rag_poison",
+                      "trajectory"
                     ]
                   },
                   "title": "Not Gradable",
@@ -91,7 +94,6 @@
               "required": [
                 "command"
               ],
-              "title": "EvalsPort",
               "type": "object"
             }
           ]

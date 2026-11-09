@@ -254,7 +254,7 @@
         "_resolve_exit",
         "main"
       ],
-      "last_modified": "2026-11-09T21:48:36Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/run-security-checks.py"
     },
     {
@@ -625,6 +625,8 @@
         "HallucinationCase",
         "AdversarialCase",
         "RagPoisonCase",
+        "TrajectoryExpect",
+        "TrajectoryCase",
         "EvalsRequest",
         "Scorecard",
         "EvalsPort",
@@ -666,11 +668,13 @@
         "_signoff_section",
         "check_signoff",
         "_one_entry_per_path",
+        "_a_rule",
+        "_one_source",
         "_evidenced",
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-11-09T21:48:36Z",
+      "last_modified": "2026-11-09T22:05:13Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -833,12 +837,15 @@
         "thresholds",
         "dataset",
         "missed",
+        "trajectory_problems",
+        "_trace_tools",
+        "judge_trajectory",
         "judge",
         "_repository",
         "main",
         "number"
       ],
-      "last_modified": "2026-11-08T20:23:29Z",
+      "last_modified": "2026-11-09T22:11:11Z",
       "id": "scripts/evals_port.py"
     },
     {
@@ -1596,7 +1603,7 @@
         "test_the_map_lists_all_ten_agentic_entries",
         "test_the_agentic_tags_are_the_maps_and_only_where_it_claims_coverage"
       ],
-      "last_modified": "2026-11-09T21:48:54Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/test/test_security_registry.py"
     },
     {
@@ -1958,7 +1965,7 @@
         "run_scorecard",
         "spy"
       ],
-      "last_modified": "2026-11-07T12:46:40Z",
+      "last_modified": "2026-11-09T22:07:14Z",
       "id": "scripts/test/test_evals_contract.py"
     },
     {
@@ -2150,7 +2157,7 @@
         "test_the_agentic_page_lists_all_ten_and_says_which_no_control_covers",
         "test_the_agentic_filter_scopes_the_page_and_still_lists_all_ten"
       ],
-      "last_modified": "2026-11-09T21:49:14Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/test/test_security_evidence_pack.py"
     },
     {
@@ -2799,7 +2806,7 @@
         "test_agentsmith_passes_the_security_contract",
         "broken"
       ],
-      "last_modified": "2026-11-09T21:19:06Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/test/test_security_contract.py"
     },
     {
@@ -3507,7 +3514,7 @@
         "ControlSpec",
         "load_control_registry"
       ],
-      "last_modified": "2026-11-09T22:00:38Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/security/registry.py"
     },
     {
@@ -3531,7 +3538,7 @@
         "_render_security_report_md",
         "write_evidence_pack"
       ],
-      "last_modified": "2026-11-09T21:59:38Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/security/report.py"
     },
     {
@@ -3576,7 +3583,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-11-09T21:19:06Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/security/runners/__init__.py"
     },
     {
@@ -3869,7 +3876,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-09T21:22:24Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "portal/test/opsIngestDb.test.ts"
     },
     {
@@ -4216,7 +4223,7 @@
         "listIngestRuns",
         "listGateFailures"
       ],
-      "last_modified": "2026-11-09T21:25:47Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "portal/lib/devRead.ts"
     },
     {
@@ -4474,7 +4481,7 @@
         "getFrameworkVersionByTenant",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-11-09T21:25:46Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -4537,7 +4544,7 @@
         "OpsResult",
         "handleOpsIngest"
       ],
-      "last_modified": "2026-11-09T21:25:46Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "portal/lib/opsIngest.ts"
     },
     {
@@ -4686,7 +4693,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-11-09T21:21:52Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "portal/app/ops/apps/[id]/page.tsx"
     },
     {
@@ -4766,7 +4773,7 @@
         "dynamic",
         "DevCommitPage"
       ],
-      "last_modified": "2026-11-09T21:21:52Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx"
     },
     {
@@ -6955,7 +6962,7 @@
         "start_as_current_span",
         "on_start"
       ],
-      "last_modified": "2026-11-09T21:31:22Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "agentsmith/tracing.py"
     },
     {
@@ -7022,7 +7029,7 @@
         "warn_if_declared_version_differs",
         "_reset_cache"
       ],
-      "last_modified": "2026-11-09T21:25:43Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "agentsmith/version.py"
     },
     {
@@ -7255,7 +7262,7 @@
         "_not_the_invalid_trace",
         "_no_secret"
       ],
-      "last_modified": "2026-11-09T21:25:43Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "agentsmith/ops_contract.py"
     },
     {
@@ -7334,7 +7341,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-11-09T21:31:30Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "agentsmith/llm_gateway.py"
     },
     {
@@ -7454,7 +7461,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-11-09T21:08:37Z",
+      "last_modified": "2026-11-09T22:05:44Z",
       "id": "agentsmith/cli.py"
     },
     {
@@ -7662,7 +7669,7 @@
         "log_message",
         "do_POST"
       ],
-      "last_modified": "2026-11-09T21:30:59Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "agentsmith/telemetry_contract.py"
     },
     {
@@ -9639,7 +9646,7 @@
         "__init__",
         "is_classified"
       ],
-      "last_modified": "2026-11-09T21:21:52Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "agentsmith/compliance.py"
     },
     {
@@ -10176,7 +10183,7 @@
         "test_a_workflow_that_does_not_parse_fails",
         "test_the_failure_says_what_to_do"
       ],
-      "last_modified": "2026-11-09T21:19:06Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/test/test_agent_workflow_injection.py"
     },
     {
@@ -10194,7 +10201,7 @@
         "_workflow_problems",
         "run"
       ],
-      "last_modified": "2026-11-09T21:19:06Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/security/runners/agent_workflow.py"
     },
     {
@@ -10228,7 +10235,7 @@
         "test_the_deploy_templates_set_it_from_the_commit_ci_validated",
         "test_the_gateway_sends_the_commit_with_each_run"
       ],
-      "last_modified": "2026-11-09T21:26:37Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/test/test_app_commit.py"
     },
     {
@@ -10260,7 +10267,7 @@
         "test_a_tool_span_carries_both_names",
         "test_the_pin_is_in_the_protocol"
       ],
-      "last_modified": "2026-11-09T21:31:30Z",
+      "last_modified": "2026-11-09T22:03:32Z",
       "id": "scripts/test/test_gen_ai_telemetry.py"
     },
     {
@@ -10294,6 +10301,44 @@
       "pillar": null,
       "created_at": "2026-11-09T22:01:05Z",
       "id": "rfc:reviews/owasp-agentic-tags.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_expect",
+        "test_each_rule",
+        "test_a_case_needs_a_rule_and_exactly_one_source",
+        "_span",
+        "_otlp",
+        "_run",
+        "test_every_run_keeping_its_rules_passes",
+        "test_one_broken_run_fails_at_the_default_floor_and_is_named",
+        "test_a_declared_floor_lowers_the_bar",
+        "test_no_dataset_is_not_gradable",
+        "test_calls_are_read_from_a_trace_in_start_order",
+        "test_a_trace_written_one_object_per_line_is_read",
+        "test_a_trace_that_cannot_be_read_is_not_gradable",
+        "test_the_cli_and_the_hook_accept_the_suite"
+      ],
+      "last_modified": "2026-11-09T22:06:41Z",
+      "id": "scripts/test/test_trajectory_evals.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Trajectory evals: grading the path, not only the answer",
+      "source_file": ".agent-rfc/designs/trajectory-evals.md",
+      "pillar": null,
+      "created_at": "2026-11-09T22:11:45Z",
+      "id": "rfc:designs/trajectory-evals.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: trajectory-evals",
+      "source_file": ".agent-rfc/reviews/trajectory-evals.md",
+      "pillar": null,
+      "created_at": "2026-11-09T22:11:46Z",
+      "id": "rfc:reviews/trajectory-evals.md"
     }
   ],
   "edges": [

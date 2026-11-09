@@ -1908,7 +1908,7 @@ def build_parser() -> argparse.ArgumentParser:
     evals = sub.add_parser("evals", help="sync HITL feedback from Phoenix, then run the eval scorecard; "
                                          "`evals run` judges one suite (contract/evals/v1)")
     evals.add_argument("verb", nargs="?", choices=("run",))
-    evals.add_argument("--suite", choices=("golden", "fairness", "hallucination", "adversarial", "rag_poison"),
+    evals.add_argument("--suite", choices=("golden", "fairness", "hallucination", "adversarial", "rag_poison", "trajectory"),
                        help="run: the suite to judge, when no request comes on stdin")
     evals.set_defaults(func=_cmd_evals)
 
