@@ -2887,6 +2887,7 @@ Create `staging` and `production` environments (if they don't exist), then on ea
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | output of the `echo` command in Step 1 |
 | `GCP_SERVICE_ACCOUNT` | `github-deployer@YOUR_GCP_PROJECT_ID.iam.gserviceaccount.com` |
 | `GCP_PROJECT_ID` | `YOUR_GCP_PROJECT_ID` |
+| `APP_COMMIT` (set for you) | The commit being deployed, available to `DEPLOY_COMMAND`. Pass it to the running app, for example `--set-env-vars APP_COMMIT=$APP_COMMIT`. Without it a run shows "not reported" in the portal and has no link to its commit, design or approvals. |
 | `DEPLOY_COMMAND` (staging) | `gcloud run deploy YOUR_WORKER_SERVICE --source . --region YOUR_REGION --project $GCP_PROJECT_ID --no-cpu-throttling --min-instances=1 --port=8080 --set-env-vars TENANT_ID=YOUR_TENANT_ID,TEMPORAL_ADDRESS=YOUR_TEMPORAL_HOST` |
 | `DEPLOY_COMMAND` (production) | same, with the production service name substituted |
 | `AGENT_MODEL_ARCHITECT` | `openai/gpt-oss-120b` (avoids Groq rate limits in eval) |

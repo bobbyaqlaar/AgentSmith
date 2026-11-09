@@ -164,7 +164,10 @@ CREATE TABLE IF NOT EXISTS agent_runs (
     -- always reading a fleet spanning several versions — and a version decides
     -- which of the columns above a tenant can populate at all. See
     -- portal/lib/wireContract.ts.
-    framework_version TEXT
+    framework_version TEXT,
+    -- The commit this deployment was built from: the link to the design and
+    -- approvals on the Dev side. NULL is "not reported", never a commit.
+    app_commit    TEXT
 );
 
 -- agent_runs predates these three, and CREATE TABLE IF NOT EXISTS is a no-op
@@ -176,6 +179,7 @@ ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS input_tokens  INTEGER;
 ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS output_tokens INTEGER;
 ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS cost_usd      NUMERIC(12, 6);
 ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS framework_version TEXT;
+ALTER TABLE agent_runs ADD COLUMN IF NOT EXISTS app_commit TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_started
     ON agent_runs (tenant_id, started_at DESC);

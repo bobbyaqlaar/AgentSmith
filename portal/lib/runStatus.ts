@@ -70,6 +70,8 @@ export interface UpsertAgentRunInput {
   // null = a framework old enough not to report one. Distinct from a current
   // tenant that failed to, which is why it is not defaulted to anything.
   frameworkVersion?: string | null;
+  // null = not reported. The link to the commit's design and approvals.
+  appCommit?: string | null;
 }
 
 /** Stores the run, or not: false when `runId` is already another tenant's.
@@ -79,8 +81,8 @@ export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<boolea
   const finished = input.status !== "running";
   const { rowCount } = await getPool().query(
     `INSERT INTO agent_runs (run_id, tenant_id, workflow_id, status, trace_id, error_summary,
-                             input_tokens, output_tokens, cost_usd, framework_version, finished_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, ${finished ? "now()" : "NULL"})
+                             input_tokens, output_tokens, cost_usd, framework_version, app_commit, finished_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, ${finished ? "now()" : "NULL"})
      ON CONFLICT (run_id) DO UPDATE SET
        -- A late 'running' must not un-finish a run. The gateway's two POSTs
        -- are best-effort HTTP: a retried or reordered START can arrive after
@@ -109,6 +111,7 @@ export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<boolea
        -- mid-run, so the only way the two writes differ is one of them not
        -- carrying it — and the one that did is the one worth keeping.
        framework_version = COALESCE(EXCLUDED.framework_version, agent_runs.framework_version),
+       app_commit = COALESCE(EXCLUDED.app_commit, agent_runs.app_commit),
        finished_at = ${finished ? "now()" : "agent_runs.finished_at"}
      WHERE agent_runs.tenant_id = EXCLUDED.tenant_id`,
     [
@@ -122,9 +125,34 @@ export async function upsertAgentRun(input: UpsertAgentRunInput): Promise<boolea
       input.outputTokens ?? null,
       input.costUsd ?? null,
       input.frameworkVersion ?? null,
+      input.appCommit ?? null,
     ]
   );
   return (rowCount ?? 0) > 0;
+}
+
+export interface RecentRun {
+  runId: string;
+  workflowId: string | null;
+  status: string;
+  startedAt: string;
+  appCommit: string | null;
+}
+
+/** An app's latest runs, for the Ops page: each is one link in the chain back to its commit. */
+export async function listRecentRuns(tenantId: string, limit = 20): Promise<RecentRun[]> {
+  const { rows } = await getPool().query(
+    `SELECT run_id, workflow_id, status, started_at, app_commit
+       FROM agent_runs WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT $2`,
+    [tenantId, limit]
+  );
+  return rows.map((r) => ({
+    runId: r.run_id,
+    workflowId: r.workflow_id,
+    status: r.status,
+    startedAt: new Date(r.started_at).toISOString(),
+    appCommit: r.app_commit,
+  }));
 }
 
 /** What each tenant's most recent run reported as its framework version.

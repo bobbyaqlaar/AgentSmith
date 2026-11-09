@@ -62,7 +62,7 @@ week.** Stage 1 does not depend on it.
 | 15 | Provide for KYC staging: Cloud SQL and Temporal (reuse or tear down what is billing in the GCP project), `GEMINI_API_KEY` and `OPENROUTER_API_KEY` set on its environment, a deployed portal and its Ops token | Owner |
 | 16 | KYC live on staging: the worker as a service, Phoenix and portal wired | Claude |
 | 17 | One real HITL round trip through the portal, and one production case promoted, with screenshots | Claude and owner |
-| 18 | **The accountability chain (gap 2):** a run carries its commit, so a production run links to its commit, design and approvals | Claude |
+| 18 | ✅ **The accountability chain (gap 2):** a run carries its commit, so a production run links to its commit, design and approvals | Claude |
 | 19 | **A kill switch (gap 4):** an app or agent stopped from the portal, the gateway refusing its calls | Claude |
 | 20 | Publish the article, with the screenshots from step 17 | Owner |
 
@@ -151,9 +151,7 @@ Each was checked absent from the code on 2026-11-03.
 1. **The OWASP Agentic Top 10 is mapped by reading, not graded.** `docs/security-framework-map.md` now states it: none of the
    ten fully covered, six partial, four not covered. Microsoft's open-source toolkit claims all ten. **Fix:** tag the `SEC-*`
    controls with `ASI*`, so evidence packs report it. *After launch.*
-2. **The accountability chain stops at the commit.** A production run carries no commit (`app_commit` appears nowhere;
-   portal phase 4), so "why does this agent do that?" cannot be answered from a trace. This is the differentiator no
-   camp above has. *Stage 2.*
+2. **The accountability chain needs a real deployment to prove it.** A run reports `APP_COMMIT`, and the portal links it to its commit, design and approvals. It has not yet carried a real production run. *Stage 2, with KYC staging.*
 3. **MCP and tool supply chain ungoverned.** Tool poisoning, rug-pulled definitions and shadow MCP are the concerns of
    2026. Pinning a tool definition and blocking on drift is reported missing from at least one gateway, and signing is not
    required by the protocol. **On the `dubai-gov` profile this is built:** `agentsmith/mcp_pin.py` pins servers and tool definitions and the compliance check fails on drift, not yet tested over HTTP. Off the profile AgentSmith checks nothing about a repository's `.mcp.json`. **Fix, without shipping a client:** the

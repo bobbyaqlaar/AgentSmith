@@ -269,6 +269,19 @@
           ],
           "default": null,
           "title": "Framework Version"
+        },
+        "app_commit": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{7,40}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "App Commit"
         }
       },
       "required": [

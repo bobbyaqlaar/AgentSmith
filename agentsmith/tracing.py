@@ -289,7 +289,7 @@ def resource_attributes(project_name: Optional[str] = None) -> dict:
         env_var="AGENT_PROJECT_NAME",
         default=None,
     ) or repo_root().name
-    from agentsmith.version import framework_version
+    from agentsmith.version import app_commit, framework_version
 
     attrs = {
         "service.name": project,
@@ -315,6 +315,10 @@ def resource_attributes(project_name: Optional[str] = None) -> dict:
         # on that. `agentsmith/telemetry_contract.py` holds the same number.
         "governance.telemetry.contract": 1,
     }
+    # Per-process and constant, like the framework version: which commit this is.
+    commit = app_commit()
+    if commit:
+        attrs["app.commit"] = commit
     # `tenant.owner` is declared in tenant.yaml and was read by nothing, while
     # this attribute came from a shell profile — so on a dev machine every repo
     # reported the same owner and in CI none did. Env still wins as the

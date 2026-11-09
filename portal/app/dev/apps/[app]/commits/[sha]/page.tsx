@@ -1,8 +1,7 @@
 // /dev/apps/<app>/commits/<sha> — one commit and what stands behind it: the
 // gate's verdict, its design with each deviation and who approved it, its
-// review (portal phase 1). This is where the accountability chain starts; the
-// link from a production run back to this page needs runs to report their
-// commit, which arrives in phase 4.
+// review (portal phase 1). A run reports the commit it was built from, so the
+// Ops page links here and this page says which runs came from it.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -10,7 +9,7 @@ import { redirect } from "next/navigation";
 import { ShortSha, VerdictBadge } from "@/components/DevBits";
 import { Badge } from "@/components/ui/Badge";
 import { Timestamp } from "@/components/ui/Timestamp";
-import { commitsStartingWith, getDevCommit } from "@/lib/devRead";
+import { commitsStartingWith, getDevCommit, runsOfCommit } from "@/lib/devRead";
 import { commitUrl, fileUrl } from "@/lib/devView";
 import { getTenant } from "@/lib/tenants";
 
@@ -44,6 +43,7 @@ export default async function DevCommitPage(props: { params: Promise<{ app: stri
   }
   const base = `/dev/apps/${tenant.tenantId}`;
   const { design, review } = commit;
+  const runs = await runsOfCommit(tenant.tenantId, commit.sha);
 
   return (
     <div className="space-y-6">
@@ -63,6 +63,20 @@ export default async function DevCommitPage(props: { params: Promise<{ app: stri
           )}
         </div>
       </div>
+
+      <section className="space-y-1">
+        <h4 className="font-medium">Running this commit</h4>
+        {runs.count === 0 ? (
+          <p className="text-sm text-black/60 dark:text-white/60">No run has reported this commit.</p>
+        ) : (
+          <p className="text-sm">
+            {runs.count} run{runs.count === 1 ? "" : "s"}, the latest <Timestamp value={runs.lastStartedAt as string} />.{" "}
+            <Link className="text-blue-700 dark:text-blue-400 hover:underline" href={`/ops/apps/${tenant.tenantId}`}>
+              See them in Ops
+            </Link>
+          </p>
+        )}
+      </section>
 
       {(commit.errors.length > 0 || commit.notes.length > 0) && (
         <section className="space-y-1">

@@ -222,6 +222,19 @@ export async function getDevCommit(appId: string, sha: string): Promise<DevCommi
   return rows[0] ? toCommit(rows[0]) : null;
 }
 
+/** The runs that reported being built from this commit. A run may report a short hash. */
+export async function runsOfCommit(
+  appId: string,
+  sha: string,
+): Promise<{ count: number; lastStartedAt: string | null }> {
+  const { rows } = await getPool().query(
+    `SELECT count(*)::int AS count, max(started_at) AS last
+       FROM agent_runs WHERE tenant_id = $1 AND app_commit IS NOT NULL AND $2 LIKE app_commit || '%'`,
+    [appId, sha],
+  );
+  return { count: rows[0].count, lastStartedAt: rows[0].last ? new Date(rows[0].last).toISOString() : null };
+}
+
 export interface DesignListing extends DesignSnapshot {
   citedBy: number;
 }

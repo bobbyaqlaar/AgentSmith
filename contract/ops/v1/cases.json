@@ -110,6 +110,22 @@
       "why": "four statuses"
     },
     {
+      "name": "a run naming the commit it was built from is stored",
+      "message": "run",
+      "set": {"app_commit": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"},
+      "drop": [],
+      "expect": 200,
+      "why": "the link from a run to its design"
+    },
+    {
+      "name": "a commit that is not a hash is refused",
+      "message": "run",
+      "set": {"app_commit": "main"},
+      "drop": [],
+      "expect": 400,
+      "why": "nobody can look it up"
+    },
+    {
       "name": "a negative token count is refused",
       "message": "run",
       "set": {

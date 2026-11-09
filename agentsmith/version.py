@@ -39,6 +39,7 @@ emits. `UNKNOWN` when even that cannot be determined — never a guess.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Optional
@@ -98,6 +99,15 @@ def framework_version() -> str:
     checkout = _checkout_version()
     _cached = f"{checkout}{SOURCE_SUFFIX}" if checkout else UNKNOWN
     return _cached
+
+
+def app_commit() -> Optional[str]:
+    """The commit this deployment was built from, or None when it was not declared.
+
+    `APP_COMMIT` is set by the deploy step. Only a hash counts: a run that names
+    something nobody can look up has no link to give (.agent-rfc/designs/accountability-chain.md)."""
+    value = os.environ.get("APP_COMMIT", "").strip().lower()
+    return value if re.fullmatch(r"[0-9a-f]{7,40}", value) else None
 
 
 def is_source_checkout(version: Optional[str] = None) -> bool:
