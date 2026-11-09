@@ -62,7 +62,7 @@ agentsmith = "agentsmith.cli:main"
 postgres = ["psycopg2-binary>=2.9,<3.0"]
 redis = ["redis>=5.0,<6.0"]
 temporal = ["temporalio>=1.5,<2.0"]
-hitl = ["cryptography>=42.0,<44.0"]
+hitl = ["cryptography>=42.0,<51.0"]
 # Exact token counts for conversation_memory. Optional because it is a compiled
 # wheel and a tenant that never builds a chat buffer should not carry it — but
 # WITHOUT it the buffer falls back to an estimate, and that estimate reads
@@ -76,7 +76,7 @@ all = [
     "psycopg2-binary>=2.9,<3.0",
     "redis>=5.0,<6.0",
     "temporalio>=1.5,<2.0",
-    "cryptography>=42.0,<44.0",
+    "cryptography>=42.0,<51.0",
     "google-auth>=2.30,<3.0",
     "boto3>=1.34,<2.0",
     "aiohttp>=3.9,<4.0",
