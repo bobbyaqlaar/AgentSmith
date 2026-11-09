@@ -28,6 +28,29 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 TELEMETRY_CONTRACT = 1
 CONTRACT_ATTRIBUTE = "governance.telemetry.contract"
+
+# OpenTelemetry's GenAI conventions, emitted beside the contract's own names
+# (.agent-rfc/designs/gen-ai-telemetry.md). Pinned to a commit: the repository has no
+# release, and every name used is still `development` there.
+GENAI_CONVENTIONS = "open-telemetry/semantic-conventions-genai@e6658f14c9d9 (gen-ai-dev/1.42.0-dev)"
+# A model id's provider prefix, as the conventions name it. One they do not list keeps
+# its own lowercase name, which the conventions allow.
+_GENAI_PROVIDERS = {
+    "anthropic": "anthropic", "azure": "azure.ai.openai", "azure_ai": "azure.ai.inference",
+    "bedrock": "aws.bedrock", "cohere": "cohere", "deepseek": "deepseek", "gemini": "gcp.gemini",
+    "groq": "groq", "mistral": "mistral", "moonshot": "moonshot_ai", "ollama": "ollama", "ollama_chat": "ollama",
+    "openai": "openai", "perplexity": "perplexity", "vertex_ai": "gcp.vertex_ai", "watsonx": "ibm.watsonx.ai",
+    "xai": "x_ai",
+}
+
+
+def genai_provider(model_id: str) -> Optional[str]:
+    """`gen_ai.provider.name` for a model id, or None when the id names no provider."""
+    prefix, separator, _rest = (model_id or "").partition("/")
+    if not separator or not prefix.strip():
+        return None
+    prefix = prefix.strip().lower()
+    return _GENAI_PROVIDERS.get(prefix, prefix)
 # A body larger than this is refused, and so is a run that sends more in all:
 # the receiver reads bodies it did not write.
 MAX_BODY_BYTES = 8_000_000

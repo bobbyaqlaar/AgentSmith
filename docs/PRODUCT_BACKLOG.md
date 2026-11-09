@@ -165,9 +165,7 @@ Each was checked absent from the code on 2026-11-03.
 6. **A record does not say who wrote the change, or who judged it.** `contract/record/v1` has no agent or model, and no gate
    version, so a backfill judges old commits by today's rules. Attribution by `Co-authored-by` is known to be weak. **Fix:**
    the IDE hook knows the agent: record it, and the gate's version. *After launch.*
-7. **No `gen_ai.*` telemetry.** `contract/telemetry/v1` defines its own attributes. OpenTelemetry's GenAI conventions, with
-   agent and MCP spans, are still in Development but are what every observability tool reads. **Fix:** emit both, and
-   pin the conventions' version. *After launch.*
+7. **GenAI names are optional beside `llm.*`.** Emitted since 4.1.0, pinned to a development commit of `open-telemetry/semantic-conventions-genai`. **Trigger:** upstream marks them stable, then a telemetry contract version 2 makes them required.
 8. **EU AI Act Article 50 and Article 19: part done.** Mapped in `docs/security-framework-map.md`, dates confirmed in
    Regulation (EU) 2026/1744. Every gateway completion now carries an Article 50(2) mark (`provenance`, `agentsmith/compliance.py`),
    on or off the profile. Still open: a tenant has it only from the next release, and each application must pass the mark to its

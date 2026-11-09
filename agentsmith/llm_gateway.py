@@ -1077,6 +1077,15 @@ class LLMGateway:
             span.set_attribute("llm.model_name", model_id)
             span.set_attribute("llm.gateway.tier", role)
             span.set_attribute("llm.gateway.cost_usd", cost_usd)
+            # OpenTelemetry's GenAI names beside the contract's, for readers that know
+            # only those (pinned in agentsmith/telemetry_contract.GENAI_CONVENTIONS).
+            from agentsmith.telemetry_contract import genai_provider
+
+            span.set_attribute("gen_ai.operation.name", "chat")
+            span.set_attribute("gen_ai.request.model", model_id)
+            provider = genai_provider(model_id)
+            if provider:
+                span.set_attribute("gen_ai.provider.name", provider)
             # An estimate and a measurement must not read alike. The stream
             # path bills the try_reserve() figure derived from `max_tokens`,
             # which is a ceiling, not what the call actually used.
@@ -1106,6 +1115,8 @@ class LLMGateway:
             if input_tokens is not None and output_tokens is not None:
                 span.set_attribute("llm.usage.input_tokens", int(input_tokens))
                 span.set_attribute("llm.usage.output_tokens", int(output_tokens))
+                span.set_attribute("gen_ai.usage.input_tokens", int(input_tokens))
+                span.set_attribute("gen_ai.usage.output_tokens", int(output_tokens))
                 span.set_attribute(
                     "llm.usage.total_tokens", int(input_tokens) + int(output_tokens)
                 )

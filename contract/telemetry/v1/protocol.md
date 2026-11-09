@@ -71,6 +71,10 @@ writes one.
 
 ## What is not in version 1
 
-The names are those AgentSmith emits today; moving the `llm.*` attributes to OpenTelemetry's GenAI
-semantic conventions is a later version, with a period that emits both. Log records are not
+The required names are AgentSmith's own. From 4.1.0 the library also writes OpenTelemetry's GenAI
+names beside them (`gen_ai.operation.name`, `gen_ai.request.model`, `gen_ai.provider.name`,
+`gen_ai.usage.*`, `gen_ai.tool.name`), optional in this version and pinned to
+`open-telemetry/semantic-conventions-genai@e6658f14c9d9` (`gen-ai-dev/1.42.0-dev`), because every one of
+them is still `development` upstream and the repository has no release. Making them the required
+names is a later version. Log records are not
 judged. The run-status report a tenant posts to the portal is the Ops records contract.

@@ -1,5 +1,5 @@
 ---
-status: active
+status: done
 scope:
   - agentsmith/sync.py
   - agentsmith/adopt.py

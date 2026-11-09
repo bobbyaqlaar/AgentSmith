@@ -241,6 +241,8 @@ def record_tool_call(
     try:
         with tracer.start_as_current_span(f"{_NS}.tool.{name}") as span:
             span.set_attribute("agent.tool.name", name)
+            span.set_attribute("gen_ai.operation.name", "execute_tool")
+            span.set_attribute("gen_ai.tool.name", name)
             span.set_attribute("agent.tool.allowed", allowed)
             span.set_attribute("agent.tool.duration_ms", duration_ms)
             if tenant_id:
