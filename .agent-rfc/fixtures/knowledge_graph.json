@@ -38,7 +38,7 @@
         "encodeActorHeader",
         "decodeActorHeader"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/authz.ts"
     },
     {
@@ -47,7 +47,7 @@
       "symbols": [
         "constantTimeEquals"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/constantTime.ts"
     },
     {
@@ -64,7 +64,7 @@
         "verifySessionToken",
         "secureCookies"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/sessionToken.ts"
     },
     {
@@ -113,7 +113,7 @@
         "currentTraceId",
         "resolveTracesEndpoint"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/tracing.ts"
     },
     {
@@ -129,7 +129,7 @@
       "symbols": [
         "register"
       ],
-      "last_modified": "2026-11-08T15:13:06Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/instrumentation.ts"
     },
     {
@@ -254,7 +254,7 @@
         "_resolve_exit",
         "main"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/run-security-checks.py"
     },
     {
@@ -342,7 +342,7 @@
         "read",
         "resolve"
       ],
-      "last_modified": "2026-11-08T14:20:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/gate_pillars.py"
     },
     {
@@ -382,7 +382,7 @@
         "_post",
         "_dispatch"
       ],
-      "last_modified": "2026-11-08T15:11:32Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/notifier.py"
     },
     {
@@ -525,7 +525,7 @@
         "export",
         "shutdown"
       ],
-      "last_modified": "2026-11-08T14:18:09Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/gate_tracing.py"
     },
     {
@@ -674,7 +674,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-11-09T22:05:13Z",
+      "last_modified": "2026-11-11T06:17:25Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -701,7 +701,7 @@
         "__init__",
         "__repr__"
       ],
-      "last_modified": "2026-11-08T15:10:33Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/cost_router.py"
     },
     {
@@ -781,7 +781,7 @@
         "_generate_local_hf",
         "main"
       ],
-      "last_modified": "2026-11-08T14:18:09Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/verify_sovereign_endpoint.py"
     },
     {
@@ -806,6 +806,7 @@
         "_tenant_declaration",
         "_repo_notes_block",
         "_design_start_lines",
+        "_token_lines",
         "_design_start_block",
         "render_registry",
         "_registry_mode",
@@ -825,7 +826,7 @@
         "main",
         "_check_drift"
       ],
-      "last_modified": "2026-11-08T20:12:35Z",
+      "last_modified": "2026-11-11T06:17:25Z",
       "id": "scripts/generate-ide-config.py"
     },
     {
@@ -845,7 +846,7 @@
         "main",
         "number"
       ],
-      "last_modified": "2026-11-09T22:11:11Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/evals_port.py"
     },
     {
@@ -887,7 +888,7 @@
         "build_graph",
         "run_pipeline"
       ],
-      "last_modified": "2026-11-08T15:10:37Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/multi_agent_system.py"
     },
     {
@@ -921,7 +922,7 @@
         "refuse",
         "_restore"
       ],
-      "last_modified": "2026-11-08T21:16:44Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -964,6 +965,8 @@
         "cmd_pre_edit",
         "_uncommitted_gated",
         "stop_problems",
+        "_remember_session",
+        "_context_note",
         "cmd_stop",
         "cmd_session_start",
         "_without_comments",
@@ -1023,7 +1026,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-11-09T20:56:47Z",
+      "last_modified": "2026-11-11T06:17:25Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -1086,7 +1089,7 @@
         "_git_refusal",
         "refusal"
       ],
-      "last_modified": "2026-11-08T14:13:56Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/gate_shell.py"
     },
     {
@@ -1603,7 +1606,7 @@
         "test_the_map_lists_all_ten_agentic_entries",
         "test_the_agentic_tags_are_the_maps_and_only_where_it_claims_coverage"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/test/test_security_registry.py"
     },
     {
@@ -1783,7 +1786,7 @@
         "test_a_stream_with_no_file_descriptor_is_read_directly",
         "context"
       ],
-      "last_modified": "2026-11-08T16:07:34Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -1965,7 +1968,7 @@
         "run_scorecard",
         "spy"
       ],
-      "last_modified": "2026-11-09T22:07:14Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/test/test_evals_contract.py"
     },
     {
@@ -2157,7 +2160,7 @@
         "test_the_agentic_page_lists_all_ten_and_says_which_no_control_covers",
         "test_the_agentic_filter_scopes_the_page_and_still_lists_all_ten"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/test/test_security_evidence_pack.py"
     },
     {
@@ -2433,7 +2436,7 @@
         "legacy",
         "change"
       ],
-      "last_modified": "2026-11-09T21:09:20Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -2806,7 +2809,7 @@
         "test_agentsmith_passes_the_security_contract",
         "broken"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/test/test_security_contract.py"
     },
     {
@@ -2937,7 +2940,7 @@
         "test_the_wait_step_stays_red_when_the_refusal_is_not_the_reason",
         "test_every_job_that_waits_survives_a_red_run"
       ],
-      "last_modified": "2026-11-09T08:37:07Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -3444,7 +3447,7 @@
         "test_every_shell_environment_input_is_documented",
         "leaves"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/test/test_env_var_documentation.py"
     },
     {
@@ -3514,7 +3517,7 @@
         "ControlSpec",
         "load_control_registry"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/security/registry.py"
     },
     {
@@ -3538,7 +3541,7 @@
         "_render_security_report_md",
         "write_evidence_pack"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/security/report.py"
     },
     {
@@ -3583,7 +3586,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/security/runners/__init__.py"
     },
     {
@@ -3609,7 +3612,7 @@
         "agency_manifest",
         "gateway_static"
       ],
-      "last_modified": "2026-11-08T20:48:00Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/security/runners/delegating.py"
     },
     {
@@ -3618,7 +3621,7 @@
       "symbols": [
         "run"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/security/runners/sso_revocation.py"
     },
     {
@@ -3651,7 +3654,7 @@
         "repository_python",
         "node_suite"
       ],
-      "last_modified": "2026-11-08T20:47:38Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/security/runners/_shared.py"
     },
     {
@@ -3791,7 +3794,7 @@
         "metadata",
         "RootLayout"
       ],
-      "last_modified": "2026-11-08T14:45:52Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/layout.tsx"
     },
     {
@@ -3801,7 +3804,7 @@
         "dynamic",
         "Home"
       ],
-      "last_modified": "2026-11-08T14:45:52Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/page.tsx"
     },
     {
@@ -3876,7 +3879,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "portal/test/opsIngestDb.test.ts"
     },
     {
@@ -3890,7 +3893,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-08T16:10:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -3946,7 +3949,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-08T14:13:22Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/test/catalogs.test.ts"
     },
     {
@@ -4170,7 +4173,7 @@
         "tableExists",
         "columnExists"
       ],
-      "last_modified": "2026-11-08T14:04:58Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/db.ts"
     },
     {
@@ -4223,7 +4226,7 @@
         "listIngestRuns",
         "listGateFailures"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "portal/lib/devRead.ts"
     },
     {
@@ -4271,7 +4274,7 @@
         "AuditEventWithVerification",
         "listAuditEvents"
       ],
-      "last_modified": "2026-11-08T16:08:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/auditLog.ts"
     },
     {
@@ -4291,7 +4294,7 @@
       "symbols": [
         "tokenRoutes"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/tokenRoutes.ts"
     },
     {
@@ -4319,7 +4322,7 @@
       "symbols": [
         "currentAccess"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/currentAccess.ts"
     },
     {
@@ -4463,7 +4466,7 @@
         "verifySignature",
         "scopeAuditEvents"
       ],
-      "last_modified": "2026-11-08T16:08:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/auditSignature.ts"
     },
     {
@@ -4481,7 +4484,7 @@
         "getFrameworkVersionByTenant",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -4518,7 +4521,7 @@
         "revokeSession",
         "isSessionRevoked"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/sessionRevocation.ts"
     },
     {
@@ -4544,7 +4547,7 @@
         "OpsResult",
         "handleOpsIngest"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "portal/lib/opsIngest.ts"
     },
     {
@@ -4570,7 +4573,7 @@
         "OidcIdentity",
         "handleCallback"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/oidc.ts"
     },
     {
@@ -4616,7 +4619,7 @@
       "symbols": [
         "AdminLayout"
       ],
-      "last_modified": "2026-11-08T14:48:54Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/admin/layout.tsx"
     },
     {
@@ -4634,7 +4637,7 @@
       "symbols": [
         "DevLayout"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/dev/layout.tsx"
     },
     {
@@ -4644,7 +4647,7 @@
         "dynamic",
         "DevAppsPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/dev/page.tsx"
     },
     {
@@ -4653,7 +4656,7 @@
       "symbols": [
         "OpsLayout"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/ops/layout.tsx"
     },
     {
@@ -4663,7 +4666,7 @@
         "dynamic",
         "OpsAppsPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/ops/page.tsx"
     },
     {
@@ -4673,7 +4676,7 @@
         "dynamic",
         "AuditLogPage"
       ],
-      "last_modified": "2026-11-08T16:09:54Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/ops/audit/page.tsx"
     },
     {
@@ -4683,7 +4686,7 @@
         "dynamic",
         "DLQPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/ops/dlq/page.tsx"
     },
     {
@@ -4693,7 +4696,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "portal/app/ops/apps/[id]/page.tsx"
     },
     {
@@ -4703,7 +4706,7 @@
         "dynamic",
         "TenantDlqPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/ops/dlq/[tenantId]/page.tsx"
     },
     {
@@ -4713,7 +4716,7 @@
         "dynamic",
         "DevApprovalsPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/dev/approvals/page.tsx"
     },
     {
@@ -4723,7 +4726,7 @@
         "dynamic",
         "DevAppLayout"
       ],
-      "last_modified": "2026-11-08T14:46:18Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/dev/apps/[app]/layout.tsx"
     },
     {
@@ -4733,7 +4736,7 @@
         "dynamic",
         "DevChangesPage"
       ],
-      "last_modified": "2026-11-08T14:45:52Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/dev/apps/[app]/page.tsx"
     },
     {
@@ -4743,7 +4746,7 @@
         "dynamic",
         "DevGatesPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/dev/apps/[app]/gates/page.tsx"
     },
     {
@@ -4753,7 +4756,7 @@
         "dynamic",
         "DevDesignsPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/dev/apps/[app]/designs/page.tsx"
     },
     {
@@ -4763,7 +4766,7 @@
         "dynamic",
         "DevDesignPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/dev/apps/[app]/designs/[...path]/page.tsx"
     },
     {
@@ -4773,7 +4776,7 @@
         "dynamic",
         "DevCommitPage"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx"
     },
     {
@@ -4782,7 +4785,7 @@
       "symbols": [
         "NewIntakePage"
       ],
-      "last_modified": "2026-11-08T14:45:52Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/dev/intakes/new/page.tsx"
     },
     {
@@ -4792,7 +4795,7 @@
         "GET",
         "POST"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/tenants/route.ts"
     },
     {
@@ -4801,7 +4804,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-08T16:07:34Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/audit/route.ts"
     },
     {
@@ -4810,7 +4813,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/dlq/route.ts"
     },
     {
@@ -4837,7 +4840,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/ops/ingest/route.ts"
     },
     {
@@ -4846,7 +4849,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/dev/intakes/route.ts"
     },
     {
@@ -4855,7 +4858,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/dev/ingest/route.ts"
     },
     {
@@ -4864,7 +4867,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/dev/scaffold/[id]/route.ts"
     },
     {
@@ -4873,7 +4876,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/dev/scaffold/[id]/consume/route.ts"
     },
     {
@@ -4882,7 +4885,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/dlq/[taskId]/discard/route.ts"
     },
     {
@@ -4891,7 +4894,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/dlq/[taskId]/replay/route.ts"
     },
     {
@@ -4909,7 +4912,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/tenants/[id]/cost/route.ts"
     },
     {
@@ -4919,7 +4922,7 @@
         "POST",
         "DELETE"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/tenants/[id]/widget-token/route.ts"
     },
     {
@@ -4928,7 +4931,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/tenants/[id]/issues/route.ts"
     },
     {
@@ -4937,7 +4940,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/admin/apps/route.ts"
     },
     {
@@ -4946,7 +4949,7 @@
       "symbols": [
         "PATCH"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/admin/apps/[id]/route.ts"
     },
     {
@@ -4969,7 +4972,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/admin/apps/[id]/replay-key/route.ts"
     },
     {
@@ -4978,7 +4981,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/auth/session-status/route.ts"
     },
     {
@@ -4987,7 +4990,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/auth/logout/route.ts"
     },
     {
@@ -4997,7 +5000,7 @@
         "dynamic",
         "GET"
       ],
-      "last_modified": "2026-11-08T14:04:58Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/auth/callback/route.ts"
     },
     {
@@ -5027,7 +5030,7 @@
         "dynamic",
         "AdminAppsPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/admin/apps/page.tsx"
     },
     {
@@ -5037,7 +5040,7 @@
         "dynamic",
         "AdminAppPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/admin/apps/[id]/page.tsx"
     },
     {
@@ -6860,7 +6863,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-11-09T21:09:20Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/sync.py"
     },
     {
@@ -6962,7 +6965,7 @@
         "start_as_current_span",
         "on_start"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/tracing.py"
     },
     {
@@ -7029,7 +7032,7 @@
         "warn_if_declared_version_differs",
         "_reset_cache"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/version.py"
     },
     {
@@ -7052,7 +7055,7 @@
         "metric_exporter",
         "_exporter"
       ],
-      "last_modified": "2026-11-08T15:12:06Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/otlp.py"
     },
     {
@@ -7077,7 +7080,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-11-08T19:53:42Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/vector_store.py"
     },
     {
@@ -7117,7 +7120,7 @@
         "apply_output_moderation",
         "__init__"
       ],
-      "last_modified": "2026-11-08T14:06:35Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/moderation.py"
     },
     {
@@ -7136,7 +7139,7 @@
         "_signal",
         "_connect"
       ],
-      "last_modified": "2026-11-08T19:50:05Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/replay_webhook_server.py"
     },
     {
@@ -7171,7 +7174,7 @@
         "invoke",
         "decorator"
       ],
-      "last_modified": "2026-11-07T12:46:40Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/tool_registry.py"
     },
     {
@@ -7242,7 +7245,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-11-09T21:09:20Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/adopt.py"
     },
     {
@@ -7262,7 +7265,7 @@
         "_not_the_invalid_trace",
         "_no_secret"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/ops_contract.py"
     },
     {
@@ -7341,7 +7344,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/llm_gateway.py"
     },
     {
@@ -7365,7 +7368,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-11-08T19:50:11Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/prompt_guard.py"
     },
     {
@@ -7383,7 +7386,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-11-08T19:53:40Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/embeddings.py"
     },
     {
@@ -7461,7 +7464,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-11-09T22:05:44Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/cli.py"
     },
     {
@@ -7627,7 +7630,7 @@
         "do_GET",
         "_answer"
       ],
-      "last_modified": "2026-11-08T20:51:38Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/conformance.py"
     },
     {
@@ -7669,7 +7672,7 @@
         "log_message",
         "do_POST"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/telemetry_contract.py"
     },
     {
@@ -7735,7 +7738,7 @@
         "_release_claim",
         "discard"
       ],
-      "last_modified": "2026-11-08T20:48:27Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/dead_letter.py"
     },
     {
@@ -8451,7 +8454,7 @@
       "symbols": [
         "fake_gateway"
       ],
-      "last_modified": "2026-11-07T12:46:40Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/test/_gateway_fixtures.py"
     },
     {
@@ -8663,7 +8666,7 @@
         "text",
         "aiter_lines"
       ],
-      "last_modified": "2026-11-07T12:46:40Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/test/test_ttft_stream.py"
     },
     {
@@ -9132,7 +9135,7 @@
         "_block",
         "_invoke"
       ],
-      "last_modified": "2026-11-07T12:46:40Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/test/test_moderation_declared.py"
     },
     {
@@ -9197,7 +9200,7 @@
         "human_fix_payload",
         "signal"
       ],
-      "last_modified": "2026-11-08T16:37:30Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/workflows/base_workflow.py"
     },
     {
@@ -9213,7 +9216,7 @@
         "BypassDecision",
         "bypass_decision"
       ],
-      "last_modified": "2026-11-08T18:24:43Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/machine/policy.py"
     },
     {
@@ -9257,7 +9260,7 @@
         "remove_profile_blocks",
         "uninstall"
       ],
-      "last_modified": "2026-11-08T14:18:09Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/machine/ops.py"
     },
     {
@@ -9300,7 +9303,7 @@
         "gates_run",
         "config"
       ],
-      "last_modified": "2026-11-08T18:27:54Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/machine/governance.py"
     },
     {
@@ -9545,7 +9548,7 @@
         "recordFailure",
         "clearFailures"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/signInPolicy.ts"
     },
     {
@@ -9569,7 +9572,7 @@
         "write_evidence",
         "main"
       ],
-      "last_modified": "2026-11-08T18:28:21Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/compliance_port.py"
     },
     {
@@ -9598,7 +9601,7 @@
         "traces_private",
         "declaration_deployed"
       ],
-      "last_modified": "2026-11-08T16:37:37Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/compliance_checks.py"
     },
     {
@@ -9646,7 +9649,7 @@
         "__init__",
         "is_classified"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "agentsmith/compliance.py"
     },
     {
@@ -9715,7 +9718,7 @@
         "blocked",
         "post"
       ],
-      "last_modified": "2026-11-08T18:24:43Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/test/test_compliance_runtime.py"
     },
     {
@@ -9744,7 +9747,7 @@
         "test_the_profile_only_strengthens",
         "test_signatures_are_not_sent_outside_the_boundary"
       ],
-      "last_modified": "2026-11-08T18:27:54Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/test/test_compliance_port.py"
     },
     {
@@ -9793,14 +9796,14 @@
         "test_a_failing_scan_fails_the_step",
         "check"
       ],
-      "last_modified": "2026-11-09T07:21:03Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "scripts/test/test_compliance_checks.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-08T14:48:54Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/test/complianceState.test.ts"
     },
     {
@@ -9816,14 +9819,14 @@
         "parseAttestations",
         "mayDecide"
       ],
-      "last_modified": "2026-11-08T14:48:54Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/complianceState.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-08T14:04:58Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/test/signInPolicy.test.ts"
     },
     {
@@ -9832,7 +9835,7 @@
       "symbols": [
         "IncidentClose"
       ],
-      "last_modified": "2026-11-08T14:48:32Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/components/IncidentClose.tsx"
     },
     {
@@ -9841,7 +9844,7 @@
       "symbols": [
         "StopControl"
       ],
-      "last_modified": "2026-11-08T14:02:38Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/components/StopControl.tsx"
     },
     {
@@ -9850,7 +9853,7 @@
       "symbols": [
         "IncidentForm"
       ],
-      "last_modified": "2026-11-08T14:09:33Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/components/IncidentForm.tsx"
     },
     {
@@ -9859,7 +9862,7 @@
       "symbols": [
         "AttestForm"
       ],
-      "last_modified": "2026-11-08T13:57:28Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/components/AttestForm.tsx"
     },
     {
@@ -9868,7 +9871,7 @@
       "symbols": [
         "HitlDecision"
       ],
-      "last_modified": "2026-11-08T14:02:38Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/components/HitlDecision.tsx"
     },
     {
@@ -9882,7 +9885,7 @@
         "NotAttestable",
         "signObligation"
       ],
-      "last_modified": "2026-11-08T14:48:32Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/compliance.ts"
     },
     {
@@ -9897,7 +9900,7 @@
         "lastStopAction",
         "stopControl"
       ],
-      "last_modified": "2026-11-08T18:24:43Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/lib/hitl.ts"
     },
     {
@@ -9907,7 +9910,7 @@
         "dynamic",
         "HitlPage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/ops/hitl/page.tsx"
     },
     {
@@ -9917,7 +9920,7 @@
         "dynamic",
         "AdminCompliancePage"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/ops/compliance/page.tsx"
     },
     {
@@ -9927,7 +9930,7 @@
         "dynamic",
         "IncidentsPage"
       ],
-      "last_modified": "2026-11-08T14:48:32Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/ops/incidents/page.tsx"
     },
     {
@@ -9937,7 +9940,7 @@
         "dynamic",
         "CompliancePage"
       ],
-      "last_modified": "2026-11-08T14:48:32Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/ops/apps/[id]/compliance/page.tsx"
     },
     {
@@ -9947,7 +9950,7 @@
         "dynamic",
         "DecisionsPage"
       ],
-      "last_modified": "2026-11-08T18:24:43Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/ops/apps/[id]/decisions/page.tsx"
     },
     {
@@ -9956,7 +9959,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/incidents/route.ts"
     },
     {
@@ -9965,7 +9968,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/ops/stop/route.ts"
     },
     {
@@ -9974,7 +9977,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-08T16:07:34Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/audit/export/route.ts"
     },
     {
@@ -9983,7 +9986,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/compliance/sync/route.ts"
     },
     {
@@ -9992,7 +9995,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T14:48:32Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/compliance/[app]/attest/route.ts"
     },
     {
@@ -10001,7 +10004,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/admin/access-export/route.ts"
     },
     {
@@ -10010,7 +10013,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-08T14:45:39Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/app/api/hitl/decide/route.ts"
     },
     {
@@ -10036,7 +10039,7 @@
         "config",
         "proxy"
       ],
-      "last_modified": "2026-11-08T18:24:43Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/proxy.ts"
     },
     {
@@ -10061,7 +10064,7 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-11-08T18:28:16Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/runtime_server.py"
     },
     {
@@ -10082,14 +10085,14 @@
         "pin",
         "verify"
       ],
-      "last_modified": "2026-11-08T16:37:24Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "agentsmith/mcp_pin.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-08T16:08:17Z",
+      "last_modified": "2026-11-10T19:45:12Z",
       "id": "portal/test/proxy.test.ts"
     },
     {
@@ -10160,6 +10163,120 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_git_dir",
+        "_ledger_path",
+        "load",
+        "_save",
+        "_fresh",
+        "read_new",
+        "remember",
+        "context_note",
+        "_short",
+        "agent",
+        "trailers",
+        "add_trailers",
+        "main"
+      ],
+      "last_modified": "2026-11-11T06:17:25Z",
+      "id": "scripts/agent_tokens.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_tokens",
+        "_generator",
+        "test_every_rule_file_a_tenant_gets_stays_within_its_budget",
+        "test_the_rule_files_carry_the_token_discipline",
+        "test_the_session_start_message_stays_within_its_budget"
+      ],
+      "last_modified": "2026-11-11T06:17:25Z",
+      "id": "scripts/test/test_context_budget.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_line",
+        "repo",
+        "_session",
+        "test_one_response_over_several_lines_is_counted_once",
+        "test_only_new_whole_lines_are_read",
+        "test_the_context_is_what_the_last_response_read",
+        "test_another_agent_or_no_transcript_records_nothing",
+        "test_a_new_session_starts_from_zero",
+        "test_the_note_comes_once_per_step",
+        "test_no_agent_no_trailer",
+        "test_an_agent_without_a_session_says_only_who",
+        "test_each_commit_carries_what_was_spent_since_the_last",
+        "test_the_trailers_land_in_the_message",
+        "test_a_real_commit_through_the_tenants_hooks_carries_the_trailers",
+        "test_a_commit_made_by_hand_gets_no_trailer",
+        "test_trailers_join_the_existing_block_and_replace_only_themselves",
+        "test_a_message_with_no_trailers_gets_a_blank_line_first",
+        "test_the_gates_own_hooks_record_the_session"
+      ],
+      "last_modified": "2026-11-11T06:17:25Z",
+      "id": "scripts/test/test_agent_tokens.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Coding agents spend fewer tokens, and every commit says what it cost",
+      "source_file": ".agent-rfc/designs/coding-agent-tokens.md",
+      "pillar": null,
+      "created_at": "2026-11-10T20:17:37Z",
+      "id": "rfc:designs/coding-agent-tokens.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: coding-agent-tokens",
+      "source_file": ".agent-rfc/reviews/coding-agent-tokens.md",
+      "pillar": null,
+      "created_at": "2026-11-10T20:17:38Z",
+      "id": "rfc:reviews/coding-agent-tokens.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_expect",
+        "test_each_rule",
+        "test_a_case_needs_a_rule_and_exactly_one_source",
+        "_span",
+        "_otlp",
+        "_run",
+        "test_every_run_keeping_its_rules_passes",
+        "test_one_broken_run_fails_at_the_default_floor_and_is_named",
+        "test_a_declared_floor_lowers_the_bar",
+        "test_no_dataset_is_not_gradable",
+        "test_calls_are_read_from_a_trace_in_start_order",
+        "test_a_trace_written_one_object_per_line_is_read",
+        "test_a_trace_that_cannot_be_read_is_not_gradable",
+        "test_the_cli_and_the_hook_accept_the_suite"
+      ],
+      "last_modified": "2026-11-11T06:17:24Z",
+      "id": "scripts/test/test_trajectory_evals.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "test_a_provider_is_named_as_the_conventions_name_it",
+        "test_an_id_naming_no_provider_names_none",
+        "_span",
+        "test_a_gateway_span_carries_both_names",
+        "test_unreported_usage_writes_no_genai_count",
+        "test_an_id_with_no_provider_writes_no_provider",
+        "test_a_tool_span_carries_both_names",
+        "test_the_pin_is_in_the_protocol"
+      ],
+      "last_modified": "2026-11-11T06:17:24Z",
+      "id": "scripts/test/test_gen_ai_telemetry.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
         "_control",
         "_check",
         "_job",
@@ -10183,42 +10300,8 @@
         "test_a_workflow_that_does_not_parse_fails",
         "test_the_failure_says_what_to_do"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/test/test_agent_workflow_injection.py"
-    },
-    {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_normalised",
-        "_untrusted_fields",
-        "_strings",
-        "_is_agent",
-        "_tainted",
-        "_uses_variable",
-        "_guarded",
-        "_step_problems",
-        "_workflow_problems",
-        "run"
-      ],
-      "last_modified": "2026-11-09T22:03:32Z",
-      "id": "scripts/security/runners/agent_workflow.py"
-    },
-    {
-      "node_type": "Guardrail",
-      "title": "A workflow may not hand untrusted event text to a coding agent",
-      "source_file": ".agent-rfc/designs/agent-workflow-injection.md",
-      "pillar": null,
-      "created_at": "2026-11-09T21:17:36Z",
-      "id": "rfc:designs/agent-workflow-injection.md"
-    },
-    {
-      "node_type": "Guardrail",
-      "title": "Review: agent-workflow-injection",
-      "source_file": ".agent-rfc/reviews/agent-workflow-injection.md",
-      "pillar": null,
-      "created_at": "2026-11-09T21:17:36Z",
-      "id": "rfc:reviews/agent-workflow-injection.md"
     },
     {
       "node_type": "CodebaseFile",
@@ -10235,110 +10318,106 @@
         "test_the_deploy_templates_set_it_from_the_commit_ci_validated",
         "test_the_gateway_sends_the_commit_with_each_run"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
+      "last_modified": "2026-11-11T06:17:24Z",
       "id": "scripts/test/test_app_commit.py"
-    },
-    {
-      "node_type": "Guardrail",
-      "title": "A production run links to the commit behind it",
-      "source_file": ".agent-rfc/designs/accountability-chain.md",
-      "pillar": null,
-      "created_at": "2026-11-09T21:26:44Z",
-      "id": "rfc:designs/accountability-chain.md"
-    },
-    {
-      "node_type": "Guardrail",
-      "title": "Review: accountability-chain",
-      "source_file": ".agent-rfc/reviews/accountability-chain.md",
-      "pillar": null,
-      "created_at": "2026-11-09T21:26:44Z",
-      "id": "rfc:reviews/accountability-chain.md"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
-        "test_a_provider_is_named_as_the_conventions_name_it",
-        "test_an_id_naming_no_provider_names_none",
-        "_span",
-        "test_a_gateway_span_carries_both_names",
-        "test_unreported_usage_writes_no_genai_count",
-        "test_an_id_with_no_provider_writes_no_provider",
-        "test_a_tool_span_carries_both_names",
-        "test_the_pin_is_in_the_protocol"
+        "_normalised",
+        "_untrusted_fields",
+        "_strings",
+        "_is_agent",
+        "_tainted",
+        "_uses_variable",
+        "_guarded",
+        "_step_problems",
+        "_workflow_problems",
+        "run"
       ],
-      "last_modified": "2026-11-09T22:03:32Z",
-      "id": "scripts/test/test_gen_ai_telemetry.py"
-    },
-    {
-      "node_type": "Guardrail",
-      "title": "OpenTelemetry's GenAI names beside AgentSmith's own",
-      "source_file": ".agent-rfc/designs/gen-ai-telemetry.md",
-      "pillar": null,
-      "created_at": "2026-11-09T21:47:20Z",
-      "id": "rfc:designs/gen-ai-telemetry.md"
-    },
-    {
-      "node_type": "Guardrail",
-      "title": "Review: gen-ai-telemetry",
-      "source_file": ".agent-rfc/reviews/gen-ai-telemetry.md",
-      "pillar": null,
-      "created_at": "2026-11-09T21:47:21Z",
-      "id": "rfc:reviews/gen-ai-telemetry.md"
+      "last_modified": "2026-11-11T06:17:24Z",
+      "id": "scripts/security/runners/agent_workflow.py"
     },
     {
       "node_type": "Guardrail",
       "title": "Evidence packs grade the OWASP Agentic Top 10",
       "source_file": ".agent-rfc/designs/owasp-agentic-tags.md",
       "pillar": null,
-      "created_at": "2026-11-09T22:01:04Z",
+      "created_at": "2026-11-11T06:17:45Z",
       "id": "rfc:designs/owasp-agentic-tags.md"
     },
     {
       "node_type": "Guardrail",
-      "title": "Review: owasp-agentic-tags",
-      "source_file": ".agent-rfc/reviews/owasp-agentic-tags.md",
+      "title": "OpenTelemetry's GenAI names beside AgentSmith's own",
+      "source_file": ".agent-rfc/designs/gen-ai-telemetry.md",
       "pillar": null,
-      "created_at": "2026-11-09T22:01:05Z",
-      "id": "rfc:reviews/owasp-agentic-tags.md"
+      "created_at": "2026-11-11T06:17:45Z",
+      "id": "rfc:designs/gen-ai-telemetry.md"
     },
     {
-      "node_type": "CodebaseFile",
-      "language": "python",
-      "symbols": [
-        "_expect",
-        "test_each_rule",
-        "test_a_case_needs_a_rule_and_exactly_one_source",
-        "_span",
-        "_otlp",
-        "_run",
-        "test_every_run_keeping_its_rules_passes",
-        "test_one_broken_run_fails_at_the_default_floor_and_is_named",
-        "test_a_declared_floor_lowers_the_bar",
-        "test_no_dataset_is_not_gradable",
-        "test_calls_are_read_from_a_trace_in_start_order",
-        "test_a_trace_written_one_object_per_line_is_read",
-        "test_a_trace_that_cannot_be_read_is_not_gradable",
-        "test_the_cli_and_the_hook_accept_the_suite"
-      ],
-      "last_modified": "2026-11-09T22:06:41Z",
-      "id": "scripts/test/test_trajectory_evals.py"
+      "node_type": "Guardrail",
+      "title": "A workflow may not hand untrusted event text to a coding agent",
+      "source_file": ".agent-rfc/designs/agent-workflow-injection.md",
+      "pillar": null,
+      "created_at": "2026-11-11T06:17:45Z",
+      "id": "rfc:designs/agent-workflow-injection.md"
     },
     {
       "node_type": "Guardrail",
       "title": "Trajectory evals: grading the path, not only the answer",
       "source_file": ".agent-rfc/designs/trajectory-evals.md",
       "pillar": null,
-      "created_at": "2026-11-09T22:11:45Z",
+      "created_at": "2026-11-11T06:17:45Z",
       "id": "rfc:designs/trajectory-evals.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A production run links to the commit behind it",
+      "source_file": ".agent-rfc/designs/accountability-chain.md",
+      "pillar": null,
+      "created_at": "2026-11-11T06:17:45Z",
+      "id": "rfc:designs/accountability-chain.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: owasp-agentic-tags",
+      "source_file": ".agent-rfc/reviews/owasp-agentic-tags.md",
+      "pillar": null,
+      "created_at": "2026-11-11T06:17:45Z",
+      "id": "rfc:reviews/owasp-agentic-tags.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: gen-ai-telemetry",
+      "source_file": ".agent-rfc/reviews/gen-ai-telemetry.md",
+      "pillar": null,
+      "created_at": "2026-11-11T06:17:45Z",
+      "id": "rfc:reviews/gen-ai-telemetry.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: agent-workflow-injection",
+      "source_file": ".agent-rfc/reviews/agent-workflow-injection.md",
+      "pillar": null,
+      "created_at": "2026-11-11T06:17:46Z",
+      "id": "rfc:reviews/agent-workflow-injection.md"
     },
     {
       "node_type": "Guardrail",
       "title": "Review: trajectory-evals",
       "source_file": ".agent-rfc/reviews/trajectory-evals.md",
       "pillar": null,
-      "created_at": "2026-11-09T22:11:46Z",
+      "created_at": "2026-11-11T06:17:46Z",
       "id": "rfc:reviews/trajectory-evals.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: accountability-chain",
+      "source_file": ".agent-rfc/reviews/accountability-chain.md",
+      "pillar": null,
+      "created_at": "2026-11-11T06:17:46Z",
+      "id": "rfc:reviews/accountability-chain.md"
     }
   ],
   "edges": [
@@ -11544,12 +11623,12 @@
     },
     {
       "edge_type": "IMPORTS",
-      "source": "scripts/test/test_app_commit.py",
+      "source": "scripts/test/test_gen_ai_telemetry.py",
       "target": "agentsmith/__init__.py"
     },
     {
       "edge_type": "IMPORTS",
-      "source": "scripts/test/test_gen_ai_telemetry.py",
+      "source": "scripts/test/test_app_commit.py",
       "target": "agentsmith/__init__.py"
     }
   ]

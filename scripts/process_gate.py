@@ -963,15 +963,42 @@ def stop_problems(root: Path) -> List[str]:
     return problems
 
 
+def _remember_session(root: Path, payload: dict) -> None:
+    """Which coding-agent session this is, for the commit's token trailer
+    (.agent-rfc/designs/coding-agent-tokens.md). Bookkeeping never fails a hook."""
+    try:
+        import agent_tokens as at
+
+        at.remember(root, _IDE["value"], payload)
+    except Exception:
+        pass
+
+
+def _context_note(root: Path) -> None:
+    """A word to the person, never a block, when the session's context has grown."""
+    if _IDE["value"] != "claude":
+        return
+    try:
+        import agent_tokens as at
+
+        note = at.context_note(root)
+    except Exception:
+        return
+    if note:
+        print(json.dumps({"systemMessage": note}))
+
+
 def cmd_stop(payload: dict) -> int:
     event = gi.parse(_IDE["value"], "stop", payload)
     root = repo_root(event.cwd)
+    _remember_session(root, payload)
     unreviewed = stop_problems(root)
     # A commit that skipped the gate is as unreviewed as an uncommitted change,
     # and the end of a turn is a touchpoint like any other.
     swept, sweep_report, _failing = sweep(root)
     problems = [*unreviewed, *([line.strip() for line in sweep_report if line.strip()] if swept else [])]
     if not problems:
+        _context_note(root)
         return 0
     _record("block", "review-before-done" if not swept else "bypass-sweep")
     # Pillar 5's log, written by the hook rather than by an agent's memory of
@@ -989,6 +1016,7 @@ def cmd_stop(payload: dict) -> int:
 
 def cmd_session_start(payload: dict) -> int:
     root = repo_root(gi.parse(_IDE["value"], "session-start", payload).cwd)
+    _remember_session(root, payload)
     config, problems = _worktree_config(root)
     if config is None and not problems:
         return 0  # this repository has not adopted the gates
@@ -2196,6 +2224,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                            help="report and re-arm, but do not refuse (pre-commit; commit-msg decides)")
     sweep_cmd.add_argument("--decision", action="store_true",
                            help="answer gate contract 3's `push`: one decision on stdout")
+    trailers_cmd = sub.add_parser("agent-trailers",
+                                  help="after the gate allowed a commit: add Agent and Agent-Tokens trailers")
+    trailers_cmd.add_argument("message_file")
     msg = sub.add_parser("commit-msg")
     msg.add_argument("--amend", action="store_true", help="the commit replaces HEAD (git commit --amend)")
     msg.add_argument("--decision", action="store_true",
@@ -2239,6 +2270,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.decision:
             return _traced("sweep", repo_root(), cmd_push_decision)
         return _traced("sweep", repo_root(), lambda: cmd_sweep(args.report))
+    if args.command == "agent-trailers":
+        import agent_tokens as at
+
+        return at.main(["trailers", args.message_file])
     if args.command == "commit-msg":
         if args.decision:
             raw = "" if sys.stdin.isatty() else _payload_text(sys.stdin)

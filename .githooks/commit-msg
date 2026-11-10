@@ -54,6 +54,10 @@ if parent_args | grep -qE '(^|[[:space:]])--amend([[:space:]]|$)'; then
 fi
 
 "$hook_dir/process-gate" commit-msg "${amend[@]+"${amend[@]}"}" "$msg_file" || exit $?
+# Which coding agent made this commit, and what its session spent since the last
+# one (.agent-rfc/designs/coding-agent-tokens.md). Only after the gate allowed it,
+# and never a reason to fail: no measurement adds nothing.
+"$hook_dir/process-gate" agent-trailers "$msg_file" >/dev/null 2>&1 || true
 # The hook this repository ran before the gates, if any — after the gate, never
 # instead of it (.githooks/chain).
 [ -f "$hook_dir/chain" ] || exit 0

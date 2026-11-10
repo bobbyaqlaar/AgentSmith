@@ -168,6 +168,12 @@
       "List every package the change adds, direct and transitive, in `## Dependencies`.",
       "After building: review passes against the levers doc until a pass finds 0, then a complete `## Sign-off` block. Both are checked by the gate."
     ],
+    "token_discipline": [
+      "Read the knowledge graph's impact list for a change before opening files; open only what it names and what they import.",
+      "Search before reading, and read the part of a large file you need, not the whole file.",
+      "Do not print large outputs into the session: filter, count or tail them first.",
+      "One slice per session: commit when it is done and start a fresh session for the next. Each commit records what its session spent (`Agent-Tokens:`)."
+    ],
     "signoff": {
       "groups": [
         "DRY & shared code",
