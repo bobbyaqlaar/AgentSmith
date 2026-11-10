@@ -241,6 +241,15 @@ records:
     - "List every package the change adds, direct and transitive, in `## Dependencies`."
     - "After building: review passes against the levers doc until a pass finds 0, then a complete `## Sign-off` block. Both are checked by the gate."
 
+  # How a coding agent keeps its own context small. Every turn re-reads the whole
+  # session, so what goes into it is paid for again and again
+  # (.agent-rfc/designs/coding-agent-tokens.md). Kept short: it is itself read every session.
+  token_discipline:
+    - "Read the knowledge graph's impact list for a change before opening files; open only what it names and what they import."
+    - "Search before reading, and read the part of a large file you need, not the whole file."
+    - "Do not print large outputs into the session: filter, count or tail them first."
+    - "One slice per session: commit when it is done and start a fresh session for the next. Each commit records what its session spent (`Agent-Tokens:`)."
+
   signoff:
     # The block docs/validation-checklist.md Step 4 asks for. A review is clean
     # only when its last pass reports 0 findings AND this block is complete.

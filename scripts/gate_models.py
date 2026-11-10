@@ -755,6 +755,9 @@ class Records(_Frozen):
     # What every IDE rule file tells an agent at the start of a change; the
     # gate does not read it, the generator renders it into six files.
     design_start: list[str] = Field(default_factory=list)
+    # How a coding agent keeps its own context small, rendered beside design_start
+    # (.agent-rfc/designs/coding-agent-tokens.md).
+    token_discipline: list[str] = Field(default_factory=list)
 
 
 class Extends(_Frozen):

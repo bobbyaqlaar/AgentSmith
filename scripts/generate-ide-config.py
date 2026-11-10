@@ -136,12 +136,22 @@ def _design_start_lines(rules: dict) -> list[str]:
 DESIGN_START_HEADING = "## Design start — before you write code"
 
 
+def _token_lines(rules: dict) -> list[str]:
+    """How to spend fewer tokens, from `records.token_discipline`: rendered with the
+    design-start block, so every agent that reads one reads the other."""
+    records = rules.get("records") or {}
+    return [" ".join(str(line).split()) for line in records.get("token_discipline", [])]
+
+
 def _design_start_block(rules: dict, heading: str = DESIGN_START_HEADING) -> str:
     lines = _design_start_lines(rules)
     if not lines:
         return ""
     bullets = [f"- {line}" for line in lines]
-    return "\n".join([heading, "", *bullets, ""])
+    tokens = _token_lines(rules)
+    token_block = ["", "## Token discipline" if heading == DESIGN_START_HEADING else "## TOKEN DISCIPLINE", "",
+                   *[f"- {line}" for line in tokens]] if tokens else []
+    return "\n".join([heading, "", *bullets, *token_block, ""])
 
 
 def render_registry(rules: dict) -> str:
@@ -585,7 +595,8 @@ def _render_skill(skill: dict, rules: dict, ctx: dict[str, str]) -> str:
         return "\n".join(lines) + "\n"
 
     if 1 in skill.get("pillars", []):
-        lines.append("- " + "\n- ".join(_design_start_lines(rules)) if _design_start_lines(rules) else "")
+        lines.append("- " + "\n- ".join(_design_start_lines(rules) + _token_lines(rules))
+                     if _design_start_lines(rules) else "")
     pillar_by_id = {p["id"]: p for p in rules.get("pillars", [])}
     for pid in skill.get("pillars", []):
         pillar = pillar_by_id.get(pid)

@@ -1333,6 +1333,7 @@ AgentSmith/
 │   ├── promote-learning.py
 │   ├── sync-ui-feedback.py
 │   ├── agent_logger.py
+│   ├── agent_tokens.py          # a coding agent's session spend, from its transcript; commit trailers
 │   ├── circuit_breaker.py
 │   ├── verify_system.py         # incl. --check-security, --check-delivery-model
 │   ├── test/                    # Framework self-tests for scripts/
