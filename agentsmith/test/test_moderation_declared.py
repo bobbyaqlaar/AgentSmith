@@ -224,6 +224,7 @@ def test_the_streaming_path_records_a_blocked_call_too(monkeypatch) -> None:
                                "endpoint": "http://127.0.0.1:11434/v1"}}
     gw.budget_cap_usd = 10.0
     gw._idempotency = None
+    gw._budget = tts._MemoryBudgetBackend()
     gw.get_budget_status = MagicMock(return_value={"ok": True, "remaining_usd": 10})
     gw._resolve_role = MagicMock(return_value=("developer", None))
     gw._coerce_messages = MagicMock(return_value=[{"role": "user", "content": "hi"}])

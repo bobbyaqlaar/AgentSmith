@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from agentsmith.llm_gateway import CompletionResult, LLMGateway
+from agentsmith.llm_gateway import CompletionResult, LLMGateway, _MemoryBudgetBackend
 from agentsmith.test._gateway_fixtures import fake_gateway
 
 
@@ -65,6 +65,7 @@ async def test_complete_stream_sets_ttft_ms() -> None:
     }
     gw.budget_cap_usd = 10.0
     gw._idempotency = None
+    gw._budget = _MemoryBudgetBackend()
     gw.get_budget_status = MagicMock(return_value={"ok": True, "remaining_usd": 10})
     gw._resolve_role = MagicMock(return_value=("developer", None))
     gw._coerce_messages = MagicMock(return_value=[{"role": "user", "content": "hi"}])
