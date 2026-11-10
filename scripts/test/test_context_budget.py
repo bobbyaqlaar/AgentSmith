@@ -49,9 +49,9 @@ def test_the_rule_files_carry_the_token_discipline():
         assert "One slice per session" in rendered[rel], rel
 
 
-def test_the_session_start_message_stays_within_its_budget(tmp_path):
-    payload = json.dumps({"cwd": str(REPO), "hook_event_name": "SessionStart",
-                          "transcript_path": str(tmp_path / "none.jsonl")})
+def test_the_session_start_message_stays_within_its_budget():
+    # No transcript_path: this runs against the real repository, whose session ledger is not the test's.
+    payload = json.dumps({"cwd": str(REPO), "hook_event_name": "SessionStart"})
     done = subprocess.run(["bash", str(REPO / ".githooks" / "process-gate"), "session-start", "--ide", "claude"],
                           input=payload, capture_output=True, text=True, cwd=REPO,
                           env={**os.environ, "AGENTSMITH_DIR": str(REPO)}, check=False)
