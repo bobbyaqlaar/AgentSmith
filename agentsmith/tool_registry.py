@@ -181,6 +181,19 @@ class ToolRegistry:
             "parameters": spec.parameters,
         }
 
+    def _count_tool_call(self, run_id: Optional[str]) -> None:
+        """`limits.run_tool_calls` per workflow run, through the gateway's atomic budget
+        backend (.agent-rfc/designs/run-token-limits.md). Off until declared."""
+        from agentsmith import token_limits
+
+        if not run_id or token_limits.run_tool_call_limit() is None:
+            return
+        if getattr(self, "_run_backend", None) is None:
+            from agentsmith.llm_gateway import _make_budget_backend
+
+            self._run_backend = _make_budget_backend()
+        token_limits.reserve_tool_call(self._run_backend, self._tenant_id or "default", run_id)
+
     def _assert_allowed(self, name: str) -> None:
         if not self._strict:
             return
@@ -191,7 +204,7 @@ class ToolRegistry:
         if name not in self._allowlist:
             raise ToolNotAllowedError(f"tool not allowlisted: {name}")
 
-    def invoke(self, name: str, args: dict[str, Any]) -> Any:
+    def invoke(self, name: str, args: dict[str, Any], *, run_id: Optional[str] = None) -> Any:
         # Every tool call annotates the active span with its name, allow/deny
         # outcome, duration and any error (TestbedFeedback-2026-07-21 G8) —
         # the "every tool call streamed to Phoenix" claim required this and
@@ -204,6 +217,7 @@ class ToolRegistry:
         start = time.perf_counter()
         try:
             self._assert_allowed(name)
+            self._count_tool_call(run_id)
             spec = self._tools.get(name)
             if spec is None:
                 raise ToolNotFoundError(name)

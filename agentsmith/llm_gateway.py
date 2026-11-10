@@ -1240,6 +1240,14 @@ class LLMGateway:
                 guardrail_counts,
             )
 
+        # Tokens bounded per role and per run (.agent-rfc/designs/run-token-limits.md). A
+        # stream reports no usage, so its run reservation stands as the charge.
+        from agentsmith import token_limits
+
+        max_tokens = token_limits.output_cap(cfg, max_tokens)
+        token_limits.check_input(cfg, messages, role)
+        token_limits.reserve_run(self._budget, self.tenant_id, workflow_id, messages, max_tokens)
+
         estimated_cost_usd = max_tokens * (
             cfg.get("cost_per_input_token", 0) + cfg.get("cost_per_output_token", 0)
         )
@@ -1596,6 +1604,15 @@ class LLMGateway:
         except Exception:  # fail-open: tracing must never break the LLM call
             pass
 
+        # Tokens bounded per role and per run (.agent-rfc/designs/run-token-limits.md):
+        # the cap shrinks the cost reservation below, and an over-budget run is
+        # refused before anything is sent.
+        from agentsmith import token_limits
+
+        max_tokens = token_limits.output_cap(cfg, max_tokens)
+        token_limits.check_input(cfg, messages, role)
+        run_tokens = token_limits.reserve_run(self._budget, self.tenant_id, workflow_id, messages, max_tokens)
+
         # Reserve an upper-bound cost estimate atomically before the call,
         # not after — closes the check-then-act race where concurrent calls
         # could all observe "not breached" before any of them recorded
@@ -1695,6 +1712,7 @@ class LLMGateway:
                 self._budget.add_spend(
                     self.tenant_id, -estimated_cost_usd
                 )  # release the reservation
+            token_limits.release_run(self._budget, self.tenant_id, workflow_id, run_tokens)
             self._report_run_status(
                 run_id,
                 "failed",
@@ -1765,6 +1783,7 @@ class LLMGateway:
             )
             cost_usd = estimated_cost_usd if (reserved and estimated_cost_usd) else 0.0
 
+        token_limits.settle_run(self._budget, self.tenant_id, workflow_id, run_tokens, in_tok, out_tok)
         if reserved and estimated_cost_usd:
             # Reconcile: replace the (conservative) reservation with the
             # actual cost. The delta can be negative (actual < estimate,

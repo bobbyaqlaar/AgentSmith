@@ -28,7 +28,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from agentsmith.llm_gateway import LLMGateway
+from agentsmith.llm_gateway import LLMGateway, _MemoryBudgetBackend
 
 DEFAULT_MODEL = {
     "id": "test-model",
@@ -63,6 +63,8 @@ def fake_gateway(
     gw.models = {role: dict(model or DEFAULT_MODEL)}
     gw.budget_cap_usd = budget_cap_usd
     gw._idempotency = None
+    # The real constructor always opens one; the run token limits read it.
+    gw._budget = _MemoryBudgetBackend()
     gw.get_budget_status = MagicMock(
         return_value={
             "ok": True,

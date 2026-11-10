@@ -1054,6 +1054,8 @@ program (`agentsmith/cli.py`), so `agentsmith <command> --help` is always curren
 |---|---|
 | `AGENTSMITH_SWEEP_BATCH` | How many unverified commits one bypass sweep checks before deferring the rest to the next one (default 200). The sweep runs at every commit, push, session start and turn end, so this bounds what any of them costs after a long fetch; nothing is skipped — an unchecked commit stays unverified |
 | `AGENTSMITH_CONTEXT_NOTE_TOKENS` | The context size, in tokens, at which the stop hook tells the person a Claude Code session has grown and suggests starting a fresh one (default 150,000; it repeats every further 50,000). |
+| `AGENTSMITH_RUN_TOKEN_LIMIT` | One workflow run's token budget, when `tenant.yaml` declares no `limits.run_tokens`. Off when unset. |
+| `AGENTSMITH_RUN_TOOL_CALL_LIMIT` | One workflow run's tool-call limit, when `tenant.yaml` declares no `limits.run_tool_calls`. Off when unset. |
 | `AGENTSMITH_STATE_DIR` | Where machine state is read and written instead of `~/.agent-framework/state` — the mode, install mode and dashboard endpoint. For sandboxes and test isolation; the hooks honour it too |
 | `AGENTSMITH_IDE` | Which agent is running the process gate (`claude`, `cursor`, `antigravity`, `copilot`, `gemini`, `codex`). Set by each IDE's generated hook config; it names the caller on the gate's `agent.gate.*` spans. Unset reads as `unknown`, never as a guess |
 | `CLAUDE_PROJECT_DIR` | Set by Claude Code to the session's project directory. `.githooks/process-gate` uses it **only as a last resort** for which repository it was invoked in — `git rev-parse --show-toplevel` first, this next, `$PWD` last. It names the SESSION's project, which is not the repository being committed to when a session in one repo commits in another, so it is deliberately not preferred. Nothing sets it but the IDE. |
@@ -1886,6 +1888,17 @@ result = await gateway.complete(prompt="...", model_hint="developer")
 Model registry: `agentsmith/models.yaml` (framework defaults) →
 tenant-repo-root `models.yaml` (override) → `.agenticframework/tenant.yaml`
 `gateway.routing_overrides` (per-role shorthand).
+
+**Using fewer tokens.** Counting tokens and capping money does not bound tokens, and on local models the money cap never bites. Four optional limits do, each off until declared and each refusing before anything is sent:
+
+| Where | Setting | Effect |
+|---|---|---|
+| `models.yaml`, on a model entry | `max_output_tokens` | Caps the answer. The gateway sends the smaller of this and what the caller asked for, so the cost reservation shrinks too. |
+| `models.yaml`, on a model entry | `max_input_tokens` | A prompt estimated larger (four characters a token) is refused with `ContextTooLargeError`, naming the role and both sizes. Summarise the history or retrieve fewer passages. |
+| `tenant.yaml` `limits.run_tokens`, or `AGENTSMITH_RUN_TOKEN_LIMIT` | a number | One workflow run's token budget, keyed by `workflow_id`. Each call reserves its estimate atomically before it is sent, settles to the real count after, and is released if it fails. A call that would pass the budget raises `RunLimitExceededError`. With usage unreported, the estimate stands as the charge. |
+| `tenant.yaml` `limits.run_tool_calls`, or `AGENTSMITH_RUN_TOOL_CALL_LIMIT` | a number | One workflow run's tool calls, counted by `ToolRegistry.invoke(name, args, run_id=…)`. The next call over raises `ToolCallLimitExceededError`. |
+
+Run counters use the same backend as the spend cap (`BUDGET_BACKEND`), so with the in-process default they hold per worker, not across a fleet.
 
 Budget backend — set before instantiating:
 

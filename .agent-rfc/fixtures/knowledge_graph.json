@@ -7170,11 +7170,12 @@
         "register",
         "names",
         "get_schema",
+        "_count_tool_call",
         "_assert_allowed",
         "invoke",
         "decorator"
       ],
-      "last_modified": "2026-11-11T06:17:24Z",
+      "last_modified": "2026-11-11T06:17:57Z",
       "id": "agentsmith/tool_registry.py"
     },
     {
@@ -7344,7 +7345,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-11-11T06:17:24Z",
+      "last_modified": "2026-11-11T06:17:57Z",
       "id": "agentsmith/llm_gateway.py"
     },
     {
@@ -8454,7 +8455,7 @@
       "symbols": [
         "fake_gateway"
       ],
-      "last_modified": "2026-11-11T06:17:24Z",
+      "last_modified": "2026-11-11T06:17:57Z",
       "id": "agentsmith/test/_gateway_fixtures.py"
     },
     {
@@ -8666,7 +8667,7 @@
         "text",
         "aiter_lines"
       ],
-      "last_modified": "2026-11-11T06:17:24Z",
+      "last_modified": "2026-11-11T06:17:57Z",
       "id": "agentsmith/test/test_ttft_stream.py"
     },
     {
@@ -9135,7 +9136,7 @@
         "_block",
         "_invoke"
       ],
-      "last_modified": "2026-11-11T06:17:24Z",
+      "last_modified": "2026-11-11T06:17:57Z",
       "id": "agentsmith/test/test_moderation_declared.py"
     },
     {
@@ -10190,7 +10191,7 @@
         "test_the_rule_files_carry_the_token_discipline",
         "test_the_session_start_message_stays_within_its_budget"
       ],
-      "last_modified": "2026-11-11T06:17:25Z",
+      "last_modified": "2026-11-11T06:17:57Z",
       "id": "scripts/test/test_context_budget.py"
     },
     {
@@ -10234,6 +10235,62 @@
       "pillar": null,
       "created_at": "2026-11-10T20:17:38Z",
       "id": "rfc:reviews/coding-agent-tokens.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "ContextTooLargeError",
+        "RunLimitExceededError",
+        "ToolCallLimitExceededError",
+        "estimate_tokens",
+        "_positive",
+        "output_cap",
+        "check_input",
+        "_limit",
+        "run_token_limit",
+        "run_tool_call_limit",
+        "_run_key",
+        "reserve_run",
+        "settle_run",
+        "release_run",
+        "reserve_tool_call"
+      ],
+      "last_modified": "2026-11-11T06:17:57Z",
+      "id": "agentsmith/token_limits.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_gateway",
+        "test_an_undeclared_limit_changes_nothing",
+        "test_the_role_caps_the_answer",
+        "test_an_oversized_prompt_is_refused_before_it_is_sent",
+        "test_a_run_stops_at_its_token_budget_and_settles_to_the_real_count",
+        "test_a_failed_call_spends_nothing_against_the_run",
+        "test_unreported_usage_keeps_the_reservation_as_the_charge",
+        "test_a_run_stops_at_its_tool_call_limit",
+        "test_the_environment_declares_a_limit_too"
+      ],
+      "last_modified": "2026-11-11T06:17:57Z",
+      "id": "agentsmith/test/test_token_limits.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Tenant apps spend fewer tokens: caps per role, limits per run",
+      "source_file": ".agent-rfc/designs/run-token-limits.md",
+      "pillar": null,
+      "created_at": "2026-11-10T20:24:58Z",
+      "id": "rfc:designs/run-token-limits.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: run-token-limits",
+      "source_file": ".agent-rfc/reviews/run-token-limits.md",
+      "pillar": null,
+      "created_at": "2026-11-10T20:24:58Z",
+      "id": "rfc:reviews/run-token-limits.md"
     },
     {
       "node_type": "CodebaseFile",
@@ -10344,7 +10401,7 @@
       "title": "Evidence packs grade the OWASP Agentic Top 10",
       "source_file": ".agent-rfc/designs/owasp-agentic-tags.md",
       "pillar": null,
-      "created_at": "2026-11-11T06:17:45Z",
+      "created_at": "2026-11-11T06:18:03Z",
       "id": "rfc:designs/owasp-agentic-tags.md"
     },
     {
@@ -10352,7 +10409,7 @@
       "title": "OpenTelemetry's GenAI names beside AgentSmith's own",
       "source_file": ".agent-rfc/designs/gen-ai-telemetry.md",
       "pillar": null,
-      "created_at": "2026-11-11T06:17:45Z",
+      "created_at": "2026-11-11T06:18:03Z",
       "id": "rfc:designs/gen-ai-telemetry.md"
     },
     {
@@ -10360,7 +10417,7 @@
       "title": "A workflow may not hand untrusted event text to a coding agent",
       "source_file": ".agent-rfc/designs/agent-workflow-injection.md",
       "pillar": null,
-      "created_at": "2026-11-11T06:17:45Z",
+      "created_at": "2026-11-11T06:18:03Z",
       "id": "rfc:designs/agent-workflow-injection.md"
     },
     {
@@ -10368,7 +10425,7 @@
       "title": "Trajectory evals: grading the path, not only the answer",
       "source_file": ".agent-rfc/designs/trajectory-evals.md",
       "pillar": null,
-      "created_at": "2026-11-11T06:17:45Z",
+      "created_at": "2026-11-11T06:18:03Z",
       "id": "rfc:designs/trajectory-evals.md"
     },
     {
@@ -10376,7 +10433,7 @@
       "title": "A production run links to the commit behind it",
       "source_file": ".agent-rfc/designs/accountability-chain.md",
       "pillar": null,
-      "created_at": "2026-11-11T06:17:45Z",
+      "created_at": "2026-11-11T06:18:03Z",
       "id": "rfc:designs/accountability-chain.md"
     },
     {
@@ -10384,7 +10441,7 @@
       "title": "Review: owasp-agentic-tags",
       "source_file": ".agent-rfc/reviews/owasp-agentic-tags.md",
       "pillar": null,
-      "created_at": "2026-11-11T06:17:45Z",
+      "created_at": "2026-11-11T06:18:04Z",
       "id": "rfc:reviews/owasp-agentic-tags.md"
     },
     {
@@ -10392,7 +10449,7 @@
       "title": "Review: gen-ai-telemetry",
       "source_file": ".agent-rfc/reviews/gen-ai-telemetry.md",
       "pillar": null,
-      "created_at": "2026-11-11T06:17:45Z",
+      "created_at": "2026-11-11T06:18:04Z",
       "id": "rfc:reviews/gen-ai-telemetry.md"
     },
     {
@@ -10400,7 +10457,7 @@
       "title": "Review: agent-workflow-injection",
       "source_file": ".agent-rfc/reviews/agent-workflow-injection.md",
       "pillar": null,
-      "created_at": "2026-11-11T06:17:46Z",
+      "created_at": "2026-11-11T06:18:04Z",
       "id": "rfc:reviews/agent-workflow-injection.md"
     },
     {
@@ -10408,7 +10465,7 @@
       "title": "Review: trajectory-evals",
       "source_file": ".agent-rfc/reviews/trajectory-evals.md",
       "pillar": null,
-      "created_at": "2026-11-11T06:17:46Z",
+      "created_at": "2026-11-11T06:18:04Z",
       "id": "rfc:reviews/trajectory-evals.md"
     },
     {
@@ -10416,7 +10473,7 @@
       "title": "Review: accountability-chain",
       "source_file": ".agent-rfc/reviews/accountability-chain.md",
       "pillar": null,
-      "created_at": "2026-11-11T06:17:46Z",
+      "created_at": "2026-11-11T06:18:04Z",
       "id": "rfc:reviews/accountability-chain.md"
     }
   ],
@@ -11619,6 +11676,16 @@
     {
       "edge_type": "IMPORTS",
       "source": "agentsmith/runtime_server.py",
+      "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/token_limits.py",
+      "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_token_limits.py",
       "target": "agentsmith/__init__.py"
     },
     {
