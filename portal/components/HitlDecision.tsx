@@ -4,31 +4,38 @@
 // a decision someone can later answer for.
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+
+import { submitOnce } from "@/lib/submitOnce";
 
 export function HitlDecision({ tenantId, recordId }: { tenantId: string; recordId: number }) {
   const router = useRouter();
   const [rationale, setRationale] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inFlight = useRef({ busy: false });
 
+  // One decision per gate, for ever: a rejection is confirmed, and a double click
+  // sends once (the 4.1.0 release review, R28).
   async function decide(approved: boolean) {
     setBusy(true);
     setError(null);
-    try {
-      const resp = await fetch("/api/hitl/decide", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tenantId, recordId, approved, rationale }),
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) throw new Error(data.error ?? `HTTP ${resp.status}`);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
+    const result = await submitOnce(
+      inFlight.current,
+      async () => {
+        const resp = await fetch("/api/hitl/decide", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ tenantId, recordId, approved, rationale }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.error ?? `HTTP ${resp.status}`);
+      },
+      () => approved || window.confirm("Reject this request? A gate takes one decision, and this cannot be changed."),
+    );
+    setBusy(false);
+    if (result.ok) router.refresh();
+    else if (result.error) setError(result.error);
   }
 
   const ready = rationale.trim().length > 0 && !busy;

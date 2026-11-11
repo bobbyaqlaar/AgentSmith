@@ -36,14 +36,27 @@ export function isLockedOut(key: string, now: number = Date.now()): boolean {
   return entry.count >= MAX_FAILURES;
 }
 
+/** Make room: expired entries first, then the oldest that is not locked. Never a lock. */
+function evict(now: number): void {
+  for (const [key, entry] of failures) {
+    if (now - entry.first > LOCKOUT_SECONDS * 1000) failures.delete(key);
+  }
+  for (const [key, entry] of failures) {
+    if (failures.size < MAX_TRACKED) return;
+    if (entry.count < MAX_FAILURES) failures.delete(key);
+  }
+}
+
 export function recordFailure(key: string, now: number = Date.now()): void {
   const entry = failures.get(key);
   if (entry && now - entry.first <= LOCKOUT_SECONDS * 1000) {
     entry.count += 1;
     return;
   }
-  if (failures.size >= MAX_TRACKED) failures.clear();
-  failures.set(key, { count: 1, first: now });
+  if (failures.size >= MAX_TRACKED) evict(now);
+  // At the cap with every entry locked, a new name is not tracked rather than a lock
+  // being dropped: clearing the map unlocked every account (the 4.1.0 release review, R17).
+  if (failures.size < MAX_TRACKED) failures.set(key, { count: 1, first: now });
 }
 
 export function clearFailures(key: string): void {

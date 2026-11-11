@@ -41,3 +41,22 @@ test("a person does not decide their own request, whatever the case", () => {
   assert.equal(mayDecide("omar@x", "rita@x"), true);
   assert.equal(mayDecide("omar@x", null), true);
 });
+
+// ── The 4.1.0 release review: R15, R29 ──
+
+test("a recurring signature expires on its period, whatever expires_at says (R15)", () => {
+  const old = signed({ attested_at: "2020-01-01T00:00:00Z", expires_at: null });
+  assert.equal(stateOf([old]), "expired");
+  const stretched = signed({ attested_at: "2020-01-01T00:00:00Z", expires_at: "2299-01-01T00:00:00Z" });
+  assert.equal(stateOf([stretched]), "expired");
+});
+test("a signature dated in the future does not count (R15)", () => {
+  assert.equal(stateOf([signed({ attested_at: "2027-01-01T00:00:00Z" })]), "missing");
+});
+test("the requester is compared as an email, trimmed (R29)", () => {
+  assert.equal(mayDecide("fatima@entity.ae", " Fatima@Entity.AE "), false);
+  assert.equal(mayDecide("omar@entity.ae", " fatima@entity.ae "), true);
+});
+test("a requester that is not an email cannot be told apart, so nobody may decide (R29)", () => {
+  assert.equal(mayDecide("fatima@entity.ae", "fatima"), false);
+});

@@ -49,3 +49,12 @@ test("activity extends idle, never absolute, and keeps the jti", async () => {
   const capped = (await verifySessionToken((await refreshedSessionToken({ ...next, exp: nearEnd }, nearEnd))!))!;
   assert.equal(capped.exp, first.abs);
 });
+
+// ── The 4.1.0 release review: R17 ──
+test("failures under other names never unlock a locked account (R17)", () => {
+  const admin = "admin|ip";
+  for (let i = 0; i < MAX_FAILURES; i++) recordFailure(admin, 1000);
+  for (let i = 0; i < 10_001; i++) recordFailure(`invented-${i}|ip`, 1000);
+  assert.equal(isLockedOut(admin, 1000), true);
+  clearFailures(admin);
+});

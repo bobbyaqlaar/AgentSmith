@@ -59,7 +59,7 @@ export default async function TenantDetailPage(props: { params: Promise<{ id: st
       {lastStop?.action === "stop" && (
         <p role="status" className="text-sm"><Badge tone="danger">Stopped</Badge> by {lastStop.actor}: {lastStop.reason}</p>
       )}
-      {can(access, "ops.stop", tenant.tenantId) && <StopControl tenantId={tenant.tenantId} />}
+      {can(access, "ops.stop", tenant.tenantId) && <StopControl tenantId={tenant.tenantId} stopped={lastStop?.action === "stop"} />}
 
       <div>
         <h2 className="text-xl font-medium">

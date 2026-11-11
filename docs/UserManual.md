@@ -854,18 +854,11 @@ grep -c '"hitl_resolved": false' .agent-history.log
 
 ### Monthly: Knowledge Graph Pruning
 
-When files are deleted or renamed, orphan nodes can accumulate in the graph:
+When files are deleted or renamed, the graph keeps nodes for them until it is redrawn. Redraw it
+from what git tracks; nodes for files that are gone are purged:
 
 ```bash
-python3 -c "
-from scripts.local_knowledge_graph import AgentKnowledgeGraph
-kg = AgentKnowledgeGraph()
-isolated = [n for n, attr in kg.graph.nodes(data=True)
-            if attr.get('type') == 'CodebaseFile' and kg.graph.degree(n) == 0]
-kg.graph.remove_nodes_from(isolated)
-kg.save_graph_to_disk()
-print(f'Pruned {len(isolated)} orphan nodes.')
-"
+agentsmith gate kg build
 ```
 
 ### As Needed: Upgrade Local GPU Models
@@ -1268,8 +1261,9 @@ export OPS_PORTAL_URL="http://localhost:3000"
 # OPS_PORTAL_SYNC_TOKEN — DEPRECATED: the one token every tenant shared for /api/runs/ingest
 # and /api/sync/history. A worker with OPS_PORTAL_TOKEN no longer uses it; the portal's
 # operator turns those routes off by unsetting it in AgenticFramework/.env.
-# Generate: openssl rand -hex 32  — then set the same value in both places.
-export OPS_PORTAL_SYNC_TOKEN="<same value as AgenticFramework/.env OPS_PORTAL_SYNC_TOKEN>"
+# Leave it unset. Only an older worker without OPS_PORTAL_TOKEN still needs it, and
+# then with the same value as the portal's:
+# export OPS_PORTAL_SYNC_TOKEN="<same value as AgenticFramework/.env OPS_PORTAL_SYNC_TOKEN>"
 
 # ── Enterprise pack (only needed in enterprise mode) ──────────────────────────────
 # BREAK_GLASS_HMAC_KEY — HMAC-SHA256 signing key used to validate break-glass tokens

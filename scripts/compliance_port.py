@@ -16,7 +16,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Optional
 
 FRAMEWORK = Path(__file__).resolve().parents[1]
@@ -96,6 +96,22 @@ def _security_rows(root: Path) -> tuple[dict[str, dict[str, Any]], str]:
         return {}, f"the security provider gave no answer (exit {done.returncode})"
 
 
+def _not_run_by_ci(cited: str) -> str:
+    """Why this file is not a test AgentSmith's CI runs, or "" when it is. A file that
+    exists is not evidence; a test nothing runs passes while broken (the 4.1.0 release
+    review, R23). Pytest collects `test_*.py` under the two test folders; the portal's
+    tests run only when `npm test` or `npm run test:db` names them."""
+    path = PurePosixPath(cited)
+    if path.suffix == ".py" and path.name.startswith("test_") and str(path.parent) in ("agentsmith/test", "scripts/test"):
+        return ""
+    if str(path.parent) == "portal/test" and path.name.endswith(".test.ts"):
+        scripts = json.loads((FRAMEWORK / "portal" / "package.json").read_text(encoding="utf-8")).get("scripts", {})
+        if any(f"test/{path.name}" in str(scripts.get(name, "")) for name in ("test", "test:db")):
+            return ""
+        return f"{cited} is in neither `npm test` nor `npm run test:db`, so CI never runs it"
+    return f"{cited} is not a test CI runs, so it is not evidence"
+
+
 def _judge_mechanism(
     root: Path,
     row: c.Obligation,
@@ -119,11 +135,11 @@ def _judge_mechanism(
         except Exception as exc:  # a check that could not run has not passed
             return "fail", f"{mechanism} could not run: {type(exc).__name__}: {exc}"
     if mechanism.startswith("release:"):
-        return (
-            ("pass", "tested in AgentSmith's own CI")
-            if (FRAMEWORK / mechanism.split(":", 1)[1]).is_file()
-            else ("fail", f"{mechanism} does not exist")
-        )
+        cited = mechanism.split(":", 1)[1]
+        if not (FRAMEWORK / cited).is_file():
+            return "fail", f"{mechanism} does not exist"
+        why = _not_run_by_ci(cited)
+        return ("fail", why) if why else ("pass", f"{cited} runs in AgentSmith's own CI")
     if mechanism == "declaration:complete":
         return (
             ("fail", f"{c.DECLARATION_FILE} still holds {c.PLACEHOLDER}")

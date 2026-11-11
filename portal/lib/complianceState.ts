@@ -40,17 +40,28 @@ export interface ChecklistRow {
 const EXPIRING_DAYS = 30;
 const DAY = 86_400_000;
 
+/** When a signature stops counting. A recurring obligation's period comes from the
+ *  catalogue; a later or missing `expires_at` does not stretch it (the 4.1.0 release
+ *  review, R15). Mirrors `expires` in scripts/compliance_port.py. */
+export function expiresAt(record: AttestationRecord, recurrenceDays: number | null): number | null {
+  const given = record.expires_at === null ? null : Date.parse(record.expires_at);
+  if (!recurrenceDays) return given;
+  const due = Date.parse(record.attested_at) + recurrenceDays * DAY;
+  return given === null ? due : Math.min(due, given);
+}
+
 /** One row per obligation. A mechanism-backed row reads `automatic`: CI is what checks it. */
 export function checklist(rows: ObligationRow[], records: AttestationRecord[], now: Date): ChecklistRow[] {
   return rows.map((obligation) => {
     if (obligation.class !== "attested") return { obligation, state: "automatic", latest: null };
     const mine = records
-      .filter((r) => r.obligation === obligation.id)
+      .filter((r) => r.obligation === obligation.id && Date.parse(r.attested_at) <= now.getTime() + 5 * 60_000)
       .sort((a, b) => Date.parse(b.attested_at) - Date.parse(a.attested_at));
     const latest = mine[0] ?? null;
     if (!latest) return { obligation, state: "missing", latest };
-    if (latest.expires_at === null) return { obligation, state: "signed", latest };
-    const left = Date.parse(latest.expires_at) - now.getTime();
+    const until = expiresAt(latest, obligation.recurrence_days);
+    if (until === null) return { obligation, state: "signed", latest };
+    const left = until - now.getTime();
     if (left <= 0) return { obligation, state: "expired", latest };
     return { obligation, state: left <= EXPIRING_DAYS * DAY ? "expiring" : "signed", latest };
   });
@@ -94,7 +105,13 @@ export function parseAttestations(raw: unknown, known: Set<string>): { ok: true;
   return { ok: true, value };
 }
 
-/** The rule that a person does not approve their own request. */
+const normalised = (value: string) => value.trim().toLowerCase();
+
+/** The rule that a person does not approve their own request. The requester must be
+ *  the sign-in email the app sent; one that is not an email cannot be told apart from
+ *  the reviewer, so nobody may decide it (the 4.1.0 release review, R29). */
 export function mayDecide(actor: string, requestedBy: string | null): boolean {
-  return !requestedBy || requestedBy.toLowerCase() !== actor.toLowerCase();
+  if (!requestedBy) return true;
+  const who = normalised(requestedBy);
+  return /^[^@\s]+@[^@\s]+$/.test(who) && who !== normalised(actor);
 }
