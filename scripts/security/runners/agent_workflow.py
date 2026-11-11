@@ -8,6 +8,7 @@ from a script: it is a floor.
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Any, Iterator
@@ -86,11 +87,66 @@ def _uses_variable(text: str, name: str) -> bool:
     return re.search(rf"\$\{{?{escaped}\b|\$\{{\{{\s*env\.{escaped}\b", text) is not None
 
 
-def _restricts(condition: str) -> bool:
-    """A condition can only restrict when every part of it must hold: an `||` lets
-    another branch run the step for anyone, and a `!` can turn the test round (the
-    4.1.0 release review, R9). Refusing both is stricter than needed, and is a floor."""
-    return "||" not in condition and re.search(r"!(?!=)", condition) is None
+_ROLE = r"'(\w+)'"
+_ASSOCIATION = r"github\.event\.(\w+)\.author_association"
+_ROLE_TESTS = (
+    re.compile(rf"^{_ASSOCIATION}\s*==\s*{_ROLE}$", re.I),
+    re.compile(rf"^{_ROLE}\s*==\s*{_ASSOCIATION}$", re.I),
+)
+_ROLE_LIST = re.compile(rf"^contains\(\s*fromjson\(\s*'(\[[^']*\])'\s*\)\s*,\s*{_ASSOCIATION}\s*\)$", re.I)
+
+
+def _terms(condition: str) -> list[str]:
+    """The terms of a condition joined by `&&`, each without its unmatched brackets."""
+    text = condition.strip()
+    if text.startswith("${{") and text.endswith("}}"):
+        text = text[3:-2]
+    terms = []
+    for piece in text.split("&&"):
+        term = piece.strip()
+        while term.startswith("(") and term.count("(") > term.count(")"):
+            term = term[1:].strip()
+        while term.endswith(")") and term.count(")") > term.count("("):
+            term = term[:-1].strip()
+        while term.startswith("(") and term.endswith(")") and term.count("(") == term.count(")"):
+            inner = term[1:-1].strip()  # `(a == 'X')` around one whole term
+            if inner.count("(") != inner.count(")"):
+                break
+            term = inner
+        terms.append(term)
+    return terms
+
+
+def _trusted_roles(term: str, authored: str) -> bool:
+    """Is this term, on its own, a test that the field's author holds a trusted role?"""
+    for pattern in _ROLE_TESTS:
+        match = pattern.match(term)
+        if match:
+            groups = [g for g in match.groups() if g]
+            context, role = (groups[0], groups[1]) if pattern is _ROLE_TESTS[0] else (groups[1], groups[0])
+            return context.lower() == authored and role.upper() in _TRUSTED_ROLES
+    match = _ROLE_LIST.match(term)
+    if match and match.group(2).lower() == authored:
+        try:
+            roles = json.loads(match.group(1))
+        except ValueError:
+            return False
+        return (isinstance(roles, list) and bool(roles)
+                and all(isinstance(r, str) and r.upper() in _TRUSTED_ROLES for r in roles))
+    return False
+
+
+def _restricts(condition: str, authored: str) -> bool:
+    """A condition restricts the author when it cannot run for anyone else: no `||`
+    (another branch runs it for anyone), no negated group (`!(…)` turns a conjunction
+    round), and at least one term that is exactly a positive test of a trusted role.
+    In a conjunction every term must hold, so the other terms can only narrow it
+    (`… && !github.event.issue.pull_request` is fine). Searching the text for a role word
+    accepted `== false`, a list with CONTRIBUTOR, and `== 'NONE'` beside an unrelated
+    role word (the 4.1.0 review's second pass, P2-R5)."""
+    if "||" in condition or re.search(r"!\s*\(", condition):
+        return False
+    return any(_trusted_roles(term, authored) for term in _terms(condition))
 
 
 def _guarded(field: str, conditions: list[str]) -> bool:
@@ -99,12 +155,7 @@ def _guarded(field: str, conditions: list[str]) -> bool:
     parts = field.lower().split(".")
     if len(parts) != 4 or parts[:2] != ["github", "event"] or parts[2] not in _AUTHORED:
         return False
-    wanted = f"github.event.{parts[2]}.author_association"
-    for condition in conditions:
-        if (wanted in condition.lower() and "!=" not in condition and _restricts(condition)
-                and any(role in condition for role in _TRUSTED_ROLES)):
-            return True
-    return False
+    return any(_restricts(condition, parts[2]) for condition in conditions)
 
 
 def _step_problems(step: dict, inherited: tuple[Any, ...], conditions: list[str]) -> list[str]:

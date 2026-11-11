@@ -271,6 +271,18 @@ jobs:
       - name: "verify_system.py --check-dlq"
         # agentsmith:gate
         run: python3 scripts/verify_system.py --check-dlq
+      - name: "AgentSmith's own evidence for its provider obligations"
+        # A tenant's provider rows read `not_applicable` because this evidence exists;
+        # it fails on a failing row that is not a named known gap
+        # (.agent-rfc/designs/review-pass2-majors.md, P2-R22).
+        # agentsmith:gate
+        run: python3 scripts/compliance_port.py provider-evidence --out provider-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: provider-evidence
+          path: provider-evidence.json
+          if-no-files-found: error
 
   shell:
     name: "Shell scripts"

@@ -44,6 +44,18 @@ jobs:
         # what that check exercises is what ships.
         run: bash scripts/build_release_assets.sh dist
 
+      # AgentSmith's own evidence for the provider obligations a tenant's compliance
+      # check reads as `not_applicable`, attached to the release with the rest of dist/.
+      # A failing row that is not a named known gap stops the release
+      # (.agent-rfc/designs/review-pass2-majors.md, P2-R22).
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+      - name: "AgentSmith's own evidence for its provider obligations"
+        run: |
+          pip install --require-hashes -r requirements.lock
+          python3 scripts/compliance_port.py provider-evidence --out dist/provider-evidence.json
+
       - name: "Import org GPG key (optional)"
         if: ${{ env.ORG_GPG_PRIVATE_KEY != '' }}
         env:
