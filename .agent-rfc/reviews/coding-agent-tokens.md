@@ -15,7 +15,14 @@ Against `docs/review-levers.md`, and against this repository's own transcript.
 
 1. **The session-start budget test wrote into this repository's own ledger.** It ran the hook against the real checkout with a made-up transcript path. The commit after it showed the cost: `Agent: claude-code` and, correctly, no token trailer, because nothing could be read. Fixed: the test sends no transcript path. The stray ledger was removed.
 
-## Pass 3 — findings: 0
+## Pass 3 — findings: 2
+
+Found on the first real trailer, this repository's own commit `555cfc5`.
+
+1. **A session's first measured commit claimed "since this session's previous commit"** while counting the whole session. Fixed: it says "this session so far: its first commit".
+2. **Billions printed as millions** ("5276.6M"). Fixed: "5.3B".
+
+## Pass 4 — findings: 0
 
 - `scripts/test/test_agent_tokens.py`: counting once per response, incremental reads that leave a half-written line for next time, the context size, other agents and missing transcripts recording nothing, a new session starting from zero, the note once per step, trailers only from Claude Code's shell and only what was spent since the session's previous commit, placement in the message, and a real commit through an adopted tenant's own hooks, with and without an agent.
 - `scripts/test/test_context_budget.py`: every rule file a tenant gets, for three stacks, under 3,000 tokens (estimated); the token-discipline block in all five instruction files; the session-start message under 1,200 tokens. The largest rule file is about 2,600.
@@ -41,4 +48,4 @@ Gates run: the suites above; ruff; mypy; the process gate against the commit.
 
 Levers reviewed: `failure-is-not-a-result`, `implemented-not-invoked`, `test-that-cannot-fail`.
 
-KG query: kg:19c5ba4be06b
+KG query: kg:4f39167e33da
