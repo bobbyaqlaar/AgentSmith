@@ -141,6 +141,8 @@ def context_note(root: Path, limit: Optional[int] = None) -> Optional[str]:
 
 
 def _short(value: int) -> str:
+    if value >= 1_000_000_000:
+        return f"{value / 1_000_000_000:.1f}B"
     if value >= 1_000_000:
         return f"{value / 1_000_000:.1f}M"
     if value >= 1_000:
@@ -164,13 +166,15 @@ def trailers(root: Path, env: Mapping[str, str]) -> list[str]:
     if ledger.get("transcript") and Path(ledger["transcript"]).is_file():
         ledger = read_new(ledger)
         now = {kind: int(ledger["totals"].get(kind, 0)) for kind in KINDS}
+        first = not ledger.get("at_last_commit")
         before = ledger.get("at_last_commit") or dict.fromkeys(KINDS, 0)
         spent = {kind: max(0, now[kind] - int(before.get(kind, 0))) for kind in KINDS}
         if any(spent.values()):
             lines.append("Agent-Tokens: " + ", ".join(
                 f"{label} {_short(spent[kind])}" for kind, label in
                 (("output", "output"), ("input", "new input"), ("cache_read", "cache read"),
-                 ("cache_write", "cache write"))) + " (since this session's previous commit)")
+                 ("cache_write", "cache write")))
+                + (" (this session so far: its first commit)" if first else " (since this session's previous commit)"))
         ledger["at_last_commit"] = now
         _save(root, ledger)
     return lines

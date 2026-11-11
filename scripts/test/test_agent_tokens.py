@@ -105,10 +105,12 @@ def test_each_commit_carries_what_was_spent_since_the_last(repo, tmp_path):
     first = at.trailers(repo, {"CLAUDECODE": "1"})
     assert first[0] == "Agent: claude-code"
     assert first[1].startswith("Agent-Tokens: output 1.5k, new input 40, cache read 2.0M, cache write 30.0k")
+    assert first[1].endswith("(this session so far: its first commit)")
     with transcript.open("a", encoding="utf-8") as handle:
         handle.write(_line("m2", 200, cache_read=500))
     second = at.trailers(repo, {"CLAUDECODE": "1"})
     assert second[1].startswith("Agent-Tokens: output 200, new input 0, cache read 500, cache write 0")
+    assert second[1].endswith("(since this session's previous commit)")
     assert at.trailers(repo, {"CLAUDECODE": "1"}) == ["Agent: claude-code"]  # nothing spent since
 
 
@@ -186,3 +188,8 @@ def test_the_gates_own_hooks_record_the_session(tmp_path, monkeypatch, event):
                           input=payload, capture_output=True, text=True, cwd=root, check=False)
     assert done.returncode == 0, done.stderr
     assert at.load(root)["totals"]["output"] == 42
+
+
+@pytest.mark.parametrize("value, shown", [(950, "950"), (1_500, "1.5k"), (2_000_000, "2.0M"), (5_276_600_000, "5.3B")])
+def test_counts_read_at_a_glance(value, shown):
+    assert at._short(value) == shown
