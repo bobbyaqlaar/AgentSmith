@@ -114,6 +114,11 @@ version table being consulted.
 
 - The `python-dubai-gov` scratch tenant asserts that the profile refuses its ungraded eval suites, instead of staying red. The manual says what a tenant needs before its CI can go green on the profile.
 
+### Fixed — what the 4.1.0 review found
+
+- Run token limits: a call the money cap refuses, a call with no tier to try, and a stream that fails or falls back are no longer charged to the run. Each tier of a degrade chain is held to its own `max_input_tokens` and `max_output_tokens`. A limit that cannot be read (`100k`, `true`, `0`) raises `LimitUnreadableError` instead of being no limit. Run counters have their own store (on Postgres, the new `llm_gateway_run_counters` table, created on first use), carry no month and are dropped two days after a run's last call. A streamed call that falls back keeps its `data_class` and `user_id`.
+- Trajectory evals: a `max_tokens` case whose trace has a model span without usage is `not_gradable`, not a pass at zero tokens; a case file holding `[]` is `not_gradable` for every suite, not a crash.
+
 ### Added — an opt-in compliance profile, `dubai-gov`
 
 For an application built for a UAE government entity. **Nothing changes for a repository without the profile**: every new branch in the runtime sits

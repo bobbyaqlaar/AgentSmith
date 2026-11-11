@@ -42,6 +42,18 @@ Both are off until declared, so no tenant's behaviour changes on upgrade. With `
 
 Tokens are estimated at four characters each where they must be known before the call. The real counts settle the run budget afterwards.
 
+## After the 4.1.0 review (2026-11-11)
+
+The 4.1.0 release review found seven places where this design's claims did not hold. Each is fixed here, with a test that failed before:
+
+- **R1 — a refused call kept its run charge.** The run is now reserved only after the money cap accepts the call; the money is given back if the run refuses; every exit that sends nothing (no tier to try, a compliance refusal on the stream path, a failed stream) releases both.
+- **R20 — a stream that falls back.** Both fallbacks to `complete()` pass `data_class` and `user_id`, and the stream's reservation is released before `complete()` reserves its own.
+- **R5 — a fallback tier's caps.** Each attempt in the degrade chain is checked against its own `max_input_tokens` and sent at most its own `max_output_tokens`. `ContextTooLargeError` and `LimitUnreadableError` are raised as themselves, not wrapped as "all tiers exhausted".
+- **R4 — a mistyped limit.** "Not declared" (absent or empty) is no limit; anything else that is not a positive whole number raises `LimitUnreadableError` naming the setting. `true`, `0`, `1.5` and `100k` are refused.
+- **R6 — run counters.** They leave the money ledger for a store of their own, matched to the budget backend: in process (pruned after `RUN_TTL_SECONDS` idle), Redis (keys expire), or Postgres (`llm_gateway_run_counters`, stale rows deleted at most hourly). No month in the key.
+- **R2 — `max_tokens` on a trace that reports no usage.** `_trace_tools` returns no token count when any model span lacks usage (`llm.usage.reported` false, or a model span with no token pair) or none reported any; the case is `not_gradable`.
+- **R11 — an empty case file.** `dataset` returns "holds no cases", so every suite is `not_gradable` on `[]`.
+
 ## Pillars
 
 - P1 applies — the paper's token goal is the requirement; `.agent-rfc/designs/run-token-limits.md` is the plan.
@@ -56,8 +68,8 @@ Tokens are estimated at four characters each where they must be known before the
 - P12 n/a — no secrets involved.
 - P13 n/a — no gate changes.
 - P14 applies — `contract/evals/v1/dataset.trajectory.schema.json` is regenerated from the model, held by `scripts/test/test_evals_contract.py`.
-- P15 applies — `agentsmith/test/test_token_limits.py` holds that an undeclared limit changes nothing, and a run with unreported usage keeps its reservation as the charge.
-- P16 applies — `CHANGELOG.md` names the settings; all are off until declared.
+- P15 applies — `agentsmith/test/test_token_limits.py` holds that an undeclared limit changes nothing, a run with unreported usage keeps its reservation as the charge, and an unreadable limit is refused (R4); `scripts/test/test_trajectory_evals.py` holds that an unmeasured trace is `not_gradable` (R2).
+- P16 applies — `CHANGELOG.md` names the settings; all are off until declared. The run-counter table (`llm_gateway_run_counters`) is created on first use and holds nothing older than two days, so dropping it loses only live runs' counts.
 
 ## Deviations
 
@@ -71,4 +83,8 @@ none
 
 - `failure-is-not-a-result` — unreported usage keeps the reservation; it is never read as zero.
 - `test-that-cannot-fail` — hand mutants.
-- `declared-vs-enforced` — each limit is enforced where it is declared, and off where it is not.
+- `declared-vs-enforced` — each limit is enforced where it is declared, and off where it is not; a fallback tier is held to its own caps (R5).
+- `early-exit-keeps-the-record` — every exit between reserve and send releases what it reserved (R1, R20).
+- `guards-must-be-able-to-fail` — an unreadable limit raises instead of reading as none (R4).
+- `ambiguous-signals` — an unreported token count is absent, never 0 (R2, R11).
+- `use-existing-apis` — run counters get a store shaped for them, not the money table (R6).

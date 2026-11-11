@@ -151,3 +151,33 @@ def test_recorded_tokens_count_for_a_named_trajectory(tmp_path):
 def test_a_token_budget_with_no_tokens_recorded_is_not_gradable(tmp_path):
     card = _run(tmp_path, [{"id": "t", "tools": ["lookup"], "expect": {"max_tokens": 800}}])
     assert card.verdict == "not_gradable" and "records no tokens" in card.reason
+
+
+# ── The 4.1.0 release review: R2, R11 ──
+
+
+def _unmeasured_model_span(start: int, *, reported_flag: bool = True) -> dict:
+    attributes = [{"key": "gen_ai.operation.name", "value": {"stringValue": "chat"}},
+                  {"key": "gen_ai.request.model", "value": {"stringValue": "m"}}]
+    if reported_flag:
+        attributes.append({"key": "llm.usage.reported", "value": {"boolValue": False}})
+    return {"name": "llm.call", "startTimeUnixNano": str(start), "attributes": attributes}
+
+
+@pytest.mark.parametrize("spans", [
+    pytest.param(lambda: [_span("lookup", 1), _unmeasured_model_span(2)], id="usage-not-reported"),
+    pytest.param(lambda: [_span("lookup", 1), _unmeasured_model_span(2, reported_flag=False)], id="no-usage-names"),
+    pytest.param(lambda: [_model_span(1, 3, 2), _unmeasured_model_span(2)], id="one-of-two-unmeasured"),
+    pytest.param(lambda: [_span("lookup", 1)], id="no-model-span"),
+])
+def test_a_token_budget_nobody_measured_is_not_gradable(tmp_path, spans):
+    """R2: a model span with no usage read as 0 tokens, and the case passed."""
+    case = {"id": "t", "trace": "run.json", "expect": {"max_tokens": 10}}
+    card = _run(tmp_path, [case], {"run.json": json.dumps(_otlp(*spans()))})
+    assert card.verdict == "not_gradable" and "records no tokens" in card.reason
+
+
+def test_an_empty_case_file_is_not_gradable(tmp_path):
+    """R11: `[]` raised ZeroDivisionError instead of a scorecard."""
+    card = _run(tmp_path, [])
+    assert card.verdict == "not_gradable" and "no cases" in card.reason
