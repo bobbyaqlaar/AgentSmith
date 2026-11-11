@@ -1188,6 +1188,8 @@ class LLMGateway:
                 workflow_id=workflow_id,
                 max_tokens=max_tokens,
                 temperature=temperature,
+                data_class=data_class,
+                user_id=user_id,
             )
 
         model_id = cfg["id"]
@@ -1241,12 +1243,13 @@ class LLMGateway:
             )
 
         # Tokens bounded per role and per run (.agent-rfc/designs/run-token-limits.md). A
-        # stream reports no usage, so its run reservation stands as the charge.
+        # stream reports no usage, so its run reservation stands as the charge. The run
+        # is charged only after the money cap accepts the call, and released on every
+        # exit that sends nothing (review 4.1.0, R1).
         from agentsmith import token_limits
 
         max_tokens = token_limits.output_cap(cfg, max_tokens)
         token_limits.check_input(cfg, messages, role)
-        token_limits.reserve_run(self._budget, self.tenant_id, workflow_id, messages, max_tokens)
 
         estimated_cost_usd = max_tokens * (
             cfg.get("cost_per_input_token", 0) + cfg.get("cost_per_output_token", 0)
@@ -1263,6 +1266,19 @@ class LLMGateway:
                     "Concurrent in-flight calls already reserved the remaining budget."
                 )
 
+        def release() -> None:
+            if reserved and estimated_cost_usd:
+                self._budget.add_spend(self.tenant_id, -estimated_cost_usd)
+            token_limits.release_run(self._budget, self.tenant_id, workflow_id, run_tokens)
+
+        run_tokens = 0
+        try:
+            run_tokens = token_limits.reserve_run(self._budget, self.tenant_id, workflow_id, messages, max_tokens)
+            self._compliance_guard(cfg, workflow_id, data_class, user_id)
+        except Exception:
+            release()
+            raise
+
         run_id = (
             f"{workflow_id}-{uuid.uuid4().hex[:8]}"
             if workflow_id
@@ -1273,8 +1289,6 @@ class LLMGateway:
         # absolute epoch timestamp, not a monotonic reading.
         started_ns = time.time_ns()
         self._report_run_status(run_id, "running", workflow_id=workflow_id)
-
-        self._compliance_guard(cfg, workflow_id, data_class, user_id)
 
         # Shared with _invoke() — this used to be a near-copy that omitted
         # the anthropic branch entirely (TestbedFeedback G1).
@@ -1340,8 +1354,8 @@ class LLMGateway:
                             ttft_ms = (time.perf_counter() - start) * 1000
                         chunks.append(content)
         except Exception as exc:
-            if reserved and estimated_cost_usd:
-                self._budget.add_spend(self.tenant_id, -estimated_cost_usd)
+            # Released before any fallback, so complete() reserves for itself, once.
+            release()
             self._report_run_status(
                 run_id,
                 "failed",
@@ -1373,6 +1387,8 @@ class LLMGateway:
                     workflow_id=workflow_id,
                     max_tokens=max_tokens,
                     temperature=temperature,
+                    data_class=data_class,
+                    user_id=user_id,
                 )
             raise
 
@@ -1606,12 +1622,12 @@ class LLMGateway:
 
         # Tokens bounded per role and per run (.agent-rfc/designs/run-token-limits.md):
         # the cap shrinks the cost reservation below, and an over-budget run is
-        # refused before anything is sent.
+        # refused before anything is sent. The run is charged only once the money cap
+        # has accepted the call (review 4.1.0, R1).
         from agentsmith import token_limits
 
         max_tokens = token_limits.output_cap(cfg, max_tokens)
         token_limits.check_input(cfg, messages, role)
-        run_tokens = token_limits.reserve_run(self._budget, self.tenant_id, workflow_id, messages, max_tokens)
 
         # Reserve an upper-bound cost estimate atomically before the call,
         # not after — closes the check-then-act race where concurrent calls
@@ -1635,6 +1651,12 @@ class LLMGateway:
                     f"model_hint={model_hint!r} would exceed cap (${budget.spent_usd:.2f}/${budget.cap_usd:.2f}). "
                     "Concurrent in-flight calls already reserved the remaining budget."
                 )
+        try:
+            run_tokens = token_limits.reserve_run(self._budget, self.tenant_id, workflow_id, messages, max_tokens)
+        except Exception:
+            if reserved and estimated_cost_usd:
+                self._budget.add_spend(self.tenant_id, -estimated_cost_usd)
+            raise
 
         # run_id is always unique per CALL, never reused across multiple
         # gateway.complete() calls within one workflow run — a workflow
@@ -1675,8 +1697,11 @@ class LLMGateway:
                 # boundary. Inside the try so the reservation is released; a
                 # refusal is not provider exhaustion, so it ends the ladder.
                 self._compliance_guard(attempt_cfg, workflow_id, data_class, user_id)
+                # Each tier is held to its own caps: a fallback is often the smaller
+                # model (review 4.1.0, R5).
+                token_limits.check_input(attempt_cfg, messages, attempt_role)
                 text, in_tok, out_tok = await self._invoke(
-                    attempt_cfg, messages, max_tokens, temperature
+                    attempt_cfg, messages, token_limits.output_cap(attempt_cfg, max_tokens), temperature
                 )
                 if attempt_role != role:
                     # Record the tier we actually used
@@ -1721,7 +1746,8 @@ class LLMGateway:
             )
             from agentsmith.compliance import ComplianceRefused
 
-            if isinstance(last_exc, ComplianceRefused):
+            if isinstance(last_exc, (ComplianceRefused, token_limits.ContextTooLargeError,
+                                     token_limits.LimitUnreadableError)):
                 raise last_exc
             if tried:
                 # Name the unset credentials when there are any. "All model
@@ -1742,6 +1768,9 @@ class LLMGateway:
             raise last_exc
 
         if text is None:
+            if reserved and estimated_cost_usd:
+                self._budget.add_spend(self.tenant_id, -estimated_cost_usd)
+            token_limits.release_run(self._budget, self.tenant_id, workflow_id, run_tokens)
             # NOT unreachable, which is what a first pass at this comment said.
             # The loop `continue`s past any role missing from `self.models`, so
             # a degrade chain whose every role is unconfigured completes with no

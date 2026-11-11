@@ -97,6 +97,8 @@ def dataset(path: Path, suite: str) -> tuple[Optional[list[dict]], str, int]:
         return None, f"{rel} is not JSON ({exc})", 0
     if not isinstance(cases, list):
         return None, f"{rel} is not a list of cases", 0
+    if not cases:  # nothing to grade is not a pass, and not a division by zero (review 4.1.0, R11)
+        return None, f"{rel} holds no cases", 0
     model = gm.EVAL_CASES[suite]
     problems, outputless = [], False
     for index, case in enumerate(cases):
@@ -176,8 +178,14 @@ _TOKEN_ATTRIBUTES = (("gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens")
                      ("llm.usage.input_tokens", "llm.usage.output_tokens"))
 
 
+# A span that is a model call, whether or not it reported usage.
+_MODEL_MARKERS = ("gen_ai.request.model", "llm.model_name", "llm.usage.reported")
+
+
 def _value(attribute: dict) -> Any:
     value = attribute.get("value") or {}
+    if "boolValue" in value:
+        return bool(value["boolValue"])
     if "intValue" in value:  # OTLP/JSON writes 64-bit integers as strings
         try:
             return int(value["intValue"])
@@ -186,9 +194,11 @@ def _value(attribute: dict) -> Any:
     return value.get("stringValue")
 
 
-def _trace_tools(root: Path, trace: str) -> tuple[Optional[list[str]], str, int]:
+def _trace_tools(root: Path, trace: str) -> tuple[Optional[list[str]], str, Optional[int]]:
     """The tool calls an OTLP/JSON export recorded, in start order, and the tokens its
-    model spans reported; or why it cannot be read."""
+    model spans reported; or why it cannot be read. The tokens are None when any model
+    span did not report usage, or none reported any: an unreported count is absent,
+    never 0 (review 4.1.0, R2)."""
     path = (root / trace).resolve()
     if not path.is_relative_to(root.resolve()):
         return None, f"{trace} is outside the repository", 0
@@ -205,6 +215,7 @@ def _trace_tools(root: Path, trace: str) -> tuple[Optional[list[str]], str, int]
             return None, f"{trace} is not OTLP/JSON", 0
     calls: list[tuple[int, str]] = []
     spans = tokens = 0
+    measured, unmeasured = False, False
     for document in documents:
         if not isinstance(document, dict):
             return None, f"{trace} is not OTLP/JSON", 0
@@ -216,14 +227,20 @@ def _trace_tools(root: Path, trace: str) -> tuple[Optional[list[str]], str, int]
                     name = attributes.get("gen_ai.tool.name") or attributes.get("agent.tool.name")
                     if isinstance(name, str) and name:
                         calls.append((int(span.get("startTimeUnixNano") or 0), name))
+                    counted = False
                     for pair in _TOKEN_ATTRIBUTES:  # one name set per span, so none is counted twice
                         counts = [attributes.get(key) for key in pair]
-                        if all(isinstance(count, int) for count in counts):
+                        if all(isinstance(count, int) and not isinstance(count, bool) for count in counts):
                             tokens += sum(counts)
+                            counted = measured = True
                             break
+                    if attributes.get("llm.usage.reported") is False or (
+                            not counted and any(key in attributes for key in _MODEL_MARKERS)):
+                        unmeasured = True
     if spans == 0:
         return None, f"{trace} holds no spans", 0
-    return [name for _start, name in sorted(calls, key=lambda call: call[0])], "", tokens
+    ordered = [name for _start, name in sorted(calls, key=lambda call: call[0])]
+    return ordered, "", (tokens if measured and not unmeasured else None)
 
 
 def judge_trajectory(root: Path, request: gm.EvalsRequest) -> gm.Scorecard:
@@ -241,7 +258,8 @@ def judge_trajectory(root: Path, request: gm.EvalsRequest) -> gm.Scorecard:
             unreadable.append(f"{case.id}: {problem}")
             continue
         if case.expect.max_tokens is not None and tokens is None:
-            unreadable.append(f"{case.id}: max_tokens is set but the case records no tokens")
+            unreadable.append(f"{case.id}: max_tokens is set but the case records no tokens "
+                              "(a model span did not report usage, or none did)")
             continue
         problems = trajectory_problems(tools, case.expect, tokens)
         if problems:

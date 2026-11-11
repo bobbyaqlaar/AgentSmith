@@ -1909,7 +1909,9 @@ tenant-repo-root `models.yaml` (override) → `.agenticframework/tenant.yaml`
 | `tenant.yaml` `limits.run_tokens`, or `AGENTSMITH_RUN_TOKEN_LIMIT` | a number | One workflow run's token budget, keyed by `workflow_id`. Each call reserves its estimate atomically before it is sent, settles to the real count after, and is released if it fails. A call that would pass the budget raises `RunLimitExceededError`. With usage unreported, the estimate stands as the charge. |
 | `tenant.yaml` `limits.run_tool_calls`, or `AGENTSMITH_RUN_TOOL_CALL_LIMIT` | a number | One workflow run's tool calls, counted by `ToolRegistry.invoke(name, args, run_id=…)`. The next call over raises `ToolCallLimitExceededError`. |
 
-Run counters use the same backend as the spend cap (`BUDGET_BACKEND`), so with the in-process default they hold per worker, not across a fleet.
+Each tier of a degrade chain is held to its own caps, so a fallback to a smaller local model is sent no more than it accepts. A call the money cap refuses, or that sends nothing, is not charged to the run. A limit written so it cannot be read (`100k`, `true`, `0`) raises `LimitUnreadableError` naming the setting; it is never taken as no limit.
+
+Run counters are shared as widely as the spend cap (`BUDGET_BACKEND`), so with the in-process default they hold per worker, not across a fleet. They are kept apart from the money ledger (on Postgres, in `llm_gateway_run_counters`), carry no month, and are dropped two days after a run's last call.
 
 Budget backend — set before instantiating:
 
