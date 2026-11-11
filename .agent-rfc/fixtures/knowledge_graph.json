@@ -1027,7 +1027,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:04:02Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -10172,9 +10172,14 @@
         "_git_dir",
         "_ledger_path",
         "load",
+        "_session_id",
+        "entry",
+        "_store",
         "_save",
         "_fresh",
         "read_new",
+        "_git",
+        "_settle",
         "remember",
         "context_note",
         "_short",
@@ -10183,7 +10188,7 @@
         "add_trailers",
         "main"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:05:17Z",
       "id": "scripts/agent_tokens.py"
     },
     {
@@ -10204,6 +10209,7 @@
       "language": "python",
       "symbols": [
         "_line",
+        "_no_session_of_ours",
         "repo",
         "_session",
         "test_one_response_over_several_lines_is_counted_once",
@@ -10214,16 +10220,25 @@
         "test_the_note_comes_once_per_step",
         "test_no_agent_no_trailer",
         "test_an_agent_without_a_session_says_only_who",
+        "_commit",
+        "_tokens",
+        "_spend",
         "test_each_commit_carries_what_was_spent_since_the_last",
+        "test_two_sessions_in_one_checkout_each_count_their_own",
+        "test_two_sessions_and_no_way_to_tell_which_says_only_who",
+        "test_a_commit_that_never_landed_does_not_move_the_baseline",
+        "test_an_amended_commit_carries_what_the_one_it_replaces_did",
+        "test_the_old_one_session_ledger_is_read",
         "test_the_trailers_land_in_the_message",
         "test_a_real_commit_through_the_tenants_hooks_carries_the_trailers",
         "test_a_commit_made_by_hand_gets_no_trailer",
         "test_trailers_join_the_existing_block_and_replace_only_themselves",
         "test_a_message_with_no_trailers_gets_a_blank_line_first",
         "test_the_gates_own_hooks_record_the_session",
-        "test_counts_read_at_a_glance"
+        "test_counts_read_at_a_glance",
+        "test_a_real_amend_through_the_tenants_hooks_carries_both"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:04:28Z",
       "id": "scripts/test/test_agent_tokens.py"
     },
     {
