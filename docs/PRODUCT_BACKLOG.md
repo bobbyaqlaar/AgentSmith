@@ -18,7 +18,7 @@ contracts C1–C9 are complete. **AgentSmith is public (AGPL-3.0)**; KYC Sentine
 private. KYC is on 4.0.0 with green CI, and Tenant B on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
 two security controls awaiting its own content: do not use it as a showcase.
 
-**For release 4.1.0 on Friday 13 November:** on `main`, the opt-in `dubai-gov` compliance profile, gaps 1, 2, 7, 9 and 10, the tenant-upgrade test with its sync fixes, fewer tokens on both sides with each commit made from Claude Code recording its agent and what it spent (gap 6), and the CI runner as a setting; in flight (below), the fixes from the 4.1.0 release review (PR #115). A tenant cannot pin any of it until the release is cut.
+**For release 4.1.0 on Friday 13 November:** on `main`, the opt-in `dubai-gov` compliance profile, gaps 1, 2, 7, 9 and 10, the tenant-upgrade test with its sync fixes, fewer tokens on both sides with each commit made from Claude Code recording its agent and what it spent (gap 6), and the CI runner as a setting, and the fixes from the 4.1.0 release review (PR #115). A tenant cannot pin any of it until the release is cut.
 
 **The owner's principle (2026-11-10): sovereign first.** AgentSmith exists to let a team build and run AI apps on its own servers with local open-weight models. A production proof needs no cloud deployment and no closed-weight model. AgentSmith passing its own standards is a corollary, not the product.
 
@@ -30,10 +30,11 @@ any change with `agentsmith gate kg impact` before opening files; the graph is
 `.agent-rfc/fixtures/knowledge_graph.json`, and `python3 scripts/verify_system.py --check-kg` says whether it is
 current. The gates enforce the rest.
 
-**In flight (2026-11-11).** PRs #113 and #114 merged: fewer tokens on both sides, gap 6, the `sync` fix for rule
-files a 4.0.1 `tenant init` left unrecorded, the CI runner as a setting, and this backlog's requirements table. The
-4.1.0 release review found 30 defects (11 major, 19 minor); all 30 held when checked, and PR #115 fixes them in six
-commits, one design each. Then release 4.1.0 (version, CHANGELOG section, `release.yml`) on Friday 13 November. After the release, in order: gap 5, gap 12 (ASI03), gap 13 (ASI05, then ASI07), the remaining token
+**In flight (2026-11-11).** PRs #113, #114 and #115 merged: fewer tokens on both sides, gap 6, the `sync` fix for
+rule files a 4.0.1 `tenant init` left unrecorded, the CI runner as a setting, this backlog's requirements table, and
+the fixes for all 30 defects the 4.1.0 release review found (11 major, 19 minor; all held when checked). One of those
+fixes refused the `dubai-gov` scratch tenant's fixture drill, dated 2099, and turned the Scratch tenants run on `main`
+red; the next PR dates it at build time. A second review pass and its residual fixes come before the release. Then release 4.1.0 (version, CHANGELOG section, `release.yml`) on Friday 13 November. After the release, in order: gap 5, gap 12 (ASI03), gap 13 (ASI05, then ASI07), the remaining token
 work, the code-health check, the test-order leak, and Stage 2 on owned hardware (steps 15 to 17).
 
 ### The requirements, and where each stands
@@ -41,7 +42,7 @@ work, the code-health check, the test-order leak, and Stage 2 on owned hardware 
 The owner's purpose: while a tenant app is built with coding agents, enforce observability, security, cost and
 token use, explainability, and guards against AI slop; in production, monitor the app against global and UAE
 standards and laws; and do both on the tenant's own machines with local open-weight models. "Shipped" means on
-`main` and tested; "4.1.0" means on `main` or in PR #115, not yet released.
+`main` and tested; "4.1.0" means on `main`, not yet released.
 
 | Requirement | Where it stands | Evidence | Open |
 |---|---|---|---|
