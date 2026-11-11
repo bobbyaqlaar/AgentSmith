@@ -1090,7 +1090,7 @@
         "_git_refusal",
         "refusal"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:21:52Z",
       "id": "scripts/gate_shell.py"
     },
     {
@@ -7084,7 +7084,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:21:44Z",
       "id": "agentsmith/vector_store.py"
     },
     {
@@ -7429,6 +7429,7 @@
         "_gate_kg",
         "_cmd_rules",
         "_cmd_evals_run",
+        "_confirm_at_terminal",
         "_cmd_ops_compliance",
         "_cmd_ops_settings",
         "_cmd_security",
@@ -7470,7 +7471,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:21:47Z",
       "id": "agentsmith/cli.py"
     },
     {
@@ -9187,6 +9188,8 @@
       "language": "python",
       "symbols": [
         "_compliance_failure",
+        "_input_digest",
+        "_looks_like_email",
         "_dlq_task_id",
         "AgentWorkflowResult",
         "BaseAgentWorkflow",
@@ -9206,7 +9209,7 @@
         "human_fix_payload",
         "signal"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:21:38Z",
       "id": "agentsmith/workflows/base_workflow.py"
     },
     {
@@ -9563,6 +9566,7 @@
       "symbols": [
         "load_catalogue",
         "_parse",
+        "expires",
         "latest_valid",
         "_declared_path",
         "_has_placeholder",
@@ -9576,9 +9580,10 @@
         "render_catalogue",
         "render_checklist",
         "write_evidence",
-        "main"
+        "main",
+        "live"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:21:50Z",
       "id": "scripts/compliance_port.py"
     },
     {
@@ -9602,12 +9607,15 @@
         "name_scrubber",
         "fairness_gate",
         "arabic_cases",
+        "_supply_chain_job",
         "supply_chain",
         "restore_drill",
         "traces_private",
+        "_ignored",
+        "_ships_declaration",
         "declaration_deployed"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:21:49Z",
       "id": "scripts/compliance_checks.py"
     },
     {
@@ -9631,7 +9639,10 @@
         "_connect",
         "_digest",
         "_canonical",
+        "_record_key",
+        "_append",
         "record",
+        "_recorded_change",
         "purge_runs",
         "restore_drill",
         "verify_chain",
@@ -9653,9 +9664,12 @@
         "outbound_allowed",
         "guard_model_call",
         "__init__",
-        "is_classified"
+        "is_classified",
+        "count",
+        "purge",
+        "stop"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:21:29Z",
       "id": "agentsmith/compliance.py"
     },
     {
@@ -9683,6 +9697,7 @@
         "test_a_leaked_system_prompt_is_withheld",
         "_Workflow",
         "_gate",
+        "_deciding",
         "_labels",
         "test_a_gate_that_does_not_say_who_asked_is_refused",
         "test_a_named_decision_is_recorded_before_and_after",
@@ -9714,6 +9729,20 @@
         "test_stop_and_resume",
         "test_a_resume_that_cannot_be_recorded_does_not_happen",
         "test_forward_waits_for_the_portal",
+        "test_a_decision_given_before_the_gate_asked_does_not_answer_it",
+        "test_a_decision_about_other_input_does_not_answer_the_gate",
+        "test_the_workflows_digest_is_the_records_digest",
+        "test_a_requester_who_is_not_a_sign_in_email_is_refused",
+        "test_a_short_system_prompt_is_still_caught",
+        "test_an_unsigned_mark_does_not_verify_where_marks_are_signed",
+        "test_the_sidecar_reserves_every_kind_the_framework_writes",
+        "_Conn",
+        "test_a_purge_that_cannot_be_recorded_deletes_nothing",
+        "test_a_purge_and_its_record_commit_together",
+        "test_a_stop_that_cannot_be_recorded_is_not_set",
+        "test_a_vector_write_never_takes_another_tenants_row",
+        "_NoRow",
+        "test_purge_apply_asks_a_person_first",
         "__init__",
         "execute_activity",
         "wait_condition",
@@ -9722,9 +9751,18 @@
         "stopped",
         "Http",
         "blocked",
-        "post"
+        "cursor",
+        "commit",
+        "rollback",
+        "close",
+        "__enter__",
+        "__exit__",
+        "execute",
+        "fetchone",
+        "post",
+        "_Cursor"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:18:32Z",
       "id": "agentsmith/test/test_compliance_runtime.py"
     },
     {
@@ -9751,9 +9789,14 @@
         "test_attest_refuses_without_a_terminal",
         "test_the_shell_gate_refuses_attest_and_writes_to_the_file",
         "test_the_profile_only_strengthens",
-        "test_signatures_are_not_sent_outside_the_boundary"
+        "test_signatures_are_not_sent_outside_the_boundary",
+        "_at",
+        "test_a_recurring_obligation_expires_on_its_catalogue_period",
+        "test_a_signature_dated_in_the_future_does_not_count",
+        "test_an_enforced_profile_without_its_declaration_fails",
+        "test_the_shell_gate_protects_the_declaration"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:16:28Z",
       "id": "scripts/test/test_compliance_port.py"
     },
     {
@@ -9798,11 +9841,21 @@
         "_run_dependency_scan",
         "test_a_lock_is_audited_exactly_as_pinned",
         "test_requirements_without_a_lock_are_resolved_not_refused",
-        "test_no_requirements_file_is_a_message_and_no_scan",
+        "test_no_stack_it_knows_fails_the_job",
         "test_a_failing_scan_fails_the_step",
+        "test_a_supply_chain_job_that_scans_nothing_fails",
+        "test_a_supply_chain_job_that_scans_passes_and_says_what_was_read",
+        "test_the_template_fails_when_it_finds_nothing_to_scan",
+        "test_the_arabic_check_reads_only_the_suites_that_carry_language",
+        "test_a_drill_dated_in_the_future_does_not_count",
+        "test_a_declaration_the_image_never_receives_fails",
+        "test_the_data_class_check_says_which_calls_it_read",
+        "test_mcp_servers_declared_elsewhere_are_seen",
+        "test_a_tool_on_a_later_page_is_pinned_and_verified",
+        "test_an_enforced_profile_with_its_declaration_deleted_fails_the_launcher",
         "check"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:20:28Z",
       "id": "scripts/test/test_compliance_checks.py"
     },
     {
@@ -10070,15 +10123,18 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:17:46Z",
       "id": "agentsmith/runtime_server.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_list_request",
         "_digest",
         "_servers",
+        "scope_note",
+        "_pages",
         "_allowlist",
         "config_hash",
         "tool_hashes",
@@ -10089,9 +10145,10 @@
         "fetch_tools",
         "static_problems",
         "pin",
-        "verify"
+        "verify",
+        "ask"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:22:13Z",
       "id": "agentsmith/mcp_pin.py"
     },
     {
@@ -10593,6 +10650,22 @@
       "pillar": null,
       "created_at": "2026-11-11T17:12:00Z",
       "id": "rfc:reviews/ciagent-guard-holds.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The `dubai-gov` profile's checks and records hold",
+      "source_file": ".agent-rfc/designs/compliance-profile-holds.md",
+      "pillar": null,
+      "created_at": "2026-11-11T17:27:52Z",
+      "id": "rfc:designs/compliance-profile-holds.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: compliance-profile-holds",
+      "source_file": ".agent-rfc/reviews/compliance-profile-holds.md",
+      "pillar": null,
+      "created_at": "2026-11-11T17:27:52Z",
+      "id": "rfc:reviews/compliance-profile-holds.md"
     }
   ],
   "edges": [

@@ -15,7 +15,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -40,10 +40,29 @@ def _parse(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def latest_valid(records: list[c.Attestation], obligation: str, now: datetime) -> Optional[c.Attestation]:
-    """The newest record for this obligation that has not expired."""
-    live = [r for r in records if r.obligation == obligation and (r.expires_at is None or _parse(r.expires_at) > now)]
-    return max(live, key=lambda r: _parse(r.attested_at)) if live else None
+def expires(record: c.Attestation, recurrence_days: Optional[int]) -> Optional[datetime]:
+    """When a signature stops counting. A recurring obligation's period comes from the
+    catalogue: a later or missing `expires_at` does not stretch it (the 4.1.0 release
+    review, R15)."""
+    given = _parse(record.expires_at) if record.expires_at else None
+    if not recurrence_days:
+        return given
+    due = _parse(record.attested_at) + timedelta(days=recurrence_days)
+    return min(due, given) if given else due
+
+
+def latest_valid(records: list[c.Attestation], obligation: str, now: datetime,
+                 recurrence_days: Optional[int] = None) -> Optional[c.Attestation]:
+    """The newest record for this obligation that is signed, not dated in the future,
+    and not expired."""
+    def live(record: c.Attestation) -> bool:
+        if record.obligation != obligation or _parse(record.attested_at) > now + timedelta(minutes=5):
+            return False
+        until = expires(record, recurrence_days)
+        return until is None or until > now
+
+    found = [r for r in records if live(r)]
+    return max(found, key=lambda r: _parse(r.attested_at)) if found else None
 
 
 def _declared_path(document: dict[str, Any], dotted: str) -> Any:
@@ -147,6 +166,15 @@ def evaluate(
     """The verdict. Only rows that block this stage can fail it; the rest read `pending`."""
     declaration = c.load_declaration(root)
     if declaration is None:
+        config_path = root / ".agenticframework" / "process-gates.json"
+        try:
+            enforced = json.loads(config_path.read_text(encoding="utf-8")).get("compliance", {}).get("mode")
+        except (OSError, ValueError, AttributeError):
+            enforced = None
+        if enforced == "enforce":  # left by deleting a file, not on the record (R24)
+            return {"schema": SCHEMA, "verdict": "fail", "rows": [], "counts": {},
+                    "reason": "process-gates.json enforces a profile and .agenticframework/compliance.json is missing: "
+                              "restore it, or leave the profile on the record (agentsmith approve)"}
         return {"schema": SCHEMA, "verdict": "no_profile", "reason": "no compliance.json", "rows": [], "counts": {}}
     declared = json.loads((root / c.DECLARATION_FILE).read_text(encoding="utf-8"))
     config_path = root / ".agenticframework" / "process-gates.json"
@@ -160,7 +188,7 @@ def evaluate(
             continue
         signed = None
         if row.kind == "attested":
-            signed = latest_valid(records, row.id, now)
+            signed = latest_valid(records, row.id, now, row.recurrence_days)
             result, message = (
                 ("pass", f"signed by {signed.actor} ({signed.role})")
                 if signed
@@ -181,7 +209,8 @@ def evaluate(
                 "refs": row.refs.model_dump(),
                 "result": result,
                 "message": message,
-                "expires_at": signed.expires_at if signed else None,
+                "expires_at": (until.isoformat() if signed and (until := expires(signed, row.recurrence_days))
+                               else None),
             }
         )
     counts: dict[str, int] = {}

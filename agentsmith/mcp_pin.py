@@ -7,6 +7,11 @@ repository trusted is written down and checked:
     agentsmith compliance mcp-verify   ask again, and fail on any difference
 
 `static_problems` needs no server, so the compliance check can run it anywhere.
+
+Servers are read from every file an agent or editor in this repository reads them
+from (`SERVER_FILES`), and every page of `tools/list` is pinned. Servers an app
+starts from its own code are not seen; the pass message says which files were read
+(the 4.1.0 release review, R26).
 """
 
 from __future__ import annotations
@@ -22,6 +27,11 @@ from pathlib import Path
 from typing import Any
 
 SERVERS_FILE = ".mcp.json"
+# Each file an agent or editor reads servers from, and the key it keeps them under.
+# A server outside the root file is named `<file>#<name>`, so two files may reuse a name.
+SERVER_FILES = ((SERVERS_FILE, "mcpServers"), (".cursor/mcp.json", "mcpServers"), (".vscode/mcp.json", "servers"),
+                (".gemini/settings.json", "mcpServers"))
+MAX_PAGES = 100
 ALLOWLIST_FILE = ".agenticframework/mcp-allowlist.json"
 TIMEOUT_SECONDS = 30
 _INITIALIZE = {
@@ -35,7 +45,13 @@ _INITIALIZE = {
     },
 }
 _INITIALIZED = {"jsonrpc": "2.0", "method": "notifications/initialized"}
-_LIST = {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
+
+
+def _list_request(number: int, cursor: Any) -> dict[str, Any]:
+    request: dict[str, Any] = {"jsonrpc": "2.0", "id": number, "method": "tools/list"}
+    if cursor is not None:
+        request["params"] = {"cursor": cursor}
+    return request
 
 
 def _digest(value: Any) -> str:
@@ -43,8 +59,39 @@ def _digest(value: Any) -> str:
 
 
 def _servers(root: Path) -> dict[str, dict[str, Any]]:
-    path = root / SERVERS_FILE
-    return json.loads(path.read_text(encoding="utf-8")).get("mcpServers", {}) if path.is_file() else {}
+    found: dict[str, dict[str, Any]] = {}
+    for rel, key in SERVER_FILES:
+        path = root / rel
+        if not path.is_file():
+            continue
+        declared = json.loads(path.read_text(encoding="utf-8")).get(key) or {}
+        for name, server in declared.items() if isinstance(declared, dict) else []:
+            if isinstance(server, dict):
+                found[name if rel == SERVERS_FILE else f"{rel}#{name}"] = server
+    return found
+
+
+def scope_note(root: Path) -> str:
+    """What the pin covers, for a pass message: the files read, and what is not seen."""
+    read = [rel for rel, _key in SERVER_FILES if (root / rel).is_file()]
+    where = ", ".join(read) if read else "none of " + ", ".join(rel for rel, _key in SERVER_FILES)
+    count = len(_servers(root))
+    return (f"{count} MCP server(s) are pinned (read: {where}; servers an app starts from its own code are not seen)"
+            if count else f"no MCP server is declared (read: {where}; servers an app starts from its own code are "
+                          "not seen)")
+
+
+def _pages(ask: Any) -> list[dict[str, Any]]:
+    """Every page of tools/list. `ask(number, cursor)` returns one reply's result."""
+    tools: list[dict[str, Any]] = []
+    cursor: Any = None
+    for page in range(MAX_PAGES):
+        result = ask(2 + page, cursor)
+        tools += result.get("tools") or []
+        cursor = result.get("nextCursor")
+        if not cursor:
+            return tools
+    raise ValueError(f"the server gave more than {MAX_PAGES} pages of tools")
 
 
 def _allowlist(root: Path) -> dict[str, Any]:
@@ -103,9 +150,15 @@ def _fetch_stdio(server: dict[str, Any]) -> list[dict[str, Any]]:
         process.stdin.write((json.dumps(_INITIALIZE) + "\n").encode())
         process.stdin.flush()
         _read_reply(process, 1, deadline)
-        process.stdin.write((json.dumps(_INITIALIZED) + "\n" + json.dumps(_LIST) + "\n").encode())
-        process.stdin.flush()
-        return _read_reply(process, 2, deadline)["result"]["tools"]
+        process.stdin.write((json.dumps(_INITIALIZED) + "\n").encode())
+
+        def ask(number: int, cursor: Any) -> dict[str, Any]:
+            assert process.stdin is not None
+            process.stdin.write((json.dumps(_list_request(number, cursor)) + "\n").encode())
+            process.stdin.flush()
+            return _read_reply(process, number, deadline)["result"]
+
+        return _pages(ask)
     finally:
         process.kill()
         process.wait()
@@ -131,9 +184,13 @@ def _fetch_http(server: dict[str, Any]) -> list[dict[str, Any]]:
         if session:
             headers["Mcp-Session-Id"] = session
         client.post(server["url"], json=_INITIALIZED, headers=headers)
-        reply = client.post(server["url"], json=_LIST, headers=headers)
-        reply.raise_for_status()
-        return _http_reply(reply)["result"]["tools"]
+
+        def ask(number: int, cursor: Any) -> dict[str, Any]:
+            reply = client.post(server["url"], json=_list_request(number, cursor), headers=headers)
+            reply.raise_for_status()
+            return _http_reply(reply)["result"]
+
+        return _pages(ask)
 
 
 def fetch_tools(server: dict[str, Any]) -> list[dict[str, Any]]:
@@ -158,7 +215,7 @@ def static_problems(root: Path) -> list[str]:
 def pin(root: Path) -> int:
     servers = _servers(root)
     if not servers:
-        print(f"mcp-pin: no {SERVERS_FILE} servers here — nothing to pin.")
+        print(f"mcp-pin: {scope_note(root)} — nothing to pin.")
         return 0
     entries: dict[str, Any] = {}
     for name, server in sorted(servers.items()):

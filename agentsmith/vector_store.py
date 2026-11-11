@@ -311,12 +311,18 @@ class PgVectorStore:
                         VALUES (%s, %s, %s::jsonb, %s::vector, %s)
                         ON CONFLICT (id) DO UPDATE SET
                           text = EXCLUDED.text,
-                          tenant_id = EXCLUDED.tenant_id,
                           metadata = EXCLUDED.metadata,
                           embedding = EXCLUDED.embedding
+                        WHERE agentsmith_embeddings.tenant_id IS NOT DISTINCT FROM EXCLUDED.tenant_id
+                        RETURNING id
                         """,
                         (vid, text, json.dumps(meta), "[" + ",".join(str(x) for x in vec) + "]", tenant),
                     )
+                    # No row back: the id is another tenant's, and is not taken over
+                    # (the 4.1.0 release review, R25). Nothing in this batch is kept.
+                    if cur.fetchone() is None:
+                        conn.rollback()
+                        raise ValueError(f"document id {vid!r} belongs to another tenant; choose another id")
             conn.commit()
         finally:
             conn.close()  # returns to the pool

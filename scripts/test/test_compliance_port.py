@@ -212,3 +212,42 @@ def test_signatures_are_not_sent_outside_the_boundary(tmp_path: Path, monkeypatc
     monkeypatch.setattr(httpx, "post", lambda *a, **k: pytest.fail("nothing may be sent"))
     records, why = cp.exchange([])
     assert records == [] and "boundary" in why
+
+
+# ── The 4.1.0 release review: R15, R24 ──
+
+
+def _at(obligation: str, attested: datetime, expires: datetime | None) -> c.Attestation:
+    return c.Attestation(id="T-2", obligation=obligation, actor="a@x", role="compliance_officer", evidence="doc",
+                         attested_at=attested.isoformat(), expires_at=expires.isoformat() if expires else None,
+                         channel="tty")
+
+
+@pytest.mark.parametrize("expires", [None, NOW + timedelta(days=99_999)])
+def test_a_recurring_obligation_expires_on_its_catalogue_period(tmp_path: Path, expires) -> None:
+    """R15: a 2020 signature with no expiry, or one of 99,999 days, satisfied OB-ISR-VERSION today."""
+    root = _repo(tmp_path)
+    old = _at("OB-ISR-VERSION", NOW - timedelta(days=366 * 6), expires)
+    assert _row(cp.evaluate(root, "production", NOW, [old], security={}), "OB-ISR-VERSION")["result"] == "fail"
+    fresh = _at("OB-ISR-VERSION", NOW - timedelta(days=10), expires)
+    row = _row(cp.evaluate(root, "production", NOW, [fresh], security={}), "OB-ISR-VERSION")
+    assert row["result"] == "pass" and row["expires_at"].startswith((NOW + timedelta(days=355)).date().isoformat())
+
+
+def test_a_signature_dated_in_the_future_does_not_count(tmp_path: Path) -> None:
+    root = _repo(tmp_path)
+    ahead = _at("OB-RISK", NOW + timedelta(days=30), NOW + timedelta(days=60))
+    assert _row(cp.evaluate(root, "production", NOW, [ahead], security={}), "OB-RISK")["result"] == "fail"
+
+
+def test_an_enforced_profile_without_its_declaration_fails(tmp_path: Path) -> None:
+    """R24: the port answered no_profile, and the job was green."""
+    (tmp_path / ".agenticframework").mkdir()
+    (tmp_path / ".agenticframework" / "process-gates.json").write_text(
+        json.dumps({"compliance": {"profile": "dubai-gov", "mode": "enforce"}}))
+    result = cp.evaluate(tmp_path, "ci", NOW, [], security={})
+    assert result["verdict"] == "fail" and "compliance.json is missing" in result["reason"]
+
+
+def test_the_shell_gate_protects_the_declaration() -> None:
+    assert gate_shell._protects(".agenticframework/compliance.json")

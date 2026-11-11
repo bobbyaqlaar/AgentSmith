@@ -161,15 +161,21 @@ def test_a_leaked_system_prompt_is_withheld(profile, quiet):
 
 
 class _Workflow:
-    def __init__(self, fail_on: str | None = None) -> None:
+    """Temporal's `workflow` module, enough for a gate. `deliver` is the reviewer's
+    decision, signalled while the gate waits: after its pending record is written."""
+
+    def __init__(self, fail_on: str | None = None, deliver: dict | None = None, wf=None) -> None:
         self.executed: list[tuple[str, dict]] = []
         self.fail_on = fail_on
+        self.deliver, self.wf = deliver, wf
 
     async def execute_activity(self, name, payload, **_k):
         label = getattr(name, "__name__", name)
         if label == "compliance_record_activity" and payload["kind"] == self.fail_on:
             raise RuntimeError("record refused")
         self.executed.append((label, payload))
+        if label == "compliance_record_activity" and payload["kind"] == "hitl_pending" and self.deliver:
+            self.wf.hitl_decide(dict(self.deliver))
         return {"ran": label}
 
     async def wait_condition(self, predicate, timeout=None):
@@ -206,9 +212,14 @@ DECISION = {
     "actor": "a@x",
     "role": "hitl_reviewer",
     "rationale": "ok",
-    "payload_sha256": "0" * 64,
+    "payload_sha256": c.payload_digest({"id": 1}),
     "decided_at": "2026-11-08T00:00:00Z",
 }
+
+
+def _deciding(decision: dict, fail_on: str | None = None):
+    wf = BaseAgentWorkflow()
+    return _Workflow(fail_on=fail_on, deliver=decision, wf=wf), wf
 
 
 def _labels(fake):
@@ -227,8 +238,7 @@ def test_a_gate_that_does_not_say_who_asked_is_refused(monkeypatch):
 
 
 def test_a_named_decision_is_recorded_before_and_after(monkeypatch):
-    fake, wf = _Workflow(), BaseAgentWorkflow()
-    wf._gate_decisions["hitl-gate"] = dict(DECISION)
+    fake, wf = _deciding(DECISION)
     _gate(fake, monkeypatch, wf)
     assert _labels(fake) == ["record:hitl_pending", "record:hitl_decision", "issue_permit"]
 
@@ -249,16 +259,14 @@ def test_a_timeout_is_recorded_so_the_queue_clears(monkeypatch):
 
 
 def test_a_rejection_does_not_act(monkeypatch):
-    fake, wf = _Workflow(), BaseAgentWorkflow()
-    wf._gate_decisions["hitl-gate"] = {**DECISION, "approved": False}
+    fake, wf = _deciding({**DECISION, "approved": False})
     _gate(fake, monkeypatch, wf)
     assert "issue_permit" not in _labels(fake) and "record:hitl_decision" in _labels(fake)
 
 
 @pytest.mark.parametrize("kind", ["hitl_pending", "hitl_decision"])
 def test_no_record_no_action(monkeypatch, kind):
-    fake, wf = _Workflow(fail_on=kind), BaseAgentWorkflow()
-    wf._gate_decisions["hitl-gate"] = dict(DECISION)
+    fake, wf = _deciding(DECISION, fail_on=kind)
     with pytest.raises(RuntimeError, match="record refused"):
         _gate(fake, monkeypatch, wf)
     assert "issue_permit" not in _labels(fake)
@@ -553,3 +561,182 @@ def test_forward_waits_for_the_portal(profile, monkeypatch):
     assert c.forward(tenant, dsn=DSN) == (2, "")
     assert sent == ["a", "b"]
     assert c.forward(tenant, dsn=DSN) == (0, "")
+
+
+# ── The 4.1.0 release review: R13, R14, R19, R21, R25, R29 ──
+
+
+def test_a_decision_given_before_the_gate_asked_does_not_answer_it(monkeypatch):
+    """R14: an approval that arrived after a timeout answered the next request, whatever its input."""
+    fake, wf = _Workflow(), BaseAgentWorkflow()
+    wf._gate_decisions["hitl-gate"] = dict(DECISION)
+    _gate(fake, monkeypatch, wf)
+    assert "issue_permit" not in _labels(fake) and "record:hitl_timeout" in _labels(fake)
+
+
+def test_a_decision_about_other_input_does_not_answer_the_gate(monkeypatch):
+    """R14: the decision must name the digest of the input this request shows."""
+    fake, wf = _deciding({**DECISION, "payload_sha256": c.payload_digest({"id": 2})})
+    _gate(fake, monkeypatch, wf)
+    assert "issue_permit" not in _labels(fake) and "record:hitl_decision" not in _labels(fake)
+
+
+def test_the_workflows_digest_is_the_records_digest():
+    assert base_workflow._input_digest({"b": [1, 2], "a": "x"}) == c.payload_digest({"a": "x", "b": [1, 2]})
+
+
+@pytest.mark.parametrize("who", ["fatima", "EMP-1042", "  "])
+def test_a_requester_who_is_not_a_sign_in_email_is_refused(monkeypatch, who):
+    """R29: the portal compares the requester with the reviewer's sign-in email."""
+    monkeypatch.setattr(base_workflow, "workflow", _Workflow())
+    monkeypatch.setattr(base_workflow, "_HAS_TEMPORAL", True)
+    with pytest.raises(Exception, match="sign-in email"):
+        asyncio.run(BaseAgentWorkflow().run_with_hitl_gate(
+            None, {}, "a", {}, "d", gate_result={"needs_hitl": True, "requested_by": who}, tenant_id="t",
+            compliance=True))
+
+
+def test_a_short_system_prompt_is_still_caught():
+    """R19 (a): under eight words, the window loop never ran."""
+    system = [{"role": "system", "content": "The admin password is hunter2 today"}]
+    assert c.leaks_system_prompt(system, "Sure: the admin password is hunter2 today.")
+    assert not c.leaks_system_prompt([{"role": "system", "content": "Be brief."}], "I will be brief.")
+
+
+def test_an_unsigned_mark_does_not_verify_where_marks_are_signed(monkeypatch):
+    """R19 (b): change the text, recompute the digest, drop the signature: it verified."""
+    import hashlib
+
+    monkeypatch.setenv(c.RECORD_KEY_ENV, "k")
+    mark = c.ai_marking("the real answer", "m")
+    forged = {k: v for k, v in mark.items() if k != "signature"}
+    forged["content_sha256"] = hashlib.sha256(b"a forged answer").hexdigest()
+    assert not c.verify_marking("a forged answer", forged)
+    assert c.verify_marking("a forged answer", forged, require_signature=False)
+
+
+def test_the_sidecar_reserves_every_kind_the_framework_writes():
+    """R21: an app could write `retention_purge` through /v1/record."""
+    from agentsmith import runtime_server
+
+    assert runtime_server.RESERVED_KINDS == c.FRAMEWORK_KINDS
+    assert {"retention_purge", "hitl_pending", "stop_control", "model_result"} <= c.FRAMEWORK_KINDS
+
+
+class _Conn:
+    """A connection that remembers what it was asked and whether it committed."""
+
+    def __init__(self, count: int = 3) -> None:
+        self.sql: list[str] = []
+        self.committed: list[str] = []
+        self.count = count
+
+    def cursor(self):
+        conn = self
+
+        class _Cursor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def execute(self, sql, params=None):
+                conn.sql.append(" ".join(sql.split()))
+
+            def fetchone(self):
+                last = conn.sql[-1]
+                if last.startswith("SELECT count"):
+                    return (conn.count,)
+                if last.startswith("SELECT record_hash"):
+                    return None
+                return (7,)
+
+        return _Cursor()
+
+    def commit(self):
+        self.committed = list(self.sql)
+
+    def rollback(self):
+        pass
+
+    def close(self):
+        pass
+
+
+def test_a_purge_that_cannot_be_recorded_deletes_nothing(profile, monkeypatch):
+    """R13: the DELETE committed, then the record was refused."""
+    conn = _Conn()
+    monkeypatch.setattr(c, "_connect", lambda dsn=None: conn)
+    monkeypatch.delenv(c.RECORD_KEY_ENV)
+    with pytest.raises(c.ComplianceRefused):
+        c.purge_runs("t", apply=True)
+    assert not any(q.startswith("DELETE") for q in conn.committed)
+
+
+def test_a_purge_and_its_record_commit_together(profile, monkeypatch):
+    conn = _Conn()
+    monkeypatch.setattr(c, "_connect", lambda dsn=None: conn)
+    assert c.purge_runs("t", apply=True) == 3
+    assert any(q.startswith("DELETE FROM agent_runs") for q in conn.committed)
+    assert any(q.startswith("INSERT INTO compliance_outbox") for q in conn.committed)  # the same commit
+
+
+def test_a_stop_that_cannot_be_recorded_is_not_set(profile, monkeypatch):
+    conn = _Conn()
+    monkeypatch.setattr(c, "_connect", lambda dsn=None: conn)
+    monkeypatch.delenv(c.RECORD_KEY_ENV)
+    with pytest.raises(c.ComplianceRefused):
+        c.set_stop("t", "*", "why", "me@x")
+    assert not any(q.startswith("INSERT INTO compliance_stop") for q in conn.committed)
+
+
+def test_a_vector_write_never_takes_another_tenants_row(monkeypatch):
+    """R25: the upsert keyed on id alone moved tenant A's row to tenant B."""
+    from agentsmith import vector_store
+
+    conn = _Conn()
+    conn.cursor = lambda: _NoRow(conn)
+    store = vector_store.PgVectorStore.__new__(vector_store.PgVectorStore)
+    store.embedder = type("E", (), {"embed": staticmethod(lambda texts: [[0.0] for _ in texts])})()
+    store._connect = lambda: conn
+    monkeypatch.setattr(vector_store, "_scoped_tenant", lambda: "tenant-b")
+    with pytest.raises(ValueError, match="another tenant"):
+        store.add(["policy-1"], ["text"])
+    assert "WHERE agentsmith_embeddings.tenant_id IS NOT DISTINCT FROM EXCLUDED.tenant_id" in conn.sql[-1]
+    assert conn.committed == []
+
+
+class _NoRow:
+    """The upsert matched a row of another tenant: Postgres returns no row."""
+
+    def __init__(self, conn):
+        self.conn = conn
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def execute(self, sql, params=None):
+        self.conn.sql.append(" ".join(sql.split()))
+
+    def fetchone(self):
+        return None
+
+
+@pytest.mark.parametrize("answer, deleted", [(2, False), (1, False), (True, True)])
+def test_purge_apply_asks_a_person_first(profile, monkeypatch, answer, deleted):
+    """R13: `ops purge --apply` deleted with no confirmation, while `ops resume` asked."""
+    import argparse
+
+    from agentsmith import cli
+
+    calls: list[bool] = []
+    monkeypatch.setattr(c, "purge_runs", lambda tenant, apply=False: calls.append(apply) or 3)
+    monkeypatch.setattr(cli, "_confirm_at_terminal", lambda verb, question, expected: answer)
+    args = argparse.Namespace(verb="purge", apply=True, tenant="t", scope="*", reason=None, restored_url=None)
+    code = cli._cmd_ops_compliance(args)
+    assert (True in calls) is deleted
+    assert code == (0 if deleted else answer)
