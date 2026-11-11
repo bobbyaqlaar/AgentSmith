@@ -49,6 +49,10 @@ monitoring.
 - **Edit-time enforcement is on Claude Code and Cursor only.** Copilot, Codex, Gemini CLI and
   Antigravity get the rule files and the CI gates, so a violation is caught at commit and in CI, not
   while the agent edits.
+- **The build side is not yet fully sovereign by default.** The running app needs no cloud, but the
+  CI templates run on GitHub's hosted runners unless you set `AGENTSMITH_RUNNER` to a self-hosted
+  runner, and the named coding agents use their vendors' cloud models. See the manual's "Keeping the
+  build side on your own machines".
 - **Windows is untested.** There is no Windows runner; CI runs on Linux, and development is on macOS.
 - **Some package managers are unsupported.** yarn and bun fail CI by name. Poetry installs only CI
   tooling, with a warning. Use npm or pnpm, and `requirements.txt` or `uv.lock`.

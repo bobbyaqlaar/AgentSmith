@@ -15,7 +15,7 @@ concurrency:
 jobs:
   guardrails:
     name: "Guardrails — Go"
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.AGENTSMITH_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
 
     steps:

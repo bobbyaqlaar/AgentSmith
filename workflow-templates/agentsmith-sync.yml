@@ -21,7 +21,7 @@ name: "AgentSmith sync"
 jobs:
   sync:
     name: "Propose the framework's latest release"
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.AGENTSMITH_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
       pull-requests: write
