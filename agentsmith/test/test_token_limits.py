@@ -131,7 +131,7 @@ async def test_a_call_with_no_tier_to_try_spends_nothing_against_the_run():
     """R1: the `text is None` exit kept the reservation too."""
     gw = _gateway()
     gw._degrade_chain.return_value = ["not-configured"]
-    with config.override(**{"limits.run_tokens": 1000}), pytest.raises(Exception):
+    with config.override(**{"limits.run_tokens": 1000}), pytest.raises(RuntimeError, match="No configured model tier"):
         await gw.complete("hi", model_hint="developer", workflow_id="run-1", max_tokens=200)
     assert tl.run_spent(gw._budget, "t", "run-1") == 0
 

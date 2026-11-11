@@ -88,4 +88,32 @@ Gates run: the suites above; the knowledge-graph check; the process gate against
 
 Levers reviewed: `early-exit-keeps-the-record`, `guards-must-be-able-to-fail`, `declared-vs-enforced`, `ambiguous-signals`, `use-existing-apis`, `grep-for-siblings`, `test-that-cannot-fail`.
 
-KG query: kg:9b6d9d28af67
+Scope at an earlier sign-off: kg:9b6d9d28af67
+## Pass 8 — findings: 1
+
+Ruff, pinned from `requirements-lint.txt`, over the whole tree before pushing.
+
+1. **B017**: `test_a_call_with_no_tier_to_try_spends_nothing_against_the_run` asserted a bare `Exception`, so any failure, including the one the test set out to rule out, would satisfy it. It now expects the `RuntimeError` naming "No configured model tier".
+
+## Pass 9 — findings: 0
+
+- `agentsmith/test/test_token_limits.py`: 21 passed; ruff clean; mypy (pinned) clean over its scope.
+
+## Sign-off (after lint)
+
+Group 1 · DRY & shared code — [x] n/a — one assertion.
+Group 2 · Quality / safety — [x] checked — the test now fails on any other error.
+Group 3 · Architecture / hygiene — [x] n/a.
+Group 4 · Process — [x] checked — found by the lint gate CI runs.
+Group 5 · Intuitive UI — [x] n/a — no screen.
+Group 6 · Signal integrity — [x] checked — a narrower assertion.
+Group 7 · Auth & session integrity — [x] n/a.
+
+Tests added: none; one assertion narrowed.
+Mutation-checked: the earlier `text is None` mutant is still killed by the narrowed test.
+Fixtures re-pinned: `.agent-rfc/fixtures/knowledge_graph.json`.
+Gates run: ruff; mypy; the test file; the process gate against the commit.
+
+Levers reviewed: `test-that-cannot-fail`.
+
+KG query: kg:5ef85d2d8a0e
