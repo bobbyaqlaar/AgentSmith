@@ -157,3 +157,48 @@ def test_a_workflow_that_does_not_parse_fails(tmp_path):
 def test_the_failure_says_what_to_do(tmp_path):
     result = _check(tmp_path, _job(_action()))
     assert "pull_request.title" in result.message and "fetch it as data" in result.message
+
+
+# ── The 4.1.0 release review: R9, R10 ──
+
+
+@pytest.mark.parametrize("guard", [
+    "github.event.comment.author_association == 'OWNER' || github.event_name == 'issue_comment'",
+    "contains(github.event.comment.body, '@claude') || github.event.comment.author_association == 'MEMBER'",
+    # Written inside ${{ }}: a bare `!` at the start of a YAML value is a tag, and is dropped.
+    "${{ !contains(fromJSON('[\"OWNER\",\"MEMBER\"]'), github.event.comment.author_association) }}",
+    "${{ ! contains(fromJSON('[\"OWNER\"]'), github.event.comment.author_association) }}",
+    "${{ !(github.event.comment.author_association == 'OWNER') }}",
+])
+def test_a_guard_that_an_or_or_a_negation_undoes_does_not_count(tmp_path, guard):
+    """R9: each of these runs for outsiders, and each was accepted."""
+    assert _failed(_check(tmp_path, _job(_action(COMMENT), job_if=guard)))
+
+
+def test_a_guard_joined_by_and_still_counts(tmp_path):
+    guard = f"{COLLABORATOR} && contains(github.event.comment.body, '@claude')"
+    assert not _failed(_check(tmp_path, _job(_action(COMMENT), job_if=guard)))
+
+
+@pytest.mark.parametrize("field", [
+    "${{ toJSON(github) }}",
+    "${{ toJson( github ) }}",
+    "${{ github.event.workflow_run.display_title }}",
+    "${{ github.event.release.body }}",
+    "${{ github.event.release.name }}",
+    "${{ github.event.label.name }}",
+    "${{ github.event.pull_request.labels[0].name }}",
+])
+def test_more_fields_an_outsider_writes_fail(tmp_path, field):
+    """R10: each reached an agent and passed."""
+    assert _failed(_check(tmp_path, _job(_action(field))))
+
+
+@pytest.mark.parametrize("scope", ["job", "workflow"])
+def test_an_action_receives_inherited_environment(tmp_path, scope):
+    """R10: a job- or workflow-level variable reaches an action whether or not it is named."""
+    env = "    env:\n      TITLE: ${{ github.event.issue.title }}\n" if scope == "job" else ""
+    top = "env:\n  TITLE: ${{ github.event.issue.title }}\n" if scope == "workflow" else ""
+    text = (f"on: issues\n{top}jobs:\n  a:\n    runs-on: ubuntu-latest\n{env}    steps:\n"
+            f"      - uses: {CLAUDE}\n        with:\n          prompt: \"fix the issue\"\n")
+    assert _failed(_check(tmp_path, text))
