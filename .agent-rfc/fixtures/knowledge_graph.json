@@ -2503,7 +2503,7 @@
         "test_allowlist_entries_are_still_orphans",
         "test_the_sweep_reaches_extensionless_shell"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:46:39Z",
       "id": "scripts/test/test_documented_env_vars_exist.py"
     },
     {
@@ -9584,7 +9584,7 @@
         "main",
         "live"
       ],
-      "last_modified": "2026-11-11T17:32:41Z",
+      "last_modified": "2026-11-11T17:46:39Z",
       "id": "scripts/compliance_port.py"
     },
     {
@@ -9800,7 +9800,7 @@
         "test_a_release_row_passes_only_on_a_test_ci_runs",
         "test_a_portal_test_no_script_runs_is_not_evidence"
       ],
-      "last_modified": "2026-11-11T17:31:06Z",
+      "last_modified": "2026-11-11T17:46:39Z",
       "id": "scripts/test/test_compliance_port.py"
     },
     {
@@ -10382,7 +10382,7 @@
         "Broken",
         "__init__"
       ],
-      "last_modified": "2026-11-11T17:00:24Z",
+      "last_modified": "2026-11-11T17:46:39Z",
       "id": "agentsmith/test/test_token_limits.py"
     },
     {

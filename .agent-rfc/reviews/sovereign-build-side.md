@@ -63,4 +63,32 @@ Gates run: the suite above; the knowledge-graph check; the process gate against 
 
 Levers reviewed: `docs-match-behaviour`, `minimal-host-dependency`.
 
-KG query: kg:2129972f0839
+Scope at an earlier sign-off: kg:2129972f0839
+## Pass 5 — findings: 1
+
+The full `agentsmith/test` and `scripts/test` suites in a clean Python 3.11 environment from `requirements.lock`.
+
+1. **`test_every_documented_env_var_is_read_somewhere` failed**: the rewritten section names `PIP_INDEX_URL`, which pip reads and AgentSmith does not. Added to the test's `ALLOWED`, with the reason.
+
+## Pass 6 — findings: 0
+
+- The test passes; the rest of the full run had passed (2,872 passed, 17 skipped).
+
+## Sign-off (after the full suite)
+
+Group 1 · DRY & shared code — [x] n/a — one allowlist entry.
+Group 2 · Quality / safety — [x] n/a — no behaviour change.
+Group 3 · Architecture / hygiene — [x] checked — the allowlist says why the name is there.
+Group 4 · Process — [x] checked — found by the clean-environment run before pushing.
+Group 5 · Intuitive UI — [x] n/a — no screen.
+Group 6 · Signal integrity — [x] checked — the documented-variables test stays strict for AgentSmith's own names.
+Group 7 · Auth & session integrity — [x] n/a — no auth code.
+
+Tests added: none; `scripts/test/test_documented_env_vars_exist.py` gains an allowlist entry.
+Mutation-checked: n/a — an allowlist entry.
+Fixtures re-pinned: `.agent-rfc/fixtures/knowledge_graph.json`.
+Gates run: the full suites; ruff; the process gate against the commit.
+
+Levers reviewed: `docs-match-behaviour`.
+
+KG query: kg:a456cebfee82
