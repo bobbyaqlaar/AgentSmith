@@ -286,6 +286,49 @@ def test_a_stale_rules_block_is_refreshed_and_the_tenants_prose_survives(tenant)
     assert "Compliance" in claude, "the framework's current rules are in the block"
 
 
+# ── Rule files an older `tenant init` never recorded (.agent-rfc/designs/sync-refreshes-rule-files.md) ──
+
+
+def _old_generated(tenant: Path, rel: str, *, recorded: bool) -> None:
+    """A whole rule file as an older framework left it: its generated header,
+    older text, and — as 4.0.1's `tenant init` did — no record in the manifest."""
+    import hashlib
+
+    here = tenant / rel
+    here.write_text(here.read_text() + "\n- An old rule nobody refreshed.\n")
+    path = tenant / ".agenticframework" / "scaffold.json"
+    manifest = json.loads(path.read_text())
+    manifest["files"].pop(rel, None)
+    if recorded:
+        manifest["files"][rel] = hashlib.sha256(here.read_bytes()).hexdigest()
+    path.write_text(json.dumps(manifest, indent=2) + "\n")
+    _git(tenant, "add", "-A")
+    assert _git(tenant, "commit", *SYNC_COMMIT).returncode == 0
+
+
+def test_an_unrecorded_generated_rule_file_is_refreshed_and_recorded(tenant):
+    _old_generated(tenant, ".cursorrules", recorded=False)
+
+    written = _sync(tenant)
+
+    assert ".cursorrules" in written
+    assert "An old rule nobody refreshed." not in (tenant / ".cursorrules").read_text()
+    manifest = json.loads((tenant / ".agenticframework" / "scaffold.json").read_text())
+    assert ".cursorrules" in manifest["files"], "recorded now, so the next sync knows whose it is"
+
+
+def test_a_recorded_rule_file_the_tenant_edited_is_still_left_alone(tenant):
+    from agentsmith.sync import plan_sync
+
+    _old_generated(tenant, ".cursorrules", recorded=True)
+    (tenant / ".cursorrules").write_text((tenant / ".cursorrules").read_text() + "- Ours.\n")
+
+    plan = plan_sync(tenant)
+
+    assert ".cursorrules" not in plan.stale
+    assert any(note.startswith(".cursorrules was edited here") for note in plan.notes)
+
+
 def test_the_ide_hook_wiring_is_refreshed_and_the_tenants_settings_survive(tenant):
     _stale_rules(tenant)
 
