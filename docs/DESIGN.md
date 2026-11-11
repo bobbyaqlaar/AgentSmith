@@ -1363,6 +1363,7 @@ AgentSmith/
 │   ├── prompt_guard.py          # Prompt-injection heuristics (SEC-PROMPT-001)
 │   ├── moderation.py            # Output moderation hook (SEC-MOD-001)
 │   ├── structured_output.py     # parse_llm_json + Pydantic (SEC-OUTPUT-001)
+│   ├── token_limits.py          # tokens bounded per role (models.yaml) and per run (tenant.yaml limits)
 │   ├── tool_registry.py         # @tool + YAML allowlist (SEC-TOOL-001)
 │   ├── security_paths.py        # security_artefact_path() — one lookup for the two above
 │   ├── tenancy.py               # resolve_tenant_id() + the identity contextvars (pillar 3)

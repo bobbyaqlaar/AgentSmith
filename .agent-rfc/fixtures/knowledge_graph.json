@@ -10179,7 +10179,7 @@
         "add_trailers",
         "main"
       ],
-      "last_modified": "2026-11-11T06:17:25Z",
+      "last_modified": "2026-11-11T06:20:55Z",
       "id": "scripts/agent_tokens.py"
     },
     {
@@ -10216,9 +10216,10 @@
         "test_a_commit_made_by_hand_gets_no_trailer",
         "test_trailers_join_the_existing_block_and_replace_only_themselves",
         "test_a_message_with_no_trailers_gets_a_blank_line_first",
-        "test_the_gates_own_hooks_record_the_session"
+        "test_the_gates_own_hooks_record_the_session",
+        "test_counts_read_at_a_glance"
       ],
-      "last_modified": "2026-11-11T06:17:25Z",
+      "last_modified": "2026-11-11T06:20:55Z",
       "id": "scripts/test/test_agent_tokens.py"
     },
     {
