@@ -33,4 +33,35 @@ Gates run: the suites above; `bash -n` on the launcher; the knowledge-graph chec
 
 Levers reviewed: `gate-integrity`, `early-exit-keeps-the-record`, `grep-for-siblings`, `declared-vs-enforced`, `test-that-cannot-fail`, `guards-must-be-able-to-fail`, `one-catalog`, `docs-match-behaviour`, `consistent-auth-gates`, `aggregates-name-their-scope`, `validate-on-the-receiving-side`, `irreversible-needs-confirmation`.
 
-KG query: kg:b486d2020bd9
+Scope at an earlier sign-off: kg:b486d2020bd9
+
+## Pass 3 — findings: 1
+
+After #115 merged, the Scratch tenants workflow on `main` (run 43079148397) failed for `python-dubai-gov` only.
+
+1. **The R18 drill fix broke the `dubai-gov` scratch tenant.** Its fixture drill (`.github/scratch-tenants/profiles/dubai-gov/agenticframework/drills/scratch.json`) was dated `2099-01-01`: exactly the evidence R18 says should not count, used to keep the scratch tenant green for ever. The production check now ignores it, so `OB-RESTORE-DRILL` failed and `build.sh` stopped. No test on the PR could see it: only the scratch workflow builds that tenant, and it runs on `main`. Fixed: `build.sh` stamps each fixture drill with the build time after copying the profile files; the fixture now says `1970-01-01`, so a build that skipped the stamp fails rather than passes.
+
+## Pass 4 — findings: 0
+
+- `build.sh python-dubai-gov … dubai-gov`, run locally with this checkout's `agentsmith` on PATH: exits 1 with `OB-RESTORE-DRILL no passing restore drill` without the fix (the failure on `main`), and exits 0 with it ("the app passes, and passes no longer with its gate removed").
+- `bash -n` on `build.sh`.
+- Searched the scratch tenants, fixtures, templates and tests for other dates in the future: none.
+
+## Sign-off (after the scratch-tenant failure)
+
+Group 1 · DRY & shared code — [x] n/a — one build step.
+Group 2 · Quality / safety — [x] checked — the scratch tenant no longer relies on evidence the profile refuses.
+Group 3 · Architecture / hygiene — [x] checked — the fixture cannot pass on its own date.
+Group 4 · Process — [x] checked — found on `main` after merge; reproduced locally before fixing.
+Group 5 · Intuitive UI — [x] n/a — no screen.
+Group 6 · Signal integrity — [x] checked — the green scratch run now means a drill dated today passes.
+Group 7 · Auth & session integrity — [x] n/a.
+
+Tests added: none; the scratch build itself is the test, run locally both ways.
+Mutation-checked: the fix removed (stash) reproduces the failure.
+Fixtures re-pinned: `.github/scratch-tenants/profiles/dubai-gov/agenticframework/drills/scratch.json`; `.agent-rfc/fixtures/knowledge_graph.json` if it changed.
+Gates run: the scratch build; the knowledge-graph check; the process gate against the commit.
+
+Levers reviewed: `fixture-truth`, `gate-integrity`.
+
+KG query: kg:cbaac984cd17
