@@ -1154,6 +1154,22 @@ def _cmd_evals_run(args: argparse.Namespace) -> int:
     return done.returncode
 
 
+def _confirm_at_terminal(verb: str, question: str, expected: str) -> "bool | int":
+    """True when a person at a terminal typed `expected`; otherwise the exit code."""
+    try:
+        reader, writer = open("/dev/tty", "r"), open("/dev/tty", "w")
+    except OSError:
+        print(f"agentsmith ops {verb}: a person confirms this at a terminal; this process has none", file=sys.stderr)
+        return 2
+    with reader, writer:
+        writer.write(f"{question} Type the app id to confirm: ")
+        writer.flush()
+        if reader.readline().strip() != expected:
+            writer.write("not done.\n")
+            return 1
+    return True
+
+
 def _cmd_ops_compliance(args: argparse.Namespace) -> int:
     """`agentsmith ops stop|resume|forward|verify` — the compliance outbox and the
     stop flag, without the portal. Stopping is open to anyone at the keyboard:
@@ -1181,21 +1197,21 @@ def _cmd_ops_compliance(args: argparse.Namespace) -> int:
             print(f"Stopped {tenant} ({args.scope}).")
             return 0
         if args.verb == "resume":
-            try:
-                reader, writer = open("/dev/tty", "r"), open("/dev/tty", "w")
-            except OSError:
-                print("agentsmith ops resume: a person resumes at a terminal; this process has none", file=sys.stderr)
-                return 2
-            with reader, writer:
-                writer.write(f"Resume {tenant} ({args.scope})? Type the app id to confirm: ")
-                writer.flush()
-                if reader.readline().strip() != tenant:
-                    writer.write("not resumed.\n")
-                    return 1
+            confirmed = _confirm_at_terminal("resume", f"Resume {tenant} ({args.scope})?", tenant)
+            if confirmed is not True:
+                return confirmed
             compliance.clear_stop(tenant, args.scope, actor)
             print(f"Resumed {tenant} ({args.scope}).")
             return 0
         if args.verb == "purge":
+            if args.apply:
+                # Deleting history cannot be undone, so a person confirms it (R13).
+                would = compliance.purge_runs(tenant, apply=False)
+                confirmed = _confirm_at_terminal(
+                    "purge", f"Delete {would} run(s) of {tenant} past the declared retention? This cannot be undone.",
+                    tenant)
+                if confirmed is not True:
+                    return confirmed
             count = compliance.purge_runs(tenant, apply=args.apply)
             print(f"{'Deleted' if args.apply else 'Would delete'} {count} run(s) past the declared retention.")
             return 0

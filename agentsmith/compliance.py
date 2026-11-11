@@ -250,6 +250,11 @@ _DDL = [
 ]
 GENESIS = "genesis"
 APP_SCOPE = "*"
+# Every kind the framework writes itself. The sidecar refuses them from an app, so an
+# app cannot forge one (agentsmith/runtime_server.py); one list, so a new kind is
+# reserved where it is born (the 4.1.0 release review, R21).
+FRAMEWORK_KINDS = frozenset({"hitl_pending", "hitl_decision", "hitl_timeout", "stop_control", "model_call",
+                             "model_result", "retention_purge"})
 
 
 def _connect(dsn: Optional[str] = None):
@@ -271,6 +276,33 @@ def _canonical(payload: Any) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
 
 
+def _record_key() -> str:
+    key = os.environ.get(RECORD_KEY_ENV, "")
+    if not key:
+        raise ComplianceRefused("OB-RECORD", f"{RECORD_KEY_ENV} is not set, so no record can be signed")
+    return key
+
+
+def _append(cursor: Any, key: str, tenant_id: str, kind: str, payload: dict[str, Any]) -> int:
+    """Append one record inside the caller's transaction, chained to the one before."""
+    body = _canonical(payload)
+    # One writer per tenant at a time, or two records would share a parent.
+    cursor.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (tenant_id,))
+    cursor.execute(
+        "SELECT record_hash FROM compliance_outbox WHERE tenant_id = %s ORDER BY record_id DESC LIMIT 1",
+        (tenant_id,),
+    )
+    row = cursor.fetchone()
+    previous = row[0] if row else GENESIS
+    digest = _digest(key, tenant_id, kind, body, previous)
+    cursor.execute(
+        "INSERT INTO compliance_outbox (tenant_id, kind, payload, prev_hash, record_hash) "
+        "VALUES (%s, %s, %s::jsonb, %s, %s) RETURNING record_id",
+        (tenant_id, kind, body, previous, digest),
+    )
+    return int(cursor.fetchone()[0])
+
+
 def record(tenant_id: str, kind: str, payload: dict[str, Any], *, dsn: Optional[str] = None) -> Optional[int]:
     """Write one record, chained to the one before it. Returns its id.
 
@@ -279,37 +311,45 @@ def record(tenant_id: str, kind: str, payload: dict[str, Any], *, dsn: Optional[
     """
     if not profile_active():
         return None
-    key = os.environ.get(RECORD_KEY_ENV, "")
-    if not key:
-        raise ComplianceRefused("OB-RECORD", f"{RECORD_KEY_ENV} is not set, so no record can be signed")
-    body = _canonical(payload)
+    key = _record_key()
     try:
         connection = _connect(dsn)
         try:
             with connection.cursor() as cursor:
-                # One writer per tenant at a time, or two records would share a parent.
-                cursor.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (tenant_id,))
-                cursor.execute(
-                    "SELECT record_hash FROM compliance_outbox WHERE tenant_id = %s ORDER BY record_id DESC LIMIT 1",
-                    (tenant_id,),
-                )
-                row = cursor.fetchone()
-                previous = row[0] if row else GENESIS
-                digest = _digest(key, tenant_id, kind, body, previous)
-                cursor.execute(
-                    "INSERT INTO compliance_outbox (tenant_id, kind, payload, prev_hash, record_hash) "
-                    "VALUES (%s, %s, %s::jsonb, %s, %s) RETURNING record_id",
-                    (tenant_id, kind, body, previous, digest),
-                )
-                record_id = cursor.fetchone()[0]
+                record_id = _append(cursor, key, tenant_id, kind, payload)
             connection.commit()
-            return int(record_id)
+            return record_id
         finally:
             connection.close()
     except ComplianceRefused:
         raise
     except Exception as exc:
         raise ComplianceRefused("OB-RECORD", f"the record could not be written ({type(exc).__name__})") from exc
+
+
+def _recorded_change(tenant_id: str, kind: str, payload: Any, change: Any, dsn: Optional[str]) -> Any:
+    """Make a change and its record in one transaction: both, or neither (R13).
+    `payload` may be a function of what `change` returns. Without a profile, the
+    change alone."""
+    key = _record_key() if profile_active() else ""
+    try:
+        connection = _connect(dsn)
+        try:
+            with connection.cursor() as cursor:
+                result = change(cursor)
+                if key:
+                    _append(cursor, key, tenant_id, kind, payload(result) if callable(payload) else payload)
+            connection.commit()
+            return result
+        finally:
+            connection.close()
+    except ComplianceRefused:
+        raise
+    except Exception as exc:
+        if not key:
+            raise
+        raise ComplianceRefused("OB-RECORD", f"the change and its record could not be written "
+                                             f"({type(exc).__name__}); neither was") from exc
 
 
 def purge_runs(tenant_id: str, *, apply: bool = False, dsn: Optional[str] = None) -> int:
@@ -321,27 +361,34 @@ def purge_runs(tenant_id: str, *, apply: bool = False, dsn: Optional[str] = None
     days = declaration.retention_days.get("runs")
     if not days:
         raise ComplianceRefused("OB-SUBJECT", "retention_days.runs is not declared")
-    connection = _connect(dsn)
-    try:
-        with connection.cursor() as cursor:
-            bounds = (tenant_id, days)
-            cursor.execute(
-                "SELECT count(*) FROM agent_runs WHERE tenant_id = %s "
-                "AND started_at < now() - make_interval(days => %s)",
-                bounds,
-            )
-            count = int(cursor.fetchone()[0])
-            if apply:
-                cursor.execute(
-                    "DELETE FROM agent_runs WHERE tenant_id = %s AND started_at < now() - make_interval(days => %s)",
-                    bounds,
-                )
-        connection.commit()
-    finally:
-        connection.close()
-    if apply:
-        record(tenant_id, "retention_purge", {"store": "runs", "days": days, "deleted": count}, dsn=dsn)
-    return count
+    bounds = (tenant_id, days)
+
+    def count(cursor: Any) -> int:
+        cursor.execute(
+            "SELECT count(*) FROM agent_runs WHERE tenant_id = %s AND started_at < now() - make_interval(days => %s)",
+            bounds,
+        )
+        return int(cursor.fetchone()[0])
+
+    if not apply:
+        connection = _connect(dsn)
+        try:
+            with connection.cursor() as cursor:
+                return count(cursor)
+        finally:
+            connection.close()
+
+    def purge(cursor: Any) -> int:
+        found = count(cursor)
+        cursor.execute(
+            "DELETE FROM agent_runs WHERE tenant_id = %s AND started_at < now() - make_interval(days => %s)", bounds
+        )
+        return found
+
+    # The record is appended in the same transaction as the delete, so history is
+    # never gone without a record saying so (the 4.1.0 release review, R13).
+    return int(_recorded_change(tenant_id, "retention_purge",
+                                lambda deleted: {"store": "runs", "days": days, "deleted": deleted}, purge, dsn))
 
 
 def restore_drill(tenant_id: str, restored_dsn: str, root: Path, *, dsn: Optional[str] = None) -> list[str]:
@@ -443,20 +490,19 @@ def forward(tenant_id: str, limit: int = 200, *, dsn: Optional[str] = None) -> t
 
 
 def set_stop(tenant_id: str, scope: str, reason: str, actor: str, *, dsn: Optional[str] = None) -> None:
-    """Stop a run (its workflow id) or the whole app (`*`), and record who did."""
-    connection = _connect(dsn)
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO compliance_stop (tenant_id, scope, reason, set_by) VALUES (%s, %s, %s, %s) "
-                "ON CONFLICT (tenant_id, scope) DO UPDATE SET reason = EXCLUDED.reason, set_by = EXCLUDED.set_by, "
-                "set_at = now()",
-                (tenant_id, scope, reason, actor),
-            )
-        connection.commit()
-    finally:
-        connection.close()
-    record(tenant_id, "stop_control", {"action": "stop", "scope": scope, "reason": reason, "actor": actor}, dsn=dsn)
+    """Stop a run (its workflow id) or the whole app (`*`), and record who did, in one
+    transaction: a stop nobody can account for is not set."""
+
+    def stop(cursor: Any) -> None:
+        cursor.execute(
+            "INSERT INTO compliance_stop (tenant_id, scope, reason, set_by) VALUES (%s, %s, %s, %s) "
+            "ON CONFLICT (tenant_id, scope) DO UPDATE SET reason = EXCLUDED.reason, set_by = EXCLUDED.set_by, "
+            "set_at = now()",
+            (tenant_id, scope, reason, actor),
+        )
+
+    _recorded_change(tenant_id, "stop_control",
+                     {"action": "stop", "scope": scope, "reason": reason, "actor": actor}, stop, dsn)
 
 
 def clear_stop(tenant_id: str, scope: str, actor: str, *, dsn: Optional[str] = None) -> None:
@@ -550,13 +596,16 @@ def ai_marking(text: str, model: str) -> dict[str, Any]:
     return mark
 
 
-def verify_marking(text: str, mark: dict[str, Any]) -> bool:
-    """Is this mark about this text, and, if signed, unaltered?"""
+def verify_marking(text: str, mark: dict[str, Any], require_signature: Optional[bool] = None) -> bool:
+    """Is this mark about this text, and unaltered? Where marks are signed (a key is
+    set) an unsigned mark proves nothing: anyone can recompute a digest (R19)."""
+    if require_signature is None:
+        require_signature = bool(os.environ.get(RECORD_KEY_ENV, ""))
     if mark.get("content_sha256") != hashlib.sha256(text.encode()).hexdigest():
         return False
     signature = mark.get("signature")
     if signature is None:
-        return True
+        return not require_signature
     unsigned = {k: v for k, v in mark.items() if k != "signature"}
     key = os.environ.get(RECORD_KEY_ENV, "")
     expected = hmac.new(key.encode(), _canonical(unsigned).encode(), hashlib.sha256).hexdigest()
@@ -587,6 +636,7 @@ def host_allowed(host: Optional[str], allowed: list[str]) -> bool:
 
 
 _LEAK_WORDS = 8
+_LEAK_MIN_WORDS = 3  # shorter, and a match is a common phrase, not a leak
 _user_calls: dict[str, deque[float]] = {}
 
 
@@ -611,8 +661,13 @@ def leaks_system_prompt(messages: list, text: str) -> bool:
     for message in messages:
         if isinstance(message, dict) and message.get("role") == "system":
             words = str(message.get("content", "")).lower().split()
-            for start in range(max(0, len(words) - _LEAK_WORDS + 1)):
-                if " ".join(words[start : start + _LEAK_WORDS]) in answer:
+            # A prompt shorter than the window is compared whole: the loop below never
+            # ran for one, so a seven-word secret was never caught (R19).
+            window = min(_LEAK_WORDS, len(words))
+            if window < _LEAK_MIN_WORDS:
+                continue
+            for start in range(len(words) - window + 1):
+                if " ".join(words[start : start + window]) in answer:
                     return True
     return False
 

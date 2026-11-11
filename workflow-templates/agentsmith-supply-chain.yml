@@ -1,7 +1,10 @@
 name: Supply chain
 
-# Written by `agentsmith compliance enable`. Dependency scan and an SBOM for this
-# application (OB-SUPPLY-CHAIN). Add static analysis for your own stack here.
+# Written by `agentsmith compliance enable`. A dependency audit and an SBOM for
+# this application (OB-SUPPLY-CHAIN), for each stack it finds: Python
+# (requirements.lock, requirements.txt or pyproject.toml), npm (package-lock.json)
+# and Go (go.mod). A repository where it finds none fails: a job that scans nothing
+# is not evidence. Add static analysis for your own stack here.
 
 on:
   push:
@@ -14,27 +17,55 @@ permissions:
 jobs:
   scan:
     runs-on: ${{ vars.AGENTSMITH_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: "Python dependencies"
+        if: hashFiles('requirements.lock', 'requirements.txt', 'pyproject.toml') != ''
         run: |
+          mkdir -p sbom
           if [ -f requirements.lock ]; then
             pipx run pip-audit==2.9.0 -r requirements.lock --disable-pip --no-deps
+            pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py requirements requirements.lock -o sbom/python.cdx.json
           elif [ -f requirements.txt ]; then
             # Without a lock: pip-audit resolves the ranges and audits the result.
             pipx run pip-audit==2.9.0 -r requirements.txt
+            pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py requirements requirements.txt -o sbom/python.cdx.json
           else
-            echo "no Python requirements file"
+            pipx run pip-audit==2.9.0 .
+            pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py environment -o sbom/python.cdx.json
           fi
-      - name: "SBOM"
+      - uses: actions/setup-node@v4
+        if: hashFiles('package-lock.json') != ''
+        with:
+          node-version: "20"
+      - name: "npm dependencies"
+        if: hashFiles('package-lock.json') != ''
         run: |
-          if [ -f requirements.lock ]; then pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py requirements requirements.lock -o sbom.cdx.json; fi
+          mkdir -p sbom
+          npm audit --audit-level=high --omit=dev
+          npx --yes @cyclonedx/cyclonedx-npm@1.19.3 --output-file sbom/npm.cdx.json
+      - uses: actions/setup-go@v5
+        if: hashFiles('go.mod') != ''
+        with:
+          go-version-file: go.mod
+      - name: "Go dependencies"
+        if: hashFiles('go.mod') != ''
+        run: |
+          mkdir -p sbom
+          go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+          go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.8.0 mod -json -output sbom/go.cdx.json
+      - name: "Something was scanned"
+        run: |
+          if [ -z "$(ls sbom 2>/dev/null)" ]; then
+            echo "::error::no requirements.lock, requirements.txt, pyproject.toml, package-lock.json or go.mod: nothing was scanned, so this job is not evidence. Add your stack's audit above."
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: sbom
-          path: sbom.cdx.json
-          if-no-files-found: ignore
+          path: sbom/
+          if-no-files-found: error

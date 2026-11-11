@@ -64,6 +64,23 @@ def _compliance_failure(message: str) -> Exception:
     return RuntimeError(message)
 
 
+def _input_digest(payload: Any) -> str:
+    """What a reviewer was shown, as `agentsmith.compliance.payload_digest` computes it.
+    Written out here because workflow code stays free of the compliance module's
+    database imports; a test holds the two equal."""
+    import hashlib
+    import json as _json
+
+    canonical = _json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def _looks_like_email(value: Any) -> bool:
+    import re
+
+    return isinstance(value, str) and re.fullmatch(r"[^@\s]+@[^@\s]+", value.strip()) is not None
+
+
 if _HAS_TEMPORAL:
 
     @activity.defn
@@ -431,7 +448,16 @@ class BaseAgentWorkflow:
             if not gate_result.get("requested_by"):
                 # Without it, nothing can stop a person approving their own request.
                 raise _compliance_failure("the gate result must say who asked: set requested_by")
+            if not _looks_like_email(gate_result.get("requested_by")):
+                # The portal compares it with the reviewer's sign-in email; a name or an
+                # employee number never matches, so a person could approve their own (R29).
+                raise _compliance_failure(
+                    "requested_by must be the requester's sign-in email, as the portal knows them")
             workflow_id = workflow.info().workflow_id
+            digest = _input_digest(resume_input)
+            # A decision given before this request was asked (after a timeout, or
+            # signalled early) does not answer it (the 4.1.0 release review, R14).
+            self._gate_decisions.pop(gate_id, None)
             await workflow.execute_activity(
                 compliance_record_activity,
                 {"tenant_id": tenant_id, "workflow_id": workflow_id, "kind": "hitl_pending",
@@ -440,7 +466,11 @@ class BaseAgentWorkflow:
                 start_to_close_timeout=timedelta(minutes=5),
             )
             try:
-                await workflow.wait_condition(lambda: gate_id in self._gate_decisions, timeout=HITL_SIGNAL_TIMEOUT)
+                # Only a decision about this request's input answers it.
+                await workflow.wait_condition(
+                    lambda: (self._gate_decisions.get(gate_id) or {}).get("payload_sha256") == digest,
+                    timeout=HITL_SIGNAL_TIMEOUT,
+                )
             except TimeoutError:
                 approved = None
                 # Takes it off the reviewers' queue: nobody can decide it any more.

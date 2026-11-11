@@ -36,7 +36,7 @@ HOST = "127.0.0.1"
 MAX_BODY_BYTES = 2 * 1024 * 1024
 FORWARD_EVERY_SECONDS = 15
 # Written by the framework itself, so an application cannot forge one.
-RESERVED_KINDS = {"hitl_pending", "hitl_decision", "hitl_timeout", "stop_control", "model_call", "model_result"}
+RESERVED_KINDS = compliance.FRAMEWORK_KINDS
 
 
 class BadRequest(ValueError):

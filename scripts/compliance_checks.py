@@ -135,10 +135,13 @@ def data_class_usage(root: Path, declared: dict[str, Any]) -> Verdict:
         and "gateway" in ast.unparse(c.func.value).lower()
         and not any(k.arg in ("data_class", None) for k in c.keywords)
     ]
+    # Only calls on a receiver whose name says "gateway" are read; the run time
+    # treats any other unstated class as classified (the 4.1.0 release review, R18).
     return (
         ("fail", "gateway calls with no data_class: " + ", ".join(missing[:5]))
         if missing
-        else ("pass", "every gateway call states its data class")
+        else ("pass", "every complete() call on a receiver named *gateway* states its data class "
+                      "(other receivers are not read; at run time an unstated class is treated as classified)")
     )
 
 
@@ -205,31 +208,72 @@ def fairness_gate(root: Path, declared: dict[str, Any]) -> Verdict:
     return "pass", "a fairness failure fails the build"
 
 
+# The suites whose cases are in a language. The trajectory suite holds tool names (R16).
+_LANGUAGE_SUITES = {
+    "golden": ".agent-rfc/fixtures/golden_evals.json",
+    "hallucination": ".agent-rfc/fixtures/hallucination_evals.json",
+    "fairness": ".agent-rfc/fixtures/fairness_evals.json",
+    "adversarial": ".agent-rfc/security/adversarial_evals.json",
+}
+
+
 def arabic_cases(root: Path, declared: dict[str, Any]) -> Verdict:
+    """Each suite of the app's own that carries language has Arabic cases. With none of
+    its own, nothing can be judged: the base suites have Arabic only in fairness, and
+    the evals job already refuses the suites it cannot grade (the 4.1.0 release review, R16)."""
     if "ar" not in declared.get("languages", []):
         return "pass", "Arabic is not a declared language"
-    thin = [
-        f.name
-        for f in (root / ".agent-rfc" / "fixtures").glob("*evals*.json")
-        if not _ARABIC.search(f.read_text(encoding="utf-8"))
-    ]
+    present = {suite: root / rel for suite, rel in _LANGUAGE_SUITES.items() if (root / rel).is_file()}
+    if not present:
+        return "not_applicable", ("the app has no golden, hallucination, fairness or adversarial suite of its own, "
+                                  "so Arabic coverage cannot be judged yet")
+    thin = [suite for suite, path in present.items() if not _ARABIC.search(path.read_text(encoding="utf-8"))]
     return (
-        ("fail", "no Arabic cases in: " + ", ".join(sorted(thin)))
+        ("fail", "no Arabic cases in the " + ", ".join(sorted(thin)) + " suite(s)")
         if thin
-        else ("pass", "the app's suites include Arabic, or it uses the base suites, which do")
+        else ("pass", "Arabic cases in: " + ", ".join(sorted(present)))
     )
+
+
+_AUDITS = ("pip-audit", "npm audit", "govulncheck")
+
+
+def _supply_chain_job(path: Path) -> str:
+    """Why this workflow does not scan dependencies on each change, or "" when it does.
+    The file existing was the whole check before (the 4.1.0 release review, R12)."""
+    try:
+        workflow = _yaml(path)
+    except Exception as exc:  # a workflow that does not parse runs nothing
+        return f"{path.name} does not parse ({type(exc).__name__})"
+    if not isinstance(workflow, dict):
+        return f"{path.name} is not a workflow"
+    triggers = workflow.get("on", workflow.get(True))  # YAML 1.1 reads a bare `on` as true
+    names = set(triggers) if isinstance(triggers, (dict, list)) else {triggers}
+    if not names & {"push", "pull_request"}:
+        return f"{path.name} does not run on a push or a pull request"
+    jobs = workflow.get("jobs")
+    runs = [str(step.get("run") or "") for job in (jobs.values() if isinstance(jobs, dict) else [])
+            if isinstance(job, dict) for step in job.get("steps") or [] if isinstance(step, dict)]
+    if not any(audit in run for run in runs for audit in _AUDITS):
+        return f"{path.name} has no step that runs a dependency audit ({', '.join(_AUDITS)})"
+    return ""
 
 
 def supply_chain(root: Path, declared: dict[str, Any]) -> Verdict:
     from agentsmith import mcp_pin
 
-    if not (root / ".github" / "workflows" / "agentsmith-supply-chain.yml").is_file():
+    path = root / ".github" / "workflows" / "agentsmith-supply-chain.yml"
+    if not path.is_file():
         return "fail", ".github/workflows/agentsmith-supply-chain.yml is missing"
+    why = _supply_chain_job(path)
+    if why:
+        return "fail", why
     problems = mcp_pin.static_problems(root)
     return (
         ("fail", "; ".join(problems[:5]))
         if problems
-        else ("pass", "the supply-chain job is present and MCP servers are pinned")
+        else ("pass", "the supply-chain job audits dependencies on each change, and "
+                      + mcp_pin.scope_note(root))
     )
 
 
@@ -241,6 +285,8 @@ def restore_drill(root: Path, declared: dict[str, Any]) -> Verdict:
         record = json.loads(path.read_text(encoding="utf-8"))
         if record.get("result") == "pass":
             at = datetime.fromisoformat(record["at"].replace("Z", "+00:00"))
+            if at > datetime.now(timezone.utc) + timedelta(minutes=5):
+                continue  # a drill dated in the future was not run (R18)
             newest = max(newest, at) if newest else at
     if newest is None:
         return "fail", "no passing restore drill: run `agentsmith ops restore-drill`"
@@ -263,17 +309,49 @@ def traces_private(root: Path, declared: dict[str, Any]) -> Verdict:
     return "pass", "no Phoenix reports out"
 
 
+def _ignored(context: Path) -> bool:
+    """Does the build context's .dockerignore keep the declaration out of the image?"""
+    ignore = context / ".dockerignore"
+    if not ignore.is_file():
+        return False
+    from fnmatch import fnmatch
+
+    target = ".agenticframework/compliance.json"
+    excluded = False
+    for raw in ignore.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        negate = line.startswith("!")
+        pattern = line.lstrip("!").strip("/")
+        if pattern.startswith("./"):
+            pattern = pattern[2:]
+        if any(fnmatch(part, pattern) for part in (target, ".agenticframework")) or target.startswith(pattern + "/"):
+            excluded = not negate
+    return excluded
+
+
+def _ships_declaration(dockerfile: Path) -> bool:
+    text = dockerfile.read_text(encoding="utf-8")
+    if re.search(r"^\s*ENV\s+COMPLIANCE_PROFILE[\s=]+\S", text, re.M):
+        return True  # the profile is on without the file (agentsmith/compliance.py profile_active)
+    if not re.search(r"^\s*COPY\s+(\.\s|\.agenticframework)", text, re.M):
+        return False
+    return not _ignored(dockerfile.parent)
+
+
 def declaration_deployed(root: Path, declared: dict[str, Any]) -> Verdict:
-    """An image without the declaration has no duties at run time."""
+    """An image without the declaration has no duties at run time. `COPY . .` ships it
+    only when `.dockerignore` lets it through (the 4.1.0 release review, R18)."""
     images = list(root.rglob("Dockerfile"))
     missing = [
         str(p.relative_to(root))
         for p in images
-        if not _SKIP.intersection(p.relative_to(root).parts)
-        and not re.search(r"^\s*COPY\s+(\.\s|\.agenticframework)", p.read_text(encoding="utf-8"), re.M)
+        if not _SKIP.intersection(p.relative_to(root).parts) and not _ships_declaration(p)
     ]
     if missing:
-        return "fail", "these images do not copy .agenticframework/compliance.json: " + ", ".join(missing)
+        return "fail", ("these images do not receive .agenticframework/compliance.json (not copied, or kept out "
+                        "by .dockerignore) and set no ENV COMPLIANCE_PROFILE: " + ", ".join(missing))
     return "pass", "the declaration ships with the image" if images else "no Dockerfile here"
 
 

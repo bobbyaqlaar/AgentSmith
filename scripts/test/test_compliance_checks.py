@@ -122,7 +122,7 @@ def test_fairness_may_not_only_warn(tmp_path):
 
 
 def test_arabic_cases(tmp_path):
-    assert cc.arabic_cases(tmp_path, DECLARED)[0] == "pass"
+    assert cc.arabic_cases(tmp_path, DECLARED)[0] == "not_applicable"
     write(tmp_path, ".agent-rfc/fixtures/fairness_evals.json", '[{"input": "english only"}]')
     assert cc.arabic_cases(tmp_path, DECLARED)[0] == "fail"
     write(tmp_path, ".agent-rfc/fixtures/fairness_evals.json", '[{"input": "قرر"}]')
@@ -133,7 +133,7 @@ def test_supply_chain(tmp_path):
     from agentsmith import mcp_pin
 
     assert cc.supply_chain(tmp_path, DECLARED)[0] == "fail"
-    write(tmp_path, ".github/workflows/agentsmith-supply-chain.yml", "x")
+    write(tmp_path, ".github/workflows/agentsmith-supply-chain.yml", SCANNING)
     assert cc.supply_chain(tmp_path, DECLARED)[0] == "pass"
     server = {"command": "run-it", "args": ["a"]}
     write(tmp_path, ".mcp.json", json.dumps({"mcpServers": {"s": server}}))
@@ -486,14 +486,145 @@ def test_requirements_without_a_lock_are_resolved_not_refused(tmp_path):
     assert "--no-deps" not in called and "--disable-pip" not in called
 
 
-def test_no_requirements_file_is_a_message_and_no_scan(tmp_path):
-    done, called = _run_dependency_scan(tmp_path, [])
-    assert done.returncode == 0
-    assert called == ""
-    assert "no Python requirements file" in done.stdout
+def test_no_stack_it_knows_fails_the_job(tmp_path):
+    """R12: with nothing to scan the job was green. Now each stack's step runs only when
+    its files exist, and the last step fails when no SBOM was written."""
+    import yaml
+
+    template = Path(__file__).resolve().parents[2] / "workflow-templates" / "agentsmith-supply-chain.yml"
+    steps = yaml.safe_load(template.read_text(encoding="utf-8"))["jobs"]["scan"]["steps"]
+    for name in ("Python dependencies", "npm dependencies", "Go dependencies"):
+        assert "hashFiles(" in next(step for step in steps if step.get("name") == name)["if"], name
+    final = next(step["run"] for step in steps if step.get("name") == "Something was scanned")
+    work = tmp_path / "repo"
+    work.mkdir()
+    done = subprocess.run(["bash", "-e", "-c", final], cwd=work, capture_output=True, text=True, check=False)
+    assert done.returncode == 1 and "nothing was scanned" in done.stdout
 
 
 @pytest.mark.parametrize("files", [["requirements.lock"], ["requirements.txt"]])
 def test_a_failing_scan_fails_the_step(tmp_path, files):
     done, _ = _run_dependency_scan(tmp_path, files, scanner_exit=1)
     assert done.returncode != 0
+
+
+# ── The 4.1.0 release review: R12, R16, R18, R24, R26 ──
+
+SUPPLY = (".github/workflows/agentsmith-supply-chain.yml")
+SCANNING = ("on:\n  pull_request:\njobs:\n  scan:\n    runs-on: x\n    steps:\n"
+            "      - run: pipx run pip-audit==2.9.0 -r requirements.lock\n")
+
+
+@pytest.mark.parametrize("body", [
+    "x",
+    "on: workflow_dispatch\n",
+    "on:\n  pull_request:\njobs: {}\n",
+    "on:\n  pull_request:\njobs:\n  scan:\n    runs-on: x\n    steps:\n      - run: echo hello\n",
+    "on: workflow_dispatch\njobs:\n  scan:\n    runs-on: x\n    steps:\n      - run: pip-audit .\n",
+])
+def test_a_supply_chain_job_that_scans_nothing_fails(tmp_path, body):
+    """R12: the file being present was the whole check."""
+    write(tmp_path, SUPPLY, body)
+    assert cc.supply_chain(tmp_path, DECLARED)[0] == "fail"
+
+
+def test_a_supply_chain_job_that_scans_passes_and_says_what_was_read(tmp_path):
+    write(tmp_path, SUPPLY, SCANNING)
+    verdict, message = cc.supply_chain(tmp_path, DECLARED)
+    assert verdict == "pass" and ".mcp.json" in message
+
+
+def test_the_template_fails_when_it_finds_nothing_to_scan():
+    """R12: the shipped job stopped green on a stack it does not know."""
+    text = (REPO / "workflow-templates" / "agentsmith-supply-chain.yml").read_text(encoding="utf-8")
+    assert "if-no-files-found: ignore" not in text
+    for tool in ("pip-audit", "npm audit", "govulncheck", "cyclonedx"):
+        assert tool in text, tool
+    assert "exit 1" in text
+
+
+def test_the_arabic_check_reads_only_the_suites_that_carry_language(tmp_path):
+    """R16: the trajectory suite failed it, and no suite at all passed it."""
+    verdict, message = cc.arabic_cases(tmp_path, DECLARED)
+    assert verdict == "not_applicable" and "cannot be judged" in message
+    write(tmp_path, ".agent-rfc/fixtures/trajectory_evals.json", '[{"id": "t", "tools": ["lookup"]}]')
+    write(tmp_path, ".agent-rfc/fixtures/golden_evals.json", '[{"input": "قرر"}]')
+    assert cc.arabic_cases(tmp_path, DECLARED)[0] == "pass"
+    write(tmp_path, ".agent-rfc/security/adversarial_evals.json", '[{"input": "english"}]')
+    verdict, message = cc.arabic_cases(tmp_path, DECLARED)
+    assert verdict == "fail" and "adversarial" in message
+
+
+def test_a_drill_dated_in_the_future_does_not_count(tmp_path):
+    """R18 (b)."""
+    _drill(tmp_path, -3650)
+    assert cc.restore_drill(tmp_path, DECLARED)[0] == "fail"
+
+
+@pytest.mark.parametrize("files, verdict", [
+    ({"Dockerfile": "FROM x\nCOPY . .\n", ".dockerignore": ".agenticframework\n"}, "fail"),
+    ({"Dockerfile": "FROM x\nCOPY . .\n", ".dockerignore": ".agenticframework/compliance.json\n"}, "fail"),
+    ({"Dockerfile": "FROM x\nCOPY . .\n", ".dockerignore": "node_modules\n"}, "pass"),
+    ({"Dockerfile": "FROM x\nCOPY app /app\nENV COMPLIANCE_PROFILE=dubai-gov\n"}, "pass"),
+])
+def test_a_declaration_the_image_never_receives_fails(tmp_path, files, verdict):
+    """R18 (a): `COPY . .` with the folder ignored shipped no declaration."""
+    for rel, body in files.items():
+        write(tmp_path, rel, body)
+    assert cc.declaration_deployed(tmp_path, DECLARED)[0] == verdict
+
+
+def test_the_data_class_check_says_which_calls_it_read(tmp_path):
+    """R18 (c)."""
+    assert "receiver named" in cc.data_class_usage(tmp_path, DECLARED)[1]
+
+
+@pytest.mark.parametrize("rel, key", [(".cursor/mcp.json", "mcpServers"), (".vscode/mcp.json", "servers")])
+def test_mcp_servers_declared_elsewhere_are_seen(tmp_path, rel, key):
+    """R26 (a): only the root .mcp.json was read."""
+    write(tmp_path, SUPPLY, SCANNING)
+    write(tmp_path, rel, json.dumps({key: {"s": {"command": "run-it"}}}))
+    verdict, message = cc.supply_chain(tmp_path, DECLARED)
+    assert verdict == "fail" and "not pinned" in message
+
+
+PAGING_MCP = """
+import json, sys
+description = open(sys.argv[1]).read()
+for line in sys.stdin:
+    message = json.loads(line)
+    if message.get("method") == "initialize":
+        print(json.dumps({"id": message["id"], "result": {}}), flush=True)
+    if message.get("method") == "tools/list":
+        cursor = (message.get("params") or {}).get("cursor")
+        if cursor is None:
+            tool = {"name": "first", "description": "one", "inputSchema": {}}
+            print(json.dumps({"id": message["id"], "result": {"tools": [tool], "nextCursor": "p2"}}), flush=True)
+        else:
+            tool = {"name": "second", "description": description, "inputSchema": {}}
+            print(json.dumps({"id": message["id"], "result": {"tools": [tool]}}), flush=True)
+"""
+
+
+def test_a_tool_on_a_later_page_is_pinned_and_verified(tmp_path):
+    """R26 (b): only the first page of tools/list was read."""
+    from agentsmith import mcp_pin
+
+    write(tmp_path, "server.py", PAGING_MCP)
+    write(tmp_path, "description.txt", "fine")
+    server = {"command": sys.executable, "args": [str(tmp_path / "server.py"), str(tmp_path / "description.txt")]}
+    write(tmp_path, ".mcp.json", json.dumps({"mcpServers": {"s": server}}))
+    assert mcp_pin.pin(tmp_path) == 0
+    assert "second" in json.loads((tmp_path / mcp_pin.ALLOWLIST_FILE).read_text())["servers"]["s"]["tools"]
+    write(tmp_path, "description.txt", "now poisoned")
+    assert mcp_pin.verify(tmp_path) == 1
+
+
+def test_an_enforced_profile_with_its_declaration_deleted_fails_the_launcher(tmp_path):
+    """R24: deleting compliance.json read as "no profile — nothing checked"."""
+    write(tmp_path, ".agenticframework/process-gates.json",
+          json.dumps({"gated": [], "compliance": {"profile": "dubai-gov", "mode": "enforce"}}))
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    done = subprocess.run(["bash", str(REPO / ".githooks" / "process-gate"), "compliance", "check"], cwd=tmp_path,
+                          capture_output=True, text=True, stdin=subprocess.DEVNULL, check=False)
+    assert done.returncode == 1 and "compliance.json is missing" in (done.stdout + done.stderr)

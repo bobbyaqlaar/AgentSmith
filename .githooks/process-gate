@@ -473,6 +473,16 @@ fail(verdict + " — " + reason + ". A suite that was not judged is not a pass; 
       *) echo "usage: process-gate compliance check [--stage ci|production] | export --evidence-dir DIR | mcp-verify" >&2; exit 2 ;;
     esac
     if [ ! -f "$root/.agenticframework/compliance.json" ]; then
+      # An enforced profile is left on the record (agentsmith approve), never by
+      # deleting its declaration (the 4.1.0 release review, R24).
+      if python3 -c '
+import json, sys
+config = json.load(open(sys.argv[1], encoding="utf-8"))
+sys.exit(0 if (config.get("compliance") or {}).get("mode") == "enforce" else 1)
+' "$root/.agenticframework/process-gates.json" 2>/dev/null; then
+        echo "Compliance: fail — process-gates.json enforces a profile and .agenticframework/compliance.json is missing. Restore it, or leave the profile on the record (agentsmith approve)." >&2
+        exit 1
+      fi
       echo "Compliance: this repository has no profile — nothing checked."
       exit 0
     fi
