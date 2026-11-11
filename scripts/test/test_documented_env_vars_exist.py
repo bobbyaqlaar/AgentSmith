@@ -57,6 +57,9 @@ def _is_source(rel: str) -> bool:
 
 # Tokens that look like environment variables but are not ours to implement.
 ALLOWED = {
+    # pip's own index setting, named in the manual's "Keeping the build side on your own
+    # machines" as what a team points at its mirror. pip reads it; AgentSmith does not.
+    "PIP_INDEX_URL",
     # Read only by the machine-wide git hooks 3.0.0 retired (vendoring-retired.md).
     # CHANGELOG.md narrates them as history, which is not a claim that they work.
     "AGENTSMITH_AUTOPUSH",

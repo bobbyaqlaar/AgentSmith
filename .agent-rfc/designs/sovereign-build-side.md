@@ -3,6 +3,7 @@ status: active
 scope:
   - workflow-templates/**
   - scripts/test/test_runner_setting.py
+  - scripts/test/test_documented_env_vars_exist.py
 ---
 # The build side can run on owned machines
 
