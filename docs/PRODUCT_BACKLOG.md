@@ -1,6 +1,6 @@
 # AgentSmith — Remaining To-Do Items
 
-**Last reviewed:** 2026-11-09, for the entries the `dubai-gov` profile changed; 2026-11-03 for the rest, when every entry was checked against the code and CI. What that closed is in
+**Last reviewed:** 2026-11-11 for "Current state" and the requirements table; 2026-11-09 for the entries the `dubai-gov` profile changed; 2026-11-03 for the rest, when every entry was checked against the code and CI. What that closed is in
 `docs/PRODUCT_ARCHIVE.md`.
 
 > **Scope:** this document owns only *not-yet-done* work. Completed build history lives in
@@ -18,11 +18,42 @@ contracts C1–C9 are complete. **AgentSmith is public (AGPL-3.0)**; KYC Sentine
 private. KYC is on 4.0.0 with green CI, and Tenant B on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
 two security controls awaiting its own content: do not use it as a showcase.
 
-**Unreleased on `main`, for release 4.1.0 on Friday 13 November:** the opt-in `dubai-gov` compliance profile; gaps 1, 2, 7, 9 and 10; the tenant-upgrade test and its four sync fixes; fewer tokens on both sides, with each commit recording its agent and what it spent (gap 6); and the CI runner as a setting. A tenant cannot pin any of it until the release is cut.
+**For release 4.1.0 on Friday 13 November:** on `main`, the opt-in `dubai-gov` compliance profile, gaps 1, 2, 7, 9 and 10, the tenant-upgrade test with its sync fixes, and fewer tokens on both sides with each commit recording its agent and what it spent (gap 6); in flight (below), the CI runner as a setting. A tenant cannot pin any of it until the release is cut.
 
 **The owner's principle (2026-11-10): sovereign first.** AgentSmith exists to let a team build and run AI apps on its own servers with local open-weight models. A production proof needs no cloud deployment and no closed-weight model. AgentSmith passing its own standards is a corollary, not the product.
 
 **The owner's decisions on the gaps (2026-11-10).** Gap 5: sign gate verdicts with a key the tenant holds. Gap 6: yes, record the agent on each commit (done). Gap 11: wait for real sessions and say so. Gaps 12 and 13: enforce in tenant apps, with every agent registered in the tenant's identity store and tied to a named human owner. Token use is a goal in its own right. The paper "AgentSmith: Salient Features and the Path to Full Enforcement" sets out how each will be enforced.
+
+**Picking this up in a new session, or on another model.** Read this section, then `CHANGELOG.md` `[Unreleased]`,
+then the active designs in `.agent-rfc/designs/` (status `active`) with their reviews in `.agent-rfc/reviews/`. Scope
+any change with `agentsmith gate kg impact` before opening files; the graph is
+`.agent-rfc/fixtures/knowledge_graph.json`, and `python3 scripts/verify_system.py --check-kg` says whether it is
+current. The gates enforce the rest.
+
+**In flight (2026-11-11).** PR #113 merged: fewer tokens on both sides, gap 6, and the `sync` fix for rule files
+a 4.0.1 `tenant init` left unrecorded. The CI runner setting and this backlog rewrite are the next PR. Then release 4.1.0 (version, CHANGELOG section, `release.yml`) on Friday
+13 November. After the release, in order: gap 5, gap 12 (ASI03), gap 13 (ASI05, then ASI07), the remaining token
+work, the code-health check, the test-order leak, and Stage 2 on owned hardware (steps 15 to 17).
+
+### The requirements, and where each stands
+
+The owner's purpose: while a tenant app is built with coding agents, enforce observability, security, cost and
+token use, explainability, and guards against AI slop; in production, monitor the app against global and UAE
+standards and laws; and do both on the tenant's own machines with local open-weight models. "Shipped" means on
+`main` and tested; "4.1.0" means on `main` or in the runner-setting PR, not yet released.
+
+| Requirement | Where it stands | Evidence | Open |
+|---|---|---|---|
+| Design before code, review before done | Shipped: edit, stop, commit and CI gates; designs answer 14 pillars; reviews run until a pass finds 0 | `docs/process-gates.md`, `scripts/process_gate.py` | Edit-time only on Claude Code and Cursor; other agents are stopped at commit and in CI (gap 11, waiting on real sessions) |
+| Observability, build side | Shipped: gate spans, dev records per commit | `scripts/process_gate.py`, `scripts/send_dev_record.py` | Spans spool locally when no OTLP endpoint is set |
+| Observability, production | Shipped: OTel traces with `llm.*` and GenAI names, run records, portal Ops (preview) | `agentsmith/llm_gateway.py`, `portal/` | GenAI names pinned to a development commit (gap 7); a real deployment proving the chain (gap 2, Stage 2) |
+| Security | Shipped: security harness and `SEC-*` controls, supply-chain template, OWASP LLM and Agentic grading in evidence packs | `docs/security-framework-map.md` | ASI03, ASI04, ASI05, ASI07 (gaps 1, 12, 13); MCP and tool supply chain (gap 3); kill switch off the profile (gap 4) |
+| Cost and token use | Shipped: cost budgets in the gateway. 4.1.0: per-role input and output caps, per-run token and tool-call limits, trajectory `max_tokens`, per-commit `Agent-Tokens:`, rule-file and session-start budgets | `agentsmith/token_limits.py`, `scripts/agent_tokens.py` | Cache, summarisation, routing by difficulty, per-run and per-agent aggregation ("Use fewer tokens, the rest") |
+| Explainability | Shipped: commit, design, review and approvals linked; a run reports `APP_COMMIT`. 4.1.0: `Agent:` on each commit (gap 6) | `.agent-rfc/`, portal run view | Gate verdicts unsigned (gap 5, tenant-held key); who judged a change (gap 6, rest) |
+| Guards against AI slop | Shipped: review levers, curated and hand mutation checks, knowledge-graph impact, design-tree and drift tests | `docs/review-levers.md`, `scripts/mutation_check.py` | A code-health check (below) |
+| Monitoring against standards | Shipped: six eval suites, evidence packs, the opt-in `dubai-gov` profile (DESC ISR, NIST AI RMF, ISO 42001, UAE laws) | `contract/compliance/v1/`, `scripts/compliance_checks.py` | Trajectory approvals and CI (gap 9); EU AI Act Articles 50 and 19 (gap 8); a calibrated in-border judge |
+| Human in the loop | Shipped: HITL v1 in the portal and runtime | `agentsmith/`, `portal/` | One real round trip on owned hardware (Stage 2, step 17) |
+| Sovereign: own machines, local models | Shipped: Compose stack, Ollama route, sovereign template. Build side: the CI runner as a setting (PR after #113) | `docker-compose.yml`, `workflow-templates/` | The production proof on owned hardware (steps 15 to 17); the named coding agents still use vendor cloud models (said in the README) |
 
 ---
 
