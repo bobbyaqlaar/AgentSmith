@@ -11,14 +11,18 @@
 > install works for anyone", on the strength of a 200 and a checksum. Run from scratch, a stranger's first commit
 > was refused.
 
-## Current state (2026-11-07)
+## Current state (2026-11-11)
 
 **v4.0.1 is the latest release**, and `release.yml` runs the Quick Start on its published URL. The governance
 contracts C1–C9 are complete. **AgentSmith is public (AGPL-3.0)**; KYC Sentinel and Tenant B are
 private. KYC is on 4.0.0 with green CI, and Tenant B on 3.0.0 with red CI, on 69 ruff errors in its frozen core and
 two security controls awaiting its own content: do not use it as a showcase.
 
-**Unreleased on `main` (2026-11-09):** the opt-in `dubai-gov` compliance profile. A tenant cannot pin it until a release is cut.
+**Unreleased on `main`, for release 4.1.0 on Friday 13 November:** the opt-in `dubai-gov` compliance profile; gaps 1, 2, 7, 9 and 10; the tenant-upgrade test and its four sync fixes; fewer tokens on both sides, with each commit recording its agent and what it spent (gap 6); and the CI runner as a setting. A tenant cannot pin any of it until the release is cut.
+
+**The owner's principle (2026-11-10): sovereign first.** AgentSmith exists to let a team build and run AI apps on its own servers with local open-weight models. A production proof needs no cloud deployment and no closed-weight model. AgentSmith passing its own standards is a corollary, not the product.
+
+**The owner's decisions on the gaps (2026-11-10).** Gap 5: sign gate verdicts with a key the tenant holds. Gap 6: yes, record the agent on each commit (done). Gap 11: wait for real sessions and say so. Gaps 12 and 13: enforce in tenant apps, with every agent registered in the tenant's identity store and tied to a named human owner. Token use is a goal in its own right. The paper "AgentSmith: Salient Features and the Path to Full Enforcement" sets out how each will be enforced.
 
 ---
 
@@ -54,19 +58,21 @@ labelled preview.
 ### Stage 2: "the DevOps platform for AI-infused and agent apps"
 
 The claim needs evidence a preview does not: a real app, on real traffic, traced back to the design that shaped it.
-**Step 15's cutoff, Wednesday 4 November at noon, passed, so Stage 1 ships on the 7th and Stage 2 the following
-week.** Stage 1 does not depend on it.
+**Rewritten on 2026-11-11 for the owner's sovereign principle:** the proof runs on owned hardware, with no cloud and
+no closed-weight model. The earlier plan used KYC Sentinel's cloud staging (Cloud SQL, Gemini and OpenRouter keys).
 
 | # | Step | Who |
 |---|---|---|
-| 15 | Provide for KYC staging: Cloud SQL and Temporal (reuse or tear down what is billing in the GCP project), `GEMINI_API_KEY` and `OPENROUTER_API_KEY` set on its environment, a deployed portal and its Ops token | Owner |
-| 16 | KYC live on staging: the worker as a service, Phoenix and portal wired | Claude |
-| 17 | One real HITL round trip through the portal, and one production case promoted, with screenshots | Claude and owner |
+| 15 | Provide a machine or server for the local stack | Owner |
+| 16 | Stand it up: portal, Phoenix and Postgres from `docker-compose.yml`, plus Temporal and Ollama, with open-weight models for every role, the judge included; calibrate the local judge (Falcon 3) and set the eval thresholds against it | Claude |
+| 17 | One real HITL round trip through the portal, a run linked to its commit, shadow evals, and one production case promoted, with screenshots; then KYC Sentinel run on the same stack | Claude and owner |
 | 18 | ✅ **The accountability chain (gap 2):** a run carries its commit, so a production run links to its commit, design and approvals | Claude |
 | 19 | **A kill switch (gap 4):** an app or agent stopped from the portal, the gateway refusing its calls | Claude |
 | 20 | Publish the article, with the screenshots from step 17 | Owner |
 
-### KYC Sentinel "Running live": what it needs
+### KYC Sentinel "Running live": the earlier, cloud plan (superseded 2026-11-11)
+
+Kept for its lessons on judge quotas and Cloud Run; the live proof now runs on owned hardware (Stage 2, step 16).
 
 **Goal:** take the tenant from offline/smoke-job to serving real traffic, so
 the observability, HITL and promotion loops are exercised end-to-end rather
@@ -157,12 +163,8 @@ Each was checked absent from the code on 2026-11-03.
    definition. Small, and ahead of most. *First after launch.*
 4. **No kill switch off the profile.** On `dubai-gov` an app or run can be stopped from the portal or `agentsmith ops stop`, and the gateway refuses it; `compliance.require_running` does nothing for any other tenant. Listed "not covered" in `docs/agentic-42001-coverage.md` (F12, S10) for that case. `agentsmith mode off` meanwhile
    records a state nothing reads (below): give it this meaning. *Stage 2.*
-5. **Gate verdicts are not signed.** Release builds are attested (`release.yml`), and the profile's run records are chained and keyed, but a gate record is still a JSON file and a commit, which an auditor must take on trust. Microsoft's
-   toolkit signs an attestation per deployment; no AI-provenance predicate is settled in SLSA or in-toto, so there is room to
-   lead. **Fix:** an in-toto attestation of each gate verdict, signed keylessly in CI. *After launch.*
-6. **A record does not say who wrote the change, or who judged it.** `contract/record/v1` has no agent or model, and no gate
-   version, so a backfill judges old commits by today's rules. Attribution by `Co-authored-by` is known to be weak. **Fix:**
-   the IDE hook knows the agent: record it, and the gate's version. *After launch.*
+5. **Gate verdicts are not signed.** Release builds are attested (`release.yml`), and the profile's run records are chained and keyed, but a gate record is still a JSON file and a commit. **Owner's decision (2026-11-10):** a CI step signs each verdict as an in-toto statement with a key the tenant holds (its key store, or an on-site HSM through a self-hosted runner, reached by federated login); the portal and `agentsmith verify` check it with the public key. Not GitHub attestations (Enterprise-only on private repositories) and not Sigstore keyless (a public log). *After 4.1.0.*
+6. **Who judged a change is not recorded.** Which agent wrote it is: since 4.1.0 a commit made from Claude Code carries `Agent:` and `Agent-Tokens:`. Still open: the gate's version in `contract/record/v1`, so a backfill judges old commits by the rules of their day, and the agent shown in the portal. *After 4.1.0.*
 7. **GenAI names are optional beside `llm.*`.** Emitted since 4.1.0, pinned to a development commit of `open-telemetry/semantic-conventions-genai`. **Trigger:** upstream marks them stable, then a telemetry contract version 2 makes them required.
 8. **EU AI Act Article 50 and Article 19: part done.** Mapped in `docs/security-framework-map.md`, dates confirmed in
    Regulation (EU) 2026/1744. Every gateway completion now carries an Article 50(2) mark (`provenance`, `agentsmith/compliance.py`),
@@ -172,12 +174,9 @@ Each was checked absent from the code on 2026-11-03.
    reads the period. **Fix:** a declared retention period the gate reads. *After launch.*
 9. **Trajectory evals stop short of approvals and CI.** The `trajectory` suite grades a run's tool calls (order, required, forbidden, count). Still open: "approved before", which needs human decisions on spans, and a template CI job that runs the suite. **Trigger:** a tenant with a trajectory dataset.
 10. **Text laundered past `SEC-CIAGENT-001`.** The control reads workflows for attacker-controlled event text reaching a coding agent. It does not follow step outputs, files or scripts a workflow calls. **Trigger:** a report of one of those routes in use.
-11. **Edit-time enforcement on two of six IDEs.** Copilot, Codex and Gemini CLI now have hook and managed-policy surfaces.
-    Confirm each schema from a real session, then generate its config; Copilot first, for reach. *After launch.*
-12. **Agents have no identity of their own (ASI03).** Tenant and role on a span are labels. No per-agent credential, scope or
-    delegation chain. *After launch.*
-13. **Nothing contains code an agent runs (ASI05), and nothing secures messages between agents (ASI07).** Name the boundary
-    first: which of these AgentSmith enforces, and which it requires a tenant to declare. *After launch.*
+11. **Edit-time enforcement on two of six IDEs.** Copilot, Codex, Gemini CLI and Antigravity read the rule files and are stopped at commit and in CI. **Owner's decision (2026-11-10):** wait for real sessions to confirm each hook format, and say so in the documentation (done in 4.1.0). The token trailer waits for the same confirmation. **Trigger:** a real session of one of them.
+12. **Agents have no identity of their own (ASI03).** **Owner's decision (2026-11-10):** every agent is registered in the tenant's identity store as a workload identity tied to a named human owner, observable and explainable in production. To build: `agentsmith agents register` with an identity-store adapter (Keycloak first, for on-premises), short-lived tokens checked by the gateway and sidecar, delegation by token exchange, a CI control for undeclared agents, an Agents view in the portal, and suspension when the owner leaves. *After 4.1.0.*
+13. **Nothing contains code an agent runs (ASI05), and nothing secures messages between agents (ASI07).** **Owner's decision (2026-11-10):** AgentSmith enforces both in tenant apps. ASI05: code tools declared in the allowlist, run only in a throwaway sandbox with no network or secrets, refused otherwise, plus a CI control against running model output outside it. ASI07: messages in a signed envelope (sender, receiver, time, one-time number, body, trace context), checked at the receiver against the manifest's allowed pairs, then run through the prompt guard. *After 4.1.0.*
 14. **`SEC-AGENCY-001` reads a declaration off the profile.** On `dubai-gov`, `scripts/compliance_checks.py` checks each `needs_hitl` action reaches a real
     `run_with_hitl_gate(..., compliance=True)`. Elsewhere the row claimed the harness verified the gate was wired; it never did, and the
     row now says so. **Fix:** check each `needs_hitl` action against a real `run_with_hitl_gate` call. *After launch.*
@@ -196,6 +195,13 @@ Sources: [Gartner AI governance platforms](https://www.gartner.com/reviews/marke
 ---
 
 ## After Stage 2, in order
+
+**Use fewer tokens, the rest (owner, 2026-11-10).** Shipped in 4.1.0: per-commit agent token trailers, a context note, rule-file and session-start budgets, per-role caps, per-run token and tool-call limits, trajectory `max_tokens`, and tokens in the portal. Still open: an exact-match cache for deterministic calls and a prompt layout for local prefix caching; summarising long conversations; routing by difficulty to the smallest capable local model, gated by the evals; tokens per run and per agent aggregated in the portal; a token-regression check that re-runs the app rather than reading recorded traces.
+
+**A code-health check.** AI slop is held back by process (designs, reviews, mutation tests) and not measured. Add size, duplication and complexity budgets to tenant CI, with a breach failing the gate.
+
+**A test leaks state across files.** `scripts/test/test_compliance_checks.py` fails three tests when `scripts/test/test_vendoring_retired.py` runs first, and passes alone and in CI's alphabetical order. Found 2026-11-11. **Fix:** find what the vendoring tests leave behind (a mode or install state) and reset it in a fixture.
+
 
 **First-run friction.** All 14 pillars for a one-line change is the most likely reason a newcomer gives up. *Scope-derived
 pillar subset:* ask only the pillars a change's paths implicate, each still carrying evidence. Held until G4, which has
