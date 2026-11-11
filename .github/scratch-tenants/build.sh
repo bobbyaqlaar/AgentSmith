@@ -88,6 +88,16 @@ cp "$HERE/security-pack/"*.yaml .agent-rfc/security/
 if [ -n "$PROFILE" ]; then
   mkdir -p .agenticframework
   cp -R "$HERE/profiles/$PROFILE/agenticframework/." .agenticframework/
+  # A drill counts only if it was run, so never from the future (the 4.1.0 release
+  # review, R18): the fixture's drill is dated when the tenant is built.
+  for drill in .agenticframework/drills/*.json; do
+    [ -f "$drill" ] || continue
+    python3 -c 'import datetime, json, sys
+path = sys.argv[1]
+record = json.load(open(path, encoding="utf-8"))
+record["at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+open(path, "w", encoding="utf-8").write(json.dumps(record, indent=2) + "\n")' "$drill"
+  done
 fi
 find . -name __pycache__ -type d -not -path './node_modules/*' -prune -exec rm -rf {} +
 git add -A

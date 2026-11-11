@@ -15,6 +15,7 @@ scope:
   - scripts/test/test_compliance_port.py
   - workflow-templates/agentsmith-supply-chain.yml
   - .githooks/process-gate
+  - .github/scratch-tenants/**
 ---
 # The `dubai-gov` profile's checks and records hold
 
@@ -45,7 +46,7 @@ Each finding let a "verified", "recorded", "signed" or "enforced" statement read
 - **Temporal decisions.** `run_with_hitl_gate(compliance=True)` drops any decision held for the gate before asking, and waits only for one whose `payload_sha256` equals the digest of this request's input. The digest is computed in workflow code the same way as `compliance.payload_digest`; a test holds them equal.
 - **Expiry from the catalogue.** `latest_valid` takes the row's `recurrence_days`: a signature counts until `attested_at + recurrence_days`, or its own `expires_at` if earlier. A signature dated in the future does not count. The row's `expires_at` reports the effective date. The portal's checklist gets the same rule in `.agent-rfc/designs/portal-compliance-holds.md`.
 - **Arabic.** Only golden, hallucination, fairness and adversarial are read, by path. With none of the app's own, the check is `not_applicable` ("cannot be judged yet"), not `pass`; the evals job already refuses the ungraded suites, and a second red here would not add a fact (and would turn the `dubai-gov` scratch tenant red for a reason `expect-ungraded.sh` does not recognise).
-- **Image, drill, data class.** An image ships the declaration when it copies it and `.dockerignore` does not exclude it, or when the Dockerfile sets `ENV COMPLIANCE_PROFILE`. A drill dated more than five minutes ahead is ignored. The data-class message says which receivers it read.
+- **Image, drill, data class.** An image ships the declaration when it copies it and `.dockerignore` does not exclude it, or when the Dockerfile sets `ENV COMPLIANCE_PROFILE`. A drill dated more than five minutes ahead is ignored. The `dubai-gov` scratch tenant's fixture drill was dated 2099 to keep it passing; `build.sh` now dates it when the tenant is built, and the fixture holds 1970, so a build that skipped the stamp fails. The data-class message says which receivers it read.
 - **Leak and mark.** A system prompt of three to seven words is compared whole; under three is skipped as a common phrase. `verify_marking(require_signature=None)` requires a signature whenever a key is set.
 - **One list of kinds.** `compliance.FRAMEWORK_KINDS`; the sidecar's `RESERVED_KINDS` is it.
 - **Leaving a profile.** With `process-gates.json` enforcing a profile, a missing declaration fails both the launcher and the port, and `.agenticframework/compliance.json` joins the shell gate's protected paths.
