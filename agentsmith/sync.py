@@ -51,6 +51,10 @@ class Plan:
     stale: list[str] = field(default_factory=list)
     added: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    # Rule files the rules provider recognises as its own whole render (the
+    # generated header, or a skill's title line) — whose by the rules contract,
+    # whatever the manifest recorded (.agent-rfc/designs/sync-refreshes-rule-files.md).
+    generated: set[str] = field(default_factory=set)
 
 
 def _manifest(root: Path) -> dict:
@@ -144,6 +148,11 @@ def plan_sync(root: Path, *, tenant_id: Optional[str] = None, framework: Optiona
             if here.read_text(encoding="utf-8") != text:
                 plan.stale.append(rel)
             continue
+        if state == "theirs" and rel in plan.generated:
+            # A 4.0.1 `tenant init` wrote its rule files without recording them, so
+            # the manifest calls them the tenant's; their generated header says whose
+            # they are, and `rules check` already holds them to the render.
+            state = "ours"
         if state == "edited":
             plan.notes.append(f"{rel} was edited here since the framework wrote it — left alone. "
                               "Revert it and re-run to take the framework's version")
@@ -236,6 +245,8 @@ def _shared_files(plan: Plan) -> tuple[dict[str, str], set[str]]:
             shared[file.path] = port.place(existing, file)
             if file.placement == "block":
                 regions.add(file.path)
+            elif existing is not None:
+                plan.generated.add(file.path)
     except RulesUnavailable as exc:
         plan.notes.append(f"rule files not refreshed — nothing of them is written: {exc}")
 

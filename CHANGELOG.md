@@ -106,6 +106,7 @@ version table being consulted.
 - `agentsmith sync` keeps a new tenant's declared eval warnings and telemetry `emitter`, redraws the knowledge graph, and refuses to move a tenant to an older release. Before this, a tenant's first sync could turn its evals and `kg check` red.
 - `tenant adopt` draws the knowledge graph after its records, so an adopted repository's graph is current from its first commit.
 - Self-Test moves a tenant from the last release to each commit (`scripts/check_tenant_upgrade.sh`).
+- `agentsmith sync` refreshes the rule files a 4.0.1 `tenant init` wrote without recording them in `scaffold.json`. They carry the generated header, so `rules check` already held them to the render, while sync read them as the tenant's own and left them; a tenant made by 4.0.1 would have stayed on 4.0.1's rules and failed `rules check` after its first sync. A rule file recorded and then edited by the tenant is still left alone, with a note.
 
 - `agentsmith-supply-chain.yml` scans an app that has a `requirements.txt` with version ranges and no lock file, instead of stopping with "not pinned". Tenants take it with `agentsmith sync`.
 
