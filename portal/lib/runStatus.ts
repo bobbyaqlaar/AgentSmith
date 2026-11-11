@@ -137,12 +137,14 @@ export interface RecentRun {
   status: string;
   startedAt: string;
   appCommit: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
 }
 
 /** An app's latest runs, for the Ops page: each is one link in the chain back to its commit. */
 export async function listRecentRuns(tenantId: string, limit = 20): Promise<RecentRun[]> {
   const { rows } = await getPool().query(
-    `SELECT run_id, workflow_id, status, started_at, app_commit
+    `SELECT run_id, workflow_id, status, started_at, app_commit, input_tokens, output_tokens
        FROM agent_runs WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT $2`,
     [tenantId, limit]
   );
@@ -152,6 +154,8 @@ export async function listRecentRuns(tenantId: string, limit = 20): Promise<Rece
     status: r.status,
     startedAt: new Date(r.started_at).toISOString(),
     appCommit: r.app_commit,
+    inputTokens: r.input_tokens,
+    outputTokens: r.output_tokens,
   }));
 }
 

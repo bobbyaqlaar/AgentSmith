@@ -144,6 +144,7 @@ export default async function TenantDetailPage(props: { params: Promise<{ id: st
                   <th className="py-1 pr-4 font-medium">Status</th>
                   <th className="py-1 pr-4 font-medium">Started</th>
                   <th className="py-1 pr-4 font-medium">Workflow</th>
+                  <th className="py-1 pr-4 font-medium">Tokens in / out</th>
                   <th className="py-1 pr-4 font-medium">Commit</th>
                 </tr>
               </thead>
@@ -153,6 +154,13 @@ export default async function TenantDetailPage(props: { params: Promise<{ id: st
                     <td className="py-1 pr-4"><Badge tone={toneForRunStatus(run.status)}>{run.status}</Badge></td>
                     <td className="py-1 pr-4"><Timestamp value={run.startedAt} /></td>
                     <td className="py-1 pr-4 font-mono text-xs break-all">{run.workflowId ?? "—"}</td>
+                    <td className="py-1 pr-4 font-mono text-xs">
+                      {run.inputTokens === null || run.outputTokens === null ? (
+                        <span className="text-black/50 dark:text-white/50">not reported</span>
+                      ) : (
+                        `${run.inputTokens} / ${run.outputTokens}`
+                      )}
+                    </td>
                     <td className="py-1 pr-4">
                       {run.appCommit ? (
                         <Link

@@ -493,11 +493,14 @@ class TrajectoryExpect(BaseModel):
     must_call: list[str] = Field(default_factory=list)
     never: list[str] = Field(default_factory=list)
     max_calls: int | None = Field(default=None, ge=0)
+    # The run's tokens, from its model spans (.agent-rfc/designs/run-token-limits.md).
+    max_tokens: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def _a_rule(self) -> "TrajectoryExpect":
-        if not (self.in_order or self.must_call or self.never or self.max_calls is not None):
-            raise ValueError("expect states no rule: give in_order, must_call, never or max_calls")
+        if not (self.in_order or self.must_call or self.never or self.max_calls is not None
+                or self.max_tokens is not None):
+            raise ValueError("expect states no rule: give in_order, must_call, never, max_calls or max_tokens")
         return self
 
 
@@ -506,6 +509,8 @@ class TrajectoryCase(_Case):
 
     tools: list[str] | None = None
     trace: str | None = Field(default=None, min_length=1)
+    # With `tools`, the run's tokens as recorded; a trace carries its own.
+    tokens: int | None = Field(default=None, ge=0)
     expect: TrajectoryExpect
 
     @model_validator(mode="after")

@@ -152,8 +152,9 @@ def missed(written: dict, below: Optional[float], above: Optional[float], parity
 TRAJECTORY_PATH = ".agent-rfc/fixtures/trajectory_evals.json"
 
 
-def trajectory_problems(tools: list[str], expect: gm.TrajectoryExpect) -> list[str]:
-    """The rules this run broke; empty when it kept them all."""
+def trajectory_problems(tools: list[str], expect: gm.TrajectoryExpect, tokens: Optional[int] = None) -> list[str]:
+    """The rules this run broke; empty when it kept them all. `tokens` is the run's
+    total; the caller makes sure it is known when `max_tokens` is set."""
     problems = [f"called {name}, which it must never call" for name in expect.never if name in tools]
     problems += [f"never called {name}" for name in expect.must_call if name not in tools]
     position = 0
@@ -165,42 +166,64 @@ def trajectory_problems(tools: list[str], expect: gm.TrajectoryExpect) -> list[s
             break
     if expect.max_calls is not None and len(tools) > expect.max_calls:
         problems.append(f"made {len(tools)} tool calls, more than {expect.max_calls}")
+    if expect.max_tokens is not None and tokens is not None and tokens > expect.max_tokens:
+        problems.append(f"spent {tokens} tokens, more than {expect.max_tokens}")
     return problems
 
 
-def _trace_tools(root: Path, trace: str) -> tuple[Optional[list[str]], str]:
-    """The tool calls an OTLP/JSON export recorded, in start order; or why it cannot be read."""
+# A model span's tokens: OpenTelemetry's GenAI names first, then AgentSmith's own.
+_TOKEN_ATTRIBUTES = (("gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens"),
+                     ("llm.usage.input_tokens", "llm.usage.output_tokens"))
+
+
+def _value(attribute: dict) -> Any:
+    value = attribute.get("value") or {}
+    if "intValue" in value:  # OTLP/JSON writes 64-bit integers as strings
+        try:
+            return int(value["intValue"])
+        except (TypeError, ValueError):
+            return None
+    return value.get("stringValue")
+
+
+def _trace_tools(root: Path, trace: str) -> tuple[Optional[list[str]], str, int]:
+    """The tool calls an OTLP/JSON export recorded, in start order, and the tokens its
+    model spans reported; or why it cannot be read."""
     path = (root / trace).resolve()
     if not path.is_relative_to(root.resolve()):
-        return None, f"{trace} is outside the repository"
+        return None, f"{trace} is outside the repository", 0
     try:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        return None, f"{trace} cannot be read ({exc.__class__.__name__})"
+        return None, f"{trace} cannot be read ({exc.__class__.__name__})", 0
     try:  # one object, or one per line as a collector's file exporter writes them
         documents = [json.loads(text)]
     except ValueError:
         try:
             documents = [json.loads(line) for line in text.splitlines() if line.strip()]
         except ValueError:
-            return None, f"{trace} is not OTLP/JSON"
+            return None, f"{trace} is not OTLP/JSON", 0
     calls: list[tuple[int, str]] = []
-    spans = 0
+    spans = tokens = 0
     for document in documents:
         if not isinstance(document, dict):
-            return None, f"{trace} is not OTLP/JSON"
+            return None, f"{trace} is not OTLP/JSON", 0
         for resource in document.get("resourceSpans") or []:
             for scope in resource.get("scopeSpans") or []:
                 for span in scope.get("spans") or []:
                     spans += 1
-                    attributes = {a.get("key"): (a.get("value") or {}).get("stringValue")
-                                  for a in span.get("attributes") or [] if isinstance(a, dict)}
+                    attributes = {a.get("key"): _value(a) for a in span.get("attributes") or [] if isinstance(a, dict)}
                     name = attributes.get("gen_ai.tool.name") or attributes.get("agent.tool.name")
-                    if name:
+                    if isinstance(name, str) and name:
                         calls.append((int(span.get("startTimeUnixNano") or 0), name))
+                    for pair in _TOKEN_ATTRIBUTES:  # one name set per span, so none is counted twice
+                        counts = [attributes.get(key) for key in pair]
+                        if all(isinstance(count, int) for count in counts):
+                            tokens += sum(counts)
+                            break
     if spans == 0:
-        return None, f"{trace} holds no spans"
-    return [name for _start, name in sorted(calls, key=lambda call: call[0])], ""
+        return None, f"{trace} holds no spans", 0
+    return [name for _start, name in sorted(calls, key=lambda call: call[0])], "", tokens
 
 
 def judge_trajectory(root: Path, request: gm.EvalsRequest) -> gm.Scorecard:
@@ -212,11 +235,15 @@ def judge_trajectory(root: Path, request: gm.EvalsRequest) -> gm.Scorecard:
     unreadable, broken = [], []
     for raw in cases:
         case = gm.TrajectoryCase.model_validate(raw)
-        tools, problem = (case.tools, "") if case.tools is not None else _trace_tools(root, str(case.trace))
+        tools, problem, tokens = ((case.tools, "", case.tokens) if case.tools is not None
+                                  else _trace_tools(root, str(case.trace)))
         if tools is None:
             unreadable.append(f"{case.id}: {problem}")
             continue
-        problems = trajectory_problems(tools, case.expect)
+        if case.expect.max_tokens is not None and tokens is None:
+            unreadable.append(f"{case.id}: max_tokens is set but the case records no tokens")
+            continue
+        problems = trajectory_problems(tools, case.expect, tokens)
         if problems:
             broken.append(f"{case.id}: {problems[0]}")
     if unreadable:

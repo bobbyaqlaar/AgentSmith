@@ -674,7 +674,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-11-11T06:17:25Z",
+      "last_modified": "2026-11-11T06:18:21Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -839,6 +839,7 @@
         "dataset",
         "missed",
         "trajectory_problems",
+        "_value",
         "_trace_tools",
         "judge_trajectory",
         "judge",
@@ -846,7 +847,7 @@
         "main",
         "number"
       ],
-      "last_modified": "2026-11-11T06:17:24Z",
+      "last_modified": "2026-11-11T06:20:01Z",
       "id": "scripts/evals_port.py"
     },
     {
@@ -3879,7 +3880,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-11T06:17:24Z",
+      "last_modified": "2026-11-11T06:19:06Z",
       "id": "portal/test/opsIngestDb.test.ts"
     },
     {
@@ -4484,7 +4485,7 @@
         "getFrameworkVersionByTenant",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-11-11T06:17:24Z",
+      "last_modified": "2026-11-11T06:18:46Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -4696,7 +4697,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-11-11T06:17:24Z",
+      "last_modified": "2026-11-11T06:18:46Z",
       "id": "portal/app/ops/apps/[id]/page.tsx"
     },
     {
@@ -10309,9 +10310,14 @@
         "test_calls_are_read_from_a_trace_in_start_order",
         "test_a_trace_written_one_object_per_line_is_read",
         "test_a_trace_that_cannot_be_read_is_not_gradable",
-        "test_the_cli_and_the_hook_accept_the_suite"
+        "test_the_cli_and_the_hook_accept_the_suite",
+        "_model_span",
+        "test_a_run_over_its_token_budget_fails_read_from_its_model_spans",
+        "test_a_span_with_both_name_sets_is_counted_once",
+        "test_recorded_tokens_count_for_a_named_trajectory",
+        "test_a_token_budget_with_no_tokens_recorded_is_not_gradable"
       ],
-      "last_modified": "2026-11-11T06:17:24Z",
+      "last_modified": "2026-11-11T06:19:06Z",
       "id": "scripts/test/test_trajectory_evals.py"
     },
     {

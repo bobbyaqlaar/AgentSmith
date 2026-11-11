@@ -88,6 +88,8 @@ version table being consulted.
 
 ## [Unreleased]
 
+- Trajectory evals gain `max_tokens`: a run's tokens are read from its trace's model spans (or a case's recorded `tokens`), so CI fails a recorded run that spent more than its budget. The portal's Recent runs list shows each call's tokens in and out.
+
 - A sixth evals suite, `trajectory`: each case gives one run's tool calls, named or read from an OTLP/JSON trace, and the rules they must keep (`in_order`, `must_call`, `never`, `max_calls`). Graded from the calls without a model, so it gives a verdict even with no judge. Run it with `process-gate evals run --suite trajectory`.
 
 - Evidence packs grade the OWASP Top 10 for Agentic Applications: controls carry an `owasp_agentic` tag where `docs/security-framework-map.md` says they cover an entry at least in part, and `owasp_agentic_top10.md` lists all ten, including the four no control covers. Additive in the registry schema.
