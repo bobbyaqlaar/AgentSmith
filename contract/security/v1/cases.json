@@ -43,6 +43,38 @@
       "why": "an outsider writes the title, and so the agent's instructions"
     },
     {
+      "name": "an author guard that an || undoes does not count",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".github/workflows/review.yml": "on: issue_comment\njobs:\n  review:\n    runs-on: ubuntu-latest\n    if: ${{ contains(github.event.comment.body, '@claude') || github.event.comment.author_association == 'MEMBER' }}\n    steps:\n      - uses: anthropics/claude-code-action@v1\n        with:\n          prompt: \"${{ github.event.comment.body }}\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CIAGENT-001": "fail"
+        }
+      },
+      "why": "the step runs for anyone who mentions the agent, whatever their association"
+    },
+    {
+      "name": "an author guard that a negation turns round does not count",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".github/workflows/review.yml": "on: issue_comment\njobs:\n  review:\n    runs-on: ubuntu-latest\n    if: ${{ !contains(fromJSON('[\"OWNER\",\"MEMBER\"]'), github.event.comment.author_association) }}\n    steps:\n      - uses: anthropics/claude-code-action@v1\n        with:\n          prompt: \"${{ github.event.comment.body }}\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CIAGENT-001": "fail"
+        }
+      },
+      "why": "the step runs only for outsiders"
+    },
+    {
       "name": "a template risk entry fails",
       "verb": "check",
       "request": {},

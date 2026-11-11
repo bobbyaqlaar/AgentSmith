@@ -28,10 +28,12 @@ _UNTRUSTED = re.compile(
     r"github\.event\.(?:(?:issue|pull_request|discussion)\.(?:title|body)"
     r"|(?:comment|review|review_comment)\.body"
     r"|pages\.[^.\s]+\.page_name"
+    r"|workflow_run\.display_title|release\.(?:name|body)|label\.name"
+    r"|(?:issue|pull_request|discussion)\.labels\.[^.\s]+\.name"
     r"|(?:commits\.[^.\s]+|head_commit|workflow_run\.head_commit)\.(?:message|author\.(?:email|name))"
     r"|pull_request\.head\.(?:ref|label|repo\.default_branch)"
     r"|workflow_run\.head_branch)\b"
-    r"|github\.head_ref\b|tojson\(\s*github\.event\b", re.I)
+    r"|github\.head_ref\b|tojson\(\s*github(?:\.event)?\s*[).]", re.I)
 _AUTHORED = ("issue", "pull_request", "discussion", "comment", "review", "review_comment")
 _TRUSTED_ROLES = ("OWNER", "MEMBER", "COLLABORATOR")
 
@@ -84,6 +86,13 @@ def _uses_variable(text: str, name: str) -> bool:
     return re.search(rf"\$\{{?{escaped}\b|\$\{{\{{\s*env\.{escaped}\b", text) is not None
 
 
+def _restricts(condition: str) -> bool:
+    """A condition can only restrict when every part of it must hold: an `||` lets
+    another branch run the step for anyone, and a `!` can turn the test round (the
+    4.1.0 release review, R9). Refusing both is stricter than needed, and is a floor."""
+    return "||" not in condition and re.search(r"!(?!=)", condition) is None
+
+
 def _guarded(field: str, conditions: list[str]) -> bool:
     """Is this field's own author restricted to people who already hold the repository?
     Only an authored title or body: a branch name or commit message has no such author."""
@@ -92,7 +101,8 @@ def _guarded(field: str, conditions: list[str]) -> bool:
         return False
     wanted = f"github.event.{parts[2]}.author_association"
     for condition in conditions:
-        if wanted in condition.lower() and "!=" not in condition and any(role in condition for role in _TRUSTED_ROLES):
+        if (wanted in condition.lower() and "!=" not in condition and _restricts(condition)
+                and any(role in condition for role in _TRUSTED_ROLES)):
             return True
     return False
 
@@ -105,8 +115,9 @@ def _step_problems(step: dict, inherited: tuple[Any, ...], conditions: list[str]
     fields = [field for text in given for field in _untrusted_fields(text)]
     tainted = _tainted(*inherited, step.get("env"))
     for name, values in tainted.items():
-        # An action receives its own step's environment whether or not it names it.
-        if any(_uses_variable(text, name) for text in given) or (step.get("uses") and name in (step.get("env") or {})):
+        # An action receives the whole environment, its step's, its job's and its
+        # workflow's, whether or not it names a variable (R10).
+        if any(_uses_variable(text, name) for text in given) or step.get("uses"):
             fields += values
     problems = [field for field in dict.fromkeys(fields) if not _guarded(field, conditions)]
     if "GITHUB_EVENT_PATH" in run:

@@ -2813,7 +2813,7 @@
         "test_agentsmith_passes_the_security_contract",
         "broken"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:10:29Z",
       "id": "scripts/test/test_security_contract.py"
     },
     {
@@ -10409,9 +10409,13 @@
         "test_a_restriction_that_does_not_hold_does_not_count",
         "test_a_restriction_never_excuses_a_branch_name",
         "test_a_workflow_that_does_not_parse_fails",
-        "test_the_failure_says_what_to_do"
+        "test_the_failure_says_what_to_do",
+        "test_a_guard_that_an_or_or_a_negation_undoes_does_not_count",
+        "test_a_guard_joined_by_and_still_counts",
+        "test_more_fields_an_outsider_writes_fail",
+        "test_an_action_receives_inherited_environment"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:07:51Z",
       "id": "scripts/test/test_agent_workflow_injection.py"
     },
     {
@@ -10442,12 +10446,13 @@
         "_is_agent",
         "_tainted",
         "_uses_variable",
+        "_restricts",
         "_guarded",
         "_step_problems",
         "_workflow_problems",
         "run"
       ],
-      "last_modified": "2026-11-11T16:50:56Z",
+      "last_modified": "2026-11-11T17:11:27Z",
       "id": "scripts/security/runners/agent_workflow.py"
     },
     {
@@ -10572,6 +10577,22 @@
       "pillar": null,
       "created_at": "2026-11-11T09:42:15Z",
       "id": "rfc:reviews/sync-refreshes-rule-files.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "SEC-CIAGENT-001 accepts only a guard that restricts, and reads more of what an outsider writes",
+      "source_file": ".agent-rfc/designs/ciagent-guard-holds.md",
+      "pillar": null,
+      "created_at": "2026-11-11T17:11:59Z",
+      "id": "rfc:designs/ciagent-guard-holds.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: ciagent-guard-holds",
+      "source_file": ".agent-rfc/reviews/ciagent-guard-holds.md",
+      "pillar": null,
+      "created_at": "2026-11-11T17:12:00Z",
+      "id": "rfc:reviews/ciagent-guard-holds.md"
     }
   ],
   "edges": [
