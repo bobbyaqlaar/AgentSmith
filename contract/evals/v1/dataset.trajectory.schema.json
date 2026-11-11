@@ -44,6 +44,19 @@
           ],
           "default": null,
           "title": "Max Calls"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tokens"
         }
       },
       "title": "TrajectoryExpect",
@@ -84,6 +97,19 @@
           ],
           "default": null,
           "title": "Trace"
+        },
+        "tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tokens"
         },
         "expect": {
           "$ref": "#/$defs/TrajectoryExpect"

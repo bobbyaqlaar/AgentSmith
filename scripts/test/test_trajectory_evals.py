@@ -118,3 +118,36 @@ def test_the_cli_and_the_hook_accept_the_suite():
     assert "|rag_poison|trajectory) ;;" in hook
     cli = (REPO / "agentsmith" / "cli.py").read_text(encoding="utf-8")
     assert '"rag_poison", "trajectory"' in cli
+
+
+# ── Tokens per run (.agent-rfc/designs/run-token-limits.md) ──────────────────
+def _model_span(start: int, tokens_in: int, tokens_out: int, names: str = "gen_ai") -> dict:
+    keys = (("gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens") if names == "gen_ai"
+            else ("llm.usage.input_tokens", "llm.usage.output_tokens"))
+    return {"name": "llm.call", "startTimeUnixNano": str(start), "attributes": [
+        {"key": keys[0], "value": {"intValue": str(tokens_in)}},
+        {"key": keys[1], "value": {"intValue": str(tokens_out)}}]}
+
+
+def test_a_run_over_its_token_budget_fails_read_from_its_model_spans(tmp_path):
+    trace = _otlp(_model_span(1, 300, 100), _span("lookup", 2), _model_span(3, 500, 200, names="llm"))
+    case = {"id": "t", "trace": "run.json", "expect": {"max_tokens": 1000}}
+    card = _run(tmp_path, [case], {"run.json": json.dumps(trace)})
+    assert card.verdict == "fail" and "spent 1100 tokens, more than 1000" in card.reason
+
+
+def test_a_span_with_both_name_sets_is_counted_once(tmp_path):
+    span = _model_span(1, 300, 100)
+    span["attributes"] += _model_span(1, 300, 100, names="llm")["attributes"]
+    case = {"id": "t", "trace": "run.json", "expect": {"max_tokens": 400}}
+    assert _run(tmp_path, [case], {"run.json": json.dumps(_otlp(span))}).verdict == "pass"
+
+
+def test_recorded_tokens_count_for_a_named_trajectory(tmp_path):
+    case = {"id": "t", "tools": ["lookup"], "tokens": 900, "expect": {"max_tokens": 800}}
+    assert _run(tmp_path, [case]).verdict == "fail"
+
+
+def test_a_token_budget_with_no_tokens_recorded_is_not_gradable(tmp_path):
+    card = _run(tmp_path, [{"id": "t", "tools": ["lookup"], "expect": {"max_tokens": 800}}])
+    assert card.verdict == "not_gradable" and "records no tokens" in card.reason

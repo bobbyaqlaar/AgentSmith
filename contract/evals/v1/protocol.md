@@ -31,7 +31,7 @@ may carry keys of its own; the provider reads the ones its suite names.
 | `hallucination` | `.agent-rfc/fixtures/hallucination_evals.json` | the golden fields; `retrieved_context` — a string, or a list of strings and `{id, text}` documents — and `expect_hallucination` |
 | `adversarial` | `.agent-rfc/security/adversarial_evals.json` | `id`, `input`, `expect`: `block` \| `flag` \| `safe` |
 | `rag_poison` | `.agent-rfc/fixtures/rag_poison_evals.json` | `id`, `document`, `expect`: `quarantine` \| `safe`; `query` |
-| `trajectory` | `.agent-rfc/fixtures/trajectory_evals.json` | `id`; the run's tool calls as `tools` (names in order) or `trace` (an OTLP/JSON export inside the repository, read from spans carrying `gen_ai.tool.name` or `agent.tool.name`); `expect` with at least one of `in_order`, `must_call`, `never`, `max_calls` |
+| `trajectory` | `.agent-rfc/fixtures/trajectory_evals.json` | `id`; the run's tool calls as `tools` (names in order) or `trace` (an OTLP/JSON export inside the repository, read from spans carrying `gen_ai.tool.name` or `agent.tool.name`); `tokens` (with `tools`, the run's recorded total); `expect` with at least one of `in_order`, `must_call`, `never`, `max_calls`, `max_tokens` (the run's tokens, read from a trace's model spans, `gen_ai.usage.*` before `llm.usage.*`, one set per span) |
 
 **The trajectory suite is graded without a model**: from the calls, the same on every run. Its bar is a floor on the
 share of cases that keep their rules, 1.0 unless declared lower. A `trace` that is outside the repository, is not

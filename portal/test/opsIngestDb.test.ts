@@ -171,6 +171,18 @@ await test("a run names its commit, and a report without one does not blank it",
   assert.equal(recent.find((r) => r.runId === id)?.appCommit, COMMIT);
 });
 
+await test("a run's tokens are listed, and a run that reported none says so", async () => {
+  const counted = `run-tokens-${RUN}`;
+  assert.equal((await handleOpsIngest(bearer(opsA), run(counted, { input_tokens: 120, output_tokens: 45 }))).status, 200);
+  const uncounted = `run-notokens-${RUN}`;
+  assert.equal((await handleOpsIngest(bearer(opsA), run(uncounted))).status, 200);
+  const recent = await listRecentRuns(APP_A);
+  const withTokens = recent.find((r) => r.runId === counted);
+  assert.equal(withTokens?.inputTokens, 120);
+  assert.equal(withTokens?.outputTokens, 45);
+  assert.equal(recent.find((r) => r.runId === uncounted)?.inputTokens, null);
+});
+
 await test("a run with no commit is stored as none, not as a commit", async () => {
   const id = `run-nocommit-${RUN}`;
   assert.equal((await handleOpsIngest(bearer(opsA), run(id))).status, 200);
