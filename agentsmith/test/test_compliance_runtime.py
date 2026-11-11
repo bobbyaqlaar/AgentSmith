@@ -740,3 +740,11 @@ def test_purge_apply_asks_a_person_first(profile, monkeypatch, answer, deleted):
     code = cli._cmd_ops_compliance(args)
     assert (True in calls) is deleted
     assert code == (0 if deleted else answer)
+
+
+@pytest.mark.parametrize("who", ["fatima", "EMP 1042@x"])
+def test_the_sidecar_refuses_a_requester_that_is_not_an_email(sidecar, who):
+    """R29, the sidecar's half: the portal compares the requester with a sign-in email."""
+    ask = {"gate_id": "g", "workflow_id": "w", "action": "issue", "input": {}, "requested_by": who}
+    reply = _call(sidecar, "/v1/gate/request", ask)
+    assert reply.status_code == 400 and "sign-in email" in reply.text

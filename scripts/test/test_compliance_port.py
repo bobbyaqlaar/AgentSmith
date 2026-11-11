@@ -251,3 +251,30 @@ def test_an_enforced_profile_without_its_declaration_fails(tmp_path: Path) -> No
 
 def test_the_shell_gate_protects_the_declaration() -> None:
     assert gate_shell._protects(".agenticframework/compliance.json")
+
+
+# ── The 4.1.0 release review: R23 ──
+
+
+@pytest.mark.parametrize("cited, verdict", [
+    ("agentsmith/test/test_compliance_runtime.py", "pass"),
+    ("portal/test/signInPolicy.test.ts", "pass"),
+    ("portal/app/api/audit/export/route.ts", "fail"),
+    ("portal/test/recordCases.ts", "fail"),
+])
+def test_a_release_row_passes_only_on_a_test_ci_runs(tmp_path: Path, cited, verdict) -> None:
+    """R23: a file that existed read as "tested in AgentSmith's own CI"."""
+    found = cp._judge_mechanism(tmp_path, _mech("OB-X", f"release:{cited}", layer="provider"), {}, {}, "", {},
+                                own=True)
+    assert found[0] == verdict, found
+
+
+def test_a_portal_test_no_script_runs_is_not_evidence(tmp_path: Path, monkeypatch) -> None:
+    portal = tmp_path / "portal"
+    (portal / "test").mkdir(parents=True)
+    (portal / "test" / "lonely.test.ts").write_text("")
+    (portal / "package.json").write_text(json.dumps({"scripts": {"test": "node test/other.test.ts"}}))
+    monkeypatch.setattr(cp, "FRAMEWORK", tmp_path)
+    found = cp._judge_mechanism(tmp_path, _mech("OB-X", "release:portal/test/lonely.test.ts", layer="provider"),
+                                {}, {}, "", {}, own=True)
+    assert found == ("fail", "portal/test/lonely.test.ts is in neither `npm test` nor `npm run test:db`, so CI never runs it")

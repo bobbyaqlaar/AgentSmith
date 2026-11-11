@@ -97,6 +97,9 @@ def _record(tenant: str, body: dict[str, Any]) -> dict[str, Any]:
 def _gate_request(tenant: str, body: dict[str, Any]) -> dict[str, Any]:
     workflow_id, gate_id = _text(body, "workflow_id"), _text(body, "gate_id")
     action, requested_by = _text(body, "action"), _text(body, "requested_by")
+    if "@" not in requested_by.strip() or any(ch.isspace() for ch in requested_by.strip()):
+        # The portal compares it with the reviewer's sign-in email (the 4.1.0 release review, R29).
+        raise BadRequest("requested_by must be the requester's sign-in email")
     compliance.require_running(tenant, workflow_id)
     record_id = compliance.record(
         tenant,

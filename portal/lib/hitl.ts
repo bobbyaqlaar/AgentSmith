@@ -42,11 +42,14 @@ function toPending(row: Record<string, unknown>): PendingGate {
   };
 }
 
-const PENDING = `SELECT r.* FROM compliance_records r
+// A timeout hides only the requests made before it: a gate asked again after one
+// timed out is a new request, and reaches the queue (the 4.1.0 release review, R21).
+export const PENDING = `SELECT r.* FROM compliance_records r
   WHERE r.record_kind = 'hitl_pending' AND NOT EXISTS (
     SELECT 1 FROM hitl_decisions d WHERE d.tenant_id = r.tenant_id AND d.record_id = r.record_id)
   AND NOT EXISTS (
     SELECT 1 FROM compliance_records t WHERE t.tenant_id = r.tenant_id AND t.record_kind = 'hitl_timeout'
+      AND t.record_id > r.record_id
       AND t.payload->>'workflow_id' = r.payload->>'workflow_id' AND t.payload->>'gate_id' = r.payload->>'gate_id')`;
 
 export async function listPending(tenantIds: string[]): Promise<PendingGate[]> {
