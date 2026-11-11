@@ -7,7 +7,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/instrumentation.node.ts"
     },
     {
@@ -19,7 +19,7 @@
         "resourceAttributes",
         "PortalIdentityProcessor"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/spanIdentity.ts"
     },
     {
@@ -35,14 +35,14 @@
         "currentTraceId",
         "resolveTracesEndpoint"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/tracing.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/tailwind.config.ts"
     },
     {
@@ -52,7 +52,7 @@
         "config",
         "proxy"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/proxy.ts"
     },
     {
@@ -64,7 +64,7 @@
         "AuditEventWithVerification",
         "listAuditEvents"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/auditLog.ts"
     },
     {
@@ -102,7 +102,7 @@
         "encodeActorHeader",
         "decodeActorHeader"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/lib/authz.ts"
     },
     {
@@ -111,7 +111,7 @@
       "symbols": [
         "constantTimeEquals"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/constantTime.ts"
     },
     {
@@ -128,7 +128,7 @@
         "verifySessionToken",
         "secureCookies"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/sessionToken.ts"
     },
     {
@@ -142,7 +142,7 @@
         "recordFailure",
         "clearFailures"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/lib/signInPolicy.ts"
     },
     {
@@ -156,7 +156,7 @@
         "interpretStatusResponse",
         "checkSessionRevocation"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/ssoRevocationMode.ts"
     },
     {
@@ -165,7 +165,7 @@
       "symbols": [
         "register"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/instrumentation.ts"
     },
     {
@@ -179,14 +179,14 @@
         "_validator_node",
         "run_pipeline"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/local_agent_stack.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/__init__.py"
     },
     {
@@ -200,7 +200,7 @@
         "_annotate_shadow_result",
         "run_shadow_eval"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/shadow-eval.py"
     },
     {
@@ -212,7 +212,7 @@
         "measure_ttft_ms",
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/verify_ttft.py"
     },
     {
@@ -225,7 +225,7 @@
         "_fetch_span",
         "sync"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/sync-ui-feedback.py"
     },
     {
@@ -247,7 +247,7 @@
         "impacted_files",
         "stats"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/local_knowledge_graph.py"
     },
     {
@@ -284,7 +284,7 @@
         "_write_results",
         "is_model_gone"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/run-evals.py"
     },
     {
@@ -297,7 +297,7 @@
         "_resolve_exit",
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/run-security-checks.py"
     },
     {
@@ -310,7 +310,7 @@
         "_load_json",
         "_save_json"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/promote-learning.py"
     },
     {
@@ -331,7 +331,7 @@
         "resolve_hitl",
         "unresolved_issues"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/agent_logger.py"
     },
     {
@@ -374,7 +374,7 @@
         "main",
         "counts"
       ],
-      "last_modified": "2026-11-23T00:03:35Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/agent_tokens.py"
     },
     {
@@ -385,7 +385,7 @@
         "_lines",
         "check"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/gate_guardrails.py"
     },
     {
@@ -428,7 +428,7 @@
         "read",
         "resolve"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/gate_pillars.py"
     },
     {
@@ -452,7 +452,7 @@
         "main",
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/rules_port.py"
     },
     {
@@ -468,7 +468,7 @@
         "_post",
         "_dispatch"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/notifier.py"
     },
     {
@@ -487,7 +487,7 @@
         "_answer",
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security_port.py"
     },
     {
@@ -502,7 +502,7 @@
         "staged_graph",
         "render_impact"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/gate_kg.py"
     },
     {
@@ -514,7 +514,7 @@
         "vouched",
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/vouched_files.py"
     },
     {
@@ -523,7 +523,7 @@
       "symbols": [
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/verify_judge_route.py"
     },
     {
@@ -535,7 +535,7 @@
         "tenant_yaml_path",
         "check_tenant_against_policy"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/delivery_model.py"
     },
     {
@@ -549,7 +549,7 @@
         "record_gates_run",
         "last_gates_run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/gate_history.py"
     },
     {
@@ -585,7 +585,7 @@
         "enabled",
         "wait"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -602,6 +602,7 @@
         "_not_run_by_ci",
         "_judge_mechanism",
         "evaluate",
+        "provider_evidence",
         "repo_records",
         "exchange",
         "all_records",
@@ -612,7 +613,7 @@
         "main",
         "live"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:57Z",
       "id": "scripts/compliance_port.py"
     },
     {
@@ -638,7 +639,7 @@
         "export",
         "shutdown"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/gate_tracing.py"
     },
     {
@@ -651,7 +652,7 @@
         "_notify_offline",
         "_notify_recovery"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/network_watchdog.py"
     },
     {
@@ -669,7 +670,7 @@
         "reset_monthly",
         "__init__"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/circuit_breaker.py"
     },
     {
@@ -695,7 +696,7 @@
         "write_evidence_pack",
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/delivery_evidence.py"
     },
     {
@@ -787,7 +788,7 @@
         "merged",
         "pillar_ids"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/gate_models.py"
     },
     {
@@ -814,7 +815,7 @@
         "__init__",
         "__repr__"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/cost_router.py"
     },
     {
@@ -837,7 +838,7 @@
         "render_table",
         "swap"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/gate_steps.py"
     },
     {
@@ -852,7 +853,7 @@
         "send",
         "redirect_request"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/send_dev_record.py"
     },
     {
@@ -880,7 +881,7 @@
         "_command",
         "render_config"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/gate_ides.py"
     },
     {
@@ -894,7 +895,7 @@
         "_generate_local_hf",
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/verify_sovereign_endpoint.py"
     },
     {
@@ -905,7 +906,7 @@
         "find_violations",
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/check_bare_except.py"
     },
     {
@@ -939,7 +940,7 @@
         "main",
         "_check_drift"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/generate-ide-config.py"
     },
     {
@@ -960,7 +961,7 @@
         "main",
         "number"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-12T17:02:30Z",
       "id": "scripts/evals_port.py"
     },
     {
@@ -980,7 +981,7 @@
         "_resolve_local_import",
         "run_map"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/map_codebase.py"
     },
     {
@@ -1012,7 +1013,7 @@
         "_ships_declaration",
         "declaration_deployed"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/compliance_checks.py"
     },
     {
@@ -1034,7 +1035,7 @@
         "build_graph",
         "run_pipeline"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/multi_agent_system.py"
     },
     {
@@ -1046,7 +1047,7 @@
         "python_license",
         "render"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/third_party_notices.py"
     },
     {
@@ -1080,7 +1081,7 @@
         "refuse",
         "_restore"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/mutation_check.py"
     },
     {
@@ -1184,7 +1185,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-11-22T23:41:35Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -1198,7 +1199,7 @@
         "criteria_digest",
         "judge_case"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/eval_judge.py"
     },
     {
@@ -1229,7 +1230,7 @@
         "_repo",
         "_commit"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -1247,7 +1248,7 @@
         "_git_refusal",
         "refusal"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/gate_shell.py"
     },
     {
@@ -1260,7 +1261,7 @@
         "_extract_json_text",
         "parse_llm_json"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/structured_output.py"
     },
     {
@@ -1285,7 +1286,7 @@
         "_changed",
         "commit_command"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/sync.py"
     },
     {
@@ -1306,7 +1307,7 @@
         "__exit__",
         "__getattr__"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/pg_pool.py"
     },
     {
@@ -1327,7 +1328,7 @@
         "redirect_request",
         "consume"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/intake.py"
     },
     {
@@ -1340,7 +1341,7 @@
         "_start_temporal_worker",
         "_start_celery_worker"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/worker.py"
     },
     {
@@ -1357,7 +1358,7 @@
         "configure_metrics",
         "_reset_cache"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/metrics.py"
     },
     {
@@ -1387,7 +1388,7 @@
         "start_as_current_span",
         "on_start"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/tracing.py"
     },
     {
@@ -1398,7 +1399,7 @@
         "propose_corrected_payload",
         "run_self_correction_loop"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/self_correction.py"
     },
     {
@@ -1414,7 +1415,7 @@
         "scrub_messages",
         "_claim"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/input_guardrail.py"
     },
     {
@@ -1439,7 +1440,7 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/runtime_server.py"
     },
     {
@@ -1463,7 +1464,7 @@
         "resolve_choice",
         "resolve"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/config.py"
     },
     {
@@ -1479,7 +1480,7 @@
         "warn_if_declared_version_differs",
         "_reset_cache"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/version.py"
     },
     {
@@ -1490,7 +1491,7 @@
         "temporal_address",
         "connect"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/temporal_client.py"
     },
     {
@@ -1502,7 +1503,7 @@
         "metric_exporter",
         "_exporter"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/otlp.py"
     },
     {
@@ -1556,7 +1557,7 @@
         "purge",
         "stop"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "agentsmith/compliance.py"
     },
     {
@@ -1581,7 +1582,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "agentsmith/vector_store.py"
     },
     {
@@ -1618,7 +1619,7 @@
         "_key",
         "_run"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "agentsmith/token_limits.py"
     },
     {
@@ -1637,7 +1638,7 @@
         "purge_expired",
         "_connect"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/idempotency.py"
     },
     {
@@ -1658,7 +1659,7 @@
         "apply_output_moderation",
         "__init__"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/moderation.py"
     },
     {
@@ -1677,7 +1678,7 @@
         "_signal",
         "_connect"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/replay_webhook_server.py"
     },
     {
@@ -1686,7 +1687,7 @@
       "symbols": [
         "security_artefact_path"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/security_paths.py"
     },
     {
@@ -1713,7 +1714,7 @@
         "invoke",
         "decorator"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/tool_registry.py"
     },
     {
@@ -1747,7 +1748,7 @@
         "_truncate",
         "configured"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/trace_redactor.py"
     },
     {
@@ -1784,7 +1785,7 @@
         "fate",
         "put"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/adopt.py"
     },
     {
@@ -1804,7 +1805,7 @@
         "_not_the_invalid_trace",
         "_no_secret"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/ops_contract.py"
     },
     {
@@ -1820,7 +1821,7 @@
         "parity_violation",
         "pair_score_spread"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/judging.py"
     },
     {
@@ -1845,7 +1846,7 @@
         "verify",
         "ask"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "agentsmith/mcp_pin.py"
     },
     {
@@ -1909,7 +1910,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "agentsmith/llm_gateway.py"
     },
     {
@@ -1933,7 +1934,7 @@
         "__init__",
         "blocked"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/prompt_guard.py"
     },
     {
@@ -1951,7 +1952,7 @@
         "_one",
         "_load"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/embeddings.py"
     },
     {
@@ -2030,7 +2031,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "agentsmith/cli.py"
     },
     {
@@ -2044,7 +2045,7 @@
         "current_identity",
         "current_tenant_id"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/tenancy.py"
     },
     {
@@ -2069,7 +2070,7 @@
         "render_scaffold_design",
         "session_start_line"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/architectures.py"
     },
     {
@@ -2081,7 +2082,7 @@
         "system_fingerprint",
         "prompt_attributes"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/prompt_identity.py"
     },
     {
@@ -2093,7 +2094,7 @@
         "warn_once",
         "warn_degraded_default"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/environment.py"
     },
     {
@@ -2196,7 +2197,7 @@
         "do_GET",
         "_answer"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/conformance.py"
     },
     {
@@ -2238,7 +2239,7 @@
         "log_message",
         "do_POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/telemetry_contract.py"
     },
     {
@@ -2247,7 +2248,7 @@
       "symbols": [
         "luhn_valid"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/luhn.py"
     },
     {
@@ -2271,7 +2272,7 @@
         "degrade_tiers",
         "__getattr__"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/testing.py"
     },
     {
@@ -2280,7 +2281,7 @@
       "symbols": [
         "ascii_digits"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/pii_patterns.py"
     },
     {
@@ -2304,7 +2305,7 @@
         "_release_claim",
         "discard"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/dead_letter.py"
     },
     {
@@ -2315,7 +2316,7 @@
         "handler",
         "_signal"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/temporal_replay.py"
     },
     {
@@ -2347,7 +2348,7 @@
         "parse_cloud_response",
         "_get_access_token"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/provider_dispatch.py"
     },
     {
@@ -2367,7 +2368,7 @@
         "_evict",
         "_message_tokens"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/conversation_memory.py"
     },
     {
@@ -2387,7 +2388,7 @@
         "test_every_vector_alias_still_resolves",
         "test_the_defaults_themselves_are_unchanged"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_degraded_defaults.py"
     },
     {
@@ -2399,7 +2400,7 @@
         "test_a_per_role_override_still_wins",
         "test_an_override_that_is_unset_falls_back_rather_than_going_dark"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_gateway_provider_catalog.py"
     },
     {
@@ -2418,7 +2419,7 @@
         "test_every_cloud_anthropic_route_sends_temperature",
         "test_a_temperature_above_the_anthropic_maximum_is_clamped_loudly"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_provider_usage_reporting.py"
     },
     {
@@ -2439,7 +2440,7 @@
         "test_anthropic_empty_content_block_parses_to_empty_string",
         "test_pii_detection_tolerates_none"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_registry_shapes.py"
     },
     {
@@ -2456,7 +2457,7 @@
         "test_absent_facts_are_absent_keys",
         "test_the_gateway_puts_the_digest_on_the_span"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_prompt_identity.py"
     },
     {
@@ -2468,7 +2469,7 @@
         "test_guard_and_redactor_share_one_implementation",
         "test_guard_and_redactor_agree_end_to_end"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_luhn_parity.py"
     },
     {
@@ -2493,7 +2494,7 @@
         "fake_post",
         "fake_post_401"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_llm_gateway_budget.py"
     },
     {
@@ -2505,7 +2506,7 @@
         "identity_processor",
         "pytest_configure"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/conftest.py"
     },
     {
@@ -2528,7 +2529,7 @@
         "__aexit__",
         "post"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_retry_visibility.py"
     },
     {
@@ -2544,7 +2545,7 @@
         "test_detection_is_the_same_engine_as_direct_prompts",
         "test_it_quarantines_a_poisoned_document_retrieved_from_a_real_store"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_rag_poison_guard.py"
     },
     {
@@ -2556,7 +2557,7 @@
         "test_a_decommissioned_entry_is_actually_marked",
         "test_no_profile_binds_a_decommissioned_model"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_no_role_binds_a_dead_model.py"
     },
     {
@@ -2583,6 +2584,7 @@
         "test_user_limit",
         "test_a_leaked_system_prompt_is_withheld",
         "_Workflow",
+        "_as_received",
         "_gate",
         "_deciding",
         "_labels",
@@ -2618,7 +2620,10 @@
         "test_forward_waits_for_the_portal",
         "test_a_decision_given_before_the_gate_asked_does_not_answer_it",
         "test_a_decision_about_other_input_does_not_answer_the_gate",
-        "test_the_workflows_digest_is_the_records_digest",
+        "_Payment",
+        "test_a_decision_answers_an_input_temporal_serializes_differently",
+        "test_the_record_activity_answers_with_the_digest_of_what_it_recorded",
+        "test_a_pending_record_without_a_digest_refuses_the_gate",
         "test_a_requester_who_is_not_a_sign_in_email_is_refused",
         "test_a_short_system_prompt_is_still_caught",
         "test_an_unsigned_mark_does_not_verify_where_marks_are_signed",
@@ -2639,6 +2644,7 @@
         "stopped",
         "Http",
         "blocked",
+        "no_digest",
         "cursor",
         "commit",
         "rollback",
@@ -2650,7 +2656,7 @@
         "post",
         "_Cursor"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:57Z",
       "id": "agentsmith/test/test_compliance_runtime.py"
     },
     {
@@ -2682,7 +2688,7 @@
         "closeall",
         "_direct_connect"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_pg_pool.py"
     },
     {
@@ -2713,7 +2719,7 @@
         "test_it_never_raises",
         "test_every_worker_entrypoint_runs_the_check"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_framework_version.py"
     },
     {
@@ -2740,7 +2746,7 @@
         "wire_transfer",
         "solo"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_tracing.py"
     },
     {
@@ -2762,7 +2768,7 @@
         "add",
         "record"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_metrics.py"
     },
     {
@@ -2780,7 +2786,7 @@
         "test_json_payloads_hash_exactly_as_they_did_before",
         "Ctx"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_idempotency_key.py"
     },
     {
@@ -2802,7 +2808,7 @@
         "cursor",
         "close"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_pg_pool_coverage.py"
     },
     {
@@ -2819,7 +2825,7 @@
         "test_resource_carries_the_per_process_half",
         "test_owner_is_omitted_rather_than_guessed"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_pillar3_conformance.py"
     },
     {
@@ -2842,7 +2848,7 @@
         "test_zero_width_joiners_are_not_treated_as_padding",
         "test_a_bidi_override_payload_is_flagged"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_prompt_guard.py"
     },
     {
@@ -2860,7 +2866,7 @@
         "test_cycle_in_degrade_chain_terminates",
         "test_a_chain_with_no_configured_tier_refuses_rather_than_returning_nothing"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_degrade_ladder.py"
     },
     {
@@ -2872,7 +2878,7 @@
         "__init__",
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/_recoverable_step_fixtures.py"
     },
     {
@@ -2898,7 +2904,7 @@
         "test_warn_helper_logs_only_when_not_independent",
         "test_run_evals_delegates_to_the_shared_function"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_judging.py"
     },
     {
@@ -2928,7 +2934,7 @@
         "_stream",
         "_ErrorResp"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_stream_providers.py"
     },
     {
@@ -2942,7 +2948,7 @@
         "test_rows_without_a_pair_are_ignored",
         "test_more_than_two_members_uses_the_full_range"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_pair_score_spread.py"
     },
     {
@@ -2963,7 +2969,7 @@
         "unlisted_by_default",
         "greet"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_tool_registry.py"
     },
     {
@@ -2982,7 +2988,7 @@
         "test_clean_prompt_reports_nothing",
         "test_upgrade_does_not_silently_stop_blocking"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_prompt_guard_modes.py"
     },
     {
@@ -3005,7 +3011,7 @@
         "test_every_writer_routes_the_verified_set_through_the_reader",
         "hooks"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_chosen_ides.py"
     },
     {
@@ -3031,7 +3037,7 @@
         "test_an_empty_anthropic_style_content_array_yields_empty_text",
         "test_every_cloud_adapter_delegates_to_a_shared_parser"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_provider_dispatch_cloud.py"
     },
     {
@@ -3065,7 +3071,7 @@
         "_install",
         "_Info"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_hitl_gate.py"
     },
     {
@@ -3105,7 +3111,7 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_intake.py"
     },
     {
@@ -3114,7 +3120,7 @@
       "symbols": [
         "fake_gateway"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/_gateway_fixtures.py"
     },
     {
@@ -3172,7 +3178,7 @@
         "test_get_refuses_rather_than_guessing_when_s3_is_configured",
         "__init__"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_trace_redactor.py"
     },
     {
@@ -3196,7 +3202,7 @@
         "explode",
         "__repr__"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_tool_payloads.py"
     },
     {
@@ -3211,7 +3217,7 @@
         "test_llm_gateway_reexports_register",
         "classifier"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_moderation.py"
     },
     {
@@ -3237,7 +3243,7 @@
         "test_a_truncated_first_fence_falls_through_to_the_next",
         "test_a_prose_fence_falls_through_to_bare_json"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_structured_output.py"
     },
     {
@@ -3257,7 +3263,7 @@
         "signal",
         "_I"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_self_correction_workflow.py"
     },
     {
@@ -3270,7 +3276,7 @@
         "test_guardrail_off_reports_nothing",
         "test_result_defaults_are_independent_instances"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_guardrail_evidence.py"
     },
     {
@@ -3283,7 +3289,7 @@
         "test_a_missing_address_falls_back_rather_than_raising",
         "test_no_caller_builds_its_own_temporal_connection"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_temporal_client.py"
     },
     {
@@ -3305,7 +3311,7 @@
         "test_a_target_without_a_style_does_not_point_at_tenant_init",
         "test_the_adoption_design_describes_an_adoption"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_architectures.py"
     },
     {
@@ -3326,7 +3332,7 @@
         "text",
         "aiter_lines"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_ttft_stream.py"
     },
     {
@@ -3346,7 +3352,7 @@
         "test_the_portal_resolver_still_guards_the_doubled_suffix",
         "test_no_module_hand_rolls_the_signal_path_any_more"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_otlp_endpoint.py"
     },
     {
@@ -3374,7 +3380,7 @@
         "Broken",
         "__init__"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "agentsmith/test/test_token_limits.py"
     },
     {
@@ -3409,7 +3415,7 @@
         "__exit__",
         "embed"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_memory_and_vector.py"
     },
     {
@@ -3424,7 +3430,7 @@
         "test_every_worker_entrypoint_configures_telemetry",
         "test_env_is_loaded_before_telemetry_reads_it"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_telemetry_wiring.py"
     },
     {
@@ -3441,7 +3447,7 @@
         "test_message_list_prompts_are_flattened_for_assertions",
         "test_recording_gateway_wraps_and_delegates"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_testing_doubles.py"
     },
     {
@@ -3453,7 +3459,7 @@
         "test_recorded_prompts_stay_assertable",
         "test_the_two_converters_are_one_function"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_testing_double_parity.py"
     },
     {
@@ -3468,7 +3474,7 @@
         "test_a_reset_or_retried_run_does_not_collide_with_the_previous_one",
         "test_each_attempt_and_each_gate_files_separately"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_dead_letter.py"
     },
     {
@@ -3507,7 +3513,7 @@
         "test_doctor_forwards_verify_system_flags",
         "test_dashboard_stop_does_not_signal_a_reused_pid"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_machine.py"
     },
     {
@@ -3552,7 +3558,7 @@
         "_build",
         "cap"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_config.py"
     },
     {
@@ -3579,7 +3585,7 @@
         "test_the_scrubbed_text_keeps_the_users_own_characters",
         "custom"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_input_guardrail.py"
     },
     {
@@ -3598,7 +3604,7 @@
         "test_the_legacy_tenant_id_env_var_is_still_accepted",
         "_write"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_tenancy.py"
     },
     {
@@ -3620,7 +3626,7 @@
         "activity",
         "R"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_self_correction.py"
     },
     {
@@ -3642,7 +3648,7 @@
         "_FakeHttpx",
         "post"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_context_propagation.py"
     },
     {
@@ -3661,7 +3667,7 @@
         "__init__",
         "__call__"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_dlq_replay_idempotency.py"
     },
     {
@@ -3673,7 +3679,7 @@
         "test_concurrent_reserves_never_exceed_cap",
         "one"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_pg_budget_live.py"
     },
     {
@@ -3691,7 +3697,7 @@
         "test_the_block_alias_still_maps_to_default",
         "_write"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_config_choices.py"
     },
     {
@@ -3733,7 +3739,7 @@
         "test_a_missing_template_is_a_message_not_a_traceback",
         "test_an_empty_framework_never_arms_an_empty_hooks_directory"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_cli.py"
     },
     {
@@ -3743,7 +3749,7 @@
         "test_workflow_stays_alive_and_resumes_with_human_fix",
         "test_retries_exactly_once_not_temporals_default_policy"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_recoverable_step.py"
     },
     {
@@ -3768,7 +3774,7 @@
         "test_the_signature_matches_the_portal_byte_for_byte",
         "test_signatures_are_compared_in_constant_time"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_replay_webhook_signature.py"
     },
     {
@@ -3799,7 +3805,7 @@
         "moderator",
         "blocking"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_idempotency_boundary.py"
     },
     {
@@ -3823,7 +3829,7 @@
         "_block",
         "_invoke"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_moderation_declared.py"
     },
     {
@@ -3837,7 +3843,7 @@
         "test_a_refusal_with_no_reason_is_not_an_answer",
         "test_a_provider_whose_output_is_not_a_decision_fails_with_what_it_printed"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_conformance.py"
     },
     {
@@ -3854,14 +3860,14 @@
         "test_without_a_start_time_no_synthetic_span_is_invented",
         "test_attributes_land_on_the_enclosing_span"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/test/test_gateway_span_usage.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/workflows/__init__.py"
     },
     {
@@ -3869,7 +3875,6 @@
       "language": "python",
       "symbols": [
         "_compliance_failure",
-        "_input_digest",
         "_looks_like_email",
         "_dlq_task_id",
         "AgentWorkflowResult",
@@ -3890,7 +3895,7 @@
         "human_fix_payload",
         "signal"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:57Z",
       "id": "agentsmith/workflows/base_workflow.py"
     },
     {
@@ -3906,14 +3911,14 @@
         "BypassDecision",
         "bypass_decision"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/machine/policy.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/machine/__init__.py"
     },
     {
@@ -3950,7 +3955,7 @@
         "remove_profile_blocks",
         "uninstall"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/machine/ops.py"
     },
     {
@@ -3969,7 +3974,7 @@
         "clear_phoenix_endpoint",
         "find_script"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/machine/state.py"
     },
     {
@@ -3993,14 +3998,14 @@
         "gates_run",
         "config"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "agentsmith/machine/governance.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "javascript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "templates/in-app-widget/widget.js"
     },
     {
@@ -4009,7 +4014,7 @@
       "symbols": [
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "templates/onprem-deploy/scripts/render-traefik-config.py"
     },
     {
@@ -4019,7 +4024,7 @@
         "cluster",
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "templates/onprem-deploy/scripts/render-envoy-config.py"
     },
     {
@@ -4030,7 +4035,7 @@
         "load_env",
         "port"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "templates/onprem-deploy/scripts/_env.py"
     },
     {
@@ -4040,7 +4045,7 @@
         "AgentStatusProps",
         "AgentStatus"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "templates/in-app-widget/react/AgentStatus.tsx"
     },
     {
@@ -4076,7 +4081,7 @@
         "test_claudes_config_still_denies_when_the_launcher_cannot_run",
         "test_an_unverified_config_schema_is_refused_rather_than_guessed"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_ides.py"
     },
     {
@@ -4105,7 +4110,7 @@
         "test_self_test_installs_the_lock_at_the_pinned_version",
         "test_the_standalone_phoenix_fallback_uses_a_subcommand_phoenix_has"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_framework_python_env.py"
     },
     {
@@ -4118,7 +4123,7 @@
         "test_no_tenant_directory_is_named_as_a_path",
         "test_every_ls_files_glob_in_a_test_matches_something"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_no_tenant_repo_dependency.py"
     },
     {
@@ -4143,7 +4148,7 @@
         "_spy",
         "_fake_pytest"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_mutation_check_journal.py"
     },
     {
@@ -4168,7 +4173,7 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_send_dev_record.py"
     },
     {
@@ -4177,7 +4182,7 @@
       "symbols": [
         "pytest_configure"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/conftest.py"
     },
     {
@@ -4201,7 +4206,7 @@
         "test_a_command_kept_out_of_the_table_is_still_documented",
         "test_every_reference_row_lists_the_flags_its_command_accepts"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_cli_install.py"
     },
     {
@@ -4221,7 +4226,7 @@
         "test_the_install_passes_on_the_version_it_announces",
         "test_another_version_fails_the_install_and_says_so"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_release_install.py"
     },
     {
@@ -4242,7 +4247,7 @@
         "test_the_provider_checkout_falls_back_to_the_runs_own_token",
         "test_a_template_does_not_state_the_provider_is_private"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_workflow_template_wiring.py"
     },
     {
@@ -4262,7 +4267,7 @@
         "test_optional_still_passes_without_a_declaration",
         "test_runner_leaves_no_moderator_registered"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_security_moderation_declared.py"
     },
     {
@@ -4275,7 +4280,7 @@
         "test_sample_disjoint_at_zero_and_full_rate",
         "test_judge_prompt_includes_no_reference_marker_for_shadow_cases"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_shadow_eval.py"
     },
     {
@@ -4312,7 +4317,7 @@
         "test_cursor_wires_the_shell_hook",
         "test_claude_matches_the_shell_tool"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_shell.py"
     },
     {
@@ -4328,7 +4333,7 @@
         "_init",
         "test_init_says_it_last_and_only_once"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_security_first_run.py"
     },
     {
@@ -4349,7 +4354,7 @@
         "test_a_name_found_early_in_a_long_listing_is_not_reported_missing",
         "test_a_name_really_absent_from_the_listing_is_still_reported"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_release_artifact_contract.py"
     },
     {
@@ -4387,7 +4392,7 @@
         "test_adopt_writes_every_file_its_plan_promises",
         "test_an_install_without_the_docs_finds_them_in_agentsmith_dir"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_tenant_adopt.py"
     },
     {
@@ -4410,7 +4415,7 @@
         "test_no_document_states_a_stale_pillar_count",
         "words"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_design_and_validation_docs.py"
     },
     {
@@ -4422,7 +4427,7 @@
         "main",
         "embed"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/telemetry_emitter.py"
     },
     {
@@ -4463,7 +4468,7 @@
         "_judge",
         "erroring_judge"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_hallucination_evals.py"
     },
     {
@@ -4500,7 +4505,7 @@
         "test_the_sweep_reports_artifact_problems_without_blocking_in_report_mode",
         "test_the_sweep_fails_on_artifact_problems_in_enforce_mode"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_artifacts.py"
     },
     {
@@ -4519,7 +4524,7 @@
         "test_sync_offline_phoenix_degrades_gracefully",
         "down"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_promotion_loop.py"
     },
     {
@@ -4533,7 +4538,7 @@
         "test_a_tenant_edit_to_a_scaffold_file_is_checked_again",
         "test_the_scaffold_passes_the_enterprise_guardrails"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_first_commit.py"
     },
     {
@@ -4546,7 +4551,7 @@
         "test_env_override_wins",
         "test_framework_grading_itself_is_unchanged"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_security_harness_roots.py"
     },
     {
@@ -4580,9 +4585,15 @@
         "test_an_enforced_profile_without_its_declaration_fails",
         "test_the_shell_gate_protects_the_declaration",
         "test_a_release_row_passes_only_on_a_test_ci_runs",
-        "test_a_portal_test_no_script_runs_is_not_evidence"
+        "test_a_portal_test_no_script_runs_is_not_evidence",
+        "test_agentsmiths_own_evidence_is_produced_and_names_its_known_gap",
+        "test_a_provider_row_that_fails_and_is_not_a_known_gap_fails_the_evidence",
+        "test_the_provider_evidence_command_exits_on_a_new_failure",
+        "test_a_tenant_reads_where_the_provider_evidence_is_and_a_known_gap_as_pending",
+        "test_ci_and_the_release_run_the_provider_evidence",
+        "test_a_known_gap_that_starts_passing_must_leave_the_list"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:57Z",
       "id": "scripts/test/test_compliance_port.py"
     },
     {
@@ -4607,7 +4618,7 @@
         "test_the_map_lists_all_ten_agentic_entries",
         "test_the_agentic_tags_are_the_maps_and_only_where_it_claims_coverage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_security_registry.py"
     },
     {
@@ -4647,7 +4658,7 @@
         "test_adopt_writes_provider_not_this_installs_paths",
         "test_sync_renames_only_what_adopt_wrote_and_leaves_every_other_byte"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_rules_contract.py"
     },
     {
@@ -4666,7 +4677,7 @@
         "test_a_reason_further_up_does_not_count",
         "test_an_undocumented_handler_still_fails"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_check_bare_except.py"
     },
     {
@@ -4679,7 +4690,7 @@
         "test_off_is_a_failure",
         "test_unset_env_enforces"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_security_prompt_guard_enforcement.py"
     },
     {
@@ -4787,7 +4798,7 @@
         "test_a_stream_with_no_file_descriptor_is_read_directly",
         "context"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_process_gate.py"
     },
     {
@@ -4812,7 +4823,7 @@
         "test_shared_root_matches_runtime_root",
         "test_dotenv_parsers_agree"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_ts_runner_invocations.py"
     },
     {
@@ -4842,7 +4853,7 @@
         "test_a_token_budget_nobody_measured_is_not_gradable",
         "test_an_empty_case_file_is_not_gradable"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/test/test_trajectory_evals.py"
     },
     {
@@ -4867,7 +4878,7 @@
         "test_a_malformed_limit_falls_back_and_says_so",
         "test_a_valid_limit_is_still_honoured"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_circuit_breaker.py"
     },
     {
@@ -4888,7 +4899,7 @@
         "test_an_errored_case_is_marked_no_verdict_not_failed",
         "test_deterministic_suites_keep_their_real_per_case_verdict"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_eval_pacing.py"
     },
     {
@@ -4938,6 +4949,7 @@
         "test_a_supply_chain_job_that_scans_nothing_fails",
         "test_a_supply_chain_job_that_scans_passes_and_says_what_was_read",
         "test_the_template_fails_when_it_finds_nothing_to_scan",
+        "test_every_environment_sbom_names_the_apps_own_interpreter",
         "test_the_arabic_check_reads_only_the_suites_that_carry_language",
         "test_a_drill_dated_in_the_future_does_not_count",
         "test_a_declaration_the_image_never_receives_fails",
@@ -4947,7 +4959,7 @@
         "test_an_enforced_profile_with_its_declaration_deleted_fails_the_launcher",
         "check"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:57Z",
       "id": "scripts/test/test_compliance_checks.py"
     },
     {
@@ -4977,7 +4989,7 @@
         "test_agentsmith_declares_the_mode_it_ships",
         "test_the_tenant_template_runs_the_same_freshness_check"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_kg.py"
     },
     {
@@ -4994,7 +5006,7 @@
         "test_every_gate_hook_exists_to_be_copied",
         "test_the_installer_says_how_to_apply_agentsmith_to_a_repository"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_installer_templates.py"
     },
     {
@@ -5005,7 +5017,7 @@
         "test_llm_call_survives_a_breaker_it_cannot_import",
         "test_the_unmetered_warning_names_the_cause"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_breaker_fail_open.py"
     },
     {
@@ -5058,7 +5070,7 @@
         "run_scorecard",
         "spy"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_evals_contract.py"
     },
     {
@@ -5099,7 +5111,7 @@
         "test_an_unparseable_spread_ceiling_stays_strict",
         "fake_judge_case"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_fairness_evals.py"
     },
     {
@@ -5121,7 +5133,7 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_tracing.py"
     },
     {
@@ -5142,7 +5154,7 @@
         "do_POST",
         "log_message"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_record_contract.py"
     },
     {
@@ -5161,7 +5173,7 @@
         "test_a_manifest_naming_an_unstaged_path_grants_nothing",
         "test_outside_a_git_repository_it_says_nothing"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_vouched_files.py"
     },
     {
@@ -5171,7 +5183,7 @@
         "test_run_security_checks_smoke_exits_zero",
         "test_run_security_checks_writes_report"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_security_harness.py"
     },
     {
@@ -5193,7 +5205,7 @@
         "test_the_declaration_is_read_whichever_way_it_is_written",
         "test_commit_msg_is_not_a_contract_event_and_keeps_the_frameworks_own_path"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_provider_resolution.py"
     },
     {
@@ -5209,7 +5221,7 @@
         "test_a_tool_span_carries_both_names",
         "test_the_pin_is_in_the_protocol"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gen_ai_telemetry.py"
     },
     {
@@ -5224,7 +5236,7 @@
         "test_the_generator_reads_the_tenants_own_declaration",
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_generate_ide_config_governance.py"
     },
     {
@@ -5238,7 +5250,7 @@
         "test_the_manual_names_every_outside_action_the_templates_use",
         "test_the_manual_says_what_is_not_supported_and_warns_about_forks"
       ],
-      "last_modified": "2026-11-22T20:41:14Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_runner_setting.py"
     },
     {
@@ -5263,7 +5275,7 @@
         "test_credential_resolution_survives_an_older_runtime",
         "test_fallback_map_matches_the_runtime_mapping"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_judge_model_resolution.py"
     },
     {
@@ -5280,7 +5292,7 @@
         "test_the_agentic_page_lists_all_ten_and_says_which_no_control_covers",
         "test_the_agentic_filter_scopes_the_page_and_still_lists_all_ten"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_security_evidence_pack.py"
     },
     {
@@ -5303,7 +5315,7 @@
         "test_an_incomplete_sign_off_is_recorded_as_not_signed_off",
         "test_the_record_carries_every_design_as_it_stands_at_the_head"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_dev_record.py"
     },
     {
@@ -5317,7 +5329,7 @@
         "test_every_non_legacy_lever_has_notes",
         "test_legacy_levers_stay_out_of_the_notes"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_lever_notes.py"
     },
     {
@@ -5356,7 +5368,7 @@
         "test_the_ci_setup_shim_answers_with_the_provider_inside_a_vendored_tenant",
         "test_no_shipped_shim_runs_the_cli_with_the_working_directory_first"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_telemetry_contract.py"
     },
     {
@@ -5388,9 +5400,11 @@
         "test_a_guard_that_an_or_or_a_negation_undoes_does_not_count",
         "test_a_guard_joined_by_and_still_counts",
         "test_more_fields_an_outsider_writes_fail",
-        "test_an_action_receives_inherited_environment"
+        "test_an_action_receives_inherited_environment",
+        "test_a_guard_that_only_looks_like_a_restriction_does_not_count",
+        "test_a_term_that_can_only_narrow_to_trusted_authors_counts"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:57Z",
       "id": "scripts/test/test_agent_workflow_injection.py"
     },
     {
@@ -5404,7 +5418,7 @@
         "test_an_exhausted_quota_still_does_not_block",
         "test_the_annotation_level_matches_the_verdict"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_retired_judge_fails_loudly.py"
     },
     {
@@ -5422,7 +5436,7 @@
         "test_the_deploy_templates_set_it_from_the_commit_ci_validated",
         "test_the_gateway_sends_the_commit_with_each_run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_app_commit.py"
     },
     {
@@ -5439,7 +5453,7 @@
         "test_validating_the_template_itself_is_still_allowed",
         "test_the_frameworks_own_register_is_not_the_template"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_security_risk_register.py"
     },
     {
@@ -5482,7 +5496,7 @@
         "test_the_base_uses_origin_main_when_origin_head_is_unset",
         "test_the_base_falls_back_when_no_base_branch_is_known"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_steps.py"
     },
     {
@@ -5520,7 +5534,7 @@
         "test_a_baseline_runs_every_test_even_after_a_failure",
         "git"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_mutation_check_scope.py"
     },
     {
@@ -5532,7 +5546,7 @@
         "test_the_sweep_reads_both_sides",
         "test_every_cited_slug_exists"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_lever_references.py"
     },
     {
@@ -5549,7 +5563,7 @@
         "test_doctor_names_a_shell_credential_that_differs_from_the_repository",
         "test_doctor_without_a_dotenv_reports_nothing"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_env_file_credentials.py"
     },
     {
@@ -5561,7 +5575,7 @@
         "test_the_widget_names_no_host_that_does_not_exist",
         "test_the_compat_wrappers_are_gone"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_launch_small_fixes.py"
     },
     {
@@ -5623,7 +5637,7 @@
         "legacy",
         "change"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_framework_sync.py"
     },
     {
@@ -5637,7 +5651,7 @@
         "test_specs_header_matches_the_installer",
         "test_changelog_has_an_entry_for_the_current_version"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_version_consistency.py"
     },
     {
@@ -5671,7 +5685,7 @@
         "run",
         "calls"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_ci_package_managers.py"
     },
     {
@@ -5686,7 +5700,7 @@
         "test_allowlist_entries_are_still_orphans",
         "test_the_sweep_reaches_extensionless_shell"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_documented_env_vars_exist.py"
     },
     {
@@ -5710,7 +5724,7 @@
         "test_chaining_writes_a_stub_for_each_hook_the_gate_does_not_own",
         "test_the_prior_directory_is_found"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_hook_chain.py"
     },
     {
@@ -5738,7 +5752,7 @@
         "test_a_stored_record_is_reported_and_the_token_never_appears",
         "test_a_portal_that_refuses_the_record_fails_the_answer_with_its_own_reason"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_contract_v2.py"
     },
     {
@@ -5753,7 +5767,7 @@
         "test_every_public_function_has_a_caller",
         "test_configure_metrics_specifically_is_reachable"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_no_orphaned_entrypoints.py"
     },
     {
@@ -5767,7 +5781,7 @@
         "test_framework_component_controls_are_not_applicable_in_a_vendored_tenant",
         "test_the_same_absence_still_fails_in_the_framework_checkout"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_security_vendored_install.py"
     },
     {
@@ -5788,7 +5802,7 @@
         "test_a_mode_that_is_neither_on_nor_off_is_a_config_problem",
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_guardrails.py"
     },
     {
@@ -5810,7 +5824,7 @@
         "_StatusError",
         "__init__"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_exhaustion_classification.py"
     },
     {
@@ -5829,7 +5843,7 @@
         "test_a_done_section_unlocks_nothing",
         "test_session_start_lists_the_active_section"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_records_single.py"
     },
     {
@@ -5858,7 +5872,7 @@
         "test_scorecard_filenames_come_from_the_shared_catalog",
         "test_refresh_block_and_missing_rows_name_the_same_commands"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_delivery_model.py"
     },
     {
@@ -5871,7 +5885,7 @@
         "test_what_adopt_writes_validates_against_the_published_providers_schema",
         "test_the_providers_schema_rejects_a_declaration_the_launcher_cannot_read"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_contract.py"
     },
     {
@@ -5902,7 +5916,7 @@
         "test_a_long_error_summary_is_bounded_not_dropped",
         "columns"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_ops_contract.py"
     },
     {
@@ -5915,7 +5929,7 @@
         "test_the_rule_files_carry_the_token_discipline",
         "test_the_session_start_message_stays_within_its_budget"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_context_budget.py"
     },
     {
@@ -5955,7 +5969,7 @@
         "test_the_gate_entrys_own_contract_wins_and_a_missing_one_is_1",
         "test_a_port_is_read_wherever_its_command_sits"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_contract_v3.py"
     },
     {
@@ -6009,7 +6023,7 @@
         "test_agentsmith_passes_the_security_contract",
         "broken"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:57Z",
       "id": "scripts/test/test_security_contract.py"
     },
     {
@@ -6028,7 +6042,7 @@
         "test_it_names_what_it_needs_and_asks_for_no_more",
         "test_the_template_is_what_a_tenant_gets"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_sync_workflow.py"
     },
     {
@@ -6042,7 +6056,7 @@
         "test_ci_templates_do_not_pin_a_judge_model",
         "test_the_guard_actually_catches_a_hardcoded_id"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_no_hardcoded_model_ids.py"
     },
     {
@@ -6053,7 +6067,7 @@
         "test_the_checker_is_reading_a_real_file_list",
         "test_every_tracked_python_file_passes_the_bare_except_check"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_bare_except_tree.py"
     },
     {
@@ -6066,7 +6080,7 @@
         "test_the_neutral_profile_fail_closed_is_the_contracts_fall_through",
         "test_the_generator_never_hardcodes_fail_closed"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_fail_closed_declared.py"
     },
     {
@@ -6095,7 +6109,7 @@
         "_write",
         "fake_run_map"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_kg_drift_gate.py"
     },
     {
@@ -6140,7 +6154,7 @@
         "test_the_wait_step_stays_red_when_the_refusal_is_not_the_reason",
         "test_every_job_that_waits_survives_a_red_run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -6149,7 +6163,7 @@
       "symbols": [
         "install"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/provider_shim.py"
     },
     {
@@ -6179,7 +6193,7 @@
         "test_a_scaffold_without_an_installed_framework_still_completes",
         "check"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_vendoring_retired.py"
     },
     {
@@ -6207,7 +6221,7 @@
         "test_a_long_backlog_of_commits_is_swept_in_batches",
         "test_pre_commit_itself_never_refuses_so_the_repair_can_be_committed"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_sweep.py"
     },
     {
@@ -6219,7 +6233,7 @@
         "test_the_check_matches_whole_exact_tokens",
         "test_no_tracked_file_names_a_private_tenant_or_project"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_private_names.py"
     },
     {
@@ -6236,7 +6250,7 @@
         "test_the_stored_row_carries_the_digest",
         "test_a_mixed_rubric_scorecard_is_rejected"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_criteria_digest.py"
     },
     {
@@ -6251,7 +6265,7 @@
         "test_a_deviation_the_design_does_not_list_cannot_be_approved",
         "test_design_new_writes_the_skeleton_the_gate_asks_for"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_cli_approve.py"
     },
     {
@@ -6262,7 +6276,7 @@
         "test_the_docs_name_the_same_required_check",
         "test_the_job_name_is_not_generated_from_something_else"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_required_check_name.py"
     },
     {
@@ -6279,7 +6293,7 @@
         "test_the_separately_licensed_services_are_named",
         "test_a_public_project_has_its_community_files"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_agpl_compliance.py"
     },
     {
@@ -6295,7 +6309,7 @@
         "test_docs_do_not_reference_an_unknown_check_mode",
         "test_a_retired_mode_is_really_gone"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_verify_system_modes.py"
     },
     {
@@ -6308,7 +6322,7 @@
         "test_the_wire_scope_keeps_its_value",
         "test_detection_still_finds_what_a_pre_3_tenant_holds"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_package_name.py"
     },
     {
@@ -6335,7 +6349,7 @@
         "test_no_second_level_tree_entry_is_absent_on_disk",
         "test_every_wildcard_tree_entry_still_matches_something"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_design_tree_drift.py"
     },
     {
@@ -6364,7 +6378,7 @@
         "test_the_dedicated_key_still_wins_when_populated",
         "_capture"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_judge_routing.py"
     },
     {
@@ -6375,7 +6389,7 @@
         "test_the_sweep_covers_a_real_file_list",
         "test_no_vendored_file_carries_a_marker_guardrail_1_forbids"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_vendored_markers.py"
     },
     {
@@ -6439,7 +6453,7 @@
         "test_a_package_the_design_names_passes",
         "test_removing_a_package_is_not_an_addition"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_pillars.py"
     },
     {
@@ -6454,7 +6468,7 @@
         "test_agent_logger_constructs",
         "test_agent_logger_prefers_the_ambient_owner_when_degraded"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_standalone_without_runtime.py"
     },
     {
@@ -6469,7 +6483,7 @@
         "test_adversarial_miss_rate",
         "test_run_scorecard_adversarial_passes_on_base"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_adversarial_evals.py"
     },
     {
@@ -6488,7 +6502,7 @@
         "test_ollama_base_url_defaults_without_the_variable",
         "test_the_onprem_bundle_parses_values_identically"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_dotenv_parsing.py"
     },
     {
@@ -6575,7 +6589,7 @@
         "and_another_sessions_hook",
         "broken"
       ],
-      "last_modified": "2026-11-22T23:59:52Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/test/test_agent_tokens.py"
     },
     {
@@ -6619,7 +6633,7 @@
         "_trip",
         "_boom"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_cost_router.py"
     },
     {
@@ -6643,7 +6657,7 @@
         "test_a_forced_rerun_still_vouches_for_what_the_first_run_wrote",
         "test_the_manifest_is_not_asked_to_vouch_for_itself_and_nothing_else_escapes"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_scaffold_review.py"
     },
     {
@@ -6677,7 +6691,7 @@
         "test_source_file_is_repository_relative",
         "test_outside_a_git_checkout_everything_maps"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "scripts/test/test_knowledge_graph.py"
     },
     {
@@ -6722,7 +6736,7 @@
         "test_a_withdrawn_deviation_still_ends_the_entry_before_it",
         "test_an_unparseable_answer_line_still_ends_the_block_above_it"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_gate_models.py"
     },
     {
@@ -6745,7 +6759,7 @@
         "__init__",
         "start"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_notifier_injection.py"
     },
     {
@@ -6759,7 +6773,7 @@
         "test_a_valid_port_still_renders",
         "test_a_bad_port_never_reaches_a_rendered_url"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_onprem_renderers.py"
     },
     {
@@ -6778,7 +6792,7 @@
         "test_webhooks_left_unset_are_skipped_and_the_job_still_fails",
         "test_a_configured_rollback_command_runs_and_can_read_the_failed_commit"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_rollback_notify.py"
     },
     {
@@ -6803,7 +6817,7 @@
         "test_every_shell_environment_input_is_documented",
         "leaves"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_env_var_documentation.py"
     },
     {
@@ -6823,7 +6837,7 @@
         "test_a_checkout_without_the_template_is_not_applicable",
         "test_the_runner_walks_the_same_chain_as_the_gateway"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_sovereign_residency.py"
     },
     {
@@ -6850,7 +6864,7 @@
         "test_the_line_is_the_shape_the_checker_already_reads",
         "test_the_stop_gate_writes_one"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/test/test_governed_tenant.py"
     },
     {
@@ -6862,7 +6876,7 @@
         "declared_emitter",
         "check"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/redaction.py"
     },
     {
@@ -6873,14 +6887,14 @@
         "ControlSpec",
         "load_control_registry"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/registry.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/__init__.py"
     },
     {
@@ -6897,7 +6911,7 @@
         "_render_security_report_md",
         "write_evidence_pack"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/report.py"
     },
     {
@@ -6907,7 +6921,7 @@
         "_SmokeModel",
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/structured_output.py"
     },
     {
@@ -6916,7 +6930,7 @@
       "symbols": [
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/pii_postcall.py"
     },
     {
@@ -6926,7 +6940,7 @@
         "_registered_tool_names",
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/tool_allowlist.py"
     },
     {
@@ -6935,14 +6949,14 @@
       "symbols": [
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/adversarial_eval.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/__init__.py"
     },
     {
@@ -6968,7 +6982,7 @@
         "agency_manifest",
         "gateway_static"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/delegating.py"
     },
     {
@@ -6977,7 +6991,7 @@
       "symbols": [
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/sso_revocation.py"
     },
     {
@@ -7010,7 +7024,7 @@
         "repository_python",
         "node_suite"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/_shared.py"
     },
     {
@@ -7021,7 +7035,7 @@
         "_declared",
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/moderation_hook.py"
     },
     {
@@ -7032,7 +7046,7 @@
         "_declared",
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/prompt_guard.py"
     },
     {
@@ -7045,13 +7059,15 @@
         "_is_agent",
         "_tainted",
         "_uses_variable",
+        "_terms",
+        "_trusted_roles",
         "_restricts",
         "_guarded",
         "_step_problems",
         "_workflow_problems",
         "run"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:57Z",
       "id": "scripts/security/runners/agent_workflow.py"
     },
     {
@@ -7062,7 +7078,7 @@
         "run",
         "_scrub_probes"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/pii_precall.py"
     },
     {
@@ -7073,7 +7089,7 @@
         "_violations",
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/sovereign_residency.py"
     },
     {
@@ -7082,7 +7098,7 @@
       "symbols": [
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/noop.py"
     },
     {
@@ -7093,7 +7109,7 @@
         "_template_path",
         "run"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "scripts/security/runners/risk_register.py"
     },
     {
@@ -7105,7 +7121,7 @@
         "main",
         "healthz"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "examples/oil-price-agent/worker.py"
     },
     {
@@ -7115,7 +7131,7 @@
         "OilPriceWorkflowInput",
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "examples/oil-price-agent/trigger_workflow.py"
     },
     {
@@ -7124,7 +7140,7 @@
       "symbols": [
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "examples/oil-price-agent/resolve_hitl.py"
     },
     {
@@ -7139,7 +7155,7 @@
         "_NoopActivity",
         "defn"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "examples/oil-price-agent/workflows/activities.py"
     },
     {
@@ -7152,14 +7168,14 @@
         "run",
         "_decide"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "examples/oil-price-agent/workflows/oil_price_workflow.py"
     },
     {
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "examples/oil-price-agent/workflows/__init__.py"
     },
     {
@@ -7169,7 +7185,7 @@
         "check_model",
         "main"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:04Z",
       "id": "archive/examples/oil-price-agent/check_model_ids.py"
     },
     {
@@ -7179,7 +7195,7 @@
         "metadata",
         "RootLayout"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/layout.tsx"
     },
     {
@@ -7189,21 +7205,21 @@
         "dynamic",
         "Home"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/page.tsx"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/tracing.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/test/complianceState.test.ts"
     },
     {
@@ -7220,7 +7236,7 @@
         "parseAttestations",
         "mayDecide"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/lib/complianceState.ts"
     },
     {
@@ -7229,28 +7245,28 @@
       "symbols": [
         "caseMessage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/opsContract.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/safeUrl.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/devReadDb.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/agentRuns.test.ts"
     },
     {
@@ -7260,91 +7276,91 @@
         "RecordCase",
         "recordBody"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/recordCases.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/replaySignature.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/brand.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/devIngestDb.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/opsIngestDb.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/scripts.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/dlqCostWidget.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/test/authz.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/timestamp.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/devIngest.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/phoenix.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/auditSignature.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/submitOnce.test.ts"
     },
     {
@@ -7354,35 +7370,35 @@
         "SubmitResult",
         "submitOnce"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/submitOnce.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/apps.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/recordContract.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/proxy.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/test/signInPolicy.test.ts"
     },
     {
@@ -7393,49 +7409,49 @@
         "referencedPaths",
         "checkRuntimeScripts"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/runtimeImageScripts.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/appsDb.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/catalogs.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/recordContractDb.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/ssoRevocation.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/wireContract.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/test/hitl.test.ts"
     },
     {
@@ -7451,49 +7467,49 @@
         "lastStopAction",
         "stopControl"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/lib/hitl.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/telemetryContract.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/intakesDb.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/auditLog.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/legal.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/intakes.test.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/test/devView.test.ts"
     },
     {
@@ -7502,7 +7518,7 @@
       "symbols": [
         "IncidentClose"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/components/IncidentClose.tsx"
     },
     {
@@ -7511,7 +7527,7 @@
       "symbols": [
         "StopControl"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/components/StopControl.tsx"
     },
     {
@@ -7520,7 +7536,7 @@
       "symbols": [
         "IncidentForm"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/components/IncidentForm.tsx"
     },
     {
@@ -7530,7 +7546,7 @@
         "NavLink",
         "NavLinks"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/NavLinks.tsx"
     },
     {
@@ -7540,7 +7556,7 @@
         "AppFormValues",
         "AppForm"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/AppForm.tsx"
     },
     {
@@ -7549,7 +7565,7 @@
       "symbols": [
         "IntakeForm"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/IntakeForm.tsx"
     },
     {
@@ -7559,7 +7575,7 @@
         "WorkspaceLink",
         "WorkspaceSwitcher"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/WorkspaceSwitcher.tsx"
     },
     {
@@ -7568,7 +7584,7 @@
       "symbols": [
         "CostChart"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/CostChart.tsx"
     },
     {
@@ -7577,7 +7593,7 @@
       "symbols": [
         "DlqEntryCard"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/DlqEntryCard.tsx"
     },
     {
@@ -7592,7 +7608,7 @@
         "toneForVerdict",
         "verdictLabel"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/ui/Badge.tsx"
     },
     {
@@ -7601,7 +7617,7 @@
       "symbols": [
         "Timestamp"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/ui/Timestamp.tsx"
     },
     {
@@ -7611,7 +7627,7 @@
         "CredentialKind",
         "IngestTokenPanel"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/IngestTokenPanel.tsx"
     },
     {
@@ -7621,7 +7637,7 @@
         "AreaNav",
         "AreaDenied"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/AreaNav.tsx"
     },
     {
@@ -7634,7 +7650,7 @@
         "ShortSha",
         "Crumbs"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/DevBits.tsx"
     },
     {
@@ -7643,7 +7659,7 @@
       "symbols": [
         "AttestForm"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/AttestForm.tsx"
     },
     {
@@ -7652,14 +7668,14 @@
       "symbols": [
         "HitlDecision"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/HitlDecision.tsx"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/scripts/migrate.ts"
     },
     {
@@ -7681,7 +7697,7 @@
         "replayDlqEntry",
         "discardDlqEntry"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/dlq.ts"
     },
     {
@@ -7692,7 +7708,7 @@
         "capped",
         "isTruncated"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/cappedList.ts"
     },
     {
@@ -7706,7 +7722,7 @@
         "tableExists",
         "columnExists"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/db.ts"
     },
     {
@@ -7724,7 +7740,7 @@
         "updateTenantSettings",
         "upsertTenant"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/tenants.ts"
     },
     {
@@ -7734,7 +7750,7 @@
         "WORKSPACES",
         "workspacesFor"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/workspaces.ts"
     },
     {
@@ -7759,7 +7775,7 @@
         "listIngestRuns",
         "listGateFailures"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/devRead.ts"
     },
     {
@@ -7781,7 +7797,7 @@
         "Parsed",
         "parseDevIngest"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/devIngest.ts"
     },
     {
@@ -7795,7 +7811,7 @@
         "freshness",
         "unrepairedFailures"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/devView.ts"
     },
     {
@@ -7806,7 +7822,7 @@
         "Isolation",
         "isValidIsolation"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/isolation.ts"
     },
     {
@@ -7815,7 +7831,7 @@
       "symbols": [
         "tokenRoutes"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/tokenRoutes.ts"
     },
     {
@@ -7834,7 +7850,7 @@
         "revokeAppIngestTokens",
         "issueReplayKey"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/apps.ts"
     },
     {
@@ -7843,7 +7859,7 @@
       "symbols": [
         "currentAccess"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/currentAccess.ts"
     },
     {
@@ -7861,7 +7877,7 @@
         "IngestTokenStatus",
         "ingestTokenStatus"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/ingestTokens.ts"
     },
     {
@@ -7871,7 +7887,7 @@
         "BearerGateConfig",
         "requireBearer"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/bearerAuth.ts"
     },
     {
@@ -7884,7 +7900,7 @@
         "RecentTraceStats",
         "getRecentTraceStats"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/phoenix.ts"
     },
     {
@@ -7897,7 +7913,7 @@
         "getTenantCost",
         "getAllTenantsCurrentSpend"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/cost.ts"
     },
     {
@@ -7906,7 +7922,7 @@
       "symbols": [
         "storeDevIngest"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/devStore.ts"
     },
     {
@@ -7916,7 +7932,7 @@
         "formatUtc",
         "isoOrUndefined"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/formatTime.ts"
     },
     {
@@ -7927,7 +7943,7 @@
         "getEnvironment",
         "ENVIRONMENT_ALIASES"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/environment.ts"
     },
     {
@@ -7947,7 +7963,7 @@
         "handleScaffoldRead",
         "handleScaffoldConsume"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/intakes.ts"
     },
     {
@@ -7962,7 +7978,7 @@
         "INTAKE_LIMITS",
         "linesOf"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/intakeCatalog.ts"
     },
     {
@@ -7972,7 +7988,7 @@
         "safeRedirectPath",
         "isSafeHttpUrl"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/safeUrl.ts"
     },
     {
@@ -7987,7 +8003,7 @@
         "verifySignature",
         "scopeAuditEvents"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/auditSignature.ts"
     },
     {
@@ -8005,7 +8021,7 @@
         "getFrameworkVersionByTenant",
         "getWidgetStatus"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/runStatus.ts"
     },
     {
@@ -8020,7 +8036,7 @@
         "explainAbsent",
         "versionBreakdown"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/wireContract.ts"
     },
     {
@@ -8032,7 +8048,7 @@
         "revokeWidgetToken",
         "revokeWidgetTokensForTenant"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/widgetTokens.ts"
     },
     {
@@ -8042,7 +8058,7 @@
         "revokeSession",
         "isSessionRevoked"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/sessionRevocation.ts"
     },
     {
@@ -8056,7 +8072,7 @@
         "NotAttestable",
         "signObligation"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/compliance.ts"
     },
     {
@@ -8066,7 +8082,7 @@
         "IngestResult",
         "handleDevIngest"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/devIngestHandler.ts"
     },
     {
@@ -8082,7 +8098,7 @@
         "OpsResult",
         "handleOpsIngest"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/opsIngest.ts"
     },
     {
@@ -8095,7 +8111,7 @@
         "SyncEntryInput",
         "syncHistoryEntries"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/issues.ts"
     },
     {
@@ -8108,7 +8124,7 @@
         "OidcIdentity",
         "handleCallback"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/oidc.ts"
     },
     {
@@ -8119,7 +8135,7 @@
         "LICENSE_URL",
         "sourceUrl"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/legal.ts"
     },
     {
@@ -8130,14 +8146,14 @@
         "SuggestedPromotion",
         "getSuggestedPromotions"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/lib/promotions.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/assets/brand/images.d.ts"
     },
     {
@@ -8147,7 +8163,7 @@
         "Card",
         "MetricCard"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/ui/Card.tsx"
     },
     {
@@ -8156,7 +8172,7 @@
       "symbols": [
         "ThemeToggle"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/components/ui/ThemeToggle.tsx"
     },
     {
@@ -8165,7 +8181,7 @@
       "symbols": [
         "AdminLayout"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/admin/layout.tsx"
     },
     {
@@ -8174,7 +8190,7 @@
       "symbols": [
         "AdminHome"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/admin/page.tsx"
     },
     {
@@ -8183,7 +8199,7 @@
       "symbols": [
         "DevLayout"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/dev/layout.tsx"
     },
     {
@@ -8193,7 +8209,7 @@
         "dynamic",
         "DevAppsPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/dev/page.tsx"
     },
     {
@@ -8202,7 +8218,7 @@
       "symbols": [
         "OpsLayout"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/ops/layout.tsx"
     },
     {
@@ -8212,7 +8228,7 @@
         "dynamic",
         "OpsAppsPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/ops/page.tsx"
     },
     {
@@ -8222,7 +8238,7 @@
         "dynamic",
         "HitlPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/ops/hitl/page.tsx"
     },
     {
@@ -8232,7 +8248,7 @@
         "dynamic",
         "AdminCompliancePage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/ops/compliance/page.tsx"
     },
     {
@@ -8242,7 +8258,7 @@
         "dynamic",
         "AuditLogPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/ops/audit/page.tsx"
     },
     {
@@ -8252,7 +8268,7 @@
         "dynamic",
         "DLQPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/ops/dlq/page.tsx"
     },
     {
@@ -8262,7 +8278,7 @@
         "dynamic",
         "IncidentsPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/ops/incidents/page.tsx"
     },
     {
@@ -8272,7 +8288,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-11-22T20:35:22Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/app/ops/apps/[id]/page.tsx"
     },
     {
@@ -8282,7 +8298,7 @@
         "dynamic",
         "CompliancePage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/ops/apps/[id]/compliance/page.tsx"
     },
     {
@@ -8292,7 +8308,7 @@
         "dynamic",
         "DecisionsPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/ops/apps/[id]/decisions/page.tsx"
     },
     {
@@ -8302,7 +8318,7 @@
         "dynamic",
         "TenantDlqPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/ops/dlq/[tenantId]/page.tsx"
     },
     {
@@ -8312,7 +8328,7 @@
         "dynamic",
         "DevApprovalsPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/dev/approvals/page.tsx"
     },
     {
@@ -8322,7 +8338,7 @@
         "dynamic",
         "DevAppLayout"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/dev/apps/[app]/layout.tsx"
     },
     {
@@ -8332,7 +8348,7 @@
         "dynamic",
         "DevChangesPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/dev/apps/[app]/page.tsx"
     },
     {
@@ -8342,7 +8358,7 @@
         "dynamic",
         "DevGatesPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/dev/apps/[app]/gates/page.tsx"
     },
     {
@@ -8352,7 +8368,7 @@
         "dynamic",
         "DevDesignsPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/dev/apps/[app]/designs/page.tsx"
     },
     {
@@ -8362,7 +8378,7 @@
         "dynamic",
         "DevDesignPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/dev/apps/[app]/designs/[...path]/page.tsx"
     },
     {
@@ -8372,7 +8388,7 @@
         "dynamic",
         "DevCommitPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx"
     },
     {
@@ -8381,7 +8397,7 @@
       "symbols": [
         "NewIntakePage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/dev/intakes/new/page.tsx"
     },
     {
@@ -8391,7 +8407,7 @@
         "GET",
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/tenants/route.ts"
     },
     {
@@ -8400,7 +8416,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/audit/route.ts"
     },
     {
@@ -8409,7 +8425,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/dlq/route.ts"
     },
     {
@@ -8418,7 +8434,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-23T09:16:46Z",
       "id": "portal/app/api/incidents/route.ts"
     },
     {
@@ -8427,7 +8443,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/runs/ingest/route.ts"
     },
     {
@@ -8436,7 +8452,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/sync/history/route.ts"
     },
     {
@@ -8445,7 +8461,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/ops/ingest/route.ts"
     },
     {
@@ -8454,7 +8470,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/ops/stop/route.ts"
     },
     {
@@ -8463,7 +8479,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/dev/intakes/route.ts"
     },
     {
@@ -8472,7 +8488,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/dev/ingest/route.ts"
     },
     {
@@ -8481,7 +8497,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/dev/scaffold/[id]/route.ts"
     },
     {
@@ -8490,7 +8506,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/dev/scaffold/[id]/consume/route.ts"
     },
     {
@@ -8499,7 +8515,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/dlq/[taskId]/discard/route.ts"
     },
     {
@@ -8508,7 +8524,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/dlq/[taskId]/replay/route.ts"
     },
     {
@@ -8517,7 +8533,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/audit/append/route.ts"
     },
     {
@@ -8526,7 +8542,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/audit/export/route.ts"
     },
     {
@@ -8535,7 +8551,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/compliance/sync/route.ts"
     },
     {
@@ -8544,7 +8560,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/compliance/[app]/attest/route.ts"
     },
     {
@@ -8553,7 +8569,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/tenants/[id]/cost/route.ts"
     },
     {
@@ -8563,7 +8579,7 @@
         "POST",
         "DELETE"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/tenants/[id]/widget-token/route.ts"
     },
     {
@@ -8572,7 +8588,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/tenants/[id]/issues/route.ts"
     },
     {
@@ -8581,7 +8597,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/admin/access-export/route.ts"
     },
     {
@@ -8590,7 +8606,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/admin/apps/route.ts"
     },
     {
@@ -8599,21 +8615,21 @@
       "symbols": [
         "PATCH"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/admin/apps/[id]/route.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/admin/apps/[id]/ingest-token/route.ts"
     },
     {
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/admin/apps/[id]/ops-token/route.ts"
     },
     {
@@ -8622,7 +8638,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/admin/apps/[id]/replay-key/route.ts"
     },
     {
@@ -8631,7 +8647,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/hitl/decide/route.ts"
     },
     {
@@ -8640,7 +8656,7 @@
       "symbols": [
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/auth/session-status/route.ts"
     },
     {
@@ -8649,7 +8665,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/auth/logout/route.ts"
     },
     {
@@ -8659,7 +8675,7 @@
         "dynamic",
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/auth/callback/route.ts"
     },
     {
@@ -8669,7 +8685,7 @@
         "dynamic",
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/auth/login/route.ts"
     },
     {
@@ -8679,7 +8695,7 @@
         "OPTIONS",
         "GET"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/api/widget/status/route.ts"
     },
     {
@@ -8689,7 +8705,7 @@
         "dynamic",
         "AdminAppsPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/admin/apps/page.tsx"
     },
     {
@@ -8699,7 +8715,7 @@
         "dynamic",
         "AdminAppPage"
       ],
-      "last_modified": "2026-11-22T08:35:04Z",
+      "last_modified": "2026-11-11T20:22:05Z",
       "id": "portal/app/admin/apps/[id]/page.tsx"
     },
     {
@@ -10789,6 +10805,22 @@
       "pillar": null,
       "created_at": "2026-11-22T20:42:48Z",
       "id": "rfc:reviews/vacuous-sweep-guards.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The four majors of the 4.1.0 review's second pass",
+      "source_file": ".agent-rfc/designs/review-pass2-majors.md",
+      "pillar": null,
+      "created_at": "2026-11-23T09:23:03Z",
+      "id": "rfc:designs/review-pass2-majors.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: review-pass2-majors",
+      "source_file": ".agent-rfc/reviews/review-pass2-majors.md",
+      "pillar": null,
+      "created_at": "2026-11-23T09:23:06Z",
+      "id": "rfc:reviews/review-pass2-majors.md"
     }
   ],
   "edges": [

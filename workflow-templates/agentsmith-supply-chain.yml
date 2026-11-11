@@ -36,7 +36,11 @@ jobs:
             pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py requirements requirements.txt -o sbom/python.cdx.json
           else
             pipx run pip-audit==2.9.0 .
-            pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py environment -o sbom/python.cdx.json
+            # The SBOM describes an environment holding the app and its dependencies.
+            # Without an interpreter, cyclonedx-py describes the one it runs in: its own.
+            python -m venv "$RUNNER_TEMP/app-env"
+            "$RUNNER_TEMP/app-env/bin/pip" install --quiet .
+            pipx run --spec cyclonedx-bom==7.1.0 cyclonedx-py environment "$RUNNER_TEMP/app-env/bin/python" -o sbom/python.cdx.json
           fi
       - uses: actions/setup-node@v4
         if: hashFiles('package-lock.json') != ''

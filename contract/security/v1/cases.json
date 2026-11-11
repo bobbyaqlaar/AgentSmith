@@ -75,6 +75,54 @@
       "why": "the step runs only for outsiders"
     },
     {
+      "name": "an author guard negated with == false does not count",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".github/workflows/review.yml": "on: issue_comment\njobs:\n  review:\n    runs-on: ubuntu-latest\n    if: ${{ contains(fromJSON('[\"OWNER\",\"MEMBER\"]'), github.event.comment.author_association) == false }}\n    steps:\n      - uses: anthropics/claude-code-action@v1\n        with:\n          prompt: \"${{ github.event.comment.body }}\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CIAGENT-001": "fail"
+        }
+      },
+      "why": "the step runs only for outsiders"
+    },
+    {
+      "name": "an author allow-list that includes CONTRIBUTOR does not count",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".github/workflows/review.yml": "on: issue_comment\njobs:\n  review:\n    runs-on: ubuntu-latest\n    if: ${{ contains(fromJSON('[\"OWNER\",\"MEMBER\",\"CONTRIBUTOR\"]'), github.event.comment.author_association) }}\n    steps:\n      - uses: anthropics/claude-code-action@v1\n        with:\n          prompt: \"${{ github.event.comment.body }}\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CIAGENT-001": "fail"
+        }
+      },
+      "why": "anyone with one merged commit is a CONTRIBUTOR"
+    },
+    {
+      "name": "a role word that is not the allowed value does not count",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".github/workflows/review.yml": "on: issue_comment\njobs:\n  review:\n    runs-on: ubuntu-latest\n    if: ${{ github.event.comment.author_association == 'NONE' && github.repository_owner == 'OWNER-co' }}\n    steps:\n      - uses: anthropics/claude-code-action@v1\n        with:\n          prompt: \"${{ github.event.comment.body }}\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CIAGENT-001": "fail"
+        }
+      },
+      "why": "the step runs for authors with no association"
+    },
+    {
       "name": "a template risk entry fails",
       "verb": "check",
       "request": {},
