@@ -23,6 +23,10 @@ Every workflow AgentSmith gives a tenant says `runs-on: ubuntu-latest`, which is
 - **Coding agents:** they use their vendors' cloud models unless configured with a local one, so code sent to them leaves the boundary. AgentSmith's own gates call no model.
 - **Release fetch:** the sync workflow and setup action fetch AgentSmith's releases from GitHub, so an air-gapped site mirrors the release.
 
+## After the 4.1.0 review (2026-11-11)
+
+**R8 — the guidance left the build side dependent on services it did not name.** The section said "four outside services" and that mirroring the installer covers releases; in fact every job fetches GitHub-hosted actions, the setup and deploy steps and the sync workflow name `bobbyaqlaar/AgentSmith`, packages come from PyPI, npm and the Go proxy, two templates upload to Codecov, and no workflow reads a mirror. The section now says plainly that an air-gapped runner is not supported in 4.1.0, lists each dependency with what replaces it, and warns that a self-hosted runner on a public repository runs fork pull requests. A test holds the section to the templates: every outside `uses:` must be named in it. A setting that points the templates at a mirror is open work, not done here.
+
 ## Pillars
 
 - P1 applies — `docs/PRODUCT_BACKLOG.md` "CI runner as a setting" and the owner's sovereign principle are the requirement; `.agent-rfc/designs/sovereign-build-side.md` is the plan.
