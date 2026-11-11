@@ -24,7 +24,7 @@ on:
 jobs:
   eval-fairness:
     name: "Fairness eval scorecard"
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.AGENTSMITH_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     continue-on-error: ${{ inputs.fairness_mode != 'required' && vars.FAIRNESS_EVALS != 'required' }}
     steps:

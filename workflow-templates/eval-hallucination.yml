@@ -16,7 +16,7 @@ on:
 jobs:
   eval-hallucination:
     name: "Hallucination eval scorecard"
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.AGENTSMITH_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - name: Checkout

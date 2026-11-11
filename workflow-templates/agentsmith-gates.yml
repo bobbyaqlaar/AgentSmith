@@ -24,7 +24,7 @@ on:
 jobs:
   process-gates:
     name: "Process gates (design + review)"
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.AGENTSMITH_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
         with:

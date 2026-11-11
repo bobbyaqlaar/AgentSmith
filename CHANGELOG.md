@@ -88,6 +88,8 @@ version table being consulted.
 
 ## [Unreleased]
 
+- Every workflow AgentSmith gives a tenant runs on `${{ vars.AGENTSMITH_RUNNER || 'ubuntu-latest' }}`, so a team can keep its build on self-hosted runners by setting one variable. Unset, nothing changes. The manual gains "Keeping the build side on your own machines": runners, mirrored releases, coding agents with local models, and which agents are enforced at edit time.
+
 - Trajectory evals gain `max_tokens`: a run's tokens are read from its trace's model spans (or a case's recorded `tokens`), so CI fails a recorded run that spent more than its budget. The portal's Recent runs list shows each call's tokens in and out.
 
 - A sixth evals suite, `trajectory`: each case gives one run's tool calls, named or read from an OTLP/JSON trace, and the rules they must keep (`in_order`, `must_call`, `never`, `max_calls`). Graded from the calls without a model, so it gives a verdict even with no judge. Run it with `process-gate evals run --suite trajectory`.

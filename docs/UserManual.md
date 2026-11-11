@@ -712,6 +712,17 @@ What a developer needs day-to-day:
   (`AGENT_PHOENIX_ENDPOINT` optional). Greenfield repos with <3 golden cases
   skip the eval gate gracefully.
 
+### Keeping the build side on your own machines
+
+AgentSmith's running app needs no cloud: every model role is local by default, and the portal, Phoenix, Postgres, Temporal and Ollama run on your servers. The build side still depends on four outside services unless you change it.
+
+| What | By default | To keep it on your machines |
+|---|---|---|
+| CI runners | GitHub's hosted runners | Set the repository or organisation variable `AGENTSMITH_RUNNER` to your self-hosted runner's label (for example `self-hosted`). Every job AgentSmith gives you reads it, on GitHub.com or GitHub Enterprise Server; unset, they run on `ubuntu-latest`. The Python stack's CI starts a Postgres service, so its runner needs Docker. GitLab CI is not supported. |
+| AgentSmith releases | The setup action and the sync workflow fetch them from GitHub | Mirror the release you pin (`install-ai-stack.sh` and its checksum) inside your network. |
+| Coding agents | Claude Code, Cursor, Codex, Gemini CLI, Copilot and Antigravity use their vendors' cloud models, so the code and prompts you give them leave your boundary | Use a coding agent configured with a model you host. AgentSmith's own gates call no model, so they work the same with any agent. |
+| Edit-time enforcement | Claude Code and Cursor are stopped while they edit. Codex, Gemini CLI, Copilot and Antigravity read the rule files, and are stopped at commit and in CI. | Rely on the commit and CI gates for those four. Their hook formats are not yet confirmed from real sessions, so AgentSmith does not claim edit-time enforcement for them. |
+
 ## Agent Identity
 
 ### Setting Up Your Identity
