@@ -30,6 +30,17 @@ CATALOGUE = FRAMEWORK / "fixtures" / "compliance" / "catalogue.json"
 CHECKLIST = "docs/compliance-checklist.md"
 SYNC_PATH = "/api/compliance/sync"
 SCHEMA = 1
+DECLARATION_TEMPLATE = FRAMEWORK / "templates" / "compliance" / "dubai-gov" / "compliance.json"
+PROVIDER_EVIDENCE = ("AgentSmith's own evidence: `scripts/compliance_port.py provider-evidence`, run by its "
+                     "Self-Test and attached to each release")
+# Provider obligations AgentSmith does not yet prove, named so the evidence step can
+# publish them and still fail on anything new. Adding one is the owner's decision
+# (2026-11-12, the 4.1.0 review's second pass, P2-R22); a gap that starts passing must
+# leave this list, or the step fails.
+KNOWN_PROVIDER_GAPS = {
+    "OB-AUDIT-COVERAGE": "it cites a route file, not a test; a test that every sign-in and human action is "
+                         "audited is open work (docs/PRODUCT_BACKLOG.md)",
+}
 
 
 def load_catalogue(path: Path = CATALOGUE) -> list[c.Obligation]:
@@ -124,7 +135,9 @@ def _judge_mechanism(
 ) -> tuple[str, str]:
     mechanism = row.mechanism or ""
     if row.layer == "provider" and not own:
-        return "not_applicable", "AgentSmith's own release evidence"
+        if row.id in KNOWN_PROVIDER_GAPS:
+            return "pending", f"AgentSmith does not yet prove this: {KNOWN_PROVIDER_GAPS[row.id]}"
+        return "not_applicable", PROVIDER_EVIDENCE
     if mechanism.startswith("check:"):
         import compliance_checks
 
@@ -242,6 +255,40 @@ def evaluate(
         "reason": f"{failed} obligation(s) not met for {stage}" if failed else "",
         "rows": rows,
         "counts": counts,
+    }
+
+
+def provider_evidence(catalogue: Optional[list[c.Obligation]] = None) -> dict[str, Any]:
+    """AgentSmith's own evidence for the obligations a tenant reads as `not_applicable`.
+    Each tenant's provider rows point here, so it must be produced: by Self-Test and by
+    the release (the 4.1.0 review's second pass, P2-R22). The verdict fails on a failing
+    row that is not a named known gap, and on a known gap that has started to pass."""
+    declared = json.loads(DECLARATION_TEMPLATE.read_text(encoding="utf-8"))
+    rows, unexpected, stale = [], [], []
+    for row in catalogue if catalogue is not None else load_catalogue():
+        if row.layer != "provider":
+            continue
+        if row.kind == "attested":
+            result, message = "fail", "a provider obligation is proved by AgentSmith's CI, not by a signature"
+        else:
+            result, message = _judge_mechanism(FRAMEWORK, row, declared, {}, "", {}, own=True)
+        known = row.id in KNOWN_PROVIDER_GAPS
+        if result == "fail" and not known:
+            unexpected.append(row.id)
+        if result != "fail" and known:
+            stale.append(row.id)
+        rows.append({"id": row.id, "title": row.title, "mechanism": row.mechanism, "result": result,
+                     "message": message, "known_gap": result == "fail" and known,
+                     **({"gap": KNOWN_PROVIDER_GAPS[row.id]} if known else {})})
+    reasons = ([f"failing: {', '.join(unexpected)}"] if unexpected else []) + (
+        [f"no longer failing, so remove from KNOWN_PROVIDER_GAPS: {', '.join(stale)}"] if stale else [])
+    return {
+        "schema": SCHEMA,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "verdict": "fail" if reasons else "pass",
+        "reason": "; ".join(reasons),
+        "known_gaps": [r["id"] for r in rows if r["known_gap"]],
+        "rows": rows,
     }
 
 
@@ -393,7 +440,19 @@ def main(argv: Optional[list[str]] = None) -> int:
     export.add_argument("--out", default=CHECKLIST)
     export.add_argument("--evidence-dir", default=None, help="also write the report by clause here")
     sub.add_parser("sync")
+    evidence = sub.add_parser("provider-evidence", help="AgentSmith's own evidence for its provider obligations")
+    evidence.add_argument("--out", default=None, help="also write the document here")
     args = parser.parse_args(argv)
+    if args.verb == "provider-evidence":
+        document = provider_evidence()
+        if args.out:
+            Path(args.out).write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+        for row in document["rows"]:
+            mark = "known gap" if row["known_gap"] else row["result"]
+            print(f"  {mark:<15}{row['id']:<24}{row['message'][:110]}", file=sys.stderr)
+        print(f"provider evidence: {document['verdict']}{': ' + document['reason'] if document['reason'] else ''}",
+              file=sys.stderr)
+        return 0 if document["verdict"] == "pass" else 1
     root, now = Path.cwd(), datetime.now(timezone.utc)
     try:
         if args.verb == "sync":

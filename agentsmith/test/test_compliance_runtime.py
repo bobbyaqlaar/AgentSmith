@@ -7,6 +7,8 @@ The tests that need Postgres run when COMPLIANCE_TEST_DSN names a database.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
+import datetime
 import json
 import os
 from pathlib import Path
@@ -174,8 +176,12 @@ class _Workflow:
         if label == "compliance_record_activity" and payload["kind"] == self.fail_on:
             raise RuntimeError("record refused")
         self.executed.append((label, payload))
-        if label == "compliance_record_activity" and payload["kind"] == "hitl_pending" and self.deliver:
-            self.wf.hitl_decide(dict(self.deliver))
+        if label == "compliance_record_activity" and payload["kind"] == "hitl_pending":
+            if self.deliver:
+                self.wf.hitl_decide(dict(self.deliver))
+            # What the real activity answers: the digest of the input as it received it,
+            # after Temporal serialized it (P2-R13).
+            return {"record_id": len(self.executed), "input_sha256": c.payload_digest(_as_received(payload)["input"])}
         return {"ran": label}
 
     async def wait_condition(self, predicate, timeout=None):
@@ -185,6 +191,14 @@ class _Workflow:
 
     def info(self):
         return type("I", (), {"workflow_id": "wf-1", "run_id": "run-1"})()
+
+
+def _as_received(payload: dict) -> dict:
+    """The record's payload as the activity sees it: through Temporal's data converter."""
+    from temporalio.converter import DataConverter
+
+    converter = DataConverter.default.payload_converter
+    return converter.from_payloads(converter.to_payloads([payload]), [dict])[0]["payload"]
 
 
 def _gate(fake, monkeypatch, wf=None):
@@ -581,8 +595,55 @@ def test_a_decision_about_other_input_does_not_answer_the_gate(monkeypatch):
     assert "issue_permit" not in _labels(fake) and "record:hitl_decision" not in _labels(fake)
 
 
-def test_the_workflows_digest_is_the_records_digest():
-    assert base_workflow._input_digest({"b": [1, 2], "a": "x"}) == c.payload_digest({"a": "x", "b": [1, 2]})
+# ── The 4.1.0 review's second pass: P2-R13 (.agent-rfc/designs/review-pass2-majors.md) ──
+
+
+@dataclasses.dataclass
+class _Payment:
+    to: str
+    amount: float
+    when: datetime.datetime
+
+
+def test_a_decision_answers_an_input_temporal_serializes_differently(monkeypatch):
+    """P2-R13: the workflow waited for a digest of the Python object, the reviewer's
+    decision named the digest of the serialized input, and the gate always timed out."""
+    payment = _Payment("x", 10.0, datetime.datetime(2026, 11, 11, 10, 0))
+    shown = _as_received({"payload": {"input": payment}})["input"]  # what the reviewer saw
+    fake, wf = _deciding({**DECISION, "payload_sha256": c.payload_digest(shown)})
+    monkeypatch.setattr(base_workflow, "workflow", fake)
+    monkeypatch.setattr(base_workflow, "_HAS_TEMPORAL", True)
+    asyncio.run(wf.run_with_hitl_gate(
+        None, {}, "issue_permit", payment, "dlq_enqueue_activity",
+        gate_result={"needs_hitl": True, "requested_by": "someone@x"}, tenant_id="t", compliance=True))
+    assert "issue_permit" in _labels(fake) and "record:hitl_timeout" not in _labels(fake)
+
+
+def test_the_record_activity_answers_with_the_digest_of_what_it_recorded(monkeypatch):
+    """The workflow waits for this value; the record and the portal carry the same one."""
+    written = {}
+    monkeypatch.setattr(c, "require_running", lambda *a, **k: None)
+    monkeypatch.setattr(c, "record", lambda tenant, kind, payload, **k: written.update(payload) or 7)
+    monkeypatch.setattr(c, "forward", lambda *a, **k: (0, ""))
+    answer = asyncio.run(base_workflow.compliance_record_activity(
+        {"tenant_id": "t", "workflow_id": "wf-1", "kind": "hitl_pending", "payload": {"input": {"to": "x"}}}))
+    assert answer == {"record_id": 7, "input_sha256": c.payload_digest({"to": "x"})}
+    assert written["input_sha256"] == answer["input_sha256"]
+
+
+def test_a_pending_record_without_a_digest_refuses_the_gate(monkeypatch):
+    """Nothing to compare a decision with: the gate fails closed rather than waiting for nothing."""
+    fake, wf = _deciding(dict(DECISION))
+    original = fake.execute_activity
+
+    async def no_digest(name, payload, **k):
+        answer = await original(name, payload, **k)
+        return {"record_id": 1} if payload.get("kind") == "hitl_pending" else answer
+
+    fake.execute_activity = no_digest
+    with pytest.raises(Exception, match="digest"):
+        _gate(fake, monkeypatch, wf)
+    assert "issue_permit" not in _labels(fake)
 
 
 @pytest.mark.parametrize("who", ["fatima", "EMP-1042", "  "])

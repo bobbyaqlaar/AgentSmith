@@ -64,17 +64,6 @@ def _compliance_failure(message: str) -> Exception:
     return RuntimeError(message)
 
 
-def _input_digest(payload: Any) -> str:
-    """What a reviewer was shown, as `agentsmith.compliance.payload_digest` computes it.
-    Written out here because workflow code stays free of the compliance module's
-    database imports; a test holds the two equal."""
-    import hashlib
-    import json as _json
-
-    canonical = _json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
-    return hashlib.sha256(canonical.encode()).hexdigest()
-
-
 def _looks_like_email(value: Any) -> bool:
     import re
 
@@ -107,7 +96,10 @@ if _HAS_TEMPORAL:
             compliance.forward(input["tenant_id"])
         except Exception:  # fail-open: the record is already written
             activity.logger.warning("compliance record not forwarded yet")
-        return {"record_id": record_id}
+        # The digest the reviewer's decision must name, taken here, after Temporal
+        # serialized the input: the workflow's own object can differ from what the
+        # record shows (a dataclass, a date), and then no decision ever matched (P2-R13).
+        return {"record_id": record_id, "input_sha256": payload.get("input_sha256")}
 
     @activity.defn
     async def dlq_enqueue_activity(input: dict) -> dict:
@@ -454,17 +446,22 @@ class BaseAgentWorkflow:
                 raise _compliance_failure(
                     "requested_by must be the requester's sign-in email, as the portal knows them")
             workflow_id = workflow.info().workflow_id
-            digest = _input_digest(resume_input)
             # A decision given before this request was asked (after a timeout, or
             # signalled early) does not answer it (the 4.1.0 release review, R14).
             self._gate_decisions.pop(gate_id, None)
-            await workflow.execute_activity(
+            pending = await workflow.execute_activity(
                 compliance_record_activity,
                 {"tenant_id": tenant_id, "workflow_id": workflow_id, "kind": "hitl_pending",
                  "payload": {"gate_id": gate_id, "workflow_id": workflow_id, "action": resume_activity_name,
                              "input": resume_input, "requested_by": gate_result.get("requested_by")}},
                 start_to_close_timeout=timedelta(minutes=5),
             )
+            # The digest of the input as the record holds it, from the activity that
+            # wrote it: one value, computed once (P2-R13).
+            digest = (pending or {}).get("input_sha256")
+            if not digest:
+                raise _compliance_failure("the pending record came back without its input digest, so no "
+                                          "decision could be matched to this request")
             try:
                 # Only a decision about this request's input answers it.
                 await workflow.wait_condition(

@@ -27,8 +27,8 @@ Each row has an `id` from the catalogue (`obligation.schema.json`), a `result` a
 |---|---|
 | `pass` | Enforced, verified or validly signed |
 | `fail` | Not met, and this stage is one the obligation blocks |
-| `pending` | Not met, and this stage is not one it blocks |
-| `not_applicable` | The provider's own release is the evidence, or no control applies here |
+| `pending` | Not met, and this stage is not one it blocks; or a provider obligation the provider names as not yet proved |
+| `not_applicable` | The provider's own evidence covers it (AgentSmith: `scripts/compliance_port.py provider-evidence`, run by Self-Test and attached to each release), or no control applies here |
 
 An attestation that has expired counts as absent. A declaration that cannot be read is a failure, never "no profile".
 

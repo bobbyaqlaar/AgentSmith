@@ -202,3 +202,45 @@ def test_an_action_receives_inherited_environment(tmp_path, scope):
     text = (f"on: issues\n{top}jobs:\n  a:\n    runs-on: ubuntu-latest\n{env}    steps:\n"
             f"      - uses: {CLAUDE}\n        with:\n          prompt: \"fix the issue\"\n")
     assert _failed(_check(tmp_path, text))
+
+
+# ── The 4.1.0 review's second pass: P2-R5 (.agent-rfc/designs/review-pass2-majors.md) ──
+
+
+@pytest.mark.parametrize("guard", [
+    # R9's negation, written with `== false` instead of `!`: runs only for outsiders.
+    "contains(fromJSON('[\"OWNER\",\"MEMBER\"]'), github.event.comment.author_association) == false",
+    "(github.event.comment.author_association == 'OWNER') == false",
+    # CONTRIBUTOR is anyone with one merged commit.
+    "contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\",\"CONTRIBUTOR\"]'), "
+    "github.event.comment.author_association)",
+    # The role word is there, but not as the allowed value.
+    "github.event.comment.author_association == 'NONE' && github.repository_owner == 'OWNER-co'",
+    # A list read as a string: `contains` on a string is a substring test.
+    "contains('OWNER,MEMBER', github.event.comment.author_association)",
+    # `&&` binds tighter than `||`: this runs for anyone who mentions the agent.
+    "contains(github.event.comment.body, '@claude') || github.event_name == 'x' && "
+    "github.event.comment.author_association == 'OWNER'",
+    # The issue's author is trusted; the comment's is not.
+    "github.event.issue.author_association == 'OWNER'",
+    # A negated group hides a positive term from the split.
+    "${{ !(contains(github.event.comment.body, '@claude') && github.event.comment.author_association == 'OWNER') }}",
+])
+def test_a_guard_that_only_looks_like_a_restriction_does_not_count(tmp_path, guard):
+    """P2-R5: each of these lets an outsider's comment reach the agent, and each was accepted."""
+    assert _failed(_check(tmp_path, _job(_action(COMMENT), job_if=guard)))
+
+
+@pytest.mark.parametrize("guard", [
+    # The common shape: only on issues, and only for the owner. A negated term in a
+    # conjunction can only narrow it.
+    "github.event.comment.author_association == 'OWNER' && !github.event.issue.pull_request",
+    "${{ github.event.comment.author_association == 'MEMBER' && contains(github.event.comment.body, '@claude') }}",
+    # Inside ${{ }}: a YAML value that starts with a quote is a quoted string.
+    "${{ 'COLLABORATOR' == github.event.comment.author_association }}",
+    # GitHub compares strings without case.
+    "github.event.comment.author_association == 'owner'",
+    "(github.event.comment.author_association == 'OWNER')",
+])
+def test_a_term_that_can_only_narrow_to_trusted_authors_counts(tmp_path, guard):
+    assert not _failed(_check(tmp_path, _job(_action(COMMENT), job_if=guard)))

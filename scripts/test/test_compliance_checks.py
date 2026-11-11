@@ -543,6 +543,26 @@ def test_the_template_fails_when_it_finds_nothing_to_scan():
     assert "exit 1" in text
 
 
+def test_every_environment_sbom_names_the_apps_own_interpreter():
+    """P2-R7: `cyclonedx-py environment` with no interpreter describes the environment it
+    runs in, which under `pipx run` is CycloneDX's own: an SBOM of the wrong software."""
+    import shlex
+
+    import yaml
+
+    workflow = yaml.safe_load((REPO / "workflow-templates" / "agentsmith-supply-chain.yml").read_text(encoding="utf-8"))
+    runs = [str(step.get("run") or "") for step in workflow["jobs"]["scan"]["steps"]]
+    calls = [shlex.split(line) for run in runs for line in run.splitlines() if "cyclonedx-py environment" in line]
+    assert calls, "the template no longer writes an environment SBOM; update this test"
+    for words in calls:
+        after = words[words.index("environment") + 1:]
+        assert after and not after[0].startswith("-"), f"no interpreter given: {' '.join(words)}"
+        environment = after[0].rsplit("/bin/", 1)[0]
+        installs = [shlex.split(line) for run in runs for line in run.splitlines() if " install " in line]
+        assert any(w[0] == f"{environment}/bin/pip" and w[1:2] == ["install"] and "." in w for w in installs), (
+            f"{after[0]} is not an environment the app was installed into")
+
+
 def test_the_arabic_check_reads_only_the_suites_that_carry_language(tmp_path):
     """R16: the trajectory suite failed it, and no suite at all passed it."""
     verdict, message = cc.arabic_cases(tmp_path, DECLARED)
