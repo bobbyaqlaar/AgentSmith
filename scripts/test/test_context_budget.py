@@ -7,13 +7,16 @@ no tokenizer."""
 
 from __future__ import annotations
 
-import importlib.util
 import json
-import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from _shared import load_script
 
 REPO = Path(__file__).resolve().parents[2]
 RULE_FILE_TOKENS = 3_000
@@ -25,10 +28,7 @@ def _tokens(text: str) -> int:
 
 
 def _generator():
-    spec = importlib.util.spec_from_file_location("generate_ide_config", REPO / "scripts" / "generate-ide-config.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("generate-ide-config")
 
 
 @pytest.mark.parametrize("stack", ["python-fastapi", "ts-react", "go"])
@@ -52,8 +52,10 @@ def test_the_rule_files_carry_the_token_discipline():
 def test_the_session_start_message_stays_within_its_budget():
     # No transcript_path: this runs against the real repository, whose session ledger is not the test's.
     payload = json.dumps({"cwd": str(REPO), "hook_event_name": "SessionStart"})
-    done = subprocess.run(["bash", str(REPO / ".githooks" / "process-gate"), "session-start", "--ide", "claude"],
-                          input=payload, capture_output=True, text=True, cwd=REPO,
-                          env={**os.environ, "AGENTSMITH_DIR": str(REPO)}, check=False)
+    # The gate itself, with this interpreter: the launcher looks for an installed environment,
+    # which a CI runner does not have.
+    gate = str(REPO / "scripts" / "process_gate.py")
+    done = subprocess.run([sys.executable, gate, "session-start", "--ide", "claude"],
+                          input=payload, capture_output=True, text=True, cwd=REPO, check=False)
     text = json.loads(done.stdout)["hookSpecificOutput"]["additionalContext"]
     assert _tokens(text) <= SESSION_START_TOKENS, f"{_tokens(text)} tokens (estimated)"

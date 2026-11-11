@@ -31,6 +31,20 @@ Found on the first real trailer, this repository's own commit `555cfc5`.
 
 Left out on purpose, and documented: Cursor, Codex, Gemini CLI, Copilot and Antigravity get no trailer until their hook payloads are confirmed (gap 11). Showing the tokens in the portal comes with the run-side token work.
 
+## Pass 5 — findings: 3
+
+CI on PR #113 failed where the local targeted runs had passed; each was checked in code.
+
+1. **Two empty `except` blocks in `scripts/process_gate.py`** (`_remember_session`, `_context_note`) had no `# fail-open:` reason, so the bare-except tree test failed. Fixed: each says why it fails open.
+2. **The session-start budget test ran the hook through `.githooks/process-gate`**, which looks for an installed environment a CI runner lacks. Fixed: it runs `scripts/process_gate.py` with the test's own interpreter.
+3. **`test_context_budget.py` loaded the generator with its own `importlib` spec loader**, a second script loader the tree test forbids. Fixed: `load_script("generate-ide-config")` from `_shared`.
+
+The lesson, kept for the next slice: run the whole `scripts/test` suite in a clean environment (no install on PATH, no `AGENTSMITH_DIR`, no `CLAUDECODE`) before pushing, not only the related suites.
+
+## Pass 6 — findings: 0
+
+- The whole `scripts/test` suite in a clean environment, with ruff and mypy.
+
 ## Sign-off
 
 Group 1 · DRY & shared code — [x] checked — one reader for the transcript, used by the hooks, the trailers and the report.
@@ -48,4 +62,4 @@ Gates run: the suites above; ruff; mypy; the process gate against the commit.
 
 Levers reviewed: `failure-is-not-a-result`, `implemented-not-invoked`, `test-that-cannot-fail`.
 
-KG query: kg:4f39167e33da
+KG query: kg:97882b6bb1df

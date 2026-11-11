@@ -970,7 +970,7 @@ def _remember_session(root: Path, payload: dict) -> None:
         import agent_tokens as at
 
         at.remember(root, _IDE["value"], payload)
-    except Exception:
+    except Exception:  # fail-open: token bookkeeping must never block a hook
         pass
 
 
@@ -982,7 +982,7 @@ def _context_note(root: Path) -> None:
         import agent_tokens as at
 
         note = at.context_note(root)
-    except Exception:
+    except Exception:  # fail-open: a missing note must never block a hook
         return
     if note:
         print(json.dumps({"systemMessage": note}))

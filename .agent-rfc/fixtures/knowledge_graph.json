@@ -1027,7 +1027,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-11-11T06:17:25Z",
+      "last_modified": "2026-11-11T06:42:21Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -10192,7 +10192,7 @@
         "test_the_rule_files_carry_the_token_discipline",
         "test_the_session_start_message_stays_within_its_budget"
       ],
-      "last_modified": "2026-11-11T06:17:57Z",
+      "last_modified": "2026-11-11T06:44:15Z",
       "id": "scripts/test/test_context_budget.py"
     },
     {
