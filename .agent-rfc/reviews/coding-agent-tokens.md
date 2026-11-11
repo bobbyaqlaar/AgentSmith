@@ -62,4 +62,40 @@ Gates run: the suites above; ruff; mypy; the process gate against the commit.
 
 Levers reviewed: `failure-is-not-a-result`, `implemented-not-invoked`, `test-that-cannot-fail`.
 
-KG query: kg:97882b6bb1df
+Scope at the first sign-off: kg:97882b6bb1df
+
+## Pass 7 — findings: 2
+
+The 4.1.0 release review, verified in the code first.
+
+1. **R3** — the ledger held one session and was reset by any other session's hook, and `commit-msg` advanced the baseline before the commit existed. Reproduced in tests: two sessions in one checkout, a commit a later hook refused, and `--amend`, each failing on `origin/main`. Fixed: one entry per transcript, the committing shell's session chosen by `CLAUDE_CODE_SESSION_ID`, and a pending baseline confirmed by finding its exact trailer line on a landed commit. A sibling: `context_note` read "the" session; it now reads the payload's transcript.
+2. **R7** — the backlog said `Agent:` on each commit. Wording fixed in the backlog commit of this PR.
+
+## Pass 8 — findings: 1
+
+1. **The tests read this session's own `CLAUDE_CODE_SESSION_ID`.** Run from Claude Code, two tests chose no session and failed; from a plain shell they would have passed, so the result depended on who ran them. An autouse fixture clears it; tests that mean one name it.
+
+## Pass 9 — findings: 0
+
+- `scripts/test/test_agent_tokens.py`: 28 passed, including the real hook path for a commit and for `--amend`.
+- Five hand mutants (always adopt the pending baseline; pick any session; pick the only session when there are two; ignore the amend base; drop the old-ledger reading), all killed.
+- No post-commit hook added: `.githooks` has none, and one would chain tenants' post-commit hooks, which can push.
+
+## Sign-off (after the 4.1.0 review)
+
+Group 1 · DRY & shared code — [x] checked — one `entry()` chooses a session for the trailer, the note and the report.
+Group 2 · Quality / safety — [x] checked — bookkeeping still never fails a commit; ambiguity writes no count.
+Group 3 · Architecture / hygiene — [x] checked — the ledger is local; the old shape is read.
+Group 4 · Process — [x] checked — design addendum first; manual and CHANGELOG updated.
+Group 5 · Intuitive UI — [x] n/a — no screen.
+Group 6 · Signal integrity — [x] checked — a trailer is a session's own spend or absent.
+Group 7 · Auth & session integrity — [x] n/a — no auth code.
+
+Tests added: six in `scripts/test/test_agent_tokens.py`.
+Mutation-checked: yes, by hand; five mutants, all killed.
+Fixtures re-pinned: `.agent-rfc/fixtures/knowledge_graph.json`.
+Gates run: the suite above; the knowledge-graph check; the process gate against the commit.
+
+Levers reviewed: `out-of-order-and-repeated`, `failure-is-not-a-result`, `implemented-not-invoked`, `docs-match-behaviour`, `test-that-cannot-fail`.
+
+KG query: kg:a82981f44083

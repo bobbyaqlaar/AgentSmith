@@ -974,14 +974,15 @@ def _remember_session(root: Path, payload: dict) -> None:
         pass
 
 
-def _context_note(root: Path) -> None:
+def _context_note(root: Path, payload: dict) -> None:
     """A word to the person, never a block, when the session's context has grown."""
     if _IDE["value"] != "claude":
         return
     try:
         import agent_tokens as at
 
-        note = at.context_note(root)
+        transcript = payload.get("transcript_path")
+        note = at.context_note(root, transcript=transcript if isinstance(transcript, str) and transcript else None)
     except Exception:  # fail-open: a missing note must never block a hook
         return
     if note:
@@ -998,7 +999,7 @@ def cmd_stop(payload: dict) -> int:
     swept, sweep_report, _failing = sweep(root)
     problems = [*unreviewed, *([line.strip() for line in sweep_report if line.strip()] if swept else [])]
     if not problems:
-        _context_note(root)
+        _context_note(root, payload)
         return 0
     _record("block", "review-before-done" if not swept else "bypass-sweep")
     # Pillar 5's log, written by the hook rather than by an agent's memory of
@@ -2226,6 +2227,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                            help="answer gate contract 3's `push`: one decision on stdout")
     trailers_cmd = sub.add_parser("agent-trailers",
                                   help="after the gate allowed a commit: add Agent and Agent-Tokens trailers")
+    trailers_cmd.add_argument("--amend", action="store_true", help="the commit replaces HEAD (git commit --amend)")
     trailers_cmd.add_argument("message_file")
     msg = sub.add_parser("commit-msg")
     msg.add_argument("--amend", action="store_true", help="the commit replaces HEAD (git commit --amend)")
@@ -2273,7 +2275,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command == "agent-trailers":
         import agent_tokens as at
 
-        return at.main(["trailers", args.message_file])
+        return at.main(["trailers", *(["--amend"] if args.amend else []), args.message_file])
     if args.command == "commit-msg":
         if args.decision:
             raw = "" if sys.stdin.isatty() else _payload_text(sys.stdin)

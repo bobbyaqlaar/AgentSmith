@@ -34,6 +34,17 @@ The step can never block a commit: any failure adds nothing. A commit with no tr
 
 **Inject less, under a budget.** A test holds each rendered rule file, the session-start message and the stop hook's message to a token budget, estimated as characters divided by four. The rule files gain a short "token discipline" block, rendered into all six from `records.token_discipline`. It covers reading the impact list rather than the tree, searching before reading, reading slices of large files, not printing large outputs, and one slice per session.
 
+## After the 4.1.0 review (2026-11-11)
+
+**R3 — two sessions in one checkout corrupted the trailer**, and so did an aborted commit and `--amend`. The ledger held one session and reset itself whenever another session's hook ran, and `commit-msg` moved the baseline before the commit existed. Now:
+
+- The ledger keeps one entry per transcript (`{"sessions": {…}}`; an old one-entry ledger is read as one session). Sessions unseen for 14 days are dropped, at most 32 kept.
+- A commit is charged to the session whose shell made it, by `CLAUDE_CODE_SESSION_ID` against the transcript's session id. With several sessions and no id, the commit carries `Agent:` only: no measurement, no trailer.
+- `commit-msg` records a *pending* baseline with the exact `Agent-Tokens:` line it wrote. The next hook in that session moves the baseline only if a recent commit carries that line; a commit refused after the trailer step charges nothing. No post-commit hook is added: `.githooks` has none, and adding one would start chaining tenants' post-commit hooks, one of which pushes.
+- `--amend` reaches the trailer step (the hook already detected it for the gate). When the commit replaced is this session's last, the trailer counts from the baseline before it.
+
+**R7** is wording: the backlog says `Agent:` on each commit made from Claude Code.
+
 ## Pillars
 
 - P1 applies — the paper's token goal and gap 6 are the requirement; `.agent-rfc/designs/coding-agent-tokens.md` is the plan.
@@ -48,7 +59,7 @@ The step can never block a commit: any failure adds nothing. A commit with no tr
 - P12 applies — `scripts/agent_tokens.py` keeps counts only; no prompt or response text leaves the transcript.
 - P13 applies — `.githooks/commit-msg` adds trailers only after the gate allows, and never fails the commit.
 - P14 n/a — no fixtures.
-- P15 applies — `scripts/test/test_agent_tokens.py` holds that no transcript or an unknown agent writes nothing, never a zero.
+- P15 applies — `scripts/test/test_agent_tokens.py` holds that no transcript or an unknown agent writes nothing, never a zero, and that two sessions with no way to tell which committed write no count (R3).
 - P16 applies — `CHANGELOG.md` names the trailers; removing the hook line stops them, and the ledger is local and disposable.
 
 ## Deviations
@@ -64,3 +75,5 @@ none
 - `failure-is-not-a-result` — no measurement is no trailer, never zero tokens.
 - `implemented-not-invoked` — a test drives the real hook path, not only the module.
 - `test-that-cannot-fail` — hand mutants.
+- `out-of-order-and-repeated` — two sessions, an aborted commit and an amend each keep their own count (R3).
+- `docs-match-behaviour` — the backlog says which commits carry `Agent:` (R7).
