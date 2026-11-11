@@ -277,4 +277,5 @@ def test_a_portal_test_no_script_runs_is_not_evidence(tmp_path: Path, monkeypatc
     monkeypatch.setattr(cp, "FRAMEWORK", tmp_path)
     found = cp._judge_mechanism(tmp_path, _mech("OB-X", "release:portal/test/lonely.test.ts", layer="provider"),
                                 {}, {}, "", {}, own=True)
-    assert found == ("fail", "portal/test/lonely.test.ts is in neither `npm test` nor `npm run test:db`, so CI never runs it")
+    assert found == ("fail", "portal/test/lonely.test.ts is in neither `npm test` nor `npm run test:db`, "
+                             "so CI never runs it")

@@ -33,4 +33,32 @@ Gates run: the suites above; `npm test`; `tsc`; the knowledge-graph check; the p
 
 Levers reviewed: `declared-vs-enforced`, `guards-must-be-able-to-fail`, `out-of-order-and-repeated`, `implemented-not-invoked`, `gate-integrity`, `run-the-gates-ci-lists`, `no-double-submit`, `irreversible-needs-confirmation`, `failure-is-not-a-result`, `validate-on-the-receiving-side`, `docs-match-behaviour`.
 
-KG query: kg:60da23be1df9
+Scope at an earlier sign-off: kg:60da23be1df9
+## Pass 3 — findings: 1
+
+Ruff, pinned from `requirements-lint.txt`, over the whole tree before pushing.
+
+1. **E501** twice: a line in `_not_run_by_ci` and one in its test passed 120 characters. Split; no behaviour change.
+
+## Pass 4 — findings: 0
+
+- `scripts/test/test_compliance_port.py`: 27 passed; ruff clean.
+
+## Sign-off (after lint)
+
+Group 1 · DRY & shared code — [x] n/a — formatting.
+Group 2 · Quality / safety — [x] n/a.
+Group 3 · Architecture / hygiene — [x] checked — the line limit CI holds.
+Group 4 · Process — [x] checked — found by the lint gate CI runs.
+Group 5 · Intuitive UI — [x] n/a — no screen.
+Group 6 · Signal integrity — [x] n/a.
+Group 7 · Auth & session integrity — [x] n/a.
+
+Tests added: none.
+Mutation-checked: n/a — formatting.
+Fixtures re-pinned: `.agent-rfc/fixtures/knowledge_graph.json`.
+Gates run: ruff; the test file; the process gate against the commit.
+
+Levers reviewed: `run-the-gates-ci-lists`.
+
+KG query: kg:752ff92fbccd

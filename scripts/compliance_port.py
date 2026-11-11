@@ -102,7 +102,8 @@ def _not_run_by_ci(cited: str) -> str:
     review, R23). Pytest collects `test_*.py` under the two test folders; the portal's
     tests run only when `npm test` or `npm run test:db` names them."""
     path = PurePosixPath(cited)
-    if path.suffix == ".py" and path.name.startswith("test_") and str(path.parent) in ("agentsmith/test", "scripts/test"):
+    pytest_folders = ("agentsmith/test", "scripts/test")
+    if path.suffix == ".py" and path.name.startswith("test_") and str(path.parent) in pytest_folders:
         return ""
     if str(path.parent) == "portal/test" and path.name.endswith(".test.ts"):
         scripts = json.loads((FRAMEWORK / "portal" / "package.json").read_text(encoding="utf-8")).get("scripts", {})
