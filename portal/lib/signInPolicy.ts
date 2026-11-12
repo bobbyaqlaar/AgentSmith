@@ -23,39 +23,52 @@ export const LOCKOUT_SECONDS = 900;
 
 // Per process: a cluster of N instances allows up to N times this, which is
 // still a limit. SSO deployments rely on the identity provider's own lockout.
+//
+// A live count is never dropped: an entry leaves only when its window has passed.
+// Evicting at a cap let a flood of invented names reset `admin` before its fifth
+// guess, and a name the full map could not hold was guessed without limit (the 4.1.0
+// review's second pass, P2-R18). So a name the map cannot count is refused: the
+// lockout fails closed. The cost, stated: about 110 failed sign-ins a second for
+// fifteen minutes on one process refuses new names there until entries expire.
 const failures = new Map<string, { count: number; first: number }>();
-const MAX_TRACKED = 10_000;
+export const MAX_TRACKED = 100_000;
+const WINDOW_MS = LOCKOUT_SECONDS * 1000;
+let prunedAt = -Infinity;
+
+/** Drop expired entries. The map keeps insertion order and an entry is re-inserted
+ *  when its window restarts, so the expired ones are at the front. At most once a
+ *  second, so a flood cannot make every request walk the map. */
+function prune(now: number): void {
+  if (now - prunedAt < 1000) return;
+  prunedAt = now;
+  for (const [key, entry] of failures) {
+    if (now - entry.first <= WINDOW_MS) return;
+    failures.delete(key);
+  }
+}
 
 export function isLockedOut(key: string, now: number = Date.now()): boolean {
   const entry = failures.get(key);
-  if (!entry) return false;
-  if (now - entry.first > LOCKOUT_SECONDS * 1000) {
-    failures.delete(key);
-    return false;
+  if (entry) {
+    if (now - entry.first > WINDOW_MS) {
+      failures.delete(key);
+      return false;
+    }
+    return entry.count >= MAX_FAILURES;
   }
-  return entry.count >= MAX_FAILURES;
-}
-
-/** Make room: expired entries first, then the oldest that is not locked. Never a lock. */
-function evict(now: number): void {
-  for (const [key, entry] of failures) {
-    if (now - entry.first > LOCKOUT_SECONDS * 1000) failures.delete(key);
-  }
-  for (const [key, entry] of failures) {
-    if (failures.size < MAX_TRACKED) return;
-    if (entry.count < MAX_FAILURES) failures.delete(key);
-  }
+  if (failures.size < MAX_TRACKED) return false;
+  prune(now);
+  return failures.size >= MAX_TRACKED; // could not be counted, so not let through
 }
 
 export function recordFailure(key: string, now: number = Date.now()): void {
   const entry = failures.get(key);
-  if (entry && now - entry.first <= LOCKOUT_SECONDS * 1000) {
+  if (entry && now - entry.first <= WINDOW_MS) {
     entry.count += 1;
     return;
   }
-  if (failures.size >= MAX_TRACKED) evict(now);
-  // At the cap with every entry locked, a new name is not tracked rather than a lock
-  // being dropped: clearing the map unlocked every account (the 4.1.0 release review, R17).
+  failures.delete(key); // an expired entry starts again at the back
+  if (failures.size >= MAX_TRACKED) prune(now);
   if (failures.size < MAX_TRACKED) failures.set(key, { count: 1, first: now });
 }
 

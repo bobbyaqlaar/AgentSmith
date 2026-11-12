@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { clearFailures, isLockedOut, LOCKOUT_SECONDS, MAX_FAILURES, mfaRefusal, recordFailure } from "../lib/signInPolicy";
+import { clearFailures, isLockedOut, LOCKOUT_SECONDS, MAX_FAILURES, MAX_TRACKED, mfaRefusal, recordFailure } from "../lib/signInPolicy";
 import { createSessionToken, refreshedSessionToken, sessionLimits, verifySessionToken } from "../lib/sessionToken";
 
 test("nothing asked, no profile: no refusal", () => assert.equal(mfaRefusal({}, {}), null));
@@ -57,4 +57,49 @@ test("failures under other names never unlock a locked account (R17)", () => {
   for (let i = 0; i < 10_001; i++) recordFailure(`invented-${i}|ip`, 1000);
   assert.equal(isLockedOut(admin, 1000), true);
   clearFailures(admin);
+});
+
+// ── The 4.1.0 review's second pass: P2-R18 (.agent-rfc/designs/stream-release-and-lockout.md) ──
+// Each test starts three windows on, so no earlier test's entry is still live.
+let clock = 10_000_000;
+const nextWindow = () => (clock += LOCKOUT_SECONDS * 1000 * 3);
+
+test("a flood of invented names never resets a count that is still live (P2-R18)", () => {
+  const t = nextWindow();
+  const admin = "admin-flood";
+  for (let i = 0; i < MAX_FAILURES - 1; i++) recordFailure(admin, t);
+  for (let i = 0; i < MAX_TRACKED; i++) recordFailure(`invented-${t}-${i}`, t);
+  assert.equal(isLockedOut(admin, t), false);
+  recordFailure(admin, t); // the fifth guess, after the flood
+  assert.equal(isLockedOut(admin, t), true);
+  clearFailures(admin);
+});
+
+test("a name the full map cannot count is refused, not let through (P2-R18)", () => {
+  const t = nextWindow();
+  for (let i = 0; i < MAX_TRACKED; i++) for (let k = 0; k < MAX_FAILURES; k++) recordFailure(`locked-${t}-${i}`, t);
+  assert.equal(isLockedOut("root-fresh", t), true);
+  recordFailure("root-fresh", t);
+  assert.equal(isLockedOut("root-fresh", t), true);
+});
+
+test("the map frees itself once the window has passed (P2-R18)", () => {
+  const t = nextWindow();
+  for (let i = 0; i < MAX_TRACKED; i++) recordFailure(`old-${t}-${i}`, t);
+  const later = t + LOCKOUT_SECONDS * 1000 + 2_000;
+  assert.equal(isLockedOut("someone-new", later), false);
+  recordFailure("someone-new", later);
+  assert.equal(isLockedOut("someone-new", later), false);
+});
+
+test("a count that starts again moves behind the live ones, so pruning still frees the map (P2-R18)", () => {
+  // A known start: fill the map, let it all expire, and the first new name clears it.
+  const start = nextWindow();
+  for (let i = 0; i < MAX_TRACKED; i++) recordFailure(`pre-${start}-${i}`, start);
+  const t = start + LOCKOUT_SECONDS * 1000 + 2_000;
+  for (let i = 0; i < MAX_TRACKED - 1; i++) recordFailure(`row-${t}-${i}`, t);
+  const later = t + LOCKOUT_SECONDS * 1000 + 2_000;
+  recordFailure(`row-${t}-0`, later); // the oldest name fails again, below the cap: a new window
+  recordFailure(`fills-${t}`, later); // now the map is full, the rest of it expired
+  assert.equal(isLockedOut("after-restart", later + 1_500), false);
 });

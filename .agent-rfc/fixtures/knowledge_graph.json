@@ -7352,7 +7352,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-11-11T20:22:04Z",
+      "last_modified": "2026-11-12T06:43:40Z",
       "id": "agentsmith/llm_gateway.py"
     },
     {
@@ -9554,11 +9554,12 @@
         "mfaRefusal",
         "MAX_FAILURES",
         "LOCKOUT_SECONDS",
+        "MAX_TRACKED",
         "isLockedOut",
         "recordFailure",
         "clearFailures"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-12T06:46:19Z",
       "id": "portal/lib/signInPolicy.ts"
     },
     {
@@ -9904,7 +9905,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-12T06:46:05Z",
       "id": "portal/test/signInPolicy.test.ts"
     },
     {
@@ -10393,11 +10394,14 @@
         "test_run_counters_are_their_own_store_and_are_forgotten",
         "test_an_unreadable_cap_on_a_fallback_tier_is_named_not_wrapped",
         "test_a_call_the_run_budget_refuses_spends_no_money",
+        "test_a_stream_that_cannot_be_built_gives_back_what_it_reserved",
+        "test_a_stream_refused_by_the_compliance_guard_or_the_run_gives_everything_back",
         "fallback",
         "Broken",
+        "refuse",
         "__init__"
       ],
-      "last_modified": "2026-11-11T20:22:04Z",
+      "last_modified": "2026-11-12T06:41:45Z",
       "id": "agentsmith/test/test_token_limits.py"
     },
     {
@@ -10773,6 +10777,22 @@
       "pillar": null,
       "created_at": "2026-11-12T06:30:51Z",
       "id": "rfc:reviews/scratch-dates-and-worktree-tokens.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "A stream that never starts releases what it reserved, and a flood of names cannot reset the lockout",
+      "source_file": ".agent-rfc/designs/stream-release-and-lockout.md",
+      "pillar": null,
+      "created_at": "2026-11-12T06:47:12Z",
+      "id": "rfc:designs/stream-release-and-lockout.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: stream-release-and-lockout",
+      "source_file": ".agent-rfc/reviews/stream-release-and-lockout.md",
+      "pillar": null,
+      "created_at": "2026-11-12T06:47:13Z",
+      "id": "rfc:reviews/stream-release-and-lockout.md"
     }
   ],
   "edges": [
