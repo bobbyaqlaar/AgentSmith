@@ -9612,6 +9612,10 @@
         "name_scrubber",
         "fairness_gate",
         "arabic_cases",
+        "_default_branches",
+        "_runs_on_default_branch",
+        "_audits",
+        "_off",
         "_supply_chain_job",
         "supply_chain",
         "restore_drill",
@@ -9620,7 +9624,7 @@
         "_ships_declaration",
         "declaration_deployed"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-12T18:48:09Z",
       "id": "scripts/compliance_checks.py"
     },
     {
@@ -9877,7 +9881,6 @@
         "test_a_supply_chain_job_that_scans_nothing_fails",
         "test_a_supply_chain_job_that_scans_passes_and_says_what_was_read",
         "test_the_template_fails_when_it_finds_nothing_to_scan",
-        "test_every_environment_sbom_names_the_apps_own_interpreter",
         "test_the_arabic_check_reads_only_the_suites_that_carry_language",
         "test_a_drill_dated_in_the_future_does_not_count",
         "test_a_declaration_the_image_never_receives_fails",
@@ -9885,9 +9888,14 @@
         "test_mcp_servers_declared_elsewhere_are_seen",
         "test_a_tool_on_a_later_page_is_pinned_and_verified",
         "test_an_enforced_profile_with_its_declaration_deleted_fails_the_launcher",
+        "_job_with",
+        "test_an_audit_that_cannot_fail_or_never_runs_does_not_count",
+        "test_an_audit_that_can_fail_counts",
+        "test_the_shipped_template_passes_its_own_check",
+        "test_the_template_audits_every_project_in_the_repository",
         "check"
       ],
-      "last_modified": "2026-11-11T20:29:22Z",
+      "last_modified": "2026-11-12T18:45:27Z",
       "id": "scripts/test/test_compliance_checks.py"
     },
     {
@@ -10863,6 +10871,22 @@
       "pillar": null,
       "created_at": "2026-11-12T17:03:01Z",
       "id": "rfc:reviews/caps-at-load-and-guard-tests.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "OB-SUPPLY-CHAIN passes only on an audit that can fail, and the template audits every manifest",
+      "source_file": ".agent-rfc/designs/supply-chain-audits-that-can-fail.md",
+      "pillar": null,
+      "created_at": "2026-11-12T18:48:43Z",
+      "id": "rfc:designs/supply-chain-audits-that-can-fail.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: supply-chain-audits-that-can-fail",
+      "source_file": ".agent-rfc/reviews/supply-chain-audits-that-can-fail.md",
+      "pillar": null,
+      "created_at": "2026-11-12T18:48:44Z",
+      "id": "rfc:reviews/supply-chain-audits-that-can-fail.md"
     }
   ],
   "edges": [

@@ -140,6 +140,8 @@ version table being consulted.
 - `SEC-CIAGENT-001` reports a whole event object given to a coding agent (`${{ github.event.pull_request }}`, `${{ github.event }}`, and the issue, comment, review, release, workflow-run and commit objects): GitHub renders it as JSON, title and body included. An author guard does not excuse an object. A field of one (`…issue.number`) still passes. One case joins the security contract.
 - Self-Test runs the compliance runtime's database tests (the record chain, stop and resume, the sidecar's gate), which skipped in every CI run for want of `COMPLIANCE_TEST_DSN`; with `AGENTSMITH_REQUIRE_DB=1` a missing DSN now fails instead of skipping.
 - An unreadable `max_output_tokens` or `max_input_tokens` on any role in `models.yaml` stops `LLMGateway` when it starts, naming the role. It was found only when a call first reached that role, which for a fallback tier meant the failover itself raised.
+- `OB-SUPPLY-CHAIN` counts only an audit that can fail the job: invoked as a command (not inside `echo` or a comment), with no `|| true`-style fallback or `set +e`, no `continue-on-error`, no job-level `if:`, on a push or pull request that reaches the default branch. A tenant's own supply-chain workflow that only appeared to audit now fails the check; `agentsmith sync` brings the template.
+- `agentsmith-supply-chain.yml` audits every Python, npm and Go project in the repository, not only the root (skipping `.git`, `node_modules`, virtual environments and `vendor`), with one SBOM per project directory. A repository with, say, `docs/requirements.txt` now has that audited too. Tenants take it with `agentsmith sync`.
 
 ### Added — an opt-in compliance profile, `dubai-gov`
 

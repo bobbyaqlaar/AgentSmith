@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -475,14 +476,14 @@ def _run_dependency_scan(tmp_path, files, scanner_exit=0):
 def test_a_lock_is_audited_exactly_as_pinned(tmp_path):
     done, called = _run_dependency_scan(tmp_path, ["requirements.lock", "requirements.txt"])
     assert done.returncode == 0
-    assert "-r requirements.lock --disable-pip --no-deps" in called
+    assert "-r ./requirements.lock --disable-pip --no-deps" in called
     assert "requirements.txt" not in called
 
 
 def test_requirements_without_a_lock_are_resolved_not_refused(tmp_path):
     done, called = _run_dependency_scan(tmp_path, ["requirements.txt"])
     assert done.returncode == 0
-    assert "-r requirements.txt" in called
+    assert "-r ./requirements.txt" in called
     assert "--no-deps" not in called and "--disable-pip" not in called
 
 
@@ -541,26 +542,6 @@ def test_the_template_fails_when_it_finds_nothing_to_scan():
     for tool in ("pip-audit", "npm audit", "govulncheck", "cyclonedx"):
         assert tool in text, tool
     assert "exit 1" in text
-
-
-def test_every_environment_sbom_names_the_apps_own_interpreter():
-    """P2-R7: `cyclonedx-py environment` with no interpreter describes the environment it
-    runs in, which under `pipx run` is CycloneDX's own: an SBOM of the wrong software."""
-    import shlex
-
-    import yaml
-
-    workflow = yaml.safe_load((REPO / "workflow-templates" / "agentsmith-supply-chain.yml").read_text(encoding="utf-8"))
-    runs = [str(step.get("run") or "") for step in workflow["jobs"]["scan"]["steps"]]
-    calls = [shlex.split(line) for run in runs for line in run.splitlines() if "cyclonedx-py environment" in line]
-    assert calls, "the template no longer writes an environment SBOM; update this test"
-    for words in calls:
-        after = words[words.index("environment") + 1:]
-        assert after and not after[0].startswith("-"), f"no interpreter given: {' '.join(words)}"
-        environment = after[0].rsplit("/bin/", 1)[0]
-        installs = [shlex.split(line) for run in runs for line in run.splitlines() if " install " in line]
-        assert any(w[0] == f"{environment}/bin/pip" and w[1:2] == ["install"] and "." in w for w in installs), (
-            f"{after[0]} is not an environment the app was installed into")
 
 
 def test_the_arabic_check_reads_only_the_suites_that_carry_language(tmp_path):
@@ -648,3 +629,109 @@ def test_an_enforced_profile_with_its_declaration_deleted_fails_the_launcher(tmp
     done = subprocess.run(["bash", str(REPO / ".githooks" / "process-gate"), "compliance", "check"], cwd=tmp_path,
                           capture_output=True, text=True, stdin=subprocess.DEVNULL, check=False)
     assert done.returncode == 1 and "compliance.json is missing" in (done.stdout + done.stderr)
+
+
+# ── The 4.1.0 review's second pass: P2-R8 (.agent-rfc/designs/supply-chain-audits-that-can-fail.md) ──
+
+
+def _job_with(step: str, *, on: str = "on:\n  pull_request:\n", job: str = "") -> str:
+    return f"{on}jobs:\n  scan:\n    runs-on: x\n{job}    steps:\n{step}"
+
+
+@pytest.mark.parametrize("body", [
+    pytest.param(_job_with("      - run: pipx run pip-audit==2.9.0 -r requirements.txt || true\n"), id="or-true"),
+    pytest.param(_job_with("      - run: npm audit || echo ignored\n"), id="or-echo"),
+    pytest.param(_job_with("      - run: |\n          set +e\n          pip-audit .\n"), id="set-plus-e"),
+    pytest.param(_job_with("      - run: pip-audit .\n        continue-on-error: true\n"), id="step-continue"),
+    pytest.param(_job_with("      - run: pip-audit .\n", job="    continue-on-error: true\n"), id="job-continue"),
+    pytest.param(_job_with("      - run: pip-audit .\n", job="    if: false\n"), id="job-if"),
+    pytest.param(_job_with("      - run: pip-audit .\n        if: ${{ false }}\n"), id="step-if-false"),
+    pytest.param(_job_with('      - run: echo "govulncheck is for later"\n'), id="echo-only"),
+    pytest.param(_job_with("      - run: '# pip-audit .'\n"), id="comment-only"),
+    pytest.param(_job_with("      - run: npm audit\n", on="on:\n  push:\n    branches: [never-a-branch]\n"),
+                 id="branch-never-runs"),
+])
+def test_an_audit_that_cannot_fail_or_never_runs_does_not_count(tmp_path, body):
+    """P2-R8: each passed as "the supply-chain job audits dependencies on each change"."""
+    write(tmp_path, SUPPLY, body)
+    verdict, message = cc.supply_chain(tmp_path, DECLARED)
+    assert verdict == "fail", message
+
+
+@pytest.mark.parametrize("body", [
+    _job_with("      - run: pip-audit . || exit 1\n"),
+    _job_with("      - run: |\n          cd web && npm audit --audit-level=high\n"),
+    _job_with("      - run: (cd svc && go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...)\n"),
+    _job_with("      - run: npm audit\n", on="on:\n  push:\n    branches: [main]\n"),
+    _job_with("      - run: npm audit\n", on="on:\n  push:\n    branches: ['**']\n"),
+    _job_with("      - run: pip-audit .\n        if: hashFiles('**/requirements.txt') != ''\n"),
+])
+def test_an_audit_that_can_fail_counts(tmp_path, body):
+    write(tmp_path, SUPPLY, body)
+    verdict, message = cc.supply_chain(tmp_path, DECLARED)
+    assert verdict == "pass", message
+
+
+def test_the_shipped_template_passes_its_own_check(tmp_path):
+    write(tmp_path, SUPPLY, (REPO / "workflow-templates" / "agentsmith-supply-chain.yml").read_text(encoding="utf-8"))
+    verdict, message = cc.supply_chain(tmp_path, DECLARED)
+    assert verdict == "pass", message
+
+
+# ── The 4.1.0 review's second pass: P2-R9, and P2-R7 run rather than read ──
+
+_SHIM = """#!/usr/bin/env bash
+# A stand-in that records how it was called and writes any output file it is asked for.
+echo "$(basename "$0")|$PWD|$*" >> "$CALLS"
+out=""
+prev=""
+for arg in "$@"; do
+  case "$prev" in -o|--output-file|-output) out="$arg" ;; esac
+  prev="$arg"
+done
+[ -n "$out" ] && mkdir -p "$(dirname "$out")" && echo '{}' > "$out"
+if [ "$(basename "$0")" = python ] && [ "$1" = -m ] && [ "$2" = venv ]; then
+  mkdir -p "$3/bin"
+  for tool in pip python; do
+    printf '#!/usr/bin/env bash\\necho "%s|$PWD|$*" >> "$CALLS"\\n' "$3/bin/$tool" > "$3/bin/$tool"
+    chmod +x "$3/bin/$tool"
+  done
+fi
+exit 0
+"""
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash required")
+def test_the_template_audits_every_project_in_the_repository(tmp_path):
+    """P2-R9: the template read the repository root only, so `web/package-lock.json` beside
+    a root Python project was never audited, and the job was green."""
+    import yaml
+
+    repo, bin_dir, temp = tmp_path / "repo", tmp_path / "bin", tmp_path / "runner-temp"
+    for rel in ("requirements.txt", "svc/pyproject.toml", "web/package-lock.json", "tools/go.mod",
+                "web/node_modules/dep/package-lock.json", ".venv/lib/requirements.txt"):
+        write(repo, rel, "{}\n" if rel.endswith(".json") else "x\n")
+    bin_dir.mkdir()
+    temp.mkdir()
+    for tool in ("pipx", "npm", "npx", "go", "python"):
+        (bin_dir / tool).write_text(_SHIM, encoding="utf-8")
+        (bin_dir / tool).chmod(0o755)
+    calls = tmp_path / "calls.log"
+    workflow = yaml.safe_load((REPO / "workflow-templates" / "agentsmith-supply-chain.yml").read_text(encoding="utf-8"))
+    env = {"PATH": f"{bin_dir}:/usr/bin:/bin", "CALLS": str(calls), "RUNNER_TEMP": str(temp), "HOME": str(tmp_path)}
+    for step in workflow["jobs"]["scan"]["steps"]:
+        if step.get("run"):
+            subprocess.run(["bash", "-e", "-c", step["run"]], cwd=repo, env=env, check=True)
+    log = calls.read_text(encoding="utf-8")
+    sboms = sorted(p.name for p in (repo / "sbom").iterdir())
+
+    assert "pip-audit==2.9.0 -r ./requirements.txt" in log  # the root Python project
+    assert f"pipx|{repo}|run pip-audit==2.9.0 ./svc" in log  # a pyproject.toml project
+    assert f"npm|{repo / 'web'}|audit" in log  # the web client the review found unaudited
+    assert f"go|{repo / 'tools'}|run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./..." in log
+    assert "node_modules" not in log and ".venv/lib" not in log  # vendored and environments skipped
+    assert sboms == ["go-tools.cdx.json", "npm-web.cdx.json", "python-root.cdx.json", "python-svc.cdx.json"]
+    # P2-R7: the pyproject project's SBOM describes an environment the project was installed into.
+    venv = temp / "app-env-svc"
+    assert f"{venv}/bin/pip|{repo}|install --quiet ./svc" in log
+    assert f"cyclonedx-py environment {venv}/bin/python -o sbom/python-svc.cdx.json" in log
