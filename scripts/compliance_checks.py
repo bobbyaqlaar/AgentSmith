@@ -10,6 +10,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterator
@@ -236,11 +237,57 @@ def arabic_cases(root: Path, declared: dict[str, Any]) -> Verdict:
 
 
 _AUDITS = ("pip-audit", "npm audit", "govulncheck")
+# An audit invoked as a command: at the start of a line or after `;`, `&&` or `(`, so
+# not inside `echo "…"` or a comment. `pipx run` and `go run …/` may come first.
+_AUDIT_COMMAND = re.compile(
+    r"(?:^|[;&(]\s*)(?:pipx\s+run\s+(?:--spec\s+\S+\s+)?|python3?\s+-m\s+)?(?:pip-audit|pip_audit)\b"
+    r"|(?:^|[;&(]\s*)npm\s+audit\b"
+    r"|(?:^|[;&(]\s*)(?:go\s+run\s+\S*/)?govulncheck\b")
+_SWALLOWED = re.compile(r"\|\|(?!\s*exit\s+[1-9])")  # a fallback, unless it fails anyway
+
+
+def _default_branches(root: Path) -> set[str]:
+    done = subprocess.run(["git", "-C", str(root), "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+                          capture_output=True, text=True, check=False)
+    found = done.stdout.strip().split("/", 1)[-1] if done.returncode == 0 and done.stdout.strip() else ""
+    return {found} if found else {"main", "master"}
+
+
+def _runs_on_default_branch(triggers: Any, defaults: set[str]) -> bool:
+    if isinstance(triggers, str):
+        triggers = {triggers: None}
+    if isinstance(triggers, list):
+        triggers = dict.fromkeys(triggers)
+    if not isinstance(triggers, dict):
+        return False
+    for name in ("push", "pull_request"):
+        if name not in triggers:
+            continue
+        branches = (triggers[name] or {}).get("branches") if isinstance(triggers[name] or {}, dict) else None
+        if not branches or any(b in defaults or "*" in str(b) for b in branches):
+            return True
+    return False
+
+
+def _audits(run: str) -> bool:
+    """An audit this step invokes and that fails the step when it finds something."""
+    if re.search(r"^\s*set\s+\+e\b", run, re.M):
+        return False
+    lines = [line.strip() for line in run.replace("\\\n", " ").splitlines()]
+    return any(_AUDIT_COMMAND.search(line) and not _SWALLOWED.search(line)
+               for line in lines if line and not line.startswith("#"))
+
+
+def _off(value: Any) -> bool:
+    return str(value).strip().lower() in ("false", "${{ false }}", "0")
 
 
 def _supply_chain_job(path: Path) -> str:
     """Why this workflow does not scan dependencies on each change, or "" when it does.
-    The file existing was the whole check before (the 4.1.0 release review, R12)."""
+    A reading of the workflow, not a run of it: the file existing was the whole check
+    once (R12), then a mention of an audit tool (the second pass, P2-R8). It now needs an
+    audit invoked as a command, with no fallback that swallows it, in a step and job that
+    can run and fail, on a trigger that reaches the default branch."""
     try:
         workflow = _yaml(path)
     except Exception as exc:  # a workflow that does not parse runs nothing
@@ -248,15 +295,18 @@ def _supply_chain_job(path: Path) -> str:
     if not isinstance(workflow, dict):
         return f"{path.name} is not a workflow"
     triggers = workflow.get("on", workflow.get(True))  # YAML 1.1 reads a bare `on` as true
-    names = set(triggers) if isinstance(triggers, (dict, list)) else {triggers}
-    if not names & {"push", "pull_request"}:
-        return f"{path.name} does not run on a push or a pull request"
+    if not _runs_on_default_branch(triggers, _default_branches(path.parents[2])):
+        return f"{path.name} does not run on a push or a pull request to the default branch"
     jobs = workflow.get("jobs")
-    runs = [str(step.get("run") or "") for job in (jobs.values() if isinstance(jobs, dict) else [])
-            if isinstance(job, dict) for step in job.get("steps") or [] if isinstance(step, dict)]
-    if not any(audit in run for run in runs for audit in _AUDITS):
-        return f"{path.name} has no step that runs a dependency audit ({', '.join(_AUDITS)})"
-    return ""
+    for job in (jobs.values() if isinstance(jobs, dict) else []):
+        if not isinstance(job, dict) or job.get("if") is not None or job.get("continue-on-error") is True:
+            continue
+        for step in job.get("steps") or []:
+            if (isinstance(step, dict) and step.get("continue-on-error") is not True
+                    and not _off(step.get("if", "")) and _audits(str(step.get("run") or ""))):
+                return ""
+    return (f"{path.name} has no step that runs a dependency audit ({', '.join(_AUDITS)}) which can fail the job: "
+            "invoked as a command, with no `|| true` or `set +e`, no `continue-on-error`, and no job-level `if:`")
 
 
 def supply_chain(root: Path, declared: dict[str, Any]) -> Verdict:
