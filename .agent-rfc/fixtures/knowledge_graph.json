@@ -9621,10 +9621,11 @@
         "restore_drill",
         "traces_private",
         "_ignored",
+        "_last_stage",
         "_ships_declaration",
         "declaration_deployed"
       ],
-      "last_modified": "2026-11-12T18:48:09Z",
+      "last_modified": "2026-11-12T18:55:48Z",
       "id": "scripts/compliance_checks.py"
     },
     {
@@ -9893,9 +9894,15 @@
         "test_an_audit_that_can_fail_counts",
         "test_the_shipped_template_passes_its_own_check",
         "test_the_template_audits_every_project_in_the_repository",
+        "test_the_stage_that_runs_is_the_one_judged",
+        "test_a_profile_set_without_the_file_says_it_must_be_mounted",
+        "test_a_commented_vscode_server_file_is_read",
+        "test_a_server_file_that_cannot_be_read_is_named_not_raised",
+        "test_a_tools_title_annotations_and_output_schema_are_pinned",
+        "test_codex_project_servers_are_read",
         "check"
       ],
-      "last_modified": "2026-11-12T18:45:27Z",
+      "last_modified": "2026-11-12T18:55:36Z",
       "id": "scripts/test/test_compliance_checks.py"
     },
     {
@@ -10175,6 +10182,9 @@
       "symbols": [
         "_list_request",
         "_digest",
+        "_without_comments",
+        "_read",
+        "_servers_and_problems",
         "_servers",
         "scope_note",
         "_pages",
@@ -10191,7 +10201,7 @@
         "verify",
         "ask"
       ],
-      "last_modified": "2026-11-11T20:22:04Z",
+      "last_modified": "2026-11-12T18:55:23Z",
       "id": "agentsmith/mcp_pin.py"
     },
     {
@@ -10887,6 +10897,22 @@
       "pillar": null,
       "created_at": "2026-11-12T18:48:44Z",
       "id": "rfc:reviews/supply-chain-audits-that-can-fail.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The declaration check reads the image's last stage, and MCP pinning reads what agents read",
+      "source_file": ".agent-rfc/designs/image-final-stage-and-mcp-reads.md",
+      "pillar": null,
+      "created_at": "2026-11-12T18:57:19Z",
+      "id": "rfc:designs/image-final-stage-and-mcp-reads.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: image-final-stage-and-mcp-reads",
+      "source_file": ".agent-rfc/reviews/image-final-stage-and-mcp-reads.md",
+      "pillar": null,
+      "created_at": "2026-11-12T18:57:20Z",
+      "id": "rfc:reviews/image-final-stage-and-mcp-reads.md"
     }
   ],
   "edges": [

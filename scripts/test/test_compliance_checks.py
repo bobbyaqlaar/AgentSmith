@@ -735,3 +735,83 @@ def test_the_template_audits_every_project_in_the_repository(tmp_path):
     venv = temp / "app-env-svc"
     assert f"{venv}/bin/pip|{repo}|install --quiet ./svc" in log
     assert f"cyclonedx-py environment {venv}/bin/python -o sbom/python-svc.cdx.json" in log
+
+
+# ── The 4.1.0 review's second pass: P2-R10, P2-R11 (.agent-rfc/designs/image-final-stage-and-mcp-reads.md) ──
+
+MULTI_STAGE = ("FROM node:20 AS build\nWORKDIR /src\nCOPY . .\nRUN npm ci && npm run build\n"
+               "FROM gcr.io/distroless/nodejs20\nCOPY --from=build /src/dist /app\nCMD [\"/app/main.js\"]\n")
+
+
+@pytest.mark.parametrize("files, verdict", [
+    pytest.param({"Dockerfile": MULTI_STAGE}, "fail", id="builder-copies-final-does-not"),
+    pytest.param({"Dockerfile": MULTI_STAGE.replace(
+        "COPY --from=build /src/dist /app",
+        "COPY --from=build /src/dist /app\nCOPY .agenticframework /app/.agenticframework")},
+        "pass", id="final-stage-copies-it"),
+    pytest.param({"Dockerfile": "FROM python:3.11\nCOPY --chown=app:app . /app\n"}, "pass", id="copy-with-flags"),
+    pytest.param({"Dockerfile": "FROM python:3.11\nCOPY ./ /app/\n"}, "pass", id="dot-slash"),
+    pytest.param({"Dockerfile": "FROM python:3.11\nADD . /app\n"}, "pass", id="add"),
+    pytest.param({"Dockerfile": "FROM x\nCOPY . .\n", ".dockerignore": ".agenticframework\n!.agenticframework\n"},
+                 "pass", id="dockerignore-negation"),
+    pytest.param({"Dockerfile": "FROM b AS one\nENV COMPLIANCE_PROFILE=dubai-gov\nFROM c\nCOPY app /app\n"},
+                 "fail", id="env-only-in-the-builder"),
+    # From another stage, `.` is that stage's filesystem root, not the build context.
+    pytest.param({"Dockerfile": "FROM a AS build\nCOPY . /src\nFROM b\nCOPY --from=build . /app\n"},
+                 "fail", id="copy-from-another-stage"),
+])
+def test_the_stage_that_runs_is_the_one_judged(tmp_path, files, verdict):
+    """P2-R10: `COPY . .` in a builder stage passed for an image that never held the declaration."""
+    for name, text in files.items():
+        write(tmp_path, name, text)
+    found = cc.declaration_deployed(tmp_path, DECLARED)
+    assert found[0] == verdict, found
+
+
+def test_a_profile_set_without_the_file_says_it_must_be_mounted(tmp_path):
+    write(tmp_path, "Dockerfile", "FROM x\nCOPY app /app\nENV COMPLIANCE_PROFILE=dubai-gov\n")
+    verdict, message = cc.declaration_deployed(tmp_path, DECLARED)
+    assert verdict == "pass" and "mounted" in message and "refuses to run" in message
+
+
+def test_a_commented_vscode_server_file_is_read(tmp_path):
+    """P2-R11 (a): VS Code's mcp.json allows comments, and one made the check raise."""
+    from agentsmith import mcp_pin
+
+    write(tmp_path, ".vscode/mcp.json",
+          '{\n  // my servers\n  "servers": {"fs": {"command": "npx", "args": ["-y", "x"],}, /* end */},\n}\n')
+    assert mcp_pin.static_problems(tmp_path) == [
+        "MCP server .vscode/mcp.json#fs is not pinned: run `agentsmith compliance mcp-pin`"]
+    # `//` inside a string is not a comment, and an escaped quote does not end one.
+    write(tmp_path, ".vscode/mcp.json",
+          '{"servers": {"web": {"url": "https://mcp.example/v1", "headers": {"X": "a\\"//b"}}}} // done\n')
+    assert mcp_pin._servers(tmp_path)[".vscode/mcp.json#web"] == {
+        "url": "https://mcp.example/v1", "headers": {"X": 'a"//b'}}
+
+
+def test_a_server_file_that_cannot_be_read_is_named_not_raised(tmp_path):
+    from agentsmith import mcp_pin
+
+    write(tmp_path, ".cursor/mcp.json", "{ not json")
+    problems = mcp_pin.static_problems(tmp_path)
+    assert len(problems) == 1 and ".cursor/mcp.json" in problems[0] and "cannot be read" in problems[0]
+
+
+@pytest.mark.parametrize("change", [{"annotations": {"readOnlyHint": True}}, {"title": "new"},
+                                    {"outputSchema": {"type": "object"}}])
+def test_a_tools_title_annotations_and_output_schema_are_pinned(change):
+    """P2-R11 (b): a server could flip `readOnlyHint` and `mcp-verify` passed."""
+    from agentsmith import mcp_pin
+
+    tool = {"name": "x", "description": "d", "inputSchema": {}, "annotations": {"readOnlyHint": False}}
+    assert mcp_pin.tool_hashes([tool]) != mcp_pin.tool_hashes([{**tool, **change}])
+
+
+def test_codex_project_servers_are_read(tmp_path):
+    """P2-R11 (c): Codex keeps project servers in `.codex/config.toml`."""
+    from agentsmith import mcp_pin
+
+    write(tmp_path, ".codex/config.toml", '[mcp_servers.docs]\ncommand = "npx"\nargs = ["-y", "docs-mcp"]\n')
+    assert mcp_pin.static_problems(tmp_path) == [
+        "MCP server .codex/config.toml#docs is not pinned: run `agentsmith compliance mcp-pin`"]
+    assert ".codex/config.toml" in mcp_pin.scope_note(tmp_path)

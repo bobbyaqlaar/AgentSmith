@@ -381,28 +381,45 @@ def _ignored(context: Path) -> bool:
     return excluded
 
 
-def _ships_declaration(dockerfile: Path) -> bool:
-    text = dockerfile.read_text(encoding="utf-8")
-    if re.search(r"^\s*ENV\s+COMPLIANCE_PROFILE[\s=]+\S", text, re.M):
-        return True  # the profile is on without the file (agentsmith/compliance.py profile_active)
-    if not re.search(r"^\s*COPY\s+(\.\s|\.agenticframework)", text, re.M):
-        return False
-    return not _ignored(dockerfile.parent)
+# A COPY or ADD of the build context's root, or of the declaration's folder, with any
+# flags; `--from=` copies from another stage, which is judged as that stage's output.
+_SHIPS = re.compile(r"^\s*(?:COPY|ADD)\s+(?:--(?!from=)\S+\s+)*(?:\./?|\.agenticframework\S*)\s", re.I | re.M)
+_PROFILE_ENV = re.compile(r"^\s*ENV\s+COMPLIANCE_PROFILE[\s=]+\S", re.I | re.M)
+
+
+def _last_stage(text: str) -> str:
+    """The stage the image runs: everything after the last `FROM`."""
+    stages = re.split(r"^\s*FROM\s", text, flags=re.I | re.M)
+    return stages[-1] if len(stages) > 1 else text
+
+
+def _ships_declaration(dockerfile: Path) -> str:
+    """"copied", "mounted" (the profile is set and the file must be mounted at run time:
+    without it `agentsmith.compliance` refuses to run), or "" when the image that runs
+    has neither. Only the last stage is read: a builder's `COPY . .` does not reach a
+    final stage that copies only build output (the 4.1.0 review's second pass, P2-R10)."""
+    stage = _last_stage(dockerfile.read_text(encoding="utf-8"))
+    if _SHIPS.search(stage) and not _ignored(dockerfile.parent):
+        return "copied"
+    return "mounted" if _PROFILE_ENV.search(stage) else ""
 
 
 def declaration_deployed(root: Path, declared: dict[str, Any]) -> Verdict:
     """An image without the declaration has no duties at run time. `COPY . .` ships it
-    only when `.dockerignore` lets it through (the 4.1.0 release review, R18)."""
-    images = list(root.rglob("Dockerfile"))
-    missing = [
-        str(p.relative_to(root))
-        for p in images
-        if not _SKIP.intersection(p.relative_to(root).parts) and not _ships_declaration(p)
-    ]
+    only in the stage that runs, and only when `.dockerignore` lets it through (R18, P2-R10)."""
+    images = [p for p in root.rglob("Dockerfile") if not _SKIP.intersection(p.relative_to(root).parts)]
+    found = {str(p.relative_to(root)): _ships_declaration(p) for p in images}
+    missing = [name for name, how in found.items() if not how]
     if missing:
-        return "fail", ("these images do not receive .agenticframework/compliance.json (not copied, or kept out "
-                        "by .dockerignore) and set no ENV COMPLIANCE_PROFILE: " + ", ".join(missing))
-    return "pass", "the declaration ships with the image" if images else "no Dockerfile here"
+        return "fail", ("the image these build does not receive .agenticframework/compliance.json in its final stage "
+                        "(not copied there, or kept out by .dockerignore) and sets no ENV COMPLIANCE_PROFILE: "
+                        + ", ".join(missing))
+    if not images:
+        return "pass", "no Dockerfile here"
+    mounted = [name for name, how in found.items() if how == "mounted"]
+    return "pass", ("the declaration ships in the final stage of every image" if not mounted else
+                    "the declaration ships with every image, or must be mounted at run time where only "
+                    "COMPLIANCE_PROFILE is set (without the file the app refuses to run): " + ", ".join(mounted))
 
 
 CHECKS: dict[str, Callable[[Path, dict[str, Any]], Verdict]] = {
