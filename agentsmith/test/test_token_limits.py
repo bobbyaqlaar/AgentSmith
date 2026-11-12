@@ -219,3 +219,45 @@ async def test_a_call_the_run_budget_refuses_spends_no_money():
     with config.override(**{"limits.run_tokens": 100}), pytest.raises(tl.RunLimitExceededError):
         await gw.complete("hi", model_hint="developer", workflow_id="run-1", max_tokens=600)
     assert gw._budget.get_spend("t") == 0
+
+
+# ── The 4.1.0 review's second pass: P2-R1 (.agent-rfc/designs/stream-release-and-lockout.md) ──
+
+
+@pytest.mark.asyncio
+async def test_a_stream_that_cannot_be_built_gives_back_what_it_reserved():
+    """P2-R1: the request was built outside the try that releases, so an error there kept
+    the run's tokens and the tenant's money although nothing was sent."""
+    from agentsmith.llm_gateway import BudgetStatus
+
+    gw = _gateway({"provider": "anthropic", "cost_per_input_token": 0.001, "cost_per_output_token": 0.001})
+    gw._is_free_tier.return_value = False
+    gw.get_budget_status = lambda: BudgetStatus(tenant_id="t", spent_usd=0.0, cap_usd=100.0, period_start="2026-11-01")
+    cached = {"type": "text", "text": "be brief", "cache_control": {"type": "ephemeral"}}
+    blocks = [{"role": "system", "content": [cached]}, {"role": "user", "content": "hi"}]
+    with config.override(**{"limits.run_tokens": 10_000}), pytest.raises(TypeError):
+        await gw.complete_stream(blocks, model_hint="developer", workflow_id="run-1", max_tokens=500)
+    assert tl.run_spent(gw._budget, "t", "run-1") == 0
+    assert gw._budget.get_spend("t") == 0
+
+
+@pytest.mark.asyncio
+async def test_a_stream_refused_by_the_compliance_guard_or_the_run_gives_everything_back(monkeypatch):
+    """Two exits the second pass found untested: a refusal after the reservations."""
+    from agentsmith.compliance import ComplianceRefused
+    from agentsmith.llm_gateway import BudgetStatus
+
+    gw = _gateway({"cost_per_input_token": 0.001, "cost_per_output_token": 0.001})
+    gw._is_free_tier.return_value = False
+    gw.get_budget_status = lambda: BudgetStatus(tenant_id="t", spent_usd=0.0, cap_usd=100.0, period_start="2026-11-01")
+
+    def refuse(*a, **k):
+        raise ComplianceRefused("OB-X", "no")
+
+    monkeypatch.setattr(gw, "_compliance_guard", refuse)
+    with config.override(**{"limits.run_tokens": 10_000}), pytest.raises(ComplianceRefused):
+        await gw.complete_stream("hi", model_hint="developer", workflow_id="run-1", max_tokens=500)
+    assert tl.run_spent(gw._budget, "t", "run-1") == 0 and gw._budget.get_spend("t") == 0
+    with config.override(**{"limits.run_tokens": 100}), pytest.raises(tl.RunLimitExceededError):
+        await gw.complete_stream("hi", model_hint="developer", workflow_id="run-2", max_tokens=500)
+    assert gw._budget.get_spend("t") == 0
