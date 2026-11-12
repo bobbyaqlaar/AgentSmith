@@ -651,6 +651,9 @@ class LLMGateway:
 
         self.tenant_id = resolve_tenant_id(tenant_id)
         self.models = load_model_registry()
+        from agentsmith import token_limits
+
+        token_limits.check_declared_caps(self.models)
         # `budget.monthly_usd_cap` has been declared in tenant.yaml since the
         # scaffold shipped and was read by nothing: KYC declared $5 while this
         # line enforced $150 whenever AGENT_MONTHLY_USD_CAP was unset — and it
