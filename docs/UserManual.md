@@ -446,7 +446,11 @@ Opt-in. `agentsmith compliance enable` (or `agentsmith tenant init --profile dub
 which helps an enterprise prepare for an assessment against the DESC Information Security Regulation and the other instruments in
 [`docs/uae-regulatory.md`](uae-regulatory.md). It is not legal advice and not a certificate. Python apps use the runtime directly; TypeScript and Go apps use the sidecar below.
 
-1. Fill in `.agenticframework/compliance.json`. Every `REPLACE_ME` must go.
+1. Fill in `.agenticframework/compliance.json`. Every `REPLACE_ME` must go. A person or a coding agent may edit it. Once filled, a
+   commit that weakens a duty (drops a language, widens the boundary, lengthens a session, shortens a retention, removes an agent or
+   changes an owner) is refused unless the owner records an approval at a terminal (`agentsmith approve`) and the commit message
+   carries `Approval: A-xxxxxxxx`. Every commit that changes the file is an entry in `.agent-history.log`; a refused weakening stays
+   unresolved there until someone resolves it.
 2. `agentsmith compliance status` lists every obligation and whether it is met.
 3. Sign each attested obligation: in the portal (**Ops › an app › Compliance checklist**, role `compliance_officer`), or at a terminal with
    `agentsmith attest OB-RISK --evidence <where> --role compliance_officer`. An agent cannot sign.
