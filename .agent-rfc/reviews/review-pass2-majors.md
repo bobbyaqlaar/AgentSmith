@@ -52,3 +52,37 @@ Gates run: the suites above; the whole Python suite; ruff; mypy; the knowledge-g
 Levers reviewed: `guards-must-be-able-to-fail`, `grep-for-siblings`, `environment-parity`, `test-the-contract`, `implemented-not-invoked`, `aggregates-name-their-scope`, `test-that-cannot-fail`
 
 KG query: kg:f771cb04716f
+
+## Pass 3 — findings: 1
+
+CI on #117 (Self-Test, "Python scripts/runtime/examples").
+
+1. **The committed knowledge graph lacked this review record's node.** The graph was rebuilt before the record was
+   written, and `agentsmith gate kg check` passed locally because the record was not yet tracked;
+   `scripts/verify_system.py --check-kg`, which CI runs, counts tracked guardrails and found it missing. Rebuilt from
+   the committed tree. (The `mutmut run || true` errors in the same job are its non-fatal survey step, and appear on
+   `main` too.)
+
+## Pass 4 — findings: 0
+
+- `python3 scripts/verify_system.py --check-kg` on a clean checkout of the branch: passes after the rebuild, and leaves
+  the tree clean.
+
+## Sign-off (after CI)
+
+Group 1 · DRY & shared code — [x] checked — no code change.
+Group 2 · Quality / safety — [x] checked — no code change.
+Group 3 · Architecture / hygiene — [x] checked — the graph fixture only.
+Group 4 · Process — [x] checked — the check CI runs, run on the committed tree before pushing.
+Group 5 · Intuitive UI — [x] n/a — no screen.
+Group 6 · Signal integrity — [x] checked — the graph matches what is tracked.
+Group 7 · Auth & session integrity — [x] n/a — no auth code.
+
+Tests added: none.
+Mutation-checked: n/a — fixture only.
+Fixtures re-pinned: `.agent-rfc/fixtures/knowledge_graph.json`.
+Gates run: `scripts/verify_system.py --check-kg`; `agentsmith gate kg check`; the process gate against the commit.
+
+Levers reviewed: `run-the-gates-ci-lists`, `fixture-truth`
+
+KG query: kg:e5219fce2510
