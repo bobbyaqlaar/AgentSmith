@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import select
 import subprocess
 import sys
@@ -30,7 +31,9 @@ SERVERS_FILE = ".mcp.json"
 # Each file an agent or editor reads servers from, and the key it keeps them under.
 # A server outside the root file is named `<file>#<name>`, so two files may reuse a name.
 SERVER_FILES = ((SERVERS_FILE, "mcpServers"), (".cursor/mcp.json", "mcpServers"), (".vscode/mcp.json", "servers"),
-                (".gemini/settings.json", "mcpServers"))
+                (".gemini/settings.json", "mcpServers"), (".codex/config.toml", "mcp_servers"))
+# What a client shows a model about a tool, and so what a poisoned server could change.
+TOOL_FIELDS = ("name", "title", "description", "inputSchema", "outputSchema", "annotations")
 MAX_PAGES = 100
 ALLOWLIST_FILE = ".agenticframework/mcp-allowlist.json"
 TIMEOUT_SECONDS = 30
@@ -58,17 +61,69 @@ def _digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def _servers(root: Path) -> dict[str, dict[str, Any]]:
+def _without_comments(text: str) -> str:
+    """JSONC as editors write it (VS Code's mcp.json allows it): `//` and `/* */` comments
+    and trailing commas removed, outside strings."""
+    out, i, quoted = [], 0, False
+    while i < len(text):
+        ch = text[i]
+        if quoted:
+            out.append(ch)
+            if ch == "\\":
+                out.append(text[i + 1:i + 2])
+                i += 1
+            elif ch == '"':
+                quoted = False
+        elif ch == '"':
+            quoted = True
+            out.append(ch)
+        elif text.startswith("//", i):
+            i = text.find("\n", i)
+            i = len(text) if i < 0 else i
+            continue
+        elif text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            i = len(text) if end < 0 else end + 2
+            continue
+        else:
+            out.append(ch)
+        i += 1
+    return re.sub(r",(\s*[}\]])", r"\1", "".join(out))
+
+
+def _read(path: Path) -> dict[str, Any]:
+    text = path.read_text(encoding="utf-8")
+    if path.suffix == ".toml":
+        import tomllib
+
+        return tomllib.loads(text)
+    return json.loads(_without_comments(text))
+
+
+def _servers_and_problems(root: Path) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    """Every declared server, and every server file that could not be read. A file that
+    cannot be read is named, never raised: one comment used to stop the whole check
+    (the 4.1.0 review's second pass, P2-R11)."""
     found: dict[str, dict[str, Any]] = {}
+    problems: list[str] = []
     for rel, key in SERVER_FILES:
         path = root / rel
         if not path.is_file():
             continue
-        declared = json.loads(path.read_text(encoding="utf-8")).get(key) or {}
+        try:
+            document = _read(path)
+        except Exception as exc:  # named in the result: a server we cannot read is not pinned
+            problems.append(f"{rel} cannot be read ({type(exc).__name__}), so its MCP servers cannot be pinned")
+            continue
+        declared = document.get(key) if isinstance(document, dict) else None
         for name, server in declared.items() if isinstance(declared, dict) else []:
             if isinstance(server, dict):
                 found[name if rel == SERVERS_FILE else f"{rel}#{name}"] = server
-    return found
+    return found, problems
+
+
+def _servers(root: Path) -> dict[str, dict[str, Any]]:
+    return _servers_and_problems(root)[0]
 
 
 def scope_note(root: Path) -> str:
@@ -112,7 +167,9 @@ def config_hash(server: dict[str, Any]) -> str:
 
 
 def tool_hashes(tools: list[dict[str, Any]]) -> dict[str, str]:
-    return {t["name"]: _digest({k: t.get(k) for k in ("name", "description", "inputSchema")}) for t in tools}
+    """A tool's whole definition as a model sees it: a changed `title` or `annotations`
+    (`readOnlyHint`) passed before (P2-R11)."""
+    return {t["name"]: _digest({k: t.get(k) for k in TOOL_FIELDS}) for t in tools}
 
 
 def _read_reply(process: subprocess.Popen[bytes], wanted: int, deadline: float) -> dict[str, Any]:
@@ -199,8 +256,8 @@ def fetch_tools(server: dict[str, Any]) -> list[dict[str, Any]]:
 
 def static_problems(root: Path) -> list[str]:
     """What can be judged without running anything."""
-    servers, pinned = _servers(root), _allowlist(root)
-    problems: list[str] = []
+    servers, problems = _servers_and_problems(root)
+    pinned = _allowlist(root)
     for name, server in sorted(servers.items()):
         entry = pinned.get(name)
         if not isinstance(entry, dict):
@@ -213,7 +270,11 @@ def static_problems(root: Path) -> list[str]:
 
 
 def pin(root: Path) -> int:
-    servers = _servers(root)
+    servers, unreadable = _servers_and_problems(root)
+    if unreadable:
+        for problem in unreadable:
+            print(f"mcp-pin: {problem}", file=sys.stderr)
+        return 1
     if not servers:
         print(f"mcp-pin: {scope_note(root)} — nothing to pin.")
         return 0
