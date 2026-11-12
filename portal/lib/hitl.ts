@@ -76,6 +76,21 @@ async function postSigned(tenantId: string, message: Record<string, unknown>): P
   if (!resp.ok) throw new HitlError(502, `the app's webhook answered ${resp.status || "with a redirect"}`);
 }
 
+/** What the app receives: the decision, the input digest the reviewer was shown, and
+ *  the request it answers. Two requests can show one input, so the digest alone could
+ *  not say which one (the 4.1.0 review's second pass, P2-R14). */
+export function decisionMessage(
+  gate: Pick<PendingGate, "recordId" | "gateId" | "workflowId" | "inputSha256">,
+  input: { approved: boolean; actor: string; role: string; rationale: string },
+  decidedAt: Date = new Date(),
+): Record<string, unknown> {
+  return {
+    gate_id: gate.gateId, workflow_id: gate.workflowId, approved: input.approved, actor: input.actor, role: input.role,
+    rationale: input.rationale, payload_sha256: gate.inputSha256, decided_at: decidedAt.toISOString(),
+    request_record_id: gate.recordId,
+  };
+}
+
 /** The decision, its audit line and its delivery stand or fall together. */
 export async function decideGate(input: {
   tenantId: string; recordId: number; approved: boolean; actor: string; role: string; rationale: string;
@@ -93,10 +108,7 @@ export async function decideGate(input: {
         details: { recordId: input.recordId, gateId: gate.gateId, workflowId: gate.workflowId, approved: input.approved, inputSha256: gate.inputSha256 } },
       client,
     );
-    await postSigned(input.tenantId, {
-      decision: { gate_id: gate.gateId, workflow_id: gate.workflowId, approved: input.approved, actor: input.actor, role: input.role,
-                  rationale: input.rationale, payload_sha256: gate.inputSha256, decided_at: new Date().toISOString() },
-    });
+    await postSigned(input.tenantId, { decision: decisionMessage(gate, input) });
   });
 }
 
