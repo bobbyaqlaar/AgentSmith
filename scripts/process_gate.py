@@ -49,7 +49,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import IO, Callable, Dict, List, Optional, Tuple
+from typing import IO, Any, Callable, Dict, List, Optional, Tuple
 
 # The gate must not change the tree it checks: importing its own modules would
 # otherwise drop scripts/__pycache__/ into the repo, which the stop and commit
@@ -578,6 +578,17 @@ def record_text(kind: str, value: str, read: Reader, single: bool
     return path, file_path, text, None
 
 
+def _declaration_change(files: List[str], message: str, read: Reader,
+                        previous: Optional[Reader]) -> Tuple[List[str], Optional[Dict[str, Any]]]:
+    """The verdict on this commit's change to the compliance declaration, and its summary
+    for the audit log; ([], None) when the commit does not touch it."""
+    if gp.DECLARATION_FILE not in files:
+        return [], None
+    approvals, _errors = load_approvals(read)
+    old = previous(gp.DECLARATION_FILE) if previous is not None else None
+    return gp.declaration_transition(old, read(gp.DECLARATION_FILE), approvals, message)
+
+
 def check_change(
     files: List[str],
     gated_lines: int,
@@ -600,12 +611,15 @@ def check_change(
     if config.artifacts_mode in ("report", "enforce") and added:
         registry, _ = config.load_registry(read)
         xref = cross_reference_problems(added, read, registry.artifacts if registry else None)
+    # The compliance declaration only strengthens unless the owner approved, whether or
+    # not a config gates it, in every mode (P2-R12).
+    declaration = _declaration_change(files, message, read, previous)
     gated = sorted(f for f in files if config.is_gated(f))
     if not gated:
         if config.artifacts_mode == "enforce":
-            return xref, []
-        return [], [f"artifacts (report): {problem}" for problem in xref]
-    errors: List[str] = list(xref) if config.artifacts_mode == "enforce" else []
+            return [*declaration[0], *xref], []
+        return declaration[0], [f"artifacts (report): {problem}" for problem in xref]
+    errors: List[str] = [*declaration[0], *(xref if config.artifacts_mode == "enforce" else [])]
     notes: List[str] = [] if config.artifacts_mode == "enforce" else [
         f"artifacts (report): {problem}" for problem in xref
     ]
@@ -1144,6 +1158,26 @@ def _guardrail_errors(root: Path, files: List[str], read: Reader, message: str) 
     return gg.check(files, read, message, vouched(root, files), gg.org_policy_present(), rfcs)
 
 
+def _log_declaration_change(root: Path, problems: List[str], summary: Optional[Dict[str, Any]]) -> None:
+    """Every commit that changes the compliance declaration is an entry in the audit log
+    (`.agent-history.log`): the owner's decision of 2026-11-13 on P2-R12. A refused
+    weakening stays unresolved, so the next session start surfaces it."""
+    if summary is None:
+        return
+    fields = ", ".join(summary["changed"]) or "nothing"
+    if problems:
+        gh.record_event(root, "compliance_declaration_weakening_refused",
+                        f"{gp.DECLARATION_FILE}: {'; '.join(summary['weakened']) or problems[0]} "
+                        "(no recorded approval cited)",
+                        level="MAJOR", resolved=False)
+    elif summary["weakened"]:
+        gh.record_event(root, "compliance_declaration_weakened",
+                        f"{gp.DECLARATION_FILE}: {'; '.join(summary['weakened'])}; approved by {summary['approval']}",
+                        level="MAJOR", resolved=True)
+    else:
+        gh.record_event(root, "compliance_declaration_changed", f"{gp.DECLARATION_FILE}: {fields}")
+
+
 def commit_verdict(message: str, amend: bool = False) -> Tuple[int, List[str], List[str]]:
     """May this commit be made: exit code, notes, errors. One judgement for the
     hook (`commit-msg`) and for gate contract 3's `commit` answer."""
@@ -1178,6 +1212,7 @@ def commit_verdict(message: str, amend: bool = False) -> Tuple[int, List[str], L
     evidence = gp.evidence_resolver(root, "") if config.pillar_policy.mode != "off" else None
     errors, notes = check_change(files, lines, message, read, config, added, previous, evidence,
                                  arming=previous(CONFIG) is None)
+    _log_declaration_change(root, *_declaration_change(files, message, read, previous))
     if config.guardrails_mode == "on":
         errors.extend(_guardrail_errors(root, files, read, message))
 

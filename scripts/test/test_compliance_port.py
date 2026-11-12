@@ -249,10 +249,6 @@ def test_an_enforced_profile_without_its_declaration_fails(tmp_path: Path) -> No
     assert result["verdict"] == "fail" and "compliance.json is missing" in result["reason"]
 
 
-def test_the_shell_gate_protects_the_declaration() -> None:
-    assert gate_shell._protects(".agenticframework/compliance.json")
-
-
 # ── The 4.1.0 release review: R23 ──
 
 

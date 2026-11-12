@@ -896,3 +896,66 @@ def test_a_resume_and_its_record_commit_together(profile, monkeypatch):
     c.clear_stop("t", "*", "me@x")
     assert any(q.startswith("DELETE FROM compliance_stop") for q in conn.committed)
     assert any(q.startswith("INSERT INTO compliance_outbox") for q in conn.committed)
+
+
+# ── The 4.1.0 review's second pass: P2-R16 (.agent-rfc/designs/declaration-ratchet-and-atomic-test.md) ──
+
+
+def _sql(dsn: str, *statements: str) -> list:
+    """Run statements in autocommit; the rows of the last."""
+    import psycopg2
+
+    conn = psycopg2.connect(dsn)
+    conn.autocommit = True
+    try:
+        with conn.cursor() as cur:
+            for statement in statements:
+                cur.execute(statement)
+            return cur.fetchall() if cur.description else []
+    finally:
+        conn.close()
+
+
+@pytest.fixture()
+def isolated_dsn():
+    """A schema of this test's own, so a trigger that refuses records touches nothing else.
+    Unique per test: the gateway caches "tables created" by DSN, so a reused name would
+    skip creating them in the fresh schema."""
+    import uuid
+
+    schema = f"p2r16_{uuid.uuid4().hex[:12]}"
+    _sql(DSN, f"DROP SCHEMA IF EXISTS {schema} CASCADE", f"CREATE SCHEMA {schema}")
+    separator = "&" if "?" in DSN else "?"
+    yield f"{DSN}{separator}options=-csearch_path%3D{schema}"
+    _sql(DSN, f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+
+
+def _refuse_records(dsn: str, kind: str) -> None:
+    c.record("t", "warm-up", {}, dsn=dsn)  # the outbox exists in this schema
+    _sql(dsn,
+         "CREATE FUNCTION refuse() RETURNS trigger AS $$ BEGIN "
+         f"IF NEW.kind = '{kind}' THEN RAISE EXCEPTION 'refused'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql",
+         "CREATE TRIGGER refuse BEFORE INSERT ON compliance_outbox FOR EACH ROW EXECUTE FUNCTION refuse()")
+
+
+@needs_db
+def test_a_purge_whose_record_fails_in_the_database_deletes_nothing(profile, isolated_dsn):
+    """P2-R16: with the record written after the delete committed, every test still passed."""
+    _sql(isolated_dsn, "CREATE TABLE agent_runs (tenant_id TEXT, started_at TIMESTAMPTZ)",
+         "INSERT INTO agent_runs VALUES ('t', now() - interval '2000 days')")
+    _refuse_records(isolated_dsn, "retention_purge")
+    with pytest.raises(c.ComplianceRefused):
+        c.purge_runs("t", apply=True, dsn=isolated_dsn)
+    assert _sql(isolated_dsn, "SELECT count(*) FROM agent_runs") == [(1,)]
+
+
+@needs_db
+def test_a_stop_or_resume_whose_record_fails_in_the_database_changes_nothing(profile, isolated_dsn):
+    c.set_stop("t", c.APP_SCOPE, "held", "a@x", dsn=isolated_dsn)
+    _refuse_records(isolated_dsn, "stop_control")
+    with pytest.raises(c.ComplianceRefused):
+        c.clear_stop("t", c.APP_SCOPE, "a@x", dsn=isolated_dsn)
+    with pytest.raises(c.ComplianceRefused):
+        c.set_stop("t", "wf-2", "also", "a@x", dsn=isolated_dsn)
+    rows = _sql(isolated_dsn, "SELECT scope FROM compliance_stop WHERE tenant_id = 't' ORDER BY scope")
+    assert rows == [(c.APP_SCOPE,)]  # still stopped, and the second stop never set
