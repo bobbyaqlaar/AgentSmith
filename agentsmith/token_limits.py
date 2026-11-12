@@ -91,6 +91,17 @@ def check_input(cfg: dict, messages: Any, role: str) -> None:
             f"about {size}. Send less: summarise the history, or retrieve fewer passages.")
 
 
+def check_declared_caps(models: dict) -> None:
+    """Read both caps of every role, so a cap that cannot be read stops the gateway when it
+    starts rather than when a call first reaches that role: on a fallback tier that is the
+    failover itself (the 4.1.0 review's second pass, P2-R2)."""
+    for role, cfg in (models or {}).items():
+        if not isinstance(cfg, dict):
+            continue
+        for key in ("max_output_tokens", "max_input_tokens"):
+            _positive(cfg.get(key), f"{key} of role {role!r} (models.yaml)")
+
+
 def _limit(dotted: str, env_var: str) -> Optional[int]:
     from agentsmith.config import resolve
 
