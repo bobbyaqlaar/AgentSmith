@@ -181,7 +181,7 @@ class _Workflow:
                 self.wf.hitl_decide(dict(self.deliver))
             # What the real activity answers: the digest of the input as it received it,
             # after Temporal serialized it (P2-R13).
-            return {"record_id": len(self.executed), "input_sha256": c.payload_digest(_as_received(payload)["input"])}
+            return {"record_id": PENDING_RECORD, "input_sha256": c.payload_digest(_as_received(payload)["input"])}
         return {"ran": label}
 
     async def wait_condition(self, predicate, timeout=None):
@@ -219,6 +219,8 @@ def _gate(fake, monkeypatch, wf=None):
     )
 
 
+PENDING_RECORD = 41  # the record id the fake pending activity answers with
+
 DECISION = {
     "gate_id": "hitl-gate",
     "workflow_id": "wf-1",
@@ -228,6 +230,7 @@ DECISION = {
     "rationale": "ok",
     "payload_sha256": c.payload_digest({"id": 1}),
     "decided_at": "2026-11-08T00:00:00Z",
+    "request_record_id": PENDING_RECORD,
 }
 
 
@@ -485,10 +488,12 @@ def test_a_gate_through_the_sidecar(sidecar, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", DSN)
     gate = {"gate_id": f"g-{os.getpid()}", "workflow_id": f"w-{os.getpid()}"}
     ask = {**gate, "action": "issue", "input": {"n": 1}, "requested_by": "a@x"}
-    assert _call(sidecar, "/v1/gate/request", ask).json()["status"] == "pending"
+    asked = _call(sidecar, "/v1/gate/request", ask).json()
+    assert asked["status"] == "pending"
     assert _call(sidecar, "/v1/gate/status", gate).json()["status"] == "pending"
     digest = c.payload_digest({"n": 1})
-    c.record("t", "hitl_decision", {**gate, "approved": True, "actor": "b@x", "payload_sha256": digest})
+    c.record("t", "hitl_decision", {**gate, "approved": True, "actor": "b@x", "payload_sha256": digest,
+                                    "request_record_id": asked["record_id"]})
     answer = _call(sidecar, "/v1/gate/status", gate).json()
     assert answer["status"] == "approved" and answer["decision"]["actor"] == "b@x"
     # Asked again with other input: the old approval does not answer it.
@@ -631,17 +636,20 @@ def test_the_record_activity_answers_with_the_digest_of_what_it_recorded(monkeyp
     assert written["input_sha256"] == answer["input_sha256"]
 
 
-def test_a_pending_record_without_a_digest_refuses_the_gate(monkeypatch):
+@pytest.mark.parametrize("missing", ["input_sha256", "record_id"])
+def test_a_pending_record_without_its_id_or_digest_refuses_the_gate(monkeypatch, missing):
     """Nothing to compare a decision with: the gate fails closed rather than waiting for nothing."""
     fake, wf = _deciding(dict(DECISION))
     original = fake.execute_activity
 
     async def no_digest(name, payload, **k):
         answer = await original(name, payload, **k)
-        return {"record_id": 1} if payload.get("kind") == "hitl_pending" else answer
+        if payload.get("kind") == "hitl_pending":
+            answer.pop(missing)
+        return answer
 
     fake.execute_activity = no_digest
-    with pytest.raises(Exception, match="digest"):
+    with pytest.raises(Exception, match="id or input digest"):
         _gate(fake, monkeypatch, wf)
     assert "issue_permit" not in _labels(fake)
 
@@ -809,3 +817,74 @@ def test_the_sidecar_refuses_a_requester_that_is_not_an_email(sidecar, who):
     ask = {"gate_id": "g", "workflow_id": "w", "action": "issue", "input": {}, "requested_by": who}
     reply = _call(sidecar, "/v1/gate/request", ask)
     assert reply.status_code == 400 and "sign-in email" in reply.text
+
+
+# ── The 4.1.0 review's second pass: P2-R14, P2-R15 (.agent-rfc/designs/decision-names-its-request.md) ──
+
+
+def test_a_decision_must_name_the_request_it_answers():
+    """P2-R14: a decision said which input, not which request."""
+    with pytest.raises(ValueError):
+        c.HumanDecision.model_validate({k: v for k, v in DECISION.items() if k != "request_record_id"})
+    assert c.HumanDecision.model_validate(DECISION).request_record_id == PENDING_RECORD
+
+
+def test_on_the_temporal_path_a_decision_about_another_request_does_not_answer(monkeypatch):
+    """P2-R14: the same input, asked twice; the decision names the first request."""
+    fake, wf = _deciding({**DECISION, "request_record_id": PENDING_RECORD - 1})
+    _gate(fake, monkeypatch, wf)
+    assert "issue_permit" not in _labels(fake) and "record:hitl_timeout" in _labels(fake)
+
+
+@needs_db
+def test_on_the_store_path_a_late_decision_on_an_earlier_request_does_not_answer(sidecar, monkeypatch):
+    """P2-R14: request 1 and request 2 show one input; a decision on request 1 recorded
+    after request 2 was asked answered request 2."""
+    monkeypatch.setenv("DATABASE_URL", DSN)
+    gate = {"gate_id": f"late-{os.getpid()}", "workflow_id": f"wl-{os.getpid()}"}
+    ask = {**gate, "action": "issue", "input": {"n": 7}, "requested_by": "a@x"}
+    first = _call(sidecar, "/v1/gate/request", ask).json()["record_id"]
+    second = _call(sidecar, "/v1/gate/request", ask).json()["record_id"]
+    decided = {**gate, "approved": True, "actor": "b@x", "payload_sha256": c.payload_digest({"n": 7})}
+    c.record("t", "hitl_decision", {**decided, "request_record_id": first})
+    assert _call(sidecar, "/v1/gate/status", gate).json()["status"] == "pending"
+    # The right request, the wrong input: not an answer either.
+    c.record("t", "hitl_decision", {**decided, "payload_sha256": c.payload_digest({"n": 8}),
+                                    "request_record_id": second})
+    assert _call(sidecar, "/v1/gate/status", gate).json()["status"] == "pending"
+    c.record("t", "hitl_decision", {**decided, "request_record_id": second})
+    assert _call(sidecar, "/v1/gate/status", gate).json()["status"] == "approved"
+
+
+class _DeleteFails(_Conn):
+    """A connection whose `DELETE FROM compliance_stop` fails, as on a lost connection."""
+
+    def cursor(self):
+        cursor = super().cursor()
+        execute = cursor.execute
+
+        def failing(sql, params=None):
+            if sql.lstrip().startswith("DELETE FROM compliance_stop"):
+                raise RuntimeError("connection lost")
+            execute(sql, params)
+
+        cursor.execute = failing
+        return cursor
+
+
+def test_a_resume_that_fails_leaves_no_resume_record(profile, monkeypatch):
+    """P2-R15: the record committed first, then the delete failed, and the chain said
+    "resumed" for an app that was still stopped."""
+    conn = _DeleteFails()
+    monkeypatch.setattr(c, "_connect", lambda dsn=None: conn)
+    with pytest.raises(c.ComplianceRefused):
+        c.clear_stop("t", "*", "me@x")
+    assert not any(q.startswith("INSERT INTO compliance_outbox") for q in conn.committed)
+
+
+def test_a_resume_and_its_record_commit_together(profile, monkeypatch):
+    conn = _Conn()
+    monkeypatch.setattr(c, "_connect", lambda dsn=None: conn)
+    c.clear_stop("t", "*", "me@x")
+    assert any(q.startswith("DELETE FROM compliance_stop") for q in conn.committed)
+    assert any(q.startswith("INSERT INTO compliance_outbox") for q in conn.committed)

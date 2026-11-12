@@ -44,7 +44,7 @@ A deployed application imports `agentsmith.compliance`. On a profile:
 - `record()` writes to the database the worker already uses, chained and keyed by `COMPLIANCE_RECORD_KEY`, and `forward()` sends unsent records
   to the portal (`kind: compliance_record`, `contract/ops/v1`) when it is up.
 - **No record, no action.** A record that cannot be written raises `ComplianceRefused`, naming the obligation. Only that function stops.
-- `run_with_hitl_gate(..., compliance=True)` accepts only a named decision, the `hitl_decide` signal carrying `HumanDecision`.
+- `run_with_hitl_gate(..., compliance=True)` accepts only a named decision, the `hitl_decide` signal carrying `HumanDecision`. A decision names the `hitl_pending` record it answers (`request_record_id`) and the digest of the input that record showed (`payload_sha256`); on the Temporal path and the store path alike, only a decision naming the latest request with its digest answers it.
 - The stop flag lives in the same database, set by the portal over the signed webhook or by `agentsmith ops stop`.
 - The portal may be down: runs continue, gates wait, and records queue.
 
