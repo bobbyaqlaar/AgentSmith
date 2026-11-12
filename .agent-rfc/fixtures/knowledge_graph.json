@@ -396,6 +396,10 @@
         "parse_policy",
         "compliance_problems",
         "compliance_transition_problems",
+        "_placeholder",
+        "_classified",
+        "declaration_weakenings",
+        "declaration_transition",
         "transition_problems",
         "Source",
         "_decorator_name",
@@ -424,12 +428,15 @@
         "exemption_count",
         "_git",
         "evidence_resolver",
+        "real",
+        "looser",
+        "parse",
         "__init__",
         "tree",
         "read",
         "resolve"
       ],
-      "last_modified": "2026-11-26T04:42:30Z",
+      "last_modified": "2026-11-26T04:44:15Z",
       "id": "scripts/gate_pillars.py"
     },
     {
@@ -545,12 +552,13 @@
       "symbols": [
         "_now",
         "record",
+        "record_event",
         "_git_dir",
         "head",
         "record_gates_run",
         "last_gates_run"
       ],
-      "last_modified": "2026-11-26T04:42:30Z",
+      "last_modified": "2026-11-26T04:44:15Z",
       "id": "scripts/gate_history.py"
     },
     {
@@ -1116,6 +1124,7 @@
         "scaffold_problems",
         "vouched_note",
         "record_text",
+        "_declaration_change",
         "check_change",
         "git",
         "repo_root",
@@ -1137,6 +1146,7 @@
         "_without_comments",
         "cmd_commit_msg",
         "_guardrail_errors",
+        "_log_declaration_change",
         "commit_verdict",
         "cmd_commit_decision",
         "cmd_push_decision",
@@ -1191,7 +1201,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-11-26T04:42:30Z",
+      "last_modified": "2026-11-26T04:44:15Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -1254,7 +1264,7 @@
         "_git_refusal",
         "refusal"
       ],
-      "last_modified": "2026-11-26T04:42:30Z",
+      "last_modified": "2026-11-26T04:44:15Z",
       "id": "scripts/gate_shell.py"
     },
     {
@@ -2654,6 +2664,11 @@
         "_DeleteFails",
         "test_a_resume_that_fails_leaves_no_resume_record",
         "test_a_resume_and_its_record_commit_together",
+        "_sql",
+        "isolated_dsn",
+        "_refuse_records",
+        "test_a_purge_whose_record_fails_in_the_database_deletes_nothing",
+        "test_a_stop_or_resume_whose_record_fails_in_the_database_changes_nothing",
         "__init__",
         "execute_activity",
         "wait_condition",
@@ -2675,7 +2690,7 @@
         "_Cursor",
         "failing"
       ],
-      "last_modified": "2026-11-26T04:43:50Z",
+      "last_modified": "2026-11-26T04:44:15Z",
       "id": "agentsmith/test/test_compliance_runtime.py"
     },
     {
@@ -4608,7 +4623,6 @@
         "test_a_recurring_obligation_expires_on_its_catalogue_period",
         "test_a_signature_dated_in_the_future_does_not_count",
         "test_an_enforced_profile_without_its_declaration_fails",
-        "test_the_shell_gate_protects_the_declaration",
         "test_a_release_row_passes_only_on_a_test_ci_runs",
         "test_a_portal_test_no_script_runs_is_not_evidence",
         "test_agentsmiths_own_evidence_is_produced_and_names_its_known_gap",
@@ -4621,7 +4635,7 @@
         "test_a_required_database_that_is_missing_fails_rather_than_skips",
         "run"
       ],
-      "last_modified": "2026-11-26T04:43:50Z",
+      "last_modified": "2026-11-26T04:44:15Z",
       "id": "scripts/test/test_compliance_port.py"
     },
     {
@@ -10979,6 +10993,41 @@
       "pillar": null,
       "created_at": "2026-11-26T04:44:12Z",
       "id": "rfc:reviews/image-final-stage-and-mcp-reads.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_with",
+        "test_each_weakening_is_named",
+        "test_deleting_the_declaration_is_a_weakening",
+        "test_a_strengthening_needs_nothing",
+        "test_filling_a_placeholder_is_not_a_weakening",
+        "test_a_weakening_needs_a_cited_approval_the_owner_recorded",
+        "test_the_shell_no_longer_refuses_the_declaration",
+        "_history",
+        "repo",
+        "test_a_commit_that_weakens_the_declaration_is_refused_then_allowed_with_approval_and_logged",
+        "test_the_ratchet_holds_in_every_mode_gated_or_not"
+      ],
+      "last_modified": "2026-11-26T04:44:15Z",
+      "id": "scripts/test/test_declaration_ratchet.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "An agent may edit the declaration, a weakening needs the owner's approval, and every change is logged",
+      "source_file": ".agent-rfc/designs/declaration-ratchet-and-atomic-test.md",
+      "pillar": null,
+      "created_at": "2026-11-26T04:44:16Z",
+      "id": "rfc:designs/declaration-ratchet-and-atomic-test.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: declaration-ratchet-and-atomic-test",
+      "source_file": ".agent-rfc/reviews/declaration-ratchet-and-atomic-test.md",
+      "pillar": null,
+      "created_at": "2026-11-26T04:44:17Z",
+      "id": "rfc:reviews/declaration-ratchet-and-atomic-test.md"
     }
   ],
   "edges": [
