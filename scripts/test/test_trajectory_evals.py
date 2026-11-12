@@ -181,3 +181,26 @@ def test_an_empty_case_file_is_not_gradable(tmp_path):
     """R11: `[]` raised ZeroDivisionError instead of a scorecard."""
     card = _run(tmp_path, [])
     assert card.verdict == "not_gradable" and "no cases" in card.reason
+
+
+# ── The 4.1.0 review's second pass: P2-R3 (.agent-rfc/designs/caps-at-load-and-guard-tests.md) ──
+
+
+def _span_with(*attributes: tuple[str, dict]) -> dict:
+    return {"name": "llm.call", "startTimeUnixNano": "2",
+            "attributes": [{"key": "gen_ai.request.model", "value": {"stringValue": "m"}},
+                           *({"key": key, "value": value} for key, value in attributes)]}
+
+
+@pytest.mark.parametrize("span", [
+    pytest.param(_span_with(("gen_ai.usage.input_tokens", {"boolValue": True}),
+                            ("gen_ai.usage.output_tokens", {"boolValue": True})), id="booleans-are-not-counts"),
+    pytest.param(_span_with(("gen_ai.usage.input_tokens", {"intValue": "0"}),
+                            ("gen_ai.usage.output_tokens", {"intValue": "0"}),
+                            ("llm.usage.reported", {"boolValue": False})), id="reported-false-beside-zeros"),
+])
+def test_a_count_that_is_not_a_measurement_is_not_gradable(tmp_path, span):
+    """P2-R3: both guards could be removed with every test green."""
+    case = {"id": "t", "trace": "run.json", "expect": {"max_tokens": 10}}
+    card = _run(tmp_path, [case], {"run.json": json.dumps(_otlp(_span("lookup", 1), span))})
+    assert card.verdict == "not_gradable" and "records no tokens" in card.reason

@@ -261,3 +261,29 @@ async def test_a_stream_refused_by_the_compliance_guard_or_the_run_gives_everyth
     with config.override(**{"limits.run_tokens": 100}), pytest.raises(tl.RunLimitExceededError):
         await gw.complete_stream("hi", model_hint="developer", workflow_id="run-2", max_tokens=500)
     assert gw._budget.get_spend("t") == 0
+
+
+# ── The 4.1.0 review's second pass: P2-R2 (.agent-rfc/designs/caps-at-load-and-guard-tests.md) ──
+
+
+def test_an_unreadable_cap_on_any_tier_stops_the_gateway_at_start(monkeypatch):
+    """P2-R2: a fallback tier's cap was read only when the primary failed, so the
+    failover itself raised, at the moment the ladder exists for."""
+    from agentsmith import llm_gateway
+
+    monkeypatch.setenv("IDEMPOTENCY_BACKEND", "memory")
+    monkeypatch.setenv("BUDGET_BACKEND", "memory")
+    registry = {"developer": {"id": "m", "provider": "openai", "degrade_to": "local"},
+                "local": {"id": "small", "provider": "ollama", "max_output_tokens": "512k"}}
+    monkeypatch.setattr(llm_gateway, "load_model_registry", lambda: {k: dict(v) for k, v in registry.items()})
+    with pytest.raises(tl.LimitUnreadableError, match=r"max_output_tokens of role 'local'"):
+        llm_gateway.LLMGateway(tenant_id="t")
+    registry["local"]["max_output_tokens"] = 512
+    assert llm_gateway.LLMGateway(tenant_id="t").models["local"]["max_output_tokens"] == 512
+
+
+@pytest.mark.parametrize("cfg", [{"max_input_tokens": "100k"}, {"max_output_tokens": True}, {"max_input_tokens": 0}])
+def test_every_declared_cap_is_read(cfg):
+    with pytest.raises(tl.LimitUnreadableError, match="'r'"):
+        tl.check_declared_caps({"ok": {"max_output_tokens": 10}, "r": cfg})
+    tl.check_declared_caps({"ok": {}, "r": {}})  # undeclared is no limit

@@ -139,6 +139,7 @@ version table being consulted.
 - `agentsmith ops resume` and the portal's Resume write the resume and its record in one transaction: a record no longer says "resumed" for an app whose stop could not be cleared.
 - `SEC-CIAGENT-001` reports a whole event object given to a coding agent (`${{ github.event.pull_request }}`, `${{ github.event }}`, and the issue, comment, review, release, workflow-run and commit objects): GitHub renders it as JSON, title and body included. An author guard does not excuse an object. A field of one (`…issue.number`) still passes. One case joins the security contract.
 - Self-Test runs the compliance runtime's database tests (the record chain, stop and resume, the sidecar's gate), which skipped in every CI run for want of `COMPLIANCE_TEST_DSN`; with `AGENTSMITH_REQUIRE_DB=1` a missing DSN now fails instead of skipping.
+- An unreadable `max_output_tokens` or `max_input_tokens` on any role in `models.yaml` stops `LLMGateway` when it starts, naming the role. It was found only when a call first reached that role, which for a fallback tier meant the failover itself raised.
 
 ### Added — an opt-in compliance profile, `dubai-gov`
 
