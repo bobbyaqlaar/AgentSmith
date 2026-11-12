@@ -135,6 +135,8 @@ version table being consulted.
 - The `dubai-gov` scratch tenant's signatures are dated when it is built, as its drill already was, so they no longer lapse on the catalogue's period and turn Scratch tenants red with no change (`.github/scratch-tenants/date-fixtures.sh`).
 - A streamed call whose request cannot be built (for example an Anthropic system prompt given as content blocks) gives back its run-token and money reservations; it kept both although nothing was sent.
 - The portal's sign-in lockout (HTTP Basic) never drops a live count: a flood of failed sign-ins under invented names no longer resets an account's count before its fifth guess. The lockout tracks up to 100,000 names per process; when every one is live, a name it cannot count is refused until entries expire, rather than let through. Under a flood of about 110 failed sign-ins a second on one process, new names are refused there for up to fifteen minutes.
+- **A human decision names the request it answers.** `HumanDecision` gains a required `request_record_id`, the `hitl_pending` record the reviewer was shown, and the portal sends it. On the Temporal path and through the sidecar (`/v1/gate/status`), only a decision naming the latest request, with the digest of its input, answers a gate: a late decision on an earlier request with the same input no longer does. The profile is new in 4.1.0, so no released portal or runtime sends the old shape.
+- `agentsmith ops resume` and the portal's Resume write the resume and its record in one transaction: a record no longer says "resumed" for an app whose stop could not be cleared.
 
 ### Added — an opt-in compliance profile, `dubai-gov`
 

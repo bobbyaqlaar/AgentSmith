@@ -506,15 +506,14 @@ def set_stop(tenant_id: str, scope: str, reason: str, actor: str, *, dsn: Option
 
 
 def clear_stop(tenant_id: str, scope: str, actor: str, *, dsn: Optional[str] = None) -> None:
-    # The record first: a resume that cannot be recorded does not happen.
-    record(tenant_id, "stop_control", {"action": "resume", "scope": scope, "actor": actor}, dsn=dsn)
-    connection = _connect(dsn)
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("DELETE FROM compliance_stop WHERE tenant_id = %s AND scope = %s", (tenant_id, scope))
-        connection.commit()
-    finally:
-        connection.close()
+    """Resume a run or the app, and record who did, in one transaction: a resume that
+    cannot be recorded does not happen, and a record never says "resumed" for an app
+    that is still stopped (P2-R15)."""
+
+    def resume(cursor: Any) -> None:
+        cursor.execute("DELETE FROM compliance_stop WHERE tenant_id = %s AND scope = %s", (tenant_id, scope))
+
+    _recorded_change(tenant_id, "stop_control", {"action": "resume", "scope": scope, "actor": actor}, resume, dsn)
 
 
 def require_running(tenant_id: str, workflow_id: Optional[str] = None, *, dsn: Optional[str] = None) -> None:
@@ -552,26 +551,36 @@ class HumanDecision(BaseModel):
     rationale: str = Field(min_length=1, max_length=4000)
     payload_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     decided_at: str
+    # The `hitl_pending` record the reviewer was shown. Two requests can show one input,
+    # so the digest alone could not say which one a decision answers (the 4.1.0 review's
+    # second pass, P2-R14).
+    request_record_id: int = Field(ge=1)
 
 
 def find_decision(
     tenant_id: str, workflow_id: str, gate_id: str, *, dsn: Optional[str] = None
 ) -> Optional[dict[str, Any]]:
     """The named decision on one gate, for an application with no Temporal workflow to
-    signal. Only a decision about the latest request counts: a gate asked again with
-    different input is not answered by what was approved before."""
-    where = "tenant_id = %s AND kind = %s AND payload->>'workflow_id' = %s AND payload->>'gate_id' = %s"
-    query = f"SELECT payload FROM compliance_outbox WHERE {where} ORDER BY record_id DESC LIMIT 1"  # nosec B608
+    signal. Only a decision that names the latest request, and the digest of the input
+    that request showed, answers it: a gate asked again is not answered by a decision on
+    an earlier request, even one with the same input (P2-R14)."""
+    gate = "tenant_id = %s AND kind = %s AND payload->>'workflow_id' = %s AND payload->>'gate_id' = %s"
+    latest_request = (f"SELECT record_id, payload FROM compliance_outbox WHERE {gate} "  # nosec B608
+                      "ORDER BY record_id DESC LIMIT 1")
+    its_decision = (f"SELECT payload FROM compliance_outbox WHERE {gate} "  # nosec B608
+                    "AND payload->>'request_record_id' = %s ORDER BY record_id DESC LIMIT 1")
     connection = _connect(dsn)
     try:
         with connection.cursor() as cursor:
-            cursor.execute(query, (tenant_id, "hitl_decision", workflow_id, gate_id))
-            decision = cursor.fetchone()
-            cursor.execute(query, (tenant_id, "hitl_pending", workflow_id, gate_id))
+            cursor.execute(latest_request, (tenant_id, "hitl_pending", workflow_id, gate_id))
             request = cursor.fetchone()
+            if not request:
+                return None
+            cursor.execute(its_decision, (tenant_id, "hitl_decision", workflow_id, gate_id, str(request[0])))
+            decision = cursor.fetchone()
     finally:
         connection.close()
-    if not decision or not request or decision[0].get("payload_sha256") != request[0].get("input_sha256"):
+    if not decision or decision[0].get("payload_sha256") != request[1].get("input_sha256"):
         return None
     return decision[0]
 

@@ -459,15 +459,19 @@ class BaseAgentWorkflow:
             # The digest of the input as the record holds it, from the activity that
             # wrote it: one value, computed once (P2-R13).
             digest = (pending or {}).get("input_sha256")
-            if not digest:
-                raise _compliance_failure("the pending record came back without its input digest, so no "
+            request_record_id = (pending or {}).get("record_id")
+            if not digest or not request_record_id:
+                raise _compliance_failure("the pending record came back without its id or input digest, so no "
                                           "decision could be matched to this request")
+
+            def answers() -> bool:
+                # Only a decision on this request, about this request's input (P2-R13, P2-R14).
+                decision = self._gate_decisions.get(gate_id) or {}
+                return (decision.get("payload_sha256") == digest
+                        and decision.get("request_record_id") == request_record_id)
+
             try:
-                # Only a decision about this request's input answers it.
-                await workflow.wait_condition(
-                    lambda: (self._gate_decisions.get(gate_id) or {}).get("payload_sha256") == digest,
-                    timeout=HITL_SIGNAL_TIMEOUT,
-                )
+                await workflow.wait_condition(answers, timeout=HITL_SIGNAL_TIMEOUT)
             except TimeoutError:
                 approved = None
                 # Takes it off the reviewers' queue: nobody can decide it any more.
