@@ -10746,6 +10746,14 @@
       "pillar": null,
       "created_at": "2026-11-11T20:35:42Z",
       "id": "rfc:designs/review-pass2-majors.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: review-pass2-majors",
+      "source_file": ".agent-rfc/reviews/review-pass2-majors.md",
+      "pillar": null,
+      "created_at": "2026-11-12T05:48:06Z",
+      "id": "rfc:reviews/review-pass2-majors.md"
     }
   ],
   "edges": [
