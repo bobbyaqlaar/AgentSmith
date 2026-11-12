@@ -2942,9 +2942,11 @@
         "test_a_red_tenant_run_reaches_the_wait_steps_report",
         "test_the_wait_step_reaches_the_refusal_check_on_a_red_run",
         "test_the_wait_step_stays_red_when_the_refusal_is_not_the_reason",
-        "test_every_job_that_waits_survives_a_red_run"
+        "test_every_job_that_waits_survives_a_red_run",
+        "test_the_profiles_evidence_is_dated_when_the_tenant_is_built",
+        "test_build_dates_the_profile_through_the_one_script"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-12T06:23:28Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -10263,7 +10265,7 @@
         "add_trailers",
         "main"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-12T06:30:10Z",
       "id": "scripts/agent_tokens.py"
     },
     {
@@ -10311,9 +10313,10 @@
         "test_a_message_with_no_trailers_gets_a_blank_line_first",
         "test_the_gates_own_hooks_record_the_session",
         "test_counts_read_at_a_glance",
-        "test_a_real_amend_through_the_tenants_hooks_carries_both"
+        "test_a_real_amend_through_the_tenants_hooks_carries_both",
+        "test_a_commit_in_a_linked_worktree_carries_its_sessions_tokens"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-12T06:23:49Z",
       "id": "scripts/test/test_agent_tokens.py"
     },
     {
@@ -10754,6 +10757,22 @@
       "pillar": null,
       "created_at": "2026-11-12T05:48:06Z",
       "id": "rfc:reviews/review-pass2-majors.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The scratch tenant's evidence is dated when it is built, and a worktree's commits carry their tokens",
+      "source_file": ".agent-rfc/designs/scratch-dates-and-worktree-tokens.md",
+      "pillar": null,
+      "created_at": "2026-11-12T06:30:50Z",
+      "id": "rfc:designs/scratch-dates-and-worktree-tokens.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: scratch-dates-and-worktree-tokens",
+      "source_file": ".agent-rfc/reviews/scratch-dates-and-worktree-tokens.md",
+      "pillar": null,
+      "created_at": "2026-11-12T06:30:51Z",
+      "id": "rfc:reviews/scratch-dates-and-worktree-tokens.md"
     }
   ],
   "edges": [

@@ -300,3 +300,25 @@ def test_a_real_amend_through_the_tenants_hooks_carries_both(tmp_path, monkeypat
     done = _git(root, "commit", "-q", "--amend", "-m", "docs: notes, amended")
     assert done.returncode == 0, done.stderr
     assert "Agent-Tokens: output 1.0k" in _git(root, "log", "-1", "--format=%B").stdout
+
+
+# ── The 4.1.0 review's second pass: P2-R4 (.agent-rfc/designs/scratch-dates-and-worktree-tokens.md) ──
+
+
+@needs_git
+def test_a_commit_in_a_linked_worktree_carries_its_sessions_tokens(repo, tmp_path):
+    """P2-R4: the hooks recorded the session in the main checkout's git directory, and a
+    commit in a linked worktree read its own, found nothing, and carried `Agent:` alone."""
+    git = ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "--no-verify", "-m", "init"], check=True)
+    worktree = tmp_path / "wt"
+    subprocess.run([*git, "worktree", "add", "-q", "-b", "side", str(worktree)], check=True)
+    env = {"CLAUDECODE": "1", "CLAUDE_CODE_SESSION_ID": "session"}
+    transcript = _session(repo, tmp_path, _line("m1", 1500))  # the hooks run in the main checkout
+
+    first = _tokens(_commit(worktree, tmp_path, env))
+    assert first.startswith("Agent-Tokens: output 1.5k")
+    _spend(transcript, "m2", 200)
+    second = _tokens(_commit(worktree, tmp_path, env))
+    assert second.startswith("Agent-Tokens: output 200") and second.endswith("(since this session's previous commit)")
+    assert at._ledger_path(worktree) == at._ledger_path(repo)
