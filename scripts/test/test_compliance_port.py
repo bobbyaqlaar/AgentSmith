@@ -331,3 +331,34 @@ def test_a_known_gap_that_starts_passing_must_leave_the_list() -> None:
     catalogue = [_mech("OB-AUDIT-COVERAGE", "release:agentsmith/test/test_compliance_runtime.py", layer="provider")]
     document = cp.provider_evidence(catalogue)
     assert document["verdict"] == "fail" and "KNOWN_PROVIDER_GAPS" in document["reason"]
+
+
+def test_ci_runs_the_compliance_database_tests() -> None:
+    """P2-R23: the tests behind OB-RECORD and OB-STOP skipped in every CI run, because
+    nothing set COMPLIANCE_TEST_DSN."""
+    import yaml
+
+    workflow = yaml.safe_load((REPO / ".github" / "workflows" / "self-test.yml").read_text(encoding="utf-8"))
+    job = next(job for job in workflow["jobs"].values()
+               if any("pytest agentsmith/test/" in str(step.get("run") or "") for step in job.get("steps") or []))
+    assert "postgres" in (job.get("services") or {})
+    env = job.get("env") or {}
+    assert env.get("COMPLIANCE_TEST_DSN", "").startswith("postgresql://")
+    assert env.get("AGENTSMITH_REQUIRE_DB") == "1"
+
+
+def test_a_required_database_that_is_missing_fails_rather_than_skips() -> None:
+    """The guard on P2-R23 can fail: required and absent is red."""
+    import os
+
+    env = {k: v for k, v in os.environ.items() if k != "COMPLIANCE_TEST_DSN"}
+
+    def run(required: str) -> int:
+        return subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+             "agentsmith/test/test_compliance_runtime.py::test_the_database_tests_run_where_they_are_required"],
+            cwd=REPO, env={**env, "AGENTSMITH_REQUIRE_DB": required}, capture_output=True, text=True, check=False,
+        ).returncode
+
+    assert run("1") != 0
+    assert run("") == 0

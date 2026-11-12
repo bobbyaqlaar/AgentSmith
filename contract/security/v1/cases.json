@@ -123,6 +123,22 @@
       "why": "the step runs for authors with no association"
     },
     {
+      "name": "a whole pull-request object reaching an agent fails",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".github/workflows/review.yml": "on: pull_request_target\njobs:\n  review:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: anthropics/claude-code-action@v1\n        with:\n          prompt: \"Review ${{ github.event.pull_request }}\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CIAGENT-001": "fail"
+        }
+      },
+      "why": "the object is rendered as JSON, its title and body included"
+    },
+    {
       "name": "a template risk entry fails",
       "verb": "check",
       "request": {},

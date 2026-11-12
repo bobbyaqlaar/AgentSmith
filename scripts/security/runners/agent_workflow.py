@@ -34,7 +34,11 @@ _UNTRUSTED = re.compile(
     r"|(?:commits\.[^.\s]+|head_commit|workflow_run\.head_commit)\.(?:message|author\.(?:email|name))"
     r"|pull_request\.head\.(?:ref|label|repo\.default_branch)"
     r"|workflow_run\.head_branch)\b"
-    r"|github\.head_ref\b|tojson\(\s*github(?:\.event)?\s*[).]", re.I)
+    r"|github\.head_ref\b|tojson\(\s*github(?:\.event)?\s*[).]"
+    # A whole object, rendered as JSON with the fields above inside it (the 4.1.0
+    # review's second pass, P2-R6). A field of one (`…issue.number`) is not this.
+    r"|github\.event(?:\.(?:pull_request\.head|issue|pull_request|discussion|comment|review_comment|review"
+    r"|release|workflow_run|head_commit|commits|pages))?(?![\w.\[])", re.I)
 _AUTHORED = ("issue", "pull_request", "discussion", "comment", "review", "review_comment")
 _TRUSTED_ROLES = ("OWNER", "MEMBER", "COLLABORATOR")
 

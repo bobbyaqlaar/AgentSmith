@@ -27,6 +27,14 @@ TEMPLATE = (
 )
 DSN = os.environ.get("COMPLIANCE_TEST_DSN", "")
 needs_db = pytest.mark.skipif(not DSN, reason="COMPLIANCE_TEST_DSN is not set")
+# Set by the CI job that runs these with a database: there a skip would be a pass nobody
+# earned (the 4.1.0 review's second pass, P2-R23).
+REQUIRE_DB = os.environ.get("AGENTSMITH_REQUIRE_DB") == "1"
+
+
+def test_the_database_tests_run_where_they_are_required():
+    assert DSN or not REQUIRE_DB, (
+        "AGENTSMITH_REQUIRE_DB=1 and COMPLIANCE_TEST_DSN is not set: the database tests would be skipped")
 
 
 @pytest.fixture()

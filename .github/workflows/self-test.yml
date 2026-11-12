@@ -237,6 +237,12 @@ jobs:
     env:
       DATABASE_URL: "postgresql://test:test@localhost:5432/test"
       IDEMPOTENCY_BACKEND: postgres
+      # The compliance runtime's database tests (the record chain, stop and resume, the
+      # sidecar's gate) are the evidence OB-RECORD and OB-STOP cite; without a DSN they
+      # skipped in every run. Required here, so they cannot quietly skip again
+      # (.agent-rfc/designs/db-tests-in-ci-and-event-objects.md, P2-R23).
+      COMPLIANCE_TEST_DSN: "postgresql://test:test@localhost:5432/test"
+      AGENTSMITH_REQUIRE_DB: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -244,3 +244,37 @@ def test_a_guard_that_only_looks_like_a_restriction_does_not_count(tmp_path, gua
 ])
 def test_a_term_that_can_only_narrow_to_trusted_authors_counts(tmp_path, guard):
     assert not _failed(_check(tmp_path, _job(_action(COMMENT), job_if=guard)))
+
+
+# ── The 4.1.0 review's second pass: P2-R6 (.agent-rfc/designs/db-tests-in-ci-and-event-objects.md) ──
+
+
+@pytest.mark.parametrize("given", [
+    "${{ github.event.pull_request }}",
+    "${{ github.event.issue }}",
+    "${{ format('{0}', github.event.issue) }}",
+    "${{ github.event.comment }}",
+    "${{ github.event.review }}",
+    "${{ github.event.release }}",
+    "${{ github.event.workflow_run }}",
+    "${{ github.event.head_commit }}",
+    "${{ github.event.commits }}",
+    "${{ github.event.pull_request.head }}",
+    "${{ github.event }}",
+    "${{ github.event['issue'] }}",
+])
+def test_a_whole_event_object_is_untrusted_text(tmp_path, given):
+    """P2-R6: GitHub renders an object as JSON, title and body included, and it passed."""
+    assert _failed(_check(tmp_path, _job(_action(given))))
+
+
+def test_an_author_guard_does_not_excuse_a_whole_object(tmp_path):
+    """An object carries more than its author wrote: labels, branch names."""
+    guard = "github.event.comment.author_association == 'OWNER'"
+    assert _failed(_check(tmp_path, _job(_action("${{ github.event.comment }}"), job_if=guard)))
+
+
+@pytest.mark.parametrize("given", ["${{ github.event.issue.number }}", "${{ github.event.pull_request.head.sha }}",
+                                   "${{ github.event_name }}", "${{ github.event.action }}"])
+def test_a_field_of_an_object_that_an_outsider_does_not_write_still_passes(tmp_path, given):
+    assert not _failed(_check(tmp_path, _job(_action(given))))
