@@ -600,6 +600,7 @@ See Section 25 for full specification (the Trace Redaction section redaction, th
 | `.agent-rfc/fixtures/golden_evals.json` | `[{id, input, expected_tool, reference_output}]` | **Tenant-local only**; seeded from bootstrap base; grows via HITL |
 | `.agent-rfc/fixtures/custom_judge_criteria.json` | `{name, version, instructions, historical_learnings: [str]}` | Versioned; semantic dedup; evicted rules archived to `.archive.json` |
 | `.agent-rfc/fixtures/knowledge_graph.json` | NetworkX `node_link_data` JSON | Auto-updated by `map_codebase.py` on every commit/checkout |
+| `.agent-rfc/fixtures/trace_graph.json` | `{about, history: false, kinds, nodes, edges, summary}` | Written by `scripts/trace_graph.py` and `agentsmith gate kg build`; report only. A function of the tree, never of git history, so a test rebuilds and compares it (`--check`). `--history` adds commits and trailers to another output |
 | `.agent-rfc/fixtures/token_velocity_cache.json` | `{config, monthly_accumulated_spend_usd, current_month_identifier, events}` | Dev session budget; monthly auto-reset |
 | `.agenticframework/tenant.yaml` | Tenant config schema | See Section 23 |
 | `.agenticframework/providers.json` | `{contract: int, providers: {<port>: {command\|url\|otlp, version?} \| "none"}}` — schema at `contract/gate/v3/providers.schema.json` (`gate` may add `contract` and `setup`) | **Who governs this repository.** Written by `agentsmith tenant adopt`, refreshed by `agentsmith sync`, read by `.githooks/process-gate` before it falls back to the framework's own paths. `"gate": "none"` declares a repository deliberately ungoverned and is never overridden. `version` is recorded for a person and for tooling; the launcher does not enforce it |
@@ -1321,6 +1322,7 @@ AgentSmith/
 │   ├── gate_ides.py             # One gate, six dialects: each IDE's payload shape in, its answer shape out, its hook config generated
 │   ├── gate_shell.py            # The shell surface: refuses --no-verify, a hooksPath override, `agentsmith approve` and writes to the gate itself
 │   ├── gate_kg.py               # What a change touches, read from the graph JSON without networkx: the review's scope and its `KG query:` hash
+│   ├── trace_graph.py           # Report only: requirement → design → commit → file → test, each link typed; imports read from the graph
 │   ├── gate_guardrails.py       # The commit checks the machine-wide hooks made (AI markers, empty handlers, enterprise RFCs), made by the commit gate
 │   ├── gate_history.py          # Pillar 5's log, written by the stop gate and the sweep; and what the last local `agentsmith gates run` found
 │   ├── gate_steps.py            # The `# agentsmith:gate` steps in the workflows: `agentsmith gates run` and the generated checklist table

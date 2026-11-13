@@ -1094,7 +1094,14 @@ def _gate_kg(scripts: Path, verb: Optional[str], base: Optional[str]) -> int:
     if verb == "build":
         # Whole, never incremental: a person asking for the graph wants it right, and the
         # incremental path keeps a file's old edges until the file changes (P3-R17).
-        return sp.run([sys.executable, str(scripts / "map_codebase.py"), "--quiet", "--force"], check=False).returncode
+        code = sp.run([sys.executable, str(scripts / "map_codebase.py"), "--quiet", "--force"], check=False).returncode
+        # The trace graph reads the knowledge graph's edges, so it is rebuilt with it, in a repository that tracks
+        # one (AgentSmith's own: it reads this repository's backlog and catalogue; a tenant has neither).
+        tracked = sp.run(["git", "ls-files", "--error-unmatch", ".agent-rfc/fixtures/trace_graph.json"],
+                         capture_output=True, check=False).returncode == 0
+        if code == 0 and tracked:
+            code = sp.run([sys.executable, str(scripts / "trace_graph.py")], check=False).returncode
+        return code
     if verb == "impact":
         scope = ["--base", base] if base else ["--staged"]
         return sp.run([sys.executable, str(scripts / "local_knowledge_graph.py"), "--impact", "--json", *scope],

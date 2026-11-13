@@ -162,7 +162,7 @@ The second pass fixed three defects at the spelling the first had reported, and 
 
 ### Added — a traceability graph, report only
 
-`scripts/trace_graph.py` writes `.agent-rfc/fixtures/trace_graph.json`: requirements, designs, reviews, commits, files and tests, every link typed `observed`, `declared`, `derived` or `inferred`, with the commit it was built from. It reads imports from the knowledge graph. No gate reads it.
+`scripts/trace_graph.py` writes `.agent-rfc/fixtures/trace_graph.json`: requirements, designs, reviews, commits, files and tests, every link typed `observed`, `declared`, `derived` or `inferred`, with the commit it was built from. The committed graph is a function of the tree alone, never of git history: a test rebuilds it and fails when it is stale (`trace_graph.py --check`), and `agentsmith gate kg build` rebuilds it with the knowledge graph. Commits, their trailers, which design built which file, and hot spots come from `trace_graph.py --history`, written elsewhere, never to the fixture; even there a commit is identifiers only, no subject. It reads imports from the knowledge graph. No gate reads it.
 
 ### Known limits of the `dubai-gov` preview
 

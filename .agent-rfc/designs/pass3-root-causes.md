@@ -22,6 +22,7 @@ scope:
   - CHANGELOG.md
   - docs/PRODUCT_BACKLOG.md
   - docs/UserManual.md
+  - docs/DESIGN.md
   - .agent-rfc/fixtures/trace_graph.json
 ---
 # The causes behind the third pass's blockers, and a code graph that can be trusted
@@ -56,7 +57,12 @@ through the portal's `@/` alias.
 - **Traceability graph.** The reviewer's builder becomes `scripts/trace_graph.py`, reading imports from the knowledge
   graph instead of resolving them a second time, building at `HEAD`, and writing
   `.agent-rfc/fixtures/trace_graph.json` with the commit it was built from. Every link carries `observed`,
-  `declared`, `derived` or `inferred`. It is the report-only phase 0 the review recommended for
+  `declared`, `derived` or `inferred`. The committed graph is a function of the tree, never of git history (owner, 2026-11-14: keep it committed):
+  a committed file cannot hold the commit that carries it, history only grows, and every scan of tracked files reads
+  what it holds (a commit subject brought in a private name). So a test rebuilds it and compares, and
+  `agentsmith gate kg build` rebuilds it in a repository that tracks it. `--history` adds commits, trailers, the
+  design-to-file links they give, and hot spots, to another output. A design's scope is not read as what it built:
+  it says what the design may touch. A checkout without the release tag records no range instead of failing. It is the report-only phase 0 the review recommended for
   `.agent-rfc/designs/traceability-graph.md`; it decides nothing and no gate reads it.
 - **P3-R1: evaluate the condition, not its spelling.** `scripts/security/gha_expression.py` parses GitHub's
   expression grammar (literals, contexts with `.` and `[…]`, calls, `!`, comparisons, `&&`, `||`, brackets) and
