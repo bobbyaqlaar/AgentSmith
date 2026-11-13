@@ -2064,7 +2064,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-11-26T04:44:55Z",
+      "last_modified": "2026-11-26T04:46:18Z",
       "id": "agentsmith/cli.py"
     },
     {
@@ -11119,6 +11119,7 @@
       "node_type": "CodebaseFile",
       "language": "python",
       "symbols": [
+        "_bookkeeping",
         "is_test",
         "Builder",
         "main",
@@ -11133,7 +11134,7 @@
         "commits",
         "build"
       ],
-      "last_modified": "2026-11-26T04:44:55Z",
+      "last_modified": "2026-11-26T04:46:18Z",
       "id": "scripts/trace_graph.py"
     },
     {
@@ -11191,9 +11192,14 @@
         "_built",
         "test_every_link_says_how_it_is_known",
         "test_imports_come_from_the_knowledge_graph_not_a_second_resolver",
-        "test_a_commits_design_trailer_is_an_observed_link_and_requirement_links_are_inferred"
+        "test_the_committed_graph_is_what_the_tree_builds",
+        "test_the_committed_graph_holds_no_git_history",
+        "test_history_never_writes_or_checks_the_committed_graph",
+        "test_a_commits_design_trailer_is_an_observed_link_and_requirement_links_are_inferred",
+        "test_a_commit_node_holds_identifiers_and_no_text_from_history",
+        "test_a_range_the_checkout_cannot_resolve_is_recorded_not_fatal"
       ],
-      "last_modified": "2026-11-26T04:44:55Z",
+      "last_modified": "2026-11-26T04:46:18Z",
       "id": "scripts/test/test_trace_graph.py"
     },
     {
