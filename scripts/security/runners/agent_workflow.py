@@ -8,13 +8,13 @@ from a script: it is a floor.
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 from typing import Any, Iterator
 
 import yaml
 
+from security import gha_expression
 from security.registry import ControlSpec
 from security.report import ControlResult
 from security.runners._shared import failed, passed
@@ -40,7 +40,6 @@ _UNTRUSTED = re.compile(
     r"|github\.event(?:\.(?:pull_request\.head|issue|pull_request|discussion|comment|review_comment|review"
     r"|release|workflow_run|head_commit|commits|pages))?(?![\w.\[])", re.I)
 _AUTHORED = ("issue", "pull_request", "discussion", "comment", "review", "review_comment")
-_TRUSTED_ROLES = ("OWNER", "MEMBER", "COLLABORATOR")
 
 
 def _normalised(expression: str) -> str:
@@ -91,75 +90,25 @@ def _uses_variable(text: str, name: str) -> bool:
     return re.search(rf"\$\{{?{escaped}\b|\$\{{\{{\s*env\.{escaped}\b", text) is not None
 
 
-_ROLE = r"'(\w+)'"
-_ASSOCIATION = r"github\.event\.(\w+)\.author_association"
-_ROLE_TESTS = (
-    re.compile(rf"^{_ASSOCIATION}\s*==\s*{_ROLE}$", re.I),
-    re.compile(rf"^{_ROLE}\s*==\s*{_ASSOCIATION}$", re.I),
-)
-_ROLE_LIST = re.compile(rf"^contains\(\s*fromjson\(\s*'(\[[^']*\])'\s*\)\s*,\s*{_ASSOCIATION}\s*\)$", re.I)
-
-
-def _terms(condition: str) -> list[str]:
-    """The terms of a condition joined by `&&`, each without its unmatched brackets."""
-    text = condition.strip()
-    if text.startswith("${{") and text.endswith("}}"):
-        text = text[3:-2]
-    terms = []
-    for piece in text.split("&&"):
-        term = piece.strip()
-        while term.startswith("(") and term.count("(") > term.count(")"):
-            term = term[1:].strip()
-        while term.endswith(")") and term.count(")") > term.count("("):
-            term = term[:-1].strip()
-        while term.startswith("(") and term.endswith(")") and term.count("(") == term.count(")"):
-            inner = term[1:-1].strip()  # `(a == 'X')` around one whole term
-            if inner.count("(") != inner.count(")"):
-                break
-            term = inner
-        terms.append(term)
-    return terms
-
-
-def _trusted_roles(term: str, authored: str) -> bool:
-    """Is this term, on its own, a test that the field's author holds a trusted role?"""
-    for pattern in _ROLE_TESTS:
-        match = pattern.match(term)
-        if match:
-            groups = [g for g in match.groups() if g]
-            context, role = (groups[0], groups[1]) if pattern is _ROLE_TESTS[0] else (groups[1], groups[0])
-            return context.lower() == authored and role.upper() in _TRUSTED_ROLES
-    match = _ROLE_LIST.match(term)
-    if match and match.group(2).lower() == authored:
-        try:
-            roles = json.loads(match.group(1))
-        except ValueError:
-            return False
-        return (isinstance(roles, list) and bool(roles)
-                and all(isinstance(r, str) and r.upper() in _TRUSTED_ROLES for r in roles))
-    return False
-
-
-def _restricts(condition: str, authored: str) -> bool:
-    """A condition restricts the author when it cannot run for anyone else: no `||`
-    (another branch runs it for anyone), no negated group (`!(…)` turns a conjunction
-    round), and at least one term that is exactly a positive test of a trusted role.
-    In a conjunction every term must hold, so the other terms can only narrow it
-    (`… && !github.event.issue.pull_request` is fine). Searching the text for a role word
-    accepted `== false`, a list with CONTRIBUTOR, and `== 'NONE'` beside an unrelated
-    role word (the 4.1.0 review's second pass, P2-R5)."""
-    if "||" in condition or re.search(r"!\s*\(", condition):
-        return False
-    return any(_trusted_roles(term, authored) for term in _terms(condition))
+# Every author association GitHub defines that does not hold the repository, and one it
+# does not define, so a future value is not trusted by default.
+_UNTRUSTED_ROLES = ("CONTRIBUTOR", "FIRST_TIME_CONTRIBUTOR", "FIRST_TIMER", "MANNEQUIN", "NONE",
+                    "A_ROLE_GITHUB_HAS_NOT_DEFINED")
 
 
 def _guarded(field: str, conditions: list[str]) -> bool:
     """Is this field's own author restricted to people who already hold the repository?
-    Only an authored title or body: a branch name or commit message has no such author."""
+    Only an authored title or body: a branch name or commit message has no such author.
+
+    The conditions (the job's and the step's `if:`) are evaluated, not read: for every
+    association that is not OWNER, MEMBER or COLLABORATOR, they must be definitely false,
+    with every other context unknown. Reading the spelling accepted `||`, `!`, `== false`
+    and a negated group in turn, three rounds of one defect (R9, P2-R5, P3-R1)."""
     parts = field.lower().split(".")
-    if len(parts) != 4 or parts[:2] != ["github", "event"] or parts[2] not in _AUTHORED:
+    if len(parts) != 4 or parts[:2] != ["github", "event"] or parts[2] not in _AUTHORED or not conditions:
         return False
-    return any(_restricts(condition, parts[2]) for condition in conditions)
+    association = ("github", "event", parts[2], "author_association")
+    return not any(gha_expression.may_be_true(conditions, {association: role}) for role in _UNTRUSTED_ROLES)
 
 
 def _step_problems(step: dict, inherited: tuple[Any, ...], conditions: list[str]) -> list[str]:

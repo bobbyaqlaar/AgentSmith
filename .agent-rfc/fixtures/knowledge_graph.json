@@ -1,7 +1,9 @@
 {
   "directed": true,
   "multigraph": false,
-  "graph": {},
+  "graph": {
+    "parser_version": 2
+  },
   "nodes": [
     {
       "node_type": "CodebaseFile",
@@ -29,6 +31,7 @@
         "parseGrants",
         "configuredGrants",
         "SINGLE_USER_GRANTS",
+        "isBasicAccount",
         "verifyBasicAuthCredentials",
         "getAccessForSsoEmail",
         "encodeGrantsHeader",
@@ -38,7 +41,7 @@
         "encodeActorHeader",
         "decodeActorHeader"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T22:21:03Z",
       "id": "portal/lib/authz.ts"
     },
     {
@@ -872,10 +875,12 @@
         "_extract_guardrails_from_cursorrules",
         "_extract_guardrails_from_rfc",
         "_extract_guardrails_from_superpowers",
+        "_tsconfig_aliases",
+        "_inside",
         "_resolve_local_import",
         "run_map"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T22:21:02Z",
       "id": "scripts/map_codebase.py"
     },
     {
@@ -1037,7 +1042,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-11-12T21:11:11Z",
+      "last_modified": "2026-11-13T22:21:00Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -2823,7 +2828,7 @@
         "test_agentsmith_passes_the_security_contract",
         "broken"
       ],
-      "last_modified": "2026-11-12T16:50:54Z",
+      "last_modified": "2026-11-13T22:12:19Z",
       "id": "scripts/test/test_security_contract.py"
     },
     {
@@ -3335,9 +3340,14 @@
         "test_a_node_for_a_file_that_became_ignored_is_purged",
         "test_an_untracked_design_not_ignored_still_maps",
         "test_source_file_is_repository_relative",
-        "test_outside_a_git_checkout_everything_maps"
+        "test_outside_a_git_checkout_everything_maps",
+        "_python_edges",
+        "test_a_python_import_keeps_its_full_module_path",
+        "test_a_typescript_import_through_a_tsconfig_alias_resolves",
+        "test_the_committed_graph_knows_who_imports_the_compliance_runtime",
+        "test_a_graph_built_by_another_parser_is_parsed_again_whole"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T22:08:50Z",
       "id": "scripts/test/test_knowledge_graph.py"
     },
     {
@@ -3909,7 +3919,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T22:18:54Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -7488,7 +7498,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-11-13T06:58:04Z",
+      "last_modified": "2026-11-13T22:06:26Z",
       "id": "agentsmith/cli.py"
     },
     {
@@ -9570,12 +9580,14 @@
         "mfaRefusal",
         "MAX_FAILURES",
         "LOCKOUT_SECONDS",
-        "MAX_TRACKED",
         "isLockedOut",
         "recordFailure",
-        "clearFailures"
+        "signInAttempt",
+        "trackedCount",
+        "clearFailures",
+        "basicSignIn"
       ],
-      "last_modified": "2026-11-12T06:46:19Z",
+      "last_modified": "2026-11-13T22:22:51Z",
       "id": "portal/lib/signInPolicy.ts"
     },
     {
@@ -9964,7 +9976,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-12T06:46:05Z",
+      "last_modified": "2026-11-13T22:22:21Z",
       "id": "portal/test/signInPolicy.test.ts"
     },
     {
@@ -10184,7 +10196,7 @@
         "config",
         "proxy"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T22:21:56Z",
       "id": "portal/proxy.ts"
     },
     {
@@ -10573,9 +10585,12 @@
         "test_a_term_that_can_only_narrow_to_trusted_authors_counts",
         "test_a_whole_event_object_is_untrusted_text",
         "test_an_author_guard_does_not_excuse_a_whole_object",
-        "test_a_field_of_an_object_that_an_outsider_does_not_write_still_passes"
+        "test_a_field_of_an_object_that_an_outsider_does_not_write_still_passes",
+        "test_every_spelling_that_lets_an_outsider_through_is_reported",
+        "test_every_spelling_that_keeps_outsiders_out_counts",
+        "test_the_job_and_the_step_conditions_hold_together"
       ],
-      "last_modified": "2026-11-12T16:50:32Z",
+      "last_modified": "2026-11-13T22:11:31Z",
       "id": "scripts/test/test_agent_workflow_injection.py"
     },
     {
@@ -10606,15 +10621,12 @@
         "_is_agent",
         "_tainted",
         "_uses_variable",
-        "_terms",
-        "_trusted_roles",
-        "_restricts",
         "_guarded",
         "_step_problems",
         "_workflow_problems",
         "run"
       ],
-      "last_modified": "2026-11-12T16:52:52Z",
+      "last_modified": "2026-11-13T22:20:47Z",
       "id": "scripts/security/runners/agent_workflow.py"
     },
     {
@@ -10964,9 +10976,10 @@
         "_history",
         "repo",
         "test_a_commit_that_weakens_the_declaration_is_refused_then_allowed_with_approval_and_logged",
-        "test_the_ratchet_holds_in_every_mode_gated_or_not"
+        "test_the_ratchet_holds_in_every_mode_gated_or_not",
+        "test_ci_refuses_a_weakening_that_skipped_the_hook"
       ],
-      "last_modified": "2026-11-12T21:10:52Z",
+      "last_modified": "2026-11-13T22:14:46Z",
       "id": "scripts/test/test_declaration_ratchet.py"
     },
     {
@@ -11035,6 +11048,103 @@
       "pillar": null,
       "created_at": "2026-11-13T08:15:25Z",
       "id": "rfc:reviews/one-signature-rule-and-incident-controls.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The causes behind the third pass's blockers, and a code graph that can be trusted",
+      "source_file": ".agent-rfc/designs/pass3-root-causes.md",
+      "pillar": null,
+      "created_at": "2026-11-13T22:04:59Z",
+      "id": "rfc:designs/pass3-root-causes.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "is_test",
+        "Builder",
+        "main",
+        "__init__",
+        "git",
+        "node",
+        "edge",
+        "lines",
+        "code",
+        "requirements",
+        "records",
+        "commits",
+        "build"
+      ],
+      "last_modified": "2026-11-13T22:10:03Z",
+      "id": "scripts/trace_graph.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "value",
+        "test_values",
+        "test_anything_not_bound_is_unknown",
+        "test_unknown_does_not_decide_a_conjunction_or_a_disjunction_it_cannot_decide",
+        "test_what_cannot_be_parsed_may_be_true",
+        "test_text_around_an_expression_is_a_string_and_so_true",
+        "test_unknown_stays_unknown_under_negation",
+        "test_unknown_resolves_when_the_other_side_decides",
+        "test_literals_and_coercion_as_github_reads_them"
+      ],
+      "last_modified": "2026-11-13T22:23:53Z",
+      "id": "scripts/test/test_gha_expression.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "Unparsed",
+        "_tokens",
+        "_Parser",
+        "parse",
+        "_truthy",
+        "_number",
+        "_equal",
+        "_compare",
+        "_text",
+        "_call",
+        "_eval",
+        "_path",
+        "may_be_true",
+        "__init__",
+        "peek",
+        "take",
+        "binary",
+        "or_",
+        "and_",
+        "eq",
+        "cmp",
+        "unary",
+        "postfix"
+      ],
+      "last_modified": "2026-11-13T22:23:53Z",
+      "id": "scripts/security/gha_expression.py"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "python",
+      "symbols": [
+        "_built",
+        "test_every_link_says_how_it_is_known",
+        "test_imports_come_from_the_knowledge_graph_not_a_second_resolver",
+        "test_a_commits_design_trailer_is_an_observed_link_and_requirement_links_are_inferred"
+      ],
+      "last_modified": "2026-11-13T22:11:32Z",
+      "id": "scripts/test/test_trace_graph.py"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: pass3-root-causes",
+      "source_file": ".agent-rfc/reviews/pass3-root-causes.md",
+      "pillar": null,
+      "created_at": "2026-11-13T22:43:52Z",
+      "id": "rfc:reviews/pass3-root-causes.md"
     }
   ],
   "edges": [
@@ -11065,8 +11175,68 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "portal/instrumentation.ts",
+      "target": "portal/instrumentation.node.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/local_agent_stack.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/local_agent_stack.py",
+      "target": "scripts/cost_router.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/local_agent_stack.py",
+      "target": "scripts/agent_logger.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/local_agent_stack.py",
+      "target": "agentsmith/otlp.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/local_agent_stack.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/local_agent_stack.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/shadow-eval.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/shadow-eval.py",
+      "target": "scripts/eval_judge.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_ttft.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/sync-ui-feedback.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/local_knowledge_graph.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/local_knowledge_graph.py",
+      "target": "scripts/gate_kg.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11075,8 +11245,113 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/run-evals.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-evals.py",
+      "target": "agentsmith/prompt_guard.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-evals.py",
+      "target": "agentsmith/judging.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-evals.py",
+      "target": "scripts/eval_judge.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-evals.py",
+      "target": "scripts/notifier.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-evals.py",
+      "target": "agentsmith/provider_dispatch.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-evals.py",
+      "target": "scripts/local_agent_stack.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-security-checks.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-security-checks.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-security-checks.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/run-security-checks.py",
+      "target": "scripts/security/runners/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/promote-learning.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/promote-learning.py",
+      "target": "scripts/agent_logger.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/agent_logger.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/agent_logger.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/agent_logger.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/agent_logger.py",
+      "target": "scripts/circuit_breaker.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/gate_guardrails.py",
+      "target": "scripts/check_bare_except.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/gate_pillars.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/rules_port.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/rules_port.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/rules_port.py",
+      "target": "scripts/gate_tracing.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11085,8 +11360,68 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/notifier.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/security_port.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security_port.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security_port.py",
+      "target": "agentsmith/version.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security_port.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security_port.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security_port.py",
+      "target": "scripts/security/runners/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security_port.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security_port.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security_port.py",
+      "target": "scripts/security/redaction.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security_port.py",
+      "target": "scripts/gate_tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_judge_route.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_judge_route.py",
+      "target": "scripts/cost_router.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11095,8 +11430,63 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/_shared.py",
+      "target": "agentsmith/provider_dispatch.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/_shared.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/_shared.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/gate_tracing.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/gate_tracing.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/gate_tracing.py",
+      "target": "agentsmith/tenancy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/gate_tracing.py",
+      "target": "agentsmith/otlp.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/network_watchdog.py",
+      "target": "scripts/notifier.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/circuit_breaker.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/circuit_breaker.py",
+      "target": "scripts/notifier.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/delivery_evidence.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/delivery_evidence.py",
+      "target": "scripts/delivery_model.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11105,8 +11495,93 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/cost_router.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/cost_router.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/cost_router.py",
+      "target": "agentsmith/provider_dispatch.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/cost_router.py",
+      "target": "scripts/network_watchdog.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/cost_router.py",
+      "target": "scripts/circuit_breaker.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/gate_steps.py",
+      "target": "scripts/gate_history.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/gate_ides.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_sovereign_endpoint.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/generate-ide-config.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/generate-ide-config.py",
+      "target": "scripts/gate_steps.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/generate-ide-config.py",
+      "target": "scripts/compliance_port.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/generate-ide-config.py",
+      "target": "scripts/gate_ides.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/generate-ide-config.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/evals_port.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/evals_port.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/evals_port.py",
+      "target": "scripts/gate_tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/map_codebase.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/map_codebase.py",
+      "target": "scripts/local_knowledge_graph.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11115,8 +11590,193 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/multi_agent_system.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/multi_agent_system.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/multi_agent_system.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/multi_agent_system.py",
+      "target": "scripts/agent_logger.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/multi_agent_system.py",
+      "target": "scripts/notifier.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/multi_agent_system.py",
+      "target": "agentsmith/otlp.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/multi_agent_system.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/multi_agent_system.py",
+      "target": "scripts/local_agent_stack.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/gate_guardrails.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/vouched_files.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/send_dev_record.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/gate_history.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/gate_ides.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/gate_kg.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/gate_shell.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/gate_pillars.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/gate_tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/process_gate.py",
+      "target": "scripts/agent_tokens.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/eval_judge.py",
+      "target": "scripts/cost_router.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/verify_system.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_system.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_system.py",
+      "target": "agentsmith/trace_redactor.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_system.py",
+      "target": "agentsmith/idempotency.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_system.py",
+      "target": "agentsmith/dead_letter.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_system.py",
+      "target": "scripts/gate_history.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_system.py",
+      "target": "scripts/map_codebase.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/verify_system.py",
+      "target": "scripts/delivery_model.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "templates/onprem-deploy/scripts/render-traefik-config.py",
+      "target": "templates/onprem-deploy/scripts/_env.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "templates/onprem-deploy/scripts/render-envoy-config.py",
+      "target": "templates/onprem-deploy/scripts/_env.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_ides.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_ides.py",
+      "target": "scripts/gate_ides.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_ides.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_ides.py",
+      "target": "scripts/process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_send_dev_record.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/conftest.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/conftest.py",
+      "target": "scripts/test/test_scratch_tenants.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/conftest.py",
+      "target": "scripts/test/provider_shim.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11125,8 +11785,23 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_cli_install.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_cli_install.py",
+      "target": "agentsmith/machine/ops.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_workflow_template_wiring.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_workflow_template_wiring.py",
+      "target": "agentsmith/cli.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11135,8 +11810,73 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_moderation_declared.py",
+      "target": "agentsmith/moderation.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_moderation_declared.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_moderation_declared.py",
+      "target": "scripts/security/runners/moderation_hook.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_shadow_eval.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_shadow_eval.py",
+      "target": "scripts/eval_judge.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_shell.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_shell.py",
+      "target": "scripts/gate_shell.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_shell.py",
+      "target": "scripts/gate_ides.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_tenant_adopt.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_tenant_adopt.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_tenant_adopt.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_tenant_adopt.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_tenant_adopt.py",
+      "target": "scripts/process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_design_and_validation_docs.py",
+      "target": "scripts/_shared.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11145,8 +11885,148 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/telemetry_emitter.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/telemetry_emitter.py",
+      "target": "agentsmith/tenancy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/telemetry_emitter.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/telemetry_emitter.py",
+      "target": "agentsmith/vector_store.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_hallucination_evals.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_hallucination_evals.py",
+      "target": "scripts/eval_judge.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_artifacts.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_artifacts.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_artifacts.py",
+      "target": "scripts/process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_promotion_loop.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_first_commit.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_harness_roots.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_registry.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_registry.py",
+      "target": "scripts/security/runners/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_registry.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_registry.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_registry.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_rules_contract.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_rules_contract.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_rules_contract.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_rules_contract.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_rules_contract.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_rules_contract.py",
+      "target": "scripts/process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_rules_contract.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_rules_contract.py",
+      "target": "agentsmith/sync.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_check_bare_except.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_prompt_guard_enforcement.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_prompt_guard_enforcement.py",
+      "target": "scripts/security/runners/prompt_guard.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_process_gate.py",
+      "target": "scripts/process_gate.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11155,8 +12035,78 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_ts_runner_invocations.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_ts_runner_invocations.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_circuit_breaker.py",
+      "target": "scripts/circuit_breaker.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_eval_pacing.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_kg.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_kg.py",
+      "target": "scripts/local_knowledge_graph.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_breaker_fail_open.py",
+      "target": "scripts/agent_logger.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_evals_contract.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_evals_contract.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_evals_contract.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_evals_contract.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_evals_contract.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_fairness_evals.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_fairness_evals.py",
+      "target": "scripts/eval_judge.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_tracing.py",
+      "target": "scripts/gate_tracing.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11165,8 +12115,78 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_record_contract.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_record_contract.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_record_contract.py",
+      "target": "scripts/process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_record_contract.py",
+      "target": "scripts/send_dev_record.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_vouched_files.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_generate_ide_config_governance.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_judge_model_resolution.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_judge_model_resolution.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_judge_model_resolution.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_judge_model_resolution.py",
+      "target": "agentsmith/judging.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_judge_model_resolution.py",
+      "target": "agentsmith/provider_dispatch.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_evidence_pack.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_evidence_pack.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_dev_record.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_dev_record.py",
+      "target": "scripts/gate_models.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11175,8 +12195,63 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_telemetry_contract.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_telemetry_contract.py",
+      "target": "agentsmith/telemetry_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_telemetry_contract.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_telemetry_contract.py",
+      "target": "scripts/test/provider_shim.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_retired_judge_fails_loudly.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_retired_judge_fails_loudly.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_retired_judge_fails_loudly.py",
+      "target": "agentsmith/provider_dispatch.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_risk_register.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_risk_register.py",
+      "target": "scripts/security/runners/risk_register.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_steps.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_steps.py",
+      "target": "scripts/gate_steps.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_mutation_check_scope.py",
+      "target": "scripts/mutation_check.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11185,8 +12260,53 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_env_file_credentials.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_env_file_credentials.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_framework_sync.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_framework_sync.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_framework_sync.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_framework_sync.py",
+      "target": "agentsmith/sync.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_framework_sync.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_framework_sync.py",
+      "target": "agentsmith/architectures.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_ci_package_managers.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_documented_env_vars_exist.py",
+      "target": "scripts/test/test_env_var_documentation.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11195,8 +12315,78 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_hook_chain.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_hook_chain.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_gate_contract_v2.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract_v2.py",
+      "target": "scripts/test/test_send_dev_record.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract_v2.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract_v2.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract_v2.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_vendored_install.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_vendored_install.py",
+      "target": "scripts/security/runners/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_vendored_install.py",
+      "target": "scripts/security/runners/delegating.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_vendored_install.py",
+      "target": "scripts/security/runners/sso_revocation.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_guardrails.py",
+      "target": "scripts/gate_guardrails.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_guardrails.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_guardrails.py",
+      "target": "scripts/vouched_files.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_guardrails.py",
+      "target": "scripts/process_gate.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11205,8 +12395,48 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_exhaustion_classification.py",
+      "target": "scripts/cost_router.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_exhaustion_classification.py",
+      "target": "agentsmith/provider_dispatch.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_records_single.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_delivery_model.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_gate_contract.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract.py",
+      "target": "scripts/gate_ides.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract.py",
+      "target": "agentsmith/adopt.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11215,8 +12445,53 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_ops_contract.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_ops_contract.py",
+      "target": "agentsmith/ops_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_ops_contract.py",
+      "target": "agentsmith/dead_letter.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_ops_contract.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_ops_contract.py",
+      "target": "agentsmith/worker.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_gate_contract_v3.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract_v3.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract_v3.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract_v3.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_contract_v3.py",
+      "target": "scripts/process_gate.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11225,8 +12500,108 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/security/redaction.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/gate_pillars.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "agentsmith/trace_redactor.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/security/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/security/runners/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/security/runners/delegating.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_contract.py",
+      "target": "scripts/security/runners/risk_register.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_fail_closed_declared.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_fail_closed_declared.py",
+      "target": "scripts/gate_ides.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_kg_drift_gate.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_kg_drift_gate.py",
+      "target": "scripts/map_codebase.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_scratch_tenants.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_scratch_tenants.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_scratch_tenants.py",
+      "target": "scripts/compliance_port.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11235,8 +12610,58 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_vendoring_retired.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_vendoring_retired.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_vendoring_retired.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_vendoring_retired.py",
+      "target": "agentsmith/sync.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_vendoring_retired.py",
+      "target": "agentsmith/machine/state.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_sweep.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_criteria_digest.py",
+      "target": "scripts/eval_judge.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_cli_approve.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_cli_approve.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_cli_approve.py",
+      "target": "agentsmith/machine/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_cli_approve.py",
+      "target": "agentsmith/machine/governance.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11245,8 +12670,78 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_judge_routing.py",
+      "target": "scripts/cost_router.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_judge_routing.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_judge_routing.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_judge_routing.py",
+      "target": "scripts/eval_judge.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_pillars.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_pillars.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_pillars.py",
+      "target": "scripts/gate_pillars.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_adversarial_evals.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_dotenv_parsing.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_dotenv_parsing.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_dotenv_parsing.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_dotenv_parsing.py",
+      "target": "scripts/cost_router.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_cost_router.py",
+      "target": "scripts/cost_router.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_cost_router.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_cost_router.py",
+      "target": "scripts/circuit_breaker.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11255,8 +12750,48 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_scaffold_review.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_scaffold_review.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_scaffold_review.py",
+      "target": "scripts/process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_knowledge_graph.py",
+      "target": "scripts/local_knowledge_graph.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_knowledge_graph.py",
+      "target": "scripts/map_codebase.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gate_models.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_notifier_injection.py",
+      "target": "scripts/notifier.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_env_var_documentation.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_env_var_documentation.py",
+      "target": "agentsmith/cli.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11265,8 +12800,48 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_sovereign_residency.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_sovereign_residency.py",
+      "target": "scripts/security/runners/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_sovereign_residency.py",
+      "target": "scripts/security/runners/sovereign_residency.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_sovereign_residency.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_governed_tenant.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_governed_tenant.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_governed_tenant.py",
+      "target": "scripts/gate_history.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_governed_tenant.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_governed_tenant.py",
+      "target": "agentsmith/machine/ops.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11275,8 +12850,63 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/security/redaction.py",
+      "target": "agentsmith/telemetry_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/redaction.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/report.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/security/runners/structured_output.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/structured_output.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/structured_output.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/structured_output.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/structured_output.py",
+      "target": "agentsmith/structured_output.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/pii_postcall.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/pii_postcall.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/pii_postcall.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/pii_postcall.py",
+      "target": "scripts/security/redaction.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11285,8 +12915,178 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/tool_allowlist.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/tool_allowlist.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/tool_allowlist.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/tool_allowlist.py",
+      "target": "agentsmith/tool_registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/tool_allowlist.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/adversarial_eval.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/adversarial_eval.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/adversarial_eval.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/adversarial_eval.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/agent_workflow.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/delegating.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/moderation_hook.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/noop.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/pii_postcall.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/pii_precall.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/prompt_guard.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/risk_register.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/sovereign_residency.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/sso_revocation.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/structured_output.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/__init__.py",
+      "target": "scripts/security/runners/tool_allowlist.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/delegating.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/delegating.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/delegating.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/delegating.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/sso_revocation.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/sso_revocation.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/sso_revocation.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/security/runners/_shared.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/_shared.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/_shared.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/_shared.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/_shared.py",
+      "target": "agentsmith/cli.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11295,8 +13095,48 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/moderation_hook.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/moderation_hook.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/moderation_hook.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/moderation_hook.py",
+      "target": "agentsmith/moderation.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/security/runners/prompt_guard.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/prompt_guard.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/prompt_guard.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/prompt_guard.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/prompt_guard.py",
+      "target": "agentsmith/prompt_guard.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11305,8 +13145,78 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/pii_precall.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/pii_precall.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/pii_precall.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/pii_precall.py",
+      "target": "agentsmith/input_guardrail.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/security/runners/sovereign_residency.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/sovereign_residency.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/sovereign_residency.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/sovereign_residency.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/sovereign_residency.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/noop.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/noop.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/risk_register.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/risk_register.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/risk_register.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/risk_register.py",
+      "target": "scripts/security/runners/_shared.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11315,13 +13225,473 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "examples/oil-price-agent/worker.py",
+      "target": "agentsmith/temporal_client.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "examples/oil-price-agent/worker.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "examples/oil-price-agent/worker.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "examples/oil-price-agent/worker.py",
+      "target": "agentsmith/version.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "examples/oil-price-agent/trigger_workflow.py",
       "target": "agentsmith/__init__.py"
     },
     {
       "edge_type": "IMPORTS",
+      "source": "examples/oil-price-agent/trigger_workflow.py",
+      "target": "agentsmith/temporal_client.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "examples/oil-price-agent/resolve_hitl.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "examples/oil-price-agent/resolve_hitl.py",
+      "target": "agentsmith/temporal_client.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/layout.tsx",
+      "target": "portal/components/ui/ThemeToggle.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/layout.tsx",
+      "target": "portal/components/WorkspaceSwitcher.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/layout.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/layout.tsx",
+      "target": "portal/lib/legal.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/layout.tsx",
+      "target": "portal/lib/workspaces.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/page.tsx",
+      "target": "portal/lib/workspaces.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/tracing.test.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/tracing.test.ts",
+      "target": "portal/lib/environment.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/tracing.test.ts",
+      "target": "portal/lib/spanIdentity.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/tracing.test.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsContract.test.ts",
+      "target": "portal/lib/opsIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsContract.test.ts",
+      "target": "portal/lib/runStatus.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/safeUrl.test.ts",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devReadDb.test.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devReadDb.test.ts",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devReadDb.test.ts",
+      "target": "portal/lib/devIngestHandler.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devReadDb.test.ts",
+      "target": "portal/lib/devRead.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devReadDb.test.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devReadDb.test.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/agentRuns.test.ts",
+      "target": "portal/lib/runStatus.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/agentRuns.test.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/agentRuns.test.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/replaySignature.test.ts",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devIngestDb.test.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devIngestDb.test.ts",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devIngestDb.test.ts",
+      "target": "portal/lib/devIngestHandler.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devIngestDb.test.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devIngestDb.test.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsIngestDb.test.ts",
+      "target": "portal/lib/apps.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsIngestDb.test.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsIngestDb.test.ts",
+      "target": "portal/lib/devIngestHandler.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsIngestDb.test.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsIngestDb.test.ts",
+      "target": "portal/lib/devRead.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsIngestDb.test.ts",
+      "target": "portal/lib/opsIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsIngestDb.test.ts",
+      "target": "portal/lib/runStatus.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsIngestDb.test.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/opsIngestDb.test.ts",
+      "target": "portal/app/api/sync/history/route.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/dlqCostWidget.test.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/dlqCostWidget.test.ts",
+      "target": "portal/lib/cost.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/dlqCostWidget.test.ts",
+      "target": "portal/lib/issues.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/dlqCostWidget.test.ts",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/dlqCostWidget.test.ts",
+      "target": "portal/lib/widgetTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/dlqCostWidget.test.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/authz.test.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/authz.test.ts",
+      "target": "portal/lib/auditSignature.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/authz.test.ts",
+      "target": "portal/lib/workspaces.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/timestamp.test.ts",
+      "target": "portal/lib/formatTime.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devIngest.test.ts",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/phoenix.test.ts",
+      "target": "portal/lib/phoenix.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/auditSignature.test.ts",
+      "target": "portal/lib/auditSignature.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/apps.test.ts",
+      "target": "portal/lib/apps.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/recordContract.test.ts",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/recordContract.test.ts",
+      "target": "portal/test/recordCases.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/appsDb.test.ts",
+      "target": "portal/lib/apps.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/appsDb.test.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/appsDb.test.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/appsDb.test.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/catalogs.test.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/catalogs.test.ts",
+      "target": "portal/lib/isolation.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/catalogs.test.ts",
+      "target": "portal/lib/runStatus.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/catalogs.test.ts",
+      "target": "portal/lib/auditSignature.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/catalogs.test.ts",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/catalogs.test.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/catalogs.test.ts",
+      "target": "portal/lib/intakes.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/recordContractDb.test.ts",
+      "target": "portal/lib/devIngestHandler.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/recordContractDb.test.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/recordContractDb.test.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/recordContractDb.test.ts",
+      "target": "portal/test/recordCases.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/ssoRevocation.test.ts",
+      "target": "portal/lib/ssoRevocationMode.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/wireContract.test.ts",
+      "target": "portal/lib/wireContract.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/telemetryContract.test.ts",
+      "target": "portal/lib/spanIdentity.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/intakesDb.test.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/intakesDb.test.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/intakesDb.test.ts",
+      "target": "portal/lib/intakes.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/auditLog.test.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/auditLog.test.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/intakes.test.ts",
+      "target": "portal/lib/apps.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/intakes.test.ts",
+      "target": "portal/lib/intakes.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/intakes.test.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/intakes.test.ts",
+      "target": "portal/lib/intakeCatalog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/intakes.test.ts",
+      "target": "portal/lib/isolation.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/devView.test.ts",
+      "target": "portal/lib/devView.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/IntakeForm.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/IntakeForm.tsx",
+      "target": "portal/lib/intakeCatalog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/CostChart.tsx",
+      "target": "portal/lib/cost.ts"
     },
     {
       "edge_type": "IMPORTS",
@@ -11335,8 +13705,38 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "portal/components/DlqEntryCard.tsx",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/ui/Timestamp.tsx",
+      "target": "portal/lib/formatTime.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "portal/components/AreaNav.tsx",
       "target": "portal/components/NavLinks.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/DevBits.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/DevBits.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/DevBits.tsx",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/DevBits.tsx",
+      "target": "portal/lib/devView.ts"
     },
     {
       "edge_type": "IMPORTS",
@@ -11670,8 +14070,1048 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "portal/app/admin/layout.tsx",
+      "target": "portal/components/AreaNav.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/layout.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/layout.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/layout.tsx",
+      "target": "portal/components/AreaNav.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/layout.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/layout.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/page.tsx",
+      "target": "portal/components/DevBits.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/page.tsx",
+      "target": "portal/lib/devRead.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/page.tsx",
+      "target": "portal/lib/devView.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/layout.tsx",
+      "target": "portal/components/AreaNav.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/layout.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/layout.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/page.tsx",
+      "target": "portal/lib/cost.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/page.tsx",
+      "target": "portal/lib/issues.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/page.tsx",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/page.tsx",
+      "target": "portal/lib/runStatus.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/page.tsx",
+      "target": "portal/lib/wireContract.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/page.tsx",
+      "target": "portal/components/ui/Card.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/audit/page.tsx",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/audit/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/audit/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/audit/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/audit/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/audit/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/dlq/page.tsx",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/dlq/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/dlq/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/dlq/page.tsx",
+      "target": "portal/components/ui/Card.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/cost.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/issues.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/phoenix.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/promotions.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/components/CostChart.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/components/StopControl.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/hitl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/runStatus.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/cappedList.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/components/ui/Card.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/dlq/[tenantId]/page.tsx",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/dlq/[tenantId]/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/dlq/[tenantId]/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/dlq/[tenantId]/page.tsx",
+      "target": "portal/components/DlqEntryCard.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/dlq/[tenantId]/page.tsx",
+      "target": "portal/lib/cappedList.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/approvals/page.tsx",
+      "target": "portal/components/DevBits.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/approvals/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/approvals/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/approvals/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/approvals/page.tsx",
+      "target": "portal/lib/devRead.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/approvals/page.tsx",
+      "target": "portal/lib/devView.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/approvals/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/layout.tsx",
+      "target": "portal/components/DevBits.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/layout.tsx",
+      "target": "portal/components/NavLinks.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/layout.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/layout.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/layout.tsx",
+      "target": "portal/lib/devRead.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/layout.tsx",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/layout.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/page.tsx",
+      "target": "portal/components/DevBits.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/page.tsx",
+      "target": "portal/lib/devIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/page.tsx",
+      "target": "portal/lib/devRead.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/page.tsx",
+      "target": "portal/lib/devView.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/gates/page.tsx",
+      "target": "portal/components/DevBits.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/gates/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/gates/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/gates/page.tsx",
+      "target": "portal/lib/devRead.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/gates/page.tsx",
+      "target": "portal/lib/devView.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/gates/page.tsx",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/gates/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/designs/page.tsx",
+      "target": "portal/components/DevBits.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/designs/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/designs/page.tsx",
+      "target": "portal/lib/devRead.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/designs/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/designs/[...path]/page.tsx",
+      "target": "portal/components/DevBits.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/designs/[...path]/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/designs/[...path]/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/designs/[...path]/page.tsx",
+      "target": "portal/lib/devRead.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/designs/[...path]/page.tsx",
+      "target": "portal/lib/devView.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/designs/[...path]/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx",
+      "target": "portal/components/DevBits.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx",
+      "target": "portal/lib/devRead.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx",
+      "target": "portal/lib/devView.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/apps/[app]/commits/[sha]/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/intakes/new/page.tsx",
+      "target": "portal/components/IntakeForm.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/intakes/new/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/dev/intakes/new/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/route.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/route.ts",
+      "target": "portal/lib/cost.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/route.ts",
+      "target": "portal/lib/issues.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/route.ts",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/route.ts",
+      "target": "portal/lib/isolation.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/route.ts",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/audit/route.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/audit/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/audit/route.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/audit/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/route.ts",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/runs/ingest/route.ts",
+      "target": "portal/lib/bearerAuth.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/runs/ingest/route.ts",
+      "target": "portal/lib/runStatus.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/runs/ingest/route.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/runs/ingest/route.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/sync/history/route.ts",
+      "target": "portal/lib/bearerAuth.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/sync/history/route.ts",
+      "target": "portal/lib/issues.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/sync/history/route.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/sync/history/route.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/ops/ingest/route.ts",
+      "target": "portal/lib/opsIngest.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dev/intakes/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dev/intakes/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dev/intakes/route.ts",
+      "target": "portal/lib/intakes.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dev/ingest/route.ts",
+      "target": "portal/lib/devIngestHandler.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dev/scaffold/[id]/route.ts",
+      "target": "portal/lib/intakes.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dev/scaffold/[id]/consume/route.ts",
+      "target": "portal/lib/intakes.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/[taskId]/discard/route.ts",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/[taskId]/discard/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/[taskId]/discard/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/[taskId]/discard/route.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/[taskId]/discard/route.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/[taskId]/replay/route.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/[taskId]/replay/route.ts",
+      "target": "portal/lib/dlq.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/[taskId]/replay/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/[taskId]/replay/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/dlq/[taskId]/replay/route.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/audit/append/route.ts",
+      "target": "portal/lib/bearerAuth.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/audit/append/route.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/cost/route.ts",
+      "target": "portal/lib/cost.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/cost/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/cost/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/cost/route.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/widget-token/route.ts",
+      "target": "portal/lib/widgetTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/widget-token/route.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/widget-token/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/widget-token/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/issues/route.ts",
+      "target": "portal/lib/issues.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/issues/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/issues/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/tenants/[id]/issues/route.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/route.ts",
+      "target": "portal/lib/apps.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/[id]/route.ts",
+      "target": "portal/lib/apps.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/[id]/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/[id]/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/[id]/ingest-token/route.ts",
+      "target": "portal/lib/tokenRoutes.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/[id]/ops-token/route.ts",
+      "target": "portal/lib/tokenRoutes.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/[id]/replay-key/route.ts",
+      "target": "portal/lib/apps.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/[id]/replay-key/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/apps/[id]/replay-key/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/session-status/route.ts",
+      "target": "portal/lib/sessionRevocation.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/logout/route.ts",
+      "target": "portal/lib/oidc.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/logout/route.ts",
+      "target": "portal/lib/sessionToken.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/logout/route.ts",
+      "target": "portal/lib/sessionRevocation.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/logout/route.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/callback/route.ts",
+      "target": "portal/lib/oidc.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/callback/route.ts",
+      "target": "portal/lib/sessionToken.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/callback/route.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/callback/route.ts",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/login/route.ts",
+      "target": "portal/lib/oidc.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/auth/login/route.ts",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/widget/status/route.ts",
+      "target": "portal/lib/widgetTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/widget/status/route.ts",
+      "target": "portal/lib/runStatus.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/widget/status/route.ts",
+      "target": "portal/lib/tracing.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/page.tsx",
+      "target": "portal/components/AppForm.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/page.tsx",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/[id]/page.tsx",
+      "target": "portal/components/AppForm.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/[id]/page.tsx",
+      "target": "portal/components/DevBits.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/[id]/page.tsx",
+      "target": "portal/components/IngestTokenPanel.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/[id]/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/[id]/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/[id]/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/[id]/page.tsx",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/[id]/page.tsx",
+      "target": "portal/lib/safeUrl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/admin/apps/[id]/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_mutation_check_journal.py",
+      "target": "scripts/mutation_check.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_agpl_compliance.py",
+      "target": "scripts/third_party_notices.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/legal.test.ts",
+      "target": "portal/lib/legal.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/sync.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/sync.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/sync.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/sync.py",
+      "target": "scripts/gate_ides.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/sync.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/sync.py",
+      "target": "agentsmith/machine/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/sync.py",
+      "target": "agentsmith/machine/governance.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11680,8 +15120,38 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/intake.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/worker.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/worker.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/worker.py",
+      "target": "agentsmith/tenancy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/worker.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/worker.py",
+      "target": "agentsmith/version.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/worker.py",
+      "target": "agentsmith/ops_contract.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11690,8 +15160,48 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/metrics.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/tracing.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tracing.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tracing.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tracing.py",
+      "target": "agentsmith/version.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tracing.py",
+      "target": "agentsmith/metrics.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tracing.py",
+      "target": "agentsmith/otlp.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tracing.py",
+      "target": "agentsmith/trace_redactor.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tracing.py",
+      "target": "agentsmith/tenancy.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11700,8 +15210,33 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/input_guardrail.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/input_guardrail.py",
+      "target": "agentsmith/pii_patterns.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/input_guardrail.py",
+      "target": "agentsmith/luhn.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/input_guardrail.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/config.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/config.py",
+      "target": "agentsmith/environment.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11710,8 +15245,18 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/version.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/temporal_client.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/temporal_client.py",
+      "target": "agentsmith/config.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11720,8 +15265,53 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/otlp.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/otlp.py",
+      "target": "agentsmith/machine/state.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/vector_store.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/vector_store.py",
+      "target": "agentsmith/embeddings.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/vector_store.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/vector_store.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/vector_store.py",
+      "target": "agentsmith/tenancy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/vector_store.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/vector_store.py",
+      "target": "agentsmith/metrics.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/vector_store.py",
+      "target": "agentsmith/pg_pool.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11730,8 +15320,28 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/idempotency.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/idempotency.py",
+      "target": "agentsmith/pg_pool.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/moderation.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/moderation.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/moderation.py",
+      "target": "agentsmith/compliance.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11740,8 +15350,63 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/replay_webhook_server.py",
+      "target": "agentsmith/dead_letter.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/replay_webhook_server.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/replay_webhook_server.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/replay_webhook_server.py",
+      "target": "agentsmith/temporal_replay.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/replay_webhook_server.py",
+      "target": "agentsmith/temporal_client.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/tool_registry.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tool_registry.py",
+      "target": "agentsmith/security_paths.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tool_registry.py",
+      "target": "agentsmith/tenancy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tool_registry.py",
+      "target": "agentsmith/token_limits.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tool_registry.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tool_registry.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tool_registry.py",
+      "target": "agentsmith/llm_gateway.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11750,8 +15415,53 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/trace_redactor.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/trace_redactor.py",
+      "target": "agentsmith/pii_patterns.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/trace_redactor.py",
+      "target": "agentsmith/luhn.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/trace_redactor.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/trace_redactor.py",
+      "target": "agentsmith/tenancy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/adopt.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/adopt.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/adopt.py",
+      "target": "agentsmith/architectures.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/adopt.py",
+      "target": "scripts/gate_ides.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/adopt.py",
+      "target": "agentsmith/config.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11760,8 +15470,103 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/ops_contract.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/llm_gateway.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/moderation.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/ops_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/machine/state.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/pg_pool.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/tenancy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/token_limits.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/provider_dispatch.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/metrics.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/prompt_guard.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/input_guardrail.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/idempotency.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/version.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/telemetry_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/llm_gateway.py",
+      "target": "agentsmith/prompt_identity.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11770,8 +15575,33 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/prompt_guard.py",
+      "target": "agentsmith/security_paths.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/prompt_guard.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/embeddings.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/embeddings.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/embeddings.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/embeddings.py",
+      "target": "agentsmith/tracing.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11780,8 +15610,108 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/version.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/architectures.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/machine/policy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/ops_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/runtime_server.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/sync.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/machine/state.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/machine/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/machine/ops.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/machine/governance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "scripts/gate_ides.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/intake.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/idempotency.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/mcp_pin.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/cli.py",
+      "target": "agentsmith/vector_store.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/tenancy.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/tenancy.py",
+      "target": "agentsmith/config.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11790,8 +15720,28 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/conformance.py",
+      "target": "agentsmith/telemetry_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/testing.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/testing.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/testing.py",
+      "target": "agentsmith/prompt_identity.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/testing.py",
+      "target": "agentsmith/provider_dispatch.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11800,8 +15750,43 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/dead_letter.py",
+      "target": "agentsmith/ops_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/dead_letter.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/dead_letter.py",
+      "target": "agentsmith/pg_pool.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/temporal_replay.py",
+      "target": "agentsmith/dead_letter.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_degraded_defaults.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_degraded_defaults.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_degraded_defaults.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_degraded_defaults.py",
+      "target": "agentsmith/vector_store.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11810,8 +15795,23 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_gateway_provider_catalog.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_gateway_provider_catalog.py",
+      "target": "agentsmith/provider_dispatch.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_provider_usage_reporting.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_provider_usage_reporting.py",
+      "target": "agentsmith/provider_dispatch.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11820,8 +15820,38 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_registry_shapes.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_registry_shapes.py",
+      "target": "agentsmith/provider_dispatch.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_registry_shapes.py",
+      "target": "agentsmith/input_guardrail.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_prompt_identity.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_prompt_identity.py",
+      "target": "agentsmith/prompt_identity.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_prompt_identity.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_prompt_identity.py",
+      "target": "agentsmith/tracing.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11830,8 +15860,28 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_luhn_parity.py",
+      "target": "agentsmith/input_guardrail.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_luhn_parity.py",
+      "target": "agentsmith/trace_redactor.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_luhn_parity.py",
+      "target": "agentsmith/luhn.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_llm_gateway_budget.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_llm_gateway_budget.py",
+      "target": "agentsmith/llm_gateway.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11840,8 +15890,23 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/conftest.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_retry_visibility.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_retry_visibility.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_retry_visibility.py",
+      "target": "agentsmith/tracing.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11850,8 +15915,33 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_rag_poison_guard.py",
+      "target": "agentsmith/embeddings.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_rag_poison_guard.py",
+      "target": "agentsmith/prompt_guard.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_rag_poison_guard.py",
+      "target": "agentsmith/vector_store.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_pg_pool.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_pg_pool.py",
+      "target": "agentsmith/pg_pool.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_pg_pool.py",
+      "target": "agentsmith/llm_gateway.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11860,8 +15950,28 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_framework_version.py",
+      "target": "agentsmith/version.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_framework_version.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_tracing.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_tracing.py",
+      "target": "agentsmith/tool_registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_tracing.py",
+      "target": "agentsmith/tracing.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11870,8 +15980,18 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_metrics.py",
+      "target": "agentsmith/metrics.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_idempotency_key.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_idempotency_key.py",
+      "target": "agentsmith/idempotency.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11880,8 +16000,23 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_pg_pool_coverage.py",
+      "target": "agentsmith/pg_pool.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_pillar3_conformance.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_pillar3_conformance.py",
+      "target": "agentsmith/tenancy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_pillar3_conformance.py",
+      "target": "agentsmith/tracing.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11890,8 +16025,23 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_prompt_guard.py",
+      "target": "agentsmith/prompt_guard.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_degrade_ladder.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_degrade_ladder.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_degrade_ladder.py",
+      "target": "agentsmith/test/_gateway_fixtures.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11900,8 +16050,28 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_judging.py",
+      "target": "agentsmith/judging.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_stream_providers.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_stream_providers.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_stream_providers.py",
+      "target": "agentsmith/test/_gateway_fixtures.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_stream_providers.py",
+      "target": "agentsmith/provider_dispatch.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11910,8 +16080,18 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_pair_score_spread.py",
+      "target": "agentsmith/judging.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_tool_registry.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_tool_registry.py",
+      "target": "agentsmith/tool_registry.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11920,8 +16100,33 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_prompt_guard_modes.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_prompt_guard_modes.py",
+      "target": "agentsmith/test/_gateway_fixtures.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_prompt_guard_modes.py",
+      "target": "agentsmith/prompt_guard.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_chosen_ides.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_chosen_ides.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_chosen_ides.py",
+      "target": "agentsmith/config.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11930,8 +16135,23 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_provider_dispatch_cloud.py",
+      "target": "agentsmith/provider_dispatch.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_hitl_gate.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_hitl_gate.py",
+      "target": "agentsmith/workflows/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_hitl_gate.py",
+      "target": "agentsmith/workflows/base_workflow.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11940,8 +16160,23 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_intake.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_intake.py",
+      "target": "agentsmith/intake.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/_gateway_fixtures.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/_gateway_fixtures.py",
+      "target": "agentsmith/llm_gateway.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11950,8 +16185,33 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_trace_redactor.py",
+      "target": "agentsmith/trace_redactor.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_trace_redactor.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_tool_payloads.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_tool_payloads.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_tool_payloads.py",
+      "target": "agentsmith/trace_redactor.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_tool_payloads.py",
+      "target": "agentsmith/tool_registry.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11960,8 +16220,23 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_moderation.py",
+      "target": "agentsmith/moderation.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_moderation.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_structured_output.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_structured_output.py",
+      "target": "agentsmith/structured_output.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11970,8 +16245,28 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_self_correction_workflow.py",
+      "target": "agentsmith/workflows/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_self_correction_workflow.py",
+      "target": "agentsmith/workflows/base_workflow.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_guardrail_evidence.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_guardrail_evidence.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_guardrail_evidence.py",
+      "target": "agentsmith/test/_gateway_fixtures.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11980,8 +16275,18 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_temporal_client.py",
+      "target": "agentsmith/temporal_client.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_architectures.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_architectures.py",
+      "target": "agentsmith/architectures.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -11990,8 +16295,23 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_ttft_stream.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_ttft_stream.py",
+      "target": "agentsmith/test/_gateway_fixtures.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_otlp_endpoint.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_otlp_endpoint.py",
+      "target": "agentsmith/otlp.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12000,8 +16320,38 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_memory_and_vector.py",
+      "target": "agentsmith/conversation_memory.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_memory_and_vector.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_memory_and_vector.py",
+      "target": "agentsmith/embeddings.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_memory_and_vector.py",
+      "target": "agentsmith/vector_store.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_testing_doubles.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_testing_doubles.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_testing_doubles.py",
+      "target": "agentsmith/testing.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12010,8 +16360,28 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_testing_double_parity.py",
+      "target": "agentsmith/prompt_identity.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_testing_double_parity.py",
+      "target": "agentsmith/testing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_dead_letter.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_dead_letter.py",
+      "target": "agentsmith/dead_letter.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_dead_letter.py",
+      "target": "agentsmith/workflows/base_workflow.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12020,8 +16390,58 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_machine.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_machine.py",
+      "target": "agentsmith/machine/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_machine.py",
+      "target": "agentsmith/machine/ops.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_machine.py",
+      "target": "agentsmith/machine/policy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_machine.py",
+      "target": "agentsmith/machine/state.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_machine.py",
+      "target": "agentsmith/otlp.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_machine.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_config.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_config.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_config.py",
+      "target": "agentsmith/ops_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_config.py",
+      "target": "agentsmith/temporal_client.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12030,8 +16450,18 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_input_guardrail.py",
+      "target": "agentsmith/input_guardrail.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_tenancy.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_tenancy.py",
+      "target": "agentsmith/tenancy.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12040,8 +16470,38 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_self_correction.py",
+      "target": "agentsmith/self_correction.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_context_propagation.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_context_propagation.py",
+      "target": "agentsmith/embeddings.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_context_propagation.py",
+      "target": "agentsmith/tenancy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_context_propagation.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_context_propagation.py",
+      "target": "agentsmith/vector_store.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_context_propagation.py",
+      "target": "agentsmith/llm_gateway.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12050,8 +16510,18 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_dlq_replay_idempotency.py",
+      "target": "agentsmith/dead_letter.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_pg_budget_live.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_pg_budget_live.py",
+      "target": "agentsmith/llm_gateway.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12060,8 +16530,63 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_config_choices.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_config_choices.py",
+      "target": "agentsmith/environment.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_config_choices.py",
+      "target": "agentsmith/input_guardrail.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_config_choices.py",
+      "target": "agentsmith/moderation.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_config_choices.py",
+      "target": "agentsmith/prompt_guard.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_cli.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_cli.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_cli.py",
+      "target": "agentsmith/adopt.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_cli.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_cli.py",
+      "target": "agentsmith/tenancy.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_cli.py",
+      "target": "agentsmith/version.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_recoverable_step.py",
+      "target": "agentsmith/test/_recoverable_step_fixtures.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12070,8 +16595,18 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_replay_webhook_signature.py",
+      "target": "agentsmith/replay_webhook_server.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_idempotency_boundary.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_idempotency_boundary.py",
+      "target": "agentsmith/llm_gateway.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12080,8 +16615,33 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_moderation_declared.py",
+      "target": "agentsmith/moderation.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_moderation_declared.py",
+      "target": "agentsmith/test/_gateway_fixtures.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_moderation_declared.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_moderation_declared.py",
+      "target": "agentsmith/test/test_ttft_stream.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/test/test_conformance.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_conformance.py",
+      "target": "agentsmith/conformance.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12090,8 +16650,38 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_gateway_span_usage.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_gateway_span_usage.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/workflows/base_workflow.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/workflows/base_workflow.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/workflows/base_workflow.py",
+      "target": "agentsmith/dead_letter.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/workflows/base_workflow.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/workflows/base_workflow.py",
+      "target": "agentsmith/self_correction.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12100,8 +16690,33 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/machine/policy.py",
+      "target": "agentsmith/machine/state.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/machine/policy.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/machine/ops.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/machine/ops.py",
+      "target": "agentsmith/machine/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/machine/ops.py",
+      "target": "agentsmith/machine/state.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/machine/ops.py",
+      "target": "agentsmith/machine/policy.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12110,8 +16725,28 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/machine/state.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/machine/governance.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/machine/governance.py",
+      "target": "agentsmith/machine/state.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/machine/governance.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/machine/governance.py",
+      "target": "agentsmith/compliance.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12120,8 +16755,48 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_first_run.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_first_run.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_first_run.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_security_first_run.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/signInPolicy.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/signInPolicy.ts",
+      "target": "portal/lib/constantTime.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/compliance_port.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/compliance_port.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/compliance_port.py",
+      "target": "scripts/compliance_checks.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12130,8 +16805,43 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/compliance_checks.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/compliance_checks.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/compliance_checks.py",
+      "target": "scripts/security/runners/sovereign_residency.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/compliance_checks.py",
+      "target": "agentsmith/mcp_pin.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/compliance.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/compliance.py",
+      "target": "agentsmith/version.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/compliance.py",
+      "target": "agentsmith/pg_pool.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/compliance.py",
+      "target": "agentsmith/ops_contract.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12140,13 +16850,123 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/workflows/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/workflows/base_workflow.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/otlp.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/ops_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/runtime_server.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/conformance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/prompt_guard.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/vector_store.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_compliance_runtime.py",
+      "target": "agentsmith/cli.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_compliance_port.py",
       "target": "agentsmith/__init__.py"
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_port.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_port.py",
+      "target": "scripts/compliance_port.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_port.py",
+      "target": "scripts/gate_pillars.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_port.py",
+      "target": "scripts/gate_shell.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_compliance_checks.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_checks.py",
+      "target": "scripts/compliance_checks.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_checks.py",
+      "target": "agentsmith/mcp_pin.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_checks.py",
+      "target": "scripts/cost_router.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_checks.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_checks.py",
+      "target": "scripts/multi_agent_system.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_checks.py",
+      "target": "agentsmith/machine/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_compliance_checks.py",
+      "target": "agentsmith/machine/governance.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12162,6 +16982,26 @@
       "edge_type": "IMPORTS",
       "source": "portal/test/signInPolicy.test.ts",
       "target": "portal/lib/sessionToken.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/IncidentClose.tsx",
+      "target": "portal/lib/submitOnce.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/StopControl.tsx",
+      "target": "portal/lib/submitOnce.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/IncidentForm.tsx",
+      "target": "portal/lib/submitOnce.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/components/HitlDecision.tsx",
+      "target": "portal/lib/submitOnce.ts"
     },
     {
       "edge_type": "IMPORTS",
@@ -12205,6 +17045,286 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "portal/app/ops/hitl/page.tsx",
+      "target": "portal/components/HitlDecision.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/hitl/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/hitl/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/hitl/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/hitl/page.tsx",
+      "target": "portal/lib/hitl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/hitl/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/compliance/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/compliance/page.tsx",
+      "target": "portal/lib/compliance.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/compliance/page.tsx",
+      "target": "portal/lib/complianceState.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/compliance/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/compliance/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/incidents/page.tsx",
+      "target": "portal/components/IncidentClose.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/incidents/page.tsx",
+      "target": "portal/components/IncidentForm.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/incidents/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/incidents/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/incidents/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/incidents/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/incidents/page.tsx",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/incidents/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/compliance/page.tsx",
+      "target": "portal/components/AttestForm.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/compliance/page.tsx",
+      "target": "portal/components/ui/Badge.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/compliance/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/compliance/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/compliance/page.tsx",
+      "target": "portal/lib/compliance.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/compliance/page.tsx",
+      "target": "portal/lib/complianceState.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/compliance/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/compliance/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/decisions/page.tsx",
+      "target": "portal/components/ui/Timestamp.tsx"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/decisions/page.tsx",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/decisions/page.tsx",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/decisions/page.tsx",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/ops/apps/[id]/decisions/page.tsx",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/incidents/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/incidents/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/incidents/route.ts",
+      "target": "portal/lib/incidents.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/ops/stop/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/ops/stop/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/ops/stop/route.ts",
+      "target": "portal/lib/hitl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/audit/export/route.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/audit/export/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/audit/export/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/audit/export/route.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/compliance/sync/route.ts",
+      "target": "portal/lib/compliance.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/compliance/sync/route.ts",
+      "target": "portal/lib/complianceState.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/compliance/sync/route.ts",
+      "target": "portal/lib/ingestTokens.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/compliance/[app]/attest/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/compliance/[app]/attest/route.ts",
+      "target": "portal/lib/compliance.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/compliance/[app]/attest/route.ts",
+      "target": "portal/lib/complianceState.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/compliance/[app]/attest/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/compliance/[app]/attest/route.ts",
+      "target": "portal/lib/tenants.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/access-export/route.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/access-export/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/admin/access-export/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/hitl/decide/route.ts",
+      "target": "portal/lib/authz.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/hitl/decide/route.ts",
+      "target": "portal/lib/currentAccess.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/app/api/hitl/decide/route.ts",
+      "target": "portal/lib/hitl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "portal/proxy.ts",
       "target": "portal/lib/auditLog.ts"
     },
@@ -12240,8 +17360,63 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/runtime_server.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/runtime_server.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/runtime_server.py",
+      "target": "agentsmith/moderation.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/runtime_server.py",
+      "target": "agentsmith/prompt_guard.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_context_budget.py",
+      "target": "scripts/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_agent_tokens.py",
+      "target": "scripts/agent_tokens.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_agent_tokens.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_agent_tokens.py",
+      "target": "scripts/test/test_framework_sync.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "agentsmith/token_limits.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/token_limits.py",
+      "target": "agentsmith/prompt_identity.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/token_limits.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/token_limits.py",
+      "target": "agentsmith/pg_pool.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12250,13 +17425,128 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_token_limits.py",
+      "target": "agentsmith/config.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_token_limits.py",
+      "target": "agentsmith/token_limits.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_token_limits.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_token_limits.py",
+      "target": "agentsmith/test/_gateway_fixtures.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_token_limits.py",
+      "target": "agentsmith/tool_registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/test/test_token_limits.py",
+      "target": "agentsmith/compliance.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_trajectory_evals.py",
+      "target": "scripts/evals_port.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_trajectory_evals.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_gen_ai_telemetry.py",
       "target": "agentsmith/__init__.py"
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gen_ai_telemetry.py",
+      "target": "agentsmith/telemetry_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gen_ai_telemetry.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gen_ai_telemetry.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_agent_workflow_injection.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_agent_workflow_injection.py",
+      "target": "scripts/security/runners/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_agent_workflow_injection.py",
+      "target": "scripts/security/runners/agent_workflow.py"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "scripts/test/test_app_commit.py",
       "target": "agentsmith/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_app_commit.py",
+      "target": "agentsmith/ops_contract.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_app_commit.py",
+      "target": "agentsmith/tracing.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_app_commit.py",
+      "target": "agentsmith/version.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_app_commit.py",
+      "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/agent_workflow.py",
+      "target": "scripts/security/registry.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/agent_workflow.py",
+      "target": "scripts/security/report.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/agent_workflow.py",
+      "target": "scripts/security/runners/_shared.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/agent_workflow.py",
+      "target": "scripts/security/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/security/runners/agent_workflow.py",
+      "target": "scripts/security/gha_expression.py"
     },
     {
       "edge_type": "IMPORTS",
@@ -12270,6 +17560,41 @@
     },
     {
       "edge_type": "IMPORTS",
+      "source": "scripts/test/test_declaration_ratchet.py",
+      "target": "scripts/gate_models.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_declaration_ratchet.py",
+      "target": "scripts/gate_pillars.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_declaration_ratchet.py",
+      "target": "scripts/gate_shell.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_declaration_ratchet.py",
+      "target": "scripts/test/test_process_gate.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/incidentsDb.test.ts",
+      "target": "portal/lib/apps.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/incidentsDb.test.ts",
+      "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/test/incidentsDb.test.ts",
+      "target": "portal/lib/incidents.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
       "source": "portal/lib/incidents.ts",
       "target": "portal/lib/auditLog.ts"
     },
@@ -12277,6 +17602,21 @@
       "edge_type": "IMPORTS",
       "source": "portal/lib/incidents.ts",
       "target": "portal/lib/db.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gha_expression.py",
+      "target": "scripts/security/__init__.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_gha_expression.py",
+      "target": "scripts/security/gha_expression.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "scripts/test/test_trace_graph.py",
+      "target": "scripts/trace_graph.py"
     }
   ]
 }

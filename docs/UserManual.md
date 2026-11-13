@@ -442,6 +442,8 @@ python3 scripts/verify_ttft.py                       # live Ollama time-to-first
 
 ### Compliance profile
 
+**Preview in 4.1.0.** Its known limits are listed in the CHANGELOG under "Known limits of the `dubai-gov` preview".
+
 Opt-in. `agentsmith compliance enable` (or `agentsmith tenant init --profile dubai-gov`) puts a repository on the `dubai-gov` profile,
 which helps an enterprise prepare for an assessment against the DESC Information Security Regulation and the other instruments in
 [`docs/uae-regulatory.md`](uae-regulatory.md). It is not legal advice and not a certificate. Python apps use the runtime directly; TypeScript and Go apps use the sidecar below.

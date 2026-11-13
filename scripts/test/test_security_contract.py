@@ -530,4 +530,4 @@ def test_agentsmith_passes_the_security_contract(tmp_path, provider_env):
     report = conformance.run_security(PROVIDER, tmp_path / "work")
 
     assert report.passed, report.render()
-    assert len(report.checks) == len(conformance.security_cases()) == 40
+    assert len(report.checks) == len(conformance.security_cases()) == 43

@@ -163,3 +163,29 @@ def test_the_ratchet_holds_in_every_mode_gated_or_not(artifacts, gated):
     errors, _notes = tpg.pg.check_change([gp.DECLARATION_FILE], 3, "docs: drop Arabic\n", new.get,
                                          config, [], old.get)
     assert any("weakens a compliance duty" in error for error in errors), errors
+
+
+# ── The 4.1.0 review's third pass: P3-R3 (.agent-rfc/designs/pass3-root-causes.md) ──
+
+
+@needs_git
+@pytest.mark.parametrize("artifacts", ["off", "report"])
+def test_ci_refuses_a_weakening_that_skipped_the_hook(tmp_path, monkeypatch, artifacts):
+    """P3-R3: the hook refused it, and CI, judging ungated commits by another route (no parent,
+    or not at all), passed the same commit made with --no-verify."""
+    config = {**tpg.FIXTURE_CONFIG, "artifacts": artifacts}
+    repo = tpg._make_repo(tmp_path, "repo", {
+        **tpg.GATE_FILES, **tpg.AGENTSMITH_MARKERS,
+        "docs/review-levers.md": tpg.REPO / "docs/review-levers.md",
+        tpg.pg.CONFIG: json.dumps(config, indent=2) + "\n",
+        **tpg.HOOK_FILES,
+    }, monkeypatch)
+    _write(repo, gp.DECLARATION_FILE, json.dumps(FILLED, indent=2) + "\n")
+    assert _commit(repo, "docs: declare the profile").returncode == 0
+    base = tpg._git(repo, "rev-parse", "HEAD").stdout.strip()
+    _write(repo, gp.DECLARATION_FILE, json.dumps(_with(lambda d: d["languages"].remove("ar")), indent=2) + "\n")
+    tpg._git(repo, "add", "-A")
+    tpg._git(repo, "commit", "-q", "--no-verify", "-m", "docs: drop Arabic")
+    result = tpg._ci(repo, base)
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "weakens a compliance duty" in result.stdout + result.stderr

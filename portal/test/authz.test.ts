@@ -26,6 +26,7 @@ import {
   LEGACY_ROLES,
   configuredGrants,
   holdsEverywhere,
+  isBasicAccount,
   PERMISSIONS,
   RETIRED_HEADERS,
   ROLES,
@@ -478,6 +479,24 @@ test("no credential is compared with === or !==", () => {
     }
   }
   assert.equal(scanned, files.length, "the scan did not read every file it names");
+});
+
+
+// ── P3-R6: the sign-in lockout counts only names that have an account ──
+test("isBasicAccount knows the single user and every multi-user name, and nothing else", () => {
+  const saved = { one: process.env.OPS_PORTAL_USER, many: process.env.OPS_PORTAL_USERS };
+  try {
+    delete process.env.OPS_PORTAL_USERS;
+    process.env.OPS_PORTAL_USER = "ops";
+    assert.equal(isBasicAccount("ops"), true);
+    assert.equal(isBasicAccount("invented"), false);
+    process.env.OPS_PORTAL_USERS = JSON.stringify([{ username: "alice", password: "x", grants: [{ role: "operator", apps: "*" }] }]);
+    assert.equal(isBasicAccount("alice"), true);
+    assert.equal(isBasicAccount("ops"), false);
+  } finally {
+    if (saved.one === undefined) delete process.env.OPS_PORTAL_USER; else process.env.OPS_PORTAL_USER = saved.one;
+    if (saved.many === undefined) delete process.env.OPS_PORTAL_USERS; else process.env.OPS_PORTAL_USERS = saved.many;
+  }
 });
 
 console.log(`\n${passed} passed`);

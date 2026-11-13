@@ -1092,7 +1092,9 @@ def _gate_kg(scripts: Path, verb: Optional[str], base: Optional[str]) -> int:
     import subprocess as sp
 
     if verb == "build":
-        return sp.run([sys.executable, str(scripts / "map_codebase.py"), "--quiet"], check=False).returncode
+        # Whole, never incremental: a person asking for the graph wants it right, and the
+        # incremental path keeps a file's old edges until the file changes (P3-R17).
+        return sp.run([sys.executable, str(scripts / "map_codebase.py"), "--quiet", "--force"], check=False).returncode
     if verb == "impact":
         scope = ["--base", base] if base else ["--staged"]
         return sp.run([sys.executable, str(scripts / "local_knowledge_graph.py"), "--impact", "--json", *scope],
