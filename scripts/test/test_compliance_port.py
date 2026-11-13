@@ -358,3 +358,18 @@ def test_a_required_database_that_is_missing_fails_rather_than_skips() -> None:
 
     assert run("1") != 0
     assert run("") == 0
+
+
+# ── The 4.1.0 review's second pass: P2-R20 (.agent-rfc/designs/one-signature-rule-and-incident-controls.md) ──
+
+SIGNATURE_CASES = json.loads((REPO / "fixtures" / "compliance" / "signature_cases.json").read_text())["cases"]
+
+
+@pytest.mark.parametrize("case", SIGNATURE_CASES, ids=[case["name"] for case in SIGNATURE_CASES])
+def test_the_port_picks_the_signature_the_shared_cases_name(case) -> None:
+    """The portal's checklist reads the same cases (portal/test/complianceState.test.ts)."""
+    records = [c.Attestation.model_validate({**r, "obligation": "OB-X", "actor": "x@y", "role": "r", "evidence": "e",
+                                             "note": "", "channel": "tty"}) for r in case["records"]]
+    now = datetime.fromisoformat(case["now"].replace("Z", "+00:00"))
+    found = cp.latest_valid(records, "OB-X", now, case["recurrence_days"])
+    assert (found.id if found else None) == case["counts"]

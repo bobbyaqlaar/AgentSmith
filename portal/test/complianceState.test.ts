@@ -1,6 +1,7 @@
 // portal/test/complianceState.test.ts — what the checklist shows, and which
 // signatures a repository may send.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import { checklist, mayDecide, parseAttestations, type AttestationRecord, type ObligationRow } from "../lib/complianceState";
@@ -60,3 +61,23 @@ test("the requester is compared as an email, trimmed (R29)", () => {
 test("a requester that is not an email cannot be told apart, so nobody may decide (R29)", () => {
   assert.equal(mayDecide("fatima@entity.ae", "fatima"), false);
 });
+
+// ── The 4.1.0 review's second pass: P2-R20 ──
+// The cases the port's test reads too (scripts/test/test_compliance_port.py), so the two cannot drift apart.
+
+const SIGNATURES = JSON.parse(readFileSync(new URL("../../fixtures/compliance/signature_cases.json", import.meta.url), "utf-8")).cases as Array<{
+  name: string; recurrence_days: number | null; now: string; counts: string | null; state: string;
+  records: Array<{ id: string; attested_at: string; expires_at: string | null }>;
+}>;
+
+for (const c of SIGNATURES) {
+  test(`shared signature case: ${c.name}`, () => {
+    const row = { id: "OB-X", title: "x", refs: {}, layer: "app" as const, class: "attested" as const, phases: ["operate" as const],
+                  mechanism: null, owner_role: "r", recurrence_days: c.recurrence_days, instructions: "i", evidence: "e",
+                  blocks: ["production" as const], profiles: ["dubai-gov"] };
+    const records = c.records.map((r) => ({ ...r, obligation: "OB-X", actor: "x@y", role: "r", evidence: "e", note: "", channel: "tty" as const }));
+    const [result] = checklist([row], records, new Date(c.now));
+    assert.equal(result.state, c.state);
+    if (c.state === "signed" || c.state === "expiring") assert.equal(result.latest?.id, c.counts);
+  });
+}
