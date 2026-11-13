@@ -482,7 +482,8 @@ classified, run them on self-hosted runners inside the boundary (`OB-CI-BOUNDARY
 **The developer pipeline is optional.** `scripts/multi_agent_system.py` needs `pip install --require-hashes -r requirements-pipeline.lock`. `local_agent_stack.py` does not.
 
 **When the portal is down,** apps keep running, records queue in the worker's database, and gates wait. `agentsmith ops stop --reason ...` stops an app from a
-terminal. Backups: `templates/onprem-deploy/scripts/backup.sh` (`DATABASE_URL`, `BACKUP_DIR`) and `restore.sh` (`RESTORE_URL`, an empty database), then `agentsmith ops restore-drill --restored-url ...`. Set `APP_COMMIT` on workers to put the commit on each decision record.
+terminal. The portal shows the stop the app recorded, from the portal or a terminal; a stop or resume sent from the portal reads "sent" until the app's record arrives.
+**Documents already in a pgvector store** when the profile is enabled: on the profile each app has its own id space, so run `agentsmith ops vector-claim` once (a dry run; `--apply` moves them, after a confirmation at a terminal, and writes a `vector_claim` record). Backups: `templates/onprem-deploy/scripts/backup.sh` (`DATABASE_URL`, `BACKUP_DIR`) and `restore.sh` (`RESTORE_URL`, an empty database), then `agentsmith ops restore-drill --restored-url ...`. Set `APP_COMMIT` on workers to put the commit on each decision record.
 
 #### The obligations
 

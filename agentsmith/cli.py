@@ -1215,6 +1215,22 @@ def _cmd_ops_compliance(args: argparse.Namespace) -> int:
             count = compliance.purge_runs(tenant, apply=args.apply)
             print(f"{'Deleted' if args.apply else 'Would delete'} {count} run(s) past the declared retention.")
             return 0
+        if args.verb == "vector-claim":
+            # Documents written before the profile join this app's id space (P2-R17).
+            # It changes who owns data, so a person confirms it, as a purge.
+            from agentsmith import vector_store
+
+            found = vector_store.claim_legacy(tenant, apply=False)
+            if args.apply:
+                confirmed = _confirm_at_terminal(
+                    "vector-claim", f"Move {found['claimable']} document(s) with no owner, or {tenant}'s without its "
+                    f"id space, into {tenant}'s?", tenant)
+                if confirmed is not True:
+                    return confirmed
+                found = vector_store.claim_legacy(tenant, apply=True)
+            print(f"{'Moved' if args.apply else 'Would move'} {found['claimable']} document(s) into {tenant}'s id "
+                  f"space; {found['already_held']} skipped, because {tenant} already holds that id.")
+            return 0
         if args.verb == "restore-drill":
             if not args.restored_url:
                 print("agentsmith ops restore-drill: --restored-url is required", file=sys.stderr)
@@ -1930,8 +1946,9 @@ def build_parser() -> argparse.ArgumentParser:
     evals.set_defaults(func=_cmd_evals)
 
     ops = sub.add_parser("ops", help="send this repository's declared settings to its portal (contract/ops/v1)")
-    ops.add_argument("verb", choices=("settings", "stop", "resume", "forward", "verify", "purge", "restore-drill"))
-    ops.add_argument("--apply", action="store_true", help="purge: delete; without it, only count")
+    ops.add_argument("verb", choices=("settings", "stop", "resume", "forward", "verify", "purge", "restore-drill",
+                                      "vector-claim"))
+    ops.add_argument("--apply", action="store_true", help="purge, vector-claim: do it; without it, only count")
     ops.add_argument("--restored-url", default=None, help="restore-drill: the database restored from a backup")
     ops.add_argument("--tenant", default=None, help="stop|resume|forward|verify: the app (default: tenant.yaml)")
     ops.add_argument("--scope", default="*", help="stop|resume: a workflow id, or * for the whole app (default)")

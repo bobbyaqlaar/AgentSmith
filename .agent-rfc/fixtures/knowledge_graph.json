@@ -4712,7 +4712,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T06:59:32Z",
       "id": "portal/app/ops/apps/[id]/page.tsx"
     },
     {
@@ -7086,17 +7086,22 @@
         "_record_hits",
         "MemoryVectorStore",
         "_profile",
+        "_stored_id",
+        "_app_id",
+        "claim_legacy",
         "_scoped_tenant",
         "PgVectorStore",
         "make_vector_store",
         "add",
         "query",
         "__init__",
+        "count",
+        "claim",
         "_connect",
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-11-11T20:22:04Z",
+      "last_modified": "2026-11-13T07:11:27Z",
       "id": "agentsmith/vector_store.py"
     },
     {
@@ -7483,7 +7488,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-11-11T20:22:04Z",
+      "last_modified": "2026-11-13T06:58:04Z",
       "id": "agentsmith/cli.py"
     },
     {
@@ -9690,7 +9695,7 @@
         "stop",
         "resume"
       ],
-      "last_modified": "2026-11-12T21:10:12Z",
+      "last_modified": "2026-11-13T07:11:09Z",
       "id": "agentsmith/compliance.py"
     },
     {
@@ -9781,6 +9786,15 @@
         "_refuse_records",
         "test_a_purge_whose_record_fails_in_the_database_deletes_nothing",
         "test_a_stop_or_resume_whose_record_fails_in_the_database_changes_nothing",
+        "_Recording",
+        "_store",
+        "test_on_the_profile_each_tenant_writes_its_own_id_space",
+        "test_on_the_profile_a_query_returns_the_id_the_app_wrote",
+        "test_off_the_profile_ids_are_unchanged",
+        "test_a_refused_write_does_not_say_whose_the_id_is",
+        "test_legacy_documents_are_claimed_into_a_tenant_with_a_record",
+        "test_a_vector_claim_is_a_framework_record",
+        "test_ops_vector_claim_counts_and_asks_before_it_moves_anything",
         "__init__",
         "execute_activity",
         "wait_condition",
@@ -9798,11 +9812,13 @@
         "__exit__",
         "execute",
         "fetchone",
+        "claim",
         "post",
         "_Cursor",
-        "failing"
+        "failing",
+        "fetchall"
       ],
-      "last_modified": "2026-11-12T21:09:46Z",
+      "last_modified": "2026-11-13T07:12:27Z",
       "id": "agentsmith/test/test_compliance_runtime.py"
     },
     {
@@ -9965,7 +9981,7 @@
       "symbols": [
         "StopControl"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T06:59:32Z",
       "id": "portal/components/StopControl.tsx"
     },
     {
@@ -10020,10 +10036,15 @@
         "getPending",
         "decisionMessage",
         "decideGate",
-        "lastStopAction",
+        "StopRecord",
+        "PortalStop",
+        "StopState",
+        "stopState",
+        "appStopState",
+        "sendStopControl",
         "stopControl"
       ],
-      "last_modified": "2026-11-12T13:18:28Z",
+      "last_modified": "2026-11-13T07:11:09Z",
       "id": "portal/lib/hitl.ts"
     },
     {
@@ -10781,7 +10802,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-12T13:17:18Z",
+      "last_modified": "2026-11-13T06:58:51Z",
       "id": "portal/test/hitl.test.ts"
     },
     {
@@ -10962,6 +10983,22 @@
       "pillar": null,
       "created_at": "2026-11-12T21:33:41Z",
       "id": "rfc:reviews/declaration-ratchet-and-atomic-test.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Each tenant has its own document ids, and the stop control shows the app's own state",
+      "source_file": ".agent-rfc/designs/vector-ids-per-tenant-and-stop-state.md",
+      "pillar": null,
+      "created_at": "2026-11-13T07:13:10Z",
+      "id": "rfc:designs/vector-ids-per-tenant-and-stop-state.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: vector-ids-per-tenant-and-stop-state",
+      "source_file": ".agent-rfc/reviews/vector-ids-per-tenant-and-stop-state.md",
+      "pillar": null,
+      "created_at": "2026-11-13T07:13:11Z",
+      "id": "rfc:reviews/vector-ids-per-tenant-and-stop-state.md"
     }
   ],
   "edges": [

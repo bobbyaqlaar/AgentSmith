@@ -254,7 +254,7 @@ APP_SCOPE = "*"
 # app cannot forge one (agentsmith/runtime_server.py); one list, so a new kind is
 # reserved where it is born (the 4.1.0 release review, R21).
 FRAMEWORK_KINDS = frozenset({"hitl_pending", "hitl_decision", "hitl_timeout", "stop_control", "model_call",
-                             "model_result", "retention_purge"})
+                             "model_result", "retention_purge", "vector_claim"})
 
 
 def _connect(dsn: Optional[str] = None):

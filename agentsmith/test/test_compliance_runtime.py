@@ -778,7 +778,7 @@ def test_a_vector_write_never_takes_another_tenants_row(monkeypatch):
     store.embedder = type("E", (), {"embed": staticmethod(lambda texts: [[0.0] for _ in texts])})()
     store._connect = lambda: conn
     monkeypatch.setattr(vector_store, "_scoped_tenant", lambda: "tenant-b")
-    with pytest.raises(ValueError, match="another tenant"):
+    with pytest.raises(ValueError, match="cannot be written"):
         store.add(["policy-1"], ["text"])
     assert "WHERE agentsmith_embeddings.tenant_id IS NOT DISTINCT FROM EXCLUDED.tenant_id" in conn.sql[-1]
     assert conn.committed == []
@@ -959,3 +959,116 @@ def test_a_stop_or_resume_whose_record_fails_in_the_database_changes_nothing(pro
         c.set_stop("t", "wf-2", "also", "a@x", dsn=isolated_dsn)
     rows = _sql(isolated_dsn, "SELECT scope FROM compliance_stop WHERE tenant_id = 't' ORDER BY scope")
     assert rows == [(c.APP_SCOPE,)]  # still stopped, and the second stop never set
+
+
+# ── The 4.1.0 review's second pass: P2-R17 (.agent-rfc/designs/vector-ids-per-tenant-and-stop-state.md) ──
+
+
+class _Recording(_Conn):
+    """Remembers each statement's parameters, and answers a query with `rows`."""
+
+    def __init__(self, rows=None, row_back=True):
+        super().__init__()
+        self.params: list = []
+        self.rows, self.row_back = rows or [], row_back
+
+    def cursor(self):
+        conn = self
+
+        class _Cursor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def execute(self, sql, params=None):
+                conn.sql.append(" ".join(sql.split()))
+                conn.params.append(params)
+
+            def fetchone(self):
+                return ("x",) if conn.row_back else None
+
+            def fetchall(self):
+                return conn.rows
+
+        return _Cursor()
+
+
+def _store(conn, monkeypatch, tenant, profile):
+    from agentsmith import vector_store
+
+    store = vector_store.PgVectorStore.__new__(vector_store.PgVectorStore)
+    store.embedder = type("E", (), {"embed": staticmethod(lambda texts: [[0.0] for _ in texts])})()
+    store._connect = lambda: conn
+    monkeypatch.setattr(vector_store, "_scoped_tenant", lambda: tenant)
+    monkeypatch.setattr(vector_store, "_profile", lambda: profile)
+    return store
+
+
+def test_on_the_profile_each_tenant_writes_its_own_id_space(monkeypatch):
+    """P2-R17: ids were shared by every tenant, so a refusal told one tenant another's ids."""
+    conn = _Recording()
+    _store(conn, monkeypatch, "tenant-b", True).add(["policy-1"], ["text"])
+    insert = conn.params[-1]
+    assert insert[0] == "tenant-b:policy-1" and insert[-1] == "tenant-b"
+
+
+def test_on_the_profile_a_query_returns_the_id_the_app_wrote(monkeypatch):
+    conn = _Recording(rows=[("tenant-b:policy-1", "text", {}, 0.9), ("legacy-1", "old", {}, 0.5)])
+    hits = _store(conn, monkeypatch, "tenant-b", True).query("q", 2)
+    assert [h.id for h in hits] == ["policy-1", "legacy-1"]
+
+
+@pytest.mark.parametrize("tenant", [None, "acme"])
+def test_off_the_profile_ids_are_unchanged(monkeypatch, tenant):
+    """Off the profile nothing changes, even for an app whose tenant is known."""
+    conn = _Recording()
+    _store(conn, monkeypatch, tenant, False).add(["policy-1"], ["text"])
+    assert conn.params[-1][0] == "policy-1"
+
+
+def test_a_refused_write_does_not_say_whose_the_id_is(monkeypatch):
+    conn = _Recording(row_back=False)
+    with pytest.raises(ValueError) as refused:
+        _store(conn, monkeypatch, "tenant-b", True).add(["policy-1"], ["text"])
+    assert "another tenant" not in str(refused.value) and "belongs" not in str(refused.value)
+
+
+@needs_db
+def test_legacy_documents_are_claimed_into_a_tenant_with_a_record(profile, isolated_dsn):
+    """P2-R17 (a): rows written before tenant_id existed could never be written again on the profile."""
+    from agentsmith import vector_store
+
+    _sql(isolated_dsn,
+         "CREATE TABLE agentsmith_embeddings (id TEXT PRIMARY KEY, tenant_id TEXT, text TEXT)",
+         "INSERT INTO agentsmith_embeddings VALUES ('a', NULL, 'x'), ('b', 'acme', 'y'), ('c', 'other', 'z'), "
+         "('acme:d', 'acme', 'w'), ('d', NULL, 'v')")
+    assert vector_store.claim_legacy("acme", apply=False, dsn=isolated_dsn) == {"claimable": 2, "already_held": 1}
+    assert _sql(isolated_dsn, "SELECT count(*) FROM agentsmith_embeddings WHERE id LIKE 'acme:%'") == [(1,)]
+    assert vector_store.claim_legacy("acme", apply=True, dsn=isolated_dsn) == {"claimable": 2, "already_held": 1}
+    ids = _sql(isolated_dsn, "SELECT id, tenant_id FROM agentsmith_embeddings ORDER BY id")
+    assert ids == [("acme:a", "acme"), ("acme:b", "acme"), ("acme:d", "acme"), ("c", "other"), ("d", None)]
+    records = _sql(isolated_dsn, "SELECT payload FROM compliance_outbox WHERE kind = 'vector_claim'")
+    assert records and records[0][0]["claimed"] == 2 and records[0][0]["skipped"] == 1
+
+
+def test_a_vector_claim_is_a_framework_record():
+    assert "vector_claim" in c.FRAMEWORK_KINDS
+
+
+def test_ops_vector_claim_counts_and_asks_before_it_moves_anything(monkeypatch, capsys):
+    from agentsmith import cli, vector_store
+
+    calls = []
+    def claim(tenant, apply=False, dsn=None):
+        calls.append(apply)
+        return {"claimable": 3, "already_held": 1}
+
+    monkeypatch.setattr(vector_store, "claim_legacy", claim)
+    asked = []
+    monkeypatch.setattr(cli, "_confirm_at_terminal", lambda verb, question, expected: asked.append(question) or 1)
+    run = lambda *extra: cli.main(["ops", "vector-claim", "--tenant", "acme", *extra])  # noqa: E731
+    assert run() == 0 and calls == [False] and not asked
+    assert "Would move 3" in capsys.readouterr().out
+    assert run("--apply") == 1 and asked and calls == [False, False]  # declined: nothing moved
