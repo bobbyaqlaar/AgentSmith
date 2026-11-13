@@ -8,7 +8,7 @@ import { getSuggestedPromotions } from "@/lib/promotions";
 import { CostChart } from "@/components/CostChart";
 import { StopControl } from "@/components/StopControl";
 import { can } from "@/lib/authz";
-import { lastStopAction } from "@/lib/hitl";
+import { appStopState } from "@/lib/hitl";
 import { listRecentRuns } from "@/lib/runStatus";
 import { isSafeHttpUrl } from "@/lib/safeUrl";
 import { isTruncated } from "@/lib/cappedList";
@@ -28,7 +28,8 @@ export default async function TenantDetailPage(props: { params: Promise<{ id: st
 
   const tenant = await getTenant(params.id);
   if (!tenant) notFound();
-  const lastStop = await lastStopAction(tenant.tenantId);
+  // The app's own record, from the portal or a terminal (P2-R19).
+  const stop = await appStopState(tenant.tenantId);
   const recentRuns = await listRecentRuns(tenant.tenantId);
 
   const [cost, issues, phoenixUp, traceStats, suggestedPromotions] = await Promise.all([
@@ -56,10 +57,15 @@ export default async function TenantDetailPage(props: { params: Promise<{ id: st
         )}
       </nav>
 
-      {lastStop?.action === "stop" && (
-        <p role="status" className="text-sm"><Badge tone="danger">Stopped</Badge> by {lastStop.actor}: {lastStop.reason}</p>
+      {stop.stopped && (
+        <p role="status" className="text-sm"><Badge tone="danger">Stopped</Badge> by {stop.actor}{stop.reason ? `: ${stop.reason}` : ""}</p>
       )}
-      {can(access, "ops.stop", tenant.tenantId) && <StopControl tenantId={tenant.tenantId} stopped={lastStop?.action === "stop"} />}
+      {stop.sent && (
+        <p role="status" className="text-sm text-black/60 dark:text-white/60">
+          {stop.sent.action === "stop" ? "Stop" : "Resume"} sent by {stop.sent.actor}; the app has not recorded it yet.
+        </p>
+      )}
+      {can(access, "ops.stop", tenant.tenantId) && <StopControl tenantId={tenant.tenantId} stopped={stop.stopped} />}
 
       <div>
         <h2 className="text-xl font-medium">
