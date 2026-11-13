@@ -32,6 +32,13 @@ from pathlib import Path
 OUT = ".agent-rfc/fixtures/trace_graph.json"
 SRC_EXT = (".py", ".ts", ".tsx", ".js", ".mjs", ".sh")
 KINDS = ("observed", "declared", "derived", "inferred")
+# A Conventional Commit type, the one part of a subject the graph keeps.
+def _bookkeeping(path: str) -> bool:
+    """Records about the work, not the work: every design's commits touch them."""
+    return path.startswith(".agent-rfc/") or path in ("CHANGELOG.md", "docs/PRODUCT_BACKLOG.md")
+
+
+_CONVENTIONAL = re.compile(r"([a-z]+)(?:\([^)]*\))?!?:")
 ENTRY = re.compile(
     r"portal/app/.*/(page|route|layout|loading|error|not-found)\.tsx?$|portal/app/(page|layout|not-found|error|global-error)\.tsx$"
     r"|portal/(proxy|instrumentation|next\.config|postcss\.config|tailwind\.config|eslint\.config)[^/]*$|portal/scripts/"
@@ -45,6 +52,7 @@ def is_test(path: str) -> bool:
 class Builder:
     def __init__(self, root: Path) -> None:
         self.root = root
+        self.since: str | None = None
         self.nodes: dict[str, dict] = {}
         self.edges: list[dict] = []
         self.tracked = [f for f in self.git("ls-files").splitlines() if f]
@@ -142,7 +150,11 @@ class Builder:
         fmt = ("%x1e%H%x00%s%x00%(trailers:key=Design,valueonly,separator=%x2C)"
                "%x00%(trailers:key=Review,valueonly,separator=%x2C)")
         raw = self.git("log", f"--format={fmt}", "--name-only", "HEAD")
-        in_range = set(self.git("rev-list", f"{since}..HEAD").split()) if since else set()
+        # A checkout without the tag (a shallow or tagless CI clone) has no range: say so, do not fail.
+        probe = ["git", "-C", str(self.root), "rev-parse", "--verify", "-q", f"{since}^{{commit}}"]
+        resolved = bool(since) and subprocess.run(probe, capture_output=True, check=False).returncode == 0
+        self.since = since if resolved else None
+        in_range = set(self.git("rev-list", f"{since}..HEAD").split()) if resolved else set()
         changed: dict[str, set[str]] = {}
         for record in raw.split("\x1e")[1:]:
             head, _, rest = record.partition("\n")
@@ -150,8 +162,11 @@ class Builder:
             cid = f"c:{sha[:10]}"
             files = {x for x in rest.splitlines() if x.strip()}
             changed[cid] = files
-            self.node(cid, "commit", subject=subject, in_range=sha in in_range, files=len(files),
-                      fix=subject.startswith("fix"))
+            # Identifiers only. A subject is free text from history, outside the tracked tree: copied
+            # here, every scan of tracked files reads it as source (a private name, a stray env var).
+            kind = _CONVENTIONAL.match(subject)
+            self.node(cid, "commit", change=kind.group(1) if kind else None, in_range=sha in in_range,
+                      files=len(files), fix=bool(kind) and kind.group(1) == "fix")
             for d in filter(None, (x.strip() for x in designs.split(","))):
                 self.edge(cid, d, "implements", "observed", resolves=int(d in self.tset))
             for r in filter(None, (x.strip() for x in reviews.split(","))):
@@ -160,11 +175,15 @@ class Builder:
                 self.edge(cid, f, "changes", "observed")
         return changed
 
-    def build(self, since: str) -> dict:
+    def build(self, since: str = "", history: bool = False) -> dict:
+        """The graph of the tree. With `history`, also every commit, its trailers and the files it changed: that part
+        is git history, not the tree, so it never goes into the committed fixture (a committed file cannot hold the
+        commit that carries it, and history only grows), and the committed graph stays a function of the tree that CI
+        rebuilds and compares."""
         imports = self.code()
         requirement_ids = self.requirements()
         self.records()
-        changed = self.commits(since)
+        changed = self.commits(since) if history else {}
 
         # design → file, through the commits that cite the design (derived)
         cites = collections.defaultdict(set)
@@ -176,7 +195,7 @@ class Builder:
         for commit, designs in cites.items():
             for d in designs:
                 for f in changed.get(commit, ()):
-                    if f.startswith(".agent-rfc/") or f in ("CHANGELOG.md", "docs/PRODUCT_BACKLOG.md"):
+                    if _bookkeeping(f):
                         continue
                     built[d].add(f)
                     designs_of[f].add(d)
@@ -205,7 +224,8 @@ class Builder:
                 self.edge(rid, d, "designed_by", "inferred")
             code = {f for f in files if not is_test(f) and f.endswith(SRC_EXT)}
             tests = {f for f in files if is_test(f)} | set().union(*(tests_of.get(f, set()) for f in code))
-            matrix[rid] = {"title": self.nodes[rid].get("title"), "evidence_files": len(files), "designs": len(designs),
+            matrix[rid] = {"title": self.nodes[rid].get("title"), "evidence_files": len(files),
+                           "designs": len(designs) if history else None,
                            "code_files": len(code), "tests": len(tests)}
 
         imported = collections.defaultdict(set)
@@ -222,10 +242,14 @@ class Builder:
             "counts": dict(collections.Counter(n["type"] for n in self.nodes.values())),
             "edges": dict(collections.Counter(f"{e['type']}:{e['kind']}" for e in self.edges)),
             "requirements": matrix,
-            "requirements_without_design": sorted(r for r, m in matrix.items() if not m["designs"]),
+            # Which design built a file is known only from the commits that cite it. A design's scope says what
+            # it may touch, not what it built: read as "built", "no design" could never be reported.
+            "requirements_without_design":
+                sorted(r for r, m in matrix.items() if not m["designs"]) if history else None,
             "requirements_without_test": sorted(r for r, m in matrix.items() if not m["tests"]),
             "designs_never_cited": sorted(d for d, n in self.nodes.items() if n["type"] == "design" and d not in built
-                                          and not any(e["to"] == d and e["type"] == "implements" for e in self.edges)),
+                                          and not any(e["to"] == d and e["type"] == "implements" for e in self.edges))
+            if history else None,
             "designs_with_unmatched_scope": {d: n["scope_unmatched"] for d, n in self.nodes.items()
                                              if n["type"] == "design" and n["scope_unmatched"]},
             "dangling_trailers": sorted({e["to"] for e in self.edges
@@ -233,32 +257,52 @@ class Builder:
             "files_no_importer_or_entry": sorted(f for f in sources if not imported.get(f) and not ENTRY.search(f)),
             "files_no_test": sorted(f for f in sources if f.endswith((".py", ".ts", ".tsx")) and not tests_of.get(f)
                                     and not ENTRY.search(f)),
-            "files_no_design": sorted(f for f in sources if not designs_of.get(f)),
-            "hot_fixes_since": hot.most_common(30),
+            "files_no_design": sorted(f for f in sources if not designs_of.get(f)) if history else None,
+            "hot_fixes_since": hot.most_common(30) if history else None,
         }
-        return {"about": __doc__.split("\n\n", 1)[0], "built_from": self.git("rev-parse", "--short=10", "HEAD").strip(),
-                "since": since, "kinds": list(KINDS), "nodes": sorted(self.nodes.values(), key=lambda n: n["id"]),
+        about = {"about": __doc__.split("\n\n", 1)[0], "history": history}
+        if history:
+            about.update(built_from=self.git("rev-parse", "--short=10", "HEAD").strip(), since=self.since,
+                         since_asked=since or None)
+        return {**about, "kinds": list(KINDS), "nodes": sorted(self.nodes.values(), key=lambda n: n["id"]),
                 "edges": sorted(self.edges, key=lambda e: (e["type"], e["from"], e["to"])), "summary": summary}
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
-    parser.add_argument("--out", default=OUT)
+    parser.add_argument("--out", default=None, help=f"default: {OUT}, or stdout with --history")
+    parser.add_argument("--history", action="store_true",
+                        help="add commits, their trailers and hot spots (never into the committed fixture)")
     parser.add_argument("--since", default=None,
-                        help="the release whose fixes count as hot spots (default: the latest tag)")
+                        help="with --history: the release whose fixes count as hot spots (default: the latest tag)")
+    parser.add_argument("--check", action="store_true", help=f"fail when {OUT} is not what the tree builds")
     args = parser.parse_args(argv)
     root = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
                                check=True).stdout.strip())
-    builder = Builder(root)
-    since = args.since or subprocess.run(["git", "-C", str(root), "describe", "--tags", "--abbrev=0"],
-                                         capture_output=True, text=True, check=False).stdout.strip()
-    document = builder.build(since)
-    out = root / args.out
-    out.write_text(json.dumps(document, indent=1) + "\n", encoding="utf-8")
+    if args.history and (args.check or (args.out and Path(args.out) == Path(OUT))):
+        parser.error(f"--history is git history, not the tree: it never writes {OUT} or checks it")
+    since = ""
+    if args.history:
+        since = args.since or subprocess.run(["git", "-C", str(root), "describe", "--tags", "--abbrev=0"],
+                                             capture_output=True, text=True, check=False).stdout.strip()
+    document = Builder(root).build(since, history=args.history)
+    text = json.dumps(document, indent=1) + "\n"
+    if args.check:
+        committed = root / OUT
+        if not committed.exists() or committed.read_text(encoding="utf-8") != text:
+            print(f"{OUT} is stale: run `agentsmith gate kg build` (or scripts/trace_graph.py) and commit it",
+                  file=sys.stderr)
+            return 1
+        return 0
+    if args.history and not args.out:
+        sys.stdout.write(text)
+    else:
+        (root / (args.out or OUT)).write_text(text, encoding="utf-8")
     s = document["summary"]
-    print(f"trace graph at {document['built_from']}: {s['counts']}; "
-          f"{len(s['requirements_without_design'])} requirement(s) with no design, "
-          f"{len(s['files_no_design'])} file(s) no design built; wrote {args.out}", file=sys.stderr)
+    design = (f"; {len(s['requirements_without_design'])} requirement(s) with no design, "
+              f"{len(s['files_no_design'])} file(s) with none") if args.history else ""
+    where = args.out or ("stdout" if args.history else OUT)
+    print(f"trace graph: {s['counts']}{design}; wrote {where}", file=sys.stderr)
     return 0
 
 
