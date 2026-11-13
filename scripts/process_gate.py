@@ -1492,15 +1492,15 @@ def check_commits(root: Path, commits: List[str], records: Optional[List[Dict[st
             _record_commit(records, about, "before_adoption", [], [], gated=False, adopted=False)
             continue
         gated = any(config.is_gated(f) for f in files)
-        if not gated and config.artifacts_mode not in ("report", "enforce"):
-            _record_commit(records, about, "not_gated", [], [], gated=False)
-            continue
+        # What the commit gate measures a commit against, for every commit: its parent.
+        # CI used to skip some ungated commits and judge the rest without the parent, so
+        # a rule the hook applies to every commit (the declaration ratchet) never ran here
+        # (the 4.1.0 review's third pass, P3-R3). Every commit now takes the hook's route.
+        parent = git("rev-parse", "--verify", "-q", f"{commit}^", cwd=root, check=False).strip()
+        previous = _reader_at(root, parent) if parent else None
         added = _added_lines(git("show", "--format=", "-U0", "--root", commit, cwd=root, check=False))
         if not gated:
-            # Documents are mostly ungated, and the cross-reference rule is about
-            # documents: the commit gate reads such a commit's pointers, so this
-            # layer — which exists for commits that skipped that gate — must too.
-            errors, notes = check_change(files, 0, message, read, config, added)
+            errors, notes = check_change(files, 0, message, read, config, added, previous)
             if errors:
                 failures.append((commit, subject, errors))
             escapes.extend((commit, subject, n) for n in notes)
@@ -1508,8 +1508,6 @@ def check_commits(root: Path, commits: List[str], records: Optional[List[Dict[st
             continue
         gated_commits += 1
         lines = _gated_lines(git("diff-tree", "--no-commit-id", "--numstat", "-r", "--root", commit, cwd=root), config)
-        parent = git("rev-parse", "--verify", "-q", f"{commit}^", cwd=root, check=False).strip()
-        previous = _reader_at(root, parent) if parent else None
         evidence = gp.evidence_resolver(root, commit) if config.pillar_policy.mode != "off" else None
         errors, notes = check_change(files, lines, message, read, config, added, previous, evidence,
                                      arming=previous is None or previous(CONFIG) is None)
