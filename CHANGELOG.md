@@ -148,6 +148,8 @@ version table being consulted.
 - A database test now proves a purge, a stop and a resume commit with their record or not at all: before, every test passed with the record written after the change.
 - On the profile, each app has its own document id space in the pgvector store: one app can no longer take, or learn of, another's document ids, and a refused write no longer says whose the id is. Documents written before the profile are moved into an app's id space with `agentsmith ops vector-claim` (a dry run; `--apply` asks at a terminal and writes a `vector_claim` record). Off the profile nothing changes.
 - The portal's stop control shows the stop the app recorded, whether from the portal or from `agentsmith ops stop` at a terminal, and marks a stop or resume sent from the portal as "sent" until the app records it. A stop the app refuses is no longer audited as given.
+- The portal's compliance checklist and `agentsmith compliance check` judge a signature the same way: the newest one still live counts. The checklist used to judge only the newest, so a short-lived later signature showed an obligation as expired while the check passed it. A shared case file (`fixtures/compliance/signature_cases.json`) holds both to the rule.
+- The incident controls send once and say when they fail: opening and closing are disabled while a request is in flight, a failure is shown, and closing asks first, since an incident cannot be reopened. A close that changed nothing (already closed, or another app's id) answers 409 and is no longer audited as a close.
 
 ### Added — an opt-in compliance profile, `dubai-gov`
 

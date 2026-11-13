@@ -9603,7 +9603,7 @@
         "main",
         "live"
       ],
-      "last_modified": "2026-11-11T20:34:38Z",
+      "last_modified": "2026-11-13T08:14:26Z",
       "id": "scripts/compliance_port.py"
     },
     {
@@ -9860,9 +9860,10 @@
         "test_a_known_gap_that_starts_passing_must_leave_the_list",
         "test_ci_runs_the_compliance_database_tests",
         "test_a_required_database_that_is_missing_fails_rather_than_skips",
+        "test_the_port_picks_the_signature_the_shared_cases_name",
         "run"
       ],
-      "last_modified": "2026-11-12T21:06:28Z",
+      "last_modified": "2026-11-13T08:12:32Z",
       "id": "scripts/test/test_compliance_port.py"
     },
     {
@@ -9939,7 +9940,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T08:12:52Z",
       "id": "portal/test/complianceState.test.ts"
     },
     {
@@ -9956,7 +9957,7 @@
         "parseAttestations",
         "mayDecide"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T08:14:21Z",
       "id": "portal/lib/complianceState.ts"
     },
     {
@@ -9972,7 +9973,7 @@
       "symbols": [
         "IncidentClose"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T08:13:40Z",
       "id": "portal/components/IncidentClose.tsx"
     },
     {
@@ -9990,7 +9991,7 @@
       "symbols": [
         "IncidentForm"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T08:13:40Z",
       "id": "portal/components/IncidentForm.tsx"
     },
     {
@@ -10103,7 +10104,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-11T20:22:05Z",
+      "last_modified": "2026-11-13T08:13:40Z",
       "id": "portal/app/api/incidents/route.ts"
     },
     {
@@ -10999,6 +11000,41 @@
       "pillar": null,
       "created_at": "2026-11-13T07:13:11Z",
       "id": "rfc:reviews/vector-ids-per-tenant-and-stop-state.md"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [],
+      "last_modified": "2026-11-13T08:13:15Z",
+      "id": "portal/test/incidentsDb.test.ts"
+    },
+    {
+      "node_type": "CodebaseFile",
+      "language": "typescript",
+      "symbols": [
+        "SEVERITIES",
+        "Severity",
+        "openIncident",
+        "closeIncident"
+      ],
+      "last_modified": "2026-11-13T08:14:22Z",
+      "id": "portal/lib/incidents.ts"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The port and the portal judge a signature the same way, and the incident controls send once",
+      "source_file": ".agent-rfc/designs/one-signature-rule-and-incident-controls.md",
+      "pillar": null,
+      "created_at": "2026-11-13T08:15:24Z",
+      "id": "rfc:designs/one-signature-rule-and-incident-controls.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: one-signature-rule-and-incident-controls",
+      "source_file": ".agent-rfc/reviews/one-signature-rule-and-incident-controls.md",
+      "pillar": null,
+      "created_at": "2026-11-13T08:15:25Z",
+      "id": "rfc:reviews/one-signature-rule-and-incident-controls.md"
     }
   ],
   "edges": [
@@ -12231,6 +12267,16 @@
       "edge_type": "IMPORTS",
       "source": "portal/test/hitl.test.ts",
       "target": "portal/lib/hitl.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/incidents.ts",
+      "target": "portal/lib/auditLog.ts"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "portal/lib/incidents.ts",
+      "target": "portal/lib/db.ts"
     }
   ]
 }
