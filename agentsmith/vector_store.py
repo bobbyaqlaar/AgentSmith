@@ -204,6 +204,55 @@ def _profile() -> bool:
     return compliance.profile_active()
 
 
+def _stored_id(tenant: Optional[str], vid: str) -> str:
+    """On the profile each tenant has its own id space, `<tenant>:<id>`: one tenant can
+    neither take nor detect another's ids (the 4.1.0 review's second pass, P2-R17)."""
+    return f"{tenant}:{vid}" if tenant and _profile() else vid
+
+
+def _app_id(tenant: Optional[str], stored: str) -> str:
+    prefix = f"{tenant}:"
+    return stored[len(prefix):] if tenant and _profile() and stored.startswith(prefix) else stored
+
+
+def claim_legacy(tenant: str, *, apply: bool = False, dsn: Optional[str] = None) -> dict[str, int]:
+    """Move documents written before the profile (no tenant, or this tenant's without the
+    prefix) into `tenant`'s id space. A dry run unless `apply`. An id the tenant already
+    holds is skipped, never overwritten. The move and its `vector_claim` record commit
+    together, because it changes who owns data (P2-R17)."""
+    from agentsmith import compliance
+
+    prefix = f"{tenant}:"
+    candidates = ("FROM agentsmith_embeddings e WHERE (e.tenant_id IS NULL OR e.tenant_id = %s) "
+                  "AND left(e.id, length(%s)) <> %s")
+    held = "EXISTS (SELECT 1 FROM agentsmith_embeddings h WHERE h.id = %s || e.id)"
+
+    def count(cursor: Any) -> dict[str, int]:
+        cursor.execute(f"SELECT count(*) FILTER (WHERE NOT {held}), count(*) FILTER (WHERE {held}) {candidates}",
+                       (prefix, prefix, tenant, prefix, prefix))
+        claimable, already = cursor.fetchone()
+        return {"claimable": int(claimable), "already_held": int(already)}
+
+    def claim(cursor: Any) -> dict[str, int]:
+        found = count(cursor)
+        cursor.execute(f"UPDATE agentsmith_embeddings AS e SET id = %s || e.id, tenant_id = %s "
+                       f"WHERE e.id IN (SELECT e.id {candidates} AND NOT {held})",
+                       (prefix, tenant, tenant, prefix, prefix, prefix))
+        return found
+
+    if not apply:
+        connection = compliance._connect(dsn)
+        try:
+            with connection.cursor() as cursor:
+                return count(cursor)
+        finally:
+            connection.close()
+    return compliance._recorded_change(
+        tenant, "vector_claim",
+        lambda found: {"tenant": tenant, "claimed": found["claimable"], "skipped": found["already_held"]},
+        claim, dsn)
+
+
 def _scoped_tenant() -> Optional[str]:
     """The tenant for this call. On a compliance profile, it must be known (OWASP LLM08)."""
     from agentsmith import compliance
@@ -316,13 +365,17 @@ class PgVectorStore:
                         WHERE agentsmith_embeddings.tenant_id IS NOT DISTINCT FROM EXCLUDED.tenant_id
                         RETURNING id
                         """,
-                        (vid, text, json.dumps(meta), "[" + ",".join(str(x) for x in vec) + "]", tenant),
+                        (_stored_id(tenant, vid), text, json.dumps(meta), "[" + ",".join(str(x) for x in vec) + "]",
+                         tenant),
                     )
-                    # No row back: the id is another tenant's, and is not taken over
-                    # (the 4.1.0 release review, R25). Nothing in this batch is kept.
+                    # No row back: the id is held by a row this tenant does not own, and is
+                    # not taken over (the 4.1.0 release review, R25). Nothing in this batch
+                    # is kept, and the message does not say whose it is (P2-R17).
                     if cur.fetchone() is None:
                         conn.rollback()
-                        raise ValueError(f"document id {vid!r} belongs to another tenant; choose another id")
+                        raise ValueError(f"document id {vid!r} cannot be written: a document this app does not "
+                                         "own holds it. Choose another id, or move documents written before the "
+                                         "profile into this app's id space with `agentsmith ops vector-claim`.")
             conn.commit()
         finally:
             conn.close()  # returns to the pool
@@ -366,7 +419,7 @@ class PgVectorStore:
             meta = row[2] if isinstance(row[2], dict) else json.loads(row[2] or "{}")
             hits.append(
                 VectorHit(
-                    id=row[0],
+                    id=_app_id(tenant, row[0]),
                     text=row[1],
                     score=float(row[3]),
                     metadata=meta,

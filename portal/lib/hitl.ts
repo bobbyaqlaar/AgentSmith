@@ -112,21 +112,63 @@ export async function decideGate(input: {
   });
 }
 
-/** Whether the app is stopped, by the last stop or resume given in the portal. */
-export async function lastStopAction(tenantId: string): Promise<{ action: string; actor: string; reason: string } | null> {
-  const { rows } = await getPool().query(
-    `SELECT actor_id, details FROM audit_log WHERE tenant_id = $1 AND event_type = 'stop_control'
-       AND details->>'scope' = '*' ORDER BY "timestamp" DESC LIMIT 1`,
-    [tenantId],
-  );
-  if (!rows[0]) return null;
-  return { action: String(rows[0].details.action), actor: String(rows[0].actor_id), reason: String(rows[0].details.reason) };
+export interface StopRecord { action: string; actor: string; reason: string; receivedAt: Date }
+export interface PortalStop { action: string; actor: string; at: Date }
+export interface StopState {
+  stopped: boolean; actor: string | null; reason: string | null;
+  /** Whether the app has recorded any stop or resume for the whole app. */
+  recorded: boolean;
+  /** A stop or resume sent from the portal that the app has not recorded yet. */
+  sent: { action: string; actor: string } | null;
 }
 
-export async function stopControl(input: {
-  tenantId: string; action: "stop" | "resume"; scope: string; reason: string; actor: string;
-}): Promise<void> {
-  await postSigned(input.tenantId, { stop: { action: input.action, scope: input.scope, reason: input.reason, actor: input.actor } });
-  await appendAuditEvent({ eventType: "stop_control", actorId: input.actor, tenantId: input.tenantId,
-                           details: { action: input.action, scope: input.scope, reason: input.reason } });
+/** The app's newest record decides whether it is stopped, whether the stop came from the
+ *  portal or from `agentsmith ops stop` at a terminal. A portal action newer than that
+ *  record is shown as sent, not as done (the 4.1.0 review's second pass, P2-R19). Both
+ *  times are the portal's own clock: when the record arrived, and when the action was sent. */
+export function stopState(record: StopRecord | null, portal: PortalStop | null): StopState {
+  const sent = portal && (!record || portal.at.getTime() > record.receivedAt.getTime())
+    ? { action: portal.action, actor: portal.actor } : null;
+  if (!record) return { stopped: false, actor: null, reason: null, recorded: false, sent };
+  return { stopped: record.action === "stop", actor: record.actor, reason: record.reason, recorded: true, sent };
+}
+
+/** Whether the app is stopped, from its own forwarded `stop_control` records. */
+export async function appStopState(tenantId: string): Promise<StopState> {
+  const pool = getPool();
+  const [records, actions] = await Promise.all([
+    pool.query(
+      `SELECT payload, received_at FROM compliance_records WHERE tenant_id = $1 AND record_kind = 'stop_control'
+         AND payload->>'scope' = '*' ORDER BY record_id DESC LIMIT 1`, [tenantId]),
+    pool.query(
+      `SELECT actor_id, details, "timestamp" FROM audit_log WHERE tenant_id = $1 AND event_type = 'stop_control'
+         AND details->>'scope' = '*' ORDER BY "timestamp" DESC LIMIT 1`, [tenantId]),
+  ]);
+  const r = records.rows[0], a = actions.rows[0];
+  return stopState(
+    r ? { action: String(r.payload.action), actor: String(r.payload.actor ?? ""), reason: String(r.payload.reason ?? ""),
+          receivedAt: new Date(r.received_at) } : null,
+    a ? { action: String(a.details.action), actor: String(a.actor_id), at: new Date(a.timestamp) } : null,
+  );
+}
+
+type StopInput = { tenantId: string; action: "stop" | "resume"; scope: string; reason: string; actor: string };
+interface StopDeps {
+  withTransaction: (name: string, work: (client: never) => Promise<void>) => Promise<unknown>;
+  appendAuditEvent: (event: Parameters<typeof appendAuditEvent>[0], client: never) => Promise<unknown>;
+  postSigned: (tenantId: string, message: Record<string, unknown>) => Promise<void>;
+}
+
+/** The audit line and the delivery stand or fall together, as a decision does: a stop the
+ *  app refused was audited as given before (P2-R19). */
+export async function sendStopControl(deps: StopDeps, input: StopInput): Promise<void> {
+  await deps.withTransaction("stop_control", async (client) => {
+    await deps.appendAuditEvent({ eventType: "stop_control", actorId: input.actor, tenantId: input.tenantId,
+                                  details: { action: input.action, scope: input.scope, reason: input.reason } }, client);
+    await deps.postSigned(input.tenantId, { stop: { action: input.action, scope: input.scope, reason: input.reason, actor: input.actor } });
+  });
+}
+
+export async function stopControl(input: StopInput): Promise<void> {
+  await sendStopControl({ withTransaction, appendAuditEvent, postSigned } as unknown as StopDeps, input);
 }
