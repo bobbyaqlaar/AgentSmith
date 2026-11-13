@@ -259,6 +259,13 @@ function getSsoUsers(): SsoUserRecord[] {
   return parsed.map((u) => ({ email: String(u.email).toLowerCase(), grants: parseGrants(u) }));
 }
 
+/** Does this name have an HTTP Basic account (OPS_PORTAL_USERS, or the single OPS_PORTAL_USER)?
+ *  The sign-in lockout counts only these (P3-R6). */
+export function isBasicAccount(username: string): boolean {
+  if (process.env.OPS_PORTAL_USERS) return getBasicAuthUsers().some((u) => u.username === username);
+  return !!process.env.OPS_PORTAL_USER && process.env.OPS_PORTAL_USER === username;
+}
+
 export function verifyBasicAuthCredentials(username: string, password: string): Access | null {
   const record = getBasicAuthUsers().find((u) => u.username === username);
   // Constant-time: this is a user password, and `!==` short-circuits on the

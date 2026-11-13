@@ -422,3 +422,71 @@ def test_outside_a_git_checkout_everything_maps(repo):
     assert map_codebase._mapped(repo) is None
     map_codebase.run_map()
     assert "rfc:001.md" in AgentKnowledgeGraph()._g
+
+
+# ── The 4.1.0 review's third pass: P3-R17 (.agent-rfc/designs/pass3-root-causes.md) ──
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+def _python_edges(tmp_path: Path, files: dict[str, str], source: str) -> set[str]:
+    for rel, text in files.items():
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(text)
+    _symbols, raw = map_codebase._parse_python(tmp_path / source)
+    found = {map_codebase._resolve_local_import(tmp_path / source, imp, tmp_path, "python") for imp in raw}
+    return {f for f in found if f}
+
+
+def test_a_python_import_keeps_its_full_module_path(tmp_path):
+    """P3-R17: only the first component was kept, so `from agentsmith import compliance`
+    resolved to nothing and `kg impact` named no Python dependents."""
+    files = {"pkg/__init__.py": "", "pkg/mod.py": "", "pkg/sub/__init__.py": "", "pkg/sub/deep.py": "",
+             "scripts/helper.py": "", "scripts/tool.py": "", "app.py": ""}
+    files["app.py"] = "from pkg import mod\nimport pkg.sub.deep\n"
+    assert _python_edges(tmp_path, files, "app.py") >= {"pkg/mod.py", "pkg/sub/deep.py"}
+    files["pkg/sub/deep.py"] = "from .. import mod\nfrom . import x\n"
+    assert "pkg/mod.py" in _python_edges(tmp_path, files, "pkg/sub/deep.py")
+    files["scripts/tool.py"] = "import helper\n"  # a script beside it, on sys.path
+    assert "scripts/helper.py" in _python_edges(tmp_path, files, "scripts/tool.py")
+
+
+def test_a_typescript_import_through_a_tsconfig_alias_resolves(tmp_path):
+    """P3-R17: the portal imports through `@/`, and every such edge was dropped."""
+    (tmp_path / "portal/lib").mkdir(parents=True)
+    (tmp_path / "portal/tsconfig.json").write_text('{"compilerOptions": {"paths": {"@/*": ["./*"]}}}')
+    (tmp_path / "portal/lib/db.ts").write_text("export const pool = 1;\n")
+    (tmp_path / "portal/lib/auth.ts").write_text("export const a = 1;\n")
+    page = tmp_path / "portal/page.tsx"
+    page.write_text('import { pool } from "@/lib/db";\n'
+                    'export { a } from "./lib/auth";\n'
+                    'const m = await import("@/lib/auth");\n')
+    _symbols, raw = map_codebase._parse_typescript(page)
+    found = {map_codebase._resolve_local_import(page, imp, tmp_path, "typescript") for imp in raw}
+    assert {"portal/lib/db.ts", "portal/lib/auth.ts"} <= found
+
+
+def test_the_committed_graph_knows_who_imports_the_compliance_runtime():
+    """The two files the third review measured: 22 and 37 importers, and 0 edges in the graph."""
+    import json
+
+    graph = json.loads((REPO / ".agent-rfc/fixtures/knowledge_graph.json").read_text())
+    importers = lambda target: {e["source"] for e in graph["edges"] if e["target"] == target}  # noqa: E731
+    assert len(importers("agentsmith/compliance.py")) >= 15
+    assert len(importers("agentsmith/llm_gateway.py")) >= 25
+    assert len(importers("portal/lib/db.ts")) >= 10
+
+
+def test_a_graph_built_by_another_parser_is_parsed_again_whole(repo):
+    """P3-R17: the incremental walk kept a file's edges until the file changed, so a parser
+    fix never reached the graph."""
+    _write_sample(repo)
+    map_codebase.run_map()
+    kg = AgentKnowledgeGraph()
+    kg._g.remove_edge("app.py", "helper.py")
+    kg._g.graph["parser_version"] = map_codebase.PARSER_VERSION - 1
+    kg.save()
+    stats = map_codebase.run_map()  # not forced, and no file changed
+    assert stats["unchanged"] == 0
+    assert AgentKnowledgeGraph()._g.has_edge("app.py", "helper.py")
+    assert map_codebase.run_map()["unchanged"] == 2  # same version: incremental again

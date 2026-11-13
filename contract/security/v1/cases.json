@@ -139,6 +139,54 @@
       "why": "the object is rendered as JSON, its title and body included"
     },
     {
+      "name": "an author guard negated around a group does not count",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".github/workflows/review.yml": "on: issue_comment\njobs:\n  review:\n    runs-on: ubuntu-latest\n    if: ${{ (github.event.comment.author_association == 'OWNER' && github.event.issue.number > 0) == false }}\n    steps:\n      - uses: anthropics/claude-code-action@v1\n        with:\n          prompt: \"${{ github.event.comment.body }}\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CIAGENT-001": "fail"
+        }
+      },
+      "why": "the step runs only for people who are not the owner"
+    },
+    {
+      "name": "an author guard compared with true by != does not count",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".github/workflows/review.yml": "on: issue_comment\njobs:\n  review:\n    runs-on: ubuntu-latest\n    if: ${{ (github.event.comment.author_association == 'OWNER' && github.event.issue.number > 0) != true }}\n    steps:\n      - uses: anthropics/claude-code-action@v1\n        with:\n          prompt: \"${{ github.event.comment.body }}\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CIAGENT-001": "fail"
+        }
+      },
+      "why": "the same negation, spelled with != true"
+    },
+    {
+      "name": "an author guard that an always-true term joins with || does not count",
+      "verb": "check",
+      "request": {},
+      "files": {
+        ".github/workflows/review.yml": "on: issue_comment\njobs:\n  review:\n    runs-on: ubuntu-latest\n    if: ${{ github.event.comment.author_association == 'OWNER' || always() }}\n    steps:\n      - uses: anthropics/claude-code-action@v1\n        with:\n          prompt: \"${{ github.event.comment.body }}\"\n"
+      },
+      "env": {},
+      "expect": {
+        "verdict": "fail",
+        "rows": {
+          "SEC-CIAGENT-001": "fail"
+        }
+      },
+      "why": "always() runs it for everyone"
+    },
+    {
       "name": "a template risk entry fails",
       "verb": "check",
       "request": {},
