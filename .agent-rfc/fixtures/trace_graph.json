@@ -3903,6 +3903,14 @@
     [
      4,
      0
+    ],
+    [
+     5,
+     1
+    ],
+    [
+     6,
+     0
     ]
    ],
    "signoff": true
@@ -9452,9 +9460,9 @@
   {
    "id": "scripts/test/test_trace_graph.py",
    "type": "test",
-   "loc": 81,
+   "loc": 118,
    "in_kg": true,
-   "symbols": 9
+   "symbols": 11
   },
   {
    "id": "scripts/test/test_trajectory_evals.py",

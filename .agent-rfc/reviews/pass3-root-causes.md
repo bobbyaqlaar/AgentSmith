@@ -70,6 +70,19 @@ tree.
 - Siblings: the only other tracked fixture is the knowledge graph, built from the tree. Its stored file times and its
   stale edges are the fourth review's P4-R8 and P4-R11, not fixed here.
 
+## Pass 5 — findings: 1
+
+From CI on ec0ddb1. 1. **The history tests read this repository's history**, which depends on how it was cloned: CI
+checks out the pull request's merge commit at depth 1, so there was one commit, a merge with no trailer, and no
+`implements` link. The missing tag (P4-R10) was the same cause. Fixed: the history tests build a repository of their
+own (a tag, a commit with a `Design:` trailer, a fix after the tag) and assert the observed, derived and hot-spot
+links on it; only the tree tests read this repository.
+
+## Pass 6 — findings: 0
+
+- `scripts/test/test_trace_graph.py` in a `--depth 1 --no-tags` clone of the commit: 8 passed. In this checkout:
+  8 passed. The freshness test caught the stale fixture after the test file changed, before the rebuild.
+
 ## Sign-off
 
 Group 1 · DRY & shared code — [x] checked — imports resolved once, in the knowledge graph, and read by the trace graph; one HTTP Basic decision, in `basicSignIn()`.
@@ -87,4 +100,4 @@ Gates run: the suites above; `npm test`; `tsc`; ruff; mypy; `scripts/verify_syst
 
 Levers reviewed: `guards-must-be-able-to-fail`, `consistent-auth-gates`, `retry-bounds`, `implemented-not-invoked`, `single-source-of-truth`, `test-that-cannot-fail`, `grep-for-siblings`
 
-KG query: kg:a4ef9808d240
+KG query: kg:311097f7d55d
