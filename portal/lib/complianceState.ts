@@ -57,13 +57,15 @@ export function checklist(rows: ObligationRow[], records: AttestationRecord[], n
     const mine = records
       .filter((r) => r.obligation === obligation.id && Date.parse(r.attested_at) <= now.getTime() + 5 * 60_000)
       .sort((a, b) => Date.parse(b.attested_at) - Date.parse(a.attested_at));
-    const latest = mine[0] ?? null;
-    if (!latest) return { obligation, state: "missing", latest };
-    const until = expiresAt(latest, obligation.recurrence_days);
-    if (until === null) return { obligation, state: "signed", latest };
-    const left = until - now.getTime();
-    if (left <= 0) return { obligation, state: "expired", latest };
-    return { obligation, state: left <= EXPIRING_DAYS * DAY ? "expiring" : "signed", latest };
+    if (mine.length === 0) return { obligation, state: "missing", latest: null };
+    // The newest signature still live counts, as in the port's `latest_valid`: judging only
+    // the newest made a short-lived later signature hide a live earlier one (the 4.1.0
+    // review's second pass, P2-R20). Both are held to fixtures/compliance/signature_cases.json.
+    const live = mine.find((r) => { const until = expiresAt(r, obligation.recurrence_days); return until === null || until > now.getTime(); });
+    if (!live) return { obligation, state: "expired", latest: mine[0] };
+    const until = expiresAt(live, obligation.recurrence_days);
+    if (until === null) return { obligation, state: "signed", latest: live };
+    return { obligation, state: until - now.getTime() <= EXPIRING_DAYS * DAY ? "expiring" : "signed", latest: live };
   });
 }
 

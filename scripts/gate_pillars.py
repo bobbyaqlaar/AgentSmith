@@ -78,6 +78,122 @@ def compliance_transition_problems(old: Any, new: Any, approvals: List["gm.Appro
             "(`agentsmith approve`) and the entry carries `\"approval\": \"A-xxxxxxxx\"`"]
 
 
+DECLARATION_FILE = ".agenticframework/compliance.json"
+_PLACEHOLDER = "REPLACE_ME"
+_APPROVAL_TRAILER = re.compile(r"^Approval:[ \t]*(\S+)[ \t]*$", re.M | re.I)
+
+
+def _placeholder(value: Any) -> bool:
+    if isinstance(value, dict):
+        return any(_placeholder(v) for v in value.values())
+    if isinstance(value, list):
+        return any(_placeholder(v) for v in value)
+    return value == _PLACEHOLDER
+
+
+def _classified(declared: Dict[str, Any]) -> Set[str]:
+    classes = declared.get("data_classes") or []
+    start = declared.get("classified_from")
+    return set(classes[classes.index(start):]) if start in classes else set(classes)
+
+
+def declaration_weakenings(old: Dict[str, Any], new: Optional[Dict[str, Any]]) -> List[str]:
+    """What a change to the compliance declaration weakens, field by field. Replacing a
+    `REPLACE_ME` placeholder fills the declaration and weakens nothing; strengthening
+    needs nothing (the 4.1.0 review's second pass, P2-R12, and the owner's decision of
+    2026-11-13: agents may edit it, and a weakening needs the owner's approval)."""
+    if new is None:
+        return ["the declaration is deleted"]
+    found: List[str] = []
+
+    def real(value: Any) -> bool:
+        return value is not None and not _placeholder(value)
+
+    def looser(section: str, keys: Sequence[str], higher_is_weaker: bool = True) -> None:
+        before, after = old.get(section) or {}, new.get(section) or {}
+        for key in keys:
+            was, now = before.get(key), after.get(key)
+            if not isinstance(was, (int, float)) or isinstance(was, bool) or _placeholder(was):
+                continue
+            if not isinstance(now, (int, float)) or (now > was if higher_is_weaker else now < was):
+                found.append(f"{section}.{key} {was} → {now}")
+
+    if new.get("profile") != old.get("profile"):
+        found.append(f"profile {old.get('profile')} → {new.get('profile')}")
+    if real(old.get("app_owner")) and new.get("app_owner") != old.get("app_owner"):
+        found.append(f"app_owner {old.get('app_owner')} → {new.get('app_owner')}")
+    unclassified = sorted(_classified(old) - _classified(new))
+    if unclassified:
+        found.append(f"no longer classified: {', '.join(unclassified)}")
+    old_boundary, new_boundary = old.get("boundary") or {}, new.get("boundary") or {}
+    if real(old_boundary.get("hosts")):
+        added = sorted(set(new_boundary.get("hosts") or []) - set(old_boundary.get("hosts") or []))
+        if added:
+            found.append(f"boundary.hosts widened: {', '.join(added)}")
+    for sink, where in (old_boundary.get("sinks") or {}).items():
+        if real(where) and (new_boundary.get("sinks") or {}).get(sink) != where:
+            found.append(f"boundary.sinks.{sink} {where} → {(new_boundary.get('sinks') or {}).get(sink)}")
+    looser("session", ("idle_minutes", "absolute_hours"))
+    looser("retention_days", sorted((old.get("retention_days") or {}).keys()), higher_is_weaker=False)
+    looser("continuity", ("rpo_minutes", "rto_minutes", "drill_every_days"))
+    backup = (old.get("continuity") or {}).get("backup_host")
+    if real(backup) and (new.get("continuity") or {}).get("backup_host") != backup:
+        found.append(f"continuity.backup_host {backup} → {(new.get('continuity') or {}).get('backup_host')}")
+    if real(old.get("languages")):
+        dropped = sorted(set(old.get("languages") or []) - set(new.get("languages") or []))
+        if dropped:
+            found.append(f"languages removed: {', '.join(dropped)}")
+    owners = {a.get("name"): a.get("accountable_owner") for a in new.get("agents") or [] if isinstance(a, dict)}
+    for agent in old.get("agents") or []:
+        if not isinstance(agent, dict) or not real(agent.get("name")):
+            continue
+        if agent["name"] not in owners:
+            found.append(f"agents: {agent['name']} removed")
+        elif real(agent.get("accountable_owner")) and owners[agent["name"]] != agent.get("accountable_owner"):
+            found.append(f"agents: {agent['name']}'s owner {agent.get('accountable_owner')} → {owners[agent['name']]}")
+    limit = old.get("user_calls_per_minute")
+    if isinstance(limit, int) and (not isinstance(new.get("user_calls_per_minute"), int)
+                                   or new["user_calls_per_minute"] > limit):
+        found.append(f"user_calls_per_minute {limit} → {new.get('user_calls_per_minute')}")
+    return found
+
+
+def declaration_transition(old_text: Optional[str], new_text: Optional[str], approvals: Sequence["gm.Approval"],
+                           message: str) -> Tuple[List[str], Dict[str, Any]]:
+    """The commit's verdict on a change to the declaration -> (problems, summary for the
+    audit log). A weakening needs an `Approval: A-xxxxxxxx` trailer naming an approval the
+    owner recorded at a terminal (`agentsmith approve`)."""
+    import json
+
+    def parse(text: Optional[str]) -> Optional[Dict[str, Any]]:
+        if text is None:
+            return None
+        value = json.loads(text)
+        return value if isinstance(value, dict) else {}
+
+    summary: Dict[str, Any] = {"changed": [], "weakened": [], "approval": None}
+    try:
+        old, new = parse(old_text), parse(new_text)
+    except ValueError as exc:
+        return [f"{DECLARATION_FILE} cannot be read as JSON ({exc}), so what it changes cannot be judged"], summary
+    if old is None:
+        summary["changed"] = sorted((new or {}).keys())
+        return [], summary
+    summary["changed"] = sorted(k for k in set(old) | set(new or {}) if old.get(k) != (new or {}).get(k))
+    summary["weakened"] = declaration_weakenings(old, new)
+    if not summary["weakened"]:
+        return [], summary
+    cited = _APPROVAL_TRAILER.findall(message)
+    known = {approval.id for approval in approvals}
+    approved = next((c for c in cited if c in known), None)
+    if approved:
+        summary["approval"] = approved
+        return [], summary
+    return [f"{DECLARATION_FILE} weakens a compliance duty ({'; '.join(summary['weakened'])}): the owner records an "
+            "approval at a terminal (`agentsmith approve`) and the commit message carries `Approval: A-xxxxxxxx`"
+            + (f" (cited {', '.join(cited)}, which is not in {gm.APPROVALS_FILE})" if cited else "")], summary
+
+
 def transition_problems(
     old: Optional[gm.PillarPolicy],
     new: gm.PillarPolicy,

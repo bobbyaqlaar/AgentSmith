@@ -36,7 +36,8 @@ export function StopControl({ tenantId, stopped }: { tenantId: string; stopped: 
     );
     setBusy(false);
     if (result.ok) {
-      setMessage(action === "stop" ? "Stopped." : "Resumed.");
+      // The app confirms by recording it; the page shows that once its record arrives (P2-R19).
+      setMessage(action === "stop" ? "Stop sent to the app." : "Resume sent to the app.");
       router.refresh();
     } else if (result.error) {
       setMessage(`Not ${action === "stop" ? "stopped" : "resumed"}: ${result.error}`);

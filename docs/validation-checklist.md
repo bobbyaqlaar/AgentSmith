@@ -121,6 +121,7 @@ CI stays the authority.
 | pytest (scripts/test/ — shadow eval sampling) | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `pytest scripts/test/ -v` | needs services |
 | verify_system.py --check-idempotency | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `python3 scripts/verify_system.py --check-idempotency` | needs services |
 | verify_system.py --check-dlq | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `python3 scripts/verify_system.py --check-dlq` | needs services |
+| AgentSmith's own evidence for its provider obligations | `.github/workflows/self-test.yml` · Python runtime behaviour tests (Postgres-backed) | `python3 scripts/compliance_port.py provider-evidence --out provider-evidence.json` | needs services |
 | bash -n / zsh -n syntax check | `.github/workflows/self-test.yml` · Shell scripts | (script) | yes |
 | npx tsc --noEmit — the portal type-checks | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npx tsc --noEmit` | yes |
 | npm test — cross-tenant isolation (no DB required) | `.github/workflows/self-test.yml` · Ops Portal (Next.js) | `npm test` | yes |

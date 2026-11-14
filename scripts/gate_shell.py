@@ -35,7 +35,6 @@ PROTECTED = (
     ".githooks/",
     ".agenticframework/approvals.jsonl",
     ".agenticframework/attestations.jsonl",
-    ".agenticframework/compliance.json",
     ".agenticframework/process-gates.json",
     ".claude/settings.json",
     ".cursor/hooks.json",

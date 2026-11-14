@@ -202,3 +202,128 @@ def test_an_action_receives_inherited_environment(tmp_path, scope):
     text = (f"on: issues\n{top}jobs:\n  a:\n    runs-on: ubuntu-latest\n{env}    steps:\n"
             f"      - uses: {CLAUDE}\n        with:\n          prompt: \"fix the issue\"\n")
     assert _failed(_check(tmp_path, text))
+
+
+# ── The 4.1.0 review's second pass: P2-R5 (.agent-rfc/designs/review-pass2-majors.md) ──
+
+
+@pytest.mark.parametrize("guard", [
+    # R9's negation, written with `== false` instead of `!`: runs only for outsiders.
+    "contains(fromJSON('[\"OWNER\",\"MEMBER\"]'), github.event.comment.author_association) == false",
+    "(github.event.comment.author_association == 'OWNER') == false",
+    # CONTRIBUTOR is anyone with one merged commit.
+    "contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\",\"CONTRIBUTOR\"]'), "
+    "github.event.comment.author_association)",
+    # The role word is there, but not as the allowed value.
+    "github.event.comment.author_association == 'NONE' && github.repository_owner == 'OWNER-co'",
+    # `&&` binds tighter than `||`: this runs for anyone who mentions the agent.
+    "contains(github.event.comment.body, '@claude') || github.event_name == 'x' && "
+    "github.event.comment.author_association == 'OWNER'",
+    # The issue's author is trusted; the comment's is not.
+    "github.event.issue.author_association == 'OWNER'",
+    # A negated group hides a positive term from the split.
+    "${{ !(contains(github.event.comment.body, '@claude') && github.event.comment.author_association == 'OWNER') }}",
+])
+def test_a_guard_that_only_looks_like_a_restriction_does_not_count(tmp_path, guard):
+    """P2-R5: each of these lets an outsider's comment reach the agent, and each was accepted."""
+    assert _failed(_check(tmp_path, _job(_action(COMMENT), job_if=guard)))
+
+
+@pytest.mark.parametrize("guard", [
+    # The common shape: only on issues, and only for the owner. A negated term in a
+    # conjunction can only narrow it.
+    "github.event.comment.author_association == 'OWNER' && !github.event.issue.pull_request",
+    "${{ github.event.comment.author_association == 'MEMBER' && contains(github.event.comment.body, '@claude') }}",
+    # Inside ${{ }}: a YAML value that starts with a quote is a quoted string.
+    "${{ 'COLLABORATOR' == github.event.comment.author_association }}",
+    # GitHub compares strings without case.
+    "github.event.comment.author_association == 'owner'",
+    "(github.event.comment.author_association == 'OWNER')",
+    # A list read as a string is a substring test, and no association outside OWNER and
+    # MEMBER (nor an undefined one) is a substring of it: it restricts. It was refused by
+    # spelling before; evaluated, it holds (P3-R1).
+    "contains('OWNER,MEMBER', github.event.comment.author_association)",
+])
+def test_a_term_that_can_only_narrow_to_trusted_authors_counts(tmp_path, guard):
+    assert not _failed(_check(tmp_path, _job(_action(COMMENT), job_if=guard)))
+
+
+# ── The 4.1.0 review's second pass: P2-R6 (.agent-rfc/designs/db-tests-in-ci-and-event-objects.md) ──
+
+
+@pytest.mark.parametrize("given", [
+    "${{ github.event.pull_request }}",
+    "${{ github.event.issue }}",
+    "${{ format('{0}', github.event.issue) }}",
+    "${{ github.event.comment }}",
+    "${{ github.event.review }}",
+    "${{ github.event.release }}",
+    "${{ github.event.workflow_run }}",
+    "${{ github.event.head_commit }}",
+    "${{ github.event.commits }}",
+    "${{ github.event.pull_request.head }}",
+    "${{ github.event }}",
+    "${{ github.event['issue'] }}",
+])
+def test_a_whole_event_object_is_untrusted_text(tmp_path, given):
+    """P2-R6: GitHub renders an object as JSON, title and body included, and it passed."""
+    assert _failed(_check(tmp_path, _job(_action(given))))
+
+
+def test_an_author_guard_does_not_excuse_a_whole_object(tmp_path):
+    """An object carries more than its author wrote: labels, branch names."""
+    guard = "github.event.comment.author_association == 'OWNER'"
+    assert _failed(_check(tmp_path, _job(_action("${{ github.event.comment }}"), job_if=guard)))
+
+
+@pytest.mark.parametrize("given", ["${{ github.event.issue.number }}", "${{ github.event.pull_request.head.sha }}",
+                                   "${{ github.event_name }}", "${{ github.event.action }}"])
+def test_a_field_of_an_object_that_an_outsider_does_not_write_still_passes(tmp_path, given):
+    assert not _failed(_check(tmp_path, _job(_action(given))))
+
+
+# ── The 4.1.0 review's third pass: P3-R1 (.agent-rfc/designs/pass3-root-causes.md) ──
+# The condition is evaluated, so these are the same guard spelled differently; every
+# spelling that lets an outsider through is reported, without a rule for each.
+
+A = "github.event.comment.author_association"
+
+
+@pytest.mark.parametrize("guard", [
+    f"({A} == 'OWNER' && github.event.issue.number > 0) == false",
+    f"({A} == 'OWNER' && github.event.issue.number > 0) != true",
+    f"${{{{ ({A} == 'OWNER' && github.event.issue.number > 0) == false }}}}",
+    f"false == ({A} == 'OWNER' && x)",
+    f"${{{{ !({A} == 'OWNER') }}}}",  # in ${{ }}: a YAML value that starts with ! is a tag
+    f"${{{{ !!({A} != 'OWNER') }}}}",  # in ${{ }}: a YAML value that starts with ! is a tag
+    f"{A} != 'OWNER' || {A} == 'OWNER'",
+    f"{A} == 'OWNER' || always()",
+    f"contains(fromJSON('[\"OWNER\",\"NONE\"]'), {A})",
+    f"startsWith({A}, 'CONTRIB') || {A} == 'MEMBER'",
+    f"{A} >= 'A'",
+    f"{A} == 'OWNER' && false || true",
+    "github.event.issue.author_association == 'OWNER'",  # another author's association
+    f"{A} == github.event.comment.user.login",             # compared with a value an outsider sets
+    f"{A} == 'OWNER' ${{{{ x }}}}",                         # text around an expression is a string: true
+    f"{A} === 'OWNER'",                                     # does not parse: may be true
+])
+def test_every_spelling_that_lets_an_outsider_through_is_reported(tmp_path, guard):
+    assert _failed(_check(tmp_path, _job(_action(COMMENT), job_if=guard)))
+
+
+@pytest.mark.parametrize("guard", [
+    f"${{{{ !({A} != 'OWNER') }}}}",  # in ${{ }}: a YAML value that starts with ! is a tag
+    f"({A} == 'OWNER' && contains(github.event.comment.body, '@claude')) == true",
+    f"${{{{ !!({A} == 'MEMBER') }}}}",
+    f"{A} == 'OWNER' && (github.event.issue.pull_request || true)",
+    f"contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), {A}) && !github.event.issue.pull_request",
+    f"({A} == 'OWNER' || {A} == 'MEMBER') && success()",
+])
+def test_every_spelling_that_keeps_outsiders_out_counts(tmp_path, guard):
+    assert not _failed(_check(tmp_path, _job(_action(COMMENT), job_if=guard)))
+
+
+def test_the_job_and_the_step_conditions_hold_together(tmp_path):
+    """A step condition that restricts is enough, whatever the job's says, and the reverse."""
+    step = f"      - uses: {CLAUDE}\n        if: {A} == 'MEMBER'\n        with:\n          prompt: \"{COMMENT}\"\n"
+    assert not _failed(_check(tmp_path, _job(step, job_if="github.event_name == 'issue_comment'")))

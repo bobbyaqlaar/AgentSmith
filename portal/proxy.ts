@@ -15,17 +15,14 @@ import type { NextRequest } from "next/server";
 import {
   ACTOR_HEADER,
   GRANTS_HEADER,
-  SINGLE_USER_GRANTS,
   encodeActorHeader,
   encodeGrantsHeader,
   getAccessForSsoEmail,
   stripAccessHeaders,
-  verifyBasicAuthCredentials,
   type Grant,
 } from "./lib/authz";
-import { constantTimeEquals } from "./lib/constantTime";
 import { SESSION_COOKIE_NAME, refreshedSessionToken, secureCookies, sessionLimits, verifySessionToken, type VerifiedSession } from "./lib/sessionToken";
-import { clearFailures, isLockedOut, LOCKOUT_SECONDS, recordFailure } from "./lib/signInPolicy";
+import { basicSignIn } from "./lib/signInPolicy";
 import {
   checkSessionRevocation,
   interpretStatusResponse,
@@ -205,49 +202,19 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  const authHeader = request.headers.get("authorization");
-  if (authHeader?.startsWith("Basic ")) {
-    const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf-8");
-    const sepIdx = decoded.indexOf(":");
-    const reqUser = sepIdx === -1 ? decoded : decoded.slice(0, sepIdx);
-    const reqPass = sepIdx === -1 ? "" : decoded.slice(sepIdx + 1);
-    // By account alone: a forwarded address is whatever the caller says it is.
-    const throttleKey = reqUser;
-    if (isLockedOut(throttleKey)) {
-      return new NextResponse("Too many failed sign-ins. Try again later.", { status: 429, headers: { "Retry-After": String(LOCKOUT_SECONDS) } });
-    }
-    // Legacy single-user fallback (OPS_PORTAL_USER/PASSWORD) is always an
-    // Administrator on every app — same behavior as before RBAC existed. OPS_PORTAL_USERS
-    // (multi-user, per-user role + tenant scope) takes precedence when set.
-    if (!process.env.OPS_PORTAL_USERS) {
-      // Constant-time, and both comparisons run before the branch so neither
-      // short-circuits the other. `===` on a password leaks it byte by byte
-      // through response timing; the multi-user path was fixed for exactly
-      // that (lib/authz.verifyBasicAuthCredentials) and this one — the DEFAULT
-      // configuration, the one docs/DESIGN.md › Universal Observability Platform calls the team-deployment
-      // minimum — kept the plain compare. A fix at one call site and not its
-      // sibling, again.
-      const userOk = constantTimeEquals(user ?? "", reqUser);
-      const passOk = constantTimeEquals(pass ?? "", reqPass);
-      if (userOk && passOk) {
-        clearFailures(throttleKey);
-        const headers = withAccessHeaders(stripForgedAccessHeaders(request), SINGLE_USER_GRANTS, reqUser);
-        return NextResponse.next({ request: { headers } });
-      }
-    } else {
-      const access = verifyBasicAuthCredentials(reqUser, reqPass);
-      if (access) {
-        clearFailures(throttleKey);
-        const headers = withAccessHeaders(stripForgedAccessHeaders(request), access.grants, access.actor);
-        return NextResponse.next({ request: { headers } });
-      }
-    }
-    recordFailure(throttleKey);
-    // Once per lockout: every failure would let anyone fill the audit log.
-    if (isLockedOut(throttleKey)) {
-      await appendAuditEvent({ eventType: "session_denied", actorId: reqUser, tenantId: null, details: { reason: "locked out after repeated failed sign-ins" } })
-        .catch(() => undefined); // the refusal stands whether or not it could be logged
-    }
+  // Only names that have an account are counted, and a locked account is answered as a
+  // wrong password is: a flood of invented names can neither fill the lockout nor refuse
+  // real users, and the answer does not say which names exist (P3-R6). lib/signInPolicy
+  // decides; this only answers.
+  const signIn = basicSignIn(request.headers.get("authorization"));
+  if (signIn?.granted) {
+    const headers = withAccessHeaders(stripForgedAccessHeaders(request), signIn.granted.grants, signIn.granted.actor);
+    return NextResponse.next({ request: { headers } });
+  }
+  // Once per lockout: every failure would let anyone fill the audit log.
+  if (signIn?.lockedNow) {
+    await appendAuditEvent({ eventType: "session_denied", actorId: signIn.user, tenantId: null, details: { reason: "locked out after repeated failed sign-ins" } })
+      .catch(() => undefined); // the refusal stands whether or not it could be logged
   }
 
   return new NextResponse("Authentication required.", {

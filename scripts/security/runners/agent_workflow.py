@@ -14,6 +14,7 @@ from typing import Any, Iterator
 
 import yaml
 
+from security import gha_expression
 from security.registry import ControlSpec
 from security.report import ControlResult
 from security.runners._shared import failed, passed
@@ -33,9 +34,12 @@ _UNTRUSTED = re.compile(
     r"|(?:commits\.[^.\s]+|head_commit|workflow_run\.head_commit)\.(?:message|author\.(?:email|name))"
     r"|pull_request\.head\.(?:ref|label|repo\.default_branch)"
     r"|workflow_run\.head_branch)\b"
-    r"|github\.head_ref\b|tojson\(\s*github(?:\.event)?\s*[).]", re.I)
+    r"|github\.head_ref\b|tojson\(\s*github(?:\.event)?\s*[).]"
+    # A whole object, rendered as JSON with the fields above inside it (the 4.1.0
+    # review's second pass, P2-R6). A field of one (`…issue.number`) is not this.
+    r"|github\.event(?:\.(?:pull_request\.head|issue|pull_request|discussion|comment|review_comment|review"
+    r"|release|workflow_run|head_commit|commits|pages))?(?![\w.\[])", re.I)
 _AUTHORED = ("issue", "pull_request", "discussion", "comment", "review", "review_comment")
-_TRUSTED_ROLES = ("OWNER", "MEMBER", "COLLABORATOR")
 
 
 def _normalised(expression: str) -> str:
@@ -86,25 +90,25 @@ def _uses_variable(text: str, name: str) -> bool:
     return re.search(rf"\$\{{?{escaped}\b|\$\{{\{{\s*env\.{escaped}\b", text) is not None
 
 
-def _restricts(condition: str) -> bool:
-    """A condition can only restrict when every part of it must hold: an `||` lets
-    another branch run the step for anyone, and a `!` can turn the test round (the
-    4.1.0 release review, R9). Refusing both is stricter than needed, and is a floor."""
-    return "||" not in condition and re.search(r"!(?!=)", condition) is None
+# Every author association GitHub defines that does not hold the repository, and one it
+# does not define, so a future value is not trusted by default.
+_UNTRUSTED_ROLES = ("CONTRIBUTOR", "FIRST_TIME_CONTRIBUTOR", "FIRST_TIMER", "MANNEQUIN", "NONE",
+                    "A_ROLE_GITHUB_HAS_NOT_DEFINED")
 
 
 def _guarded(field: str, conditions: list[str]) -> bool:
     """Is this field's own author restricted to people who already hold the repository?
-    Only an authored title or body: a branch name or commit message has no such author."""
+    Only an authored title or body: a branch name or commit message has no such author.
+
+    The conditions (the job's and the step's `if:`) are evaluated, not read: for every
+    association that is not OWNER, MEMBER or COLLABORATOR, they must be definitely false,
+    with every other context unknown. Reading the spelling accepted `||`, `!`, `== false`
+    and a negated group in turn, three rounds of one defect (R9, P2-R5, P3-R1)."""
     parts = field.lower().split(".")
-    if len(parts) != 4 or parts[:2] != ["github", "event"] or parts[2] not in _AUTHORED:
+    if len(parts) != 4 or parts[:2] != ["github", "event"] or parts[2] not in _AUTHORED or not conditions:
         return False
-    wanted = f"github.event.{parts[2]}.author_association"
-    for condition in conditions:
-        if (wanted in condition.lower() and "!=" not in condition and _restricts(condition)
-                and any(role in condition for role in _TRUSTED_ROLES)):
-            return True
-    return False
+    association = ("github", "event", parts[2], "author_association")
+    return not any(gha_expression.may_be_true(conditions, {association: role}) for role in _UNTRUSTED_ROLES)
 
 
 def _step_problems(step: dict, inherited: tuple[Any, ...], conditions: list[str]) -> list[str]:

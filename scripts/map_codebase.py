@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import ast
 import json
-import os
 import re
 import subprocess
 from pathlib import Path
@@ -146,11 +145,18 @@ def _parse_python(path: Path) -> tuple[list[str], list[str]]:
                 if isinstance(getattr(node, "_parent", None), type(None)):
                     symbols.append(node.name)
             elif isinstance(node, ast.Import):
-                for alias in node.names:
-                    imports.append(alias.name.split(".")[0])
+                # The full module path: `agentsmith.compliance`, never just
+                # `agentsmith`, or nothing resolves (the 4.1.0 review's third pass, P3-R17).
+                imports.extend(alias.name for alias in node.names)
             elif isinstance(node, ast.ImportFrom):
+                # `from a.b import c` may import the module `a.b.c` or a name in `a.b`:
+                # both are offered and the resolver keeps what exists. A relative import
+                # keeps its leading dots.
+                base = "." * node.level + (node.module or "")
                 if node.module:
-                    imports.append(node.module.split(".")[0])
+                    imports.append(base)
+                joiner = "" if base.endswith(".") or not base else "."
+                imports.extend(base + joiner + alias.name for alias in node.names if alias.name != "*")
 
         # Fix: mark parent on top-level nodes only
         symbols = [
@@ -177,16 +183,11 @@ def _parse_typescript(path: Path) -> tuple[list[str], list[str]]:
             re.MULTILINE,
         ):
             symbols.append(m.group(1))
-        # Import paths (local only — starts with . or /)
-        for m in re.finditer(r"""from\s+['"]([^'"]+)['"]""", source):
-            imp = m.group(1)
-            if imp.startswith("."):
-                imports.append(imp)
-        # Side-effect imports
-        for m in re.finditer(r"""import\s+['"]([^'"]+)['"]""", source):
-            imp = m.group(1)
-            if imp.startswith("."):
-                imports.append(imp)
+        # Every module specifier: `import … from`, `export … from`, side-effect
+        # `import "…"` and `import("…")`. Packages are kept here and dropped by the
+        # resolver, which knows the relative and `tsconfig` alias forms (P3-R17).
+        for m in re.finditer(r"""(?:\bfrom\s+|\bimport\s+|\bimport\s*\(\s*)['"]([^'"]+)['"]""", source):
+            imports.append(m.group(1))
     # fail-open: one unparsable file must not abort the whole codebase scan; it just
     # contributes no symbols/imports
     except Exception:
@@ -313,6 +314,35 @@ def _extract_guardrails_from_superpowers(superpowers_dir: Path, root: Path,
 # ── Resolve local import to file path ─────────────────────────────────────────
 
 
+def _tsconfig_aliases(source_file: Path, root: Path) -> list[tuple[str, Path]]:
+    """`compilerOptions.paths` of the nearest `tsconfig.json`, as (prefix, directory):
+    `"@/*": ["./*"]` in `portal/tsconfig.json` is ("@/", portal/)."""
+    folder = source_file.parent
+    while True:
+        config = folder / "tsconfig.json"
+        if config.is_file():
+            try:
+                options = json.loads(config.read_text(encoding="utf-8")).get("compilerOptions") or {}
+            except ValueError:
+                return []
+            base = folder / (options.get("baseUrl") or ".")
+            out = []
+            for pattern, targets in (options.get("paths") or {}).items():
+                if pattern.endswith("*") and targets and str(targets[0]).endswith("*"):
+                    out.append((pattern[:-1], (base / str(targets[0])[:-1]).resolve()))
+            return out
+        if folder == root or folder.parent == folder:
+            return []
+        folder = folder.parent
+
+
+def _inside(path: Path, root: Path) -> Optional[str]:
+    try:
+        return str(path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        return None
+
+
 def _resolve_local_import(
     source_file: Path,
     import_path: str,
@@ -320,42 +350,54 @@ def _resolve_local_import(
     lang: str,
 ) -> Optional[str]:
     """
-    Try to resolve a relative import string to a repo-relative path.
-    Returns None if unresolvable.
+    Resolve one import to a repo-relative path, or None when it is not a file of this
+    repository (a package, the standard library, a name rather than a module).
+
+    Python: a relative import from the importing file's package; an absolute one
+    against the repository root, the importing file's own directory and `scripts/`,
+    which the scripts put on `sys.path`. TypeScript: relative specifiers, and the
+    `paths` aliases of the nearest `tsconfig.json` (P3-R17).
     """
     if lang in ("python",):
-        # Python: module path → file path
-        parts = import_path.replace(".", os.sep)
-        candidates = [
-            root / (parts + ".py"),
-            root / parts / "__init__.py",
-        ]
-        for c in candidates:
-            if c.exists():
-                return str(c.relative_to(root))
+        dots = len(import_path) - len(import_path.lstrip("."))
+        parts = [p for p in import_path[dots:].split(".") if p]
+        if dots:
+            base = source_file.parent
+            for _ in range(dots - 1):
+                base = base.parent
+            roots = [base]
+        else:
+            roots = [root, source_file.parent, root / "scripts"]
+        for base in roots:
+            target = base.joinpath(*parts) if parts else base
+            for candidate in (Path(str(target) + ".py"), target / "__init__.py"):
+                if candidate.is_file():
+                    found = _inside(candidate, root)
+                    if found:
+                        return found
+        return None
+    if import_path.startswith("."):
+        bases = [(source_file.parent / import_path)]
     else:
-        # TS/JS: relative path
-        base = (source_file.parent / import_path).resolve()
-        for ext in (
-            ".ts",
-            ".tsx",
-            ".js",
-            ".jsx",
-            "/index.ts",
-            "/index.tsx",
-            "/index.js",
-        ):
-            # Plain concatenation covers both shapes: `foo` + `.ts` and
-            # `foo` + `/index.ts`. This was a ternary whose two branches were
-            # character-for-character identical — a special case someone
-            # started writing and did not need.
-            candidate = Path(str(base) + ext)
-            if candidate.exists():
-                return str(candidate.relative_to(root))
+        bases = [directory / import_path[len(prefix):] for prefix, directory in _tsconfig_aliases(source_file, root)
+                 if import_path.startswith(prefix)]
+    for base in bases:
+        for ext in ("", ".ts", ".tsx", ".js", ".jsx", ".mjs", "/index.ts", "/index.tsx", "/index.js"):
+            candidate = Path(str(base.resolve()) + ext)
+            if candidate.is_file():
+                found = _inside(candidate, root)
+                if found:
+                    return found
     return None
 
 
 # ── Main walker ───────────────────────────────────────────────────────────────
+
+
+# Raised whenever what the parsers extract changes. A graph built by another version is
+# re-parsed whole: the incremental path keeps a file's edges until the file changes, so a
+# parser fix never reached the graph (the 4.1.0 review's third pass, P3-R17).
+PARSER_VERSION = 2
 
 
 def run_map(verbose: bool = False, force: bool = False) -> dict:
@@ -377,6 +419,9 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
 
     root = _repo_root()
     kg = AgentKnowledgeGraph()
+    if kg._g.graph.get("parser_version") != PARSER_VERSION:
+        force = True
+    kg._g.graph["parser_version"] = PARSER_VERSION
 
     # Track which files we see during this walk
     seen_files: set[str] = set()

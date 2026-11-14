@@ -442,11 +442,17 @@ python3 scripts/verify_ttft.py                       # live Ollama time-to-first
 
 ### Compliance profile
 
+**Preview in 4.1.0.** Its known limits are listed in the CHANGELOG under "Known limits of the `dubai-gov` preview".
+
 Opt-in. `agentsmith compliance enable` (or `agentsmith tenant init --profile dubai-gov`) puts a repository on the `dubai-gov` profile,
 which helps an enterprise prepare for an assessment against the DESC Information Security Regulation and the other instruments in
 [`docs/uae-regulatory.md`](uae-regulatory.md). It is not legal advice and not a certificate. Python apps use the runtime directly; TypeScript and Go apps use the sidecar below.
 
-1. Fill in `.agenticframework/compliance.json`. Every `REPLACE_ME` must go.
+1. Fill in `.agenticframework/compliance.json`. Every `REPLACE_ME` must go. A person or a coding agent may edit it. Once filled, a
+   commit that weakens a duty (drops a language, widens the boundary, lengthens a session, shortens a retention, removes an agent or
+   changes an owner) is refused unless the owner records an approval at a terminal (`agentsmith approve`) and the commit message
+   carries `Approval: A-xxxxxxxx`. Every commit that changes the file is an entry in `.agent-history.log`; a refused weakening stays
+   unresolved there until someone resolves it.
 2. `agentsmith compliance status` lists every obligation and whether it is met.
 3. Sign each attested obligation: in the portal (**Ops › an app › Compliance checklist**, role `compliance_officer`), or at a terminal with
    `agentsmith attest OB-RISK --evidence <where> --role compliance_officer`. An agent cannot sign.
@@ -455,7 +461,7 @@ which helps an enterprise prepare for an assessment against the DESC Information
 5. `agentsmith compliance export` writes `docs/compliance-checklist.md` with the current state.
 
 **What a tenant app does on the profile.** Pass `data_class=` on every gateway call. Use `run_with_hitl_gate(..., tenant_id=..., compliance=True)` for
-each action in the agency manifest, and register `compliance_record_activity` on the worker. The gate's result must carry `requested_by`: the requester's sign-in email, exactly as the portal's identity provider gives it, so the portal can refuse a person deciding their own request; a name or an employee number is refused. A reviewer's decision answers only the request whose input it was shown: one given before the gate asked, or about other input, is ignored. Ship `.agenticframework/compliance.json` in the image (`.dockerignore` must not keep it out), or set `ENV COMPLIANCE_PROFILE` in the Dockerfile. Deleting the declaration while `process-gates.json` enforces the profile fails the compliance check; leave a profile through `agentsmith approve`. `agentsmith ops purge --apply` asks for the app id at a terminal, and writes its record in the same transaction as the delete. Set
+each action in the agency manifest, and register `compliance_record_activity` on the worker. The gate's result must carry `requested_by`: the requester's sign-in email, exactly as the portal's identity provider gives it, so the portal can refuse a person deciding their own request; a name or an employee number is refused. A reviewer's decision answers only the request it was shown: it names that request's record (`request_record_id`) and the digest of its input, and one given before the gate asked, on an earlier request, or about other input, is ignored. Ship `.agenticframework/compliance.json` in the image (`.dockerignore` must not keep it out), or set `ENV COMPLIANCE_PROFILE` in the Dockerfile. Deleting the declaration while `process-gates.json` enforces the profile fails the compliance check; leave a profile through `agentsmith approve`. `agentsmith ops purge --apply` asks for the app id at a terminal, and writes its record in the same transaction as the delete. Set
 `COMPLIANCE_PROFILE=dubai-gov`, `DATABASE_URL` and `COMPLIANCE_RECORD_KEY`, and run
 `agentsmith ops forward` on a schedule. A function raises `agentsmith.compliance.ComplianceRefused` when its record cannot be written, the app is
 stopped, or classified data would leave the boundary. The rest of the app keeps running.
@@ -478,7 +484,8 @@ classified, run them on self-hosted runners inside the boundary (`OB-CI-BOUNDARY
 **The developer pipeline is optional.** `scripts/multi_agent_system.py` needs `pip install --require-hashes -r requirements-pipeline.lock`. `local_agent_stack.py` does not.
 
 **When the portal is down,** apps keep running, records queue in the worker's database, and gates wait. `agentsmith ops stop --reason ...` stops an app from a
-terminal. Backups: `templates/onprem-deploy/scripts/backup.sh` (`DATABASE_URL`, `BACKUP_DIR`) and `restore.sh` (`RESTORE_URL`, an empty database), then `agentsmith ops restore-drill --restored-url ...`. Set `APP_COMMIT` on workers to put the commit on each decision record.
+terminal. The portal shows the stop the app recorded, from the portal or a terminal; a stop or resume sent from the portal reads "sent" until the app's record arrives.
+**Documents already in a pgvector store** when the profile is enabled: on the profile each app has its own id space, so run `agentsmith ops vector-claim` once (a dry run; `--apply` moves them, after a confirmation at a terminal, and writes a `vector_claim` record). Backups: `templates/onprem-deploy/scripts/backup.sh` (`DATABASE_URL`, `BACKUP_DIR`) and `restore.sh` (`RESTORE_URL`, an empty database), then `agentsmith ops restore-drill --restored-url ...`. Set `APP_COMMIT` on workers to put the commit on each decision record.
 
 #### The obligations
 

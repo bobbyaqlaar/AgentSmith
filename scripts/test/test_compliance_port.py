@@ -249,10 +249,6 @@ def test_an_enforced_profile_without_its_declaration_fails(tmp_path: Path) -> No
     assert result["verdict"] == "fail" and "compliance.json is missing" in result["reason"]
 
 
-def test_the_shell_gate_protects_the_declaration() -> None:
-    assert gate_shell._protects(".agenticframework/compliance.json")
-
-
 # ── The 4.1.0 release review: R23 ──
 
 
@@ -279,3 +275,101 @@ def test_a_portal_test_no_script_runs_is_not_evidence(tmp_path: Path, monkeypatc
                                 {}, {}, "", {}, own=True)
     assert found == ("fail", "portal/test/lonely.test.ts is in neither `npm test` nor `npm run test:db`, "
                              "so CI never runs it")
+
+
+# ── The 4.1.0 review's second pass: P2-R22 (.agent-rfc/designs/review-pass2-majors.md) ──
+
+
+def test_agentsmiths_own_evidence_is_produced_and_names_its_known_gap() -> None:
+    """P2-R22: the provider rows were `not_applicable` in every tenant and evaluated nowhere."""
+    document = cp.provider_evidence()
+    ids = {row["id"] for row in document["rows"]}
+    assert ids == {row.id for row in cp.load_catalogue() if row.layer == "provider"}
+    gap = _row(document, "OB-AUDIT-COVERAGE")
+    assert gap["result"] == "fail" and gap["known_gap"]
+    assert document["verdict"] == "pass", document  # every other row passes, and the one gap is named
+    assert document["known_gaps"] == ["OB-AUDIT-COVERAGE"]
+
+
+def test_a_provider_row_that_fails_and_is_not_a_known_gap_fails_the_evidence() -> None:
+    catalogue = [_mech("OB-X", "release:portal/app/api/audit/export/route.ts", layer="provider"),
+                 _mech("OB-AUDIT-COVERAGE", "release:portal/app/api/audit/export/route.ts", layer="provider")]
+    document = cp.provider_evidence(catalogue)
+    assert document["verdict"] == "fail" and _row(document, "OB-X")["known_gap"] is False
+
+
+def test_the_provider_evidence_command_exits_on_a_new_failure(tmp_path: Path, monkeypatch) -> None:
+    out = tmp_path / "provider-evidence.json"
+    assert cp.main(["provider-evidence", "--out", str(out)]) == 0
+    assert json.loads(out.read_text())["verdict"] == "pass"
+    monkeypatch.setattr(cp, "KNOWN_PROVIDER_GAPS", {})
+    assert cp.main(["provider-evidence", "--out", str(out)]) == 1
+
+
+def test_a_tenant_reads_where_the_provider_evidence_is_and_a_known_gap_as_pending(tmp_path: Path) -> None:
+    catalogue = [_mech("OB-X", "release:agentsmith/test/test_compliance_runtime.py", layer="provider"),
+                 _mech("OB-AUDIT-COVERAGE", "release:portal/app/api/audit/export/route.ts", layer="provider")]
+    result = cp.evaluate(_repo(tmp_path), "production", NOW, [], security={}, catalogue=catalogue)
+    row = _row(result, "OB-X")
+    assert row["result"] == "not_applicable" and "provider-evidence" in row["message"]
+    gap = _row(result, "OB-AUDIT-COVERAGE")
+    assert gap["result"] == "pending" and "does not yet prove" in gap["message"]
+    assert result["verdict"] == "pass"
+
+
+def test_ci_and_the_release_run_the_provider_evidence() -> None:
+    for workflow in ("self-test.yml", "release.yml"):
+        text = (REPO / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
+        assert "compliance_port.py provider-evidence" in text, workflow
+
+
+def test_a_known_gap_that_starts_passing_must_leave_the_list() -> None:
+    catalogue = [_mech("OB-AUDIT-COVERAGE", "release:agentsmith/test/test_compliance_runtime.py", layer="provider")]
+    document = cp.provider_evidence(catalogue)
+    assert document["verdict"] == "fail" and "KNOWN_PROVIDER_GAPS" in document["reason"]
+
+
+def test_ci_runs_the_compliance_database_tests() -> None:
+    """P2-R23: the tests behind OB-RECORD and OB-STOP skipped in every CI run, because
+    nothing set COMPLIANCE_TEST_DSN."""
+    import yaml
+
+    workflow = yaml.safe_load((REPO / ".github" / "workflows" / "self-test.yml").read_text(encoding="utf-8"))
+    job = next(job for job in workflow["jobs"].values()
+               if any("pytest agentsmith/test/" in str(step.get("run") or "") for step in job.get("steps") or []))
+    assert "postgres" in (job.get("services") or {})
+    env = job.get("env") or {}
+    assert env.get("COMPLIANCE_TEST_DSN", "").startswith("postgresql://")
+    assert env.get("AGENTSMITH_REQUIRE_DB") == "1"
+
+
+def test_a_required_database_that_is_missing_fails_rather_than_skips() -> None:
+    """The guard on P2-R23 can fail: required and absent is red."""
+    import os
+
+    env = {k: v for k, v in os.environ.items() if k != "COMPLIANCE_TEST_DSN"}
+
+    def run(required: str) -> int:
+        return subprocess.run(
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+             "agentsmith/test/test_compliance_runtime.py::test_the_database_tests_run_where_they_are_required"],
+            cwd=REPO, env={**env, "AGENTSMITH_REQUIRE_DB": required}, capture_output=True, text=True, check=False,
+        ).returncode
+
+    assert run("1") != 0
+    assert run("") == 0
+
+
+# ── The 4.1.0 review's second pass: P2-R20 (.agent-rfc/designs/one-signature-rule-and-incident-controls.md) ──
+
+SIGNATURE_CASES = json.loads((REPO / "fixtures" / "compliance" / "signature_cases.json").read_text())["cases"]
+
+
+@pytest.mark.parametrize("case", SIGNATURE_CASES, ids=[case["name"] for case in SIGNATURE_CASES])
+def test_the_port_picks_the_signature_the_shared_cases_name(case) -> None:
+    """The portal's checklist reads the same cases (portal/test/complianceState.test.ts)."""
+    records = [c.Attestation.model_validate({**r, "obligation": "OB-X", "actor": "x@y", "role": "r", "evidence": "e",
+                                             "note": "", "channel": "tty"}) for r in case["records"]]
+    now = datetime.fromisoformat(case["now"].replace("Z", "+00:00"))
+    found = cp.latest_valid(records, "OB-X", now, case["recurrence_days"])
+    assert (found.id if found else None) == case["counts"]

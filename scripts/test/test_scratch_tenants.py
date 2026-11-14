@@ -576,3 +576,40 @@ def test_every_job_that_waits_survives_a_red_run():
     text = WORKFLOW.read_text(encoding="utf-8")
     watches = [line for line in text.splitlines() if "gh run watch" in line and not line.strip().startswith("#")]
     assert watches and all(line.rstrip().endswith("|| rc=$?") for line in watches), watches
+
+
+# ── The 4.1.0 review's second pass: P2-R24 (.agent-rfc/designs/scratch-dates-and-worktree-tokens.md) ──
+
+
+def test_the_profiles_evidence_is_dated_when_the_tenant_is_built(tmp_path):
+    """P2-R24: the signatures were dated in the fixture, and since R15 a recurring one
+    expires on the catalogue's period, so the tenant would fail on its own in December."""
+    import shutil
+    from datetime import datetime, timedelta, timezone
+
+    sys.path.insert(0, str(REPO / "scripts"))
+    import compliance_port as cp
+
+    target = tmp_path / "agenticframework"
+    shutil.copytree(SCRATCH / "profiles" / "dubai-gov" / "agenticframework", target)
+    before = datetime.now(timezone.utc) - timedelta(seconds=5)
+    subprocess.run(["bash", str(SCRATCH / "date-fixtures.sh"), str(target)], check=True)
+    after = datetime.now(timezone.utc) + timedelta(seconds=5)
+
+    for drill in (target / "drills").glob("*.json"):
+        assert before <= datetime.fromisoformat(json.loads(drill.read_text())["at"]) <= after
+    records = [json.loads(line) for line in (target / "attestations.jsonl").read_text().splitlines() if line.strip()]
+    assert records
+    periods = {row.id: row.recurrence_days for row in cp.load_catalogue()}
+    for record in records:
+        signed = datetime.fromisoformat(record["attested_at"])
+        assert before <= signed <= after, record["id"]
+        assert record["expires_at"] is None  # the catalogue's period decides
+        if periods.get(record["obligation"]):
+            assert signed + timedelta(days=periods[record["obligation"]]) > after
+
+
+def test_build_dates_the_profile_through_the_one_script():
+    text = BUILD.read_text(encoding="utf-8")
+    assert '"$HERE/date-fixtures.sh" .agenticframework' in text
+    assert 'record["at"] =' not in text  # the inline drill loop is gone
