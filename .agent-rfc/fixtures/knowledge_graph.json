@@ -11195,11 +11195,13 @@
         "test_the_committed_graph_is_what_the_tree_builds",
         "test_the_committed_graph_holds_no_git_history",
         "test_history_never_writes_or_checks_the_committed_graph",
+        "history_repo",
         "test_a_commits_design_trailer_is_an_observed_link_and_requirement_links_are_inferred",
         "test_a_commit_node_holds_identifiers_and_no_text_from_history",
-        "test_a_range_the_checkout_cannot_resolve_is_recorded_not_fatal"
+        "test_a_range_the_checkout_cannot_resolve_is_recorded_not_fatal",
+        "git"
       ],
-      "last_modified": "2026-11-26T04:46:18Z",
+      "last_modified": "2026-11-26T04:47:20Z",
       "id": "scripts/test/test_trace_graph.py"
     },
     {
