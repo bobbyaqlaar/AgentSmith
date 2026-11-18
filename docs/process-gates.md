@@ -866,6 +866,15 @@ see Provisioning, above.
   Pro for a private repository (verified 2026-09-14 — the API answered "Upgrade
   to GitHub Pro or make this repository public"), and this repository was
   private until 2026-09-27.
+- **CI judges a range's commits and its two ends; a range with no known base is judged by its
+  head commit alone.** The per-commit rules (trailers, records, scope) run on each non-merge
+  commit. The before-and-after rules (the compliance declaration, the pillar policy, the
+  compliance profile) also run once from where the branch left its base (`git merge-base`) to
+  the head, so a weakening made in a merge commit or a conflict's resolution fails CI as the
+  hook would have refused it. With an all-zero or unknown base (a new branch, a first push, a
+  force-push) there is no start to compare with: only the head commit is judged, and the report
+  says so. A weakening one commit below such a head passes CI; the hook and the sweep still
+  refuse it locally.
 - **The commit guardrails skip what the tenant did not write.** The AI-marker,
   empty-handler and `cost_router` checks (`commit_guardrails`) do not run over a
   staged file that `.agenticframework/scaffold.json` records **and** that still

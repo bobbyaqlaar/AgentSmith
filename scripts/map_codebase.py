@@ -394,34 +394,45 @@ def _resolve_local_import(
 # ── Main walker ───────────────────────────────────────────────────────────────
 
 
-# Raised whenever what the parsers extract changes. A graph built by another version is
-# re-parsed whole: the incremental path keeps a file's edges until the file changes, so a
-# parser fix never reached the graph (the 4.1.0 review's third pass, P3-R17).
+# Raised whenever what the parsers extract changes. Recorded in the graph; every run parses
+# every file now, so it no longer decides whether a file is parsed again (P3-R17, P4-R8).
 PARSER_VERSION = 2
 
 
 def run_map(verbose: bool = False, force: bool = False) -> dict:
     """Walk the repo into the Knowledge Graph.
 
-    `force` re-parses every file instead of skipping those whose stored mtime
-    still matches. The incremental path is right for the post-commit hook, but
-    it can only ever repair a node whose FILE changed — a graph that is wrong
-    for any other reason (a hand edit, a bad merge, a truncated write) is
-    invisible to it and survives every subsequent run. One was committed and
-    pushed on 2026-08-24 with a node's symbols replaced by a test string; three
-    regenerations later it was still there, because middleware.ts had not been
-    touched. Callers that VERIFY the graph should force.
+    Every file is parsed and every import edge is built from nothing on every run: an edge
+    depends on the whole tree (adding `b.py` makes `import b` in an unchanged `a.py` resolve),
+    so no edge is kept from a previous run. The incremental walk this replaces skipped files
+    whose mtime matched and only ever added edges, so an import removed from the code stayed
+    in the graph until its file was deleted — 94 stale edges in the committed graph, and
+    `--check-kg` passed over them because it compared with what the same walk added (the
+    4.1.0 review's fourth pass, P4-R8).
+
+    `force` is accepted and does nothing: every run is a full rebuild. `agentsmith/cli.py`
+    and `verify_system.py` still pass it.
     """
+    del force
     try:
         from local_knowledge_graph import AgentKnowledgeGraph
     except ImportError:
         from scripts.local_knowledge_graph import AgentKnowledgeGraph
 
-    root = _repo_root()
     kg = AgentKnowledgeGraph()
-    if kg._g.graph.get("parser_version") != PARSER_VERSION:
-        force = True
+    with kg.batch():
+        return _walk(kg, verbose)
+
+
+def _walk(kg, verbose: bool) -> dict:
+    root = _repo_root()
     kg._g.graph["parser_version"] = PARSER_VERSION
+
+    # Rebuild, don't add: every import edge goes, and the walk below makes the ones the tree
+    # makes now. Other edge types (CAUSED_INCIDENT) are another tool's data and stay.
+    kg._g.remove_edges_from([
+        (s, t) for s, t, d in kg._g.edges(data=True) if d.get("edge_type") == "IMPORTS"
+    ])
 
     # Track which files we see during this walk
     seen_files: set[str] = set()
@@ -433,40 +444,16 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
     mapped = _mapped(root)
 
     # ── Walk source files ─────────────────────────────────────────────────────
+    from datetime import datetime, timezone
+
     for abs_path in _iter_source_files(root, mapped):
         lang = EXTENSION_TO_LANG.get(abs_path.suffix, "unknown")
         rel_path = str(abs_path.relative_to(root))
         seen_files.add(rel_path)
 
-        last_modified = abs_path.stat().st_mtime
-
-        from datetime import datetime, timezone
-
-        mtime_str = datetime.fromtimestamp(last_modified, tz=timezone.utc).strftime(
+        mtime_str = datetime.fromtimestamp(abs_path.stat().st_mtime, tz=timezone.utc).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
-
-        # Incremental skip (ReviewFindings-2026-07-18 C2): a node whose stored
-        # last_modified matches the file's current mtime was already parsed by
-        # a previous run — its symbols and import edges are in the graph.
-        # Skipping unchanged files turns the per-commit rebuild from
-        # "re-parse the whole repo" into "re-parse what the commit touched",
-        # and also skips the per-upsert graph save each node would trigger.
-        # (mtime granularity is 1s ISO here — a same-second rewrite is caught
-        # on the next run once the clock ticks; commits are slower than that.)
-        existing = None if force else (
-            kg._g.nodes[rel_path] if kg._g.has_node(rel_path) else None
-        )
-        if (
-            existing is not None
-            and existing.get("node_type") == "CodebaseFile"
-            and existing.get("last_modified") == mtime_str
-            and existing.get("language") == lang
-        ):
-            stats["unchanged"] += 1
-            if verbose:
-                print(f"  [{lang}] {rel_path} — unchanged, skipped")
-            continue
 
         parser = _PARSERS.get(lang)
         symbols, raw_imports = parser(abs_path) if parser else ([], [])
@@ -495,7 +482,7 @@ def run_map(verbose: bool = False, force: bool = False) -> dict:
     # inside the repo. That is why adding an ignore rule could not clean a graph
     # that already held 196 nodes from an IDE worktree: the files were still
     # there, so they were never stale. `seen_files` holds every file the walk
-    # included, skipped-as-unchanged ones too, so nothing of ours is in here.
+    # included, so nothing of ours is in here.
     stale = [
         node_id
         for node_id, attrs in kg._g.nodes(data=True)
@@ -570,7 +557,7 @@ if __name__ == "__main__":
         "-f",
         "--force",
         action="store_true",
-        help="Re-parse every file, ignoring the mtime skip (repairs a wrong graph)",
+        help="Accepted for old callers; every run is a full rebuild",
     )
     parser.add_argument(
         "-q",

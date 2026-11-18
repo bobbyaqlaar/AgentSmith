@@ -306,6 +306,9 @@ A = "github.event.comment.author_association"
     f"{A} == github.event.comment.user.login",             # compared with a value an outsider sets
     f"{A} == 'OWNER' ${{{{ x }}}}",                         # text around an expression is a string: true
     f"{A} === 'OWNER'",                                     # does not parse: may be true
+    f"${{{{ !success() || {A} == 'OWNER' }}}}",             # P4-R1: success() varies; an outsider can fail a step
+    f"success() == false || {A} == 'OWNER'",
+    f"{A} == 'OWNER' || !success()",
 ])
 def test_every_spelling_that_lets_an_outsider_through_is_reported(tmp_path, guard):
     assert _failed(_check(tmp_path, _job(_action(COMMENT), job_if=guard)))

@@ -196,7 +196,11 @@ def _text(value: Any) -> str:
 
 
 def _call(name: str, args: list) -> Any:
-    if name in ("success", "always"):
+    # The rule this evaluator keeps: a definite value only where GitHub's result is certain.
+    # always() is the one status function that is a constant. success() is false once an earlier
+    # step failed or the run was cancelled, which an outsider's pull request can cause; read as
+    # true, `!success() || <owner test>` was judged a guard (the 4.1.0 review's fourth pass, P4-R1).
+    if name == "always" and not args:
         return True
     if any(a is UNKNOWN for a in args):
         return UNKNOWN
@@ -220,7 +224,7 @@ def _call(name: str, args: list) -> Any:
         for index, value in enumerate(args[1:]):
             out = out.replace("{%d}" % index, _text(value))
         return out
-    return UNKNOWN  # failure(), cancelled(), hashFiles(), join() and anything else
+    return UNKNOWN  # success(), failure(), cancelled(), hashFiles(), join() and anything else
 
 
 def _eval(node: tuple, bindings: dict[tuple, Any]) -> Any:
