@@ -189,3 +189,126 @@ def test_ci_refuses_a_weakening_that_skipped_the_hook(tmp_path, monkeypatch, art
     result = tpg._ci(repo, base)
     assert result.returncode != 0, result.stdout + result.stderr
     assert "weakens a compliance duty" in result.stdout + result.stderr
+
+
+# ── The 4.1.0 review's fourth pass: P4-R4 (.agent-rfc/designs/pass4-majors.md) ──
+#
+# CI judged the commits of a range one at a time and skipped merges, so a weakening made in a
+# merge commit (or in a conflict's resolution) passed it while the hook refused it. CI now also
+# judges the range's two ends: what the declaration and the config were where the branch left
+# its base, and what they are at the head. The shapes below are how one change reaches a head.
+
+
+def _bare(repo: Path, *args: str) -> None:
+    tpg._git(repo, *args)
+
+
+def _side_and_main(repo: Path, side_change=None, main_change=None) -> None:
+    """A branch `side` off main, one commit each way, so a merge is a real merge."""
+    _bare(repo, "checkout", "-q", "-b", "side")
+    _write(repo, "notes.txt", "side\n")
+    if side_change is not None:
+        _write(repo, gp.DECLARATION_FILE, json.dumps(_with(side_change), indent=2) + "\n")
+    _bare(repo, "add", "-A")
+    _bare(repo, "commit", "-q", "--no-verify", "-m", "docs: side work")
+    _bare(repo, "checkout", "-q", "main")
+    _write(repo, "other.txt", "main\n")
+    if main_change is not None:
+        _write(repo, gp.DECLARATION_FILE, json.dumps(_with(main_change), indent=2) + "\n")
+    _bare(repo, "add", "-A")
+    _bare(repo, "commit", "-q", "--no-verify", "-m", "docs: main work")
+
+
+def _weaken_in_the_merge(repo: Path) -> None:
+    _side_and_main(repo)
+    _bare(repo, "merge", "-q", "--no-commit", "--no-ff", "side")
+    _write(repo, gp.DECLARATION_FILE, json.dumps(_with(lambda d: d["languages"].remove("ar")), indent=2) + "\n")
+    _bare(repo, "add", "-A")
+    _bare(repo, "commit", "-q", "--no-verify", "-m", "Merge branch 'side'")
+
+
+def _weaken_in_a_conflict_resolution(repo: Path) -> None:
+    _side_and_main(repo, side_change=lambda d: d["session"].update(absolute_hours=6),
+                   main_change=lambda d: d["session"].update(idle_minutes=10))
+    merged = tpg._git(repo, "merge", "-q", "--no-ff", "side", check=False)
+    assert merged.returncode != 0, "the two strengthenings were meant to conflict"
+
+    def resolved(d):
+        d["session"].update(idle_minutes=10, absolute_hours=6)
+        d["languages"].remove("ar")
+    _write(repo, gp.DECLARATION_FILE, json.dumps(_with(resolved), indent=2) + "\n")
+    _bare(repo, "add", "-A")
+    _bare(repo, "commit", "-q", "--no-verify", "-m", "Merge branch 'side'")
+
+
+def _weaken_on_the_branch(repo: Path) -> None:
+    _side_and_main(repo, side_change=lambda d: d["languages"].remove("ar"))
+    _bare(repo, "merge", "-q", "--no-ff", "--no-verify", "-m", "Merge branch 'side'", "side")
+
+
+@pytest.fixture()
+def declared(repo):
+    _write(repo, gp.DECLARATION_FILE, json.dumps(FILLED, indent=2) + "\n")
+    assert _commit(repo, "docs: declare the profile").returncode == 0
+    return repo, tpg._git(repo, "rev-parse", "HEAD").stdout.strip()
+
+
+@needs_git
+@pytest.mark.parametrize("shape", [_weaken_in_the_merge, _weaken_in_a_conflict_resolution, _weaken_on_the_branch],
+                         ids=["in-the-merge-commit", "in-a-conflict-resolution", "on-the-merged-branch"])
+def test_ci_refuses_a_weakening_however_the_range_is_shaped(declared, shape):
+    """P4-R4: `languages` loses `ar` between the range's two ends; no shape of history hides it."""
+    repo, base = declared
+    shape(repo)
+    result = tpg._ci(repo, base)
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "weakens a compliance duty" in result.stdout + result.stderr and "languages" in result.stdout
+
+
+@needs_git
+def test_ci_allows_a_weakening_in_a_merge_the_owner_approved(declared):
+    """The range rule takes the same approval route as the hook: recorded, and cited in the range."""
+    repo, base = declared
+    _side_and_main(repo)
+    _bare(repo, "merge", "-q", "--no-commit", "--no-ff", "side")
+    _write(repo, gp.DECLARATION_FILE, json.dumps(_with(lambda d: d["languages"].remove("ar")), indent=2) + "\n")
+    _write(repo, gm.APPROVALS_FILE, APPROVAL.model_dump_json() + "\n")
+    _bare(repo, "add", "-A")
+    _bare(repo, "commit", "-q", "--no-verify", "-m", "Merge branch 'side'\n\nApproval: A-0123abcd")
+    result = tpg._ci(repo, base)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+@needs_git
+def test_ci_measures_from_where_the_branch_left_not_from_the_base_tip(declared):
+    """Main strengthens after the branch left it; the branch never touches the declaration.
+    Measured from main's tip, the branch would read as weakening it."""
+    repo, _ = declared
+    _bare(repo, "checkout", "-q", "-b", "feature")
+    _write(repo, "notes.txt", "feature\n")
+    _bare(repo, "add", "-A")
+    _bare(repo, "commit", "-q", "--no-verify", "-m", "docs: feature work")
+    _bare(repo, "checkout", "-q", "main")
+    _write(repo, gp.DECLARATION_FILE, json.dumps(_with(lambda d: d["session"].update(idle_minutes=10)),
+                                                  indent=2) + "\n")
+    assert _commit(repo, "docs: shorter idle timeout").returncode == 0
+    main_tip = tpg._git(repo, "rev-parse", "HEAD").stdout.strip()
+    result = tpg._ci(repo, main_tip, head="feature")
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+@needs_git
+def test_ci_refuses_a_pillar_policy_turned_down_in_a_merge(declared):
+    """The range rule covers the config's ratchets too: `pillars` from `enforce` to `report`, made in
+    the merge commit itself, which the per-commit loop never sees."""
+    repo, base = declared
+    _side_and_main(repo)
+    _bare(repo, "merge", "-q", "--no-commit", "--no-ff", "side")
+    config = json.loads((repo / tpg.pg.CONFIG).read_text())
+    config["pillars"]["mode"] = "report"
+    _write(repo, tpg.pg.CONFIG, json.dumps(config, indent=2) + "\n")
+    _bare(repo, "add", "-A")
+    _bare(repo, "commit", "-q", "--no-verify", "-m", "Merge branch 'side'")
+    result = tpg._ci(repo, base)
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "range from" in result.stdout and "`pillars` would weaken" in result.stdout

@@ -713,11 +713,10 @@ def _kg_shape(kg_path: Path) -> Optional[str]:
     import edges between them — is exactly what goes stale when someone edits
     code and does not regenerate.
 
-    KNOWN LIMIT: map_codebase skips files whose stored mtime still matches, at
-    1-second granularity, so an edit made within the same second as the last
-    regeneration is not re-parsed and this check passes. Irrelevant in CI —
-    actions/checkout stamps every file fresh, so nothing is ever skipped — and
-    self-correcting locally on the next run once the clock ticks.
+    The other side of the comparison is map_codebase's build, which parses every
+    file and makes every import edge from nothing on each run (P4-R8). It used to
+    add to the graph it found, so a committed edge no file makes compared equal
+    to itself and this check passed over 94 of them.
     """
     if not kg_path.exists():
         return None

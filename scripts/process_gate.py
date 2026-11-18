@@ -589,6 +589,35 @@ def _declaration_change(files: List[str], message: str, read: Reader,
     return gp.declaration_transition(old, read(gp.DECLARATION_FILE), approvals, message)
 
 
+def policy_transitions(old: Optional[Config], new: Config, approvals: List["gm.Approval"]) -> List[str]:
+    """What going from one config to another does to the pillar policy and the compliance
+    profile. One implementation for a commit (`check_change`) and for a range's two ends
+    (`range_transitions`)."""
+    inherited = old.pillar_policy if old is not None and old.pillars_declared else None
+    return [*gp.transition_problems(inherited, new.pillar_policy, approvals),
+            *gp.compliance_transition_problems(old.compliance if old is not None else None,
+                                               new.compliance, approvals)]
+
+
+def range_transitions(before: Reader, after: Reader, messages: str) -> List[str]:
+    """The before-and-after rules on a range's two ends, whatever commits lie between.
+
+    CI judged a range one commit at a time and skipped merges, so a weakening made in a merge
+    commit or a conflict's resolution passed it while the hook refused it (the 4.1.0 review's
+    fourth pass, P4-R4). The two ends cannot be shaped around. The approval route is the hook's:
+    an approval recorded at the end, cited by a message in the range (`messages`, merges
+    included) or by the config entry."""
+    approvals = load_approvals(after)[0]
+    errors: List[str] = []
+    old_declaration, new_declaration = before(gp.DECLARATION_FILE), after(gp.DECLARATION_FILE)
+    if old_declaration != new_declaration:
+        errors.extend(gp.declaration_transition(old_declaration, new_declaration, approvals, messages)[0])
+    new_config = parse_config(after(CONFIG))[0]
+    if new_config is not None:
+        errors.extend(policy_transitions(parse_config(before(CONFIG))[0], new_config, approvals))
+    return errors
+
+
 def check_change(
     files: List[str],
     gated_lines: int,
@@ -637,11 +666,7 @@ def check_change(
     # anyone from.
     policy = config.pillar_policy
     previous_config = parse_config(previous(CONFIG))[0] if previous is not None else None
-    inherited = previous_config.pillar_policy if previous_config is not None \
-        and previous_config.pillars_declared else None
-    errors.extend(gp.transition_problems(inherited, policy, approvals))
-    errors.extend(gp.compliance_transition_problems(previous_config.compliance if previous_config is not None else None,
-                                                    config.compliance, approvals))
+    errors.extend(policy_transitions(previous_config, config, approvals))
     design_body = ""
 
     def na(name: str, value: str) -> bool:
@@ -1283,6 +1308,31 @@ def _range_commits(root: Path, base: str, head: str) -> Tuple[List[str], Optiona
     return [c for c in out.splitlines() if c], None
 
 
+def _range_starts(root: Path, base: str, head: str) -> List[str]:
+    """Where the range's branch left its base: the merge base(s) of base and head. Not the
+    base itself: a pull request's base is the tip of its branch, and a strengthening made
+    there after the fork would read as this branch weakening it. Empty when the base is
+    unknown (a new branch, a first push, a force-push): then only the head commit is judged,
+    as the caveat says and gate contracts 2 and 3 publish."""
+    if not base or set(base) == {"0"}:
+        return []
+    if subprocess.run(["git", "cat-file", "-e", f"{base}^{{commit}}"], cwd=root, check=False).returncode != 0:
+        return []
+    out = git("merge-base", "--all", base, head, cwd=root, check=False)
+    return [c for c in out.splitlines() if c]
+
+
+def _range_problems(root: Path, base: str, head: str) -> List[Tuple[str, str]]:
+    """-> [(start, problem)]: the before-and-after rules from each start of the range to its head."""
+    after = _reader_at(root, head)
+    found: List[Tuple[str, str]] = []
+    for start in _range_starts(root, base, head):
+        messages = git("log", "--format=%B", f"{start}..{head}", cwd=root, check=False)
+        found.extend((start, problem) for problem in range_transitions(_reader_at(root, start), after, messages)
+                     if (start, problem) not in found)
+    return found
+
+
 def _report(lines: List[str], annotations: List[str]) -> None:
     text = "\n".join(lines)
     print(text)
@@ -1496,6 +1546,7 @@ def check_commits(root: Path, commits: List[str], records: Optional[List[Dict[st
         # CI used to skip some ungated commits and judge the rest without the parent, so
         # a rule the hook applies to every commit (the declaration ratchet) never ran here
         # (the 4.1.0 review's third pass, P3-R3). Every commit now takes the hook's route.
+        # Merges are not in this list; `ci_verdict` judges the range's two ends for them (P4-R4).
         parent = git("rev-parse", "--verify", "-q", f"{commit}^", cwd=root, check=False).strip()
         previous = _reader_at(root, parent) if parent else None
         added = _added_lines(git("show", "--format=", "-U0", "--root", commit, cwd=root, check=False))
@@ -1542,6 +1593,9 @@ def ci_verdict(base: str, head: str, record: bool = False, json_path: Optional[s
     commits, caveat = _range_commits(root, base, head)
     records: Optional[List[Dict[str, object]]] = [] if record else None
     failures, escapes, unadopted, range_files, gated_commits = check_commits(root, commits, records)
+    # The commits above are judged one at a time, merges skipped; the range's two ends are
+    # judged here, so no shape of history (a merge, a conflict's resolution) hides a weakening.
+    range_problems = _range_problems(root, base, head)
     document: Optional[Dict[str, object]] = None
     if record:
         # Built whatever the verdict: a failed range is exactly what the Dev
@@ -1587,6 +1641,8 @@ def ci_verdict(base: str, head: str, record: bool = False, json_path: Optional[s
     for commit, subject, errors in failures:
         report.append(f"- ❌ `{commit[:10]}` {subject}")
         report.extend(f"  - {e}" for e in errors)
+    for start, problem in range_problems:
+        report.append(f"- ❌ range from `{start[:10]}` to the head: {problem}")
     if changelog_error:
         report.append(f"- ❌ {changelog_error}")
     for commit, subject, note in escapes:
@@ -1595,12 +1651,14 @@ def ci_verdict(base: str, head: str, record: bool = False, json_path: Optional[s
         report.append(f"- ℹ️ `{commit[:10]}` {subject} — before this repo adopted the gates; not checked")
     art_code, art_lines = artifacts_report(root, head_config)
     report.extend(f"- {'❌' if art_code else 'ℹ️'} {line}" for line in art_lines)
-    if not failures and not changelog_error and not art_code:
+    if not failures and not range_problems and not changelog_error and not art_code:
         report.append("- ✅ every gated commit carries a resolving Design and a clean, same-commit Review")
     annotations = [f"::error title=Process gate {c[:10]}::{e}" for c, _s, errs in failures for e in errs]
+    annotations.extend(f"::error title=Process gate (range)::{problem}" for _start, problem in range_problems)
     if changelog_error:
         annotations.append(f"::error title=Process gate::{changelog_error}")
-    return (1 if failures or changelog_error or art_code else 0), report, annotations, document
+    failed = failures or range_problems or changelog_error or art_code
+    return (1 if failed else 0), report, annotations, document
 
 
 def cmd_ci_decision(base: str, head: str) -> int:

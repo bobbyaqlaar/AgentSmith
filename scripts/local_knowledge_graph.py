@@ -28,8 +28,9 @@ Usage:
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Iterator, Literal, Optional
 
 try:
     import networkx as nx
@@ -68,6 +69,7 @@ class AgentKnowledgeGraph:
             )
         self._path = _graph_path()
         self._g: nx.DiGraph = self._load()
+        self._batching = False
 
     # ── Persistence ───────────────────────────────────────────────────────────
 
@@ -90,7 +92,21 @@ class AgentKnowledgeGraph:
                 )
         return nx.DiGraph()
 
+    @contextmanager
+    def batch(self) -> Iterator["AgentKnowledgeGraph"]:
+        """Mutations inside are written once, at the end, not one file write each. A full
+        rebuild of this repository wrote the graph ~760 times and took ~28 s; the walk in
+        map_codebase rebuilds every edge on every run, so it writes once."""
+        self._batching = True
+        try:
+            yield self
+        finally:
+            self._batching = False
+        self.save()
+
     def save(self) -> None:
+        if self._batching:
+            return
         data = nx_json.node_link_data(self._g)
         with self._path.open("w") as fh:
             json.dump(data, fh, indent=2, default=str)
