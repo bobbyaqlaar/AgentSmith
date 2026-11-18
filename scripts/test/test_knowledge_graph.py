@@ -4,8 +4,8 @@ walker (TestCoverageReview-2026-07-21 gap 3).
 
 Covers: upsert/persist/reload round-trip, import edges, incident injection,
 subgraph context window, symbol/impact queries, stale-node purge, and the
-incremental mtime skip added in ReviewFindings C2 (previously verified only
-by hand in a scratch repo — now pinned here).
+full rebuild of every edge on every run that replaced the incremental mtime
+skip of ReviewFindings C2 (P4-R8).
 
 Runs entirely in a tmp repo root; requires networkx (in requirements.txt —
 same dependency verify_system.py --check-kg already assumes in CI).
@@ -135,20 +135,20 @@ def test_walker_upserts_symbols_and_edges(repo):
     assert kg._g.has_edge("app.py", "helper.py")  # resolved local import
 
 
-def test_walker_incremental_skip_and_purge(repo):
-    """Pin the C2 behavior: unchanged → skipped; touched → re-parsed;
-    deleted → purged."""
+def test_walker_rebuilds_every_run_and_purges(repo):
+    """Every run parses every file (P4-R8 replaced the C2 mtime skip, which only ever added
+    edges); a second run over an unchanged tree builds the same graph; a deleted file's node
+    goes."""
     _write_sample(repo)
     map_codebase.run_map()
+    first = AgentKnowledgeGraph()._g
 
     s2 = map_codebase.run_map()
-    assert s2 == {**s2, "upserted": 0, "unchanged": 2, "purged": 0}
-
-    # mtime granularity is 1s in the stored ISO string — bump explicitly
-    st = (repo / "app.py").stat()
-    os.utime(repo / "app.py", (st.st_atime, st.st_mtime + 2))
-    s3 = map_codebase.run_map()
-    assert s3["upserted"] == 1 and s3["unchanged"] == 1
+    assert s2 == {**s2, "upserted": 2, "unchanged": 0, "purged": 0}
+    second = AgentKnowledgeGraph()._g
+    assert set(second.edges) == set(first.edges)
+    assert {n: d["symbols"] for n, d in second.nodes(data=True)} == \
+        {n: d["symbols"] for n, d in first.nodes(data=True)}
 
     (repo / "helper.py").unlink()
     s4 = map_codebase.run_map()
@@ -274,6 +274,7 @@ def test_a_production_incident_survives_the_walk(repo):
     a walk. A purge keyed on "not seen" alone would delete them on the next
     run — the node TYPE is the filter, as it is for files."""
     _write_sample(repo)
+    map_codebase.run_map()  # app.py is a node, so the incident links to it
     kg = AgentKnowledgeGraph()
     kg.inject_production_learning(
         "incident:2026-10-18-01", event="gateway timeout", agent="analyst",
@@ -282,7 +283,10 @@ def test_a_production_incident_survives_the_walk(repo):
 
     map_codebase.run_map()
 
-    assert AgentKnowledgeGraph()._g.has_node("incident:2026-10-18-01")
+    graph = AgentKnowledgeGraph()._g
+    assert graph.has_node("incident:2026-10-18-01")
+    # The rebuild drops import edges only (P4-R8): the incident's link to its file is another tool's data.
+    assert graph.has_edge("app.py", "incident:2026-10-18-01")
 
 
 def test_walker_extracts_guardrails(repo):
@@ -422,3 +426,172 @@ def test_outside_a_git_checkout_everything_maps(repo):
     assert map_codebase._mapped(repo) is None
     map_codebase.run_map()
     assert "rfc:001.md" in AgentKnowledgeGraph()._g
+
+
+# ── The 4.1.0 review's third pass: P3-R17 (.agent-rfc/designs/pass3-root-causes.md) ──
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+def _python_edges(tmp_path: Path, files: dict[str, str], source: str) -> set[str]:
+    for rel, text in files.items():
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(text)
+    _symbols, raw = map_codebase._parse_python(tmp_path / source)
+    found = {map_codebase._resolve_local_import(tmp_path / source, imp, tmp_path, "python") for imp in raw}
+    return {f for f in found if f}
+
+
+def test_a_python_import_keeps_its_full_module_path(tmp_path):
+    """P3-R17: only the first component was kept, so `from agentsmith import compliance`
+    resolved to nothing and `kg impact` named no Python dependents."""
+    files = {"pkg/__init__.py": "", "pkg/mod.py": "", "pkg/sub/__init__.py": "", "pkg/sub/deep.py": "",
+             "scripts/helper.py": "", "scripts/tool.py": "", "app.py": ""}
+    files["app.py"] = "from pkg import mod\nimport pkg.sub.deep\n"
+    assert _python_edges(tmp_path, files, "app.py") >= {"pkg/mod.py", "pkg/sub/deep.py"}
+    files["pkg/sub/deep.py"] = "from .. import mod\nfrom . import x\n"
+    assert "pkg/mod.py" in _python_edges(tmp_path, files, "pkg/sub/deep.py")
+    files["scripts/tool.py"] = "import helper\n"  # a script beside it, on sys.path
+    assert "scripts/helper.py" in _python_edges(tmp_path, files, "scripts/tool.py")
+
+
+def test_a_typescript_import_through_a_tsconfig_alias_resolves(tmp_path):
+    """P3-R17: the portal imports through `@/`, and every such edge was dropped."""
+    (tmp_path / "portal/lib").mkdir(parents=True)
+    (tmp_path / "portal/tsconfig.json").write_text('{"compilerOptions": {"paths": {"@/*": ["./*"]}}}')
+    (tmp_path / "portal/lib/db.ts").write_text("export const pool = 1;\n")
+    (tmp_path / "portal/lib/auth.ts").write_text("export const a = 1;\n")
+    page = tmp_path / "portal/page.tsx"
+    page.write_text('import { pool } from "@/lib/db";\n'
+                    'export { a } from "./lib/auth";\n'
+                    'const m = await import("@/lib/auth");\n')
+    _symbols, raw = map_codebase._parse_typescript(page)
+    found = {map_codebase._resolve_local_import(page, imp, tmp_path, "typescript") for imp in raw}
+    assert {"portal/lib/db.ts", "portal/lib/auth.ts"} <= found
+
+
+def test_the_committed_graph_knows_who_imports_the_compliance_runtime():
+    """The two files the third review measured: 22 and 37 importers, and 0 edges in the graph."""
+    import json
+
+    graph = json.loads((REPO / ".agent-rfc/fixtures/knowledge_graph.json").read_text())
+    importers = lambda target: {e["source"] for e in graph["edges"] if e["target"] == target}  # noqa: E731
+    assert len(importers("agentsmith/compliance.py")) >= 15
+    assert len(importers("agentsmith/llm_gateway.py")) >= 25
+    assert len(importers("portal/lib/db.ts")) >= 10
+
+
+def test_a_graph_built_by_another_parser_is_parsed_again_whole(repo):
+    """P3-R17: the incremental walk kept a file's edges until the file changed, so a parser
+    fix never reached the graph. Every run is whole now, whatever version built the graph."""
+    _write_sample(repo)
+    map_codebase.run_map()
+    kg = AgentKnowledgeGraph()
+    kg._g.remove_edge("app.py", "helper.py")
+    kg._g.graph["parser_version"] = map_codebase.PARSER_VERSION - 1
+    kg.save()
+    stats = map_codebase.run_map()  # no file changed
+    assert stats["unchanged"] == 0
+    graph = AgentKnowledgeGraph()._g
+    assert graph.has_edge("app.py", "helper.py")
+    assert graph.graph["parser_version"] == map_codebase.PARSER_VERSION
+
+
+# ── P4-R8: rebuild, don't add (.agent-rfc/designs/pass4-majors.md) ───────────
+#
+# A re-parsed file's imports were added to the edges it already had, and an unchanged file was
+# not looked at, so an import removed from the code stayed in the graph until its file was
+# deleted. Edges depend on the whole tree, so every run now builds them from nothing.
+
+
+def _imports(repo: Path) -> set[tuple[str, str]]:
+    graph = AgentKnowledgeGraph()._g
+    return {(s, t) for s, t, d in graph.edges(data=True) if d.get("edge_type") == "IMPORTS"}
+
+
+def _fresh_imports(repo: Path, tmp_path: Path, monkeypatch) -> set[tuple[str, str]]:
+    """The same tree, copied to a directory with no graph, built there."""
+    import shutil
+    fresh = tmp_path / "fresh"
+    shutil.rmtree(fresh, ignore_errors=True)
+    shutil.copytree(repo, fresh, ignore=shutil.ignore_patterns(".agent-rfc"))
+    monkeypatch.chdir(fresh)
+    try:
+        map_codebase.run_map()
+        return _imports(fresh)
+    finally:
+        monkeypatch.chdir(repo)
+
+
+def _bump(path: Path) -> None:
+    st = path.stat()
+    os.utime(path, (st.st_atime, st.st_mtime + 2))
+
+
+def test_a_file_that_stops_importing_loses_its_edge(repo):
+    _write_sample(repo)
+    map_codebase.run_map()
+    assert ("app.py", "helper.py") in _imports(repo)
+    (repo / "app.py").write_text("def main():\n    return 1\n")
+    _bump(repo / "app.py")
+    map_codebase.run_map()
+    assert ("app.py", "helper.py") not in _imports(repo)
+
+
+def test_an_edge_no_file_makes_does_not_survive_a_build(repo):
+    """No file changed, so nothing was re-parsed, and the invented edge stayed (E11)."""
+    _write_sample(repo)
+    map_codebase.run_map()
+    kg = AgentKnowledgeGraph()
+    kg.add_import("helper.py", "app.py")
+    map_codebase.run_map()
+    assert _imports(repo) == {("app.py", "helper.py")}
+
+
+def test_a_new_file_an_unchanged_file_already_imports_gets_its_edge(repo):
+    """`import helper` in an untouched app.py resolves once helper.py exists (E5)."""
+    (repo / "app.py").write_text("import helper\n")
+    map_codebase.run_map()
+    assert _imports(repo) == set()
+    (repo / "helper.py").write_text("X = 1\n")
+    map_codebase.run_map()
+    assert _imports(repo) == {("app.py", "helper.py")}
+
+
+def test_any_edit_sequence_builds_what_a_fresh_tree_builds(repo, tmp_path, monkeypatch):
+    (repo / "pkg").mkdir()
+    (repo / "pkg/__init__.py").write_text("")
+    (repo / "a.py").write_text("import b\nimport pkg.c\n")
+    (repo / "b.py").write_text("import pkg.c\n")
+    (repo / "pkg/c.py").write_text("X = 1\n")
+    steps = [
+        lambda: (repo / "a.py").write_text("import pkg.c\n"),            # an import removed
+        lambda: (repo / "b.py").rename(repo / "d.py"),                   # importer unchanged, target renamed
+        lambda: (repo / "b.py").write_text("Y = 2\n"),                   # the old name comes back
+        lambda: (repo / "pkg/c.py").unlink(),                            # a target deleted
+        lambda: (repo / "d.py").write_text("from pkg import c\nimport a\n"),
+    ]
+    map_codebase.run_map()
+    for step in steps:
+        step()
+        for path in repo.rglob("*.py"):
+            _bump(path)
+        map_codebase.run_map()
+        assert _imports(repo) == _fresh_imports(repo, tmp_path, monkeypatch)
+
+
+def test_the_check_fails_on_a_committed_edge_no_file_makes(monkeypatch, tmp_path):
+    """`--check-kg` compared the committed graph with what the same additive builder made of it,
+    so the stale edges passed it (P4-R8). It now compares with a build from nothing."""
+    import subprocess
+    import verify_system
+    repo = tmp_path / "tracked"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    monkeypatch.chdir(repo)
+    _write_sample(repo)
+    map_codebase.run_map()
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    assert verify_system.check_kg_fresh() is True
+    AgentKnowledgeGraph().add_import("helper.py", "app.py")
+    assert verify_system.check_kg_fresh() is False

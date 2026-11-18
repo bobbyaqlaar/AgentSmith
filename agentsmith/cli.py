@@ -1092,7 +1092,16 @@ def _gate_kg(scripts: Path, verb: Optional[str], base: Optional[str]) -> int:
     import subprocess as sp
 
     if verb == "build":
-        return sp.run([sys.executable, str(scripts / "map_codebase.py"), "--quiet"], check=False).returncode
+        # Whole, never incremental: a person asking for the graph wants it right, and the
+        # incremental path keeps a file's old edges until the file changes (P3-R17).
+        code = sp.run([sys.executable, str(scripts / "map_codebase.py"), "--quiet", "--force"], check=False).returncode
+        # The trace graph reads the knowledge graph's edges, so it is rebuilt with it, in a repository that tracks
+        # one (AgentSmith's own: it reads this repository's backlog and catalogue; a tenant has neither).
+        tracked = sp.run(["git", "ls-files", "--error-unmatch", ".agent-rfc/fixtures/trace_graph.json"],
+                         capture_output=True, check=False).returncode == 0
+        if code == 0 and tracked:
+            code = sp.run([sys.executable, str(scripts / "trace_graph.py")], check=False).returncode
+        return code
     if verb == "impact":
         scope = ["--base", base] if base else ["--staged"]
         return sp.run([sys.executable, str(scripts / "local_knowledge_graph.py"), "--impact", "--json", *scope],
@@ -1214,6 +1223,22 @@ def _cmd_ops_compliance(args: argparse.Namespace) -> int:
                     return confirmed
             count = compliance.purge_runs(tenant, apply=args.apply)
             print(f"{'Deleted' if args.apply else 'Would delete'} {count} run(s) past the declared retention.")
+            return 0
+        if args.verb == "vector-claim":
+            # Documents written before the profile join this app's id space (P2-R17).
+            # It changes who owns data, so a person confirms it, as a purge.
+            from agentsmith import vector_store
+
+            found = vector_store.claim_legacy(tenant, apply=False)
+            if args.apply:
+                confirmed = _confirm_at_terminal(
+                    "vector-claim", f"Move {found['claimable']} document(s) with no owner, or {tenant}'s without its "
+                    f"id space, into {tenant}'s?", tenant)
+                if confirmed is not True:
+                    return confirmed
+                found = vector_store.claim_legacy(tenant, apply=True)
+            print(f"{'Moved' if args.apply else 'Would move'} {found['claimable']} document(s) into {tenant}'s id "
+                  f"space; {found['already_held']} skipped, because {tenant} already holds that id.")
             return 0
         if args.verb == "restore-drill":
             if not args.restored_url:
@@ -1930,8 +1955,9 @@ def build_parser() -> argparse.ArgumentParser:
     evals.set_defaults(func=_cmd_evals)
 
     ops = sub.add_parser("ops", help="send this repository's declared settings to its portal (contract/ops/v1)")
-    ops.add_argument("verb", choices=("settings", "stop", "resume", "forward", "verify", "purge", "restore-drill"))
-    ops.add_argument("--apply", action="store_true", help="purge: delete; without it, only count")
+    ops.add_argument("verb", choices=("settings", "stop", "resume", "forward", "verify", "purge", "restore-drill",
+                                      "vector-claim"))
+    ops.add_argument("--apply", action="store_true", help="purge, vector-claim: do it; without it, only count")
     ops.add_argument("--restored-url", default=None, help="restore-drill: the database restored from a backup")
     ops.add_argument("--tenant", default=None, help="stop|resume|forward|verify: the app (default: tenant.yaml)")
     ops.add_argument("--scope", default="*", help="stop|resume: a workflow id, or * for the whole app (default)")

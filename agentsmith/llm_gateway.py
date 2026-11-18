@@ -651,6 +651,9 @@ class LLMGateway:
 
         self.tenant_id = resolve_tenant_id(tenant_id)
         self.models = load_model_registry()
+        from agentsmith import token_limits
+
+        token_limits.check_declared_caps(self.models)
         # `budget.monthly_usd_cap` has been declared in tenant.yaml since the
         # scaffold shipped and was read by nothing: KYC declared $5 while this
         # line enforced $150 whenever AGENT_MONTHLY_USD_CAP was unset — and it
@@ -1290,22 +1293,22 @@ class LLMGateway:
         started_ns = time.time_ns()
         self._report_run_status(run_id, "running", workflow_id=workflow_id)
 
-        # Shared with _invoke() — this used to be a near-copy that omitted
-        # the anthropic branch entirely (TestbedFeedback G1).
-        base_url, api_key = self._resolve_endpoint(cfg)
-
-        path, headers, body = build_request(
-            provider, model_id, messages, api_key, max_tokens, temperature
-        )
-        body = {**body, "stream": True}
-        url = base_url.rstrip("/") + path
-
         import httpx
 
         start = time.perf_counter()
         ttft_ms: Optional[float] = None
         chunks: list[str] = []
         try:
+            # Inside the try that releases: a request that cannot be built was never
+            # sent, and kept its reservations when this ran before it (the 4.1.0
+            # review's second pass, P2-R1). Shared with _invoke() — this used to be a
+            # near-copy that omitted the anthropic branch entirely (TestbedFeedback G1).
+            base_url, api_key = self._resolve_endpoint(cfg)
+            path, headers, body = build_request(
+                provider, model_id, messages, api_key, max_tokens, temperature
+            )
+            body = {**body, "stream": True}
+            url = base_url.rstrip("/") + path
             async with httpx.AsyncClient(timeout=120.0) as client:
                 async with client.stream(
                     "POST", url, json=body, headers=headers

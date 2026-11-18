@@ -74,6 +74,27 @@ def record(root: Path, event: str, detail: str) -> None:
         pass
 
 
+def record_event(root: Path, event: str, detail: str, *, level: str = "INFO", resolved: bool = True) -> None:
+    """Append one entry to the audit log as it is, without deduplicating: each is a
+    separate action someone took (the compliance declaration's changes, for one)."""
+    entry = {
+        "timestamp": _now(),
+        "level": level,
+        "event": event,
+        "detail": detail,
+        "agent": "process-gate",
+        "agent_role": "gate",
+        "project": Path(root).name,
+        "owner_id": os.environ.get("AGENT_OWNER_ID") or "unknown",
+        "hitl_resolved": resolved,
+    }
+    try:
+        with (Path(root) / LOG).open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry) + "\n")
+    except OSError:  # fail-open: a log that cannot be written must not break the hook
+        pass
+
+
 def _git_dir(root: Path) -> Optional[Path]:
     found = subprocess.run(["git", "rev-parse", "--absolute-git-dir"], cwd=root,
                            capture_output=True, text=True, check=False).stdout.strip()

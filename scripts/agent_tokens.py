@@ -9,8 +9,9 @@ Only Claude Code is read: the other agents' payloads and shells are unconfirmed 
 No measurement is no trailer, never a zero. Counts only — no prompt or response text
 leaves the transcript.
 
-One checkout may hold several sessions at once, so the ledger keeps one entry per
-transcript, and a commit is charged to the session whose shell made it
+One checkout, or its worktrees, may hold several sessions at once, so the ledger (in the
+git directory they share) keeps one entry per transcript, and a commit is charged to the
+session whose shell made it
 (`CLAUDE_CODE_SESSION_ID`); with several sessions and no way to tell, it says only
 which agent. The baseline moves only once the commit is seen to have landed, so a
 commit a later hook refused charges nothing, and `--amend` carries what the commit it
@@ -47,9 +48,14 @@ _FORGET_AFTER = 14 * 86_400
 
 
 def _git_dir(root: Path) -> Optional[Path]:
-    done = subprocess.run(["git", "-C", str(root), "rev-parse", "--absolute-git-dir"],
+    """The git directory every worktree of this repository shares. A linked worktree's
+    own (`.git/worktrees/<name>`) held no session, because the hooks ran in the main
+    checkout, so its commits carried `Agent:` alone (the 4.1.0 review's second pass, P2-R4)."""
+    done = subprocess.run(["git", "-C", str(root), "rev-parse", "--git-common-dir"],
                           capture_output=True, text=True, check=False)
-    return Path(done.stdout.strip()) if done.returncode == 0 and done.stdout.strip() else None
+    found = done.stdout.strip()
+    # Relative to `root` when git answers relatively (`.git` in the main checkout).
+    return (Path(root) / found).resolve() if done.returncode == 0 and found else None
 
 
 def _ledger_path(root: Path) -> Optional[Path]:

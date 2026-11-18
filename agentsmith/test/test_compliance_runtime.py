@@ -7,6 +7,8 @@ The tests that need Postgres run when COMPLIANCE_TEST_DSN names a database.
 from __future__ import annotations
 
 import asyncio
+import dataclasses
+import datetime
 import json
 import os
 from pathlib import Path
@@ -25,6 +27,14 @@ TEMPLATE = (
 )
 DSN = os.environ.get("COMPLIANCE_TEST_DSN", "")
 needs_db = pytest.mark.skipif(not DSN, reason="COMPLIANCE_TEST_DSN is not set")
+# Set by the CI job that runs these with a database: there a skip would be a pass nobody
+# earned (the 4.1.0 review's second pass, P2-R23).
+REQUIRE_DB = os.environ.get("AGENTSMITH_REQUIRE_DB") == "1"
+
+
+def test_the_database_tests_run_where_they_are_required():
+    assert DSN or not REQUIRE_DB, (
+        "AGENTSMITH_REQUIRE_DB=1 and COMPLIANCE_TEST_DSN is not set: the database tests would be skipped")
 
 
 @pytest.fixture()
@@ -174,8 +184,12 @@ class _Workflow:
         if label == "compliance_record_activity" and payload["kind"] == self.fail_on:
             raise RuntimeError("record refused")
         self.executed.append((label, payload))
-        if label == "compliance_record_activity" and payload["kind"] == "hitl_pending" and self.deliver:
-            self.wf.hitl_decide(dict(self.deliver))
+        if label == "compliance_record_activity" and payload["kind"] == "hitl_pending":
+            if self.deliver:
+                self.wf.hitl_decide(dict(self.deliver))
+            # What the real activity answers: the digest of the input as it received it,
+            # after Temporal serialized it (P2-R13).
+            return {"record_id": PENDING_RECORD, "input_sha256": c.payload_digest(_as_received(payload)["input"])}
         return {"ran": label}
 
     async def wait_condition(self, predicate, timeout=None):
@@ -185,6 +199,14 @@ class _Workflow:
 
     def info(self):
         return type("I", (), {"workflow_id": "wf-1", "run_id": "run-1"})()
+
+
+def _as_received(payload: dict) -> dict:
+    """The record's payload as the activity sees it: through Temporal's data converter."""
+    from temporalio.converter import DataConverter
+
+    converter = DataConverter.default.payload_converter
+    return converter.from_payloads(converter.to_payloads([payload]), [dict])[0]["payload"]
 
 
 def _gate(fake, monkeypatch, wf=None):
@@ -205,6 +227,8 @@ def _gate(fake, monkeypatch, wf=None):
     )
 
 
+PENDING_RECORD = 41  # the record id the fake pending activity answers with
+
 DECISION = {
     "gate_id": "hitl-gate",
     "workflow_id": "wf-1",
@@ -214,6 +238,7 @@ DECISION = {
     "rationale": "ok",
     "payload_sha256": c.payload_digest({"id": 1}),
     "decided_at": "2026-11-08T00:00:00Z",
+    "request_record_id": PENDING_RECORD,
 }
 
 
@@ -471,10 +496,12 @@ def test_a_gate_through_the_sidecar(sidecar, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", DSN)
     gate = {"gate_id": f"g-{os.getpid()}", "workflow_id": f"w-{os.getpid()}"}
     ask = {**gate, "action": "issue", "input": {"n": 1}, "requested_by": "a@x"}
-    assert _call(sidecar, "/v1/gate/request", ask).json()["status"] == "pending"
+    asked = _call(sidecar, "/v1/gate/request", ask).json()
+    assert asked["status"] == "pending"
     assert _call(sidecar, "/v1/gate/status", gate).json()["status"] == "pending"
     digest = c.payload_digest({"n": 1})
-    c.record("t", "hitl_decision", {**gate, "approved": True, "actor": "b@x", "payload_sha256": digest})
+    c.record("t", "hitl_decision", {**gate, "approved": True, "actor": "b@x", "payload_sha256": digest,
+                                    "request_record_id": asked["record_id"]})
     answer = _call(sidecar, "/v1/gate/status", gate).json()
     assert answer["status"] == "approved" and answer["decision"]["actor"] == "b@x"
     # Asked again with other input: the old approval does not answer it.
@@ -581,8 +608,58 @@ def test_a_decision_about_other_input_does_not_answer_the_gate(monkeypatch):
     assert "issue_permit" not in _labels(fake) and "record:hitl_decision" not in _labels(fake)
 
 
-def test_the_workflows_digest_is_the_records_digest():
-    assert base_workflow._input_digest({"b": [1, 2], "a": "x"}) == c.payload_digest({"a": "x", "b": [1, 2]})
+# ── The 4.1.0 review's second pass: P2-R13 (.agent-rfc/designs/review-pass2-majors.md) ──
+
+
+@dataclasses.dataclass
+class _Payment:
+    to: str
+    amount: float
+    when: datetime.datetime
+
+
+def test_a_decision_answers_an_input_temporal_serializes_differently(monkeypatch):
+    """P2-R13: the workflow waited for a digest of the Python object, the reviewer's
+    decision named the digest of the serialized input, and the gate always timed out."""
+    payment = _Payment("x", 10.0, datetime.datetime(2026, 11, 11, 10, 0))
+    shown = _as_received({"payload": {"input": payment}})["input"]  # what the reviewer saw
+    fake, wf = _deciding({**DECISION, "payload_sha256": c.payload_digest(shown)})
+    monkeypatch.setattr(base_workflow, "workflow", fake)
+    monkeypatch.setattr(base_workflow, "_HAS_TEMPORAL", True)
+    asyncio.run(wf.run_with_hitl_gate(
+        None, {}, "issue_permit", payment, "dlq_enqueue_activity",
+        gate_result={"needs_hitl": True, "requested_by": "someone@x"}, tenant_id="t", compliance=True))
+    assert "issue_permit" in _labels(fake) and "record:hitl_timeout" not in _labels(fake)
+
+
+def test_the_record_activity_answers_with_the_digest_of_what_it_recorded(monkeypatch):
+    """The workflow waits for this value; the record and the portal carry the same one."""
+    written = {}
+    monkeypatch.setattr(c, "require_running", lambda *a, **k: None)
+    monkeypatch.setattr(c, "record", lambda tenant, kind, payload, **k: written.update(payload) or 7)
+    monkeypatch.setattr(c, "forward", lambda *a, **k: (0, ""))
+    answer = asyncio.run(base_workflow.compliance_record_activity(
+        {"tenant_id": "t", "workflow_id": "wf-1", "kind": "hitl_pending", "payload": {"input": {"to": "x"}}}))
+    assert answer == {"record_id": 7, "input_sha256": c.payload_digest({"to": "x"})}
+    assert written["input_sha256"] == answer["input_sha256"]
+
+
+@pytest.mark.parametrize("missing", ["input_sha256", "record_id"])
+def test_a_pending_record_without_its_id_or_digest_refuses_the_gate(monkeypatch, missing):
+    """Nothing to compare a decision with: the gate fails closed rather than waiting for nothing."""
+    fake, wf = _deciding(dict(DECISION))
+    original = fake.execute_activity
+
+    async def no_digest(name, payload, **k):
+        answer = await original(name, payload, **k)
+        if payload.get("kind") == "hitl_pending":
+            answer.pop(missing)
+        return answer
+
+    fake.execute_activity = no_digest
+    with pytest.raises(Exception, match="id or input digest"):
+        _gate(fake, monkeypatch, wf)
+    assert "issue_permit" not in _labels(fake)
 
 
 @pytest.mark.parametrize("who", ["fatima", "EMP-1042", "  "])
@@ -701,7 +778,7 @@ def test_a_vector_write_never_takes_another_tenants_row(monkeypatch):
     store.embedder = type("E", (), {"embed": staticmethod(lambda texts: [[0.0] for _ in texts])})()
     store._connect = lambda: conn
     monkeypatch.setattr(vector_store, "_scoped_tenant", lambda: "tenant-b")
-    with pytest.raises(ValueError, match="another tenant"):
+    with pytest.raises(ValueError, match="cannot be written"):
         store.add(["policy-1"], ["text"])
     assert "WHERE agentsmith_embeddings.tenant_id IS NOT DISTINCT FROM EXCLUDED.tenant_id" in conn.sql[-1]
     assert conn.committed == []
@@ -748,3 +825,250 @@ def test_the_sidecar_refuses_a_requester_that_is_not_an_email(sidecar, who):
     ask = {"gate_id": "g", "workflow_id": "w", "action": "issue", "input": {}, "requested_by": who}
     reply = _call(sidecar, "/v1/gate/request", ask)
     assert reply.status_code == 400 and "sign-in email" in reply.text
+
+
+# ── The 4.1.0 review's second pass: P2-R14, P2-R15 (.agent-rfc/designs/decision-names-its-request.md) ──
+
+
+def test_a_decision_must_name_the_request_it_answers():
+    """P2-R14: a decision said which input, not which request."""
+    with pytest.raises(ValueError):
+        c.HumanDecision.model_validate({k: v for k, v in DECISION.items() if k != "request_record_id"})
+    assert c.HumanDecision.model_validate(DECISION).request_record_id == PENDING_RECORD
+
+
+def test_on_the_temporal_path_a_decision_about_another_request_does_not_answer(monkeypatch):
+    """P2-R14: the same input, asked twice; the decision names the first request."""
+    fake, wf = _deciding({**DECISION, "request_record_id": PENDING_RECORD - 1})
+    _gate(fake, monkeypatch, wf)
+    assert "issue_permit" not in _labels(fake) and "record:hitl_timeout" in _labels(fake)
+
+
+@needs_db
+def test_on_the_store_path_a_late_decision_on_an_earlier_request_does_not_answer(sidecar, monkeypatch):
+    """P2-R14: request 1 and request 2 show one input; a decision on request 1 recorded
+    after request 2 was asked answered request 2."""
+    monkeypatch.setenv("DATABASE_URL", DSN)
+    gate = {"gate_id": f"late-{os.getpid()}", "workflow_id": f"wl-{os.getpid()}"}
+    ask = {**gate, "action": "issue", "input": {"n": 7}, "requested_by": "a@x"}
+    first = _call(sidecar, "/v1/gate/request", ask).json()["record_id"]
+    second = _call(sidecar, "/v1/gate/request", ask).json()["record_id"]
+    decided = {**gate, "approved": True, "actor": "b@x", "payload_sha256": c.payload_digest({"n": 7})}
+    c.record("t", "hitl_decision", {**decided, "request_record_id": first})
+    assert _call(sidecar, "/v1/gate/status", gate).json()["status"] == "pending"
+    # The right request, the wrong input: not an answer either.
+    c.record("t", "hitl_decision", {**decided, "payload_sha256": c.payload_digest({"n": 8}),
+                                    "request_record_id": second})
+    assert _call(sidecar, "/v1/gate/status", gate).json()["status"] == "pending"
+    c.record("t", "hitl_decision", {**decided, "request_record_id": second})
+    assert _call(sidecar, "/v1/gate/status", gate).json()["status"] == "approved"
+
+
+class _DeleteFails(_Conn):
+    """A connection whose `DELETE FROM compliance_stop` fails, as on a lost connection."""
+
+    def cursor(self):
+        cursor = super().cursor()
+        execute = cursor.execute
+
+        def failing(sql, params=None):
+            if sql.lstrip().startswith("DELETE FROM compliance_stop"):
+                raise RuntimeError("connection lost")
+            execute(sql, params)
+
+        cursor.execute = failing
+        return cursor
+
+
+def test_a_resume_that_fails_leaves_no_resume_record(profile, monkeypatch):
+    """P2-R15: the record committed first, then the delete failed, and the chain said
+    "resumed" for an app that was still stopped."""
+    conn = _DeleteFails()
+    monkeypatch.setattr(c, "_connect", lambda dsn=None: conn)
+    with pytest.raises(c.ComplianceRefused):
+        c.clear_stop("t", "*", "me@x")
+    assert not any(q.startswith("INSERT INTO compliance_outbox") for q in conn.committed)
+
+
+def test_a_resume_and_its_record_commit_together(profile, monkeypatch):
+    conn = _Conn()
+    monkeypatch.setattr(c, "_connect", lambda dsn=None: conn)
+    c.clear_stop("t", "*", "me@x")
+    assert any(q.startswith("DELETE FROM compliance_stop") for q in conn.committed)
+    assert any(q.startswith("INSERT INTO compliance_outbox") for q in conn.committed)
+
+
+# ── The 4.1.0 review's second pass: P2-R16 (.agent-rfc/designs/declaration-ratchet-and-atomic-test.md) ──
+
+
+def _sql(dsn: str, *statements: str) -> list:
+    """Run statements in autocommit; the rows of the last."""
+    import psycopg2
+
+    conn = psycopg2.connect(dsn)
+    conn.autocommit = True
+    try:
+        with conn.cursor() as cur:
+            for statement in statements:
+                cur.execute(statement)
+            return cur.fetchall() if cur.description else []
+    finally:
+        conn.close()
+
+
+@pytest.fixture()
+def isolated_dsn():
+    """A schema of this test's own, so a trigger that refuses records touches nothing else.
+    Unique per test: the gateway caches "tables created" by DSN, so a reused name would
+    skip creating them in the fresh schema."""
+    import uuid
+
+    schema = f"p2r16_{uuid.uuid4().hex[:12]}"
+    _sql(DSN, f"DROP SCHEMA IF EXISTS {schema} CASCADE", f"CREATE SCHEMA {schema}")
+    separator = "&" if "?" in DSN else "?"
+    yield f"{DSN}{separator}options=-csearch_path%3D{schema}"
+    _sql(DSN, f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+
+
+def _refuse_records(dsn: str, kind: str) -> None:
+    c.record("t", "warm-up", {}, dsn=dsn)  # the outbox exists in this schema
+    _sql(dsn,
+         "CREATE FUNCTION refuse() RETURNS trigger AS $$ BEGIN "
+         f"IF NEW.kind = '{kind}' THEN RAISE EXCEPTION 'refused'; END IF; RETURN NEW; END $$ LANGUAGE plpgsql",
+         "CREATE TRIGGER refuse BEFORE INSERT ON compliance_outbox FOR EACH ROW EXECUTE FUNCTION refuse()")
+
+
+@needs_db
+def test_a_purge_whose_record_fails_in_the_database_deletes_nothing(profile, isolated_dsn):
+    """P2-R16: with the record written after the delete committed, every test still passed."""
+    _sql(isolated_dsn, "CREATE TABLE agent_runs (tenant_id TEXT, started_at TIMESTAMPTZ)",
+         "INSERT INTO agent_runs VALUES ('t', now() - interval '2000 days')")
+    _refuse_records(isolated_dsn, "retention_purge")
+    with pytest.raises(c.ComplianceRefused):
+        c.purge_runs("t", apply=True, dsn=isolated_dsn)
+    assert _sql(isolated_dsn, "SELECT count(*) FROM agent_runs") == [(1,)]
+
+
+@needs_db
+def test_a_stop_or_resume_whose_record_fails_in_the_database_changes_nothing(profile, isolated_dsn):
+    c.set_stop("t", c.APP_SCOPE, "held", "a@x", dsn=isolated_dsn)
+    _refuse_records(isolated_dsn, "stop_control")
+    with pytest.raises(c.ComplianceRefused):
+        c.clear_stop("t", c.APP_SCOPE, "a@x", dsn=isolated_dsn)
+    with pytest.raises(c.ComplianceRefused):
+        c.set_stop("t", "wf-2", "also", "a@x", dsn=isolated_dsn)
+    rows = _sql(isolated_dsn, "SELECT scope FROM compliance_stop WHERE tenant_id = 't' ORDER BY scope")
+    assert rows == [(c.APP_SCOPE,)]  # still stopped, and the second stop never set
+
+
+# ── The 4.1.0 review's second pass: P2-R17 (.agent-rfc/designs/vector-ids-per-tenant-and-stop-state.md) ──
+
+
+class _Recording(_Conn):
+    """Remembers each statement's parameters, and answers a query with `rows`."""
+
+    def __init__(self, rows=None, row_back=True):
+        super().__init__()
+        self.params: list = []
+        self.rows, self.row_back = rows or [], row_back
+
+    def cursor(self):
+        conn = self
+
+        class _Cursor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def execute(self, sql, params=None):
+                conn.sql.append(" ".join(sql.split()))
+                conn.params.append(params)
+
+            def fetchone(self):
+                return ("x",) if conn.row_back else None
+
+            def fetchall(self):
+                return conn.rows
+
+        return _Cursor()
+
+
+def _store(conn, monkeypatch, tenant, profile):
+    from agentsmith import vector_store
+
+    store = vector_store.PgVectorStore.__new__(vector_store.PgVectorStore)
+    store.embedder = type("E", (), {"embed": staticmethod(lambda texts: [[0.0] for _ in texts])})()
+    store._connect = lambda: conn
+    monkeypatch.setattr(vector_store, "_scoped_tenant", lambda: tenant)
+    monkeypatch.setattr(vector_store, "_profile", lambda: profile)
+    return store
+
+
+def test_on_the_profile_each_tenant_writes_its_own_id_space(monkeypatch):
+    """P2-R17: ids were shared by every tenant, so a refusal told one tenant another's ids."""
+    conn = _Recording()
+    _store(conn, monkeypatch, "tenant-b", True).add(["policy-1"], ["text"])
+    insert = conn.params[-1]
+    assert insert[0] == "tenant-b:policy-1" and insert[-1] == "tenant-b"
+
+
+def test_on_the_profile_a_query_returns_the_id_the_app_wrote(monkeypatch):
+    conn = _Recording(rows=[("tenant-b:policy-1", "text", {}, 0.9), ("legacy-1", "old", {}, 0.5)])
+    hits = _store(conn, monkeypatch, "tenant-b", True).query("q", 2)
+    assert [h.id for h in hits] == ["policy-1", "legacy-1"]
+
+
+@pytest.mark.parametrize("tenant", [None, "acme"])
+def test_off_the_profile_ids_are_unchanged(monkeypatch, tenant):
+    """Off the profile nothing changes, even for an app whose tenant is known."""
+    conn = _Recording()
+    _store(conn, monkeypatch, tenant, False).add(["policy-1"], ["text"])
+    assert conn.params[-1][0] == "policy-1"
+
+
+def test_a_refused_write_does_not_say_whose_the_id_is(monkeypatch):
+    conn = _Recording(row_back=False)
+    with pytest.raises(ValueError) as refused:
+        _store(conn, monkeypatch, "tenant-b", True).add(["policy-1"], ["text"])
+    assert "another tenant" not in str(refused.value) and "belongs" not in str(refused.value)
+
+
+@needs_db
+def test_legacy_documents_are_claimed_into_a_tenant_with_a_record(profile, isolated_dsn):
+    """P2-R17 (a): rows written before tenant_id existed could never be written again on the profile."""
+    from agentsmith import vector_store
+
+    _sql(isolated_dsn,
+         "CREATE TABLE agentsmith_embeddings (id TEXT PRIMARY KEY, tenant_id TEXT, text TEXT)",
+         "INSERT INTO agentsmith_embeddings VALUES ('a', NULL, 'x'), ('b', 'acme', 'y'), ('c', 'other', 'z'), "
+         "('acme:d', 'acme', 'w'), ('d', NULL, 'v')")
+    assert vector_store.claim_legacy("acme", apply=False, dsn=isolated_dsn) == {"claimable": 2, "already_held": 1}
+    assert _sql(isolated_dsn, "SELECT count(*) FROM agentsmith_embeddings WHERE id LIKE 'acme:%'") == [(1,)]
+    assert vector_store.claim_legacy("acme", apply=True, dsn=isolated_dsn) == {"claimable": 2, "already_held": 1}
+    ids = _sql(isolated_dsn, "SELECT id, tenant_id FROM agentsmith_embeddings ORDER BY id")
+    assert ids == [("acme:a", "acme"), ("acme:b", "acme"), ("acme:d", "acme"), ("c", "other"), ("d", None)]
+    records = _sql(isolated_dsn, "SELECT payload FROM compliance_outbox WHERE kind = 'vector_claim'")
+    assert records and records[0][0]["claimed"] == 2 and records[0][0]["skipped"] == 1
+
+
+def test_a_vector_claim_is_a_framework_record():
+    assert "vector_claim" in c.FRAMEWORK_KINDS
+
+
+def test_ops_vector_claim_counts_and_asks_before_it_moves_anything(monkeypatch, capsys):
+    from agentsmith import cli, vector_store
+
+    calls = []
+    def claim(tenant, apply=False, dsn=None):
+        calls.append(apply)
+        return {"claimable": 3, "already_held": 1}
+
+    monkeypatch.setattr(vector_store, "claim_legacy", claim)
+    asked = []
+    monkeypatch.setattr(cli, "_confirm_at_terminal", lambda verb, question, expected: asked.append(question) or 1)
+    run = lambda *extra: cli.main(["ops", "vector-claim", "--tenant", "acme", *extra])  # noqa: E731
+    assert run() == 0 and calls == [False] and not asked
+    assert "Would move 3" in capsys.readouterr().out
+    assert run("--apply") == 1 and asked and calls == [False, False]  # declined: nothing moved

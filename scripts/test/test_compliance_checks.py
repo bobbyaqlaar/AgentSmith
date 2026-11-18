@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -475,14 +476,14 @@ def _run_dependency_scan(tmp_path, files, scanner_exit=0):
 def test_a_lock_is_audited_exactly_as_pinned(tmp_path):
     done, called = _run_dependency_scan(tmp_path, ["requirements.lock", "requirements.txt"])
     assert done.returncode == 0
-    assert "-r requirements.lock --disable-pip --no-deps" in called
+    assert "-r ./requirements.lock --disable-pip --no-deps" in called
     assert "requirements.txt" not in called
 
 
 def test_requirements_without_a_lock_are_resolved_not_refused(tmp_path):
     done, called = _run_dependency_scan(tmp_path, ["requirements.txt"])
     assert done.returncode == 0
-    assert "-r requirements.txt" in called
+    assert "-r ./requirements.txt" in called
     assert "--no-deps" not in called and "--disable-pip" not in called
 
 
@@ -628,3 +629,189 @@ def test_an_enforced_profile_with_its_declaration_deleted_fails_the_launcher(tmp
     done = subprocess.run(["bash", str(REPO / ".githooks" / "process-gate"), "compliance", "check"], cwd=tmp_path,
                           capture_output=True, text=True, stdin=subprocess.DEVNULL, check=False)
     assert done.returncode == 1 and "compliance.json is missing" in (done.stdout + done.stderr)
+
+
+# ── The 4.1.0 review's second pass: P2-R8 (.agent-rfc/designs/supply-chain-audits-that-can-fail.md) ──
+
+
+def _job_with(step: str, *, on: str = "on:\n  pull_request:\n", job: str = "") -> str:
+    return f"{on}jobs:\n  scan:\n    runs-on: x\n{job}    steps:\n{step}"
+
+
+@pytest.mark.parametrize("body", [
+    pytest.param(_job_with("      - run: pipx run pip-audit==2.9.0 -r requirements.txt || true\n"), id="or-true"),
+    pytest.param(_job_with("      - run: npm audit || echo ignored\n"), id="or-echo"),
+    pytest.param(_job_with("      - run: |\n          set +e\n          pip-audit .\n"), id="set-plus-e"),
+    pytest.param(_job_with("      - run: pip-audit .\n        continue-on-error: true\n"), id="step-continue"),
+    pytest.param(_job_with("      - run: pip-audit .\n", job="    continue-on-error: true\n"), id="job-continue"),
+    pytest.param(_job_with("      - run: pip-audit .\n", job="    if: false\n"), id="job-if"),
+    pytest.param(_job_with("      - run: pip-audit .\n        if: ${{ false }}\n"), id="step-if-false"),
+    pytest.param(_job_with('      - run: echo "govulncheck is for later"\n'), id="echo-only"),
+    pytest.param(_job_with("      - run: '# pip-audit .'\n"), id="comment-only"),
+    pytest.param(_job_with("      - run: npm audit\n", on="on:\n  push:\n    branches: [never-a-branch]\n"),
+                 id="branch-never-runs"),
+])
+def test_an_audit_that_cannot_fail_or_never_runs_does_not_count(tmp_path, body):
+    """P2-R8: each passed as "the supply-chain job audits dependencies on each change"."""
+    write(tmp_path, SUPPLY, body)
+    verdict, message = cc.supply_chain(tmp_path, DECLARED)
+    assert verdict == "fail", message
+
+
+@pytest.mark.parametrize("body", [
+    _job_with("      - run: pip-audit . || exit 1\n"),
+    _job_with("      - run: |\n          cd web && npm audit --audit-level=high\n"),
+    _job_with("      - run: (cd svc && go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...)\n"),
+    _job_with("      - run: npm audit\n", on="on:\n  push:\n    branches: [main]\n"),
+    _job_with("      - run: npm audit\n", on="on:\n  push:\n    branches: ['**']\n"),
+    _job_with("      - run: pip-audit .\n        if: hashFiles('**/requirements.txt') != ''\n"),
+])
+def test_an_audit_that_can_fail_counts(tmp_path, body):
+    write(tmp_path, SUPPLY, body)
+    verdict, message = cc.supply_chain(tmp_path, DECLARED)
+    assert verdict == "pass", message
+
+
+def test_the_shipped_template_passes_its_own_check(tmp_path):
+    write(tmp_path, SUPPLY, (REPO / "workflow-templates" / "agentsmith-supply-chain.yml").read_text(encoding="utf-8"))
+    verdict, message = cc.supply_chain(tmp_path, DECLARED)
+    assert verdict == "pass", message
+
+
+# ── The 4.1.0 review's second pass: P2-R9, and P2-R7 run rather than read ──
+
+_SHIM = """#!/usr/bin/env bash
+# A stand-in that records how it was called and writes any output file it is asked for.
+echo "$(basename "$0")|$PWD|$*" >> "$CALLS"
+out=""
+prev=""
+for arg in "$@"; do
+  case "$prev" in -o|--output-file|-output) out="$arg" ;; esac
+  prev="$arg"
+done
+[ -n "$out" ] && mkdir -p "$(dirname "$out")" && echo '{}' > "$out"
+if [ "$(basename "$0")" = python ] && [ "$1" = -m ] && [ "$2" = venv ]; then
+  mkdir -p "$3/bin"
+  for tool in pip python; do
+    printf '#!/usr/bin/env bash\\necho "%s|$PWD|$*" >> "$CALLS"\\n' "$3/bin/$tool" > "$3/bin/$tool"
+    chmod +x "$3/bin/$tool"
+  done
+fi
+exit 0
+"""
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash required")
+def test_the_template_audits_every_project_in_the_repository(tmp_path):
+    """P2-R9: the template read the repository root only, so `web/package-lock.json` beside
+    a root Python project was never audited, and the job was green."""
+    import yaml
+
+    repo, bin_dir, temp = tmp_path / "repo", tmp_path / "bin", tmp_path / "runner-temp"
+    for rel in ("requirements.txt", "svc/pyproject.toml", "web/package-lock.json", "tools/go.mod",
+                "web/node_modules/dep/package-lock.json", ".venv/lib/requirements.txt"):
+        write(repo, rel, "{}\n" if rel.endswith(".json") else "x\n")
+    bin_dir.mkdir()
+    temp.mkdir()
+    for tool in ("pipx", "npm", "npx", "go", "python"):
+        (bin_dir / tool).write_text(_SHIM, encoding="utf-8")
+        (bin_dir / tool).chmod(0o755)
+    calls = tmp_path / "calls.log"
+    workflow = yaml.safe_load((REPO / "workflow-templates" / "agentsmith-supply-chain.yml").read_text(encoding="utf-8"))
+    env = {"PATH": f"{bin_dir}:/usr/bin:/bin", "CALLS": str(calls), "RUNNER_TEMP": str(temp), "HOME": str(tmp_path)}
+    for step in workflow["jobs"]["scan"]["steps"]:
+        if step.get("run"):
+            subprocess.run(["bash", "-e", "-c", step["run"]], cwd=repo, env=env, check=True)
+    log = calls.read_text(encoding="utf-8")
+    sboms = sorted(p.name for p in (repo / "sbom").iterdir())
+
+    assert "pip-audit==2.9.0 -r ./requirements.txt" in log  # the root Python project
+    assert f"pipx|{repo}|run pip-audit==2.9.0 ./svc" in log  # a pyproject.toml project
+    assert f"npm|{repo / 'web'}|audit" in log  # the web client the review found unaudited
+    assert f"go|{repo / 'tools'}|run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./..." in log
+    assert "node_modules" not in log and ".venv/lib" not in log  # vendored and environments skipped
+    assert sboms == ["go-tools.cdx.json", "npm-web.cdx.json", "python-root.cdx.json", "python-svc.cdx.json"]
+    # P2-R7: the pyproject project's SBOM describes an environment the project was installed into.
+    venv = temp / "app-env-svc"
+    assert f"{venv}/bin/pip|{repo}|install --quiet ./svc" in log
+    assert f"cyclonedx-py environment {venv}/bin/python -o sbom/python-svc.cdx.json" in log
+
+
+# ── The 4.1.0 review's second pass: P2-R10, P2-R11 (.agent-rfc/designs/image-final-stage-and-mcp-reads.md) ──
+
+MULTI_STAGE = ("FROM node:20 AS build\nWORKDIR /src\nCOPY . .\nRUN npm ci && npm run build\n"
+               "FROM gcr.io/distroless/nodejs20\nCOPY --from=build /src/dist /app\nCMD [\"/app/main.js\"]\n")
+
+
+@pytest.mark.parametrize("files, verdict", [
+    pytest.param({"Dockerfile": MULTI_STAGE}, "fail", id="builder-copies-final-does-not"),
+    pytest.param({"Dockerfile": MULTI_STAGE.replace(
+        "COPY --from=build /src/dist /app",
+        "COPY --from=build /src/dist /app\nCOPY .agenticframework /app/.agenticframework")},
+        "pass", id="final-stage-copies-it"),
+    pytest.param({"Dockerfile": "FROM python:3.11\nCOPY --chown=app:app . /app\n"}, "pass", id="copy-with-flags"),
+    pytest.param({"Dockerfile": "FROM python:3.11\nCOPY ./ /app/\n"}, "pass", id="dot-slash"),
+    pytest.param({"Dockerfile": "FROM python:3.11\nADD . /app\n"}, "pass", id="add"),
+    pytest.param({"Dockerfile": "FROM x\nCOPY . .\n", ".dockerignore": ".agenticframework\n!.agenticframework\n"},
+                 "pass", id="dockerignore-negation"),
+    pytest.param({"Dockerfile": "FROM b AS one\nENV COMPLIANCE_PROFILE=dubai-gov\nFROM c\nCOPY app /app\n"},
+                 "fail", id="env-only-in-the-builder"),
+    # From another stage, `.` is that stage's filesystem root, not the build context.
+    pytest.param({"Dockerfile": "FROM a AS build\nCOPY . /src\nFROM b\nCOPY --from=build . /app\n"},
+                 "fail", id="copy-from-another-stage"),
+])
+def test_the_stage_that_runs_is_the_one_judged(tmp_path, files, verdict):
+    """P2-R10: `COPY . .` in a builder stage passed for an image that never held the declaration."""
+    for name, text in files.items():
+        write(tmp_path, name, text)
+    found = cc.declaration_deployed(tmp_path, DECLARED)
+    assert found[0] == verdict, found
+
+
+def test_a_profile_set_without_the_file_says_it_must_be_mounted(tmp_path):
+    write(tmp_path, "Dockerfile", "FROM x\nCOPY app /app\nENV COMPLIANCE_PROFILE=dubai-gov\n")
+    verdict, message = cc.declaration_deployed(tmp_path, DECLARED)
+    assert verdict == "pass" and "mounted" in message and "refuses to run" in message
+
+
+def test_a_commented_vscode_server_file_is_read(tmp_path):
+    """P2-R11 (a): VS Code's mcp.json allows comments, and one made the check raise."""
+    from agentsmith import mcp_pin
+
+    write(tmp_path, ".vscode/mcp.json",
+          '{\n  // my servers\n  "servers": {"fs": {"command": "npx", "args": ["-y", "x"],}, /* end */},\n}\n')
+    assert mcp_pin.static_problems(tmp_path) == [
+        "MCP server .vscode/mcp.json#fs is not pinned: run `agentsmith compliance mcp-pin`"]
+    # `//` inside a string is not a comment, and an escaped quote does not end one.
+    write(tmp_path, ".vscode/mcp.json",
+          '{"servers": {"web": {"url": "https://mcp.example/v1", "headers": {"X": "a\\"//b"}}}} // done\n')
+    assert mcp_pin._servers(tmp_path)[".vscode/mcp.json#web"] == {
+        "url": "https://mcp.example/v1", "headers": {"X": 'a"//b'}}
+
+
+def test_a_server_file_that_cannot_be_read_is_named_not_raised(tmp_path):
+    from agentsmith import mcp_pin
+
+    write(tmp_path, ".cursor/mcp.json", "{ not json")
+    problems = mcp_pin.static_problems(tmp_path)
+    assert len(problems) == 1 and ".cursor/mcp.json" in problems[0] and "cannot be read" in problems[0]
+
+
+@pytest.mark.parametrize("change", [{"annotations": {"readOnlyHint": True}}, {"title": "new"},
+                                    {"outputSchema": {"type": "object"}}])
+def test_a_tools_title_annotations_and_output_schema_are_pinned(change):
+    """P2-R11 (b): a server could flip `readOnlyHint` and `mcp-verify` passed."""
+    from agentsmith import mcp_pin
+
+    tool = {"name": "x", "description": "d", "inputSchema": {}, "annotations": {"readOnlyHint": False}}
+    assert mcp_pin.tool_hashes([tool]) != mcp_pin.tool_hashes([{**tool, **change}])
+
+
+def test_codex_project_servers_are_read(tmp_path):
+    """P2-R11 (c): Codex keeps project servers in `.codex/config.toml`."""
+    from agentsmith import mcp_pin
+
+    write(tmp_path, ".codex/config.toml", '[mcp_servers.docs]\ncommand = "npx"\nargs = ["-y", "docs-mcp"]\n')
+    assert mcp_pin.static_problems(tmp_path) == [
+        "MCP server .codex/config.toml#docs is not pinned: run `agentsmith compliance mcp-pin`"]
+    assert ".codex/config.toml" in mcp_pin.scope_note(tmp_path)
