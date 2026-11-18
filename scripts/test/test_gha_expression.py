@@ -26,7 +26,7 @@ def value(condition: str, role: str = "NONE"):
     ("!false && 2 > 1", True), ("1 < 2 == true", True),                  # precedence: ! < > before == before &&
     ("contains(fromJSON('[\"A\",\"B\"]'), 'b')", True), ("contains('ABC', 'bc')", True),
     ("startsWith('Contributor', 'contrib')", True), ("format('{0}-{1}', 'a', 'b') == 'a-b'", True),
-    ("success() && always()", True),
+    ("always() && true", True),
 ])
 def test_values(condition, expected):
     assert value(condition) == expected
@@ -87,3 +87,25 @@ def test_unknown_resolves_when_the_other_side_decides(condition, expected):
 ])
 def test_literals_and_coercion_as_github_reads_them(condition, expected):
     assert gx._truthy(value(condition)) is expected
+
+
+# P4-R1: success() is false whenever an earlier step failed or the run was cancelled, which an
+# outsider's pull request can cause. Only always() is a constant; read success() as true and
+# `!success() || <owner test>` is "definitely false" for every outsider, so judged a guard.
+@pytest.mark.parametrize("condition", ["success()", "!success()", "success() == false", "failure()", "cancelled()"])
+def test_a_status_function_that_varies_is_unknown(condition):
+    assert value(condition) is gx.UNKNOWN
+
+
+def test_always_is_a_constant_only_as_github_writes_it():
+    assert value("always()") is True
+    assert value("always('x')") is gx.UNKNOWN   # not a form GitHub documents: not certain
+
+
+@pytest.mark.parametrize("condition", [
+    "!success() || github.event.comment.author_association == 'OWNER'",
+    "success() == false || github.event.comment.author_association == 'OWNER'",
+    "github.event.comment.author_association == 'OWNER' || !success()",
+])
+def test_a_status_function_joined_by_or_never_keeps_an_outsider_out(condition):
+    assert gx.may_be_true([condition], {ROLE: "NONE"}) is True
