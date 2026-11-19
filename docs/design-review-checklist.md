@@ -26,7 +26,10 @@ new content here — the RULE lives in one place.
 2. While designing, work the groups that bear on what you're building — Group
    5 for anything with a screen, Group 2 and 6 for anything that writes data
    or reports a result, Group 7 for anything with a cookie or bearer session,
-   Group 1 and 3 before you create a new file or a new abstraction.
+   Group 1 and 3 before you create a new file or a new abstraction, Group 8
+   for anything that takes outside input, holds a secret, runs a program or
+   ships a build, Group 9 for personal or government data, an AI judgement or
+   audit evidence, and Group 10 for any path whose size grows with use.
 3. This is a design aid, not a gate. The gate is
    [`validation-checklist.md`](./validation-checklist.md) and the CI run —
    this document exists so fewer findings reach that stage in the first
@@ -110,6 +113,11 @@ new content here — the RULE lives in one place.
   interpreter it is about to enter (a shell, a query, a template). Validating
   only at the point of origin misses every other path the value can arrive
   by.
+- **`commit-before-side-effect`** — Order every change as save, confirm the save, then act. Decide now whether the framework commits before or after the response, and use one rule on every route.
+- **`lock-what-you-decide-on`** — If a record can change while something decides on it, design the lock or version check now, so the decision and the record refer to the same state.
+- **`partial-is-not-complete`** — Design the threshold for a dependency that answers for some items. A partial run ends as partial or failed, never complete.
+- **`outage-is-not-a-finding`** — Give "could not determine" its own value in every result this change can record.
+- **`identity-not-label`** — Bind an earned property to the identity of the thing that earned it: a digest, a version or an id. Never bind it to the name of a slot.
 
 ## Group 3 · Architecture / product hygiene — the shape of the change
 
@@ -141,6 +149,8 @@ new content here — the RULE lives in one place.
   teams or two repos ship independently across, it needs a version on the
   wire and a written compatibility window — decided now, because "we'll keep
   them in sync" is not a design, it's a hope.
+- **`runnable-docs`** — Every command a document gives must run as printed, on a clean machine. Design the set-up steps so they need no file the reader does not have.
+- **`move-and-restore-are-features`** — Design backup, restore and moving to another machine alongside the thing being restored. A restore brings back permissions, keys and the audit chain.
 
 ## Group 4 · Process — how the work itself gets done
 
@@ -163,6 +173,8 @@ new content here — the RULE lives in one place.
 - **`run-the-gates-ci-lists`** — Know, before you start, which gates
   `self-test.yml` (or the tenant's own CI file) will run against this change.
   Design against the real list, not the subset you remember.
+- **`fix-the-class-not-the-case`** — Before fixing a reported defect, name its kind and list the other routes to the same fault. The fix states in words what it does not cover.
+- **`prove-it-fails-first`** — Make a finding that was only read happen before anything changes. If it will not fail, stop and find out why.
 
 ## Group 5 · Intuitive UI — building the screen
 
@@ -208,6 +220,9 @@ on one.
   of the app already uses for the same purpose. A new pattern here is a
   second definition of "what a button looks like" — see `one-catalog` above,
   applied to pixels instead of code.
+- **`screens-tell-the-truth`** — Write every message from what happened. A success is not "failed", a cause that was not checked is not named, and an ended session is not shown as a raw code.
+- **`background-refresh-is-not-activity`** — Keep auto-polling out of the idle timer, so an unattended screen signs out at its limit.
+- **`bilingual-and-rtl`** — Where users or documents are Arabic or another right-to-left language, design direction, fonts and mixed-direction text from the first screen.
 
 ## Group 6 · Signal integrity — before you decide what "done" reports
 
@@ -250,6 +265,8 @@ on one.
   forbid. Design the assertion around a positive signal — a uniquely created
   name, an auth header, the signed-in chrome — not the absence of a string
   that a correct page and an empty one can both satisfy.
+- **`metrics-survive-time`** — For every rate, ask what it reads after retention expires, after the period changes, and after a reviewer edits a record. Count failed runs in the denominator.
+- **`tests-cannot-touch-live`** — Test set-up checks every connection setting the code might read, including the one the application prefers, not only the one the tests set.
 
 ## Group 7 · Auth & session integrity — any cookie, bearer, or dual client/server session
 
@@ -277,6 +294,64 @@ line that touches a token, a cookie, or a session check.
   bound (at most one retry) and an explicit failure branch that clears the
   session — before writing the happy path, so "then what" already has an
   answer.
+- **`session-lifetimes`** — Design every session with an absolute limit and an idle limit, a sweep for expired sessions, and a sign-in message that says why the user was signed out.
+- **`mfa-by-capability`** — Decide who needs a second factor by what the account can do, not by its role's name. Design enrolment so a refresh or a second tab cannot unpair a device, and design lost-device and last-administrator recovery.
+- **`no-account-oracle`** — Sign-in, reset and lockout take the same time and give the same answer whatever the username. Throttle per username and per client address.
+
+---
+
+## Group 8 · Security engineering — input, secrets, privilege, supply chain
+
+Walk this group for anything that takes outside input, holds a credential, runs
+another program, or changes what goes into a build.
+
+- **`least-privilege-by-construction`** — The running service connects as an account that can read and write rows and nothing else. Schema changes run in a separate one-shot step. Design the database to refuse destructive statements, and check permissions granted by a second route.
+- **`containers-run-unprivileged`** — No process runs as root in its container. A program that opens untrusted files runs as its own user with no network, no secrets and no view of stored data or backups.
+- **`subprocess-gets-nothing`** — A started program inherits nothing by default: an explicit minimal environment, a throwaway folder and a time limit. Libraries that start programs count. Keep a written list of the modules allowed to start one.
+- **`secrets-have-one-home`** — Secrets live only in the secrets store or settings file, never in an example, a log, a fixture or version history. Example files carry no working default, and a published default password is refused at start-up.
+- **`no-query-from-a-value`** — No database command, shell command or path is built by pasting in a value. Parameterise it, or allow-list it.
+- **`untrusted-input-is-hostile`** — Treat every upload, document and field as an attack. Check size before all of it is received, check type by content, cap pages and length, strip control characters, refuse encrypted or malformed files, and delete what a refused upload left behind. Cover every route the input can arrive by.
+- **`prompt-injection-is-contained`** — For any model in the path, assume the document it reads contains instructions. The model holds no tools and writes nothing; its answer is a small structure the code validates; a verdict needs evidence checked against the source. Then test with hostile documents in each supported language, with hidden text and text inside images.
+- **`encrypted-in-transit-and-at-rest`** — HTTPS is the deployment, and plain HTTP redirects. Outbound calls refuse a clear-text fallback and name the setting that would fix it. Decide and record how stored data and backups are encrypted.
+- **`security-headers-and-csp`** — Every response carries the security headers and a content-security policy, in every deployment mode.
+- **`supply-chain-is-pinned`** — Libraries come from a locked list with checksums, base images are pinned by digest, and downloaded models are verified against a recorded fingerprint. A bill of materials says what is in the build.
+- **`security-gates-in-ci`** — Plan the gates this change must clear before it enters history: secrets scan, static security analysis, dependency and image scans, and project rules as code. Existing findings go on a baseline that only shrinks.
+- **`handover-contains-only-the-program`** — Define a release or handover package by an explicit include list, never "everything except". Commercial documents, data, keys and undo copies stay out unless named.
+
+## Group 9 · Regulation & compliance — data, evidence, AI governance
+
+Walk this group for anything that stores personal or government data, makes an
+automated judgement, or produces evidence an auditor will rely on. Name the
+instruments that bind, and state which you claim as compliance and which as
+alignment.
+
+- **`residency-is-enforced`** — If data must stay in a jurisdiction, the code refuses an endpoint outside it unless an administrator allows it, and that choice is audited.
+- **`classify-and-minimise`** — Classify every stored item. Collect and send only what the purpose needs, and redact before any outside call.
+- **`retention-and-disposal`** — Every store, including uploads, intermediate passages, archives and backups, has a retention period and a disposal routine that actually runs. Nothing is kept for ever by default.
+- **`lawful-basis-and-subject-rights`** — For personal data, record what is processed, its lawful basis, and the route for someone to ask what is held about them. Do the impact assessment before go-live.
+- **`audit-trail-is-tamper-evident`** — Record every security- or decision-relevant action with who, what, when and how the actor signed in. The trail is append-only, chained, keyed and anchored outside the store, and the running service cannot shorten or rewrite it. An anchor reset is itself recorded and shown.
+- **`records-name-the-right-actor`** — Each record names the person who acted and the event that happened, not a system account, and not an event that was planned and did not occur.
+- **`forensic-readiness`** — On a suspected incident, logs, their anchor and the affected documents can be preserved and exported before they age out.
+- **`monitoring-and-incident-response`** — Decide which events alert, such as repeated sign-in failures, a failed integrity check or a residency override, and send them to a central feed. Write the incident procedure, the recovery targets and a restore-drill schedule.
+- **`access-is-reviewed`** — Plan a periodic review of who has access and what they can do, and a leaver process.
+- **`human-in-the-loop-is-enforced`** — If no automated result may reach a customer without a named approver, the state machine makes that impossible to skip, and outputs say on their face what they are.
+- **`ai-governance-pack`** — For each model: a model card, an intended-use and limits statement, a risk-register entry, and a re-rating whenever the model or its environment changes. Quality gates measure accuracy per language and per other relevant subgroup.
+- **`compliance-register`** — Keep one register that names each instrument, what it requires, who owns it, what evidences it, and a review date. A compliance claim with no evidence row is an alignment claim at best.
+- **`honest-assurance`** — Until an independent assessment or penetration test is done, the claim is "built to these controls, not yet audited against them".
+
+## Group 10 · Code optimisation & performance — paths that grow with use
+
+Optimisation means less code and less work, never cleverness. Measure before
+and after; a change justified as faster with no number is a guess.
+
+- **`bounded-by-default`** — Every list a screen or API returns is paged, filtered and counted in the database, never fetched whole and sifted in the app, and never silently capped by an inherited number.
+- **`stream-what-must-be-whole`** — An export meant to include everything streams row by row, so its size is not the size of the process's memory.
+- **`read-once`** — A request reads each thing once. Load it once per request, or cache it with an explicit invalidation rule.
+- **`dont-redo-finished-work`** — A retry resumes from what already succeeded. The cache it resumes from is keyed by everything that changes the answer, including model identity and version.
+- **`measure-at-real-volume`** — Time the path with data at the size a working system reaches, and record the figure and the date.
+- **`index-what-you-filter`** — Every filter, sort and join a screen uses at scale has an index, designed with the query.
+- **`batch-not-one-at-a-time`** — Where users act on many items, design the batch operation and the batch query, not one round trip per item.
+- **`delete-before-optimise`** — The cheapest code is removed code. Delete first, merge repeated definitions second, and tune last, once the tests that would catch a mistake can be trusted.
 
 ---
 
