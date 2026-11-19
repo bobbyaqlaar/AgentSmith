@@ -31,7 +31,7 @@ from agentsmith.prompt_guard import PromptGuardBlockedError
 
 logger = logging.getLogger(__name__)
 
-TOKEN_ENV = "AGENTSMITH_RUNTIME_TOKEN"
+TOKEN_ENV = "AGENTSMITH_RUNTIME_TOKEN"  # noqa: S105 -- an environment variable NAME, not a secret
 HOST = "127.0.0.1"
 MAX_BODY_BYTES = 2 * 1024 * 1024
 FORWARD_EVERY_SECONDS = 15

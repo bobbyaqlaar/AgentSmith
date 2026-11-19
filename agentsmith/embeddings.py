@@ -158,14 +158,14 @@ class SentenceTransformerEmbedder:
             "embedding.encode", kind="embedding", model=self.model_name, count=len(texts)
         ) as span:
             self._load()
-            assert self._model is not None
+            if self._model is None:
+                raise RuntimeError(f"embedding model {self.model_name!r} did not load")
             vectors = self._model.encode(texts, normalize_embeddings=True)
             out = [list(map(float, row)) for row in vectors]
             try:
                 if out:
                     span.set_attribute("agent.embedding.dimensions", len(out[0]))
-            except Exception:  # fail-open: a span attribute must never cost the
-                # caller its embeddings.
+            except Exception:  # noqa: S110 -- fail-open: a span attribute must never cost the caller its embeddings
                 pass
             return out
 

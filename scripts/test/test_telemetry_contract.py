@@ -160,9 +160,9 @@ def test_an_export_file_is_judged_one_object_or_one_per_line(tmp_path):
 
 
 def _post(url: str, body: bytes, content_type: str = "application/x-protobuf") -> int:
-    request = urllib.request.Request(url, data=body, headers={"Content-Type": content_type}, method="POST")
+    request = urllib.request.Request(url, data=body, headers={"Content-Type": content_type}, method="POST")  # noqa: S310 -- the loopback receiver under test
     try:
-        with urllib.request.urlopen(request, timeout=5) as answer:
+        with urllib.request.urlopen(request, timeout=5) as answer:  # noqa: S310 -- the loopback receiver under test
             return answer.status
     except urllib.error.HTTPError as exc:
         return exc.code

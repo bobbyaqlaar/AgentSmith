@@ -716,7 +716,7 @@ def check_change(
 
 
 def git(*args: str, cwd: Optional[Path] = None, check: bool = True) -> str:
-    result = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=False)
+    result = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=False)  # noqa: S603, S607 -- git wrapper, argv list, no shell; refs come from git output, the hook or CI event, or the operator
     if check and result.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)}: {result.stderr.strip()}")
     return result.stdout
@@ -737,7 +737,8 @@ def _reader_at(root: Path, rev: str) -> Reader:
     check reads a binary's content: gate_pillars skips `_BINARY` before it
     reads (.agent-rfc/designs/gate-reads-binary-files.md)."""
     def read(path: str) -> Optional[str]:
-        result = subprocess.run(["git", "show", f"{rev}:{path}"], cwd=root, capture_output=True, check=False)
+        result = subprocess.run(["git", "show", "--end-of-options", f"{rev}:{path}"],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the ref follows --end-of-options
+                                cwd=root, capture_output=True, check=False)
         return result.stdout.decode("utf-8", errors="replace") if result.returncode == 0 else None
     return read
 
@@ -970,7 +971,7 @@ def _remember_session(root: Path, payload: dict) -> None:
         import agent_tokens as at
 
         at.remember(root, _IDE["value"], payload)
-    except Exception:  # fail-open: token bookkeeping must never block a hook
+    except Exception:  # noqa: S110 -- fail-open: token bookkeeping must never block a hook
         pass
 
 
@@ -1241,7 +1242,9 @@ def _range_commits(root: Path, base: str, head: str) -> Tuple[List[str], Optiona
     only = git("rev-parse", "--verify", f"{head}^{{commit}}", cwd=root, check=False).strip() or head
     if not base or set(base) == {"0"}:
         return [only], "no base commit (new branch or first push): checked the head commit only"
-    if subprocess.run(["git", "cat-file", "-e", f"{base}^{{commit}}"], cwd=root, check=False).returncode != 0:
+    known = subprocess.run(["git", "cat-file", "-e", "--end-of-options", f"{base}^{{commit}}"],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the ref follows --end-of-options
+                           cwd=root, check=False)
+    if known.returncode != 0:
         return [only], f"base {base[:12]} is not in this history (force-push?): checked the head commit only"
     out = git("rev-list", "--reverse", "--no-merges", f"{base}..{head}", cwd=root)
     return [c for c in out.splitlines() if c], None

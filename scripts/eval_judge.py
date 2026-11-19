@@ -197,7 +197,7 @@ def run_judge(prompt: str, judge_model: str) -> dict[str, Any]:
     try:
         route = _route_for_model(judge_model)
         scored["judged_by_route"] = route.base_url
-    except Exception:  # fail-open: provenance detail, never worth failing a verdict over
+    except Exception:  # noqa: S110 -- fail-open: provenance detail, never worth failing a verdict over
         pass
     return scored
 

@@ -75,7 +75,7 @@ def _run_on_a_terminal(repo: Path, args: list[str], typed: str) -> tuple[int, st
     if pid == 0:                                            # child
         os.chdir(repo)
         os.environ["PYTHONPATH"] = str(REPO)                # the framework checkout this test runs from
-        os.execv(sys.executable, [sys.executable, "-c",
+        os.execv(sys.executable, [sys.executable, "-c",  # noqa: S606 -- the test's own interpreter in a pty child; argv built here
                                   "import sys; from agentsmith.cli import main; sys.exit(main())", *args])
     os.write(fd, typed.encode())
     output = b""

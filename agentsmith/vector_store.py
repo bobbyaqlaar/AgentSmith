@@ -107,7 +107,7 @@ def _record_hits(
         record_retrieval(
             tenant_id=current_tenant_id(), backend=backend, hits=len(hits)
         )
-    except Exception:  # fail-open: a metric must never break a query
+    except Exception:  # noqa: S110 -- fail-open: a metric must never break a query
         pass
     try:
         # WHICH embedder produced these vectors. The default is HashEmbedder, a
@@ -127,7 +127,7 @@ def _record_hits(
             scores = [float(h.score) for h in hits]
             span.set_attribute("agent.retrieval.top_score", max(scores))
             span.set_attribute("agent.retrieval.min_score", min(scores))
-    except Exception:  # fail-open: an attribute write must never break a query
+    except Exception:  # noqa: S110 -- fail-open: an attribute write must never break a query
         pass
 
 
@@ -349,7 +349,7 @@ class PgVectorStore:
                     {where}
                     ORDER BY embedding <=> %s::vector
                     LIMIT %s
-                    """,  # nosec B608
+                    """,  # nosec B608  # noqa: S608 -- `where` is one of two constants; every value is a parameter
                     (q_literal, *([tenant] if _profile() else []), q_literal, k),
                 )
                 rows = cur.fetchall()

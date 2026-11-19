@@ -312,7 +312,7 @@ class ReplayWebhookHandler(BaseHTTPRequestHandler):
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8090
-    server = ThreadingHTTPServer(("0.0.0.0", port), ReplayWebhookHandler)  # nosec B104 - a reference receiver, for a container; every request is signed
+    server = ThreadingHTTPServer(("0.0.0.0", port), ReplayWebhookHandler)  # nosec B104 - a reference receiver, for a container; every request is signed  # noqa: S104 -- a container's receiver must listen on all interfaces; every request is signed
     logger.info("replay_webhook_server listening on :%d (POST /replay)", port)
     server.serve_forever()
 

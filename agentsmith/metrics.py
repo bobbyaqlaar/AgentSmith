@@ -88,7 +88,7 @@ def _record(instrument: Any, value: Any, attributes: Optional[dict]) -> None:
             instrument.add(value, clean)
         else:
             instrument.record(value, clean)
-    except Exception:  # fail-open: never raise into the path being measured
+    except Exception:  # noqa: S110 -- fail-open: never raise into the path being measured
         pass
 
 

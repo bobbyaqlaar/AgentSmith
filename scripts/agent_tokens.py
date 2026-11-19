@@ -36,7 +36,7 @@ NOTE_STEP = 50_000
 
 
 def _git_dir(root: Path) -> Optional[Path]:
-    done = subprocess.run(["git", "-C", str(root), "rev-parse", "--absolute-git-dir"],
+    done = subprocess.run(["git", "-C", str(root), "rev-parse", "--absolute-git-dir"],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
                           capture_output=True, text=True, check=False)
     return Path(done.stdout.strip()) if done.returncode == 0 and done.stdout.strip() else None
 
@@ -205,12 +205,12 @@ def add_trailers(message_file: Path, root: Path, env: Mapping[str, str]) -> list
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    root = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
+    root = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,  # noqa: S607 -- git on PATH; fixed argv
                                check=False).stdout.strip() or ".")
     if len(args) == 2 and args[0] == "trailers":
         try:
             add_trailers(Path(args[1]), root, os.environ)
-        except Exception:  # fail-open: a commit is never blocked by its own bookkeeping
+        except Exception:  # noqa: S110 -- fail-open: a commit is never blocked by its own bookkeeping
             pass
         return 0
     if args == ["report"]:

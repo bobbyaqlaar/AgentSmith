@@ -340,7 +340,7 @@ def judge(root: Path, request: gm.EvalsRequest) -> gm.Scorecard:
 def _repository(request: gm.EvalsRequest) -> Path:
     if request.cwd:
         return Path(request.cwd).resolve()
-    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)
+    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)  # noqa: S607 -- git on PATH; fixed argv
     return Path(top.stdout.strip()) if top.returncode == 0 and top.stdout.strip() else Path.cwd()
 
 

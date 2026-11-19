@@ -104,8 +104,8 @@ def _mapped(root: Path) -> Optional[set[str]]:
     then every file maps, as before: unknown is not "nothing is tracked", which
     would purge every node."""
     try:
-        listed = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        listed = subprocess.run(  # noqa: S603 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
+            ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],  # noqa: S607 -- git on PATH; the only variable is the repository root
             capture_output=True, check=False,
         )
     except OSError:  # fail-open: no git on PATH — map everything, as the walk always did
@@ -189,7 +189,7 @@ def _parse_typescript(path: Path) -> tuple[list[str], list[str]]:
                 imports.append(imp)
     # fail-open: one unparsable file must not abort the whole codebase scan; it just
     # contributes no symbols/imports
-    except Exception:
+    except Exception:  # noqa: S110 -- expected and deliberately swallowed, per the fail-open note
         pass
     return list(dict.fromkeys(symbols)), list(dict.fromkeys(imports))
 
@@ -213,7 +213,7 @@ def _parse_go(path: Path) -> tuple[list[str], list[str]]:
                 imports.append(pkg.split("/")[-1])
     # fail-open: one unparsable file must not abort the whole codebase scan; it just
     # contributes no symbols/imports
-    except Exception:
+    except Exception:  # noqa: S110 -- expected and deliberately swallowed, per the fail-open note
         pass
     return list(dict.fromkeys(symbols)), list(dict.fromkeys(imports))
 
@@ -248,7 +248,7 @@ def _extract_guardrails_from_cursorrules(path: Path, root: Path) -> list[dict]:
             )
     # fail-open: one unparsable .cursorrules file must not abort the whole codebase scan;
     # it just contributes no guardrails
-    except Exception:
+    except Exception:  # noqa: S110 -- expected and deliberately swallowed, per the fail-open note
         pass
     return guardrails
 
@@ -271,7 +271,7 @@ def _extract_guardrails_from_rfc(rfc_dir: Path, root: Path, mapped: Optional[set
                     "source_file": md_file.relative_to(root).as_posix(),
                 }
             )
-        except Exception:  # fail-open: one unparsable RFC file must not abort scanning the rest of the directory
+        except Exception:  # noqa: S110 -- fail-open: one unparsable RFC file must not abort scanning the rest of the directory
             pass
     return guardrails
 
@@ -304,8 +304,7 @@ def _extract_guardrails_from_superpowers(superpowers_dir: Path, root: Path,
                         "source_file": md_file.relative_to(root).as_posix(),
                     }
                 )
-            except Exception:  # fail-open: one unreadable skill file must not lose
-                # the rest of the map, same as the RFC extractor above.
+            except Exception:  # noqa: S110 -- fail-open: one unreadable skill file must not lose the rest of the map
                 pass
     return guardrails
 

@@ -39,7 +39,7 @@ def _project_name() -> str:
         import subprocess
 
         remote = subprocess.check_output(
-            ["git", "remote", "get-url", "origin"],
+            ["git", "remote", "get-url", "origin"],  # noqa: S607 -- git on PATH; fixed argv
             text=True,
             cwd=root,
         ).strip()
@@ -47,7 +47,7 @@ def _project_name() -> str:
             return remote.rstrip("/").split("/")[-1].removesuffix(".git")
     # fail-open: no git remote / not a git repo / git not installed all fall back to the
     # dir name below
-    except Exception:
+    except Exception:  # noqa: S110 -- expected and deliberately swallowed, per the fail-open note
         pass
     return root.name
 
@@ -58,8 +58,8 @@ def _project_name() -> str:
 def _git_config(key: str) -> Optional[str]:
     """`git config user.email`, or None. The dev-session fallback."""
     try:
-        out = subprocess.run(
-            ["git", "config", "--get", key], capture_output=True, text=True, timeout=5, check=False
+        out = subprocess.run(  # noqa: S603 -- git on PATH, argv list, no shell; callers pass literal config keys
+            ["git", "config", "--get", key], capture_output=True, text=True, timeout=5, check=False  # noqa: S607 -- git on PATH; callers pass literal config keys
         )
     except (OSError, subprocess.SubprocessError):
         return None
@@ -279,7 +279,7 @@ class AgentLogger:
                         updated += 1
                 # fail-open: one malformed JSON-lines entry must not abort resolving the
                 # rest; raw line is preserved unchanged below either way
-                except Exception:
+                except Exception:  # noqa: S110 -- expected and deliberately swallowed, per the fail-open note
                     pass
                 lines.append(raw)
         with self._log_path.open("w", encoding="utf-8") as fh:
@@ -306,7 +306,7 @@ class AgentLogger:
                         results.append(entry)
                 # fail-open: one malformed JSON-lines entry must not abort scanning the
                 # rest of the log for unresolved issues
-                except Exception:
+                except Exception:  # noqa: S110 -- expected and deliberately swallowed, per the fail-open note
                     pass
         return results
 

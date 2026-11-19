@@ -135,6 +135,12 @@ def _exporter(signal: str, module: str, attr: str, env) -> Any:
         return None
     from agentsmith import compliance
 
+    # Spans and metrics carry request data, so they leave only over https, or
+    # over plain http to this machine. The same rule the portal and intake
+    # clients apply before they send anything (compliance.is_web_url).
+    if not compliance.is_web_url(endpoint):
+        logger.error("%s is not https (or http to this machine) — %s will not be exported", endpoint, signal)
+        return None
     if not compliance.outbound_allowed(endpoint):
         logger.error("%s is outside the declared boundary — %s will not be exported", endpoint, signal)
         return None

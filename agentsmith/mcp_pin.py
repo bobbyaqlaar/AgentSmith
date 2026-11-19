@@ -69,7 +69,8 @@ def tool_hashes(tools: list[dict[str, Any]]) -> dict[str, str]:
 
 
 def _read_reply(process: subprocess.Popen[bytes], wanted: int, deadline: float) -> dict[str, Any]:
-    assert process.stdout is not None
+    if process.stdout is None:
+        raise ConnectionError("the server was started without a stdout pipe")
     buffer = b""
     descriptor = process.stdout.fileno()
     while True:
@@ -90,16 +91,17 @@ def _read_reply(process: subprocess.Popen[bytes], wanted: int, deadline: float) 
 
 def _fetch_stdio(server: dict[str, Any]) -> list[dict[str, Any]]:
     env = {**os.environ, **{k: os.path.expandvars(str(v)) for k, v in server.get("env", {}).items()}}
-    process = subprocess.Popen(
+    process = subprocess.Popen(  # noqa: S603 -- starts the MCP server the repository's own config declares, to pin its tools; no shell
         [server["command"], *server.get("args", [])],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         env=env,
     )
-    assert process.stdin is not None
     deadline = time.monotonic() + TIMEOUT_SECONDS
     try:
+        if process.stdin is None:
+            raise ConnectionError("the server was started without a stdin pipe")
         process.stdin.write((json.dumps(_INITIALIZE) + "\n").encode())
         process.stdin.flush()
         _read_reply(process, 1, deadline)

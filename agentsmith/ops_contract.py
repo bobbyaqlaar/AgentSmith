@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 OPS_CONTRACT = 1
 URL_ENV = "OPS_PORTAL_URL"
-TOKEN_ENV = "OPS_PORTAL_TOKEN"
+TOKEN_ENV = "OPS_PORTAL_TOKEN"  # noqa: S105 -- an environment variable NAME, not a secret
 INGEST_PATH = "/api/ops/ingest"
 # Text limits a receiver may enforce; the schema states them.
 TEXT_LIMIT = 4000

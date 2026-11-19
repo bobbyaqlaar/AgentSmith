@@ -88,8 +88,8 @@ def _notify_osascript(title: str, message: str) -> bool:
 
         if platform.system() != "Darwin":
             return False
-        proc = subprocess.run(
-            [
+        proc = subprocess.run(  # noqa: S603 -- osascript with a fixed script; the message goes in as an argument, never as code
+            [  # noqa: S607 -- osascript on PATH; macOS only
                 "osascript",
                 "-e",
                 _OSASCRIPT_NOTIFY,
@@ -127,18 +127,18 @@ def _send_webhook(title: str, message: str) -> None:
                 sys.path.insert(0, repo)
             from agentsmith import compliance
 
-            if not compliance.outbound_allowed(WEBHOOK_URL):
+            if not compliance.is_web_url(WEBHOOK_URL) or not compliance.outbound_allowed(WEBHOOK_URL):
                 return
             payload = json.dumps(
                 {"text": f"*{APP_NAME}* — *{title}*\n{message}"}
             ).encode()
-            req = urllib.request.Request(
+            req = urllib.request.Request(  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
                 WEBHOOK_URL,
                 data=payload,
                 headers={"Content-Type": "application/json"},
             )
-            urllib.request.urlopen(req, timeout=5)  # nosec B310 - the operator's configured webhook
-        except Exception:  # fail-open: fire-and-forget webhook on a daemon thread; nothing waits on or checks this
+            urllib.request.urlopen(req, timeout=5)  # nosec B310 - the operator's configured webhook  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
+        except Exception:  # noqa: S110 -- fail-open: fire-and-forget webhook on a daemon thread; nothing waits on or checks this
             pass
 
     threading.Thread(target=_post, daemon=True, name="notifier-webhook").start()

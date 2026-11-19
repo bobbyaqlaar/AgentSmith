@@ -2590,7 +2590,9 @@ events silently. If `OPS_PORTAL_URL`/`AUDIT_LOG_WRITE_TOKEN` are unset, or
 the write to `POST /api/audit/append` fails (portal down, network error,
 non-2xx response), the event is appended as a JSON line to
 `~/.agent-framework/local-audit-fallback.log` instead, tagged with the
-reason (`ops_portal_not_configured` or `ops_portal_write_failed`). This is
+reason (`ops_portal_not_configured`, `ops_portal_url_not_https` — the URL is
+neither https nor http to this machine, so it was never opened — or
+`ops_portal_write_failed`). This is
 a local trace for later reconciliation, not a substitute for the Ops
 Portal's immutable, signed audit log — it has no signature, no tamper
 protection, and no cross-machine visibility.

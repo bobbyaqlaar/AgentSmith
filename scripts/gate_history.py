@@ -75,13 +75,13 @@ def record(root: Path, event: str, detail: str) -> None:
 
 
 def _git_dir(root: Path) -> Optional[Path]:
-    found = subprocess.run(["git", "rev-parse", "--absolute-git-dir"], cwd=root,
+    found = subprocess.run(["git", "rev-parse", "--absolute-git-dir"], cwd=root,  # noqa: S607 -- git on PATH; fixed argv
                            capture_output=True, text=True, check=False).stdout.strip()
     return Path(found) if found else None
 
 
 def head(root: Path) -> str:
-    return subprocess.run(["git", "rev-parse", "HEAD"], cwd=root,
+    return subprocess.run(["git", "rev-parse", "HEAD"], cwd=root,  # noqa: S607 -- git on PATH; fixed argv
                           capture_output=True, text=True, check=False).stdout.strip()
 
 

@@ -65,7 +65,7 @@ _EXPRESSION = re.compile(r"\$\{\{\s*(.*?)\s*\}\}")
 
 
 def _git(root: Path, *args: str) -> str:
-    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True,
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True,  # noqa: S603, S607 -- git wrapper, argv list, no shell; callers pass literals or refs git itself printed
                           check=False).stdout.strip()
 
 
@@ -305,7 +305,7 @@ def run(root: Path, only: Optional[str] = None, services: bool = False,
         print(f"  ▶️  {step.name}  ({step.workflow} · {step.job})")
         for line in dropped:
             print(f"      (not run — this is not a fresh runner: {line})")
-        result = subprocess.run(["bash", "-eo", "pipefail", "-c", script or ""],
+        result = subprocess.run(["bash", "-eo", "pipefail", "-c", script or ""],  # noqa: S603, S607 -- runs a step from the repository's own CI workflow, as CI does; that is this tool's purpose
                                 cwd=directory or str(where), env=environment, check=False)
         if result.returncode == 0:
             passed += 1
@@ -327,7 +327,7 @@ def run(root: Path, only: Optional[str] = None, services: bool = False,
         import gate_history
 
         gate_history.record_gates_run(where, passed=passed, failed=failed, skipped=skipped, only=only)
-    except Exception:  # fail-open: recording the run must not fail the run
+    except Exception:  # noqa: S110 -- fail-open: recording the run must not fail the run
         pass
     return 1 if failed else 0
 

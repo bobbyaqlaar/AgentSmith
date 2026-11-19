@@ -420,7 +420,7 @@ _SECRETS = (
 )
 # What a line that MUST hold one carries — a redaction test, a fixture that
 # proves the scrubber works. Greppable, so the exemptions can be counted.
-NOT_A_SECRET = "not-a-secret:"
+NOT_A_SECRET = "not-a-secret:"  # noqa: S105 -- a marker prefix that labels test values, not a secret
 
 
 def _p12_secrets(src: Source) -> List[str]:
@@ -619,7 +619,7 @@ def exemption_count(root: Path) -> int:
 
 
 def _git(root: Path, *args: str) -> str:
-    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False).stdout
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False).stdout  # noqa: S603, S607 -- git on PATH, argv list, no shell; callers pass literal subcommands
 
 
 def evidence_resolver(root: Path, rev: str) -> Resolver:
@@ -643,7 +643,7 @@ def evidence_resolver(root: Path, rev: str) -> Resolver:
         found = token in known or any(fnmatch(path, token) for path in tracked)
         if not found:
             grep = ["grep", "-q", "-F", "-e", token] + ([rev] if rev else ["--cached"]) + ["--", ":!*.md"]
-            found = subprocess.run(["git", *grep], cwd=root, capture_output=True, check=False).returncode == 0
+            found = subprocess.run(["git", *grep], cwd=root, capture_output=True, check=False).returncode == 0  # noqa: S603, S607 -- git grep with the token after -e and paths after --; no shell
         seen[token] = found
         return found
 

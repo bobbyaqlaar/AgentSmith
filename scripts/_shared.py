@@ -302,7 +302,7 @@ def _tenant_id() -> Optional[str]:
                     return line.split(":", 1)[1].strip()
         # fail-open: best-effort tenant-id lookup; None is a valid "no tenant" result,
         # same as the yaml-parse path below
-        except Exception:
+        except Exception:  # noqa: S110 -- expected and deliberately swallowed, per the fail-open note
             pass
         return None
     except Exception:
@@ -538,8 +538,9 @@ def load_script(name: str, *, cache: bool = True) -> Any:
     # Keep the hyphen-free module name callers already used ("run_evals"), so
     # anything reaching into sys.modules by that name still finds it.
     spec = importlib.util.spec_from_file_location(name.replace("-", "_"), path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load script: {path}")
     module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
     spec.loader.exec_module(module)
     if cache:
         _SCRIPT_MODULE_CACHE[name] = module

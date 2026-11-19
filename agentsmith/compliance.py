@@ -515,7 +515,7 @@ def find_decision(
     signal. Only a decision about the latest request counts: a gate asked again with
     different input is not answered by what was approved before."""
     where = "tenant_id = %s AND kind = %s AND payload->>'workflow_id' = %s AND payload->>'gate_id' = %s"
-    query = f"SELECT payload FROM compliance_outbox WHERE {where} ORDER BY record_id DESC LIMIT 1"  # nosec B608
+    query = f"SELECT payload FROM compliance_outbox WHERE {where} ORDER BY record_id DESC LIMIT 1"  # nosec B608  # noqa: S608 -- `where` is a constant above; every value is a %s parameter
     connection = _connect(dsn)
     try:
         with connection.cursor() as cursor:
@@ -642,9 +642,20 @@ def require_inside_boundary(base_url: str) -> None:
     if declaration is None:
         return
     host = urlparse(base_url).hostname
-    if host in ("localhost", "127.0.0.1", "::1") or host_allowed(host, declaration.boundary.hosts):
+    if host in LOOPBACK_HOSTS or host_allowed(host, declaration.boundary.hosts):
         return
     raise ComplianceRefused("OB-RESIDENCY", f"endpoint {host!r} is outside the declared boundary")
+
+
+LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+
+
+def is_web_url(url: str) -> bool:
+    """https to any host; plain http only to this machine. `urlopen` also serves
+    `file:` and `ftp:`, so a URL from configuration is checked before it is opened
+    (ruff S310), and a bearer token never crosses a network in clear text."""
+    parsed = urlparse(url)
+    return parsed.scheme == "https" or (parsed.scheme == "http" and parsed.hostname in LOOPBACK_HOSTS)
 
 
 def outbound_allowed(url: str) -> bool:
