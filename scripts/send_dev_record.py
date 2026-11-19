@@ -104,7 +104,10 @@ def send(document: Optional[dict], say: Callable[[str, str], None], unread: str 
                        "AGENTSMITH_PORTAL_INGEST_TOKEN to show this repository in the portal's Dev workspace")
         return 0
     parsed = urlparse(url)
-    if parsed.scheme != "https" and not (parsed.scheme == "http" and parsed.hostname in ("localhost", "127.0.0.1")):
+    # Same rule as agentsmith.compliance.is_web_url. Kept inline: this script is
+    # stdlib-only and runs in any CI job. Parity is pinned by a test.
+    loopback = ("localhost", "127.0.0.1", "::1")
+    if parsed.scheme != "https" and not (parsed.scheme == "http" and parsed.hostname in loopback):
         say("error", f"AGENTSMITH_PORTAL_URL must be https (or http to localhost) — not sending the token to {url}")
         return 1
     if document is None:
@@ -114,7 +117,7 @@ def send(document: Optional[dict], say: Callable[[str, str], None], unread: str 
     endpoint = url.rstrip("/") + "/api/dev/ingest"
     stored = 0
     for part in _parts(document):
-        request = urllib.request.Request(
+        request = urllib.request.Request(  # noqa: S310 -- the URL passed the https-or-localhost check above
             endpoint, data=json.dumps(part).encode("utf-8"), method="POST",
             headers={"authorization": f"Bearer {token}", "content-type": "application/json"},
         )

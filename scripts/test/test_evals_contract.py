@@ -98,10 +98,10 @@ def test_the_stub_judge_scores_from_the_markers_and_refuses_a_call_without_its_k
     def ask(judge, key):
         body = json.dumps({"model": "stub-judge", "messages": [
             {"role": "user", "content": "INPUT: q\nACTUAL OUTPUT: a SCORE=0.65 HALLUCINATION=0.2"}]}).encode()
-        request = urllib.request.Request(f"{judge.url}/chat/completions", data=body, method="POST",
+        request = urllib.request.Request(f"{judge.url}/chat/completions", data=body, method="POST",  # noqa: S310 -- the stub judge this test started on localhost
                                          headers={"Authorization": f"Bearer {key}",
                                                   "Content-Type": "application/json"})
-        with urllib.request.urlopen(request, timeout=10) as answer:
+        with urllib.request.urlopen(request, timeout=10) as answer:  # noqa: S310 -- the stub judge this test started on localhost
             return json.loads(json.loads(answer.read())["choices"][0]["message"]["content"])
 
     with conformance.StubJudge() as judge:

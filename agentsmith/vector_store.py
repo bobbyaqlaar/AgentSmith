@@ -107,7 +107,7 @@ def _record_hits(
         record_retrieval(
             tenant_id=current_tenant_id(), backend=backend, hits=len(hits)
         )
-    except Exception:  # fail-open: a metric must never break a query
+    except Exception:  # noqa: S110 -- fail-open: a metric must never break a query
         pass
     try:
         # WHICH embedder produced these vectors. The default is HashEmbedder, a
@@ -127,7 +127,7 @@ def _record_hits(
             scores = [float(h.score) for h in hits]
             span.set_attribute("agent.retrieval.top_score", max(scores))
             span.set_attribute("agent.retrieval.min_score", min(scores))
-    except Exception:  # fail-open: an attribute write must never break a query
+    except Exception:  # noqa: S110 -- fail-open: an attribute write must never break a query
         pass
 
 
@@ -235,7 +235,7 @@ def claim_legacy(tenant: str, *, apply: bool = False, dsn: Optional[str] = None)
 
     def claim(cursor: Any) -> dict[str, int]:
         found = count(cursor)
-        cursor.execute(f"UPDATE agentsmith_embeddings AS e SET id = %s || e.id, tenant_id = %s "
+        cursor.execute(f"UPDATE agentsmith_embeddings AS e SET id = %s || e.id, tenant_id = %s "  # noqa: S608 -- `held` and `candidates` are constants above; every value is a %s parameter
                        f"WHERE e.id IN (SELECT e.id {candidates} AND NOT {held})",
                        (prefix, tenant, tenant, prefix, prefix, prefix))
         return found
@@ -408,7 +408,7 @@ class PgVectorStore:
                     {where}
                     ORDER BY embedding <=> %s::vector
                     LIMIT %s
-                    """,  # nosec B608
+                    """,  # nosec B608  # noqa: S608 -- `where` is one of two constants; every value is a parameter
                     (q_literal, *([tenant] if _profile() else []), q_literal, k),
                 )
                 rows = cur.fetchall()

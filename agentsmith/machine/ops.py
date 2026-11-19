@@ -57,7 +57,7 @@ def effective_mode(env: Optional[Mapping[str, str]] = None) -> Optional[str]:
 
 def _http_ok(url: str, timeout: float = 3.0) -> bool:
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:  # nosec B310 - a local health URL from this module
+        with urllib.request.urlopen(url, timeout=timeout) as response:  # nosec B310 - a local health URL from this module  # noqa: S310 -- callers pass this module's own local health URLs
             return 200 <= response.status < 400
     except urllib.error.HTTPError as exc:
         return 300 <= exc.code < 400
@@ -66,7 +66,7 @@ def _http_ok(url: str, timeout: float = 3.0) -> bool:
 
 
 def _git_global(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", "config", "--global", *args], capture_output=True, text=True, check=False)
+    return subprocess.run(["git", "config", "--global", *args], capture_output=True, text=True, check=False)  # noqa: S603, S607 -- git config wrapper, argv list, no shell; callers pass literal keys
 
 
 def _git_global_get(key: str) -> str:
@@ -115,8 +115,8 @@ def _run_script(name: str, args: Sequence[str], out: Out, *, quiet: bool = False
         return 127
     cmd = [sys.executable, str(script), *args]
     if quiet:
-        return subprocess.run(cmd, capture_output=True, text=True, check=False).returncode
-    return subprocess.run(cmd, check=False).returncode
+        return subprocess.run(cmd, capture_output=True, text=True, check=False).returncode  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
+    return subprocess.run(cmd, check=False).returncode  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
 
 
 # ── mode ────────────────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ def check(out: Out = print, env: Optional[Mapping[str, str]] = None) -> int:
         failed = True
     elif current in (None, "local"):
         try:
-            with urllib.request.urlopen(OLLAMA_TAGS, timeout=3) as response:  # nosec B310 - a constant local URL
+            with urllib.request.urlopen(OLLAMA_TAGS, timeout=3) as response:  # nosec B310 - a constant local URL  # noqa: S310 -- OLLAMA_TAGS is a constant local URL
                 names = {m.get("name", "") for m in json.load(response).get("models", [])}
             out("   ✅ [ENGINE]  Ollama daemon responding")
             required = required_ollama_models()
@@ -306,7 +306,7 @@ def dashboard_start(out: Out = print, env: Optional[Mapping[str, str]] = None) -
 
     if shutil.which("docker") and compose.is_file() and not opted_out:
         out("📊 Starting the standing stack (Phoenix + Postgres + Ops Portal)...")
-        rc = subprocess.run(["docker", "compose", "up", "-d"], cwd=compose.parent, check=False).returncode
+        rc = subprocess.run(["docker", "compose", "up", "-d"], cwd=compose.parent, check=False).returncode  # noqa: S607 -- docker on PATH; fixed argv
         if rc != 0:
             out("❌ docker compose up failed — see the output above")
             return rc
@@ -328,7 +328,7 @@ def dashboard_start(out: Out = print, env: Optional[Mapping[str, str]] = None) -
     log.parent.mkdir(parents=True, exist_ok=True)
     out(f"📊 Starting Arize Phoenix at {endpoint} (standalone — no Docker stack)...")
     with log.open("ab") as fh:
-        proc = subprocess.Popen(cmd, stdout=fh, stderr=subprocess.STDOUT, start_new_session=True)
+        proc = subprocess.Popen(cmd, stdout=fh, stderr=subprocess.STDOUT, start_new_session=True)  # noqa: S603 -- uvx resolved by shutil.which; port and database URL are the operator's own settings
     pid_file = _phoenix_pid_file(env)
     pid_file.parent.mkdir(parents=True, exist_ok=True)
     pid_file.write_text(f"{proc.pid}\n", encoding="utf-8")
@@ -343,7 +343,7 @@ def dashboard_stop(out: Out = print, env: Optional[Mapping[str, str]] = None) ->
     if shutil.which("docker") and compose.is_file():
         out("🔒 Stopping the standing stack (Phoenix + Postgres + Ops Portal)...")
         # No -v: named volumes (traces, portal data) survive a stop.
-        rc = subprocess.run(["docker", "compose", "down"], cwd=compose.parent, check=False).returncode
+        rc = subprocess.run(["docker", "compose", "down"], cwd=compose.parent, check=False).returncode  # noqa: S607 -- docker on PATH; fixed argv
         out("✅ Stack offline (data preserved — 'docker compose down -v' there to wipe it)" if rc == 0
             else "❌ docker compose down failed — see the output above")
         return rc
@@ -354,7 +354,7 @@ def dashboard_stop(out: Out = print, env: Optional[Mapping[str, str]] = None) ->
         pid = int(pid_file.read_text(encoding="utf-8").strip())
         # A pid file outlives a reboot, and the number is reused: signal the
         # group only if that process is still the Phoenix this command started.
-        command = subprocess.run(["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True,
+        command = subprocess.run(["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True,  # noqa: S603, S607 -- ps on PATH, argv list, no shell; the pid is an int
                                  check=False).stdout
         if "phoenix" not in command:
             raise ProcessLookupError(pid)
@@ -363,7 +363,7 @@ def dashboard_stop(out: Out = print, env: Optional[Mapping[str, str]] = None) ->
         # No pid file, or the process is gone. A Phoenix started by the old
         # shell function has no pid file at all.
         for pattern in ("phoenix serve", "phoenix.server.main"):
-            subprocess.run(["pkill", "-f", pattern], capture_output=True, check=False)
+            subprocess.run(["pkill", "-f", pattern], capture_output=True, check=False)  # noqa: S603, S607 -- pkill on PATH, argv list, no shell; the pattern is a literal from this loop
     pid_file.unlink(missing_ok=True)
     out("✅ Dashboard offline")
     return 0
@@ -437,8 +437,8 @@ def tenant_promote(tenant_id: str, from_env: str, to_env: str, out: Out = print)
         out("❌ gh CLI required to open the develop → main promotion PR")
         return 1
     out(f"🚀 Opening promotion PR: develop → main for tenant '{tenant_id}'...")
-    rc = subprocess.run(
-        [
+    rc = subprocess.run(  # noqa: S603 -- gh, checked by shutil.which; argv list, no shell; tenant id is the operator's
+        [  # noqa: S607 -- gh on PATH, checked by shutil.which above
             "gh", "pr", "create",
             "--title", f"promote({tenant_id}): staging → production",
             "--body", "Auto-generated by `agentsmith tenant promote`. Staging eval gate passed. "

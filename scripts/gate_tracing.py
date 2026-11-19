@@ -151,6 +151,7 @@ def ship(timeout: float = 1.0) -> ShipResult:
     batches = sorted(spool_dir().glob("*.pb"))
     try:
         _import_runtime()
+        from agentsmith.compliance import is_web_url
         from agentsmith.otlp import resolve_otlp_endpoint
 
         endpoint = resolve_otlp_endpoint("traces")
@@ -158,14 +159,17 @@ def ship(timeout: float = 1.0) -> ShipResult:
         return ShipResult(endpoint=None, kept=len(batches), errors=[f"endpoint unresolved: {exc}"])
     if not endpoint:
         return ShipResult(endpoint=None, kept=len(batches))
+    if not is_web_url(endpoint):
+        return ShipResult(endpoint=endpoint, kept=len(batches),
+                          errors=[f"{endpoint}: must be https, or http to this machine — nothing sent"])
     result = ShipResult(endpoint=endpoint)
     for batch in batches:
-        request = urllib.request.Request(
+        request = urllib.request.Request(  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
             endpoint, data=batch.read_bytes(), method="POST",
             headers={"Content-Type": "application/x-protobuf"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310 - the configured collector
+            with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310 - the configured collector  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
                 accepted = 200 <= response.status < 300
         except (urllib.error.URLError, OSError) as exc:
             result.kept += len(batches) - result.sent - result.kept
@@ -206,7 +210,7 @@ def reset_for_tests() -> None:
 
         trace._TRACER_PROVIDER_SET_ONCE = Once()  # type: ignore[attr-defined]
         trace._TRACER_PROVIDER = None  # type: ignore[attr-defined]
-    except Exception:  # fail-open: only tests call this
+    except Exception:  # noqa: S110 -- fail-open: only tests call this
         pass
     _state["provider"] = None
     _state["error"] = None

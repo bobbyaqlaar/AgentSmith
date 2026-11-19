@@ -129,7 +129,7 @@ def test_shipping_posts_the_spooled_bytes_and_deletes_only_what_was_accepted(spo
 
 
 def test_a_dead_collector_costs_at_most_the_timeout(spool, tmp_path, monkeypatch):
-    monkeypatch.setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://10.255.255.1:9/v1/traces")  # unroutable
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "https://10.255.255.1:9/v1/traces")  # unroutable
     with gt.gate_span("stop", root=tmp_path, ide="claude"):
         pass
     gt.flush()

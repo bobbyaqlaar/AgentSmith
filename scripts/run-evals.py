@@ -1234,7 +1234,7 @@ def run_scorecard(
         from notifier import notify_eval_result
 
         notify_eval_result(avg_score, fail_below, passed, project=project)
-    except Exception:  # fail-open: desktop notification must not affect pass/fail
+    except Exception:  # noqa: S110 -- fail-open: desktop notification must not affect pass/fail
         pass
 
     _write_results(verdict=("pass" if passed else "fail"), passed_value=passed)

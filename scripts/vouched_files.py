@@ -34,7 +34,7 @@ from pathlib import Path
 
 def _git(*args: str, root: Path | None = None) -> bytes | None:
     try:
-        done = subprocess.run(["git", *args], cwd=str(root) if root else None, capture_output=True, check=False)
+        done = subprocess.run(["git", *args], cwd=str(root) if root else None, capture_output=True, check=False)  # noqa: S603, S607 -- git on PATH, argv list, no shell; callers pass literal subcommands
     except OSError:  # fail-open: no git on PATH means no vouch, so nothing is skipped
         return None
     return done.stdout if done.returncode == 0 else None
@@ -48,7 +48,7 @@ def _staged_blobs(root: Path, paths: list[str]) -> dict[str, bytes]:
         return {}
     try:
         done = subprocess.run(
-            ["git", "cat-file", "--batch"],
+            ["git", "cat-file", "--batch"],  # noqa: S607 -- git on PATH; fixed argv
             cwd=str(root),
             input="".join(f":{p}\n" for p in paths).encode("utf-8"),
             capture_output=True,

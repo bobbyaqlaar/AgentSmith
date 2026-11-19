@@ -70,7 +70,7 @@ def _paths(root: Path) -> Optional[tuple[Path, tuple[Path, ...]]]:
     """The ledger, in the git directory a checkout's worktrees share (the main
     checkout's `.git`), and the legacy ledgers to read beside it: the shared
     directory's and this checkout's own, which differ only in a linked worktree."""
-    done = subprocess.run(["git", "-C", str(root), "rev-parse", "--git-dir", "--git-common-dir"],
+    done = subprocess.run(["git", "-C", str(root), "rev-parse", "--git-dir", "--git-common-dir"],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
                           capture_output=True, text=True, check=False)
     lines = done.stdout.splitlines()
     if done.returncode != 0 or len(lines) != 2 or not all(line.strip() for line in lines):
@@ -373,7 +373,7 @@ def read_new(entry: dict) -> dict:
 
 
 def _git(root: Path, *args: str) -> str:
-    done = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, check=False)
+    done = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, check=False)  # noqa: S603, S607 -- git on PATH, argv list, no shell; every caller passes fixed subcommands and flags built here
     return done.stdout if done.returncode == 0 else ""
 
 
@@ -464,7 +464,7 @@ def trailers(root: Path, env: Mapping[str, str], amend: bool = False) -> list[st
     lines = [f"Agent: {name}"]
     try:
         lines.extend(_spend(root, env, amend))
-    except Exception:  # fail-open: a ledger that cannot be read, saved or understood costs the count, never who
+    except Exception:  # noqa: S110 -- fail-open: a ledger that cannot be read, saved or understood costs the count, never who
         pass
     return lines
 
@@ -526,14 +526,14 @@ def add_trailers(message_file: Path, root: Path, env: Mapping[str, str], amend: 
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    root = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
+    root = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,  # noqa: S607 -- git on PATH; fixed argv
                                check=False).stdout.strip() or ".")
     amend = "--amend" in args
     args = [arg for arg in args if arg != "--amend"]
     if len(args) == 2 and args[0] == "trailers":
         try:
             add_trailers(Path(args[1]), root, os.environ, amend)
-        except Exception:  # fail-open: a commit is never blocked by its own bookkeeping
+        except Exception:  # noqa: S110 -- fail-open: a commit is never blocked by its own bookkeeping
             pass
         return 0
     if args == ["report"]:

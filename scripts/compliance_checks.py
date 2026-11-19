@@ -247,7 +247,7 @@ _SWALLOWED = re.compile(r"\|\|(?!\s*exit\s+[1-9])")  # a fallback, unless it fai
 
 
 def _default_branches(root: Path) -> set[str]:
-    done = subprocess.run(["git", "-C", str(root), "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+    done = subprocess.run(["git", "-C", str(root), "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
                           capture_output=True, text=True, check=False)
     found = done.stdout.strip().split("/", 1)[-1] if done.returncode == 0 and done.stdout.strip() else ""
     return {found} if found else {"main", "master"}

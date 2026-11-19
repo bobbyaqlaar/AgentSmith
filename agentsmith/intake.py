@@ -35,10 +35,9 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import urlparse
 
 URL_VAR = "AGENTSMITH_PORTAL_URL"
-TOKEN_VAR = "AGENTSMITH_INTAKE_TOKEN"
+TOKEN_VAR = "AGENTSMITH_INTAKE_TOKEN"  # noqa: S105 -- an environment variable NAME, not a secret
 
 CHANGE_SOMETHING = 2
 RETRY = 4
@@ -73,11 +72,12 @@ class IntakeError(Exception):
 
 
 def safe_portal_url(url: str) -> bool:
-    """https anywhere; http only to this machine. The same rule
-    scripts/send_dev_record.py applies before it sends a token — pinned to it by
-    agentsmith/test/test_intake.py, since the two ship to different places."""
-    parsed = urlparse(url)
-    return parsed.scheme == "https" or (parsed.scheme == "http" and parsed.hostname in ("localhost", "127.0.0.1"))
+    """https anywhere; http only to this machine. The one rule is
+    compliance.is_web_url; scripts/send_dev_record.py keeps an inline copy (it
+    ships stdlib-only), pinned to that rule by scripts/test/test_send_dev_record.py."""
+    from agentsmith.compliance import is_web_url
+
+    return is_web_url(url)
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -169,7 +169,7 @@ def validate_record(record: Any, intake_id: str) -> dict[str, Any]:
 
 
 def _call(method: str, url: str, token: str) -> dict[str, Any]:
-    request = urllib.request.Request(
+    request = urllib.request.Request(  # noqa: S310 -- the URL passed safe_portal_url (https, or http to localhost) before this
         url, method=method, data=b"{}" if method == "POST" else None,
         headers={"authorization": f"Bearer {token}", "accept": "application/json",
                  **({"content-type": "application/json"} if method == "POST" else {})},

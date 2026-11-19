@@ -121,18 +121,20 @@ def audit_log_event(
     reason = "ops_portal_not_configured"
     from agentsmith import compliance
 
-    if url and token and compliance.outbound_allowed(url):
-        request = urllib.request.Request(
+    if url and token and not compliance.is_web_url(url):
+        reason = "ops_portal_url_not_https"
+    elif url and token and compliance.outbound_allowed(url):
+        request = urllib.request.Request(  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
             f"{url}/api/audit/append",
             data=json.dumps(body).encode(),
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=5) as response:  # nosec B310 - the operator's portal URL
+            with urllib.request.urlopen(request, timeout=5) as response:  # nosec B310 - the operator's portal URL  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
                 if 200 <= response.status < 300:
                     return
-        except Exception:  # fail-open: the event is kept locally below instead
+        except Exception:  # noqa: S110 -- fail-open: the event is kept locally below instead
             pass
         reason = "ops_portal_write_failed"
 

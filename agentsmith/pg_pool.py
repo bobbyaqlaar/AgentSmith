@@ -94,7 +94,7 @@ class _PooledConnection:
         except Exception:  # fail-open: pool already closed/full — don't leak the socket
             try:
                 conn.close()
-            except Exception:  # fail-open: connection already dead; nothing left to release
+            except Exception:  # noqa: S110 -- fail-open: connection already dead; nothing left to release
                 pass
 
     @property
@@ -147,7 +147,7 @@ def connect(dsn: str):
             except Exception:  # fail-open: pool refused the return; close directly
                 try:
                     conn.close()
-                except Exception:  # fail-open: already closed
+                except Exception:  # noqa: S110 -- fail-open: already closed
                     pass
     return psycopg2.connect(dsn)
 
@@ -158,7 +158,7 @@ def close_all() -> None:
         for pool in _pools.values():
             try:
                 pool.closeall()
-            except Exception:  # fail-open: shutdown path; a dead pool is already closed
+            except Exception:  # noqa: S110 -- fail-open: shutdown path; a dead pool is already closed
                 pass
         _pools.clear()
 

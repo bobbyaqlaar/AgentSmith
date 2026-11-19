@@ -68,7 +68,7 @@ async def _run_health_server() -> None:
     runner = web.AppRunner(app)
     await runner.setup()
     port = int(os.environ.get("PORT", "8080"))
-    site = web.TCPSite(runner, "0.0.0.0", port)
+    site = web.TCPSite(runner, "0.0.0.0", port)  # noqa: S104 -- a container health server; the kubelet probe reaches it from outside the pod
     await site.start()
     print(f"[worker] Health server listening on :{port}/healthz")
 

@@ -20,6 +20,7 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import date
 from pathlib import Path
@@ -56,7 +57,7 @@ def _sovereign_ollama_models() -> tuple[str, ...]:
         if ids:
             # Largest first: the profile's primary route before its fallback.
             return tuple(sorted(ids, reverse=True))
-    except Exception:  # fail-open: a smoke test must not die on a missing template
+    except Exception:  # noqa: S110 -- fail-open: a smoke test must not die on a missing template
         pass
     return ("falcon3:3b", "falcon3:1b")  # model-literal-ok: fallback == the template's own ids
 
@@ -94,6 +95,12 @@ def _chat(
     timeout: float = 120.0,
 ) -> str:
     url = _chat_url(base_url)
+    # Standalone (no runtime package), so the rule is agentsmith.compliance.is_web_url's,
+    # spelled here: https to any host, plain http only to this machine.
+    parsed = urllib.parse.urlparse(url)
+    if not (parsed.scheme == "https"
+            or (parsed.scheme == "http" and parsed.hostname in ("localhost", "127.0.0.1", "::1"))):
+        raise ValueError(f"{base_url!r} must be https, or http to this machine")
     body = json.dumps(
         {
             "model": model,
@@ -108,8 +115,8 @@ def _chat(
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    req = urllib.request.Request(url, data=body, method="POST", headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 - the endpoint the operator is probing
+    req = urllib.request.Request(url, data=body, method="POST", headers=headers)  # noqa: S310 -- the check above allowed only https, or http to loopback
+    with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 - the endpoint the operator is probing  # noqa: S310 -- the check above allowed only https, or http to loopback
         data = json.loads(resp.read().decode("utf-8"))
     choices = data.get("choices") or []
     if not choices:

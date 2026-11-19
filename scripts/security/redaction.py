@@ -85,7 +85,7 @@ def check(root: Path, environment: str, emitter: Optional[str], timeout: int = 3
                     PROBES_ENV: json.dumps([probe.text for probe in PROBES])})
         ran = ""  # why the emitter did not finish cleanly, judged after the wire
         try:
-            done = subprocess.run(shlex.split(emitter), cwd=root, env=env, capture_output=True, text=True,
+            done = subprocess.run(shlex.split(emitter), cwd=root, env=env, capture_output=True, text=True,  # noqa: S603 -- runs the emitter command the operator named for the redaction check; no shell
                                   check=False, timeout=timeout)
             if done.returncode != 0:
                 tail = done.stderr.strip().splitlines()[-1:] or [""]

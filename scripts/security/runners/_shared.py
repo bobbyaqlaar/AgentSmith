@@ -49,7 +49,7 @@ def verify_system(
     report Met while verifying nothing.
     """
     root = Path(ctx["root"])
-    proc = subprocess.run(
+    proc = subprocess.run(  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
         [sys.executable, str(root / "scripts" / "verify_system.py"), flag],
         cwd=root,
         capture_output=True,
@@ -117,7 +117,7 @@ def pytest_suite(
     if select:
         cmd += ["-k", select]
     run_env = {**clean, "ENVIRONMENT": "staging", **(env or {})}
-    proc = subprocess.run(
+    proc = subprocess.run(  # noqa: S603 -- pytest on a control's test file from the registry; argv list, no shell
         cmd,
         cwd=root,
         capture_output=True,
@@ -565,7 +565,7 @@ def node_suite(
         # Relative so node resolves it against cwd=portal, matching package.json.
         cmd.append("--experimental-loader=./test/ts-extension-loader.mjs")
     cmd.append(str(target))
-    proc = subprocess.run(
+    proc = subprocess.run(  # noqa: S603 -- node on the portal's own test file; argv list, no shell
         cmd,
         cwd=portal,
         capture_output=True,

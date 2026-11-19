@@ -106,13 +106,18 @@ agentsmith = ["models.yaml", "requirements-runtime.txt"]
 # while nothing checked. RUF100 is selected below precisely to keep that from
 # happening again.
 #
-# The selection is deliberate rather than maximal. Two families were measured
-# and rejected: `S` (bandit) reports 1429, almost all of it every subprocess
-# call and every assert; `BLE` reports 130, which is this repo's deliberate
-# fail-open idiom already governed by scripts/check_bare_except.py's stricter
-# rule that each one carry a `# fail-open:` justification. Turning either on
-# would produce noqa noise, and a lint rule that is mostly waived teaches people
-# to waive lint rules.
+# The selection is deliberate rather than maximal. `BLE` was measured and
+# rejected: it reports 130, which is this repo's deliberate fail-open idiom
+# already governed by scripts/check_bare_except.py's stricter rule that each one
+# carry a `# fail-open:` justification.
+#
+# `S` (flake8-bandit) was rejected once on a count of 1429 — but that count was
+# the test tree's asserts and subprocess calls. Outside the tests it raised 217,
+# each triaged (.agent-rfc/designs/ruff-s-rules.md): the real ones were fixed,
+# and every remaining waiver is an inline `# noqa: S… -- <reason>` that RUF100
+# holds to a finding that still exists. `bandit -ll` in supply-chain.yml covers
+# medium severity and up; `S` here is what catches the low-severity families —
+# a variable argv, a swallowed exception, an assert that `python -O` removes.
 #
 # What IS here earns its place: PLW1510 caught `subprocess.run` without an
 # explicit `check`, which is exactly how notifier._notify_osascript reported
@@ -122,7 +127,7 @@ line-length = 120
 extend-exclude = [".venv", "node_modules", ".next", "portal/.next"]
 
 [tool.ruff.lint]
-select = ["E", "F", "N", "B", "RUF", "PLW1510"]
+select = ["E", "F", "N", "B", "RUF", "PLW1510", "S"]
 ignore = [
     # Em dashes and typographic quotes are house style in this codebase's
     # comments, which carry the reasoning rather than restating the code.
@@ -136,6 +141,13 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Tests bind fixtures and doubles at module scope after a sys.path insert.
 "*/test/*" = ["E402"]
+# Test code is held to the test tree's job, not to production's: pytest asserts
+# with `assert` (S101); the tests drive git and the framework's CLIs with the
+# paths they build, which is what is under test (S603, S607); and a token in a
+# test is a fixture (S105, S106, S107). Anything else in a test is waived inline.
+"agentsmith/test/**" = ["S101", "S603", "S607", "S105", "S106", "S107"]
+"scripts/test/**" = ["S101", "S603", "S607", "S105", "S106", "S107"]
+".github/scratch-tenants/**/tests/**" = ["S101"]
 # Fully-qualified protobuf type URLs — e.g.
 # "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager
 # .v3.HttpConnectionManager" — are single tokens. Wrapping one changes the

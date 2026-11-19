@@ -396,7 +396,7 @@ def _credential_for(model: str, default_env: str) -> str:
             if env and os.environ.get(env, "").strip():
                 return os.environ[env]
             break
-    except Exception:  # fail-open: fall through to the provider default
+    except Exception:  # noqa: S110 -- fail-open: fall through to the provider default
         pass
     return os.environ.get(default_env, "")
 
@@ -629,7 +629,7 @@ def call(
         for attempt in range(1, max_attempts + 1):
             resp = httpx.post(url, json=body, headers=headers, timeout=120.0)
             if resp.status_code in _RETRYABLE_STATUSES and attempt < max_attempts:
-                wait = (2**attempt) * 5 + random.uniform(0, 3)
+                wait = (2**attempt) * 5 + random.uniform(0, 3)  # noqa: S311 -- backoff jitter, not a secret; a predictable value harms nothing
                 _time.sleep(wait)
                 continue
             # `status_code >= 400` rather than httpx's `resp.is_error`: the

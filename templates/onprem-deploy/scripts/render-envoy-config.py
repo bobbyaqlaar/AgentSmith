@@ -107,7 +107,7 @@ def main() -> int:
                     "name": "ingress",
                     "address": {
                         "socket_address": {
-                            "address": "0.0.0.0",
+                            "address": "0.0.0.0",  # noqa: S104 -- the ingress listener of a container proxy must accept outside traffic
                             "port_value": listen_port,
                         }
                     },

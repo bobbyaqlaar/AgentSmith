@@ -565,9 +565,9 @@ def find_decision(
     that request showed, answers it: a gate asked again is not answered by a decision on
     an earlier request, even one with the same input (P2-R14)."""
     gate = "tenant_id = %s AND kind = %s AND payload->>'workflow_id' = %s AND payload->>'gate_id' = %s"
-    latest_request = (f"SELECT record_id, payload FROM compliance_outbox WHERE {gate} "  # nosec B608
+    latest_request = (f"SELECT record_id, payload FROM compliance_outbox WHERE {gate} "  # nosec B608  # noqa: S608 -- `gate` is a constant above; every value is a %s parameter
                       "ORDER BY record_id DESC LIMIT 1")
-    its_decision = (f"SELECT payload FROM compliance_outbox WHERE {gate} "  # nosec B608
+    its_decision = (f"SELECT payload FROM compliance_outbox WHERE {gate} "  # nosec B608  # noqa: S608 -- `gate` is a constant above; every value is a %s parameter
                     "AND payload->>'request_record_id' = %s ORDER BY record_id DESC LIMIT 1")
     connection = _connect(dsn)
     try:
@@ -706,9 +706,20 @@ def require_inside_boundary(base_url: str) -> None:
     if declaration is None:
         return
     host = urlparse(base_url).hostname
-    if host in ("localhost", "127.0.0.1", "::1") or host_allowed(host, declaration.boundary.hosts):
+    if host in LOOPBACK_HOSTS or host_allowed(host, declaration.boundary.hosts):
         return
     raise ComplianceRefused("OB-RESIDENCY", f"endpoint {host!r} is outside the declared boundary")
+
+
+LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+
+
+def is_web_url(url: str) -> bool:
+    """https to any host; plain http only to this machine. `urlopen` also serves
+    `file:` and `ftp:`, so a URL from configuration is checked before it is opened
+    (ruff S310), and a bearer token never crosses a network in clear text."""
+    parsed = urlparse(url)
+    return parsed.scheme == "https" or (parsed.scheme == "http" and parsed.hostname in LOOPBACK_HOSTS)
 
 
 def outbound_allowed(url: str) -> bool:

@@ -127,24 +127,24 @@ def build_fixture(workdir: Path, contract: int = CONTRACT_VERSION) -> Path:
     commit = spec.get("commit") or {}
     git = ["git", "-C", str(root), "-c", f"user.name={commit.get('name', 'conformance')}",
            "-c", f"user.email={commit.get('email', 'c@x')}"]
-    subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)
-    subprocess.run([*git, "add", "-A"], check=True, capture_output=True)
-    subprocess.run([*git, "commit", "-q", "-m", commit.get("message", "fixture")], check=True, capture_output=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(root)], check=True)  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
+    subprocess.run([*git, "add", "-A"], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
+    subprocess.run([*git, "commit", "-q", "-m", commit.get("message", "fixture")], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
     if spec.get("history"):
-        subprocess.run([*git, "tag", "fixture"], check=True, capture_output=True)
+        subprocess.run([*git, "tag", "fixture"], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
     for step in spec.get("history") or []:
         for rel, body in step["files"].items():
             target = root / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(body, encoding="utf-8")
-        subprocess.run([*git, "add", "-A"], check=True, capture_output=True)
-        subprocess.run([*git, "commit", "-q", "-m", step["message"]], check=True, capture_output=True)
-        subprocess.run([*git, "tag", step["tag"]], check=True, capture_output=True)
+        subprocess.run([*git, "add", "-A"], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
+        subprocess.run([*git, "commit", "-q", "-m", step["message"]], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
+        subprocess.run([*git, "tag", step["tag"]], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
     return root
 
 
 def _ask(provider: str, case: Case, root: Path) -> tuple[int, str, str]:
-    done = subprocess.run([*shlex.split(provider), case.event_name, *case.args], input=json.dumps(case.event),
+    done = subprocess.run([*shlex.split(provider), case.event_name, *case.args], input=json.dumps(case.event),  # noqa: S603 -- runs the provider command the operator named for conformance; running it is the harness's purpose
                           capture_output=True, text=True, cwd=root, check=False)
     return done.returncode, done.stdout.strip(), done.stderr.strip()
 
@@ -195,23 +195,23 @@ def _arrange(root: Path, arrange: dict) -> None:
     # .githooks/, so its own commits meet no gate — which is the point of `commit`.
     git = ["git", "-C", str(root), "-c", "user.name=conformance", "-c", "user.email=c@x"]
     if arrange.get("checkout"):
-        subprocess.run([*git, "checkout", "-q", "-f", "--detach", arrange["checkout"]], check=True, capture_output=True)
-        subprocess.run([*git, "reset", "-q"], check=True, capture_output=True)
+        subprocess.run([*git, "checkout", "-q", "-f", "--detach", arrange["checkout"]], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
+        subprocess.run([*git, "reset", "-q"], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
     for tag in arrange.get("drop") or []:
-        subprocess.run([*git, "tag", "-d", tag], check=False, capture_output=True)
+        subprocess.run([*git, "tag", "-d", tag], check=False, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
     for rel, body in (arrange.get("write") or {}).items():
         target = root / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(body, encoding="utf-8")
     if arrange.get("stage"):
-        subprocess.run([*git, "add", "--", *arrange["stage"]], check=True, capture_output=True)
+        subprocess.run([*git, "add", "--", *arrange["stage"]], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
     if arrange.get("commit"):
         # A commit made WITHOUT the gate — the fixture's own git, no hooks — which is
         # exactly the history the `push` event exists to stop leaving the machine.
         for rel, body in arrange["commit"]["files"].items():
             (root / rel).write_text(body, encoding="utf-8")
-        subprocess.run([*git, "add", "-A"], check=True, capture_output=True)
-        subprocess.run([*git, "commit", "-q", "-m", arrange["commit"]["message"]], check=True, capture_output=True)
+        subprocess.run([*git, "add", "-A"], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
+        subprocess.run([*git, "commit", "-q", "-m", arrange["commit"]["message"]], check=True, capture_output=True)  # noqa: S603 -- git on PATH, argv list, no shell; values come from the contract's own fixture files
 
 
 def run(provider: str, workdir: Path, contract: int = CONTRACT_VERSION) -> Report:
@@ -234,8 +234,8 @@ def run(provider: str, workdir: Path, contract: int = CONTRACT_VERSION) -> Repor
 RECORD_CONTRACT = 1
 # What AgentSmith's provider reads; another provider names its own (--url-env, --token-env).
 SENDER_URL_ENV = "AGENTSMITH_PORTAL_URL"
-SENDER_TOKEN_ENV = "AGENTSMITH_PORTAL_INGEST_TOKEN"
-RECEIVER_TOKEN_ENV = "GOVERNANCE_RECORD_TOKEN"
+SENDER_TOKEN_ENV = "AGENTSMITH_PORTAL_INGEST_TOKEN"  # noqa: S105 -- an environment variable NAME, not a secret
+RECEIVER_TOKEN_ENV = "GOVERNANCE_RECORD_TOKEN"  # noqa: S105 -- an environment variable NAME, not a secret
 
 
 def _record_dir() -> Path:
@@ -323,15 +323,19 @@ def run_record_receiver(url: str, token: str) -> RecordReport:
     import secrets
     import urllib.error
 
+    from agentsmith.compliance import is_web_url
+
+    if not is_web_url(url):
+        raise ValueError(f"the receiver must be https, or http to this machine — not {url!r}")
     opener = urllib.request.build_opener(_NoRedirect)
     checks = []
     for case in record_cases():
         headers = {"content-type": "application/json"}
-        if case.token == "valid":
+        if case.token == "valid":  # noqa: S105 -- a test-case label, not a secret
             headers["authorization"] = f"Bearer {token}"
-        elif case.token == "unknown":
+        elif case.token == "unknown":  # noqa: S105 -- a test-case label, not a secret
             headers["authorization"] = f"Bearer conformance-unknown-{secrets.token_hex(8)}"
-        request = urllib.request.Request(url, data=record_body(case), method="POST", headers=headers)
+        request = urllib.request.Request(url, data=record_body(case), method="POST", headers=headers)  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
         try:
             with opener.open(request, timeout=60) as response:
                 status = response.status
@@ -381,11 +385,11 @@ def run_record_sender(provider: str, workdir: Path, url_env: str = SENDER_URL_EN
     for s in (server, other):
         threading.Thread(target=s.serve_forever, daemon=True).start()
     root = build_fixture(Path(workdir), 2)
-    token = "conformance-record-token"
+    token = "conformance-record-token"  # noqa: S105 -- a throwaway token the harness plants in its own fixture
     env = {**os.environ, url_env: f"http://127.0.0.1:{server.server_port}", token_env: token}
 
     def decide() -> Optional[str]:
-        done = subprocess.run([*shlex.split(provider), "ci"], cwd=root, env=env, capture_output=True, text=True,
+        done = subprocess.run([*shlex.split(provider), "ci"], cwd=root, env=env, capture_output=True, text=True,  # noqa: S603 -- runs the provider command the operator named for conformance; running it is the harness's purpose
                               input=json.dumps({"kind": "range", "base": "fixture", "head": "clean"}), check=False)
         try:
             return str(json.loads(done.stdout)["decision"])
@@ -516,7 +520,7 @@ def build_rules_fixture(workdir: Path) -> Path:
     for rel, text in rules_fixture()["files"].items():
         (workdir / rel).parent.mkdir(parents=True, exist_ok=True)
         (workdir / rel).write_text(text, encoding="utf-8")
-    subprocess.run(["git", "init", "-q", "--template=", str(workdir)], check=True)
+    subprocess.run(["git", "init", "-q", "--template=", str(workdir)], check=True)  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
     return workdir
 
 
@@ -526,7 +530,7 @@ _JUNK_ENV = ("AGENT_OWNER_ID", "AGENT_PHOENIX_ENDPOINT", "FRAMEWORK_VERSION")
 def _ask_rules(provider: str, verb: str, root: Path, env: dict[str, str]) -> tuple[int, str]:
     base = {k: v for k, v in os.environ.items() if k not in _JUNK_ENV}
     try:
-        done = subprocess.run([*shlex.split(provider), verb], cwd=root, input=json.dumps({"cwd": str(root)}),
+        done = subprocess.run([*shlex.split(provider), verb], cwd=root, input=json.dumps({"cwd": str(root)}),  # noqa: S603 -- runs the provider command the operator named for conformance; running it is the harness's purpose
                               capture_output=True, text=True, check=False, timeout=120, env={**base, **env})
     except (OSError, subprocess.TimeoutExpired) as exc:
         return 127, str(exc)
@@ -745,7 +749,7 @@ def run_telemetry_emitter(command: str, timeout: int = 300) -> TelemetryReport:
         env.update({"OTEL_EXPORTER_OTLP_ENDPOINT": collector.endpoint, "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
                     "OTEL_METRIC_EXPORT_INTERVAL": "1000"})
         try:
-            done = subprocess.run(shlex.split(command), env=env, capture_output=True, text=True, check=False,
+            done = subprocess.run(shlex.split(command), env=env, capture_output=True, text=True, check=False,  # noqa: S603 -- runs the provider command the operator named for conformance; running it is the harness's purpose
                                   timeout=timeout)
             ran = Check("the emitter ran", done.returncode == 0,
                         "" if done.returncode == 0 else f"exit {done.returncode}: {done.stderr.strip()[-300:]}")
@@ -917,7 +921,7 @@ def build_evals_fixture(workdir: Path, case: EvalsCase) -> Path:
         path = workdir / fixture["paths"][case.suite]
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(dataset["cases"], indent=2) + "\n", encoding="utf-8")
-    subprocess.run(["git", "init", "-q", "--template=", str(workdir)], check=True)
+    subprocess.run(["git", "init", "-q", "--template=", str(workdir)], check=True)  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
     return workdir
 
 
@@ -999,7 +1003,7 @@ def _ask_evals(provider: str, case: EvalsCase, root: Path, judge_url: str) -> tu
     env = {**base, STUB_JUDGE_URL_ENV: judge_url, STUB_JUDGE_KEY_ENV: STUB_JUDGE_KEY, **case.env}
     request = {"suite": case.suite, "cwd": str(root.resolve()), **case.request}
     try:
-        done = subprocess.run([*shlex.split(provider), case.verb], cwd=root, input=json.dumps(request),
+        done = subprocess.run([*shlex.split(provider), case.verb], cwd=root, input=json.dumps(request),  # noqa: S603 -- runs the provider command the operator named for conformance; running it is the harness's purpose
                               capture_output=True, text=True, check=False, timeout=300, env=env)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return 127, str(exc)
@@ -1144,7 +1148,7 @@ def build_security_fixture(workdir: Path, case: SecurityCase) -> Path:
             continue
         (workdir / rel).parent.mkdir(parents=True, exist_ok=True)
         (workdir / rel).write_text(text, encoding="utf-8")
-    subprocess.run(["git", "init", "-q", "--template=", str(workdir)], check=True)
+    subprocess.run(["git", "init", "-q", "--template=", str(workdir)], check=True)  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
     return workdir
 
 
@@ -1152,7 +1156,7 @@ def _ask_security(provider: str, case: SecurityCase, root: Path) -> tuple[int, s
     base = {k: v for k, v in os.environ.items() if k not in _SECURITY_JUNK_ENV}
     request = {"cwd": str(root.resolve()), **case.request}
     try:
-        done = subprocess.run([*shlex.split(provider), case.verb], cwd=root, input=json.dumps(request),
+        done = subprocess.run([*shlex.split(provider), case.verb], cwd=root, input=json.dumps(request),  # noqa: S603 -- runs the provider command the operator named for conformance; running it is the harness's purpose
                               capture_output=True, text=True, check=False, timeout=600, env={**base, **case.env})
     except (OSError, subprocess.TimeoutExpired) as exc:
         return 127, str(exc)
@@ -1239,11 +1243,11 @@ def run_security(provider: str, workdir: Path) -> SecurityReport:
 # (.agent-rfc/designs/ops-contract.md).
 
 OPS_CONTRACT = 1
-OPS_RECEIVER_TOKEN_ENV = "GOVERNANCE_OPS_TOKEN"
+OPS_RECEIVER_TOKEN_ENV = "GOVERNANCE_OPS_TOKEN"  # noqa: S105 -- an environment variable NAME, not a secret
 OPS_REPLAY_KEY_ENV = "GOVERNANCE_REPLAY_KEY"
 # Planted in the fixture's tenant.yaml where a careless sender would find it;
 # no message may carry it. Not a credential.
-_OPS_PLANTED_SECRET = "planted-replay-secret-not-a-real-key"
+_OPS_PLANTED_SECRET = "planted-replay-secret-not-a-real-key"  # noqa: S105 -- a planted canary the harness checks is never leaked; not a key
 
 
 def _ops_dir() -> Path:
@@ -1347,24 +1351,24 @@ def build_ops_fixture(workdir: Path) -> Path:
         "tenant:\n  id: fixture-tenant\n\nbudget:\n  monthly_usd_cap: 25\n\nhitl:\n"
         "  replay_webhook_url: https://worker.fixture.example/replay\n"
         f"  replay_webhook_secret: {_OPS_PLANTED_SECRET}\n", encoding="utf-8")
-    subprocess.run(["git", "init", "-q", "--template=", str(workdir)], check=True)
+    subprocess.run(["git", "init", "-q", "--template=", str(workdir)], check=True)  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
     return workdir
 
 
 def run_ops_sender(command: str, workdir: Path, url_env: str = "OPS_PORTAL_URL",
-                   token_env: str = "OPS_PORTAL_TOKEN") -> OpsReport:
+                   token_env: str = "OPS_PORTAL_TOKEN") -> OpsReport:  # noqa: S107 -- an environment variable NAME, not a secret
     """Run `command` against a loopback receiver under each answer a portal can
     give, and judge what it sent and how it ended."""
     import jsonschema
 
     schema = json.loads((_ops_dir() / "message.schema.json").read_text(encoding="utf-8"))
-    token = "aso_conformance-sender-token"
+    token = "aso_conformance-sender-token"  # noqa: S105 -- a throwaway token the harness plants in its own fixture
     root = build_ops_fixture(workdir)
     base = {k: v for k, v in os.environ.items() if k not in (url_env, token_env)}
 
     def run(env: dict) -> tuple[int, str]:
         try:
-            done = subprocess.run(shlex.split(command), cwd=root, env=env, capture_output=True, text=True,
+            done = subprocess.run(shlex.split(command), cwd=root, env=env, capture_output=True, text=True,  # noqa: S603 -- runs the provider command the operator named for conformance; running it is the harness's purpose
                                   check=False, timeout=120)
         except (OSError, subprocess.TimeoutExpired) as exc:
             return 127, str(exc)
@@ -1460,12 +1464,16 @@ def _post_status(url: str, message, token: str, headers: Optional[dict] = None) 
     status, never following a redirect. 0 when nothing answered."""
     import urllib.error
 
+    from agentsmith.compliance import is_web_url
+
+    if not is_web_url(url):
+        raise ValueError(f"the receiver must be https, or http to this machine — not {url!r}")
     class _NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, *_args, **_kwargs):
             return None
 
     data = message if isinstance(message, bytes) else json.dumps(message).encode()
-    request = urllib.request.Request(url, data=data, method="POST",
+    request = urllib.request.Request(url, data=data, method="POST",  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
                                      headers={"Content-Type": "application/json", **(headers or {}),
                                               **({"Authorization": f"Bearer {token}"} if token else {})})
     try:
@@ -1521,7 +1529,7 @@ def run_compliance(provider: str, workdir: Path) -> list[tuple[str, bool, str]]:
             target = repo / rel
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(body, encoding="utf-8")
-        done = subprocess.run([*shlex.split(provider), "check", "--stage", case["stage"]], cwd=repo,
+        done = subprocess.run([*shlex.split(provider), "check", "--stage", case["stage"]], cwd=repo,  # noqa: S603 -- runs the provider command the operator named for conformance; running it is the harness's purpose
                               stdin=subprocess.DEVNULL,
                               capture_output=True, text=True, check=False)
         try:
