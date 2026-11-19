@@ -450,3 +450,331 @@ just hides an ended session behind a UI that looks like a network hiccup.
 *Caught (Tenant B): a failed middleware refresh left both the
 access and refresh cookies in place until an explicit `clearTokenCookies`
 call was added to the failure path.*
+
+---
+
+## Groups 2–10 · levers added 2026-11-19 from an external expert review
+
+These levers came from an external expert review of the design and validation
+checklists, not from a defect this repository has caught. Each is marked
+`(unevidenced)` and says why it is here. The mark drops the day a pass of this
+repository catches a defect the lever would have prevented, and the note gets
+the defect in its place.
+
+### Group 2
+
+### `commit-before-side-effect` — Save first, then act
+
+**Why.** A response, mail or file written before the save is confirmed reports an action that may never have been recorded.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `lock-what-you-decide-on` — The decision and the record must see the same state
+
+**Why.** A finding edited while its approval is pending gets approved against a state nobody reviewed.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `partial-is-not-complete` — A partial answer is never a complete one
+
+**Why.** A model that times out on three of forty requirements, reported as complete, is a false pass with a real count behind it.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `outage-is-not-a-finding` — A check that could not run has no result
+
+**Why.** A type-checker outage recorded as a type mismatch sends someone to fix code that is not broken.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `identity-not-label` — Bind a pass to what passed, not to where it sits
+
+**Why.** A quality pass tied to a slot name carries over when someone points that slot at a different model.
+
+*Not yet caught. `(unevidenced)`.*
+
+### Group 3
+
+### `runnable-docs` — Every printed command must run as printed
+
+**Why.** A setup step that depends on an unlisted file works for its author and fails for the first reader.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `move-and-restore-are-features` — Restore is part of the design
+
+**Why.** A restored database that loses its permissions, keys or audit chain looks recovered and is not.
+
+*Not yet caught. `(unevidenced)`.*
+
+### Group 4
+
+### `fix-the-class-not-the-case` — Name the kind of defect, then list its routes
+
+**Why.** A fix that closes only the reported case leaves its siblings open, and a later review finds them one at a time.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `prove-it-fails-first` — Make the finding happen before changing anything
+
+**Why.** A finding that was only read may be wrong, and a fix to a non-defect adds risk with no gain.
+
+*Not yet caught. `(unevidenced)`.*
+
+### Group 5
+
+### `screens-tell-the-truth` — A message names what actually happened
+
+**Why.** "Failed" shown for a success, or a clock warning for an expired secret, sends the operator to fix the wrong thing.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `background-refresh-is-not-activity` — Polling is not the user being present
+
+**Why.** A screen that polls itself can keep an unattended session alive forever, which defeats the idle limit.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `bilingual-and-rtl` — Right-to-left is designed in, not translated later
+
+**Why.** Layout direction and mixed text retrofitted after launch cost a rebuild of every screen.
+
+*Not yet caught. `(unevidenced)`.*
+
+### Group 6
+
+### `metrics-survive-time` — A rate must stay true after its data ages
+
+**Why.** A figure computed from retained data goes false when retention expires or a reviewer edits a record, and no one notices until it is quoted.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `tests-cannot-touch-live` — Test set-up checks every setting, not just the one it sets
+
+**Why.** A test that sets one connection string but leaves an application-preferred one unchecked can write to a live store.
+
+*Not yet caught. `(unevidenced)`.*
+
+### Group 7
+
+### `session-lifetimes` — Absolute and idle limits, and a reason at sign-in
+
+**Why.** A session with no absolute limit lives as long as it is used, and a user sent back to sign-in with no reason cannot tell a timeout from a fault.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `mfa-by-capability` — The second factor follows what the account can do
+
+**Why.** A role-based rule misses a custom role with administrator powers, and a refresh that unpairs a device locks out the owner.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `no-account-oracle` — Sign-in answers do not reveal which usernames exist
+
+**Why.** Different timing or messages for known and unknown usernames let an attacker list accounts.
+
+*Not yet caught. `(unevidenced)`.*
+
+## Group 8 · Security engineering
+
+### `least-privilege-by-construction` — The database refuses what the service should not do
+
+**Why.** A service connecting as an owner can drop tables; a permission granted by a second route can undo a careful grant.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `containers-run-unprivileged` — No root, and untrusted-file parsers run isolated
+
+**Why.** A parser for an untrusted office file running as root with secrets in reach turns one malformed file into a full compromise.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `subprocess-gets-nothing` — A child process inherits nothing by default
+
+**Why.** A child inheriting the parent's environment passes its secrets to whatever program it starts, and a child with no time limit can hang a request.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `secrets-have-one-home` — Secrets live in one store, never in examples or history
+
+**Why.** A default password in an example file is the password a deployment ships with.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `no-query-from-a-value` — Parameterise every query, command and path
+
+**Why.** A query built by pasting a value in is an injection waiting for its input.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `untrusted-input-is-hostile` — Size, type and content are checked before use
+
+**Why.** An upload checked for size only after it is fully received, or checked for type by extension, is accepted by whoever renames a file.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `prompt-injection-is-contained` — A model that reads a document assumes it is hostile
+
+**Why.** A document that carries instructions can steer a model that holds tools; containment limits what a steered model can do.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `encrypted-in-transit-and-at-rest` — Encryption is a decision, recorded
+
+**Why.** "The disk probably is" is not a control, and a clear-text fallback that nobody notices is a breach waiting for a network.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `security-headers-and-csp` — Headers on every response, in every mode
+
+**Why.** Headers added only in production leave development and staging behaving differently from what is shipped.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `supply-chain-is-pinned` — The same source builds the same artifact
+
+**Why.** Two builds a week apart that differ by a transitive dependency are not the same build, and no bill of materials says what changed. This repository's supply-chain workflow audits dependencies and produces an SBOM; digest pinning and model fingerprints are not yet enforced.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `security-gates-in-ci` — The gates a change must clear before it enters history
+
+**Why.** A secret committed and then removed is still in history. A gate run after the commit finds it too late.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `handover-contains-only-the-program` — The package is an include list, not "everything but"
+
+**Why.** An "everything except" package ships the keys and data that a new exclusion missed.
+
+*Not yet caught. `(unevidenced)`.*
+
+## Group 9 · Regulation & compliance
+
+### `residency-is-enforced` — The code refuses an endpoint outside the jurisdiction
+
+**Why.** A profile that ships with an offshore provider is a residency breach one setting away, unless the code refuses it.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `classify-and-minimise` — Classify each item, send only what the purpose needs
+
+**Why.** Data sent to an outside service in full, when the task needed one field, is a disclosure that the sender chose.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `retention-and-disposal` — Retention periods, and a disposal routine that runs
+
+**Why.** A store with no retention period is kept forever by default, and an archive that nobody reads back is not a retention policy.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `lawful-basis-and-subject-rights` — Record the basis and the route to ask
+
+**Why.** Personal data processed without a recorded lawful basis cannot be defended to a regulator, and a person with no route to ask cannot exercise their rights.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `audit-trail-is-tamper-evident` — The trail cannot be shortened or rewritten by the service
+
+**Why.** An audit log the running service can edit is a log that proves nothing about the service's own behaviour.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `records-name-the-right-actor` — A record names the actor and what actually happened
+
+**Why.** A record that names a system account, or an event that was planned and never occurred, hides who did what.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `forensic-readiness` — Preserve the evidence before it ages out
+
+**Why.** Logs rotated before an incident is noticed cannot be examined afterwards.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `monitoring-and-incident-response` — Alerts go to a feed someone watches
+
+**Why.** A failed integrity check shown only on a screen nobody opens is a failure with no visibility.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `access-is-reviewed` — Access is reviewed on a schedule, and leavers are removed
+
+**Why.** Access granted for a project and never revoked outlives the project and its owner.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `human-in-the-loop-is-enforced` — An approval that can be skipped is not an approval
+
+**Why.** A result that reaches a customer through a path that does not pass the approval state has no approver, whatever the screen shows.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `ai-governance-pack` — A model card, a risk entry, and a re-rating per change
+
+**Why.** A model re-rated only when someone remembers, after its environment has changed, is rated for a system that no longer exists.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `compliance-register` — Every claim has an evidence row
+
+**Why.** A compliance statement with no evidence to point at is a claim nobody can check.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `honest-assurance` — Say "not yet audited" until it is audited
+
+**Why.** An overstated assurance claim is a false statement to every reader who relies on it.
+
+*Not yet caught. `(unevidenced)`.*
+
+## Group 10 · Code optimisation & performance
+
+### `bounded-by-default` — Lists are paged and counted in the database
+
+**Why.** A list fetched whole and sifted in the browser works at demo size and stops working at a year of data.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `stream-what-must-be-whole` — Exports stream, so memory does not set their size
+
+**Why.** An export that loads every row into memory fails on the first large customer.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `read-once` — One read per thing per request
+
+**Why.** Reading the whole audit trail to find one row costs more the longer the system runs.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `dont-redo-finished-work` — A retry resumes, and its cache is keyed by the model
+
+**Why.** A cache that survives a model upgrade serves answers the new model never gave.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `measure-at-real-volume` — Time it at the size a working system reaches
+
+**Why.** A path fast at demo size can be unusable at a year of data, and a "faster" claim with no number is a guess.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `index-what-you-filter` — Every filter at scale has an index
+
+**Why.** A filter with no index is a full scan on every request once the table is large.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `batch-not-one-at-a-time` — One batch operation, not one round trip per item
+
+**Why.** Approving forty findings as forty requests multiplies latency and the chance of a partial failure.
+
+*Not yet caught. `(unevidenced)`.*
+
+### `delete-before-optimise` — Remove first, then merge, then tune
+
+**Why.** Tuning code that should not exist spends effort on nothing, and shortening it before the tests can catch a mistake risks breaking it silently.
+
+*Not yet caught. `(unevidenced)`.*

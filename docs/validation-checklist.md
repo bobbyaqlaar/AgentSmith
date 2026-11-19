@@ -42,6 +42,12 @@ just the component source. If the change touches a cookie, bearer token, or
 any client/server session, Group 7 (Auth & session integrity) is equally not
 optional.
 
+If the change takes outside input, holds a secret, runs a program or changes a
+build, Group 8 (Security engineering) is walked. If it stores personal or
+government data, makes an AI judgement or produces audit evidence, Group 9
+(Regulation & compliance) is walked. If it adds a path whose size grows with
+use, Group 10 (Code optimisation) is walked.
+
 ## Step 2 — Testing obligations
 
 Pillar 4 (Testing Guardrails) and Pillar 14 (Fixture and Baseline Drift) in
@@ -73,6 +79,40 @@ discharge them concretely:
      the sign-off below rather than silently skipping them: an unchecked
      lever and a satisfied one must not read the same way
      (`ambiguous-signals`, Group 6, applied to this checklist itself).
+5. **Tests stay off live targets.** Test set-up refuses to start unless every
+   connection setting the code might read points at a test target, including
+   the one the application prefers (`tests-cannot-touch-live`, Group 6).
+6. **Reliability, as tests** (Groups 2 and 6):
+   - Make the save fail after the action is prepared, then assert that no mail,
+     no success response and no file was produced.
+   - Deliver one request twice and out of order, then assert a single effect.
+   - Make a dependency answer for some items only, and another that is down.
+     The first must end partial or failed; the second must record "could not
+     determine", never a result.
+7. **Security, as tests** (Group 8):
+   - Send oversize, wrong-type, encrypted, malformed and control-character
+     inputs through every route the input can arrive by.
+   - Check that the application's database account is refused destructive
+     statements, and that a child process gets no secrets and is killed at its
+     time limit.
+   - Compare timing and messages for known and unknown usernames.
+   - Run the hostile-document suite against the real model on a schedule, not
+     only against a stand-in.
+8. **Compliance, as tests** (Group 9):
+   - Attempt to update, delete, truncate, shorten or reset the audit anchor, and
+     assert refusal or detection. Plant a gap in the chain and assert the
+     integrity check fails.
+   - Request a non-permitted endpoint and assert refusal unless the override is
+     set; setting it must write an audit record.
+   - Assert that expired items are actually removed by the scheduled routine,
+     and that no result reaches a customer without an approval.
+   - Restore a backup taken before the latest schema change and confirm the
+     audit check still passes.
+9. **Performance, as measurements** (Group 10): time each changed path at a
+   realistic volume, record before and after with the date, and count queries
+   where the tooling allows.
+10. **Manual-only levers.** Anything above that cannot be automated here is
+    listed in the sign-off with how it was checked.
 
 ## Step 3 — Run the gates CI lists, against the state CI will see
 
@@ -139,6 +179,43 @@ Regenerate the Knowledge Graph (`--check-kg`) whenever the change adds or
 removes a top-level symbol — a stale graph fails the same gate CI enforces,
 and it is cheaper to catch here than in a second round-trip through CI.
 
+### Release and handover readiness (when the change ships)
+
+- The handover package holds only what an explicit include list names. No
+  settings files, keys, data, undo copies or commercial documents unless named
+  (Group 8, `handover-contains-only-the-program`).
+- Every runnable instruction in the README and handover notes was run as
+  printed on a clean machine (`runnable-docs`).
+- Screenshots and manual text match the build (`docs-match-behaviour`).
+- Defaults are secure: HTTPS on, a second factor on for privileged
+  capabilities, no published default passwords, and a first-admin password that
+  must change.
+- The compliance register, model cards and DPIA reflect this release. Until an
+  independent assessment is done, the assurance claim is "built to these
+  controls, not yet audited against them" (Group 9, `honest-assurance`).
+- A backup, restore and audit check has been run on this release
+  (`move-and-restore-are-features`).
+
+### Security and supply-chain gate status
+
+Status as read from `.github/workflows/` on 2026-11-19. A row marked "Not in
+CI" is a declared gap, not a pass.
+
+| Gate | Status in this repository | Blocks on |
+|---|---|---|
+| Secrets scan over the change and history | Not in CI. A full-history scan was run by hand on 2026-11-05 (backlog, Stage 1 step 9) | any finding |
+| Static security analysis | Bandit 1.8.6 runs in `supply-chain.yml` on AgentSmith's own code, at medium severity and above, with no baseline. Semgrep and Ruff `S` rules are not in CI | medium and above (Bandit) |
+| Dependency audit | `supply-chain.yml`: `pip-audit==2.9.0` over the two lock files, with no severity filter; `npm audit --omit=dev --audit-level=high` over `portal` only (production dependencies) | any finding (pip-audit); high (npm) |
+| SBOM | CycloneDX over `requirements.lock` only, in `supply-chain.yml`. Not the pipeline lock or the portal's npm dependencies. Not produced per tenant | — |
+| Container image scan (Trivy) | Not in CI | to be set when added |
+| Project rules as code (custom Semgrep or equivalent) | Not in CI | to be set when added |
+| Model fingerprint check | Not in CI | any mismatch |
+| Hostile-input evaluation, scheduled | Not in this repository's CI | any unsupported verdict |
+| Docs and diagram drift | Present: `self-test.yml` runs `test_design_tree_drift.py` | any drift |
+
+Any of these that a change depends on is written in the sign-off as
+`gap: <backlog id>`, with the trigger that brings it back.
+
 ## Step 4 — Sign off
 
 State, per group, one of: **checked / not applicable / declared gap**. A
@@ -154,12 +231,27 @@ Group 4 · Process                     [ ] checked  [ ] n/a  [ ] gap: ____
 Group 5 · Intuitive UI                [ ] checked  [ ] n/a  [ ] gap: ____
 Group 6 · Signal integrity            [ ] checked  [ ] n/a  [ ] gap: ____
 Group 7 · Auth & session integrity    [ ] checked  [ ] n/a  [ ] gap: ____
+Group 8 · Security engineering        [ ] checked  [ ] n/a  [ ] gap: ____
+Group 9 · Regulation & compliance     [ ] checked  [ ] n/a  [ ] gap: ____
+Group 10 · Code optimisation          [ ] checked  [ ] n/a  [ ] gap: ____
 
+Defect kind and siblings checked: ____ (what the fix does NOT cover: ____)
 Tests added/updated:      ____
+Reproduced before fixing:  yes / no / n/a
 Mutation-checked:          yes / no — why not, if not
 Fixtures re-pinned:        yes / no / n/a
+Performance measured:      before ____ / after ____ at volume ____ on date ____ / n/a
+Security gates:            the table above — result, or "not yet in CI"
+Compliance evidence:       register / model card / DPIA / audit test — or n/a
+Manual-only levers:        listed, and how each was checked
 Gates run locally:         list them, and confirm the tree matches what CI sees
 ```
+
+The gate checks only Groups 1–7, and only the fields `Tests added`,
+`Mutation-checked`, `Fixtures re-pinned` and `Gates run`, as listed in
+`templates/agent-rules.yaml`. Groups 8–10 and the other fields are not gate-checked
+yet: the reviewer checks them and records the result here. That is a declared
+gap until the registry is extended.
 
 A gap declared here and never revisited is `backlog-discipline`'s job to
 catch, not this document's — file it, with the trigger that would bring
