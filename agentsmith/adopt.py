@@ -27,7 +27,7 @@ from typing import Optional, Sequence
 
 # The hooks the gate owns, copied from the framework's .githooks; every other
 # hook the prior directory has gets a stub that runs it through `chain`.
-from agentsmith.cli import GATE_HOOKS
+from agentsmith.cli import GATE_HOOKS, framework_scripts_on_path
 
 ADOPTION_DESIGN = ".agent-rfc/designs/adoption.md"
 PROVIDERS = ".agenticframework/providers.json"
@@ -549,8 +549,8 @@ def adopt(plan: Plan) -> list[str]:
 
     written += install_gate_hooks(root, framework, prior=plan.prior_hooks)
 
-    sys.path.insert(0, str(framework / "scripts"))
-    import gate_ides  # type: ignore
+    with framework_scripts_on_path(framework):
+        import gate_ides  # type: ignore
 
     from agentsmith.config import chosen_ides
 

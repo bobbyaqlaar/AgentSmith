@@ -28,10 +28,12 @@ from __future__ import annotations
 import json
 import os
 import sys
+import http.client
 import urllib.error
 import urllib.request
 from typing import Callable, Optional
-from urllib.parse import urlparse
+
+from _shared import display_url, is_web_url, unopenable, web_url_refusal
 
 # The portal's per-request limit (portal/lib/devIngest.ts DEV_LIMITS.commits).
 CHUNK = 500
@@ -103,12 +105,12 @@ def send(document: Optional[dict], say: Callable[[str, str], None], unread: str 
         say("notice", "the gate's record was not sent: set AGENTSMITH_PORTAL_URL and "
                        "AGENTSMITH_PORTAL_INGEST_TOKEN to show this repository in the portal's Dev workspace")
         return 0
-    parsed = urlparse(url)
-    # Same rule as agentsmith.compliance.is_web_url. Kept inline: this script is
-    # stdlib-only and runs in any CI job. Parity is pinned by a test.
-    loopback = ("localhost", "127.0.0.1", "::1")
-    if parsed.scheme != "https" and not (parsed.scheme == "http" and parsed.hostname in loopback):
-        say("error", f"AGENTSMITH_PORTAL_URL must be https (or http to localhost) — not sending the token to {url}")
+    # Same rule as agentsmith.compliance.is_web_url, via scripts/_shared.py (this
+    # script is stdlib-only and runs in any CI job); pinned by
+    # agentsmith/test/test_https_only_egress.py.
+    if not is_web_url(url):
+        say("error", f"AGENTSMITH_PORTAL_URL {web_url_refusal(url)} — "
+            f"not sending the token to {display_url(url)}")
         return 1
     if document is None:
         say("warning", f"no gate record to send ({unread}) — did the gate step run?")
@@ -142,8 +144,11 @@ def send(document: Optional[dict], say: Callable[[str, str], None], unread: str 
                 return 1
             say("warning", f"the portal could not store the gate's record ({exc.code}): {reason}")
             return 0
+        except http.client.InvalidURL:  # its message holds the address whole, password included
+            say("error", "AGENTSMITH_PORTAL_URL " + unopenable(url, "AGENTSMITH_PORTAL_INGEST_TOKEN is the credential"))
+            return 1
         except (urllib.error.URLError, OSError) as exc:
-            say("warning", f"the portal was not reachable at {url} ({exc}) — the record was not sent")
+            say("warning", f"the portal was not reachable at {display_url(url)} ({exc}) — the record was not sent")
             return 0
     say("notice", f"the gate's record reached the portal: {stored} commit(s) stored")
     return 0

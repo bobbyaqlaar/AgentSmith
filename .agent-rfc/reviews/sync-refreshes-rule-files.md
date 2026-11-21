@@ -36,3 +36,15 @@ Gates run: the sync tests; the tenant-upgrade check; ruff; mypy; the process gat
 Levers reviewed: `implemented-not-invoked`, `test-that-cannot-fail`.
 
 KG query: kg:5fa67d1fbe5f
+
+## Pass 3 — findings: 0
+
+A review by the author of the ruff-s-rules change (branch `feat/ruff-s-rules`), not an independent pass. It covers only that branch's edits to files in this design's scope, against `docs/review-levers.md`. This design shipped earlier; its own work is unchanged. Files: `agentsmith/sync.py`.
+
+- `_shared_files` imports `gate_ides` inside `cli.framework_scripts_on_path(framework)`, so the framework's `scripts/` no longer stays on `sys.path`. Only the import moved into the block. `chosen_ides` and `render_config` run after it; `gate_ides` and `gate_models` import nothing when called, which was checked. A framework without `gate_ides` still lands in the same `except` with the same note.
+- The rule-file refresh this design fixed (unrecorded `tenant init` files treated as the framework's own render) is untouched. `_redraw_graph` and the `git status` call gain noqa reasons only.
+- The suites that pin this design passed: `scripts/test/test_framework_sync.py`, `framework_sync` (19/19 mutations caught) and `agentsmith/test/test_framework_scripts_path.py` (sync measured on its own).
+
+Evidence: the full suite on that tree gave 3048 passed, 17 skipped, 0 failed, and the curated mutation suites CI selects for the branch gave 270 of 270 caught.
+
+Rebuilt on PR #117's head `c2583ff` (2026-11-24; `.agent-rfc/reviews/ruff-s-rules.md` Pass 15). The claims above were re-read against the rebuilt files. They hold: #117 did not change `agentsmith/sync.py`. On the rebuilt head the full suite gave 3420 passed, 21 skipped; the one failure was a stale trace-graph fixture, rebuilt.

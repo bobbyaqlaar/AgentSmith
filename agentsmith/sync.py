@@ -227,10 +227,10 @@ def _shared_files(plan: Plan) -> tuple[dict[str, str], set[str]]:
     the IDE hook configs, the rule files, the gates workflow and the gate config —
     and which of them it owns only a region of."""
     import json as _json
-    import sys as _sys
 
     from agentsmith.adopt import GATES_WORKFLOW, PROVIDERS, SYNC_WORKFLOW, RulesUnavailable, providers_declaration, \
         rendered_rules, rules_port, workflow_setup
+    from agentsmith.cli import framework_scripts_on_path
 
     root, framework = plan.root, plan.framework
     shared: dict[str, str] = {}
@@ -260,9 +260,9 @@ def _shared_files(plan: Plan) -> tuple[dict[str, str], set[str]]:
             plan.notes.append(f"{CONFIG}: documents named by this install's paths now name `\"provider\"` — "
                               "the gate provider's own, wherever it is installed")
 
-    _sys.path.insert(0, str(framework / "scripts"))
     try:
-        import gate_ides as gi  # type: ignore
+        with framework_scripts_on_path(framework):
+            import gate_ides as gi  # type: ignore
 
         from agentsmith.config import chosen_ides
 

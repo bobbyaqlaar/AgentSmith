@@ -90,6 +90,15 @@ def test_residency_fails_outside(tmp_path, registry):
     assert cc.residency(tmp_path, DECLARED)[0] == "fail"
 
 
+def test_residency_names_an_endpoint_that_does_not_parse(tmp_path):
+    """A malformed declared endpoint is a named problem, not an exception that
+    leaves the role unnamed and the other roles unchecked (Pass 7, item C)."""
+    write(tmp_path, "models.yaml", GOOD + '  coder:\n    id: x\n    provider: ollama\n    endpoint: "https://[::1:6006/v1"\n')
+    verdict, why = cc.residency(tmp_path, DECLARED)
+    assert verdict == "fail"
+    assert "coder" in why and "has no host that parses" in why
+
+
 def test_residency_fails_a_sink_outside(tmp_path):
     write(tmp_path, "models.yaml", GOOD)
     declared = {

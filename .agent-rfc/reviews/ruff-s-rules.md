@@ -44,7 +44,7 @@ Self-review by the change's author; no independent pass yet, so the sign-off abo
 independent Opus pass is still owed (`expect-re-review`). Not formatted: `ruff format` would reformat the three
 edited files, which were already unformatted at HEAD; CI runs `ruff check .` only, so left as is.
 
-## Sign-off (validation-checklist Step 4)
+## Earlier sign-off (after Pass 5; superseded by the sign-off at the end)
 
 ```
 Group 1 · DRY & shared code           [x] checked — one is_web_url and one LOOPBACK_HOSTS; the standalone probe's copy is declared
@@ -74,8 +74,9 @@ Performance measured:      n/a
 Security gates:            ruff S in the CI lint step (this change); bandit -ll unchanged in supply-chain.yml
 Compliance evidence:       n/a
 Manual-only levers:        noqa reasons read one by one against the call sites
-KG query:                 kg:1507fc6a1766
-Rebuilt on #117's head:    2026-11-24, onto c2583ff (fix/review-4.1.0-pass2, on main cdf04e1) by cherry-pick,
+Pass 5 KG query:          kg:4984a235bcc3
+Rebuild KG query:          kg:1507fc6a1766 (commit 1 rebuilt on #117's head:
+                          2026-11-24, onto c2583ff (fix/review-4.1.0-pass2, on main cdf04e1) by cherry-pick,
                           owner decision 24. Signed at kg:4984a235bcc3; the graph rebuilt on the new tree moves
                           the scope to kg:1507fc6a1766: 142 files gained (106 test files), 22 lost (files this
                           branch's old base lacked, now on main). The gained test files run on the staged tree:
@@ -92,3 +93,159 @@ Gates run locally:         ruff check . (clean); full pytest 2819 passed, 17 ski
                           before the pass-3 one-liner, whose tests were rerun; check_bare_except; verify_system
                           --check-kg; mypy NOT run (not installed)
 ```
+
+## Pass 6 — findings: 6
+
+Independent review's findings, fixed against `docs/design-review-checklist.md`. Defect class (`fix-the-class-not-the-case`): the URL-scheme rule accepted inputs it should refuse — unparsed, hostless, or unguarded at the caller. Design note updated first (`## Pass 6 fixes`). Tests written first: 12 failed on the old code (is_web_url raised `ValueError` on `http://[::1:6006` and `https://[::1:6006`, returned True for `https://` and `https:evil.com`; the OTLP path raised or exported for the same; intake and send_dev_record raised on the malformed address).
+
+1. **Shipped config and docs named plain http to another host** (HIGH). `templates/uae-sovereign/env.example`, `docs/team-observability.md` (§2.2, §2.3, §3 heading), `docs/UserManual.md` (two sites) and the comment in `docker-compose.yml` now give https placeholders and say the collector must serve TLS. The Node portal's compose setting is left as is (it does not go through `agentsmith/otlp.py`). Fixed.
+2. **A malformed endpoint raised** (MEDIUM). `compliance.is_web_url` returns False when `urlparse` raises; the OTLP path logs its refusal; `intake.safe_portal_url` delegates; `send_dev_record`'s inline copy returns exit 1. Fixed.
+3. **An https URL with no host passed** (LOW, reproduced this pass). A non-empty host is required for both schemes, in `is_web_url` and the inline copy; parity covers both cases. Fixed.
+4. **`safe_portal_url` docstring named the wrong parity pin.** Now names `agentsmith/test/test_https_only_egress.py` and `agentsmith/test/test_intake.py`. Fixed.
+5. **Egress tests too weak.** Refusal tests assert the guard's ERROR line (caplog), for span and metric exporters; that line is logged before the exporter import, so with the guard bypassed they fail whether or not the package is installed (checked: 8 failed both ways). The positive tests skip by name (`importorskip`) when the package is absent, and now cover `metric_exporter` over loopback and https. Malformed-IPv6 and hostless cases added for `is_web_url`, the OTLP path, intake and send_dev_record. Fixed.
+6. **CHANGELOG overclaimed coverage.** Both Unreleased entries now name exactly what the rule covers and say the model gateway and other token-sending clients are not covered yet; operators are pointed at the shipped-config change. Fixed.
+
+Not covered (stated in the design): the unguarded token-sending sites (reported separately); `verify_sovereign_endpoint.py`'s inline copy, which already refuses a malformed address by raising its `ValueError` and sends nothing to a hostless one.
+
+Runs: the three named suites 119 passed; adjacent suites (bandit findings, OTLP endpoint, gate tracing, tracing, machine, compliance runtime, doc and env-var sweeps) 244 passed, 7 skipped. `ruff check .` clean. `verify_system.py --check-kg` not run: it regenerates the tracked knowledge-graph fixture in place.
+
+## Pass 7 — findings: 7
+
+Review over the Pass 6 tree, against `docs/review-levers.md`. Owner decisions: Q1 strict (https-or-loopback on model calls as well), Q2 yes (fix the TLS-front proxy target here). The design note says what was fixed, routes checked and what was deferred (`## Pass 7 fixes`, `## Pass 7 follow-ups`).
+
+1. **A — secrets sent where only the residency check guards** (HIGH): `ops_contract.send`, `llm_gateway._report_run_status`, `compliance_port.exchange`, `dead_letter._notify`, `conformance.run_runtime` now check `compliance.is_web_url` first and name the setting they refused. The dead-letter refusal names the variable, not the URL. Fixed.
+2. **B — the last unfixed copy of the URL rule** (MEDIUM): `verify_sovereign_endpoint.py` let a hostless address through and raised on a malformed one. It now uses `scripts/_shared.py::is_web_url`, and the sovereign template ships an https `OLLAMA_BASE_URL`. Fixed.
+3. **C — `urlparse(x).hostname` raising out of a verdict** (MEDIUM): `compliance.url_host` is used by `require_inside_boundary`, `guard_model_call` and `compliance_checks.residency`. A malformed endpoint is now a named fail. Fixed.
+4. **D — the documented TLS front skipped the auth layer** (HIGH): Caddy (§3.2) and Nginx (§4) proxied 6006. They now proxy 6007. Fixed.
+5. **E — one contract pinned twice** (LOW): `test_https_only_egress.py` holds the one parity test. The copy in `test_intake.py` is gone. Fixed.
+6. **F — `sys.path` leak** (MEDIUM, found while testing this pass): `gate_ides_module`, `sync._shared_files` and `adopt.adopt` left `<framework>/scripts` at `sys.path[0]`, so later imports in the process resolved to the machine install's copy. Fixed with one context manager, `cli.framework_scripts_on_path`, and an autouse fixture in `agentsmith/test/conftest.py` that pins `AGENTSMITH_DIR` to the checkout and restores `sys.path`. Test first: `agentsmith/test/test_framework_scripts_path.py` gives 4 failed on the old code and 5 passed after. Swapping only the sync site back is caught alone ("sync left an entry"). Siblings left as they are on purpose, with reasons in the design: `machine/governance._gate_module` (its module imports `gate_history` when called), `scripts/rules_port.py`'s module-scope insert (its functions import `_shared` and `gate_tracing` when called), and `machine/ops._shared`, whose leak is the module cache (new backlog row).
+7. **G — §3.3 gave no credential for the auth sidecar** (LOW): an export following it got a 401. It now shows `OTEL_EXPORTER_OTLP_HEADERS` with a `Basic%20` placeholder, checked against the OTel SDK's header parser, and §2.2 points to it. Fixed.
+
+Self-review by the change's author. The independent pass follows.
+
+## Pass 8 — findings: 7
+
+Independent review by a separate Opus 5.5 agent, not the author, against `docs/review-levers.md` over the whole change (85735d2 plus the working tree). The reviewer's report was read as data, and every finding was confirmed in the code before it was fixed. The design was updated first (`## Pass 8 fixes`). Tests were written first, and each failed on the old code for the reason named.
+
+1. **H — a redirect carried the bearer token past the rule** (MEDIUM, `encrypted-in-transit-and-at-rest`). `machine/policy.audit_log_event` and `verify_sovereign_endpoint._chat` used plain `urlopen`, which follows a 3xx with `Authorization`. Both now open through `compliance.NoRedirect` / `_shared.NoRedirect`. Tests use two real loopback servers, one answering 302 to the other. On the old code the target received `Bearer PLACEHOLDER-TOKEN` and the probe followed. Existing positive tests now also intercept `OpenerDirector.open`, so they still see the request. Fixed.
+2. **I — operator URLs printed with their userinfo** (MEDIUM, `secrets-have-one-home`). `compliance.display_url`, with a stdlib copy pinned by a parity test, is now used in every message in the touched files that names an operator address: otlp ×3, gate_tracing ×3, machine/ops ×5, compliance ×2, conformance ×5, ops_contract ×3, intake, send_dev_record ×2, compliance_checks ×2, and the probe. Six tests failed on the old code with the placeholder password in the ERROR log, the status line or `agentsmith status`. Fixed.
+3. **J — §3.3's header does not reach gate spans; §8 broken by the 6007 front** (LOW). The doc and CHANGELOG now say what the header covers. §8 now uses https and names the credential. Gate-span headers are a backlog row. Narrowed and recorded.
+4. **K — a refused notifier webhook was silent** (LOW, `failure-mode-visibility`). A stderr line now names `AGENT_NOTIFY_WEBHOOK`, never the URL, for both scheme and boundary refusals. Fixed.
+5. **L — a boundary refusal of the audit write was recorded as `ops_portal_not_configured`** (LOW, `ambiguous-signals`). It is now `ops_portal_outside_boundary`, and `docs/DESIGN.md` is updated. Fixed.
+6. **M — the adopt/sync `sys.path` test could not catch an insert-if-absent leak** (LOW, `test-that-cannot-fail`). The framework's `scripts/` is taken off `sys.path` before measuring. The reviewer's leaky variant (insert if absent, never remove) now fails that test: checked by swapping it in, 3 failed, then restored and 5 passed. Fixed.
+7. **N — a wrong noqa reason on `machine/ops._http_ok`** (LOW). The reason now names the operator's `AGENT_PHOENIX_ENDPOINT` and says the GET carries no credential. The health check reporting an auth-sidecar or userinfo URL as offline was already the case before this change; it is a backlog row. Fixed.
+
+Runs: `ruff check .` clean. The eight affected suites (bandit findings, https-only egress, framework scripts path, gate tracing, intake, machine, compliance checks, compliance runtime) gave 345 passed, 7 skipped (no DSN).
+
+
+## Pass 9 — findings: 5
+
+The same independent reviewer, over the Pass 8 fixes and the whole tree. Each finding was confirmed before fixing (`## Pass 9 fixes` in the design). Tests were written first: 15 failed on the Pass 8 tree, every userinfo case with `http.client.InvalidURL: nonnumeric port: 'PLACEHOLDER-PW@…'` escaping.
+
+1. **O — a `user:password` in an address crashed urllib with the password in the error** (MEDIUM, `secrets-have-one-home`). `InvalidURL` is neither `URLError` nor `OSError`. These sites now catch it and report the address with `display_url`: `gate_tracing.ship` (with that, session start), `intake._call`, `send_dev_record`, `conformance._post_status` and `verify_sovereign_endpoint._chat`. The docs stop prescribing userinfo, in §2.2, §2.3 and UserManual ×2, and send the header instead. Their `base64` one-liner gets `tr -d '\n'` for GNU's line wrap; it was checked with a long placeholder credential against the OTel SDK's header parser. The CHANGELOG claim is corrected and carries an operator action. The ship test runs real urllib. Fixed.
+2. **P — the intake refusal printed the raw URL** (LOW). It now uses `display_url`, with a test. Fixed.
+3. **Q — `machine/ops.py` imported pydantic at module scope** (LOW, `declared-vs-enforced`). `display_url` is now imported inside `_shown`. `test_the_machine_package_stays_import_light` holds the package, checked in a subprocess with `-I`. Fixed.
+4. **R — `display_url` showed a password holding `/`, `?` or `#`** (LOW). An `@` after the netloc, or userinfo with no host, now gives a placeholder, in both copies. The parity test covers the new cases. Fixed.
+5. **S — the hostless placeholder dropped the only clue** (LOW). A hostless address with no `@` is now shown as written, without query or fragment (`phoenix:6006`). Fixed.
+
+Runs: `ruff check .` clean. The six affected suites gave 288 passed.
+
+## Pass 10 — findings: 3
+
+The same independent reviewer, over the Pass 9 fixes and the whole tree. Each finding was confirmed before fixing (`## Pass 10 fixes`). Tests were written first: 9 failed on the Pass 9 tree.
+
+1. **T — `conformance.run_record_receiver` was missed by O, and the ops harness read an unopenable address as "answered 0"** (LOW, `fix-the-class-not-the-case`, `outage-is-not-a-finding`). Both raise a named `ValueError`. The record report target is `display_url(url)`. The CLI's record and ops handlers print the `ValueError` and exit 2, with no traceback; a test drives `cli.main` for both ports. The test that pinned "answered 0" now asserts the message. Fixed.
+2. **U — a bad port passed the rule, then was blamed on a password** (LOW, `screens-tell-the-truth`). `is_web_url` reads `.port`, in both copies. `:6006x`, `:99999` and `:-1` are in `REFUSED`, so every parity test now covers them. `unopenable(url, hint)`, two copies with identical code, names a user:password only when the address holds an `@`; it is used at the six `InvalidURL` sites. `display_url` shows an unparseable address that holds no `@` as written. Fixed.
+3. **U (display) — the typo was hidden behind the placeholder.** Folded into 2 above, with its own `DISPLAYED` case. Fixed.
+
+Runs: `ruff check .` clean. Egress, bandit findings, intake and gate tracing gave 275 passed.
+
+## Pass 11 — findings: 2
+
+The same independent reviewer, over the Pass 10 fixes and the whole tree. Both findings were confirmed before fixing (`## Pass 11 fixes`). Tests were written first: 41 failed on the Pass 10 tree.
+
+1. **V — a bad port was refused as a scheme problem** (LOW, `screens-tell-the-truth`). `web_url_refusal(url)` has two copies with identical code, pinned over `URLS` plus three bad ports. It says "has a port that is not one (0–65535)" when only the port fails, and the rule otherwise. It replaces the hand-written phrase at all thirteen `is_web_url` refusal messages. The otlp messages now use the one phrase; the two egress filters move with them, and they still fail when the refusal is not logged. Bad-port tests cover the exporter, span shipping, intake and the conformance receiver. Fixed.
+2. **W — the conformance CLI swallowed every `ValueError`** (LOW, `failure-mode-visibility`). It now catches only `conformance.ReceiverRefused`, a `ValueError` raised by the receiver-address refusals. A test patches `ops_case_message` to raise, and the bug still raises out of `cli.main`. Fixed.
+
+Runs: `ruff check .` clean. Egress, bandit findings, intake and gate tracing: 306 passed. The thirteen conformance, contract, gateway, dead-letter, notifier, otlp, probe and send_dev_record suites: 133 passed.
+
+## Pass 12 — findings: 1
+
+The same independent reviewer, over the Pass 11 fixes. Confirmed by reading the helper (`## Pass 12 fixes`).
+
+1. **X — `web_url_refusal` had no "no host" cause, and the probe appended ", with a host"** (LOW, `screens-tell-the-truth`). The helper now names the first thing to change, in this order: does not parse, then the scheme (the rule), then no host, then plain http to another host (the rule), then the bad port. The probe says the phrase once. The parity test holds each address to its expected cause in a `CAUSE` map, so `ftp://…:99999` and `http://10.0.0.5:99999` get the rule first. Tests that matched "must be https" for hostless or unparseable addresses now match their cause; the otlp refusal test keys on the guard's own ERROR line. The helper was edited before its test was written; the order was put right by swapping the Pass 11 helper back afterwards, which gave 17 failed, and restoring the fix, which gave 264 passed. Fixed.
+
+Runs: `ruff check .` clean. Egress and bandit findings: 264 passed.
+
+## Pass 13 — findings: 0
+
+The same independent reviewer, over the Pass 12 fix plus a final sweep of the whole change against `docs/review-levers.md` groups 1–10. Its targeted runs: egress, bandit findings, intake, conformance and send_dev_record gave 324 passed; `ruff check . --no-cache` was clean.
+
+- X checked: the cause order holds, the copies are identical, every composed message reads true, and the tests can fail.
+- Group 1: each runtime helper has one stdlib copy, pinned by behaviour.
+- Group 2: every credential-carrying urllib sender refuses redirects.
+- Group 3: `agentsmith/machine` stays import-light, and the docs match the code.
+- Group 6: no refusal is reported as success or as an outage.
+- Groups 7 and 8: tokens go only over https or loopback; no userinfo reaches a log or an error; the noqa reasons match their call sites.
+- Not counted, and recorded as a backlog row for the owner: `is_web_url` accepts `https://ops:123/pw@host`, where a credential written into the address against the docs is sent as a path to host `ops`. `display_url` already masks it.
+
+## Sign-off (validation-checklist Step 4)
+
+```
+Group 1 · DRY & shared code           [x] checked — one rule per job (is_web_url, display_url, web_url_refusal, unopenable, NoRedirect, url_host); the agentsmith/ <-> scripts/ boundary keeps one stdlib copy of each, code identical, pinned by parity tests; one sys.path helper (cli.framework_scripts_on_path)
+Group 2 · Quality / safety            [x] checked — asserts that -O strips are explicit checks; every credential-carrying urllib sender refuses redirects; a bad port, hostless or unparseable address is refused by the rule, not raised
+Group 3 · Architecture / hygiene      [x] checked — agentsmith/machine stays import-light (tested); no new module; sys.path left as found by the three import sites; siblings left on purpose are named in the design with reasons
+Group 4 · Process                     [x] checked — design written before each pass's code (Pass 6–12 sections); tests first, each shown failing on the old code; CHANGELOG, DESIGN.md, docs and backlog updated; 13 passes, the last at 0
+Group 5 · Intuitive UI                [x] n/a — no screen or control; operator messages are covered under Group 6
+Group 6 · Signal integrity            [x] checked — a refusal names its cause (web_url_refusal) and never reads as success or as an outage; ops_portal_outside_boundary; notifier refusal said; conformance CLI catches only ReceiverRefused; tests that could not fail were fixed (Pass 2, Pass 8 M)
+Group 7 · Auth & session integrity    [x] checked — bearer tokens and secret webhook URLs go only over https or loopback http and never follow a redirect; the documented TLS front reaches Phoenix only through the auth sidecar
+Group 8 · Security engineering        [x] checked — git option injection fixed (--end-of-options); scheme and clear-text refused; userinfo never printed (display_url, unopenable); every noqa reasoned and RUF100-held
+Group 9 · Regulation & compliance     [x] n/a — no data, evidence or model-governance path changes; the residency check is unchanged, only reached after the scheme rule
+Group 10 · Code optimisation          [x] n/a — no path that grows with use
+
+Defect kind and siblings checked: CWE-88 git argument injection; unrestricted URL scheme / clear-text token (every
+                          is_web_url caller); redirect carrying a token (every urllib sender with a credential);
+                          userinfo in messages and in urllib's InvalidURL (every operator-URL message and urllib
+                          site in the touched files); process-global sys.path left mutated (every sys.path insert
+                          in agentsmith/ and scripts/, siblings left with reasons). Routes in the design note.
+Tests added/updated:      agentsmith/test/test_framework_scripts_path.py (new); agentsmith/test/test_https_only_egress.py
+                          (rule, display, refusal-cause parity, otlp, gate spans, intake, send_dev_record, conformance,
+                          probe, machine import-light); scripts/test/test_bandit_findings.py (git refs, URL rule,
+                          token sites, redirects on real loopback servers, notifier, audit reasons);
+                          test_compliance_checks.py, test_compliance_runtime.py, test_context_propagation.py,
+                          test_intake.py, test_gate_tracing.py
+Reproduced before fixing:  yes — each pass's new tests failed on the tree before its fix (Pass 7 F: 4; Pass 8: 11;
+                          Pass 9: 15; Pass 10: 9; Pass 11: 41; Pass 12: 17, by swapping the old helper back)
+Mutation-checked:          yes — curated suites CI selects for this branch (--changed-since origin/main): 37 suites,
+                          270 of 270 caught, tree restored byte-for-byte; the sys.path fix mutated by hand per site
+                          and with the reviewer's insert-if-absent variant
+Fixtures re-pinned:        .agent-rfc/fixtures/knowledge_graph.json (723 nodes, agentsmith gate kg build from this
+                          checkout); two curated mutations in scripts/mutation_check.py (Pass 1)
+Performance measured:      n/a
+Security gates:            ruff S in the CI lint step (this change); bandit -ll unchanged in supply-chain.yml
+Compliance evidence:       n/a
+Manual-only levers:        noqa reasons read one by one against the call sites; composed refusal messages read for
+                          truth (reviewer, Pass 13)
+KG query:                 kg:76c7d1e0887f
+Scope before the rebuild:  kg:a22f43273be2 (Pass 15 says what moved)
+Gates run locally:         ruff check . (clean); full pytest 3048 passed, 17 skipped, 0 failed, 11m53s, no test
+                          over the 300s stall limit (skips: no live Postgres / COMPLIANCE_TEST_DSN, no AWS
+                          credentials, no decommissioned models); check_bare_except over changed and shipped files
+                          (clean); mutation_check intake + send_dev_record (13/13) and the branch set (270/270);
+                          agentsmith gate kg build; mypy NOT run — pinned mypy 1.14.1 is not installed here
+Independent review:        Passes 8–13 by a separate Opus 5.5 agent, not the author; its reports were read as data
+                          and every finding confirmed in code before fixing
+```
+
+
+## Pass 14 — findings: 0
+
+The author's pass over a fix the commit gate required; this is not a review finding. The commit gate refused nine new cross-references that pointed into `docs/team-observability.md` by section number (`§3.3`, `§2.2`, `§3.2`, `§3`). The repository requires a heading name, because a section number moves on the next edit. Each one now names its heading (`› Update developer endpoints`, `› Configure each developer`, `› Caddyfile`, `› TLS / HTTPS`), in the design note, CHANGELOG, backlog, UserManual and `scripts/gate_tracing.py`'s refusal text. Wording only: the egress and gate-tracing suites gave 223 passed, `ruff check .` is clean, and the staged `KG query` is unchanged (`kg:a22f43273be2`).
+
+## Pass 15 — findings: 0
+
+The author's pass over the rebuild, not a review finding. The branch was rebuilt on PR #117's head `c2583ff` (`fix/review-4.1.0-pass2`, 16 commits on `main` `cdf04e1`) on 2026-11-24, because both change `scripts/process_gate.py`, `agentsmith/cli.py`, `agentsmith/sync.py` and `agentsmith/llm_gateway.py` and this one lands right after #117 (owner decision 24). One commit at a time, `cherry-pick --no-commit` then `commit -C`, through the hooks. The old head `0298743` is kept as `backup/ruff-s-0298743`. The four commits below `85735d2` on the old branch were already on `main` under other hashes and were dropped.
+
+- **Commit 1 (`85735d2`).** Conflicts kept #117's code with this change's waivers put back: `cli._gate_kg` (whole rebuild plus the trace graph), `compliance.find_decision` (decision names its request), `agent_tokens._paths` and `main` (main's #119). `# noqa: S603, S607` is restored on `agent_tokens`' `git rev-parse` call. The S rules also reach code #117 added since this branch was cut, so each finding was triaged like the first 217: `process_gate._range_starts`' `git cat-file` gains `--end-of-options`, like `_range_commits` beside it (CWE-88); `mcp_pin`'s `ask()` and `trace_graph`'s `edge()` raise instead of asserting, which `python -O` strips; reasoned waivers on `trace_graph`, `compliance_checks._default_branches`, `vector_store.claim_legacy`'s update, `cli._gate_kg` and `agent_tokens`' `_git` and its two fail-open handlers. The scope moved from `kg:4984a235bcc3` to `kg:1507fc6a1766` (142 files gained, 106 of them tests; 22 lost, files the old base lacked). The gained test files, on that staged tree: 2117 passed, 12 skipped. This change's own suites with the touched files': 218 passed, 11 skipped. The rebuild is recorded in that commit's sign-off as `Rebuild KG query`, so passes 6–14 keep their numbers.
+- **Commit 2 (`0298743`).** The code merged without conflict. Two review records did: here (the earlier sign-off keeps both hashes) and `run-token-limits.md`, where #117 had added Passes 5–9, so this branch's pass there is now Pass 10, with the gateway's line numbers updated. The other three reopened designs' passes (`gen-ai-telemetry`, `sync-refreshes-rule-files`, `trajectory-evals`) were re-read against the rebuilt files; each gains a rebuild note. The scope moved from `kg:a22f43273be2` to `kg:76c7d1e0887f` (116 files gained, 78 of them tests; none lost).
+- **Checks on the staged head.** The full suite: 3420 passed, 21 skipped, 1 failed. The failure was `test_the_committed_graph_is_what_the_tree_builds`: the trace graph had been built while the index still held the conflicted entries (`resolves` 301, not 295). It was rebuilt, and that file passes. `ruff check .` (0.15.20) clean; `verify_system.py --check-kg` and `trace_graph.py --check` pass; `check_bare_except` clean. Curated mutations were not run locally; CI runs the suites it selects.

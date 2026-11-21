@@ -318,15 +318,22 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None  # the redirect's status is the answer; nothing follows it
 
 
+class ReceiverRefused(ValueError):
+    """A receiver address the harness will not send to — a scheme or port the
+    rule refuses, or one urllib cannot open — said by name. The CLI catches this
+    and only this, so a bug in the harness still traces back."""
+
+
 def run_record_receiver(url: str, token: str) -> RecordReport:
     """Send every case to the receiver at `url` and judge each by its status."""
+    import http.client
     import secrets
     import urllib.error
 
-    from agentsmith.compliance import is_web_url
+    from agentsmith.compliance import display_url, is_web_url, unopenable, web_url_refusal
 
     if not is_web_url(url):
-        raise ValueError(f"the receiver must be https, or http to this machine — not {url!r}")
+        raise ReceiverRefused(f"the receiver {web_url_refusal(url)} — not {display_url(url)!r}")
     opener = urllib.request.build_opener(_NoRedirect)
     checks = []
     for case in record_cases():
@@ -341,12 +348,14 @@ def run_record_receiver(url: str, token: str) -> RecordReport:
                 status = response.status
         except urllib.error.HTTPError as exc:
             status = exc.code
+        except http.client.InvalidURL:  # nothing could be sent; its text holds the password
+            raise ReceiverRefused(unopenable(url, "the token is the credential")) from None
         except (urllib.error.URLError, OSError) as exc:
             checks.append(Check(case.name, False, f"no answer: {exc}"))
             continue
         checks.append(Check(case.name, status == case.expect,
                             "" if status == case.expect else f"expected {case.expect}, got {status}"))
-    return RecordReport(party="receiver", target=url, checks=checks)
+    return RecordReport(party="receiver", target=display_url(url), checks=checks)
 
 
 def run_record_sender(provider: str, workdir: Path, url_env: str = SENDER_URL_ENV,
@@ -1456,18 +1465,21 @@ def run_ops_receiver(url: str, token: str) -> OpsReport:
     status = _post_status(url, big, token)
     checks.append(Check("a body over the limit is refused (413)", status == 413,
                         "" if status == 413 else f"answered {status}"))
-    return OpsReport(f"receiver: {url}", checks)
+    from agentsmith.compliance import display_url
+
+    return OpsReport(f"receiver: {display_url(url)}", checks)
 
 
 def _post_status(url: str, message, token: str, headers: Optional[dict] = None) -> int:
     """POST one JSON body — a dict, or the exact bytes a signature covers; the
     status, never following a redirect. 0 when nothing answered."""
+    import http.client
     import urllib.error
 
-    from agentsmith.compliance import is_web_url
+    from agentsmith.compliance import display_url, is_web_url, unopenable, web_url_refusal
 
     if not is_web_url(url):
-        raise ValueError(f"the receiver must be https, or http to this machine — not {url!r}")
+        raise ReceiverRefused(f"the receiver {web_url_refusal(url)} — not {display_url(url)!r}")
     class _NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, *_args, **_kwargs):
             return None
@@ -1481,6 +1493,8 @@ def _post_status(url: str, message, token: str, headers: Optional[dict] = None) 
             return response.status
     except urllib.error.HTTPError as exc:
         return exc.code
+    except http.client.InvalidURL:  # not "nothing answered": nothing could be sent; its text holds the password
+        raise ReceiverRefused(unopenable(url, "the token is the credential")) from None
     except (urllib.error.URLError, OSError):
         return 0
 
@@ -1512,7 +1526,9 @@ def run_ops_replay(url: str, key: str) -> OpsReport:
     for name, headers, ok in attempts:
         status = _post_status(url, body, "", headers)
         checks.append(Check(name, ok(status), "" if ok(status) else f"answered {status or 'nothing'}"))
-    return OpsReport(f"replay webhook: {url}", checks)
+    from agentsmith.compliance import display_url
+
+    return OpsReport(f"replay webhook: {display_url(url)}", checks)
 
 
 # ── The compliance contract (contract/compliance/v1/) ────────────────────────
@@ -1544,7 +1560,13 @@ def run_compliance(provider: str, workdir: Path) -> list[tuple[str, bool, str]]:
 
 
 def run_runtime(url: str, token: str) -> list[tuple[str, bool, str]]:
-    """Every case of contract/runtime/v1/cases.json against a running sidecar."""
+    """Every case of contract/runtime/v1/cases.json against a running sidecar.
+    The bearer token goes only over https, or http to this machine."""
+    from agentsmith.compliance import display_url, is_web_url, web_url_refusal
+
+    if not is_web_url(url):
+        return [("receiver address", False, f"{web_url_refusal(url)} — {display_url(url)!r} "
+                                            "was not sent the token")]
     import httpx
 
     source = _contract_dir().parents[1] / "runtime" / "v1" / "cases.json"

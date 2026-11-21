@@ -139,7 +139,9 @@ def _audit(tmp_path, monkeypatch, url):
         opened.append(request.full_url)
         raise OSError("not a real portal")
 
+    # Both ways a request leaves: urlopen, and an opener (the no-redirect one).
     monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", lambda self, request, *a, **k: urlopen(request))
     policy.audit_log_event("config_change", "actor", "tenant", {},
                            env={"OPS_PORTAL_URL": url, "AUDIT_LOG_WRITE_TOKEN": "t"})
     log = tmp_path / ".agent-framework" / "local-audit-fallback.log"
@@ -159,12 +161,12 @@ def test_an_audit_event_is_sent_over_https_or_to_loopback(tmp_path, monkeypatch,
     assert opened == [f"{url}/api/audit/append"] and reason == "ops_portal_write_failed"
 
 
-def _webhook(monkeypatch, url):
+def _webhook(monkeypatch, url, allowed=True):
     import notifier
 
     opened = []
     monkeypatch.setattr(notifier, "WEBHOOK_URL", url)
-    monkeypatch.setattr(compliance, "outbound_allowed", lambda _url: True)
+    monkeypatch.setattr(compliance, "outbound_allowed", lambda _url: allowed)
     monkeypatch.setattr(urllib.request, "urlopen", lambda request, **k: opened.append(request.full_url))
     started = []
     real_start = threading.Thread.start
@@ -213,8 +215,34 @@ def test_the_sovereign_probe_refuses_clear_text_to_another_host(monkeypatch, bas
     import verify_sovereign_endpoint as vse
 
     monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: pytest.fail("opened"))
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", lambda *a, **k: pytest.fail("opened"))
     with pytest.raises(ValueError, match="must be https"):
         vse._chat(base, "model", "prompt")
+
+
+@pytest.mark.parametrize("base, cause", [("https://", "has no host"), ("https:evil.com", "has no host"),
+                                         ("http://[::1:6006", "does not parse")])
+def test_the_sovereign_probe_refuses_an_address_with_no_host_or_that_does_not_parse(monkeypatch, base, cause):
+    """Pass 7: the probe's own copy let a hostless address reach urlopen, and a
+    malformed one raised urlparse's "Invalid IPv6 URL", which names no setting."""
+    import verify_sovereign_endpoint as vse
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: pytest.fail("opened"))
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", lambda *a, **k: pytest.fail("opened"))
+    with pytest.raises(ValueError, match=cause):
+        vse._chat(base, "model", "prompt")
+
+
+def test_the_shipped_sovereign_template_passes_the_probe_rule():
+    """templates/uae-sovereign/env.example's OLLAMA_BASE_URL is what an operator
+    copies; the probe must not refuse the value the template ships (Q1, strict)."""
+    from _shared import is_web_url
+
+    env = REPO / "templates" / "uae-sovereign" / "env.example"
+    values = [line.split("=", 1)[1].strip() for line in env.read_text(encoding="utf-8").splitlines()
+              if line.startswith("OLLAMA_BASE_URL=")]
+    assert values, "env.example no longer sets OLLAMA_BASE_URL"
+    assert all(is_web_url(v) for v in values), values
 
 
 @pytest.mark.parametrize("base", ["https://10.0.0.5:11434", "http://127.0.0.1:11434"])
@@ -228,6 +256,210 @@ def test_the_sovereign_probe_reaches_https_or_loopback(monkeypatch, base):
         raise OSError("no server")
 
     monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", lambda self, request, *a, **k: urlopen(request))
     with pytest.raises(OSError):
         vse._chat(base, "model", "prompt")
     assert opened == [f"{base}/v1/chat/completions"]
+
+
+# ── Token-sending sites (.agent-rfc/designs/ruff-s-rules.md, Pass 7) ─────────
+# A portal token or a secret webhook URL went to the configured address with
+# only the residency check in front of it, which allows everything when no
+# profile is declared. Each test fails on the code before the rule: the secret
+# crossed the network over plain http.
+
+
+def test_the_ops_token_is_not_sent_in_clear_to_another_host(monkeypatch, caplog):
+    import httpx
+
+    from agentsmith import ops_contract as oc
+
+    monkeypatch.setenv(oc.URL_ENV, REMOTE_HTTP)
+    monkeypatch.setenv(oc.TOKEN_ENV, "aso_t")
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: pytest.fail("the token was sent"))
+    oc._warned.clear()
+    with caplog.at_level("WARNING"):
+        assert oc.send(oc.RunMessage(run_id="r", status="success")) is None
+    assert "must be https" in caplog.text and oc.URL_ENV in caplog.text
+
+
+def test_the_deprecated_route_does_not_send_the_shared_token_in_clear(monkeypatch, caplog):
+    import httpx
+
+    from agentsmith import ops_contract as oc
+    from agentsmith.llm_gateway import LLMGateway
+
+    posted = []
+    monkeypatch.delenv(oc.TOKEN_ENV, raising=False)
+    monkeypatch.setenv("OPS_PORTAL_URL", REMOTE_HTTP)
+    monkeypatch.setenv("OPS_PORTAL_SYNC_TOKEN", "shared")
+    monkeypatch.setattr(httpx, "post", lambda url, **k: posted.append(url))
+    oc._warned.clear()
+    gateway = LLMGateway.__new__(LLMGateway)
+    gateway.tenant_id = "t"
+    with caplog.at_level("WARNING"):
+        gateway._report_run_status("run-2", "success")
+    assert posted == []
+    assert "must be https" in caplog.text
+
+
+def test_signatures_are_not_sent_in_clear_inside_the_boundary(tmp_path, monkeypatch):
+    import httpx
+
+    import compliance_port as cp
+    from test_compliance_port import _repo
+
+    monkeypatch.chdir(_repo(tmp_path))  # boundary: x.example.ae
+    monkeypatch.setenv("OPS_PORTAL_URL", "http://x.example.ae")
+    monkeypatch.setenv("OPS_PORTAL_TOKEN", "t")
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: pytest.fail("the token was sent"))
+    records, why = cp.exchange([])
+    assert records == [] and "must be https" in why
+
+
+def _dead_letter_notify(monkeypatch, url):
+    import httpx
+
+    from agentsmith import dead_letter
+
+    posted = []
+    monkeypatch.delenv("TEAMS_WEBHOOK_URL", raising=False)
+    monkeypatch.setenv("SLACK_WEBHOOK_URL", url)
+    monkeypatch.setattr(httpx, "post", lambda target, **k: posted.append(target))
+    dead_letter._notify("t", "task", "r", "e")
+    return posted
+
+
+def test_a_dead_letter_webhook_in_clear_is_not_called_and_not_logged(monkeypatch, caplog):
+    with caplog.at_level("WARNING", logger="agentsmith.dead_letter"):
+        assert _dead_letter_notify(monkeypatch, "http://hooks.example/T000/B000/placeholder") == []
+    assert "SLACK_WEBHOOK_URL" in caplog.text and "must be https" in caplog.text
+    assert "hooks.example" not in caplog.text  # the URL is the secret
+
+
+def test_a_dead_letter_webhook_over_https_is_still_called(monkeypatch):
+    assert _dead_letter_notify(monkeypatch, "https://hooks.example/x") == ["https://hooks.example/x"]
+
+
+def test_the_runtime_conformance_token_is_not_sent_in_clear(monkeypatch):
+    import httpx
+
+    from agentsmith import conformance
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: pytest.fail("the token was sent"))
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: pytest.fail("the token was sent"))
+    checks = conformance.run_runtime("http://receiver.example", "tok")
+    assert [(name, ok) for name, ok, _why in checks] == [("receiver address", False)]
+    assert "must be https" in checks[0][2]
+
+
+# ── Pass 8 (.agent-rfc/designs/ruff-s-rules.md, items H, K, L) ───────────────
+
+
+def _redirecting_pair():
+    """Two loopback servers: the first answers every request with a 302 to the
+    second, and the second records the Authorization header it is sent. A URL
+    that passes the rule must not carry the token on to wherever a 3xx points."""
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    seen: list = []
+
+    class Target(BaseHTTPRequestHandler):
+        def _answer(self):
+            seen.append(self.headers.get("Authorization"))
+            body = b'{"choices": [{"message": {"content": "ok"}}]}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            self._answer()
+
+        def do_POST(self):
+            self._answer()
+
+        def log_message(self, *_args):
+            pass
+
+    target = ThreadingHTTPServer(("127.0.0.1", 0), Target)
+
+    class Redirect(BaseHTTPRequestHandler):
+        def _answer(self):
+            self.send_response(302)
+            self.send_header("Location", f"http://127.0.0.1:{target.server_port}/elsewhere")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def do_GET(self):
+            self._answer()
+
+        def do_POST(self):
+            self._answer()
+
+        def log_message(self, *_args):
+            pass
+
+    first = ThreadingHTTPServer(("127.0.0.1", 0), Redirect)
+    for server in (target, first):
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+    return f"http://127.0.0.1:{first.server_port}", seen, (first, target)
+
+
+@pytest.fixture()
+def redirecting():
+    url, seen, servers = _redirecting_pair()
+    yield url, seen
+    for server in servers:
+        server.shutdown()
+        server.server_close()
+
+
+def test_the_audit_token_does_not_follow_a_redirect(tmp_path, monkeypatch, redirecting):
+    from agentsmith.machine import policy
+
+    url, seen = redirecting
+    monkeypatch.setenv("HOME", str(tmp_path))
+    policy.audit_log_event("config_change", "actor", "tenant", {},
+                           env={"OPS_PORTAL_URL": url, "AUDIT_LOG_WRITE_TOKEN": "PLACEHOLDER-TOKEN"})
+    assert seen == [], "the redirect target was sent the request"
+    log = tmp_path / ".agent-framework" / "local-audit-fallback.log"
+    [record] = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+    assert record["reason"] == "ops_portal_write_failed"
+
+
+def test_the_probe_token_does_not_follow_a_redirect(redirecting):
+    import urllib.error
+
+    import verify_sovereign_endpoint as vse
+
+    url, seen = redirecting
+    with pytest.raises(urllib.error.HTTPError):
+        vse._chat(url, "model", "prompt", token="PLACEHOLDER-TOKEN")
+    assert seen == [], "the redirect target was sent the request"
+
+
+@pytest.mark.parametrize("url, allowed", [("http://hooks.example/PLACEHOLDER-SECRET", True),
+                                          ("https://hooks.example/PLACEHOLDER-SECRET", False)])
+def test_a_refused_webhook_is_said_by_variable_never_by_url(monkeypatch, capsys, url, allowed):
+    """Before: _post returned without a word, so an operator's alerts stopped
+    silently after the upgrade (Pass 8, item K)."""
+    assert _webhook(monkeypatch, url, allowed=allowed) == []
+    err = capsys.readouterr().err
+    assert "AGENT_NOTIFY_WEBHOOK" in err
+    assert "PLACEHOLDER-SECRET" not in err and "hooks.example" not in err
+
+
+def test_an_audit_write_refused_by_the_boundary_says_so(tmp_path, monkeypatch):
+    """Before: recorded as ops_portal_not_configured, though it was configured
+    (Pass 8, item L)."""
+    from agentsmith.machine import policy
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(compliance, "outbound_allowed", lambda _url: False)
+    policy.audit_log_event("config_change", "actor", "tenant", {},
+                           env={"OPS_PORTAL_URL": "https://portal.example", "AUDIT_LOG_WRITE_TOKEN": "t"})
+    log = tmp_path / ".agent-framework" / "local-audit-fallback.log"
+    [record] = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+    assert record["reason"] == "ops_portal_outside_boundary"

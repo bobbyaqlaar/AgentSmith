@@ -123,7 +123,9 @@ def audit_log_event(
 
     if url and token and not compliance.is_web_url(url):
         reason = "ops_portal_url_not_https"
-    elif url and token and compliance.outbound_allowed(url):
+    elif url and token and not compliance.outbound_allowed(url):
+        reason = "ops_portal_outside_boundary"
+    elif url and token:
         request = urllib.request.Request(  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
             f"{url}/api/audit/append",
             data=json.dumps(body).encode(),
@@ -131,7 +133,8 @@ def audit_log_event(
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=5) as response:  # nosec B310 - the operator's portal URL  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
+            # Not followed: a 3xx would carry the token past the rule (compliance.NoRedirect).
+            with urllib.request.build_opener(compliance.NoRedirect).open(request, timeout=5) as response:  # nosec B310 - the operator's portal URL, checked by is_web_url above
                 if 200 <= response.status < 300:
                     return
         except Exception:  # noqa: S110 -- fail-open: the event is kept locally below instead

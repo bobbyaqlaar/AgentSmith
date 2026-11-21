@@ -127,7 +127,14 @@ def _send_webhook(title: str, message: str) -> None:
                 sys.path.insert(0, repo)
             from agentsmith import compliance
 
-            if not compliance.is_web_url(WEBHOOK_URL) or not compliance.outbound_allowed(WEBHOOK_URL):
+            # Said, by variable and never by value: the webhook URL is the secret.
+            if not compliance.is_web_url(WEBHOOK_URL):
+                print(f"notifier: AGENT_NOTIFY_WEBHOOK {compliance.web_url_refusal(WEBHOOK_URL)} — "
+                      "the notification was not sent", file=sys.stderr)
+                return
+            if not compliance.outbound_allowed(WEBHOOK_URL):
+                print("notifier: AGENT_NOTIFY_WEBHOOK is outside the declared compliance boundary — "
+                      "the notification was not sent", file=sys.stderr)
                 return
             payload = json.dumps(
                 {"text": f"*{APP_NAME}* — *{title}*\n{message}"}

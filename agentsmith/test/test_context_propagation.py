@@ -83,7 +83,7 @@ def test_the_gateway_sends_traceparent_and_a_trace_id(spans, monkeypatch):
 
     monkeypatch.setenv("IDEMPOTENCY_BACKEND", "memory")
     monkeypatch.setenv("BUDGET_BACKEND", "memory")
-    monkeypatch.setenv("OPS_PORTAL_URL", "http://portal.invalid")
+    monkeypatch.setenv("OPS_PORTAL_URL", "https://portal.invalid")
     monkeypatch.setenv("OPS_PORTAL_SYNC_TOKEN", "t")
 
     captured: dict = {}

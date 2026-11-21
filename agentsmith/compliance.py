@@ -20,6 +20,7 @@ from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, Optional
+import urllib.request
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -705,7 +706,9 @@ def require_inside_boundary(base_url: str) -> None:
     declaration = load_declaration()
     if declaration is None:
         return
-    host = urlparse(base_url).hostname
+    host = url_host(base_url)
+    if host is None:
+        raise ComplianceRefused("OB-RESIDENCY", f"endpoint {display_url(base_url)!r} has no host that parses")
     if host in LOOPBACK_HOSTS or host_allowed(host, declaration.boundary.hosts):
         return
     raise ComplianceRefused("OB-RESIDENCY", f"endpoint {host!r} is outside the declared boundary")
@@ -714,12 +717,117 @@ def require_inside_boundary(base_url: str) -> None:
 LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
 
 
+def url_host(url: str) -> Optional[str]:
+    """The host of `url`, or None when it has none or does not parse (an unclosed IPv6 bracket)."""
+    try:
+        return urlparse(url).hostname
+    except ValueError:
+        return None
+
+
 def is_web_url(url: str) -> bool:
     """https to any host; plain http only to this machine. `urlopen` also serves
     `file:` and `ftp:`, so a URL from configuration is checked before it is opened
-    (ruff S310), and a bearer token never crosses a network in clear text."""
-    parsed = urlparse(url)
-    return parsed.scheme == "https" or (parsed.scheme == "http" and parsed.hostname in LOOPBACK_HOSTS)
+    (ruff S310), and a bearer token never crosses a network in clear text.
+    No host (`https://`, `https:evil.com`) or an address that does not parse is
+    refused, not raised."""
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname
+        parsed.port  # noqa: B018 -- read for its ValueError: `:6006x`, `:99999` pass urlparse, then fail in urllib
+    except ValueError:  # e.g. an unclosed IPv6 bracket, or a port that is not one
+        return False
+    return bool(host) and (parsed.scheme == "https" or (parsed.scheme == "http" and host in LOOPBACK_HOSTS))
+
+WEB_URL_RULE = "must be https, or http to this machine"
+NO_HOST = "has no host"
+BAD_PORT = "has a port that is not one (0–65535)"
+DOES_NOT_PARSE = "does not parse as an address"
+
+
+def web_url_refusal(url: str) -> str:
+    """What a refusal by `is_web_url` says: the first thing the operator must
+    change. In order: an address that does not parse; a scheme that is neither
+    https nor http (the rule); no host; plain http to another host (the rule);
+    then a port urllib cannot use (`:6006x`, `:99999`), named only once the rest
+    would pass. "must be https" would be false for `https://` or
+    `http://localhost:600600`.
+    scripts/_shared.py keeps a stdlib copy."""
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname
+    except ValueError:
+        return DOES_NOT_PARSE
+    if parsed.scheme not in ("https", "http"):
+        return WEB_URL_RULE
+    if not host:
+        return NO_HOST
+    if parsed.scheme == "http" and host not in LOOPBACK_HOSTS:
+        return WEB_URL_RULE
+    try:
+        parsed.port  # noqa: B018 -- read for its ValueError
+    except ValueError:
+        return BAD_PORT
+    return WEB_URL_RULE
+
+
+UNPARSED_URL = "<an address that does not parse>"
+ENTANGLED_URL = "<an address whose credential cannot be separated>"
+
+
+def display_url(url: str) -> str:
+    """`url` as a message may show it: scheme, host, port and path, without
+    userinfo, query or fragment. The docs put the auth sidecar's password in the
+    collector address (`https://ops:<password>@host`), and a refusal printed
+    whole put it in logs and session context. Not for an address whose path is
+    the secret (a Slack or Teams webhook): name its variable instead.
+    scripts/_shared.py keeps a stdlib copy."""
+    if not url:
+        return url
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname
+        port = parsed.port
+    except ValueError:  # an unclosed IPv6 bracket, a port that is not a number
+        # With no `@` there is no userinfo to drop, and the typo is in the value.
+        return UNPARSED_URL if "@" in url else url.split("#", 1)[0].split("?", 1)[0]
+    # A password holding `/`, `?` or `#` ends the netloc early, so the rest of
+    # it reads as path, query or fragment (`https://ops:123/s3cr3t@host` parses
+    # as host `ops`, port 123): any `@` there, or userinfo with no host, means the
+    # credential cannot be told apart from the address.
+    if "@" in parsed.path + parsed.params + parsed.query + parsed.fragment or ("@" in parsed.netloc and not host):
+        return ENTANGLED_URL
+    if not host:  # `phoenix:6006`, `https://`: no userinfo to drop, and the value is the clue
+        return url.split("#", 1)[0].split("?", 1)[0]
+    netloc = f"[{host}]" if ":" in host else host
+    if port is not None:
+        netloc += f":{port}"
+    return f"{parsed.scheme}://{netloc}{parsed.path}"
+
+
+def unopenable(url: str, hint: str) -> str:
+    """Why urllib refused `url` (`http.client.InvalidURL`), for a message that
+    must not quote it: that error's own text holds the address whole, password
+    included. A user:password is named only when the address holds an `@`, with
+    `hint` saying where the credential goes instead; a bad port is refused
+    earlier, by `is_web_url`.
+    scripts/_shared.py keeps a stdlib copy."""
+    shown = display_url(url)
+    if "@" in url:
+        return (f"{shown} cannot be opened as written: a user:password in the address cannot be sent — "
+                f"remove it; {hint}")
+    return f"{shown} cannot be opened as written (a control character in it?)"
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """An opener handler that does not follow a 3xx. urllib's redirect_request
+    copies the Authorization header onto the next request, so following hands a
+    token to wherever the redirect points — past the https rule the first
+    address passed. The 3xx answers as itself (`HTTPError`).
+    scripts/_shared.py keeps a stdlib copy."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        return None
 
 
 def outbound_allowed(url: str) -> bool:
@@ -750,7 +858,9 @@ def guard_model_call(
     _check_user_limit(tenant_id, user_id, declaration.user_calls_per_minute)
     if not declaration.is_classified(data_class or ""):
         return
-    host = urlparse(base_url).hostname
+    host = url_host(base_url)
+    if host is None:
+        raise ComplianceRefused("OB-RESIDENCY", f"model endpoint {display_url(base_url)!r} has no host that parses")
     if not host_allowed(host, declaration.boundary.hosts):
         raise ComplianceRefused(
             "OB-RESIDENCY", f"model endpoint {host!r} is outside the declared boundary for classified data"

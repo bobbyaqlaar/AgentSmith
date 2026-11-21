@@ -39,8 +39,9 @@ import os
 import re
 import shutil
 import sys
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Iterator, Optional, Sequence
 
 # The scaffold's shape is a product decision, so it lives here as data rather
 # than as a heredoc: a test can assert on it, and there is exactly one copy.
@@ -281,13 +282,33 @@ def gate_ides_module(framework: Optional[Path] = None):
     framework = framework or _framework_dir()
     if framework is None:
         return None
-    sys.path.insert(0, str(framework / "scripts"))
     try:
-        import gate_ides  # type: ignore
+        with framework_scripts_on_path(framework):
+            import gate_ides  # type: ignore
 
         return gate_ides
     except Exception:  # fail-open: an unresolvable registry must not block a scaffold
         return None
+
+
+@contextmanager
+def framework_scripts_on_path(framework: Path) -> Iterator[None]:
+    """`<framework>/scripts` importable for the length of the block, and
+    `sys.path` holding as many copies of it after as before. Inserted only if
+    absent; copies added inside the block (a framework script whose module scope
+    inserts its own directory, as `scripts/rules_port.py` does) are removed too.
+    Left behind, it made every later `import notifier` or `import _shared` in the
+    process resolve to that framework's copy — the machine's stale install, in a
+    test run (.agent-rfc/designs/ruff-s-rules.md)."""
+    entry = str(framework / "scripts")
+    present = sys.path.count(entry)
+    if not present:
+        sys.path.insert(0, entry)
+    try:
+        yield
+    finally:
+        while sys.path.count(entry) > present:
+            sys.path.remove(entry)
 
 
 def init_tenant(
@@ -1464,7 +1485,7 @@ def _record_conformance(args: argparse.Namespace) -> int:
             with tempfile.TemporaryDirectory() as tmp:
                 report = rc.run_record_sender(args.sender, Path(tmp) / "fixture",
                                               args.url_env or rc.SENDER_URL_ENV, args.token_env or rc.SENDER_TOKEN_ENV)
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, rc.ReceiverRefused) as exc:  # a receiver address refused, said by name
         print(f"agentsmith: {exc}", file=sys.stderr)
         return 2
     print(report.render())
@@ -1498,7 +1519,7 @@ def _ops_conformance(args: argparse.Namespace) -> int:
             with tempfile.TemporaryDirectory() as tmp:
                 report = rc.run_ops_sender(args.sender, Path(tmp) / "fixture", args.url_env or ops_contract.URL_ENV,
                                            args.token_env or ops_contract.TOKEN_ENV)
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, rc.ReceiverRefused) as exc:  # a receiver address refused, said by name
         print(f"agentsmith: {exc}", file=sys.stderr)
         return 2
     print(report.render())

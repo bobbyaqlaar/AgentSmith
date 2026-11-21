@@ -117,3 +117,15 @@ Gates run: ruff; mypy; the test file; the process gate against the commit.
 Levers reviewed: `test-that-cannot-fail`.
 
 KG query: kg:5ef85d2d8a0e
+
+## Pass 10 — findings: 0
+
+A review by the author of the ruff-s-rules change (branch `feat/ruff-s-rules`), not an independent pass. It covers only that branch's edits to files in this design's scope, against `docs/review-levers.md`. This design shipped earlier; its own work is unchanged. Files: `agentsmith/llm_gateway.py`.
+
+- No change to token counting, the per-role output caps, the prompt bound or the run limit. The edits to `llm_gateway.py` are seven comment-only noqa reasons on fail-open handlers, plus the legacy run-status route's scheme refusal, which returns before the report is sent and enforces nothing.
+- A refused report does not touch the accounting the limits read. `token_limits.reserve_run`, `release_run` and `settle_run` (`llm_gateway.py` ~1279–1283, 1662, 1747, 1780, 1822, and the stream path's `release()`) each run before the `_report_run_status` call next to them, and the report only reads their result.
+- The suites that pin this design passed: `agentsmith/test/test_token_limits.py`, `test_ttft_stream.py` and `scripts/test/test_trajectory_evals.py`.
+
+Evidence: on the branch's original tree (before the rebuild below), the full suite gave 3048 passed, 17 skipped, 0 failed, and the curated mutation suites CI selects for the branch gave 270 of 270 caught.
+
+Rebuilt on PR #117's head `c2583ff` (2026-11-24; `.agent-rfc/reviews/ruff-s-rules.md` Pass 15). The claims above were re-read against the rebuilt files. They hold against #117's Passes 5–9: every reserve and release now sits before the run-status report beside it, including the stream path's `release()`. On the rebuilt head the full suite gave 3420 passed, 21 skipped; the one failure was a stale trace-graph fixture, rebuilt.

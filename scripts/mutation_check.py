@@ -546,8 +546,7 @@ CATALOGUE: tuple[Suite, ...] = (
             Mutation(
                 "the token goes to any address, plain http included",
                 "agentsmith/intake.py",
-                '    return parsed.scheme == "https" or '
-                '(parsed.scheme == "http" and parsed.hostname in ("localhost", "127.0.0.1"))',
+                "    return is_web_url(url)",
                 "    return True",
             ),
             Mutation(

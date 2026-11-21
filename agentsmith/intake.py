@@ -27,6 +27,7 @@ portal is unreachable or failing and the same command is the retry.
 from __future__ import annotations
 
 import getpass
+import http.client
 import json
 import os
 import re
@@ -73,8 +74,8 @@ class IntakeError(Exception):
 
 def safe_portal_url(url: str) -> bool:
     """https anywhere; http only to this machine. The one rule is
-    compliance.is_web_url; scripts/send_dev_record.py keeps an inline copy (it
-    ships stdlib-only), pinned to that rule by scripts/test/test_send_dev_record.py."""
+    compliance.is_web_url; scripts/ keeps a stdlib copy in scripts/_shared.py (used
+    by scripts/send_dev_record.py), pinned to that rule by agentsmith/test/test_https_only_egress.py."""
     from agentsmith.compliance import is_web_url
 
     return is_web_url(url)
@@ -187,8 +188,15 @@ def _call(method: str, url: str, token: str) -> dict[str, Any]:
             raise IntakeError(f"the portal failed ({exc.code}): {reason} — run the same command again", RETRY) from exc
         hint = {401: f" — check {TOKEN_VAR}: it is the token shown once when the intake was created"}.get(exc.code, "")
         raise IntakeError(f"the portal refused ({exc.code}): {reason}{hint}") from exc
+    except http.client.InvalidURL:  # its message holds the address whole, password included
+        from agentsmith.compliance import unopenable
+
+        raise IntakeError(f"{URL_VAR} {unopenable(url, f'{TOKEN_VAR} is the credential')}") from None
     except (urllib.error.URLError, OSError) as exc:
-        raise IntakeError(f"the portal was not reachable at {url} ({exc}) — run the same command again", RETRY) from exc
+        from agentsmith.compliance import display_url
+
+        raise IntakeError(f"the portal was not reachable at {display_url(url)} ({exc}) — "
+                          "run the same command again", RETRY) from exc
     if len(body) > MAX_BYTES:
         raise IntakeError(f"invalid intake: the portal's answer is larger than {MAX_BYTES} bytes")
     try:
@@ -244,7 +252,10 @@ def fetch(intake_id: str) -> Intake:
     if not base:
         raise IntakeError(f"not configured: set {URL_VAR} to the portal's address")
     if not safe_portal_url(base):
-        raise IntakeError(f"{URL_VAR} must be https (or http to localhost) — not sending the token to {base}")
+        from agentsmith.compliance import display_url, web_url_refusal
+
+        raise IntakeError(f"{URL_VAR} {web_url_refusal(base)} — not sending the token to "
+                          f"{display_url(base)}")
     token = _token()
     record = validate_record(_call("GET", f"{base}/api/dev/scaffold/{intake_id}", token), intake_id)
     return Intake(record, base, token)

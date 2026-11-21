@@ -75,18 +75,28 @@ curl http://localhost:${PHOENIX_AUTH_PORT:-6007}/healthz               # should 
 
 ### 2.2 Configure each developer
 
-Add to `~/.zshrc` or `~/.bashrc` on every developer machine — note the
-**auth port** (6007), not Phoenix's own port (6006), which is unreachable
-remotely by design:
+Add to `~/.zshrc` or `~/.bashrc` on every developer machine. `<phoenix-host>`
+is a name that serves TLS in front of the **auth port** (6007), not Phoenix's
+own port (6006), which is unreachable remotely by design — see §3 for the TLS
+front:
 
 ```bash
-export AGENT_PHOENIX_ENDPOINT="http://<server-ip>:6007"
-export OTEL_EXPORTER_OTLP_ENDPOINT="http://<server-ip>:6007/v1/traces"
+export AGENT_PHOENIX_ENDPOINT="https://<phoenix-host>"
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://<phoenix-host>/v1/traces"
 ```
 
-`AGENT_PHOENIX_ENDPOINT` doesn't carry HTTP basic-auth credentials itself —
-either embed them in the URL (`http://ops:<password>@<server-ip>:6007`) or
-configure your HTTP client/agent runtime to send the `Authorization` header.
+The collector must serve TLS. AgentSmith's exporter (`agentsmith/otlp.py`)
+sends spans and metrics only over https, or plain http to this machine
+(`localhost`, `127.0.0.1`, `::1`); an address like `http://<server-ip>:6007`
+is refused with an ERROR log line and nothing is exported.
+
+`AGENT_PHOENIX_ENDPOINT` carries no credential. Send the sidecar's basic-auth
+credential as an `Authorization` header: for span and metric export, set
+`OTEL_EXPORTER_OTLP_HEADERS` as shown in §3.3. Do not write it into the URL
+(`https://ops:<password>@…`). AgentSmith's own senders use urllib, which
+cannot send a password in the address: it refuses the request, and session
+start says "cannot be opened as written". An address is also printed and
+logged in more places than a header.
 OTLP trace export over gRPC (port 4317) is unaffected by this auth sidecar —
 it remains a separate, directly-exposed ingestion path (write-only).
 
@@ -99,18 +109,27 @@ agentsmith check
 
 ### 2.3 Configure CI
 
-Add `AGENT_PHOENIX_ENDPOINT` (pointing at the **auth port**, with embedded
-credentials) as a GitHub Actions repository secret:
+Add two GitHub Actions repository secrets: the address of the TLS front for
+the **auth port**, and the header that carries its credential (§3.3):
 
 ```
 Settings → Secrets and variables → Actions → New repository secret
 Name:  AGENT_PHOENIX_ENDPOINT
-Value: http://ops:<password>@<server-ip>:6007
+Value: https://<phoenix-host>
+
+Name:  OTEL_EXPORTER_OTLP_HEADERS
+Value: Authorization=Basic%20<base64 of user:password>
 ```
 
 ---
 
-## 3. TLS / HTTPS (Recommended for team servers)
+## 3. TLS / HTTPS (required for export from another machine)
+
+AgentSmith exports to a collector on another machine only over https, so a
+team server needs a TLS front.
+
+Point the TLS front at the auth sidecar's port (6007), not Phoenix's (6006);
+6006 has no authentication.
 
 Use Caddy as a reverse proxy — it auto-provisions Let's Encrypt certificates.
 
@@ -130,7 +149,8 @@ sudo apt update && sudo apt install caddy
 # /etc/caddy/Caddyfile
 
 phoenix.yourcompany.com {
-    reverse_proxy localhost:6006
+    # the auth sidecar (PHOENIX_AUTH_PORT, default 6007) — never Phoenix's own 6006, which has no auth
+    reverse_proxy localhost:6007
 
     # Optional: restrict to VPN / office IP range
     # @blocked not remote_ip 10.0.0.0/8 192.168.0.0/16
@@ -148,10 +168,25 @@ sudo systemctl reload caddy
 
 ### 3.3 Update developer endpoints
 
+The TLS front reaches Phoenix through the auth sidecar, so the span and metric
+exporter (`agentsmith/otlp.py`, the OpenTelemetry SDK's) must send the
+sidecar's basic-auth credential, or every export is refused with 401:
+
 ```bash
 export AGENT_PHOENIX_ENDPOINT="https://phoenix.yourcompany.com"
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://phoenix.yourcompany.com/v1/traces"
+# base64 of "<user>:<password>": PHOENIX_BASIC_AUTH_USER and the password you hashed in §2.1
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic%20$(printf '%s' '<user>:<password>' | base64 | tr -d '\n')"
 ```
+
+The header value is URL-encoded, so the space after `Basic` is written `%20`.
+Keep the line in your shell profile or a secrets manager, not in a repository:
+it is a credential.
+
+Not covered yet: the gate's own spans (`scripts/gate_tracing.py`, shipped at
+session start) are sent without this header, so behind the auth sidecar they
+stay spooled and session start says "gate spans NOT exported — … Unauthorized".
+That is on the backlog (`docs/PRODUCT_BACKLOG.md`).
 
 ---
 
@@ -168,7 +203,8 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/phoenix.yourcompany.com/privkey.pem;
 
     location / {
-        proxy_pass         http://localhost:6006;
+        # the auth sidecar (PHOENIX_AUTH_PORT, default 6007) — never Phoenix's own 6006, which has no auth
+        proxy_pass         http://localhost:6007;
         proxy_set_header   Host              $host;
         proxy_set_header   X-Real-IP         $remote_addr;
         proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
@@ -271,13 +307,17 @@ Each project's spans are separated in Phoenix by the `project.name` attribute,
 which the post-checkout hook sets automatically from the repo name.
 
 To view a specific project in the Phoenix UI:
-1. Open `http://phoenix.yourcompany.com`
+1. Open `https://phoenix.yourcompany.com` and sign in with the sidecar's credential
 2. Projects → select your project name
 
 To query across all projects, use the Phoenix Python SDK:
 
 ```python
 import phoenix as px
-client = px.Client(endpoint="http://phoenix.yourcompany.com")
+client = px.Client(endpoint="https://phoenix.yourcompany.com")
 spans = client.get_spans_dataframe(project_name="my-api")
 ```
+
+The TLS front reaches Phoenix through the auth sidecar (§3), so the client must
+send the same basic-auth `Authorization` header as in §3.3; how it takes extra
+headers depends on your Phoenix client's version.

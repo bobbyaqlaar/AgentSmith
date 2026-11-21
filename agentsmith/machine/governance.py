@@ -54,6 +54,8 @@ def _gate_module(name: str):
     for directory in _candidate_dirs("scripts"):
         if (directory / f"{name}.py").is_file():
             if str(directory) not in sys.path:
+                # Left on sys.path on purpose: `gate_steps.run` imports
+                # `gate_history` when it is called, after this returns.
                 sys.path.insert(0, str(directory))
             return importlib.import_module(name)
     raise FileNotFoundError(

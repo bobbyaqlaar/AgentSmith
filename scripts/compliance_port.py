@@ -304,6 +304,8 @@ def exchange(records: list[c.Attestation]) -> tuple[list[c.Attestation], str]:
     url, token = os.environ.get("OPS_PORTAL_URL", "").strip(), os.environ.get("OPS_PORTAL_TOKEN", "").strip()
     if not url or not token:
         return [], "OPS_PORTAL_URL and OPS_PORTAL_TOKEN are not set"
+    if not c.is_web_url(url):
+        return [], f"OPS_PORTAL_URL {c.web_url_refusal(url)} — the token was not sent"
     if not c.outbound_allowed(url):
         return [], "OPS_PORTAL_URL is outside the declared boundary"
     import httpx

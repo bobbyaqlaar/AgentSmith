@@ -163,8 +163,14 @@ def send(message: BaseModel, *, headers: Optional[dict[str, str]] = None) -> Opt
         return None
     from agentsmith import compliance
 
+    if not compliance.is_web_url(url):
+        _say_once(f"scheme:{url}",
+                  f"{URL_ENV} {compliance.web_url_refusal(url)} — the token was not sent to "
+                  f"{compliance.display_url(url)}")
+        return None
     if not compliance.outbound_allowed(url):
-        _say_once(f"boundary:{url}", f"Ops ingest at {url} is outside the declared boundary — nothing was sent")
+        _say_once(f"boundary:{url}", f"Ops ingest at {compliance.display_url(url)} is outside the declared boundary "
+                                          "— nothing was sent")
         return None
     try:
         import httpx
@@ -177,7 +183,7 @@ def send(message: BaseModel, *, headers: Optional[dict[str, str]] = None) -> Opt
             timeout=httpx.Timeout(connect=1.0, read=2.0, write=2.0, pool=1.0),
         )
     except Exception as exc:  # fail-open: the report never fails the work it reports on
-        _say_once(f"down:{url}", f"Ops ingest at {url} did not answer ({type(exc).__name__}) — "
+        _say_once(f"down:{url}", f"Ops ingest at {compliance.display_url(url)} did not answer ({type(exc).__name__}) — "
                                  "reports are not reaching the portal")
         return None
     status = response.status_code

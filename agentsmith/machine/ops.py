@@ -55,9 +55,18 @@ def effective_mode(env: Optional[Mapping[str, str]] = None) -> Optional[str]:
     return explicit or state.read_mode(env)
 
 
+def _shown(url: str) -> str:
+    """`url` as this module prints it: without its userinfo (compliance.display_url).
+    Imported here, not at module scope — compliance loads pydantic, and this
+    package is import-light (agentsmith/machine/__init__.py)."""
+    from agentsmith.compliance import display_url
+
+    return display_url(url)
+
+
 def _http_ok(url: str, timeout: float = 3.0) -> bool:
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:  # nosec B310 - a local health URL from this module  # noqa: S310 -- callers pass this module's own local health URLs
+        with urllib.request.urlopen(url, timeout=timeout) as response:  # nosec B310 - a GET with no credential  # noqa: S310 -- a GET that carries no credential: this module's local health URLs, or the operator's AGENT_PHOENIX_ENDPOINT
             return 200 <= response.status < 400
     except urllib.error.HTTPError as exc:
         return 300 <= exc.code < 400
@@ -192,7 +201,7 @@ def check(out: Out = print, env: Optional[Mapping[str, str]] = None) -> int:
 
     endpoint = phoenix_endpoint(env)
     if _http_ok(endpoint):
-        out(f"   ✅ [TRACER]  Phoenix is live at {endpoint}")
+        out(f"   ✅ [TRACER]  Phoenix is live at {_shown(endpoint)}")
     else:
         out("   ⚠️  [TRACER]  Phoenix is offline. Run: agentsmith dashboard start")
         failed = True
@@ -258,7 +267,7 @@ def status(out: Out = print, env: Optional[Mapping[str, str]] = None) -> int:
     # machine mutes them.
     out("  Hooks:     none machine-wide — a governed repository's .githooks run its gate")
     out(f"  Install:   {state.read_install_mode(env)}  ({framework_home()})")
-    out(f"  Phoenix:   {phoenix_endpoint(env)}")
+    out(f"  Phoenix:   {_shown(phoenix_endpoint(env))}")
     out(f"  Judge:     {judge_model() or 'unresolved'}   (from models.yaml, not the environment)")
     out(f"  Owner:     {environ.get('AGENT_OWNER_ID') or 'tenant.yaml tenant.owner, else git config user.email'}")
     out(f"  Network:   {'🌐 ONLINE' if _online() else '❌ OFFLINE (local fallback armed)'}")
@@ -311,7 +320,7 @@ def dashboard_start(out: Out = print, env: Optional[Mapping[str, str]] = None) -
             out("❌ docker compose up failed — see the output above")
             return rc
         state.write_phoenix_endpoint(endpoint, env)
-        out(f"🚀 Phoenix    → open {endpoint}")
+        out(f"🚀 Phoenix    → open {_shown(endpoint)}")
         out(f"🚀 Ops Portal → open http://localhost:{environ.get('OPS_PORTAL_PORT', '3000')}")
         out("   (shared across every repo on this machine — opt out per repo with:")
         out("    touch .agenticframework/no-shared-infra)")
@@ -326,14 +335,14 @@ def dashboard_start(out: Out = print, env: Optional[Mapping[str, str]] = None) -
         cmd += ["--database-url", environ["AGENT_PHOENIX_DB_URL"]]
     log = framework_home() / "logs" / "phoenix.log"
     log.parent.mkdir(parents=True, exist_ok=True)
-    out(f"📊 Starting Arize Phoenix at {endpoint} (standalone — no Docker stack)...")
+    out(f"📊 Starting Arize Phoenix at {_shown(endpoint)} (standalone — no Docker stack)...")
     with log.open("ab") as fh:
         proc = subprocess.Popen(cmd, stdout=fh, stderr=subprocess.STDOUT, start_new_session=True)  # noqa: S603 -- uvx resolved by shutil.which; port and database URL are the operator's own settings
     pid_file = _phoenix_pid_file(env)
     pid_file.parent.mkdir(parents=True, exist_ok=True)
     pid_file.write_text(f"{proc.pid}\n", encoding="utf-8")
     state.write_phoenix_endpoint(endpoint, env)
-    out(f"🚀 Dashboard starting → open {endpoint}  (log: {log})")
+    out(f"🚀 Dashboard starting → open {_shown(endpoint)}  (log: {log})")
     return 0
 
 

@@ -16,11 +16,11 @@ tiny models); non-zero otherwise.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import sys
 import urllib.error
-import urllib.parse
 import urllib.request
 from datetime import date
 from pathlib import Path
@@ -74,7 +74,7 @@ DEFAULT_OLLAMA_BASE = "http://127.0.0.1:11434"
 # _load_dotenv lives in _shared.py (ReviewFindings-2026-07-18 B3). This
 # script's old private copy raised on unreadable .env; the shared version
 # is best-effort (never fatal), matching the other callers.
-from _shared import _load_dotenv  # noqa: E402
+from _shared import NoRedirect, _load_dotenv, display_url, is_web_url, unopenable, web_url_refusal  # noqa: E402
 
 
 def _chat_url(base_url: str) -> str:
@@ -95,12 +95,11 @@ def _chat(
     timeout: float = 120.0,
 ) -> str:
     url = _chat_url(base_url)
-    # Standalone (no runtime package), so the rule is agentsmith.compliance.is_web_url's,
-    # spelled here: https to any host, plain http only to this machine.
-    parsed = urllib.parse.urlparse(url)
-    if not (parsed.scheme == "https"
-            or (parsed.scheme == "http" and parsed.hostname in ("localhost", "127.0.0.1", "::1"))):
-        raise ValueError(f"{base_url!r} must be https, or http to this machine")
+    # Standalone (no runtime package): scripts/_shared.py's copy of
+    # agentsmith.compliance.is_web_url — https to any host, plain http only to this machine.
+    if not is_web_url(url):
+        raise ValueError(f"{display_url(base_url)!r} {web_url_refusal(base_url)} "
+                         "(set OLLAMA_BASE_URL or HF_BASE_URL)")
     body = json.dumps(
         {
             "model": model,
@@ -116,8 +115,13 @@ def _chat(
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(url, data=body, method="POST", headers=headers)  # noqa: S310 -- the check above allowed only https, or http to loopback
-    with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 - the endpoint the operator is probing  # noqa: S310 -- the check above allowed only https, or http to loopback
-        data = json.loads(resp.read().decode("utf-8"))
+    # Not followed: a 3xx would carry the token past the rule (_shared.NoRedirect).
+    try:
+        with urllib.request.build_opener(NoRedirect).open(req, timeout=timeout) as resp:  # nosec B310 - the endpoint the operator is probing, checked above
+            data = json.loads(resp.read().decode("utf-8"))
+    except http.client.InvalidURL:  # its message holds the address whole, password included
+        raise ValueError(unopenable(base_url, "the token is sent as a header "
+                                              "(set OLLAMA_BASE_URL or HF_BASE_URL)")) from None
     choices = data.get("choices") or []
     if not choices:
         return ""

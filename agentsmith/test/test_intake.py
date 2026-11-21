@@ -250,28 +250,6 @@ def test_each_variable_is_read_by_the_name_its_messages_give():
         assert f'os.environ.get("{name}"' in source, name
 
 
-@pytest.mark.parametrize("url", [
-    "https://portal.example.com", "http://localhost:3000", "http://127.0.0.1:3000",
-    "http://portal.example.com", "http://10.0.0.5", "ftp://localhost", "localhost:3000",
-    "http://localhost.example.com", "http://127.0.0.1@example.com",
-])
-def test_the_portal_address_rule_is_send_dev_records(url, monkeypatch, capsys, tmp_path):
-    """Both send a token to AGENTSMITH_PORTAL_URL and ship to different places
-    (scripts/ to CI, agentsmith/ vendored into tenants), so the rule exists twice.
-    Pinned by behaviour: send_dev_record refuses an unsafe address with exit 1
-    before it reads its record, and gets as far as the missing record (exit 0)
-    for a safe one — no network either way."""
-    import importlib.util
-
-    spec = importlib.util.spec_from_file_location("send_dev_record", REPO / "scripts" / "send_dev_record.py")
-    sender = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(sender)
-    monkeypatch.setenv("AGENTSMITH_PORTAL_URL", url)
-    monkeypatch.setenv("AGENTSMITH_PORTAL_INGEST_TOKEN", "x")
-    sender_refuses = sender.main(["send_dev_record.py", str(tmp_path / "absent.json")]) == 1
-    assert sender_refuses == (not intake.safe_portal_url(url)), url
-
-
 # ── tenant init --from ───────────────────────────────────────────────────────
 
 def _init(root: Path, *extra: str) -> int:

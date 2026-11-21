@@ -1741,7 +1741,8 @@
     "scripts/**",
     "agentsmith/**",
     "examples/**",
-    "templates/**"
+    "templates/**",
+    "docker-compose.yml"
    ],
    "scope_unmatched": []
   },
@@ -3297,6 +3298,10 @@
     [
      2,
      0
+    ],
+    [
+     3,
+     0
     ]
    ],
    "signoff": true
@@ -4665,6 +4670,46 @@
     [
      5,
      0
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ],
+    [
+     8,
+     7
+    ],
+    [
+     9,
+     5
+    ],
+    [
+     10,
+     3
+    ],
+    [
+     11,
+     2
+    ],
+    [
+     12,
+     1
+    ],
+    [
+     13,
+     0
+    ],
+    [
+     14,
+     0
+    ],
+    [
+     15,
+     0
     ]
    ],
    "signoff": true
@@ -4738,6 +4783,10 @@
     ],
     [
      9,
+     0
+    ],
+    [
+     10,
      0
     ]
    ],
@@ -5155,6 +5204,10 @@
     [
      2,
      0
+    ],
+    [
+     3,
+     0
     ]
    ],
    "signoff": true
@@ -5284,6 +5337,10 @@
     ],
     [
      3,
+     0
+    ],
+    [
+     4,
      0
     ]
    ],
@@ -6394,16 +6451,16 @@
   {
    "id": "agentsmith/cli.py",
    "type": "file",
-   "loc": 2094,
+   "loc": 2115,
    "in_kg": true,
-   "symbols": 71
+   "symbols": 72
   },
   {
    "id": "agentsmith/compliance.py",
    "type": "file",
-   "loc": 762,
+   "loc": 872,
    "in_kg": true,
-   "symbols": 48
+   "symbols": 54
   },
   {
    "id": "agentsmith/config.py",
@@ -6415,9 +6472,9 @@
   {
    "id": "agentsmith/conformance.py",
    "type": "file",
-   "loc": 1566,
+   "loc": 1588,
    "in_kg": true,
-   "symbols": 95
+   "symbols": 96
   },
   {
    "id": "agentsmith/conversation_memory.py",
@@ -6429,7 +6486,7 @@
   {
    "id": "agentsmith/dead_letter.py",
    "type": "file",
-   "loc": 502,
+   "loc": 506,
    "in_kg": true,
    "symbols": 16
   },
@@ -6464,7 +6521,7 @@
   {
    "id": "agentsmith/intake.py",
    "type": "file",
-   "loc": 251,
+   "loc": 262,
    "in_kg": true,
    "symbols": 13
   },
@@ -6485,7 +6542,7 @@
   {
    "id": "agentsmith/llm_gateway.py",
    "type": "file",
-   "loc": 2254,
+   "loc": 2258,
    "in_kg": true,
    "symbols": 56
   },
@@ -6506,21 +6563,21 @@
   {
    "id": "agentsmith/machine/governance.py",
    "type": "file",
-   "loc": 400,
+   "loc": 402,
    "in_kg": true,
    "symbols": 16
   },
   {
    "id": "agentsmith/machine/ops.py",
    "type": "file",
-   "loc": 659,
+   "loc": 668,
    "in_kg": true,
-   "symbols": 29
+   "symbols": 30
   },
   {
    "id": "agentsmith/machine/policy.py",
    "type": "file",
-   "loc": 217,
+   "loc": 220,
    "in_kg": true,
    "symbols": 8
   },
@@ -6555,14 +6612,14 @@
   {
    "id": "agentsmith/ops_contract.py",
    "type": "file",
-   "loc": 228,
+   "loc": 234,
    "in_kg": true,
    "symbols": 12
   },
   {
    "id": "agentsmith/otlp.py",
    "type": "file",
-   "loc": 161,
+   "loc": 163,
    "in_kg": true,
    "symbols": 4
   },
@@ -6688,9 +6745,9 @@
   {
    "id": "agentsmith/test/conftest.py",
    "type": "test",
-   "loc": 103,
+   "loc": 126,
    "in_kg": true,
-   "symbols": 4
+   "symbols": 5
   },
   {
    "id": "agentsmith/test/test_architectures.py",
@@ -6716,9 +6773,9 @@
   {
    "id": "agentsmith/test/test_compliance_runtime.py",
    "type": "test",
-   "loc": 1074,
+   "loc": 1084,
    "in_kg": true,
-   "symbols": 115
+   "symbols": 116
   },
   {
    "id": "agentsmith/test/test_config.py",
@@ -6777,6 +6834,13 @@
    "symbols": 11
   },
   {
+   "id": "agentsmith/test/test_framework_scripts_path.py",
+   "type": "test",
+   "loc": 123,
+   "in_kg": true,
+   "symbols": 9
+  },
+  {
    "id": "agentsmith/test/test_framework_version.py",
    "type": "test",
    "loc": 288,
@@ -6814,9 +6878,9 @@
   {
    "id": "agentsmith/test/test_https_only_egress.py",
    "type": "test",
-   "loc": 70,
+   "loc": 434,
    "in_kg": true,
-   "symbols": 5
+   "symbols": 36
   },
   {
    "id": "agentsmith/test/test_idempotency_boundary.py",
@@ -6842,9 +6906,9 @@
   {
    "id": "agentsmith/test/test_intake.py",
    "type": "test",
-   "loc": 339,
+   "loc": 317,
    "in_kg": true,
-   "symbols": 32
+   "symbols": 31
   },
   {
    "id": "agentsmith/test/test_judging.py",
@@ -8452,9 +8516,9 @@
   {
    "id": "scripts/_shared.py",
    "type": "file",
-   "loc": 687,
+   "loc": 801,
    "in_kg": true,
-   "symbols": 28
+   "symbols": 34
   },
   {
    "id": "scripts/agent_logger.py",
@@ -8508,14 +8572,14 @@
   {
    "id": "scripts/compliance_checks.py",
    "type": "file",
-   "loc": 439,
+   "loc": 443,
    "in_kg": true,
    "symbols": 29
   },
   {
    "id": "scripts/compliance_port.py",
    "type": "file",
-   "loc": 492,
+   "loc": 494,
    "in_kg": true,
    "symbols": 20
   },
@@ -8613,9 +8677,9 @@
   {
    "id": "scripts/gate_tracing.py",
    "type": "file",
-   "loc": 216,
+   "loc": 235,
    "in_kg": true,
-   "symbols": 18
+   "symbols": 19
   },
   {
    "id": "scripts/generate-ide-config.py",
@@ -8655,7 +8719,7 @@
   {
    "id": "scripts/mutation_check.py",
    "type": "file",
-   "loc": 2725,
+   "loc": 2724,
    "in_kg": true,
    "symbols": 26
   },
@@ -8669,7 +8733,7 @@
   {
    "id": "scripts/notifier.py",
    "type": "file",
-   "loc": 252,
+   "loc": 259,
    "in_kg": true,
    "symbols": 8
   },
@@ -8858,7 +8922,7 @@
   {
    "id": "scripts/send_dev_record.py",
    "type": "file",
-   "loc": 153,
+   "loc": 158,
    "in_kg": true,
    "symbols": 7
   },
@@ -8935,9 +8999,9 @@
   {
    "id": "scripts/test/test_bandit_findings.py",
    "type": "test",
-   "loc": 233,
+   "loc": 465,
    "in_kg": true,
-   "symbols": 21
+   "symbols": 42
   },
   {
    "id": "scripts/test/test_bare_except_tree.py",
@@ -8991,9 +9055,9 @@
   {
    "id": "scripts/test/test_compliance_checks.py",
    "type": "test",
-   "loc": 817,
+   "loc": 826,
    "in_kg": true,
-   "symbols": 62
+   "symbols": 63
   },
   {
    "id": "scripts/test/test_compliance_port.py",
@@ -9705,7 +9769,7 @@
   {
    "id": "scripts/verify_sovereign_endpoint.py",
    "type": "file",
-   "loc": 237,
+   "loc": 241,
    "in_kg": true,
    "symbols": 6
   },
@@ -10156,7 +10220,7 @@
    "to": "agentsmith/",
    "type": "evidence",
    "kind": "declared",
-   "resolves": 126
+   "resolves": 127
   },
   {
    "from": "REQ-B9",
@@ -10454,6 +10518,24 @@
    "kind": "derived"
   },
   {
+   "from": "agentsmith/test/test_framework_scripts_path.py",
+   "to": "agentsmith/adopt.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_framework_scripts_path.py",
+   "to": "agentsmith/cli.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_framework_scripts_path.py",
+   "to": "agentsmith/sync.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
    "from": "agentsmith/test/test_framework_version.py",
    "to": "agentsmith/__init__.py",
    "type": "exercises",
@@ -10521,7 +10603,19 @@
   },
   {
    "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "agentsmith/cli.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
    "to": "agentsmith/compliance.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "agentsmith/conformance.py",
    "type": "exercises",
    "kind": "derived"
   },
@@ -10533,7 +10627,37 @@
   },
   {
    "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "agentsmith/machine/__init__.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "agentsmith/machine/ops.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
    "to": "agentsmith/otlp.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "scripts/_shared.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "scripts/gate_tracing.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "scripts/verify_sovereign_endpoint.py",
    "type": "exercises",
    "kind": "derived"
   },
@@ -11697,6 +11821,18 @@
   },
   {
    "from": "scripts/test/test_bandit_findings.py",
+   "to": "agentsmith/dead_letter.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
+   "to": "agentsmith/llm_gateway.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
    "to": "agentsmith/machine/__init__.py",
    "type": "exercises",
    "kind": "derived"
@@ -11704,6 +11840,24 @@
   {
    "from": "scripts/test/test_bandit_findings.py",
    "to": "agentsmith/machine/policy.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
+   "to": "agentsmith/ops_contract.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
+   "to": "scripts/_shared.py",
+   "type": "exercises",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
+   "to": "scripts/compliance_port.py",
    "type": "exercises",
    "kind": "derived"
   },
@@ -13395,6 +13549,12 @@
   },
   {
    "from": "agentsmith/machine/ops.py",
+   "to": "agentsmith/compliance.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/machine/ops.py",
    "to": "agentsmith/machine/__init__.py",
    "type": "imports",
    "kind": "derived"
@@ -13916,6 +14076,24 @@
    "kind": "derived"
   },
   {
+   "from": "agentsmith/test/test_framework_scripts_path.py",
+   "to": "agentsmith/adopt.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_framework_scripts_path.py",
+   "to": "agentsmith/cli.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_framework_scripts_path.py",
+   "to": "agentsmith/sync.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
    "from": "agentsmith/test/test_framework_version.py",
    "to": "agentsmith/__init__.py",
    "type": "imports",
@@ -13989,7 +14167,19 @@
   },
   {
    "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "agentsmith/cli.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
    "to": "agentsmith/compliance.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "agentsmith/conformance.py",
    "type": "imports",
    "kind": "derived"
   },
@@ -14001,7 +14191,37 @@
   },
   {
    "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "agentsmith/machine/__init__.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "agentsmith/machine/ops.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
    "to": "agentsmith/otlp.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "scripts/_shared.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "scripts/gate_tracing.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/test/test_https_only_egress.py",
+   "to": "scripts/verify_sovereign_endpoint.py",
    "type": "imports",
    "kind": "derived"
   },
@@ -18632,6 +18852,12 @@
    "kind": "derived"
   },
   {
+   "from": "scripts/send_dev_record.py",
+   "to": "scripts/_shared.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
    "from": "scripts/shadow-eval.py",
    "to": "scripts/_shared.py",
    "type": "imports",
@@ -18795,6 +19021,18 @@
   },
   {
    "from": "scripts/test/test_bandit_findings.py",
+   "to": "agentsmith/dead_letter.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
+   "to": "agentsmith/llm_gateway.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
    "to": "agentsmith/machine/__init__.py",
    "type": "imports",
    "kind": "derived"
@@ -18802,6 +19040,24 @@
   {
    "from": "scripts/test/test_bandit_findings.py",
    "to": "agentsmith/machine/policy.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
+   "to": "agentsmith/ops_contract.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
+   "to": "scripts/_shared.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
+   "to": "scripts/compliance_port.py",
    "type": "imports",
    "kind": "derived"
   },
@@ -18826,6 +19082,12 @@
   {
    "from": "scripts/test/test_bandit_findings.py",
    "to": "scripts/process_gate.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "scripts/test/test_bandit_findings.py",
+   "to": "scripts/test/test_compliance_port.py",
    "type": "imports",
    "kind": "derived"
   },
@@ -20285,15 +20547,15 @@
  "summary": {
   "counts": {
    "file": 295,
-   "test": 225,
+   "test": 226,
    "requirement": 65,
    "design": 139,
    "review": 150
   },
   "edges": {
-   "imports:derived": 1219,
+   "imports:derived": 1237,
    "evidence:declared": 49,
-   "exercises:derived": 467
+   "exercises:derived": 482
   },
   "requirements": {
    "REQ-B1": {
@@ -20315,7 +20577,7 @@
     "evidence_files": 185,
     "designs": null,
     "code_files": 133,
-    "tests": 68
+    "tests": 69
    },
    "REQ-B4": {
     "title": "Security",
@@ -20354,10 +20616,10 @@
    },
    "REQ-B9": {
     "title": "Human in the loop",
-    "evidence_files": 310,
+    "evidence_files": 311,
     "designs": null,
     "code_files": 185,
-    "tests": 139
+    "tests": 140
    },
    "REQ-B10": {
     "title": "Sovereign: own machines, local models",

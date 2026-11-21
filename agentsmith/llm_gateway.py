@@ -864,6 +864,10 @@ class LLMGateway:
             from agentsmith.tracing import current_trace_id, inject_context
             from agentsmith.version import framework_version
 
+            if not compliance.is_web_url(ops_portal_url):
+                ops_contract._say_once("legacy-scheme", f"OPS_PORTAL_URL {compliance.web_url_refusal(ops_portal_url)} "
+                                                        "— run status and the shared token were not sent")
+                return
             if not compliance.outbound_allowed(ops_portal_url):
                 return
             httpx.post(
