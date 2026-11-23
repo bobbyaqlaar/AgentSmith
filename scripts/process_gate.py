@@ -975,7 +975,7 @@ def _remember_session(root: Path, payload: dict) -> None:
 
 
 def _context_note(root: Path, payload: dict) -> None:
-    """A word to the person, never a block, when the session's context has grown."""
+    """A word to the person, never a block, when this session's context has grown."""
     if _IDE["value"] != "claude":
         return
     try:
