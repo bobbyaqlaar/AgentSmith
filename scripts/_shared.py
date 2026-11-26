@@ -496,6 +496,12 @@ def _phoenix_request(
         resp.raise_for_status()
         return resp.json()
     except Exception as exc:
+        # An HTTP status error's text is the whole URL, userinfo included, and the auth
+        # sidecar's password can sit in the endpoint: name the status and the address as
+        # display_url shows it, and do not chain the original, whose traceback repeats it.
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if isinstance(status, int):
+            raise RuntimeError(f"Phoenix API error [{path}]: HTTP {status} from {display_url(url)}") from None
         raise RuntimeError(f"Phoenix API error [{path}]: {exc}") from exc
 
 

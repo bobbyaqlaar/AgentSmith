@@ -50,6 +50,6 @@ A review by the author of the ruff-s-rules change (branch `feat/ruff-s-rules`), 
 - Unrelated to evals but in this file: the new `framework_scripts_on_path` helper, and the record and ops conformance handlers now catch `conformance.ReceiverRefused` as well. Neither touches the evals port or the trajectory suite.
 - The suites that pin this design passed: `scripts/test/test_trajectory_evals.py`, `scripts/test/test_evals_contract.py` and `evals_contract` (14/14 mutations caught).
 
-Evidence: the full suite on that tree gave 3048 passed, 17 skipped, 0 failed, and the curated mutation suites CI selects for the branch gave 270 of 270 caught.
+Evidence: on the branch's original tree (before the rebuild below), the full suite gave 3048 passed, 17 skipped, 0 failed, and the curated mutation suites CI selects for the branch gave 270 of 270 caught.
 
-Rebuilt on PR #117's head `c2583ff` (2026-11-24; `.agent-rfc/reviews/ruff-s-rules.md` Pass 15). The claims above were re-read against the rebuilt files. They hold: #117's edits to `agentsmith/cli.py` (`_gate_kg` rebuilds the trace graph) gain `# noqa: S603`/`S607` reasons only and do not touch the evals port. On the rebuilt head the full suite gave 3420 passed, 21 skipped; the one failure was a stale trace-graph fixture, rebuilt.
+Rebuilt on PR #117's head `c2583ff` (2026-11-24; `.agent-rfc/reviews/ruff-s-rules.md` Pass 15). The claims above were re-read against the rebuilt files. They hold: #117's edits to `agentsmith/cli.py` (`_gate_kg` rebuilds the trace graph; `ops vector-claim`) gain `# noqa: S603`/`S607` reasons only and do not touch the evals port. On the rebuilt head the full suite gave 3420 passed, 21 skipped; the one failure was a stale trace-graph fixture, rebuilt.

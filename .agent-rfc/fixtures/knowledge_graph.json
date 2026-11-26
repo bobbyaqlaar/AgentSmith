@@ -308,7 +308,7 @@
         "wait",
         "redirect_request"
       ],
-      "last_modified": "2026-11-27T05:31:58Z",
+      "last_modified": "2026-11-27T05:33:27Z",
       "id": "scripts/_shared.py"
     },
     {
@@ -1559,11 +1559,12 @@
         "_fetch_http",
         "fetch_tools",
         "static_problems",
+        "_failure",
         "pin",
         "verify",
         "ask"
       ],
-      "last_modified": "2026-11-27T05:31:38Z",
+      "last_modified": "2026-11-27T05:33:27Z",
       "id": "agentsmith/mcp_pin.py"
     },
     {
@@ -4114,6 +4115,7 @@
         "test_shared_imports_only_stdlib",
         "test_display_url_drops_userinfo_query_and_fragment",
         "test_scripts_shared_display_matches_the_runtime_one",
+        "test_a_phoenix_api_error_does_not_carry_the_password",
         "test_the_exporter_refusal_does_not_log_the_password",
         "test_the_exporter_boundary_refusal_does_not_log_the_password",
         "_gate_tracing",
@@ -4136,10 +4138,11 @@
         "test_intake_says_a_bad_port",
         "test_a_conformance_receiver_with_a_bad_port_is_said_by_name",
         "test_the_conformance_cli_does_not_swallow_a_harness_bug",
+        "refusing",
         "refuse",
         "broken"
       ],
-      "last_modified": "2026-11-27T05:31:58Z",
+      "last_modified": "2026-11-27T05:33:27Z",
       "id": "agentsmith/test/test_https_only_egress.py"
     },
     {
@@ -5349,6 +5352,9 @@
         "test_the_data_class_check_says_which_calls_it_read",
         "test_mcp_servers_declared_elsewhere_are_seen",
         "test_a_tool_on_a_later_page_is_pinned_and_verified",
+        "_refused",
+        "_unreachable",
+        "test_a_server_mcp_pin_cannot_ask_is_named_without_its_secrets",
         "test_an_enforced_profile_with_its_declaration_deleted_fails_the_launcher",
         "_job_with",
         "test_an_audit_that_cannot_fail_or_never_runs_does_not_count",
@@ -5363,7 +5369,7 @@
         "test_codex_project_servers_are_read",
         "check"
       ],
-      "last_modified": "2026-11-27T05:31:58Z",
+      "last_modified": "2026-11-27T05:33:27Z",
       "id": "scripts/test/test_compliance_checks.py"
     },
     {
@@ -12331,6 +12337,11 @@
       "edge_type": "IMPORTS",
       "source": "scripts/security/runners/sovereign_residency.py",
       "target": "agentsmith/llm_gateway.py"
+    },
+    {
+      "edge_type": "IMPORTS",
+      "source": "agentsmith/mcp_pin.py",
+      "target": "agentsmith/compliance.py"
     },
     {
       "edge_type": "IMPORTS",

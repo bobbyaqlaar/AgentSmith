@@ -3556,6 +3556,10 @@
     [
      2,
      0
+    ],
+    [
+     3,
+     0
     ]
    ],
    "signoff": true
@@ -4013,6 +4017,10 @@
     [
      7,
      0
+    ],
+    [
+     8,
+     0
     ]
    ],
    "signoff": true
@@ -4031,6 +4039,10 @@
     ],
     [
      3,
+     0
+    ],
+    [
+     4,
      0
     ]
    ],
@@ -4709,6 +4721,22 @@
     ],
     [
      15,
+     0
+    ],
+    [
+     16,
+     5
+    ],
+    [
+     17,
+     0
+    ],
+    [
+     18,
+     0
+    ],
+    [
+     19,
      0
     ]
    ],
@@ -6591,9 +6619,9 @@
   {
    "id": "agentsmith/mcp_pin.py",
    "type": "file",
-   "loc": 318,
+   "loc": 333,
    "in_kg": true,
-   "symbols": 20
+   "symbols": 21
   },
   {
    "id": "agentsmith/metrics.py",
@@ -6878,9 +6906,9 @@
   {
    "id": "agentsmith/test/test_https_only_egress.py",
    "type": "test",
-   "loc": 434,
+   "loc": 456,
    "in_kg": true,
-   "symbols": 36
+   "symbols": 38
   },
   {
    "id": "agentsmith/test/test_idempotency_boundary.py",
@@ -8516,7 +8544,7 @@
   {
    "id": "scripts/_shared.py",
    "type": "file",
-   "loc": 801,
+   "loc": 807,
    "in_kg": true,
    "symbols": 34
   },
@@ -9055,9 +9083,9 @@
   {
    "id": "scripts/test/test_compliance_checks.py",
    "type": "test",
-   "loc": 826,
+   "loc": 855,
    "in_kg": true,
-   "symbols": 63
+   "symbols": 66
   },
   {
    "id": "scripts/test/test_compliance_port.py",
@@ -13592,6 +13620,12 @@
   {
    "from": "agentsmith/machine/state.py",
    "to": "agentsmith/cli.py",
+   "type": "imports",
+   "kind": "derived"
+  },
+  {
+   "from": "agentsmith/mcp_pin.py",
+   "to": "agentsmith/compliance.py",
    "type": "imports",
    "kind": "derived"
   },
@@ -20553,7 +20587,7 @@
    "review": 150
   },
   "edges": {
-   "imports:derived": 1237,
+   "imports:derived": 1238,
    "evidence:declared": 49,
    "exercises:derived": 482
   },

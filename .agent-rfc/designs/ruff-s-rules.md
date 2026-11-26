@@ -146,6 +146,13 @@ Same independent reviewer, two findings, both confirmed before fixing.
 
   So `ftp://host:99999` and `http://10.0.0.5:99999` are told the rule first. The port is said only once the rest would pass. The probe no longer appends to the phrase. The parity test now holds each case to its expected cause, not two buckets. Tests that matched "must be https" for a hostless or unparseable address now match the cause they get.
 
+## Pass 16 fixes
+
+The independent review of the rebuild on #117's head (Opus 5.5, read-only; report outside the tree). Five findings, each confirmed in code first.
+
+- **Y. An HTTP error printed the whole configured URL** (`secrets-have-one-home`, `fix-the-class-not-the-case`). httpx's `HTTPStatusError` text is "… for url '<the URL>'", with userinfo and query, and `agentsmith compliance mcp-pin` printed it to stderr. `mcp_pin._failure` now names a URL server's failure by the error's type, its HTTP status and `compliance.display_url` of the address. A stdio server's error names no URL and is printed whole. The class is the sites that call `raise_for_status()` and then print the exception. There are four: `mcp_pin` (fixed), `scripts/_shared._phoenix_request` (fixed: `HTTP <status> from <display_url>`, not chained, since a traceback would repeat the text), `scripts/verify_ttft.py` (already prints the status and body only) and `llm_gateway`'s stream path (reads the body and never raises the status error). An httpx connection error carries the OS error, not the URL.
+- **Records.** The rebuild's "22 lost" is "none lost". `agentsmith/sync.py` is this branch's file alone. The final sign-off now says which tree each piece of evidence comes from. The three #117 designs whose code the rebuild changed (`pass4-majors`, `image-final-stage-and-mcp-reads`, `pass3-root-causes`) each record a pass. The trajectory-evals note names `ops vector-claim`.
+
 ## Pillars
 
 - P1 applies — this design, written before the code; scope is `pyproject.toml` (the lint config) and the files the findings sit in, checked by `ruff check .` in `.github/workflows/self-test.yml`.

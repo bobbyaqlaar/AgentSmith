@@ -46,3 +46,11 @@ Gates run: the suites above; ruff; mypy; `scripts/verify_system.py --check-kg`; 
 Levers reviewed: `gate-integrity`, `aggregates-name-their-scope`, `grep-for-siblings`, `docs-match-behaviour`, `test-that-cannot-fail`
 
 KG query: kg:3aabc9a15e62
+
+## Pass 3 — findings: 0
+
+A review by the author of the ruff-s-rules change (PR #120, branch `feat/ruff-s-rules`, rebuilt on #117's head `c2583ff`), not an independent pass. The independent review of that rebuild (finding 3) noted that it changes code this design owns and that this record did not say so. It covers only that branch's edits to files in this design's scope, against `docs/review-levers.md`.
+
+- `agentsmith/mcp_pin.py` `_fetch_stdio`'s `ask()`: `assert process.stdin is not None` is now an explicit `ConnectionError`, as at the function's other two checks, because `python -O` strips asserts (Ruff S101). Unreachable with the pipes it opens; no answer changes.
+- `mcp_pin.pin`: a server reached by URL that cannot be asked is now named by its error's type, its HTTP status and its address without userinfo or query (`compliance.display_url`), not httpx's text, which printed the whole URL, password and `api_key=` query included (the independent review's finding 4). A stdio server's error is printed whole, as before. What is read, pinned and verified is unchanged. Test: `test_a_server_mcp_pin_cannot_ask_is_named_without_its_secrets` (a 401 and a connection error), failing on the old line; three hand mutants (no status, the raw URL, the stdio branch for every server), all killed.
+- `scripts/test/test_compliance_checks.py`: 90 passed.

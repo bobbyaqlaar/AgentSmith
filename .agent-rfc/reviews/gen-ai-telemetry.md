@@ -45,6 +45,6 @@ A review by the author of the ruff-s-rules change (branch `feat/ruff-s-rules`), 
 - `_report_run_status`'s deprecated shared-token route now refuses an `OPS_PORTAL_URL` that is not https (or http to this machine) before `httpx.post`, and says so once (`web_url_refusal`). That route sends the portal its run status, not telemetry; spans and `traceparent` injection are unchanged.
 - The suites that pin this design passed: `scripts/test/test_gen_ai_telemetry.py` and `telemetry_contract` (10/10 mutations caught).
 
-Evidence: the full suite on that tree gave 3048 passed, 17 skipped, 0 failed, and the curated mutation suites CI selects for the branch gave 270 of 270 caught.
+Evidence: on the branch's original tree (before the rebuild below), the full suite gave 3048 passed, 17 skipped, 0 failed, and the curated mutation suites CI selects for the branch gave 270 of 270 caught.
 
 Rebuilt on PR #117's head `c2583ff` (2026-11-24; `.agent-rfc/reviews/ruff-s-rules.md` Pass 15). The claims above were re-read against the rebuilt files. They hold: the seven handlers and the scheme refusal are unchanged. Not named above: `agentsmith/tracing.py`, also in this design's scope, gains five comment-only `# noqa: S110` reasons on its fail-open handlers; no span or attribute changes. On the rebuilt head the full suite gave 3420 passed, 21 skipped; the one failure was a stale trace-graph fixture, rebuilt.

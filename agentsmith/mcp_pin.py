@@ -272,6 +272,21 @@ def static_problems(root: Path) -> list[str]:
     return problems
 
 
+def _failure(server: dict[str, Any], exc: Exception) -> str:
+    """What a failed ask may print. For a server reached by URL: the error's type, the
+    HTTP status when there is one, and the address without userinfo or query. httpx's
+    own text carries the whole URL, a password and an `api_key=` query included, and
+    stderr reaches CI logs and the agent's context. A local (stdio) server's error names
+    no URL, so it is printed whole."""
+    if not server.get("url"):
+        return f"{type(exc).__name__}: {exc}"
+    from agentsmith.compliance import display_url
+
+    response = getattr(exc, "response", None) if type(exc).__name__ == "HTTPStatusError" else None
+    status = getattr(response, "status_code", None)
+    return f"{type(exc).__name__}{f' (HTTP {status})' if status else ''} from {display_url(str(server['url']))}"
+
+
 def pin(root: Path) -> int:
     servers, unreadable = _servers_and_problems(root)
     if unreadable:
@@ -286,7 +301,7 @@ def pin(root: Path) -> int:
         try:
             tools = tool_hashes(fetch_tools(server))
         except Exception as exc:  # named: a server that cannot be asked is not pinned
-            print(f"mcp-pin: could not ask {name}: {type(exc).__name__}: {exc}", file=sys.stderr)
+            print(f"mcp-pin: could not ask {name}: {_failure(server, exc)}", file=sys.stderr)
             return 1
         entries[name] = {"config_sha256": config_hash(server), "tools": tools}
         print(f"mcp-pin: {name}: {len(tools)} tool(s)")

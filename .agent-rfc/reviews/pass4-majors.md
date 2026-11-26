@@ -59,3 +59,11 @@ Gates run: the full `pytest` on the staged tree; ruff; `scripts/verify_system.py
 Levers reviewed: `guards-must-be-able-to-fail`, `consistent-auth-gates`, `single-source-of-truth`, `implemented-not-invoked`, `test-that-cannot-fail`, `grep-for-siblings`
 
 KG query: kg:b8904c0445a1
+
+## Pass 4 — findings: 0
+
+A review by the author of the ruff-s-rules change (PR #120, branch `feat/ruff-s-rules`, rebuilt on #117's head `c2583ff`), not an independent pass. The independent review of that rebuild (finding 3) noted that it changes code this design owns and that this record did not say so. It covers only that branch's edits to files in this design's scope, against `docs/review-levers.md`.
+
+- `scripts/process_gate.py` `_range_starts`: its `git cat-file -e` now passes `--end-of-options` before the base, like `_range_commits` beside it (CWE-88, Ruff S603/S607 with a reason). For a base that names a commit nothing changes; a base spelled like an option fails either way (exit 128/129, checked by the reviewer with git 2.49), so the range rule's answer is the same for every input. The merge-base call after it is reached only once the base resolved as a commit.
+- Elsewhere in this design's scope the branch adds comment-only `# noqa` reasons (`map_codebase.py`, `verify_system.py`) and edits tests that pin other designs; none changes the range rule, the `success()` reading or the graph build.
+- `scripts/test/test_process_gate.py`: 116 passed on the branch's head.

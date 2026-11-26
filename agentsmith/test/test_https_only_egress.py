@@ -190,6 +190,28 @@ def test_scripts_shared_display_matches_the_runtime_one(url, monkeypatch):
     assert _scripts_shared(monkeypatch).display_url(url) == compliance.display_url(url), url
 
 
+def test_a_phoenix_api_error_does_not_carry_the_password(monkeypatch):
+    """httpx's HTTPStatusError text is the whole URL, userinfo included, and the docs put
+    the auth sidecar's password in the Phoenix address. The scripts' one Phoenix request
+    path wrapped that text into its own error, which the sync scripts print (independent
+    review of the ruff-s rebuild, finding 4's sibling)."""
+    import httpx
+
+    shared = _scripts_shared(monkeypatch)
+    real = httpx.Client
+
+    def refusing(method, url, **kwargs):
+        with real(transport=httpx.MockTransport(lambda request: httpx.Response(401, request=request))) as client:
+            return client.request(method.upper(), url, **kwargs)
+
+    monkeypatch.setattr(httpx, "get", lambda url, **kw: refusing("get", url, **kw))
+    with pytest.raises(RuntimeError) as raised:
+        shared._phoenix_request(f"https://ops:{PW}@phoenix.example.invalid:6007", "/v1/projects")
+    said = str(raised.value)
+    assert PW not in said and raised.value.__cause__ is None and raised.value.__suppress_context__, said
+    assert "HTTP 401" in said and "https://phoenix.example.invalid:6007/v1/projects" in said, said
+
+
 @pytest.mark.parametrize("build", [otlp.span_exporter, otlp.metric_exporter])
 def test_the_exporter_refusal_does_not_log_the_password(build, caplog):
     env = {"AGENT_PHOENIX_ENDPOINT": f"http://ops:{PW}@10.0.0.5:6007"}

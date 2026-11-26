@@ -45,6 +45,6 @@ A review by the author of the ruff-s-rules change (branch `feat/ruff-s-rules`), 
 - The rule-file refresh this design fixed (unrecorded `tenant init` files treated as the framework's own render) is untouched. `_redraw_graph` and the `git status` call gain noqa reasons only.
 - The suites that pin this design passed: `scripts/test/test_framework_sync.py`, `framework_sync` (19/19 mutations caught) and `agentsmith/test/test_framework_scripts_path.py` (sync measured on its own).
 
-Evidence: the full suite on that tree gave 3048 passed, 17 skipped, 0 failed, and the curated mutation suites CI selects for the branch gave 270 of 270 caught.
+Evidence: on the branch's original tree (before the rebuild below), the full suite gave 3048 passed, 17 skipped, 0 failed, and the curated mutation suites CI selects for the branch gave 270 of 270 caught.
 
 Rebuilt on PR #117's head `c2583ff` (2026-11-24; `.agent-rfc/reviews/ruff-s-rules.md` Pass 15). The claims above were re-read against the rebuilt files. They hold: #117 did not change `agentsmith/sync.py`. On the rebuilt head the full suite gave 3420 passed, 21 skipped; the one failure was a stale trace-graph fixture, rebuilt.

@@ -78,8 +78,8 @@ Pass 5 KG query:          kg:4984a235bcc3
 Rebuild KG query:          kg:1507fc6a1766 (commit 1 rebuilt on #117's head:
                           2026-11-24, onto c2583ff (fix/review-4.1.0-pass2, on main cdf04e1) by cherry-pick,
                           owner decision 24. Signed at kg:4984a235bcc3; the graph rebuilt on the new tree moves
-                          the scope to kg:1507fc6a1766: 142 files gained (106 test files), 22 lost (files this
-                          branch's old base lacked, now on main). The gained test files run on the staged tree:
+                          the scope to kg:1507fc6a1766: 142 files gained (106 test files), none lost (corrected
+                          in Pass 16; "22 lost" compared against a scope recomputed on another tree). The gained test files run on the staged tree:
                           2117 passed, 12 skipped, 0 failed; this change's own suites and the touched files'
                           suites: 218 passed, 11 skipped. Conflicts kept #117's code (cli._gate_kg,
                           compliance.find_decision, agent_tokens._paths and main) with this change's waivers
@@ -199,7 +199,7 @@ Group 4 · Process                     [x] checked — design written before eac
 Group 5 · Intuitive UI                [x] n/a — no screen or control; operator messages are covered under Group 6
 Group 6 · Signal integrity            [x] checked — a refusal names its cause (web_url_refusal) and never reads as success or as an outage; ops_portal_outside_boundary; notifier refusal said; conformance CLI catches only ReceiverRefused; tests that could not fail were fixed (Pass 2, Pass 8 M)
 Group 7 · Auth & session integrity    [x] checked — bearer tokens and secret webhook URLs go only over https or loopback http and never follow a redirect; the documented TLS front reaches Phoenix only through the auth sidecar
-Group 8 · Security engineering        [x] checked — git option injection fixed (--end-of-options); scheme and clear-text refused; userinfo never printed (display_url, unopenable); every noqa reasoned and RUF100-held
+Group 8 · Security engineering        [x] checked — git option injection fixed (--end-of-options); scheme and clear-text refused; userinfo never printed (display_url, unopenable; httpx status errors in mcp-pin and the Phoenix requests, Pass 16); every noqa reasoned and RUF100-held
 Group 9 · Regulation & compliance     [x] n/a — no data, evidence or model-governance path changes; the residency check is unchanged, only reached after the scheme rule
 Group 10 · Code optimisation          [x] n/a — no path that grows with use
 
@@ -216,24 +216,27 @@ Tests added/updated:      agentsmith/test/test_framework_scripts_path.py (new); 
                           test_intake.py, test_gate_tracing.py
 Reproduced before fixing:  yes — each pass's new tests failed on the tree before its fix (Pass 7 F: 4; Pass 8: 11;
                           Pass 9: 15; Pass 10: 9; Pass 11: 41; Pass 12: 17, by swapping the old helper back)
-Mutation-checked:          yes — curated suites CI selects for this branch (--changed-since origin/main): 37 suites,
-                          270 of 270 caught, tree restored byte-for-byte; the sys.path fix mutated by hand per site
+Mutation-checked:          yes — on the rebuilt head 7554f83 (--changed-since c2583ff, a scratch clone): 37 suites,
+                          270 of 270 caught; before the rebuild (kg:a22f43273be2) the same 270 of 270 were caught, tree restored byte-for-byte; the sys.path fix mutated by hand per site
                           and with the reviewer's insert-if-absent variant
-Fixtures re-pinned:        .agent-rfc/fixtures/knowledge_graph.json (723 nodes, agentsmith gate kg build from this
-                          checkout); two curated mutations in scripts/mutation_check.py (Pass 1)
+Fixtures re-pinned:        .agent-rfc/fixtures/knowledge_graph.json and trace_graph.json, rebuilt on the rebuilt tree
+                          with agentsmith gate kg build (723 nodes before the rebuild); two curated mutations in scripts/mutation_check.py (Pass 1)
 Performance measured:      n/a
 Security gates:            ruff S in the CI lint step (this change); bandit -ll unchanged in supply-chain.yml
 Compliance evidence:       n/a
 Manual-only levers:        noqa reasons read one by one against the call sites; composed refusal messages read for
                           truth (reviewer, Pass 13)
-KG query:                 kg:76c7d1e0887f
-Scope before the rebuild:  kg:a22f43273be2 (Pass 15 says what moved)
-Gates run locally:         ruff check . (clean); full pytest 3048 passed, 17 skipped, 0 failed, 11m53s, no test
+KG query:                 kg:61bc3f095dfa
+Scope at the rebuild:      kg:76c7d1e0887f (Pass 15); before it kg:a22f43273be2. Pass 19 is the latest.
+Gates run locally:         on the rebuilt head (Pass 15): full pytest 3420 passed, 21 skipped, the one failure a stale
+                          trace-graph fixture, rebuilt; CI 12/12 green at 7554f83. Before the rebuild (kg:a22f43273be2):
+                          ruff check . (clean); full pytest 3048 passed, 17 skipped, 0 failed, 11m53s, no test
                           over the 300s stall limit (skips: no live Postgres / COMPLIANCE_TEST_DSN, no AWS
                           credentials, no decommissioned models); check_bare_except over changed and shipped files
                           (clean); mutation_check intake + send_dev_record (13/13) and the branch set (270/270);
                           agentsmith gate kg build; mypy NOT run — pinned mypy 1.14.1 is not installed here
-Independent review:        Passes 8–13 by a separate Opus 5.5 agent, not the author; its reports were read as data
+Independent review:        Passes 8–13 by a separate Opus 5.5 agent, not the author; its reports were read as data.
+                          Pass 16: a fresh Opus 5.5 agent over the rebuild, read-only
                           and every finding confirmed in code before fixing
 ```
 
@@ -244,8 +247,42 @@ The author's pass over a fix the commit gate required; this is not a review find
 
 ## Pass 15 — findings: 0
 
-The author's pass over the rebuild, not a review finding. The branch was rebuilt on PR #117's head `c2583ff` (`fix/review-4.1.0-pass2`, 16 commits on `main` `cdf04e1`) on 2026-11-24, because both change `scripts/process_gate.py`, `agentsmith/cli.py`, `agentsmith/sync.py` and `agentsmith/llm_gateway.py` and this one lands right after #117 (owner decision 24). One commit at a time, `cherry-pick --no-commit` then `commit -C`, through the hooks. The old head `0298743` is kept as `backup/ruff-s-0298743`. The four commits below `85735d2` on the old branch were already on `main` under other hashes and were dropped.
+The author's pass over the rebuild, not a review finding. The branch was rebuilt on PR #117's head `c2583ff` (`fix/review-4.1.0-pass2`, 16 commits on `main` `cdf04e1`) on 2026-11-24, because both change `scripts/process_gate.py`, `agentsmith/cli.py` and `agentsmith/llm_gateway.py` (`agentsmith/sync.py` is this branch's alone; corrected in Pass 16) and this one lands right after #117 (owner decision 24). One commit at a time, `cherry-pick --no-commit` then `commit -C`, through the hooks. The old head `0298743` is kept as `backup/ruff-s-0298743`. The four commits below `85735d2` on the old branch were already on `main` under other hashes and were dropped.
 
-- **Commit 1 (`85735d2`).** Conflicts kept #117's code with this change's waivers put back: `cli._gate_kg` (whole rebuild plus the trace graph), `compliance.find_decision` (decision names its request), `agent_tokens._paths` and `main` (main's #119). `# noqa: S603, S607` is restored on `agent_tokens`' `git rev-parse` call. The S rules also reach code #117 added since this branch was cut, so each finding was triaged like the first 217: `process_gate._range_starts`' `git cat-file` gains `--end-of-options`, like `_range_commits` beside it (CWE-88); `mcp_pin`'s `ask()` and `trace_graph`'s `edge()` raise instead of asserting, which `python -O` strips; reasoned waivers on `trace_graph`, `compliance_checks._default_branches`, `vector_store.claim_legacy`'s update, `cli._gate_kg` and `agent_tokens`' `_git` and its two fail-open handlers. The scope moved from `kg:4984a235bcc3` to `kg:1507fc6a1766` (142 files gained, 106 of them tests; 22 lost, files the old base lacked). The gained test files, on that staged tree: 2117 passed, 12 skipped. This change's own suites with the touched files': 218 passed, 11 skipped. The rebuild is recorded in that commit's sign-off as `Rebuild KG query`, so passes 6–14 keep their numbers.
+- **Commit 1 (`85735d2`).** Conflicts kept #117's code with this change's waivers put back: `cli._gate_kg` (whole rebuild plus the trace graph), `compliance.find_decision` (decision names its request), `agent_tokens._paths` and `main` (main's #119). `# noqa: S603, S607` is restored on `agent_tokens`' `git rev-parse` call. The S rules also reach code #117 added since this branch was cut, so each finding was triaged like the first 217: `process_gate._range_starts`' `git cat-file` gains `--end-of-options`, like `_range_commits` beside it (CWE-88); `mcp_pin`'s `ask()` and `trace_graph`'s `edge()` raise instead of asserting, which `python -O` strips; reasoned waivers on `trace_graph`, `compliance_checks._default_branches`, `vector_store.claim_legacy`'s update, `cli._gate_kg` and `agent_tokens`' `_git` and its two fail-open handlers. The scope moved from `kg:4984a235bcc3` to `kg:1507fc6a1766` (62 files to 204: 142 gained, 106 of them tests; none lost — corrected in Pass 16). The gained test files, on that staged tree: 2117 passed, 12 skipped. This change's own suites with the touched files': 218 passed, 11 skipped. The rebuild is recorded in that commit's sign-off as `Rebuild KG query`, so passes 6–14 keep their numbers.
 - **Commit 2 (`0298743`).** The code merged without conflict. Two review records did: here (the earlier sign-off keeps both hashes) and `run-token-limits.md`, where #117 had added Passes 5–9, so this branch's pass there is now Pass 10, with the gateway's line numbers updated. The other three reopened designs' passes (`gen-ai-telemetry`, `sync-refreshes-rule-files`, `trajectory-evals`) were re-read against the rebuilt files; each gains a rebuild note. The scope moved from `kg:a22f43273be2` to `kg:76c7d1e0887f` (116 files gained, 78 of them tests; none lost).
 - **Checks on the staged head.** The full suite: 3420 passed, 21 skipped, 1 failed. The failure was `test_the_committed_graph_is_what_the_tree_builds`: the trace graph had been built while the index still held the conflicted entries (`resolves` 301, not 295). It was rebuilt, and that file passes. `ruff check .` (0.15.20) clean; `verify_system.py --check-kg` and `trace_graph.py --check` pass; `check_bare_except` clean. Curated mutations were not run locally; CI runs the suites it selects.
+
+## Pass 16 — findings: 5
+
+An independent review of the rebuild, by a fresh Opus 5.5 agent, not the author. It was read-only and worked against `docs/review-levers.md` over `c2583ff..7554f83`, compared with the originals. Its report was read as data, and every finding was confirmed in the code or the records before it was fixed (`## Pass 16 fixes` in the design). It found 0 blockers and 0 majors.
+
+1. **MINOR: two false facts in this record.** "22 lost" should be "none lost": the recorded `kg:4984a235bcc3` is 62 files and `kg:1507fc6a1766` is 204, so 142 were gained and nothing was lost. The author had compared against a scope recomputed on another tree (84 files). Also, `agentsmith/sync.py` is not a file #117 changes. Both are corrected where they stand: the `Rebuild KG query` block and Pass 15.
+2. **MINOR: the final sign-off mixed trees.** Its `KG query` named the rebuilt scope, but its mutation, graph and pytest lines came from the old tree, unlabelled. Each line now says which tree it comes from. The curated mutations were then run on the rebuilt head, in a scratch clone with `--changed-since c2583ff`: 37 suites, 270 of 270 caught. The other three reopened records said "on that tree"; they now say "on the branch's original tree", as `run-token-limits` Pass 10 already did.
+3. **MINOR: #117's designs were not told their code changed.** Three now record a pass: `pass4-majors` Pass 4 (`_range_starts`' `--end-of-options`), `image-final-stage-and-mcp-reads` Pass 3 (`ask()` raises; finding 4's fix) and `pass3-root-causes` Pass 8 (`edge()` raises). The other active designs whose scope this branch touches get comment-only `# noqa` reasons and nothing else: `coding-agent-tokens`, `scratch-dates-and-worktree-tokens`, `vector-ids-per-tenant-and-stop-state`, `decision-names-its-request`, `supply-chain-audits-that-can-fail`, `compliance-profile-holds`, `declaration-ratchet-and-atomic-test`, `caps-at-load-and-guard-tests`, `stream-release-and-lockout`, `portal-compliance-holds`, `review-pass2-majors`, `one-signature-rule-and-incident-controls` and `db-tests-in-ci-and-event-objects`. No behaviour of theirs changes.
+4. **MINOR: `agentsmith compliance mcp-pin` printed an MCP server's whole URL, password and query included.** This was there before the rebuild. httpx's `HTTPStatusError` text carries the URL. The fix is `mcp_pin._failure`: the error's type, the HTTP status and `display_url`. One sibling had the same defect: `scripts/_shared._phoenix_request` now says `HTTP <status> from <display_url>` and does not chain the original. Two other `raise_for_status` sites were already safe (`verify_ttft.py`, the gateway's stream path). Tests were written first, and each failed on the old code, printing the placeholder password:
+   - `test_a_server_mcp_pin_cannot_ask_is_named_without_its_secrets` (a 401 and a connection error);
+   - `test_a_phoenix_api_error_does_not_carry_the_password`.
+   Six hand mutants, all killed: no status, the raw URL, the stdio branch for every server, chaining the original, and skipping the status branch.
+5. **NIT: the trajectory-evals note left out `ops vector-claim`** from #117's `cli.py` edits. Added.
+
+## Pass 17 — findings: 0
+
+The author's check of Pass 16's fixes on the staged tree. The full suite gave 3424 passed, 21 skipped, 0 failed (19m08s; the skips need a live Postgres, `COMPLIANCE_TEST_DSN`, AWS credentials or decommissioned models). `scripts/test/test_compliance_checks.py` gave 90 passed and `scripts/test/test_process_gate.py` 116 passed. `ruff check .` (0.15.20) is clean. Both graphs were rebuilt with `agentsmith gate kg build`, and `trace_graph.py --check` and `verify_system.py --check-kg` pass. Only the fix's own files moved the scope, to `kg:61bc3f095dfa` (64 files). The levers were re-read against the fix: `secrets-have-one-home`, `fix-the-class-not-the-case`, `grep-for-siblings`, `aggregates-name-their-scope`, `docs-match-behaviour` and `test-that-cannot-fail`. Nothing further was found.
+
+## Pass 18 — findings: 0
+
+The author's pass over a second rebuild, not a review finding. PR #117 was rebuilt again, on 2026-11-26: its head `c2583ff` became `03175ea`, every commit has a new hash, and a docs commit was added. So this branch was rebuilt on `03175ea` the same way: `cherry-pick --no-commit` then `commit -C`, through the hooks, with the old head kept as `backup/ruff-s-d6256f0`.
+
+- #117's tree moved in seven files, all records, docs and fixtures: the `scratch-dates-and-worktree-tokens` design and review, `pass3-root-causes.md`, `CHANGELOG.md`, `docs/process-gates.md` and both graphs. None of them is code.
+- Each rebuilt commit differs from its predecessor in exactly those seven files.
+- Only the knowledge graph conflicted. Ours was taken and the graphs were rebuilt on each commit.
+- All three scopes are unchanged: `kg:1507fc6a1766`, `kg:76c7d1e0887f` and `kg:61bc3f095dfa`. So Passes 15–17's test, mutation and full-suite evidence still describes the code. `pass3-root-causes.md` keeps its numbering (Passes 1–8): #117 reworded its rebuild and pre-rebuild notes only.
+
+## Pass 19 — findings: 0
+
+The author's pass over the rebuild on `main`, not a review finding. PR #117 merged by rebase on 2026-11-27, with the owner's go: `main` is `d2280a9`, 17 commits above `cdf04e1`, and GitHub retargeted this PR to `main`. `main`'s tree is byte-identical to `03175ea`'s (`git diff 03175ea d2280a9` is empty). So this branch's three commits were cherry-picked onto `d2280a9` the same way, through the hooks, and the old head is kept as `backup/ruff-s-76410a7`.
+
+- Only the knowledge graph conflicted. Ours was taken in the index and the graphs were rebuilt. Each rebuilt commit differs from its predecessor only in `knowledge_graph.json`, and there only in the `created_at` and `last_modified` dates, which come from git, and in the order those dates give.
+- The first build of commit 2's trace graph ran while the conflict was still in the index (`resolves` 297, not 295). It was rebuilt before anything was pushed, and now equals the one at `bffd16a`.
+- The three scopes are unchanged: `kg:1507fc6a1766`, `kg:76c7d1e0887f` and `kg:61bc3f095dfa`. The code is byte-identical to the heads Passes 15–18 checked.

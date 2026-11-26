@@ -105,3 +105,12 @@ Gates run: the suites above; `npm test`; `tsc`; ruff; mypy; `scripts/verify_syst
 Levers reviewed: `guards-must-be-able-to-fail`, `consistent-auth-gates`, `retry-bounds`, `implemented-not-invoked`, `single-source-of-truth`, `test-that-cannot-fail`, `grep-for-siblings`
 
 KG query: kg:311097f7d55d
+
+## Pass 8 — findings: 0
+
+A review by the author of the ruff-s-rules change (PR #120, branch `feat/ruff-s-rules`, rebuilt on #117's head `c2583ff`), not an independent pass. The independent review of that rebuild (finding 3) noted that it changes code this design owns and that this record did not say so. It covers only that branch's edits to files in this design's scope, against `docs/review-levers.md`.
+
+- `scripts/trace_graph.py` `Builder.edge()`: `assert how in KINDS` is now `raise ValueError`, because `python -O` strips asserts (Ruff S101). Every caller passes a literal kind from `KINDS`, so no graph changes.
+- Its git calls gain `# noqa: S603, S607` reasons. The `--since` probe was checked by the reviewer: `rev-parse --verify -q '<dash-led>^{commit}'` fails for every option-shaped value it tried, so a range is used only once it resolved as a commit.
+- `scripts/process_gate.py` `_range_starts` gains `--end-of-options` (recorded in `pass4-majors.md` Pass 4); `cli._gate_kg` keeps this design's whole rebuild with the trace graph, with reasons on its calls.
+- `scripts/test/test_trace_graph.py` and `scripts/test/test_process_gate.py` passed on the branch's head after the fixtures were rebuilt.
