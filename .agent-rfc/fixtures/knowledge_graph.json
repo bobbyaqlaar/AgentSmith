@@ -52,7 +52,7 @@
         "config",
         "proxy"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/proxy.ts"
     },
     {
@@ -102,7 +102,7 @@
         "encodeActorHeader",
         "decodeActorHeader"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/lib/authz.ts"
     },
     {
@@ -142,7 +142,7 @@
         "recordFailure",
         "clearFailures"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/lib/signInPolicy.ts"
     },
     {
@@ -247,7 +247,7 @@
         "impacted_files",
         "stats"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/local_knowledge_graph.py"
     },
     {
@@ -374,7 +374,7 @@
         "main",
         "counts"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-23T10:09:35Z",
       "id": "scripts/agent_tokens.py"
     },
     {
@@ -428,7 +428,7 @@
         "read",
         "resolve"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/gate_pillars.py"
     },
     {
@@ -549,7 +549,7 @@
         "record_gates_run",
         "last_gates_run"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/gate_history.py"
     },
     {
@@ -981,7 +981,7 @@
         "_resolve_local_import",
         "run_map"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/map_codebase.py"
     },
     {
@@ -1013,7 +1013,7 @@
         "_ships_declaration",
         "declaration_deployed"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/compliance_checks.py"
     },
     {
@@ -1185,7 +1185,7 @@
         "read",
         "checked"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/process_gate.py"
     },
     {
@@ -1230,7 +1230,7 @@
         "_repo",
         "_commit"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/verify_system.py"
     },
     {
@@ -1248,7 +1248,7 @@
         "_git_refusal",
         "refusal"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/gate_shell.py"
     },
     {
@@ -1557,7 +1557,7 @@
         "purge",
         "stop"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "agentsmith/compliance.py"
     },
     {
@@ -1582,7 +1582,7 @@
         "_ensure_schema",
         "_query"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "agentsmith/vector_store.py"
     },
     {
@@ -1619,7 +1619,7 @@
         "_key",
         "_run"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "agentsmith/token_limits.py"
     },
     {
@@ -1846,7 +1846,7 @@
         "verify",
         "ask"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "agentsmith/mcp_pin.py"
     },
     {
@@ -1910,7 +1910,7 @@
         "_hook",
         "_post_with_retry"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "agentsmith/llm_gateway.py"
     },
     {
@@ -2031,7 +2031,7 @@
         "main",
         "put"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "agentsmith/cli.py"
     },
     {
@@ -2656,7 +2656,7 @@
         "post",
         "_Cursor"
       ],
-      "last_modified": "2026-11-23T09:16:57Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "agentsmith/test/test_compliance_runtime.py"
     },
     {
@@ -3380,7 +3380,7 @@
         "Broken",
         "__init__"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "agentsmith/test/test_token_limits.py"
     },
     {
@@ -3895,7 +3895,7 @@
         "human_fix_payload",
         "signal"
       ],
-      "last_modified": "2026-11-23T09:16:57Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "agentsmith/workflows/base_workflow.py"
     },
     {
@@ -4593,7 +4593,7 @@
         "test_ci_and_the_release_run_the_provider_evidence",
         "test_a_known_gap_that_starts_passing_must_leave_the_list"
       ],
-      "last_modified": "2026-11-23T09:16:57Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/test/test_compliance_port.py"
     },
     {
@@ -4853,7 +4853,7 @@
         "test_a_token_budget_nobody_measured_is_not_gradable",
         "test_an_empty_case_file_is_not_gradable"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/test/test_trajectory_evals.py"
     },
     {
@@ -4959,7 +4959,7 @@
         "test_an_enforced_profile_with_its_declaration_deleted_fails_the_launcher",
         "check"
       ],
-      "last_modified": "2026-11-23T09:16:57Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/test/test_compliance_checks.py"
     },
     {
@@ -5404,7 +5404,7 @@
         "test_a_guard_that_only_looks_like_a_restriction_does_not_count",
         "test_a_term_that_can_only_narrow_to_trusted_authors_counts"
       ],
-      "last_modified": "2026-11-23T09:16:57Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/test/test_agent_workflow_injection.py"
     },
     {
@@ -6023,7 +6023,7 @@
         "test_agentsmith_passes_the_security_contract",
         "broken"
       ],
-      "last_modified": "2026-11-23T09:16:57Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/test/test_security_contract.py"
     },
     {
@@ -6152,9 +6152,11 @@
         "test_a_red_tenant_run_reaches_the_wait_steps_report",
         "test_the_wait_step_reaches_the_refusal_check_on_a_red_run",
         "test_the_wait_step_stays_red_when_the_refusal_is_not_the_reason",
-        "test_every_job_that_waits_survives_a_red_run"
+        "test_every_job_that_waits_survives_a_red_run",
+        "test_the_profiles_evidence_is_dated_when_the_tenant_is_built",
+        "test_build_dates_the_profile_through_the_one_script"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/test/test_scratch_tenants.py"
     },
     {
@@ -6589,7 +6591,7 @@
         "and_another_sessions_hook",
         "broken"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-23T10:09:35Z",
       "id": "scripts/test/test_agent_tokens.py"
     },
     {
@@ -6691,7 +6693,7 @@
         "test_source_file_is_repository_relative",
         "test_outside_a_git_checkout_everything_maps"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/test/test_knowledge_graph.py"
     },
     {
@@ -7067,7 +7069,7 @@
         "_workflow_problems",
         "run"
       ],
-      "last_modified": "2026-11-23T09:16:57Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "scripts/security/runners/agent_workflow.py"
     },
     {
@@ -7219,7 +7221,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/test/complianceState.test.ts"
     },
     {
@@ -7236,7 +7238,7 @@
         "parseAttestations",
         "mayDecide"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/lib/complianceState.ts"
     },
     {
@@ -7325,7 +7327,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/test/authz.test.ts"
     },
     {
@@ -7398,7 +7400,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/test/signInPolicy.test.ts"
     },
     {
@@ -7451,7 +7453,7 @@
       "node_type": "CodebaseFile",
       "language": "typescript",
       "symbols": [],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/test/hitl.test.ts"
     },
     {
@@ -7467,7 +7469,7 @@
         "lastStopAction",
         "stopControl"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/lib/hitl.ts"
     },
     {
@@ -7518,7 +7520,7 @@
       "symbols": [
         "IncidentClose"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/components/IncidentClose.tsx"
     },
     {
@@ -7527,7 +7529,7 @@
       "symbols": [
         "StopControl"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/components/StopControl.tsx"
     },
     {
@@ -7536,7 +7538,7 @@
       "symbols": [
         "IncidentForm"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/components/IncidentForm.tsx"
     },
     {
@@ -8288,7 +8290,7 @@
         "dynamic",
         "TenantDetailPage"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/app/ops/apps/[id]/page.tsx"
     },
     {
@@ -8434,7 +8436,7 @@
       "symbols": [
         "POST"
       ],
-      "last_modified": "2026-11-23T09:16:46Z",
+      "last_modified": "2026-11-26T04:42:30Z",
       "id": "portal/app/api/incidents/route.ts"
     },
     {
@@ -10821,6 +10823,22 @@
       "pillar": null,
       "created_at": "2026-11-23T09:23:06Z",
       "id": "rfc:reviews/review-pass2-majors.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "The scratch tenant's evidence is dated when it is built",
+      "source_file": ".agent-rfc/designs/scratch-dates-and-worktree-tokens.md",
+      "pillar": null,
+      "created_at": "2026-11-23T15:25:57Z",
+      "id": "rfc:designs/scratch-dates-and-worktree-tokens.md"
+    },
+    {
+      "node_type": "Guardrail",
+      "title": "Review: scratch-dates-and-worktree-tokens",
+      "source_file": ".agent-rfc/reviews/scratch-dates-and-worktree-tokens.md",
+      "pillar": null,
+      "created_at": "2026-11-23T15:26:00Z",
+      "id": "rfc:reviews/scratch-dates-and-worktree-tokens.md"
     }
   ],
   "edges": [
