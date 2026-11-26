@@ -874,7 +874,11 @@ see Provisioning, above.
   hook would have refused it. With an all-zero or unknown base (a new branch, a first push, a
   force-push) there is no start to compare with: only the head commit is judged, and the report
   says so. A weakening one commit below such a head passes CI; the hook and the sweep still
-  refuse it locally.
+  refuse it locally, unless it is a merge commit: the sweep (pre-push) skips merges, a merge
+  head with no known base lists no files, and a merge's weakening undone by a later commit
+  passes CI. The commit hook refuses the merge when it is made; only `--no-verify` gets one
+  through. Closed by the `invariants-not-instances` design (each merge judged against its first
+  parent).
 - **The commit guardrails skip what the tenant did not write.** The AI-marker,
   empty-handler and `cost_router` checks (`commit_guardrails`) do not run over a
   staged file that `.agenticframework/scaffold.json` records **and** that still
