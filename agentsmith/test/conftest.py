@@ -21,6 +21,29 @@ from __future__ import annotations
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _this_checkout_is_the_framework(monkeypatch):
+    """Every test resolves this checkout as the framework, and leaves `sys.path`
+    as it found it.
+
+    With `AGENTSMITH_DIR` unset, `cli._framework_dir` picks `~/.agent-framework` —
+    the machine's install, which can be releases behind this tree — and code that
+    imports from its `scripts/` put that directory on `sys.path` for the rest of
+    the run, so later tests imported its `notifier` and `_shared` instead of
+    these. A test that wants another framework sets `AGENTSMITH_DIR` itself
+    (.agent-rfc/designs/ruff-s-rules.md, Pass 7 follow-up F).
+    """
+    import sys
+    from pathlib import Path
+
+    checkout = Path(__file__).resolve().parents[2]
+    if (checkout / "scripts" / "process_gate.py").is_file():  # vendored into a tenant, there is no checkout to pin
+        monkeypatch.setenv("AGENTSMITH_DIR", str(checkout))
+    saved = list(sys.path)
+    yield
+    sys.path[:] = saved
+
+
 @pytest.fixture(scope="session")
 def _exporter():
     trace = pytest.importorskip("opentelemetry.trace")

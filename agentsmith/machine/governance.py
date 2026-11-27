@@ -54,6 +54,8 @@ def _gate_module(name: str):
     for directory in _candidate_dirs("scripts"):
         if (directory / f"{name}.py").is_file():
             if str(directory) not in sys.path:
+                # Left on sys.path on purpose: `gate_steps.run` imports
+                # `gate_history` when it is called, after this returns.
                 sys.path.insert(0, str(directory))
             return importlib.import_module(name)
     raise FileNotFoundError(
@@ -78,7 +80,7 @@ def _registry(gm):
 
 def _git_identity(root: Path) -> str:
     def config(key: str) -> str:
-        result = subprocess.run(["git", "-C", str(root), "config", "--get", key],
+        result = subprocess.run(["git", "-C", str(root), "config", "--get", key],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the key is a literal from this module
                                 capture_output=True, text=True, check=False)
         return result.stdout.strip()
 
@@ -376,7 +378,7 @@ def gates_repair(root: Optional[Path] = None) -> int:
         print("❌ scripts/process_gate.py not found in this repo or ~/.agent-framework — "
               "re-run install-ai-stack.sh, or set AGENTSMITH_DIR", file=sys.stderr)
         return 2
-    return subprocess.run([sys.executable, str(script), "sweep"], cwd=root, check=False).returncode
+    return subprocess.run([sys.executable, str(script), "sweep"], cwd=root, check=False).returncode  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
 
 
 def gates_list() -> int:

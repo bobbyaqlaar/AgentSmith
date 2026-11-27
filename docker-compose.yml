@@ -51,14 +51,15 @@
 #     docker compose -f docker-compose.yml -f docker-compose.auth.yml up -d
 #
 #   Developers and CI then connect through Caddy's authenticated port
-#   (PHOENIX_AUTH_PORT, default 6007), not 6006:
+#   (PHOENIX_AUTH_PORT, default 6007), not 6006, behind a TLS front: the
+#   Python exporter sends only over https, or plain http to this machine.
 #
-#     export AGENT_PHOENIX_ENDPOINT="http://<server-ip>:${PHOENIX_AUTH_PORT:-6007}"
+#     export AGENT_PHOENIX_ENDPOINT="https://<phoenix-host>"
 #
 #   The Ops Portal has its own auth (basic auth or SSO, enforced by
 #   portal/proxy.ts) — it does not need the Caddy overlay.
 #
-#   For TLS termination in front of Caddy's basic auth, see docs/team-observability.md › TLS / HTTPS (Recommended for team servers).
+#   For TLS termination in front of Caddy's basic auth, see docs/team-observability.md › TLS / HTTPS (required for export from another machine).
 #
 # Other environment overrides (copy to .env in this directory):
 #   PHOENIX_PORT=6006

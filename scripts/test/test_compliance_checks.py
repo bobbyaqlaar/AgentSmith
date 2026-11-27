@@ -90,6 +90,15 @@ def test_residency_fails_outside(tmp_path, registry):
     assert cc.residency(tmp_path, DECLARED)[0] == "fail"
 
 
+def test_residency_names_an_endpoint_that_does_not_parse(tmp_path):
+    """A malformed declared endpoint is a named problem, not an exception that
+    leaves the role unnamed and the other roles unchecked (Pass 7, item C)."""
+    write(tmp_path, "models.yaml", GOOD + '  coder:\n    id: x\n    provider: ollama\n    endpoint: "https://[::1:6006/v1"\n')
+    verdict, why = cc.residency(tmp_path, DECLARED)
+    assert verdict == "fail"
+    assert "coder" in why and "has no host that parses" in why
+
+
 def test_residency_fails_a_sink_outside(tmp_path):
     write(tmp_path, "models.yaml", GOOD)
     declared = {
@@ -619,6 +628,35 @@ def test_a_tool_on_a_later_page_is_pinned_and_verified(tmp_path):
     assert "second" in json.loads((tmp_path / mcp_pin.ALLOWLIST_FILE).read_text())["servers"]["s"]["tools"]
     write(tmp_path, "description.txt", "now poisoned")
     assert mcp_pin.verify(tmp_path) == 1
+
+
+def _refused(request):
+    return __import__("httpx").Response(401, request=request)
+
+
+def _unreachable(request):
+    raise __import__("httpx").ConnectError(f"could not reach {request.url}", request=request)
+
+
+@pytest.mark.parametrize("answer", [_refused, _unreachable], ids=["http-401", "connect-error"])
+def test_a_server_mcp_pin_cannot_ask_is_named_without_its_secrets(tmp_path, monkeypatch, capsys, answer):
+    """httpx's error text carries the whole URL, userinfo and query string included, and
+    `mcp-pin` printed it to stderr: CI logs and the agent's context (independent review of
+    the ruff-s rebuild, finding 4). The failure names the server, its address without
+    userinfo or query, and the HTTP status when there is one."""
+    import httpx
+
+    from agentsmith import mcp_pin
+
+    real = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda **kw: real(transport=httpx.MockTransport(answer), **kw))
+    url = "https://ops:NOT-A-REAL-SECRET@mcp.example.invalid/mcp?api_key=ALSO-NOT-REAL"
+    write(tmp_path, ".mcp.json", json.dumps({"mcpServers": {"hosted": {"url": url}}}))
+    assert mcp_pin.pin(tmp_path) == 1
+    said = capsys.readouterr().err
+    assert "NOT-A-REAL-SECRET" not in said and "ALSO-NOT-REAL" not in said, said
+    assert "could not ask hosted" in said and "https://mcp.example.invalid/mcp" in said, said
+    assert ("HTTP 401" in said) == (answer is _refused), said
 
 
 def test_an_enforced_profile_with_its_declaration_deleted_fails_the_launcher(tmp_path):

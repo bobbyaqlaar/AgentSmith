@@ -23,6 +23,9 @@ What lives here, and what deliberately does not:
   judge_model      the eval judge, registry-first.
   _phoenix_*       one request path; get/post are thin wrappers over it.
   _load_dotenv     .env parsing, inline comments handled.
+  is_web_url       agentsmith.compliance.is_web_url, for scripts that run
+                   without the runtime package (send_dev_record, the
+                   sovereign probe); pinned by agentsmith/test/test_https_only_egress.py.
 
 Not here on purpose:
 
@@ -44,6 +47,8 @@ import re
 import sys
 from pathlib import Path
 from typing import Any, Optional
+import urllib.request
+from urllib.parse import urlparse
 
 # ── Eval-judge model ──────────────────────────────────────────────────────────
 #
@@ -302,7 +307,7 @@ def _tenant_id() -> Optional[str]:
                     return line.split(":", 1)[1].strip()
         # fail-open: best-effort tenant-id lookup; None is a valid "no tenant" result,
         # same as the yaml-parse path below
-        except Exception:
+        except Exception:  # noqa: S110 -- expected and deliberately swallowed, per the fail-open note
             pass
         return None
     except Exception:
@@ -491,6 +496,12 @@ def _phoenix_request(
         resp.raise_for_status()
         return resp.json()
     except Exception as exc:
+        # An HTTP status error's text is the whole URL, userinfo included, and the auth
+        # sidecar's password can sit in the endpoint: name the status and the address as
+        # display_url shows it, and do not chain the original, whose traceback repeats it.
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if isinstance(status, int):
+            raise RuntimeError(f"Phoenix API error [{path}]: HTTP {status} from {display_url(url)}") from None
         raise RuntimeError(f"Phoenix API error [{path}]: {exc}") from exc
 
 
@@ -538,8 +549,9 @@ def load_script(name: str, *, cache: bool = True) -> Any:
     # Keep the hyphen-free module name callers already used ("run_evals"), so
     # anything reaching into sys.modules by that name still finds it.
     spec = importlib.util.spec_from_file_location(name.replace("-", "_"), path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load script: {path}")
     module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
     spec.loader.exec_module(module)
     if cache:
         _SCRIPT_MODULE_CACHE[name] = module
@@ -684,3 +696,112 @@ def rate_limiter_from_env(var: str = "EVAL_RPM", default: float = 0.0) -> RateLi
     except ValueError:
         print(f"⚠️  {var}={raw!r} is not a number — ignoring, no pacing applied")
         return RateLimiter(default)
+
+
+LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+
+
+def is_web_url(url: str) -> bool:
+    """agentsmith.compliance.is_web_url, for scripts that run without the runtime
+    package: https to any host, plain http only to this machine, and always a
+    host. An address that does not parse is refused, not raised. Pinned to the
+    runtime rule by agentsmith/test/test_https_only_egress.py."""
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname
+        parsed.port  # noqa: B018 -- read for its ValueError: `:6006x`, `:99999` pass urlparse, then fail in urllib
+    except ValueError:  # e.g. an unclosed IPv6 bracket, or a port that is not one
+        return False
+    return bool(host) and (parsed.scheme == "https" or (parsed.scheme == "http" and host in LOOPBACK_HOSTS))
+
+
+WEB_URL_RULE = "must be https, or http to this machine"
+NO_HOST = "has no host"
+BAD_PORT = "has a port that is not one (0–65535)"
+DOES_NOT_PARSE = "does not parse as an address"
+
+
+def web_url_refusal(url: str) -> str:
+    """What a refusal by `is_web_url` says: the first thing the operator must
+    change. In order: an address that does not parse; a scheme that is neither
+    https nor http (the rule); no host; plain http to another host (the rule);
+    then a port urllib cannot use (`:6006x`, `:99999`), named only once the rest
+    would pass. "must be https" would be false for `https://` or
+    `http://localhost:600600`.
+    agentsmith.compliance.web_url_refusal's stdlib copy."""
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname
+    except ValueError:
+        return DOES_NOT_PARSE
+    if parsed.scheme not in ("https", "http"):
+        return WEB_URL_RULE
+    if not host:
+        return NO_HOST
+    if parsed.scheme == "http" and host not in LOOPBACK_HOSTS:
+        return WEB_URL_RULE
+    try:
+        parsed.port  # noqa: B018 -- read for its ValueError
+    except ValueError:
+        return BAD_PORT
+    return WEB_URL_RULE
+
+
+UNPARSED_URL = "<an address that does not parse>"
+ENTANGLED_URL = "<an address whose credential cannot be separated>"
+
+
+def display_url(url: str) -> str:
+    """`url` as a message may show it: scheme, host, port and path, without
+    userinfo, query or fragment. The docs put the auth sidecar's password in the
+    collector address (`https://ops:<password>@host`), and a refusal printed
+    whole put it in logs and session context. Not for an address whose path is
+    the secret (a Slack or Teams webhook): name its variable instead.
+    agentsmith.compliance.display_url's stdlib copy, pinned to it by
+    agentsmith/test/test_https_only_egress.py."""
+    if not url:
+        return url
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname
+        port = parsed.port
+    except ValueError:  # an unclosed IPv6 bracket, a port that is not a number
+        # With no `@` there is no userinfo to drop, and the typo is in the value.
+        return UNPARSED_URL if "@" in url else url.split("#", 1)[0].split("?", 1)[0]
+    # A password holding `/`, `?` or `#` ends the netloc early, so the rest of
+    # it reads as path, query or fragment (`https://ops:123/s3cr3t@host` parses
+    # as host `ops`, port 123): any `@` there, or userinfo with no host, means the
+    # credential cannot be told apart from the address.
+    if "@" in parsed.path + parsed.params + parsed.query + parsed.fragment or ("@" in parsed.netloc and not host):
+        return ENTANGLED_URL
+    if not host:  # `phoenix:6006`, `https://`: no userinfo to drop, and the value is the clue
+        return url.split("#", 1)[0].split("?", 1)[0]
+    netloc = f"[{host}]" if ":" in host else host
+    if port is not None:
+        netloc += f":{port}"
+    return f"{parsed.scheme}://{netloc}{parsed.path}"
+
+
+def unopenable(url: str, hint: str) -> str:
+    """Why urllib refused `url` (`http.client.InvalidURL`), for a message that
+    must not quote it: that error's own text holds the address whole, password
+    included. A user:password is named only when the address holds an `@`, with
+    `hint` saying where the credential goes instead; a bad port is refused
+    earlier, by `is_web_url`.
+    agentsmith.compliance.unopenable's stdlib copy."""
+    shown = display_url(url)
+    if "@" in url:
+        return (f"{shown} cannot be opened as written: a user:password in the address cannot be sent — "
+                f"remove it; {hint}")
+    return f"{shown} cannot be opened as written (a control character in it?)"
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """An opener handler that does not follow a 3xx. urllib's redirect_request
+    copies the Authorization header onto the next request, so following hands a
+    token to wherever the redirect points — past the https rule the first
+    address passed. The 3xx answers as itself (`HTTPError`).
+    agentsmith.compliance.NoRedirect's stdlib copy."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        return None

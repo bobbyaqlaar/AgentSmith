@@ -114,7 +114,7 @@ def agent_span(
             try:
                 span.set_attribute(f"{_NS}.error", type(exc).__name__)
                 span.record_exception(exc)
-            except Exception:  # fail-open: tracing must never mask the real error
+            except Exception:  # noqa: S110 -- fail-open: tracing must never mask the real error
                 pass
             raise
         finally:
@@ -122,7 +122,7 @@ def agent_span(
                 span.set_attribute(
                     f"{_NS}.duration_ms", (time.perf_counter() - start) * 1000
                 )
-            except Exception:  # fail-open: never break the step on a tracing write
+            except Exception:  # noqa: S110 -- fail-open: never break the step on a tracing write
                 pass
 
 
@@ -135,7 +135,7 @@ def _stamp(span: Any, name: str, tenant_id: Optional[str], kind: str, attrs: dic
         for k, v in attrs.items():
             if v is not None:
                 span.set_attribute(f"{_NS}.{k}", v)
-    except Exception:  # fail-open: attribute writes must never raise into the step
+    except Exception:  # noqa: S110 -- fail-open: attribute writes must never raise into the step
         pass
 
 
@@ -260,7 +260,7 @@ def record_tool_call(
                 payload_out = _serialise_payload(result)
                 if payload_out is not None:
                     span.set_attribute(TOOL_OUTPUT_ATTRIBUTE, payload_out)
-    except Exception:  # fail-open: tracing must never break a tool call
+    except Exception:  # noqa: S110 -- fail-open: tracing must never break a tool call
         pass
 
 
@@ -365,7 +365,7 @@ class AgentIdentityProcessor(_OTelSpanProcessor):
 
             for key, value in current_identity().items():
                 span.set_attribute(key, value)
-        except Exception:  # fail-open: identity must never break a span
+        except Exception:  # noqa: S110 -- fail-open: identity must never break a span
             pass
 
     # on_end / shutdown / force_flush come from the base class — this

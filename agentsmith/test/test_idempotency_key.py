@@ -50,7 +50,7 @@ STABLE_PAYLOADS = {
     "datetime": {"at": datetime.datetime(2026, 8, 30, 12, 0)},
     "uuid": {"id": uuid.UUID("12345678-1234-5678-1234-567812345678")},
     "decimal": {"amt": decimal.Decimal("10.50")},
-    "path": {"p": pathlib.Path("/tmp/x")},
+    "path": {"p": pathlib.Path("/tmp/x")},  # noqa: S108 -- a Path value to serialise; nothing is written there
     "enum": {"c": Colour.RED},
     "bytes": {"b": b"ab"},
 }

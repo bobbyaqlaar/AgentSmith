@@ -149,7 +149,7 @@ def run_checks() -> bool:
     # governed by its own .githooks. One left pointing at AgentSmith's old
     # templates is reported, so a re-install can put it back.
     print("Git hooks:")
-    configured_dir = subprocess.run(["git", "config", "--global", "--get", "init.templateDir"],
+    configured_dir = subprocess.run(["git", "config", "--global", "--get", "init.templateDir"],  # noqa: S607 -- git on PATH; fixed argv
                                     capture_output=True, text=True, check=False).stdout.strip()
     stale = configured_dir.rstrip("/").endswith(".git_templates") and any(
         (Path(configured_dir).expanduser() / "hooks" / hook).is_file()
@@ -266,7 +266,7 @@ def run_checks() -> bool:
                         unresolved.append(entry)
                 # fail-open: one malformed JSON-lines entry must not abort scanning the
                 # rest of the log for unresolved issues
-                except Exception:
+                except Exception:  # noqa: S110 -- expected and deliberately swallowed, per the fail-open note
                     pass
 
         if unresolved:
@@ -327,7 +327,7 @@ def check_security() -> bool:
         _check("run-security-checks.py present", False, f"missing {script}")
         return False
 
-    proc = subprocess.run(
+    proc = subprocess.run(  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
         [sys.executable, str(script), "--mode", "smoke"],
         cwd=root,
         capture_output=True,
@@ -623,7 +623,7 @@ def check_hooks() -> bool:
         tmp = Path(tmp_str)
 
         def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
-            return subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@x", *args],
+            return subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@x", *args],  # noqa: S603, S607 -- git on PATH, argv list, no shell, in a throwaway repo; callers pass literals
                                   env=env, capture_output=True, text=True, check=False)
 
         def _repo(name: str, guardrails: Optional[str] = None) -> Path:
@@ -640,7 +640,7 @@ def check_hooks() -> bool:
                 config["commit_guardrails"] = guardrails
             (repo / ".agenticframework").mkdir()
             (repo / ".agenticframework" / "process-gates.json").write_text(json.dumps(config))
-            subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(repo)], check=True)
+            subprocess.run(["git", "init", "-q", "-b", "main", "--template=", str(repo)], check=True)  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
             _git(repo, "add", "-A")
             _git(repo, "commit", "-qm", "chore: base", "--no-verify")
             _git(repo, "config", "core.hooksPath", ".githooks")
@@ -798,7 +798,7 @@ def _git_tracked_files() -> Optional[set[str]]:
     """
     try:
         proc = subprocess.run(
-            ["git", "ls-files"],
+            ["git", "ls-files"],  # noqa: S607 -- git on PATH; fixed argv
             cwd=_repo_root(),
             capture_output=True,
             text=True,
@@ -830,7 +830,7 @@ def framework_copies(root: Path, framework: Path) -> list[tuple[str, str]]:
     that drifted is still a copy. Nothing in AgentSmith's own checkout."""
     if (root / "install-ai-stack.sh").is_file() and (root / "workflow-templates").is_dir():
         return []
-    tracked = subprocess.run(["git", "ls-files", "-z", "--", "scripts", "runtime", "fixtures", ".github/actions"],
+    tracked = subprocess.run(["git", "ls-files", "-z", "--", "scripts", "runtime", "fixtures", ".github/actions"],  # noqa: S607 -- git on PATH; fixed argv
                              cwd=root, capture_output=True, text=True, check=False).stdout.split("\0")
     copies = []
     for rel in filter(None, tracked):
@@ -885,7 +885,7 @@ def check_governed() -> bool:
             shown = ", ".join(rels[:5]) + (f" and {len(rels) - 5} more" if len(rels) > 5 else "")
             gaps.append(f"  {shown} → {why}")
 
-    armed = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=root,
+    armed = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=root,  # noqa: S607 -- git on PATH; fixed argv
                            capture_output=True, text=True, check=False).stdout.strip()
     if armed != ".githooks":
         gaps.append("git config core.hooksPath is "
@@ -1123,8 +1123,8 @@ def check_onprem_deploy() -> bool:
             shutil.copy(env_file, base / ".env")
             for engine in ("traefik", "envoy"):
                 render_script = base / "scripts" / f"render-{engine}-config.py"
-                r = subprocess.run(
-                    ["python3", str(render_script)],
+                r = subprocess.run(  # noqa: S603 -- a render script shipped in templates/; argv list, no shell
+                    ["python3", str(render_script)],  # noqa: S607 -- python3 on PATH, as the template's own docs run it
                     cwd=base,
                     capture_output=True,
                     text=True,
@@ -1152,8 +1152,8 @@ def check_onprem_deploy() -> bool:
                         failures += 1
                     cfg_file.unlink()
 
-                result = subprocess.run(
-                    [
+                result = subprocess.run(  # noqa: S603 -- docker compose config on the template's own files; argv list, no shell
+                    [  # noqa: S607 -- docker on PATH
                         "docker",
                         "compose",
                         "--env-file",
@@ -1192,8 +1192,8 @@ def check_onprem_deploy() -> bool:
 
     if have_helm:
         chart = base / "kubernetes"
-        result = subprocess.run(
-            ["helm", "lint", str(chart)], capture_output=True, text=True, check=False
+        result = subprocess.run(  # noqa: S603 -- helm lint on the chart in this repository; argv list, no shell
+            ["helm", "lint", str(chart)], capture_output=True, text=True, check=False  # noqa: S607 -- helm on PATH
         )
         if not _check(
             "helm lint passes", result.returncode == 0, result.stdout + result.stderr
@@ -1216,8 +1216,8 @@ def check_onprem_deploy() -> bool:
             ),
             (["--set", "proxyEngine=envoy-gateway"], "envoy-gateway"),
         ]:
-            result = subprocess.run(
-                ["helm", "template", "verify-check", str(chart), *set_args],
+            result = subprocess.run(  # noqa: S603 -- helm template on this repository's chart with literal --set values; no shell
+                ["helm", "template", "verify-check", str(chart), *set_args],  # noqa: S607 -- helm on PATH
                 capture_output=True,
                 text=True,
                 check=False,

@@ -87,8 +87,9 @@ def impact(graph: dict, changed: Sequence[str]) -> Impact:
 
 
 def changed_files(base: str, root: Optional[Path] = None) -> list:
-    """What `git diff --name-only <base>` says this change touches."""
-    result = subprocess.run(["git", "diff", "--name-only", base], cwd=root,
+    """What `git diff --name-only <base>` says this change touches. `base` is read as a
+    ref even when it is spelled like an option (`--output=<path>` would write a file)."""
+    result = subprocess.run(["git", "diff", "--name-only", "--end-of-options", base], cwd=root,  # noqa: S603, S607 -- git on PATH, argv list, no shell; the ref follows --end-of-options
                             capture_output=True, text=True, check=False)
     return [line for line in result.stdout.splitlines() if line]
 
@@ -98,7 +99,7 @@ def staged_files(root: Optional[Path] = None) -> list:
     deletions excluded — exactly what the commit gate scopes the review by.
     `git diff <base>` also counts unstaged edits, which is how a review's hash
     used to disagree with the gate's (.agent-rfc/designs/gate-local-events.md)."""
-    result = subprocess.run(["git", "diff", "--cached", "--name-only", "--no-renames", "--diff-filter=d"],
+    result = subprocess.run(["git", "diff", "--cached", "--name-only", "--no-renames", "--diff-filter=d"],  # noqa: S607 -- git on PATH; fixed argv
                             cwd=root, capture_output=True, text=True, check=False)
     return [line for line in result.stdout.splitlines() if line]
 
@@ -107,7 +108,7 @@ def staged_graph(root: Optional[Path] = None, fixture: str = ".agent-rfc/fixture
     """The graph as the commit will carry it — the index's copy — or {} without one."""
     import json
 
-    result = subprocess.run(["git", "show", f":{fixture}"], cwd=root, capture_output=True, text=True, check=False)
+    result = subprocess.run(["git", "show", f":{fixture}"], cwd=root, capture_output=True, text=True, check=False)  # noqa: S603, S607 -- git on PATH, argv list, no shell; the fixture path is a default in this module
     try:
         return json.loads(result.stdout) if result.returncode == 0 else {}
     except ValueError:

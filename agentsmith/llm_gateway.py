@@ -864,6 +864,10 @@ class LLMGateway:
             from agentsmith.tracing import current_trace_id, inject_context
             from agentsmith.version import framework_version
 
+            if not compliance.is_web_url(ops_portal_url):
+                ops_contract._say_once("legacy-scheme", f"OPS_PORTAL_URL {compliance.web_url_refusal(ops_portal_url)} "
+                                                        "— run status and the shared token were not sent")
+                return
             if not compliance.outbound_allowed(ops_portal_url):
                 return
             httpx.post(
@@ -1020,7 +1024,7 @@ class LLMGateway:
                 )
             finally:
                 span.end()
-        except Exception:  # fail-open: tracing must never break the actual LLM call
+        except Exception:  # noqa: S110 -- fail-open: tracing must never break the actual LLM call
             pass
 
     def _emit_call_metrics(
@@ -1130,7 +1134,7 @@ class LLMGateway:
                 span.set_attribute("llm.gateway.degrade_reason", degrade_tier)
             if workflow_id:
                 span.set_attribute("workflow.id", workflow_id)
-        except Exception:  # fail-open: an attribute write must never break the call
+        except Exception:  # noqa: S110 -- fail-open: an attribute write must never break the call
             pass
 
     # ── Completion ────────────────────────────────────────────────────────────
@@ -1620,7 +1624,7 @@ class LLMGateway:
                 )
                 for kind, n in guardrail_counts.items():
                     span.set_attribute(f"llm.gateway.input_guardrail.{kind}", n)
-        except Exception:  # fail-open: tracing must never break the LLM call
+        except Exception:  # noqa: S110 -- fail-open: tracing must never break the LLM call
             pass
 
         # Tokens bounded per role and per run (.agent-rfc/designs/run-token-limits.md):
@@ -1955,7 +1959,7 @@ class LLMGateway:
                             "llm.model_name": model_id,
                         },
                     )
-            except Exception:  # fail-open: telemetry never breaks a retry
+            except Exception:  # noqa: S110 -- fail-open: telemetry never breaks a retry
                 pass
             try:
                 from agentsmith.metrics import record_retry
@@ -1966,8 +1970,7 @@ class LLMGateway:
                     attempt=retry_state.attempt_number,
                     reason=reason,
                 )
-            except Exception:  # fail-open: this is the retry's own logging; a
-                # failure to log must not abort the retry it is describing.
+            except Exception:  # noqa: S110 -- fail-open: a failure in the retry's own logging must not abort the retry
                 pass
 
         return _hook
@@ -2013,7 +2016,7 @@ class LLMGateway:
                 continue  # local or cloud-credential provider — no key to miss
             try:
                 _, api_key = self._resolve_endpoint(cfg)
-            except Exception:  # a config this broken has a louder problem
+            except Exception:  # noqa: S112 -- a route whose config cannot resolve is skipped; a config this broken has a louder problem
                 continue
             if not api_key:
                 env = str(cfg.get("api_key_env") or _DEFAULT_API_KEY_ENV[provider])
@@ -2247,8 +2250,7 @@ class LLMGateway:
             span = trace.get_current_span()
             if span is not None and span.is_recording():
                 span.set_attribute("llm.gateway.attempts", attempts)
-        except Exception:  # fail-open: recording the attempt count must never
-            # break the call that succeeded.
+        except Exception:  # noqa: S110 -- fail-open: recording the attempt count must never break a call that succeeded
             pass
 
         if is_cloud_provider(provider):

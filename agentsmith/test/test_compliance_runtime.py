@@ -106,6 +106,16 @@ def quiet(monkeypatch):
     return written
 
 
+def test_a_malformed_endpoint_is_refused_not_raised_under_a_profile(profile, quiet):
+    """An endpoint that does not parse is refused by the boundary rule, not
+    raised out of urlparse (Pass 7, item C)."""
+    assert c.outbound_allowed("http://[::1:6006") is False
+    with pytest.raises(c.ComplianceRefused, match="OB-RESIDENCY"):
+        c.require_inside_boundary("http://[::1:6006")
+    with pytest.raises(c.ComplianceRefused, match="OB-RESIDENCY"):
+        c.guard_model_call("t", None, "secret", "http://[::1:6006", "m")
+
+
 def test_classified_data_outside_the_boundary_is_refused(profile, quiet):
     with pytest.raises(c.ComplianceRefused, match="OB-RESIDENCY"):
         c.guard_model_call("t", None, "secret", "https://api.openai.com/v1", "m")

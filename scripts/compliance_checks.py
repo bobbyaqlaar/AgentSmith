@@ -14,7 +14,6 @@ import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterator
-from urllib.parse import urlparse
 
 import yaml
 
@@ -161,6 +160,7 @@ def _in_boundary(host: str | None, allowed: list[str]) -> bool:
 
 def residency(root: Path, declared: dict[str, Any]) -> Verdict:
     """This application's own registry and data stores, against its own boundary."""
+    from agentsmith.compliance import display_url, url_host
     from agentsmith.llm_gateway import _roles_from_doc
     from security.runners.sovereign_residency import _violations
 
@@ -173,8 +173,12 @@ def residency(root: Path, declared: dict[str, Any]) -> Verdict:
     for role, cfg in sorted(roles.items()):
         endpoint = str(cfg.get("endpoint") or "")
         # An environment reference is resolved at run time, where the gateway refuses it if it is outside.
-        if endpoint and "${" not in endpoint and not _in_boundary(urlparse(endpoint).hostname, allowed):
-            problems.append(f"{role}: {endpoint} is outside the boundary")
+        if endpoint and "${" not in endpoint:
+            host = url_host(endpoint)
+            if host is None:
+                problems.append(f"{role}: {display_url(endpoint)} has no host that parses")
+            elif not _in_boundary(host, allowed):
+                problems.append(f"{role}: {display_url(endpoint)} is outside the boundary")
     for sink, host in sorted(declared["boundary"].get("sinks", {}).items()):
         if not _in_boundary(host, allowed):
             problems.append(f"sink {sink}: {host} is outside the boundary")
@@ -247,7 +251,7 @@ _SWALLOWED = re.compile(r"\|\|(?!\s*exit\s+[1-9])")  # a fallback, unless it fai
 
 
 def _default_branches(root: Path) -> set[str]:
-    done = subprocess.run(["git", "-C", str(root), "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+    done = subprocess.run(["git", "-C", str(root), "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
                           capture_output=True, text=True, check=False)
     found = done.stdout.strip().split("/", 1)[-1] if done.returncode == 0 and done.stdout.strip() else ""
     return {found} if found else {"main", "master"}

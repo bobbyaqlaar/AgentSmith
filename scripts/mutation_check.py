@@ -505,13 +505,10 @@ CATALOGUE: tuple[Suite, ...] = (
                 "the index and commit reader decodes strictly again — a commit carrying an image "
                 "crashes the gate and CI",
                 "scripts/process_gate.py",
-                '        result = subprocess.run(["git", "show", f"{rev}:{path}"], cwd=root, '
-                'capture_output=True, check=False)\n'
+                '                                cwd=root, capture_output=True, check=False)\n'
                 '        return result.stdout.decode("utf-8", errors="replace") '
                 'if result.returncode == 0 else None',
-                '        result = subprocess.run(["git", "show", f"{rev}:{path}"], cwd=root, '
-                'capture_output=True, text=True, '
-                'check=False)\n'
+                '                                cwd=root, capture_output=True, text=True, check=False)\n'
                 "        return result.stdout if result.returncode == 0 else None",
             ),
             Mutation(
@@ -549,8 +546,7 @@ CATALOGUE: tuple[Suite, ...] = (
             Mutation(
                 "the token goes to any address, plain http included",
                 "agentsmith/intake.py",
-                '    return parsed.scheme == "https" or '
-                '(parsed.scheme == "http" and parsed.hostname in ("localhost", "127.0.0.1"))',
+                "    return is_web_url(url)",
                 "    return True",
             ),
             Mutation(
@@ -1590,12 +1586,12 @@ CATALOGUE: tuple[Suite, ...] = (
                     "source_file": md_file.relative_to(root).as_posix(),
                 }
             )
-        except Exception:  # fail-open: one unparsable RFC file''',
+        except Exception:  # noqa: S110 -- fail-open: one unparsable RFC file''',
                 '''                    "pillar": None,
                     "source_file": str(md_file),
                 }
             )
-        except Exception:  # fail-open: one unparsable RFC file''',
+        except Exception:  # noqa: S110 -- fail-open: one unparsable RFC file''',
             ),
             Mutation(
                 "git that cannot answer reads as a repository holding nothing",
@@ -2185,7 +2181,7 @@ def _git_dir() -> Path:
     (.agent-rfc/designs/kg-skips-nested-checkouts.md).
     """
     try:
-        out = subprocess.run(["git", "rev-parse", "--git-dir"], cwd=REPO,
+        out = subprocess.run(["git", "rev-parse", "--git-dir"], cwd=REPO,  # noqa: S607 -- git on PATH; fixed argv
                              capture_output=True, text=True, check=True).stdout.strip()
         git_dir = Path(out)
         return git_dir if git_dir.is_absolute() else REPO / git_dir
@@ -2324,8 +2320,8 @@ def _dirty_catalogue_files(suites: tuple[Suite, ...]) -> list[str]:
         # run that mutates nothing (every suite skipped) has no reason to refuse.
         return []
     try:
-        result = subprocess.run(
-            ["git", "status", "--porcelain", "--", *paths],
+        result = subprocess.run(  # noqa: S603 -- git on PATH, argv list, no shell; the paths follow --
+            ["git", "status", "--porcelain", "--", *paths],  # noqa: S607 -- git on PATH; the paths follow --
             cwd=REPO, capture_output=True, text=True, check=True,
         )
     except Exception:
@@ -2377,7 +2373,7 @@ def _pytest(tests: tuple[str, ...], *, first_failure: bool = False) -> subproces
         env = {**os.environ, "PYTHONPYCACHEPREFIX": cache}
         # check=False deliberately: a NON-ZERO exit is the good outcome here. It
         # means the suite noticed the mutation, which is the entire point.
-        return subprocess.run(args, cwd=REPO, capture_output=True, text=True, check=False, env=env)
+        return subprocess.run(args, cwd=REPO, capture_output=True, text=True, check=False, env=env)  # noqa: S603 -- the suite's own pytest command, built in this module; no shell
 
 
 def _has_timeout_plugin() -> bool:
@@ -2466,16 +2462,17 @@ def changed_files(ref: str, cwd: Path = REPO) -> "set[str] | None":
     "unknown", never "nothing changed"."""
     if not ref or ref == _NO_COMMIT:
         return None
-    known = subprocess.run(["git", "-C", str(cwd), "rev-parse", "--verify", "-q", f"{ref}^{{commit}}"],
-                           capture_output=True, text=True, check=False)
+    known = subprocess.run(  # noqa: S603 -- git on PATH, argv list, no shell; the ref follows --end-of-options
+        ["git", "-C", str(cwd), "rev-parse", "--verify", "-q", "--end-of-options", f"{ref}^{{commit}}"],  # noqa: S607 -- git on PATH
+        capture_output=True, text=True, check=False)
     if known.returncode != 0:
         return None
     # `ref` against the working tree, not HEAD, plus untracked files: locally
     # the edit in progress is the change. In CI the tree is clean, so this is
     # ref..HEAD there.
-    diff = subprocess.run(["git", "-C", str(cwd), "diff", "--name-only", "--no-renames", ref],
+    diff = subprocess.run(["git", "-C", str(cwd), "diff", "--name-only", "--no-renames", "--end-of-options", ref],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the ref follows --end-of-options
                           capture_output=True, text=True, check=False)
-    new = subprocess.run(["git", "-C", str(cwd), "ls-files", "--others", "--exclude-standard"],
+    new = subprocess.run(["git", "-C", str(cwd), "ls-files", "--others", "--exclude-standard"],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
                          capture_output=True, text=True, check=False)
     if diff.returncode != 0 or new.returncode != 0:
         return None

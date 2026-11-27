@@ -135,8 +135,16 @@ def _exporter(signal: str, module: str, attr: str, env) -> Any:
         return None
     from agentsmith import compliance
 
+    # Spans and metrics carry request data, so they leave only over https, or
+    # over plain http to this machine. The same rule the portal and intake
+    # clients apply before they send anything (compliance.is_web_url).
+    if not compliance.is_web_url(endpoint):
+        logger.error("%s %s — %s will not be exported",
+                     compliance.display_url(endpoint), compliance.web_url_refusal(endpoint), signal)
+        return None
     if not compliance.outbound_allowed(endpoint):
-        logger.error("%s is outside the declared boundary — %s will not be exported", endpoint, signal)
+        logger.error("%s is outside the declared boundary — %s will not be exported",
+                     compliance.display_url(endpoint), signal)
         return None
     try:
         exporter_cls = getattr(__import__(module, fromlist=[attr]), attr)
@@ -148,7 +156,7 @@ def _exporter(signal: str, module: str, attr: str, env) -> Any:
             "%s is configured but opentelemetry-exporter-otlp-proto-http is not "
             "installed — %s will not be exported. pip install "
             "'opentelemetry-exporter-otlp-proto-http>=1.20,<2.0'",
-            endpoint,
+            compliance.display_url(endpoint),
             signal,
         )
         return None

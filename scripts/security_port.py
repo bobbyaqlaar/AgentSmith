@@ -204,7 +204,7 @@ def redaction(root: Path, request: gm.RedactionRequest) -> gm.RedactionResult:
 def _repository(cwd: Optional[str]) -> Path:
     if cwd:
         return Path(cwd).resolve()
-    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)
+    top = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)  # noqa: S607 -- git on PATH; fixed argv
     return Path(top.stdout.strip()) if top.returncode == 0 and top.stdout.strip() else Path.cwd()
 
 

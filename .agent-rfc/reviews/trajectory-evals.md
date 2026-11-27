@@ -41,3 +41,15 @@ Gates run: the suites above; ruff; mypy; the process gate against the commit.
 Levers reviewed: `failure-is-not-a-result`, `test-that-cannot-fail`, `implemented-not-invoked`.
 
 KG query: kg:5e20ddfa6eb0
+
+## Pass 4 — findings: 0
+
+A review by the author of the ruff-s-rules change (branch `feat/ruff-s-rules`), not an independent pass. It covers only that branch's edits to files in this design's scope, against `docs/review-levers.md`. This design shipped earlier; its own work is unchanged. Files: `agentsmith/cli.py`.
+
+- `_cmd_evals_run`'s `evals_port.py` call and the other subprocess calls in `cli.py` gain `# noqa: S603/S607 -- <reason>` only. Their argv, input and exit codes are unchanged.
+- Unrelated to evals but in this file: the new `framework_scripts_on_path` helper, and the record and ops conformance handlers now catch `conformance.ReceiverRefused` as well. Neither touches the evals port or the trajectory suite.
+- The suites that pin this design passed: `scripts/test/test_trajectory_evals.py`, `scripts/test/test_evals_contract.py` and `evals_contract` (14/14 mutations caught).
+
+Evidence: on the branch's original tree (before the rebuild below), the full suite gave 3048 passed, 17 skipped, 0 failed, and the curated mutation suites CI selects for the branch gave 270 of 270 caught.
+
+Rebuilt on PR #117's head `c2583ff` (2026-11-24; `.agent-rfc/reviews/ruff-s-rules.md` Pass 15). The claims above were re-read against the rebuilt files. They hold: #117's edits to `agentsmith/cli.py` (`_gate_kg` rebuilds the trace graph; `ops vector-claim`) gain `# noqa: S603`/`S607` reasons only and do not touch the evals port. On the rebuilt head the full suite gave 3420 passed, 21 skipped; the one failure was a stale trace-graph fixture, rebuilt.

@@ -90,7 +90,7 @@ def _declared(control: ControlSpec, ctx: dict[str, Any]) -> ControlResult:
     env = repository_env(Path(ctx["root"]))
     env["PYTHONPATH"] = os.pathsep.join(filter(None, [str(root), env.get("PYTHONPATH")]))
     try:
-        done = subprocess.run([repository_python(), "-c", _HOOK_SMOKE, hook], cwd=root, env=env,
+        done = subprocess.run([repository_python(), "-c", _HOOK_SMOKE, hook], cwd=root, env=env,  # noqa: S603 -- a fixed smoke script; the hook name goes in as an argument, never as code
                               capture_output=True, text=True, timeout=120, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
         return failed(control, f"declared hook {hook} could not run: {exc}", mode=mode, hook=hook)

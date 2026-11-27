@@ -698,8 +698,11 @@ procedure lives in **[the Install & Start section](UserManual.md)**
 ("Team-shared Phoenix with auth" and "standing infra"). Short version:
 
 - One team server runs `docker compose -f docker-compose.yml -f docker-compose.auth.yml up -d`.
-- Every developer sets `AGENT_PHOENIX_ENDPOINT="http://ops:<password>@<server-ip>:6007"`
-  (port 6007 = the auth sidecar; 6006 stays loopback-only).
+- Every developer sets `AGENT_PHOENIX_ENDPOINT="https://<phoenix-host>"` and the
+  sidecar's credential as `OTEL_EXPORTER_OTLP_HEADERS` (team-observability.md › Update developer endpoints),
+  where `<phoenix-host>` serves TLS in front of port 6007 (the auth sidecar; 6006
+  stays loopback-only). The credential goes in the header, never in the URL. The collector must serve TLS: spans and metrics are
+  exported only over https, or plain http to this machine.
 - An unauthenticated shared Phoenix is non-compliant (docs/DESIGN.md › Universal Observability Platform).
 
 ## CI/CD via GitHub Actions
@@ -1541,10 +1544,15 @@ curl http://localhost:6007/healthz                                    # 401, no 
 curl -u ops:<your-password> http://localhost:6007/healthz             # 200
 ```
 
-Developers and CI then point at port **6007** (the auth sidecar), not 6006:
+Developers and CI then point at a TLS front for port **6007** (the auth
+sidecar), not 6006. The collector must serve TLS: the exporter refuses plain
+http to another host, with an ERROR log line (see
+[team-observability.md › TLS / HTTPS](team-observability.md)):
 
 ```bash
-export AGENT_PHOENIX_ENDPOINT="http://ops:<password>@<server-ip>:6007"
+export AGENT_PHOENIX_ENDPOINT="https://<phoenix-host>"
+# the sidecar's credential, as a header, never in the URL (team-observability.md › Update developer endpoints)
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Basic%20$(printf '%s' '<user>:<password>' | base64 | tr -d '\n')"
 ```
 
 See [docker-compose.yml](../docker-compose.yml) and

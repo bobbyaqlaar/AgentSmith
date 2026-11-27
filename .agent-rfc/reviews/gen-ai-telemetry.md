@@ -36,3 +36,15 @@ Gates run: the telemetry suites; the whole Python suite; ruff; mypy; the process
 Levers reviewed: `single-source-of-truth`, `failure-is-not-a-result`, `test-that-cannot-fail`.
 
 KG query: kg:cfeaeba9448a
+
+## Pass 3 — findings: 0
+
+A review by the author of the ruff-s-rules change (branch `feat/ruff-s-rules`), not an independent pass. It covers only that branch's edits to files in this design's scope, against `docs/review-levers.md`. This design shipped earlier; its own work is unchanged. Files: `agentsmith/llm_gateway.py`.
+
+- Seven fail-open `except Exception` handlers on the tracing and attribute-write paths changed only their comment: each gains `# noqa: S110/S112 -- <reason>` and keeps its `fail-open:` text (`check_bare_except` is clean). Span names, GenAI attributes and their emission order are untouched.
+- `_report_run_status`'s deprecated shared-token route now refuses an `OPS_PORTAL_URL` that is not https (or http to this machine) before `httpx.post`, and says so once (`web_url_refusal`). That route sends the portal its run status, not telemetry; spans and `traceparent` injection are unchanged.
+- The suites that pin this design passed: `scripts/test/test_gen_ai_telemetry.py` and `telemetry_contract` (10/10 mutations caught).
+
+Evidence: on the branch's original tree (before the rebuild below), the full suite gave 3048 passed, 17 skipped, 0 failed, and the curated mutation suites CI selects for the branch gave 270 of 270 caught.
+
+Rebuilt on PR #117's head `c2583ff` (2026-11-24; `.agent-rfc/reviews/ruff-s-rules.md` Pass 15). The claims above were re-read against the rebuilt files. They hold: the seven handlers and the scheme refusal are unchanged. Not named above: `agentsmith/tracing.py`, also in this design's scope, gains five comment-only `# noqa: S110` reasons on its fail-open handlers; no span or attribute changes. On the rebuilt head the full suite gave 3420 passed, 21 skipped; the one failure was a stale trace-graph fixture, rebuilt.

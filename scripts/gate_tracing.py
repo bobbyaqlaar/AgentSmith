@@ -20,6 +20,7 @@ from __future__ import annotations
 import os
 import sys
 import time
+import http.client
 import urllib.error
 import urllib.request
 from contextlib import contextmanager
@@ -151,6 +152,7 @@ def ship(timeout: float = 1.0) -> ShipResult:
     batches = sorted(spool_dir().glob("*.pb"))
     try:
         _import_runtime()
+        from agentsmith.compliance import display_url, is_web_url, unopenable, web_url_refusal
         from agentsmith.otlp import resolve_otlp_endpoint
 
         endpoint = resolve_otlp_endpoint("traces")
@@ -158,18 +160,27 @@ def ship(timeout: float = 1.0) -> ShipResult:
         return ShipResult(endpoint=None, kept=len(batches), errors=[f"endpoint unresolved: {exc}"])
     if not endpoint:
         return ShipResult(endpoint=None, kept=len(batches))
+    if not is_web_url(endpoint):
+        return ShipResult(endpoint=endpoint, kept=len(batches),
+                          errors=[f"{display_url(endpoint)}: {web_url_refusal(endpoint)} — nothing sent"])
     result = ShipResult(endpoint=endpoint)
     for batch in batches:
-        request = urllib.request.Request(
+        request = urllib.request.Request(  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
             endpoint, data=batch.read_bytes(), method="POST",
             headers={"Content-Type": "application/x-protobuf"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310 - the configured collector
+            with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310 - the configured collector  # noqa: S310 -- is_web_url above allowed only https, or http to loopback
                 accepted = 200 <= response.status < 300
+        except http.client.InvalidURL:  # its message holds the address whole, password included
+            result.kept += len(batches) - result.sent - result.kept
+            result.errors.append(unopenable(endpoint, "the OTLP exporter takes the credential from "
+                                            "OTEL_EXPORTER_OTLP_HEADERS (docs/team-observability.md "
+                                            "› Update developer endpoints)"))
+            return result
         except (urllib.error.URLError, OSError) as exc:
             result.kept += len(batches) - result.sent - result.kept
-            result.errors.append(f"{endpoint}: {getattr(exc, 'reason', exc)}")
+            result.errors.append(f"{display_url(endpoint)}: {getattr(exc, 'reason', exc)}")
             return result  # the collector is down: don't pay the timeout once per batch
         if accepted:
             batch.unlink(missing_ok=True)
@@ -177,6 +188,18 @@ def ship(timeout: float = 1.0) -> ShipResult:
         else:
             result.kept += 1
     return result
+
+
+def _shown(endpoint: str) -> str:
+    """The collector as a status line may show it — never its userinfo (the
+    auth sidecar's password can sit there). The runtime is already loaded by
+    `ship`, which is the only way an endpoint gets here."""
+    try:
+        from agentsmith.compliance import display_url
+
+        return display_url(endpoint)
+    except Exception:  # fail-open: a status line must not crash session start; show nothing of the URL
+        return "the configured collector"
 
 
 def status_line(result: ShipResult | None = None) -> str:
@@ -191,7 +214,7 @@ def status_line(result: ShipResult | None = None) -> str:
         elif result.errors:
             parts.append(f"gate spans NOT exported — {result.errors[0]}; {result.kept} batch(es) kept for the next try")
         else:
-            parts.append(f"gate spans exported to {result.endpoint} ({result.sent} batch(es))")
+            parts.append(f"gate spans exported to {_shown(result.endpoint)} ({result.sent} batch(es))")
     dropped = dropped_count()
     if dropped:
         parts.append(f"{dropped} dropped — the spool reached {MAX_BATCHES} batches before a collector took them")
@@ -206,7 +229,7 @@ def reset_for_tests() -> None:
 
         trace._TRACER_PROVIDER_SET_ONCE = Once()  # type: ignore[attr-defined]
         trace._TRACER_PROVIDER = None  # type: ignore[attr-defined]
-    except Exception:  # fail-open: only tests call this
+    except Exception:  # noqa: S110 -- fail-open: only tests call this
         pass
     _state["provider"] = None
     _state["error"] = None

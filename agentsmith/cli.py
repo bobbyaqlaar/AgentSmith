@@ -39,8 +39,9 @@ import os
 import re
 import shutil
 import sys
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Iterator, Optional, Sequence
 
 # The scaffold's shape is a product decision, so it lives here as data rather
 # than as a heredoc: a test can assert on it, and there is exactly one copy.
@@ -281,13 +282,33 @@ def gate_ides_module(framework: Optional[Path] = None):
     framework = framework or _framework_dir()
     if framework is None:
         return None
-    sys.path.insert(0, str(framework / "scripts"))
     try:
-        import gate_ides  # type: ignore
+        with framework_scripts_on_path(framework):
+            import gate_ides  # type: ignore
 
         return gate_ides
     except Exception:  # fail-open: an unresolvable registry must not block a scaffold
         return None
+
+
+@contextmanager
+def framework_scripts_on_path(framework: Path) -> Iterator[None]:
+    """`<framework>/scripts` importable for the length of the block, and
+    `sys.path` holding as many copies of it after as before. Inserted only if
+    absent; copies added inside the block (a framework script whose module scope
+    inserts its own directory, as `scripts/rules_port.py` does) are removed too.
+    Left behind, it made every later `import notifier` or `import _shared` in the
+    process resolve to that framework's copy — the machine's stale install, in a
+    test run (.agent-rfc/designs/ruff-s-rules.md)."""
+    entry = str(framework / "scripts")
+    present = sys.path.count(entry)
+    if not present:
+        sys.path.insert(0, entry)
+    try:
+        yield
+    finally:
+        while sys.path.count(entry) > present:
+            sys.path.remove(entry)
 
 
 def init_tenant(
@@ -464,7 +485,7 @@ def _run_tool(script: Path, root: Path, *args: str) -> None:
 
     if not script.is_file():
         return
-    done = sp.run([sys.executable, str(script), *args], cwd=root,
+    done = sp.run([sys.executable, str(script), *args], cwd=root,  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
                   capture_output=True, text=True, check=False)
     if done.returncode != 0:
         print(f"  ! {script.name} did not complete: {done.stderr.strip()[:200]}", file=sys.stderr)
@@ -739,7 +760,7 @@ def install_gate_hooks(root: Path, framework: Path, prior: Optional[Path] = None
     # once the hooks are there: a hooks path overrides .git/hooks, so arming an
     # empty directory leaves a repository with no hooks at all — which is what a
     # machine install without .githooks/ used to do, silently.
-    sp.run(["git", "-C", str(root), "config", "core.hooksPath", ".githooks"], check=False)
+    sp.run(["git", "-C", str(root), "config", "core.hooksPath", ".githooks"], check=False)  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
     if prior is not None:
         from agentsmith.adopt import chain_hooks
 
@@ -1067,7 +1088,7 @@ def _cmd_gate(args: argparse.Namespace) -> int:
         "commit": ["commit-msg", "--decision"],
         "push": ["sweep", "--decision"],
     }.get(args.event, [args.event, "--ide", args.ide or "neutral"])
-    done = sp.run([sys.executable, str(gate), *command],
+    done = sp.run([sys.executable, str(gate), *command],  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell; the event picks from a fixed table
                   input=_stdin_request() or "{}",
                   capture_output=True, text=True, check=False)
     sys.stderr.write(done.stderr)
@@ -1094,20 +1115,20 @@ def _gate_kg(scripts: Path, verb: Optional[str], base: Optional[str]) -> int:
     if verb == "build":
         # Whole, never incremental: a person asking for the graph wants it right, and the
         # incremental path keeps a file's old edges until the file changes (P3-R17).
-        code = sp.run([sys.executable, str(scripts / "map_codebase.py"), "--quiet", "--force"], check=False).returncode
+        code = sp.run([sys.executable, str(scripts / "map_codebase.py"), "--quiet", "--force"], check=False).returncode  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
         # The trace graph reads the knowledge graph's edges, so it is rebuilt with it, in a repository that tracks
         # one (AgentSmith's own: it reads this repository's backlog and catalogue; a tenant has neither).
-        tracked = sp.run(["git", "ls-files", "--error-unmatch", ".agent-rfc/fixtures/trace_graph.json"],
+        tracked = sp.run(["git", "ls-files", "--error-unmatch", ".agent-rfc/fixtures/trace_graph.json"],  # noqa: S607 -- git on PATH; fixed argv
                          capture_output=True, check=False).returncode == 0
         if code == 0 and tracked:
-            code = sp.run([sys.executable, str(scripts / "trace_graph.py")], check=False).returncode
+            code = sp.run([sys.executable, str(scripts / "trace_graph.py")], check=False).returncode  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
         return code
     if verb == "impact":
         scope = ["--base", base] if base else ["--staged"]
-        return sp.run([sys.executable, str(scripts / "local_knowledge_graph.py"), "--impact", "--json", *scope],
+        return sp.run([sys.executable, str(scripts / "local_knowledge_graph.py"), "--impact", "--json", *scope],  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell; the scope ref is passed as an argument value, not an option
                       check=False).returncode
     if verb == "check":
-        return sp.run([sys.executable, str(scripts / "verify_system.py"), "--check-kg-fresh"], check=False).returncode
+        return sp.run([sys.executable, str(scripts / "verify_system.py"), "--check-kg-fresh"], check=False).returncode  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
     print("agentsmith gate kg: build | impact [--staged | --base REF] | check", file=sys.stderr)
     return 2
 
@@ -1126,7 +1147,7 @@ def _cmd_rules(args: argparse.Namespace) -> int:
     if args.write and args.verb != "render":
         print("agentsmith rules: --write goes with render", file=sys.stderr)
         return 2
-    done = sp.run([sys.executable, str(scripts / "rules_port.py"), args.verb, *(["--write"] if args.write else [])],
+    done = sp.run([sys.executable, str(scripts / "rules_port.py"), args.verb, *(["--write"] if args.write else [])],  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell; the verb is an argparse choice
                   input=_stdin_request() or "{}", capture_output=True, text=True,
                   check=False)
     sys.stderr.write(done.stderr)
@@ -1157,7 +1178,7 @@ def _cmd_evals_run(args: argparse.Namespace) -> int:
             return 2
         request = json.dumps({**body, "suite": args.suite})
     # stderr is the person's report and streams as the suite runs; stdout is the scorecard.
-    done = sp.run([sys.executable, str(scripts / "evals_port.py"), args.verb], input=request or "{}",
+    done = sp.run([sys.executable, str(scripts / "evals_port.py"), args.verb], input=request or "{}",  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell; the verb is an argparse choice
                   stdout=sp.PIPE, text=True, check=False)
     sys.stdout.write(done.stdout)
     return done.returncode
@@ -1269,7 +1290,7 @@ def _cmd_ops_settings(args: argparse.Namespace) -> int:
 
     from agentsmith import ops_contract
 
-    top = sp.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)
+    top = sp.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)  # noqa: S607 -- git on PATH; fixed argv
     root = Path(top.stdout.strip()) if top.returncode == 0 and top.stdout.strip() else Path.cwd()
     message, notes = ops_contract.settings_from_tenant_yaml(root)
     for note in notes:
@@ -1316,7 +1337,7 @@ def _cmd_security(args: argparse.Namespace) -> int:
             return 2
         request = json.dumps({**body, **given})
     # stderr is the person's report; stdout is the result.
-    done = sp.run([sys.executable, str(scripts / "security_port.py"), args.verb], input=request or "{}",
+    done = sp.run([sys.executable, str(scripts / "security_port.py"), args.verb], input=request or "{}",  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell; the verb is an argparse choice
                   stdout=sp.PIPE, text=True, check=False)
     sys.stdout.write(done.stdout)
     return done.returncode
@@ -1464,7 +1485,7 @@ def _record_conformance(args: argparse.Namespace) -> int:
             with tempfile.TemporaryDirectory() as tmp:
                 report = rc.run_record_sender(args.sender, Path(tmp) / "fixture",
                                               args.url_env or rc.SENDER_URL_ENV, args.token_env or rc.SENDER_TOKEN_ENV)
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, rc.ReceiverRefused) as exc:  # a receiver address refused, said by name
         print(f"agentsmith: {exc}", file=sys.stderr)
         return 2
     print(report.render())
@@ -1498,7 +1519,7 @@ def _ops_conformance(args: argparse.Namespace) -> int:
             with tempfile.TemporaryDirectory() as tmp:
                 report = rc.run_ops_sender(args.sender, Path(tmp) / "fixture", args.url_env or ops_contract.URL_ENV,
                                            args.token_env or ops_contract.TOKEN_ENV)
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, rc.ReceiverRefused) as exc:  # a receiver address refused, said by name
         print(f"agentsmith: {exc}", file=sys.stderr)
         return 2
     print(report.render())
@@ -1594,7 +1615,7 @@ def _cmd_doctor(args: argparse.Namespace) -> int:
     if script is None:
         print("agentsmith: verify_system.py not found in ./scripts/ or ~/.agent-framework/scripts/", file=sys.stderr)
         return 1
-    return subprocess.run([sys.executable, str(script), *args.checks], check=False).returncode
+    return subprocess.run([sys.executable, str(script), *args.checks], check=False).returncode  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell; the check names are the operator's own arguments
 
 
 # `shellenv` was removed: it printed `export AI_STACK_MODE=…` for a profile to
@@ -1783,7 +1804,7 @@ def _cmd_compliance(args: argparse.Namespace) -> int:
         argv += ["--out", args.out]
     if args.verb == "export" and args.evidence_dir:
         argv += ["--evidence-dir", args.evidence_dir]
-    return sp.run(argv, stdin=sp.DEVNULL, check=False).returncode
+    return sp.run(argv, stdin=sp.DEVNULL, check=False).returncode  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell; the verb is an argparse choice, paths are the operator's
 
 
 def _cmd_design_new(args: argparse.Namespace) -> int:

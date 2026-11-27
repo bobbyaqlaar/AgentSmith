@@ -227,10 +227,10 @@ def _shared_files(plan: Plan) -> tuple[dict[str, str], set[str]]:
     the IDE hook configs, the rule files, the gates workflow and the gate config —
     and which of them it owns only a region of."""
     import json as _json
-    import sys as _sys
 
     from agentsmith.adopt import GATES_WORKFLOW, PROVIDERS, SYNC_WORKFLOW, RulesUnavailable, providers_declaration, \
         rendered_rules, rules_port, workflow_setup
+    from agentsmith.cli import framework_scripts_on_path
 
     root, framework = plan.root, plan.framework
     shared: dict[str, str] = {}
@@ -260,9 +260,9 @@ def _shared_files(plan: Plan) -> tuple[dict[str, str], set[str]]:
             plan.notes.append(f"{CONFIG}: documents named by this install's paths now name `\"provider\"` — "
                               "the gate provider's own, wherever it is installed")
 
-    _sys.path.insert(0, str(framework / "scripts"))
     try:
-        import gate_ides as gi  # type: ignore
+        with framework_scripts_on_path(framework):
+            import gate_ides as gi  # type: ignore
 
         from agentsmith.config import chosen_ides
 
@@ -370,7 +370,7 @@ def _redraw_graph(plan: Plan) -> list[str]:
     mapper = plan.framework / "scripts" / "map_codebase.py"
     if not (plan.root / GRAPH).is_file() or not mapper.is_file():
         return []
-    done = subprocess.run([sys.executable, str(mapper), "--quiet"], cwd=plan.root,
+    done = subprocess.run([sys.executable, str(mapper), "--quiet"], cwd=plan.root,  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
                           capture_output=True, text=True, check=False)
     if done.returncode != 0:
         print(f"  ! the knowledge graph was not redrawn, so `kg check` may fail: {done.stderr.strip()[-200:]}",
@@ -381,7 +381,7 @@ def _redraw_graph(plan: Plan) -> list[str]:
 
 def _changed(root: Path, rel: str) -> bool:
     """Is this path different from what the repository has committed?"""
-    done = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", rel],
+    done = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", rel],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the path follows --
                           capture_output=True, text=True, check=False)
     return bool(done.stdout.strip())
 

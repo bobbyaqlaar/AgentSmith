@@ -411,7 +411,8 @@ class BaseAgentWorkflow:
         if gate_result is None:
             # Guaranteed by the neither/both validation above — stated rather
             # than assumed, because the guarantee lives thirty lines away.
-            assert gate_activity_name is not None
+            if gate_activity_name is None:
+                raise ValueError("pass exactly one of gate_result and gate_activity_name")
             gate_result = await workflow.execute_activity(
                 gate_activity_name,
                 gate_input,

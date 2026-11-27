@@ -96,6 +96,10 @@ def _notify(tenant_id: str, task_id: str, reason: Optional[str], error: str) -> 
             continue
         from agentsmith import compliance
 
+        if not compliance.is_web_url(url):
+            logger.warning("%s %s: not notified (the URL is the secret, so it is not logged)", env_var,
+                           compliance.web_url_refusal(url))
+            continue
         if not compliance.outbound_allowed(url):
             logger.warning("%s is outside the declared boundary: not notified", env_var)
             continue

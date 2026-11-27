@@ -27,7 +27,7 @@ from typing import Optional, Sequence
 
 # The hooks the gate owns, copied from the framework's .githooks; every other
 # hook the prior directory has gets a stub that runs it through `chain`.
-from agentsmith.cli import GATE_HOOKS
+from agentsmith.cli import GATE_HOOKS, framework_scripts_on_path
 
 ADOPTION_DESIGN = ".agent-rfc/designs/adoption.md"
 PROVIDERS = ".agenticframework/providers.json"
@@ -120,7 +120,7 @@ class Plan:
 
 
 def _git(root: Path, *args: str) -> str:
-    done = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, check=False)
+    done = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, check=False)  # noqa: S603, S607 -- git wrapper, argv list, no shell; callers pass literal subcommands and keys
     return done.stdout.strip() if done.returncode == 0 else ""
 
 
@@ -245,7 +245,7 @@ def plan_adoption(tenant_id: str, root: Path, *, stack: Optional[str] = None, ar
     if not _git(root, "rev-parse", "--verify", "-q", "HEAD"):
         raise AdoptError(f"{root} has no commit yet — a new repository is `agentsmith tenant init`'s")
     if (root / ".agenticframework" / "process-gates.json").exists():
-        committed = subprocess.run(["git", "-C", str(root), "cat-file", "-e",
+        committed = subprocess.run(["git", "-C", str(root), "cat-file", "-e",  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
                                     "HEAD:.agenticframework/process-gates.json"], capture_output=True, check=False)
         if committed.returncode == 0:
             raise AdoptError(f"{root} already carries .agenticframework/process-gates.json — it is already under "
@@ -422,7 +422,7 @@ def rendered_rules(root: Path, framework: Optional[Path] = None):
     try:
         # Split on whitespace, as the launcher splits it in CI: one command,
         # read the same way by every caller.
-        done = subprocess.run([*declared.split(), "render"], cwd=root,
+        done = subprocess.run([*declared.split(), "render"], cwd=root,  # noqa: S603 -- the rules command the repository's own process-gates.json declares; split, no shell
                               input=json.dumps({"cwd": str(root)}), capture_output=True, text=True, check=False,
                               timeout=120)
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -549,8 +549,8 @@ def adopt(plan: Plan) -> list[str]:
 
     written += install_gate_hooks(root, framework, prior=plan.prior_hooks)
 
-    sys.path.insert(0, str(framework / "scripts"))
-    import gate_ides  # type: ignore
+    with framework_scripts_on_path(framework):
+        import gate_ides  # type: ignore
 
     from agentsmith.config import chosen_ides
 
@@ -578,7 +578,7 @@ def adopt(plan: Plan) -> list[str]:
     graph = ".agent-rfc/fixtures/knowledge_graph.json"
     mapper = framework / "scripts" / "map_codebase.py"
     if mapper.is_file():
-        subprocess.run([sys.executable, str(mapper), "--quiet"], cwd=root, capture_output=True, check=False)
+        subprocess.run([sys.executable, str(mapper), "--quiet"], cwd=root, capture_output=True, check=False)  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
     if not (root / graph).is_file():
         put(graph, json.dumps({"directed": True, "multigraph": False, "graph": {}, "nodes": [], "links": []},
                               indent=2) + "\n")
@@ -592,7 +592,7 @@ def adopt(plan: Plan) -> list[str]:
     if mapper.is_file():
         # The records are nodes of the graph, so it is drawn again after them, and the
         # manifest written again for the graph's final hash.
-        subprocess.run([sys.executable, str(mapper), "--quiet"], cwd=root, capture_output=True, check=False)
+        subprocess.run([sys.executable, str(mapper), "--quiet"], cwd=root, capture_output=True, check=False)  # noqa: S603 -- this interpreter on a framework script whose path is resolved here; argv list, no shell
         write_scaffold_records(root, plan.tenant_id, plan.stack, plan.style, plan.agentic, files,
                                force=True, design=ADOPTION_DESIGN, adopted=True)
     if SCAFFOLD_MANIFEST not in written:

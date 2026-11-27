@@ -59,13 +59,14 @@ class Builder:
         self.tset = set(self.tracked)
 
     def git(self, *args: str) -> str:
-        return subprocess.run(["git", "-C", str(self.root), *args], capture_output=True, text=True, check=True).stdout
+        return subprocess.run(["git", "-C", str(self.root), *args], capture_output=True, text=True, check=True).stdout  # noqa: S603, S607 -- git on PATH, argv list, no shell; callers pass fixed subcommands, and a range only once --verify resolved it
 
     def node(self, ident: str, kind: str, **fields: object) -> None:
         self.nodes[ident] = {"id": ident, "type": kind, **fields}
 
     def edge(self, source: str, target: str, kind: str, how: str, **fields: object) -> None:
-        assert how in KINDS, how
+        if how not in KINDS:
+            raise ValueError(f"unknown edge kind: {how}")
         self.edges.append({"from": source, "to": target, "type": kind, "kind": how, **fields})
 
     def lines(self, path: str) -> int:
@@ -152,7 +153,7 @@ class Builder:
         raw = self.git("log", f"--format={fmt}", "--name-only", "HEAD")
         # A checkout without the tag (a shallow or tagless CI clone) has no range: say so, do not fail.
         probe = ["git", "-C", str(self.root), "rev-parse", "--verify", "-q", f"{since}^{{commit}}"]
-        resolved = bool(since) and subprocess.run(probe, capture_output=True, check=False).returncode == 0
+        resolved = bool(since) and subprocess.run(probe, capture_output=True, check=False).returncode == 0  # noqa: S603 -- git on PATH, argv list, no shell; the release is the operator's own argument, checked as a commit
         self.since = since if resolved else None
         in_range = set(self.git("rev-list", f"{since}..HEAD").split()) if resolved else set()
         changed: dict[str, set[str]] = {}
@@ -277,13 +278,13 @@ def main(argv: list[str] | None = None) -> int:
                         help="with --history: the release whose fixes count as hot spots (default: the latest tag)")
     parser.add_argument("--check", action="store_true", help=f"fail when {OUT} is not what the tree builds")
     args = parser.parse_args(argv)
-    root = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
+    root = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,  # noqa: S607 -- git on PATH; fixed argv
                                check=True).stdout.strip())
     if args.history and (args.check or (args.out and Path(args.out) == Path(OUT))):
         parser.error(f"--history is git history, not the tree: it never writes {OUT} or checks it")
     since = ""
     if args.history:
-        since = args.since or subprocess.run(["git", "-C", str(root), "describe", "--tags", "--abbrev=0"],
+        since = args.since or subprocess.run(["git", "-C", str(root), "describe", "--tags", "--abbrev=0"],  # noqa: S603, S607 -- git on PATH, argv list, no shell; the other parts are paths and flags built here
                                              capture_output=True, text=True, check=False).stdout.strip()
     document = Builder(root).build(since, history=args.history)
     text = json.dumps(document, indent=1) + "\n"
