@@ -957,6 +957,87 @@
    "scope_unmatched": []
   },
   {
+   "id": ".agent-rfc/designs/invariants-not-instances.md",
+   "type": "design",
+   "status": "active",
+   "scope": [
+    "scripts/security/gha_expression.py",
+    "scripts/security/runners/agent_workflow.py",
+    "scripts/test/test_gha_expression.py",
+    "scripts/test/test_gha_expression_oracle.py",
+    "scripts/test/gha_oracle/**",
+    "scripts/test/test_agent_workflow_injection.py",
+    "contract/security/v1/cases.json",
+    "scripts/test/test_security_contract.py",
+    "scripts/process_gate.py",
+    "scripts/gate_pillars.py",
+    "scripts/gate_history.py",
+    "scripts/test/test_range_verdict.py",
+    "scripts/test/test_declaration_ratchet.py",
+    "scripts/test/test_process_gate.py",
+    "scripts/map_codebase.py",
+    "scripts/local_knowledge_graph.py",
+    "scripts/gate_kg.py",
+    "scripts/verify_system.py",
+    "scripts/test/test_kg_rebuild.py",
+    "scripts/test/test_knowledge_graph.py",
+    "scripts/test/test_kg_drift_gate.py",
+    "scripts/test/test_gate_kg.py",
+    "scripts/test/test_trace_graph.py",
+    ".agent-rfc/fixtures/knowledge_graph.json",
+    ".agent-rfc/fixtures/trace_graph.json",
+    "scripts/ci_tree.py",
+    "scripts/test/test_ci_tree.py",
+    "scripts/test/test_collection.py",
+    "scripts/mutation_check.py",
+    "scripts/test/test_mutation_check_lists.py",
+    "scripts/test/test_claims.py",
+    "portal/test/scripts.test.ts",
+    "portal/proxy.ts",
+    "portal/lib/signInPolicy.ts",
+    "portal/test/signInPolicy.test.ts",
+    "portal/test/proxy.test.ts",
+    ".github/workflows/self-test.yml",
+    ".agenticframework/process-gates.json",
+    "CHANGELOG.md",
+    "THIRD_PARTY_LICENSES.md",
+    "docs/process-gates.md",
+    "docs/validation-checklist.md",
+    "docs/UserManual.md",
+    "docs/PRODUCT_BACKLOG.md",
+    "templates/agent-rules.yaml",
+    "templates/governance.json",
+    "scripts/gate_models.py",
+    "scripts/collection_check.py",
+    "scripts/test/**",
+    "agentsmith/machine/governance.py",
+    "agentsmith/architectures.py",
+    "agentsmith/cli.py",
+    "agentsmith/adopt.py",
+    "agentsmith/sync.py",
+    "agentsmith/test/**",
+    "docs/review-levers.md",
+    "docs/review-lever-notes.md",
+    "docs/design-review-checklist.md",
+    "docs/scratch-tenants.md",
+    ".github/scratch-tenants/**",
+    ".github/workflows/scratch-tenants.yml",
+    "contract/gate/v3/protocol.md"
+   ],
+   "scope_unmatched": [
+    "scripts/test/test_gha_expression_oracle.py",
+    "scripts/test/gha_oracle/**",
+    "scripts/test/test_range_verdict.py",
+    "scripts/test/test_kg_rebuild.py",
+    "scripts/ci_tree.py",
+    "scripts/test/test_ci_tree.py",
+    "scripts/test/test_collection.py",
+    "scripts/test/test_mutation_check_lists.py",
+    "scripts/test/test_claims.py",
+    "scripts/collection_check.py"
+   ]
+  },
+  {
    "id": ".agent-rfc/designs/kg-check-sees-tracked-guardrails.md",
    "type": "design",
    "status": "done",
@@ -3605,6 +3686,109 @@
     ],
     [
      2,
+     0
+    ]
+   ],
+   "signoff": true
+  },
+  {
+   "id": ".agent-rfc/reviews/invariants-not-instances.md",
+   "type": "review",
+   "passes": [
+    [
+     1,
+     6
+    ],
+    [
+     2,
+     26
+    ],
+    [
+     3,
+     27
+    ],
+    [
+     4,
+     15
+    ],
+    [
+     5,
+     12
+    ],
+    [
+     6,
+     12
+    ],
+    [
+     7,
+     8
+    ],
+    [
+     8,
+     8
+    ],
+    [
+     9,
+     7
+    ],
+    [
+     10,
+     8
+    ],
+    [
+     11,
+     5
+    ],
+    [
+     12,
+     1
+    ],
+    [
+     13,
+     2
+    ],
+    [
+     14,
+     1
+    ],
+    [
+     15,
+     2
+    ],
+    [
+     16,
+     1
+    ],
+    [
+     17,
+     4
+    ],
+    [
+     18,
+     5
+    ],
+    [
+     19,
+     4
+    ],
+    [
+     20,
+     3
+    ],
+    [
+     21,
+     2
+    ],
+    [
+     22,
+     1
+    ],
+    [
+     23,
+     0
+    ],
+    [
+     24,
      0
     ]
    ],
@@ -10067,7 +10251,7 @@
    "to": ".agent-rfc/",
    "type": "evidence",
    "kind": "declared",
-   "resolves": 293
+   "resolves": 295
   },
   {
    "from": "REQ-B7",
@@ -20047,8 +20231,8 @@
    "file": 295,
    "test": 223,
    "requirement": 65,
-   "design": 138,
-   "review": 149
+   "design": 139,
+   "review": 150
   },
   "edges": {
    "imports:derived": 1202,
@@ -20093,7 +20277,7 @@
    },
    "REQ-B6": {
     "title": "Explainability",
-    "evidence_files": 293,
+    "evidence_files": 295,
     "designs": null,
     "code_files": 0,
     "tests": 0
@@ -20658,6 +20842,18 @@
     "runtime/cli.py",
     "runtime/test/test_cli.py",
     "runtime/adopt.py"
+   ],
+   ".agent-rfc/designs/invariants-not-instances.md": [
+    "scripts/test/test_gha_expression_oracle.py",
+    "scripts/test/gha_oracle/**",
+    "scripts/test/test_range_verdict.py",
+    "scripts/test/test_kg_rebuild.py",
+    "scripts/ci_tree.py",
+    "scripts/test/test_ci_tree.py",
+    "scripts/test/test_collection.py",
+    "scripts/test/test_mutation_check_lists.py",
+    "scripts/test/test_claims.py",
+    "scripts/collection_check.py"
    ],
    ".agent-rfc/designs/launch-small-fixes.md": [
     "templates/shell/ai-compat.sh"
