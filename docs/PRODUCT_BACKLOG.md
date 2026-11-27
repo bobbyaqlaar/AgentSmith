@@ -448,6 +448,15 @@ before install, as the hook bundle was.
 
 ## Later: confirmed gaps, each waiting on its trigger
 
+### Traceability from requirement to operation — proposed, awaiting the owner (2026-11-13)
+
+The owner's intent: the knowledge graph should give the traceability matrix from requirements to design, build, test
+and operate, for AgentSmith and every tenant, with the tenant's viewer in the Ops Portal to find defects in production.
+The proposal is `.agent-rfc/designs/traceability-graph.md` (status `proposed`): a separate trace document per commit
+(`contract/trace/v1`) with the code graph as one layer, requirement ids, links typed as observed, declared or derived,
+and a matrix, defect trace and graph view in the portal. Four phases, each its own design once the owner approves.
+Trigger: the owner's decisions D1–D7 in that design.
+
 ### Compliance gap status boards (pointers, not copies)
 
 Live status for the two compliance tracks is maintained in one place each — do

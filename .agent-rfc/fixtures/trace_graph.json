@@ -2166,6 +2166,31 @@
    ]
   },
   {
+   "id": ".agent-rfc/designs/traceability-graph.md",
+   "type": "design",
+   "status": "proposed",
+   "scope": [
+    "contract/trace/**",
+    "scripts/trace_graph.py",
+    "scripts/gate_models.py",
+    "scripts/process_gate.py",
+    "scripts/send_dev_record.py",
+    "agentsmith/cli.py",
+    "portal/lib/trace*.ts",
+    "portal/app/dev/apps/[app]/trace/**",
+    "portal/app/ops/apps/[id]/trace/**",
+    "portal/db/schema.sql",
+    "workflow-templates/agentsmith-gates.yml",
+    ".github/workflows/self-test.yml"
+   ],
+   "scope_unmatched": [
+    "contract/trace/**",
+    "portal/lib/trace*.ts",
+    "portal/app/dev/apps/[app]/trace/**",
+    "portal/app/ops/apps/[id]/trace/**"
+   ]
+  },
+  {
    "id": ".agent-rfc/designs/trajectory-evals.md",
    "type": "design",
    "status": "active",
@@ -10067,7 +10092,7 @@
    "to": ".agent-rfc/",
    "type": "evidence",
    "kind": "declared",
-   "resolves": 293
+   "resolves": 294
   },
   {
    "from": "REQ-B7",
@@ -20047,7 +20072,7 @@
    "file": 295,
    "test": 223,
    "requirement": 65,
-   "design": 138,
+   "design": 139,
    "review": 149
   },
   "edges": {
@@ -20093,7 +20118,7 @@
    },
    "REQ-B6": {
     "title": "Explainability",
-    "evidence_files": 293,
+    "evidence_files": 294,
     "designs": null,
     "code_files": 0,
     "tests": 0
@@ -20768,6 +20793,12 @@
    ],
    ".agent-rfc/designs/tenant-visibility-override.md": [
     "hooks/post-checkout"
+   ],
+   ".agent-rfc/designs/traceability-graph.md": [
+    "contract/trace/**",
+    "portal/lib/trace*.ts",
+    "portal/app/dev/apps/[app]/trace/**",
+    "portal/app/ops/apps/[id]/trace/**"
    ],
    ".agent-rfc/designs/vacuous-sweep-guards.md": [
     "runtime/test/**"
