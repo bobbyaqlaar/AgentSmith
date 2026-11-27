@@ -18,7 +18,7 @@ ruff==0.15.20
 # useful answer. Installed here rather than only in the CI step, so a local run
 # resolves the same stubs — this was previously CI-only, and a laptop reported
 # a `yaml` stub error that CI never saw.
-types-PyYAML>=6.0,<7.0
+types-PyYAML>=6.0.12.20261103,<7.0
 
 # Exhaustive mutation testing (advisory CI job; see pyproject.toml
 # [tool.mutmut]). Pinned like the rest: a mutation score that moves because the
